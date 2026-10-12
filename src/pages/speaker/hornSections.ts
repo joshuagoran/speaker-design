@@ -1,8 +1,8 @@
-// A horn's flare sections as the Designer's Horn settings show and edit them: areas in in² and lengths in in, the
+// A horn's flare sections as the Speaker page's Horn settings show and edit them: areas in in² and lengths in in, the
 // spec's own cm² and cm (the horn engine's, Hornresp's) converted here only. Pure.
 import type { HornSegment, SpeakerHorn } from "../../types";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
-import { shownIn, shownTenth } from "./designerFields";
+import { shownIn, shownTenth } from "./speakerFields";
 
 /** A new section's end area over its start area: it doubles, as a flare step. */
 const NEW_SECTION_AREA_RATIO = 2;

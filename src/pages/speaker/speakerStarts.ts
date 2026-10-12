@@ -1,4 +1,4 @@
-// Where a new Designer speaker starts: a template (designerTemplates), or the current PA or Hi-fi design read through
+// Where a new speaker on the Speaker page starts: a template (speakerTemplates), or the current PA or Hi-fi design read through
 // the L1 adapters (lib/speaker paSpec, hifiSpec).
 import type {
   HifiDesignState,
@@ -12,21 +12,21 @@ import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerIdentity } from "../../lib/speaker/specParts";
 import { DEFAULT_COVERAGE_LAYOUT } from "../coverage/useCoverageLayout";
 import {
-  DESIGNER_CURRENT_START,
-  DESIGNER_START,
-  DESIGNER_START_GROUPS,
-  DESIGNER_START_SPEAKER_NAMES,
-  DESIGNER_TEMPLATE,
-  type DesignerCurrentStart,
-  type DesignerStart,
-  type DesignerTemplate,
-} from "../../constants/designerStarts";
+  SPEAKER_CURRENT_START,
+  SPEAKER_START,
+  SPEAKER_START_GROUPS,
+  SPEAKER_START_SPEAKER_NAMES,
+  SPEAKER_TEMPLATE,
+  type SpeakerCurrentStart,
+  type SpeakerStart,
+  type SpeakerTemplate,
+} from "../../constants/speakerStarts";
 import { SPEAKER_PART } from "../../constants/speakerSpec";
-import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useDesigner";
-import { DESIGNER_TEMPLATES, templateSpeaker } from "./designerTemplates";
+import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useSpeakerPage";
+import { SPEAKER_TEMPLATES, templateSpeaker } from "./speakerTemplates";
 
 /** What a start reads: the PA design as the planner holds it, the Hi-fi design and its look. */
-export interface DesignerSources {
+export interface StartSources {
   pa: PaPlannerDesign;
   hifi: HifiDesignState;
   hifiLook: SpeakerSpec["look"];
@@ -37,36 +37,36 @@ const PA_START_PARTS = {
   paSub: SPEAKER_PART.sub,
   paTop: SPEAKER_PART.top,
   paTower: SPEAKER_PART.tower,
-} as const satisfies Partial<Record<DesignerStart, SpeakerPart>>;
+} as const satisfies Partial<Record<SpeakerStart, SpeakerPart>>;
 
 /** The starts the PA design offers: the tower's one speaker, or the sub and the mid/high box of the other layouts. */
-export const paStarts = (layout: PaLayout): DesignerStart[] =>
-  layout === "tower" ? [DESIGNER_START.paTower] : [DESIGNER_START.paSub, DESIGNER_START.paTop];
+export const paStarts = (layout: PaLayout): SpeakerStart[] =>
+  layout === "tower" ? [SPEAKER_START.paTower] : [SPEAKER_START.paSub, SPEAKER_START.paTop];
 
 /** Every start the picker lists, in order: the templates, then the current Hi-fi and PA designs. */
-export const designerStarts = (layout: PaLayout): DesignerStart[] => [
-  ...DESIGNER_TEMPLATES,
-  DESIGNER_START.hifi,
+export const speakerStarts = (layout: PaLayout): SpeakerStart[] => [
+  ...SPEAKER_TEMPLATES,
+  SPEAKER_START.hifi,
   ...paStarts(layout),
 ];
 
 /** Whether a start is a template (else it reads a current design). */
-export const isTemplate = (start: DesignerStart): start is DesignerTemplate =>
-  Object.hasOwn(DESIGNER_TEMPLATE, start);
+export const isTemplate = (start: SpeakerStart): start is SpeakerTemplate =>
+  Object.hasOwn(SPEAKER_TEMPLATE, start);
 
 /** The picker's group a start is listed under. */
-export const startGroup = (start: DesignerStart) =>
-  isTemplate(start) ? DESIGNER_START_GROUPS.templates : DESIGNER_START_GROUPS.current;
+export const startGroup = (start: SpeakerStart) =>
+  isTemplate(start) ? SPEAKER_START_GROUPS.templates : SPEAKER_START_GROUPS.current;
 
 /** The speaker a current-design start gives, as a draft under the start's name. */
-function currentSpeaker(start: DesignerCurrentStart, sources: DesignerSources): SpeakerSpec {
-  const identity = { id: DRAFT_SPEAKER_ID, name: DESIGNER_START_SPEAKER_NAMES[start] };
+function currentSpeaker(start: SpeakerCurrentStart, sources: StartSources): SpeakerSpec {
+  const identity = { id: DRAFT_SPEAKER_ID, name: SPEAKER_START_SPEAKER_NAMES[start] };
   switch (start) {
-    case DESIGNER_CURRENT_START.hifi:
+    case SPEAKER_CURRENT_START.hifi:
       return speakerFromHifi(sources.hifi, sources.hifiLook, identity);
-    case DESIGNER_CURRENT_START.paSub:
-    case DESIGNER_CURRENT_START.paTop:
-    case DESIGNER_CURRENT_START.paTower: {
+    case SPEAKER_CURRENT_START.paSub:
+    case SPEAKER_CURRENT_START.paTop:
+    case SPEAKER_CURRENT_START.paTower: {
       // the speakers alone are read: where the stacks stand (the coverage page's) doesn't change them
       const read = layersFromPa(sources.pa, identity, DEFAULT_COVERAGE_LAYOUT);
       const id = speakerIdentity(identity, PA_START_PARTS[start]).id;
@@ -78,5 +78,5 @@ function currentSpeaker(start: DesignerCurrentStart, sources: DesignerSources): 
 }
 
 /** The speaker a start gives, as a draft under the start's name. */
-export const startSpeaker = (start: DesignerStart, sources: DesignerSources): SpeakerSpec =>
+export const startSpeaker = (start: SpeakerStart, sources: StartSources): SpeakerSpec =>
   isTemplate(start) ? templateSpeaker(start) : currentSpeaker(start, sources);

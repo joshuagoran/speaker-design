@@ -34,8 +34,8 @@ import {
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
 import { FRONT_END_NAMES, NO_FRONT_END, SPACE_TEXT } from "../../constants/space";
-import { isSavedSpeaker, type Designer } from "../designer/useDesigner";
-import { paPlannerDesign } from "../designer/DesignerPage";
+import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
+import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { stackFromSaved } from "../stack/stackSaves";
 import type { StackPlanner } from "../stack/useStack";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -48,8 +48,8 @@ interface Props {
   space: SpacePlanner;
   /** the stack library: the Stack page's store */
   stack: Pick<StackPlanner, "store">;
-  /** the speaker library: the Designer's store */
-  designer: Pick<Designer, "store">;
+  /** the speaker library: the Speaker page's store */
+  speakerPage: Pick<SpeakerPageState, "store">;
   planner: PaPlanner;
 }
 
@@ -65,7 +65,7 @@ const relClass = (rel: number) =>
  * aim, a mirror pair following its partner; the hardware that drives them; the coverage across the floor on the fixed
  * scale, the levels at the listening area, a side view of the heights and tilts, and the response at the listener.
  */
-export function SpacePage({ space, stack, designer, planner }: Props) {
+export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   const pal = usePalette();
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
@@ -76,7 +76,7 @@ export function SpacePage({ space, stack, designer, planner }: Props) {
     const saved = stackFromSaved(c);
     return saved ? [{ id: c.id, name: c.name, saved }] : [];
   });
-  const speakers = (designer.store.saved ?? []).flatMap((c) => {
+  const speakers = (speakerPage.store.saved ?? []).flatMap((c) => {
     const saved: unknown = Reflect.get(c, "speaker");
     return isSavedSpeaker(saved) ? [{ id: c.id, name: c.name, spec: saved }] : [];
   });

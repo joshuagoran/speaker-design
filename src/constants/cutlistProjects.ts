@@ -12,11 +12,11 @@ export interface CutlistProject {
 export const CUTLIST_PROJECTS = {
   pa: { set: "stack", setsLabel: "Stacks", sets: [1, 2, 4], source: "the Design page's boxes" },
   hifi: { set: "speaker", setsLabel: "Speakers", sets: [1, 2, 4], source: "the Hi-fi page's box" },
-  designer: {
+  speaker: {
     set: "speaker",
     setsLabel: "Speakers",
     sets: [1, 2, 4],
-    source: "the Designer's speaker",
+    source: "the speaker on the Speaker page",
   },
 } as const satisfies Record<Exclude<ProjectId, "stack" | "space">, CutlistProject>;
 
@@ -26,6 +26,6 @@ export type CutlistProjectId = keyof typeof CUTLIST_PROJECTS;
 /** The projects whose cutlist choices this browser keeps (the PA stack's live in its planner and its saves). */
 export const CUTLIST_PROJECT = {
   hifi: "hifi",
-  designer: "designer",
+  speaker: "speaker",
 } as const satisfies Record<string, CutlistProjectId>;
 export type StoredCutlistProject = (typeof CUTLIST_PROJECT)[keyof typeof CUTLIST_PROJECT];

@@ -370,7 +370,7 @@ export function addSlotShelf(
 
 /**
  * The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/tubeFold). `fold`, for
- * a port placed elsewhere (the Designer's set position): the room its tubes have and whether the riser heads down;
+ * a port placed elsewhere (the Speaker page's set position): the room its tubes have and whether the riser heads down;
  * absent, the Hi-fi box's room (`hifiTubeRoom`), rising.
  */
 export function addRoundPorts(

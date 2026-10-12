@@ -8,11 +8,11 @@ import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { byId } from "../../lib/tables";
 import { entriesOf } from "../../lib/records";
-import { SET_BY, SET_BY_NAMES } from "../../constants/designer";
+import { SET_BY, SET_BY_NAMES } from "../../constants/speakerPage";
 import { AUTO_DELAY } from "../../constants/speakerSpec";
 import { STACK_TEXT } from "../../constants/stack";
 import { SPACE_PITCH_DEG } from "../../constants/space";
-import { FIELD_ROW, shownIn } from "../designer/designerFields";
+import { FIELD_ROW, shownIn } from "../speaker/speakerFields";
 
 interface Props {
   index: number;

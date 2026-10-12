@@ -16,9 +16,9 @@ interface Props {
   extra?: React.ReactNode;
   /** a plain div instead of the page-width section */
   bare?: boolean;
-  /** the name a save takes, where the page names its design itself (the Designer): then no name box shows */
+  /** the name a save takes, where the page names its design itself (the Speaker page): then no name box shows */
   saveName?: string;
-  /** the library's actions on the picked one too: save over it, rename, duplicate (the Designer's speakers) */
+  /** the library's actions on the picked one too: save over it, rename, duplicate (the Speaker page's speakers) */
   manage?: boolean;
 }
 

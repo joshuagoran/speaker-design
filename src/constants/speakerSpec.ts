@@ -1,4 +1,4 @@
-// The ids of the speaker designer's spec (SpeakerSpec, StackSpec, SpaceSpec in src/types.ts; read adapters in
+// The ids of the speaker spec (SpeakerSpec, StackSpec, SpaceSpec in src/types.ts; read adapters in
 // lib/speaker).
 import type {
   CabinetConstruction,
@@ -39,7 +39,7 @@ export const DRIVER_KIND = {
 
 /**
  * The bands the read adapters give a speaker, by id, low to high. A 2-way uses low and high; air is the top octave (a
- * super tweeter). The Designer adds bands of its own with generated ids.
+ * super tweeter). The Speaker page adds bands of its own with generated ids.
  */
 export const SPEAKER_BAND = {
   low: "low",

@@ -46,7 +46,7 @@ export const stuffingPctOf = (gain: number) => Math.round((gain - 1) * 100);
 /** A chamber whose drivers radiate straight out. */
 export const DIRECT_LOAD: ChamberLoad = { kind: CHAMBER_LOAD.direct };
 
-/** A flush box with a flat top (the Hi-fi box, the fill's, the Designer's empty speaker): its baffle is its front. */
+/** A flush box with a flat top (the Hi-fi box, the fill's, the Speaker page's empty speaker): its baffle is its front. */
 export const FLUSH_BOX: Pick<SpeakerCabinet, "construction" | "top" | "insetIn"> = {
   construction: CABINET_CONSTRUCTION.flushBox,
   top: CABINET_TOP.flat,

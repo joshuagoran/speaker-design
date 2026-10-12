@@ -5,7 +5,7 @@ import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { TextField } from "../../components/ui/TextField";
 import { entriesOf } from "../../lib/records";
-import { DESIGNER_TEXT, DRIVE_NAMES } from "../../constants/designer";
+import { SPEAKER_TEXT, DRIVE_NAMES } from "../../constants/speakerPage";
 import { FilterFields } from "./FilterFields";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 
@@ -39,7 +39,7 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
       <FilterFields
         filters={band}
         newCornerHz={newCornerHz}
-        offName={DESIGNER_TEXT.noFilter}
+        offName={SPEAKER_TEXT.noFilter}
         onEdit={(edit) => onEdit((b) => ({ ...b, ...edit(b) }))}
       />
       <NumberField

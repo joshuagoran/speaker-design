@@ -4,13 +4,13 @@ import { NotesPage } from "./pages/notes/NotesPage";
 import { FillsPage } from "./pages/fills/FillsPage";
 import { PaCutlistPage } from "./pages/cutlist/PaCutlistPage";
 import { HifiCutlistPage } from "./pages/cutlist/HifiCutlistPage";
-import { DesignerCutlistPage } from "./pages/cutlist/DesignerCutlistPage";
+import { SpeakerCutlistPage } from "./pages/cutlist/SpeakerCutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
 import { CoveragePage } from "./pages/coverage/CoveragePage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
 import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
-import { DesignerPage } from "./pages/designer/DesignerPage";
-import { useDesigner } from "./pages/designer/useDesigner";
+import { SpeakerPage } from "./pages/speaker/SpeakerPage";
+import { useSpeakerPage } from "./pages/speaker/useSpeakerPage";
 import { StackPage } from "./pages/stack/StackPage";
 import { useStack } from "./pages/stack/useStack";
 import { SpacePage } from "./pages/space/SpacePage";
@@ -50,11 +50,11 @@ export function App() {
   const planner = usePaPlanner();
   const hifi = useHifiPlanner();
   const fills = useFillsPlanner();
-  const designer = useDesigner();
+  const speakerPage = useSpeakerPage();
   const stack = useStack();
   const space = useSpace();
   const project = projectOf(view);
-  // two levels: the project (PA stack, Hi-fi, Designer, Stack or Space), then its own pages
+  // two levels: the project (PA stack, Hi-fi, Speaker, Stack or Space), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
@@ -124,14 +124,14 @@ export function App() {
           <HifiCutlistPage hifi={hifi} />
         ) : view === "cutlist" ? (
           <PaCutlistPage planner={planner} />
-        ) : view === "designer" ? (
-          <DesignerPage designer={designer} planner={planner} hifi={hifi} />
-        ) : view === "designerCutlist" ? (
-          <DesignerCutlistPage designer={designer} />
+        ) : view === "speaker" ? (
+          <SpeakerPage speakerPage={speakerPage} planner={planner} hifi={hifi} />
+        ) : view === "speakerCutlist" ? (
+          <SpeakerCutlistPage speakerPage={speakerPage} />
         ) : view === "stack" ? (
-          <StackPage stack={stack} designer={designer} planner={planner} />
+          <StackPage stack={stack} speakerPage={speakerPage} planner={planner} />
         ) : view === "space" ? (
-          <SpacePage space={space} stack={stack} designer={designer} planner={planner} />
+          <SpacePage space={space} stack={stack} speakerPage={speakerPage} planner={planner} />
         ) : view === "coverage" ? (
           <CoveragePage planner={planner} />
         ) : (

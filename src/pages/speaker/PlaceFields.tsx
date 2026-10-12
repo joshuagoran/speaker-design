@@ -3,8 +3,8 @@ import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf } from "../../lib/records";
-import { DESIGNER_TEXT, SET_BY, SET_BY_NAMES } from "../../constants/designer";
-import { FIELD_ROW, shownIn } from "./designerFields";
+import { SPEAKER_TEXT, SET_BY, SET_BY_NAMES } from "../../constants/speakerPage";
+import { FIELD_ROW, shownIn } from "./speakerFields";
 
 interface Props<P extends FacePoint> {
   label: React.ReactNode;
@@ -35,7 +35,7 @@ export function PlaceFields<P extends FacePoint>({
   return (
     <>
       <ToggleGroup
-        label={<Tooltip tip={DESIGNER_TEXT.placeTip}>{label}</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.placeTip}>{label}</Tooltip>}
         className="mb-2"
         value={value ? SET_BY.custom : SET_BY.auto}
         onChange={(v) =>
@@ -50,14 +50,14 @@ export function PlaceFields<P extends FacePoint>({
       {value && children}
       <div className={FIELD_ROW}>
         <NumberField
-          label={DESIGNER_TEXT.fromLeft}
+          label={SPEAKER_TEXT.fromLeft}
           value={shownIn(at.xIn + widthIn / 2)}
           disabled={!value}
           step={0.25}
           onChange={(v) => value && onChange({ ...value, xIn: v - widthIn / 2 })}
         />
         <NumberField
-          label={DESIGNER_TEXT.fromBottom}
+          label={SPEAKER_TEXT.fromBottom}
           value={shownIn(at.yIn)}
           disabled={!value}
           step={0.25}

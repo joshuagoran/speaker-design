@@ -34,10 +34,10 @@ import {
 } from "../../constants/settingsSections";
 import { STACK_TEXT } from "../../constants/stack";
 import { DEFAULT_COVERAGE_LAYOUT } from "../coverage/useCoverageLayout";
-import { FilterFields } from "../designer/FilterFields";
-import { inputText } from "../designer/designerText";
-import { isSavedSpeaker, type Designer } from "../designer/useDesigner";
-import { paPlannerDesign } from "../designer/DesignerPage";
+import { FilterFields } from "../speaker/FilterFields";
+import { inputText } from "../speaker/speakerText";
+import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
+import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
 import type { StackPlanner } from "./useStack";
@@ -45,8 +45,8 @@ import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 
 interface Props {
   stack: StackPlanner;
-  /** the speaker library: the Designer's store */
-  designer: Pick<Designer, "store">;
+  /** the speaker library: the Speaker page's store */
+  speakerPage: Pick<SpeakerPageState, "store">;
   planner: PaPlanner;
 }
 
@@ -64,13 +64,13 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  * library or the current PA design, where each stands, its crossover, level and delay; the stack's response and maximum
  * output at its listening point on fixed axes, with each member's curve, and the stacks' library.
  */
-export function StackPage({ stack, designer, planner }: Props) {
+export function StackPage({ stack, speakerPage, planner }: Props) {
   const pal = usePalette();
   const { design, response, limits, store, snapshot, restore } = stack;
   const { members, name, notes } = design.stack;
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   /** the library's speakers, as the picker lists them */
-  const library = (designer.store.saved ?? []).flatMap((c) => {
+  const library = (speakerPage.store.saved ?? []).flatMap((c) => {
     const saved: unknown = Reflect.get(c, "speaker");
     return isSavedSpeaker(saved) ? [{ id: c.id, name: c.name, spec: saved }] : [];
   });

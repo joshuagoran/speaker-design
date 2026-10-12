@@ -1,10 +1,10 @@
-// The Designer's Horn settings (src/pages/designer/hornSections, HornSettings): editing a flare section changes the
+// The Speaker page's Horn settings (src/pages/speaker/hornSections, HornSettings): editing a flare section changes the
 // response, the 3D flare and the cutlist; sections chain as they are added and removed; the settings' in² and in
 // convert to the spec's cm² and cm and back; a size that is not positive and finite is a named gap, never NaN; the PA
 // v2 templates still model.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { templateSpeaker } from "../src/pages/designer/designerTemplates";
+import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import {
   joinsNext,
   shownIn2,
@@ -18,9 +18,9 @@ import {
   withSectionRemoved,
   withSectionSize,
   withStepsSmoothed,
-} from "../src/pages/designer/hornSections";
-import { DESIGNER_TEXT } from "../src/constants/designer";
-import { hornText } from "../src/pages/designer/designerText";
+} from "../src/pages/speaker/hornSections";
+import { SPEAKER_TEXT } from "../src/constants/speakerPage";
+import { hornText } from "../src/pages/speaker/speakerText";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { speakerCutParts } from "../src/lib/speaker/speakerBuild";
@@ -28,7 +28,7 @@ import {
   buildSpeakerScene,
   SPEAKER_MESH_NAMES,
 } from "../src/components/stack-view/buildSpeakerScene";
-import { DESIGNER_TEMPLATE } from "../src/constants/designerStarts";
+import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import {
   CHAMBER_LOAD,
   HORN_DRIVE,
@@ -42,7 +42,7 @@ import type { HornSegment, SpeakerHorn, SpeakerSpec } from "../src/types";
 import type * as THREE from "three";
 
 /** The two-18″ PA v2 sub bin: the template the Horn settings were built on. */
-const BIN = templateSpeaker(DESIGNER_TEMPLATE.paV2SubBinTwo);
+const BIN = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
 
 /** The spec's one horn. */
 function hornOf(spec: SpeakerSpec): SpeakerHorn {
@@ -96,11 +96,11 @@ const maxDiff = (a: SpeakerSpec, b: SpeakerSpec) => {
 const finiteResponse = (spec: SpeakerSpec) =>
   responseOf(spec).sum.every((p) => Number.isFinite(p.spl) && Number.isFinite(p.f));
 
-test("designer horn: the PA v2 templates still model", () => {
+test("speaker horn: the PA v2 templates still model", () => {
   for (const template of [
-    DESIGNER_TEMPLATE.paV2SubBinOne,
-    DESIGNER_TEMPLATE.paV2SubBinTwo,
-    DESIGNER_TEMPLATE.paV2MidBox,
+    SPEAKER_TEMPLATE.paV2SubBinOne,
+    SPEAKER_TEMPLATE.paV2SubBinTwo,
+    SPEAKER_TEMPLATE.paV2MidBox,
   ]) {
     const spec = templateSpeaker(template);
     const r = responseOf(spec);
@@ -111,7 +111,7 @@ test("designer horn: the PA v2 templates still model", () => {
   }
 });
 
-test("designer horn: editing a section changes the response, the 3D flare and the cutlist", () => {
+test("speaker horn: editing a section changes the response, the 3D flare and the cutlist", () => {
   const segments = hornOf(BIN).segments;
   const last = segments.length - 1;
   // a mouth 25% larger: the last section's end area
@@ -144,7 +144,7 @@ test("designer horn: editing a section changes the response, the 3D flare and th
   assert.equal(flareOf(folded)?.placeholder, true);
 });
 
-test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.1 in²)", () => {
+test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.1 in²)", () => {
   const segments = hornOf(BIN).segments;
   const shown = shownIn2(segments[0].s2);
   assert.equal(shown, 630.1, "the bin's first joint as the field shows it, to the tenth");
@@ -162,7 +162,7 @@ test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's
   assert.ok(stepsIn(withSectionSize(segments, 1, "s1", shown + 0.1), 1));
 });
 
-test("designer horn: typing an end area keystroke by keystroke doesn't join a stepped pair", () => {
+test("speaker horn: typing an end area keystroke by keystroke doesn't join a stepped pair", () => {
   const segments = withSectionSize(hornOf(BIN).segments, 1, "s1", 50);
   assert.ok(stepsIn(segments, 1), "a step: the second section starts at 50 in²");
   // "500" typed into the first section's end, one keystroke at a time; the joint as it was when the field took focus
@@ -179,7 +179,7 @@ test("designer horn: typing an end area keystroke by keystroke doesn't join a st
   assert.equal(shownIn2(follow[1].s1), 500);
 });
 
-test("designer horn: sections chain as they are edited, added and removed", () => {
+test("speaker horn: sections chain as they are edited, added and removed", () => {
   const segments = hornOf(BIN).segments;
   const n = segments.length;
   assert.ok(n >= 2, "the bin's flare has steps");
@@ -217,7 +217,7 @@ test("designer horn: sections chain as they are edited, added and removed", () =
   assert.ok(finiteResponse(removedSpec));
 });
 
-test("designer horn: in² and in round-trip to the spec's cm² and cm, and the spec survives a save", () => {
+test("speaker horn: in² and in round-trip to the spec's cm² and cm, and the spec survives a save", () => {
   // areas show to the tenth, lengths to the hundredth
   for (const typed of [0.3, 12.5, 178.4, 1234.6])
     assert.equal(shownIn2(specSize("s1", typed)), typed);
@@ -236,7 +236,7 @@ test("designer horn: in² and in round-trip to the spec's cm² and cm, and the s
   assert.equal(shownInOfCm(hornOf(saved).segments[0].length), 7.5);
 });
 
-test("designer horn: a size that is not positive and finite is a named gap, never NaN", () => {
+test("speaker horn: a size that is not positive and finite is a named gap, never NaN", () => {
   const bad: [string, (s: readonly HornSegment[]) => HornSegment[]][] = [
     ["zero start area", (s) => withSectionSize(s, 0, "s1", 0)],
     ["negative end area", (s) => withSectionSize(s, 0, "s2", -10)],
@@ -260,7 +260,7 @@ test("designer horn: a size that is not positive and finite is a named gap, neve
   }
 });
 
-test("designer horn: a drive other than front-loaded is the engine's named gap", () => {
+test("speaker horn: a drive other than front-loaded is the engine's named gap", () => {
   const tapped = withHorn(BIN, (h) => ({
     ...h,
     drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 0 },
@@ -270,12 +270,12 @@ test("designer horn: a drive other than front-loaded is the engine's named gap",
   assert.match(hornText(hornOf(BIN)), /^front-loaded horn, \d+ sections, [\d.]+ in, straight$/);
 });
 
-test("designer horn: smooth by default; Steps off snaps each start area back to the previous end", () => {
+test("speaker horn: smooth by default; Steps off snaps each start area back to the previous end", () => {
   // the templates and a new section have no steps
   for (const template of [
-    DESIGNER_TEMPLATE.paV2SubBinOne,
-    DESIGNER_TEMPLATE.paV2SubBinTwo,
-    DESIGNER_TEMPLATE.paV2MidBox,
+    SPEAKER_TEMPLATE.paV2SubBinOne,
+    SPEAKER_TEMPLATE.paV2SubBinTwo,
+    SPEAKER_TEMPLATE.paV2MidBox,
   ])
     assert.equal(stepCount(hornOf(templateSpeaker(template)).segments), 0, template);
   const segments = hornOf(BIN).segments;
@@ -283,11 +283,11 @@ test("designer horn: smooth by default; Steps off snaps each start area back to 
   // two steps made with Steps on
   const stepped = withSectionSize(withSectionSize(segments, 1, "s1", 100), 3, "s1", 900);
   assert.equal(stepCount(stepped), 2);
-  assert.equal(DESIGNER_TEXT.hornSteps(stepCount(stepped)), "Steps: 2");
+  assert.equal(SPEAKER_TEXT.hornSteps(stepCount(stepped)), "Steps: 2");
   // Steps off: every start back to the previous end, the ends as they were
   const smooth = withStepsSmoothed(stepped);
   assert.equal(stepCount(smooth), 0);
-  assert.equal(DESIGNER_TEXT.hornSteps(stepCount(smooth)), "Steps: none");
+  assert.equal(SPEAKER_TEXT.hornSteps(stepCount(smooth)), "Steps: none");
   smooth.forEach((s, i) => {
     assert.equal(s.s2, stepped[i].s2);
     if (i > 0) assert.equal(s.s1, smooth[i - 1].s2);
@@ -297,10 +297,10 @@ test("designer horn: smooth by default; Steps off snaps each start area back to 
   assert.deepEqual(responseOf(withSegments(BIN, () => smooth)).sum, responseOf(BIN).sum);
 });
 
-test("designer horn: a step shows a note that names the two sections", () => {
+test("speaker horn: a step shows a note that names the two sections", () => {
   const stepped = withSectionSize(hornOf(BIN).segments, 1, "s1", 100);
   const notes = stepped.flatMap((_, i) =>
-    stepsIn(stepped, i) ? [DESIGNER_TEXT.hornStep(i + 1)] : [],
+    stepsIn(stepped, i) ? [SPEAKER_TEXT.hornStep(i + 1)] : [],
   );
   assert.deepEqual(notes, [
     "Section 2 starts at a different area than section 1 ends. This makes a step in the horn.",
@@ -308,7 +308,7 @@ test("designer horn: a step shows a note that names the two sections", () => {
   assert.equal(stepsIn(withStepsSmoothed(stepped), 1), false, "no note once smooth");
 });
 
-test("designer horn: Steps stays on when a step is typed back to smooth; only Off turns it off", () => {
+test("speaker horn: Steps stays on when a step is typed back to smooth; only Off turns it off", () => {
   const segments = hornOf(BIN).segments;
   // smooth and never turned on: off
   assert.equal(stepsLatched(false, segments), false);

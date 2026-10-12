@@ -85,7 +85,7 @@ export const SPACE_TEXT = {
   addStack: "Place stack",
   addSpeaker: "Place speaker",
   noLibrary:
-    "Save stacks on the Stack page, or speakers in the Designer, to place them here (sign in first).",
+    "Save stacks on the Stack page, or speakers on the Speaker page, to place them here (sign in first).",
   remove: "Remove",
   addPair: "Add the mirror pair",
   follows: "Mirror of",
@@ -102,7 +102,7 @@ export const SPACE_TEXT = {
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
   pitch: "Pitch, °",
   pitchTip:
-    "Its tilt, + up. A stack member's tilt and a box's kick-back add to it (set those on the Stack page and in the Designer).",
+    "Its tilt, + up. A stack member's tilt and a box's kick-back add to it (set those on the Stack and Speaker pages).",
   mirror: "Mirror image",
   level: "Level, dB",
   delay: "Delay, ms",
@@ -123,7 +123,7 @@ export const SPACE_TEXT = {
   channelsOver: (amp: number, used: number, has: number) =>
     `${ampName(amp)} has ${has} channels; this space uses ${used}.`,
   noChannel:
-    "A band has no amp channel: the model drives it at its own amp power (set in the Designer).",
+    "A band has no amp channel: the model drives it at its own amp power (set on the Speaker page).",
   analogDelay:
     "An analog front end has fixed cards with no delay: a stack's alignment or a placement's delay needs a DSP.",
   noFrontEnd:

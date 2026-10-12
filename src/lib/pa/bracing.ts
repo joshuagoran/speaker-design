@@ -80,7 +80,7 @@ export interface PaBoxSupports {
   bottomZ?: number[];
   /**
    * back from the baffle (z), by panel: where a horn's flare built into the box leaves the panel, its wall glued to it
-   * holds the panel in a line across it (a Designer chamber's horn; none in the PA boxes)
+   * holds the panel in a line across it (a Speaker-page chamber's horn; none in the PA boxes)
    */
   flareZ?: Partial<Record<FlarePanel, number[]>>;
   /** a bottom slot's fins' height where they run the whole depth: the `bottom` lines are those fins */

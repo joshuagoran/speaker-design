@@ -10,8 +10,8 @@ export const PAGE_HASHES = {
   notes: "#notes",
   hifi: "#hifi",
   hifiCutlist: "#hifi-cutlist",
-  designerCutlist: "#designer-cutlist",
-  designer: "#designer",
+  speakerCutlist: "#speaker-cutlist",
+  speaker: "#speaker",
   stack: "#stack",
   space: "#space",
 } as const;
@@ -21,8 +21,8 @@ export type AppPage = keyof typeof PAGE_HASHES;
 export const PROJECT_NAMES = {
   pa: "PA Stack",
   hifi: "Hi-fi",
-  /** the speaker designer: any single box (docs/speaker-designer-plan.md, L3) */
-  designer: "Designer",
+  /** the Speaker page: any single box (docs/speaker-designer-plan.md, L3) */
+  speaker: "Speaker",
   /** speakers in a fixed relationship (docs/speaker-designer-plan.md, L4a) */
   stack: "Stack",
   /** stacks and speakers placed in a room (docs/speaker-designer-plan.md, L4b) */
@@ -34,7 +34,7 @@ export type ProjectId = keyof typeof PROJECT_NAMES;
 export const PROJECT_NAV_LABELS: Record<ProjectId, string> = {
   pa: "PA stack pages",
   hifi: "Hi-fi pages",
-  designer: "Designer pages",
+  speaker: "Speaker pages",
   stack: "Stack pages",
   space: "Space pages",
 };
@@ -52,9 +52,9 @@ export const PROJECT_PAGES = {
     ["hifi", "Design"],
     ["hifiCutlist", "Cutlist"],
   ],
-  designer: [
-    ["designer", "Design"],
-    ["designerCutlist", "Cutlist"],
+  speaker: [
+    ["speaker", "Design"],
+    ["speakerCutlist", "Cutlist"],
   ],
   stack: [["stack", "Design"]],
   space: [["space", "Design"]],

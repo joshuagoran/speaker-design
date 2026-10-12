@@ -1,4 +1,4 @@
-// The Designer's one-line summaries, built from the spec and the catalog.
+// The Speaker page's one-line summaries, built from the spec and the catalog.
 import type {
   BandFilter,
   BoxBracing,
@@ -9,14 +9,14 @@ import type {
 } from "../../types";
 import { formatDims, formatHz, formatWatts } from "../../lib/format";
 import {
-  DESIGNER_TEXT,
+  SPEAKER_TEXT,
   HORN_DRIVE_NAMES,
   HORN_PATH_NAMES,
   PORT_SHAPE_NAMES,
   VENT_KIND_NAMES,
-} from "../../constants/designer";
+} from "../../constants/speakerPage";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
-import { driverName } from "./designerParts";
+import { driverName } from "./speakerParts";
 import { pathIn } from "./hornSections";
 
 /** "1 chamber", "2 chambers". */
@@ -91,5 +91,5 @@ export function bracingText(bracing: Pick<BoxBracing, "windows" | "ribs">): stri
     windows > 0 && countText(windows, "window brace", "window braces"),
     ribs > 0 && countText(ribs, "rib", "ribs"),
   ].filter((p): p is string => !!p);
-  return parts.length ? parts.join(", ") : DESIGNER_TEXT.noBraces;
+  return parts.length ? parts.join(", ") : SPEAKER_TEXT.noBraces;
 }

@@ -1,6 +1,6 @@
 // Cutlist for the Hi-fi speaker: the box's six panels at its wall thickness, the slot shelf, and the cutouts and
 // bought parts as notes on their rows. lib/pa/cutlist lays them out on sheets as it does the PA boxes. The flush box's
-// panels and notes are shared with the Designer's flush cabinets (lib/speaker/speakerBuild).
+// panels and notes are shared with the Speaker page's flush cabinets (lib/speaker/speakerBuild).
 import type {
   CornerJoint,
   CutBoxId,

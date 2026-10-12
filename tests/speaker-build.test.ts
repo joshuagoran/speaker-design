@@ -1,4 +1,4 @@
-// The Designer's build of any speaker spec (lib/speaker/speakerBuild) against the PA and Hi-fi pages: the read
+// The Speaker page's build of any speaker spec (lib/speaker/speakerBuild) against the PA and Hi-fi pages: the read
 // adapters' specs of the golden designs give the PA page's bracing, net air, cutlist and weights, and the Hi-fi page's
 // cutlist and weight; and the general rules (shared walls, one shell, an arched top, a horn-loaded chamber).
 import { test } from "vite-plus/test";
@@ -18,8 +18,8 @@ import {
   speakerLayout,
 } from "../src/lib/speaker/speakerLayout";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
-import { DESIGNER_TEMPLATES, templateSpeaker } from "../src/pages/designer/designerTemplates";
-import { DESIGNER_TEXT } from "../src/constants/designer";
+import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { SPEAKER_TEXT } from "../src/constants/speakerPage";
 import { hifiCutParts } from "../src/lib/hifi/cutlist";
 import { RADIATOR_PANEL } from "../src/lib/hifi/hifi";
 import {
@@ -417,7 +417,7 @@ test("speaker build: a horn sits in the baffle or on the top wherever it fits, w
 test("speaker build: a horn that no longer fits where it is mounted is left out, and said so", () => {
   // every read adapter's and template's horn fits where it is set
   const specs = [
-    ...DESIGNER_TEMPLATES.map(templateSpeaker),
+    ...SPEAKER_TEMPLATES.map(templateSpeaker),
     ...configs.flatMap(
       (c) => layersFromPa(paDesign(c), { id: "pa", name: c.name }, PA_FLOOR).speakers,
     ),
@@ -440,7 +440,7 @@ test("speaker build: a horn that no longer fits where it is mounted is left out,
   const hornDriver = mid.drivers.find((d) => d.horn);
   assert.ok(hornDriver && !hornFitsWhereSet(low, hornDriver));
   const baffle = speakerCutParts(stacked, "butt").parts.find((p) => p.part === "baffle");
-  assert.ok(baffle && baffle.note.includes(DESIGNER_TEXT.hornNoFitNote));
+  assert.ok(baffle && baffle.note.includes(SPEAKER_TEXT.hornNoFitNote));
   // no binding posts for a horn that isn't there
   const plan = cabinetBuild(stacked).chambers[0].hardware;
   assert.ok(plan && !plan.parts.some((p) => p.kind === "posts"));

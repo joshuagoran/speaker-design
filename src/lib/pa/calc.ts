@@ -916,7 +916,7 @@ export interface BraceInputs {
   hole?: PlateHole;
   /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined;
-  /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ, or a Designer cabinet's own */
+  /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ, or a Speaker-page cabinet's own */
   targetHz: number;
 }
 /**
@@ -964,7 +964,7 @@ export function subBoxBracing(
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
   back: BackJointId = DEFAULT_BACK_JOINT,
-  /** every panel's first mode should clear it, Hz (a Designer cabinet's own target) */
+  /** every panel's first mode should clear it, Hz (a Speaker-page cabinet's own target) */
   targetHz: number = PA_PANEL_TARGET_HZ,
 ): BoxBracing {
   const bs = braceStyle ?? defaultBraceStyleNear(t);

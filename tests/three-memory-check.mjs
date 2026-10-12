@@ -1,37 +1,37 @@
-// GPU memory check for the 3D views (the PA stack's, the Hi-fi speaker's and the Designer's), run in CI after the build
+// GPU memory check for the 3D views (the PA stack's, the Hi-fi speaker's and the Speaker page's), run in CI after the build
 // (not part of `vp test`).
 //   node tests/three-memory-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE, PW_CHROMIUM as for tests/mobile-check.mjs.
-// On each page, rebuilds its 3D view many times (its first slider, or the Designer's first number field, stepped up and
+// On each page, rebuilds its 3D view many times (its first slider, or the Speaker page's first number field, stepped up and
 // back) and fails if the live geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
 // canvas (one WebGL renderer for the component's life).
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts.ts";
-import { DESIGNER_START_NAMES, DESIGNER_START_TEXT } from "../src/constants/designerStarts.ts";
+import { SPEAKER_START_NAMES, SPEAKER_START_TEXT } from "../src/constants/speakerStarts.ts";
 
 const REBUILDS = 30;
-/** The pages with a 3D view: the PA stack (the default view), Hi-fi and the Designer, and the control each steps. */
+/** The pages with a 3D view: the PA stack (the default view), Hi-fi and the Speaker page, and the control each steps. */
 const SLIDER = { control: 'input[type="range"]', up: "ArrowRight", down: "ArrowLeft" };
 const VIEWS = [
   { name: "PA", hash: "", ...SLIDER },
   { name: "Hi-fi", hash: "#hifi", ...SLIDER },
-  // the PA tower started in the Designer (horns, a vent, shared walls), its first chamber's width stepped: one shell, then a
+  // the PA tower started on the Speaker page (horns, a vent, shared walls), its first chamber's width stepped: one shell, then a
   // stepped one
   {
-    name: "Designer",
+    name: "Speaker",
     hash: "",
     control: 'input[type="number"]',
     up: "ArrowUp",
     down: "ArrowDown",
     prepare: async (page) => {
       await page.getByRole("button", { name: PA_LAYOUT_NAMES.tower, exact: true }).first().click();
-      await page.evaluate(() => (location.hash = "#designer"));
+      await page.evaluate(() => (location.hash = "#speaker"));
       await page
-        .getByLabel(DESIGNER_START_TEXT.startFrom)
-        .selectOption({ label: DESIGNER_START_NAMES.paTower });
-      await page.getByRole("button", { name: DESIGNER_START_TEXT.startOver }).click();
+        .getByLabel(SPEAKER_START_TEXT.startFrom)
+        .selectOption({ label: SPEAKER_START_NAMES.paTower });
+      await page.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
       // built empty when the page opens, then as the tower
       await page.waitForFunction(
         () => Number(document.querySelector("[data-geometries]")?.dataset.rebuilds) >= 2,

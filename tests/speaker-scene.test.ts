@@ -1,4 +1,4 @@
-// The Designer's 3D scene of any speaker spec (stack-view/buildSpeakerScene), built from the read adapters' specs of
+// The Speaker page's 3D scene of any speaker spec (stack-view/buildSpeakerScene), built from the read adapters' specs of
 // golden PA and Hi-fi designs (the PA sub, the mid/high box, the tower, a Hi-fi speaker on a waveguide, a coaxial):
 // each chamber, driver, horn and port where the spec and its layout (lib/speaker/speakerLayout) put them, the walls the
 // tower's chambers share, a horn-loaded chamber's mouth and flare, and every geometry the build makes reachable from the
@@ -90,7 +90,7 @@ function paSpeaker(c: GoldenConfig, part: SpeakerPart): SpeakerSpec {
 const hifiSpeaker = (over: Partial<HifiDesignState>) =>
   speakerFromHifi({ ...DEFAULT_HIFI, ...over }, DEFAULT_HIFI_LOOK, IDENTITY);
 
-/** The spec with its waveguide moved off the top into the baffle, near the top (as the Designer can set it). */
+/** The spec with its waveguide moved off the top into the baffle, near the top (as the Speaker page can set it). */
 function inBaffle(spec: SpeakerSpec): SpeakerSpec {
   const [chamber] = spec.cabinet.chambers;
   return {

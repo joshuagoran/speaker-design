@@ -31,15 +31,15 @@ export const CUTLIST_SETTINGS_SECTIONS = {
 } as const;
 export type CutlistSettingsSection = keyof typeof CUTLIST_SETTINGS_SECTIONS;
 
-/** The Designer settings column's fold sections, by id, and the name each shows. */
-export const DESIGNER_SETTINGS_SECTIONS = {
+/** The Speaker page settings column's fold sections, by id, and the name each shows. */
+export const SPEAKER_SETTINGS_SECTIONS = {
   speaker: "Speaker",
   construction: "Construction",
   chambers: "Chambers and drivers",
   bands: "Bands and filters",
   look: "Look",
 } as const;
-export type DesignerSettingsSection = keyof typeof DESIGNER_SETTINGS_SECTIONS;
+export type SpeakerSettingsSection = keyof typeof SPEAKER_SETTINGS_SECTIONS;
 
 /** The Stack settings column's fold sections, by id, and the name each shows. */
 export const STACK_SETTINGS_SECTIONS = {

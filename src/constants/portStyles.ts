@@ -1,6 +1,6 @@
 import type { PortStyle } from "../types";
 
-/** The sub's port styles, by what each is: the ids the Designer's views read a spec's PA port as. */
+/** The sub's port styles, by what each is: the ids the Speaker page's views read a spec's PA port as. */
 export const PORT_STYLE = {
   slot: "slots",
   twoDucts: "vslots",

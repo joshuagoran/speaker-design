@@ -1,17 +1,17 @@
-// The Designer's templates (src/pages/designer/designerTemplates) and the L3e cabinet settings: each template builds a
+// The Speaker page's templates (src/pages/speaker/speakerTemplates) and the L3e cabinet settings: each template builds a
 // spec the speaker model takes whole, with the chambers, drivers and bands it promises; the PA v2 boxes reach the horn
 // engine; and the construction, top and positions survive a save (the library stores the spec as JSON).
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { DESIGNER_TEMPLATES, templateSpeaker } from "../src/pages/designer/designerTemplates";
-import { designerStarts, isTemplate, startSpeaker } from "../src/pages/designer/designerStarts";
+import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { speakerStarts, isTemplate, startSpeaker } from "../src/pages/speaker/speakerStarts";
 import {
   mouthPlace,
   ventPlace,
   withMouthPosition,
   withVentPosition,
-} from "../src/pages/designer/designerPlaces";
-import { DEFAULT_VENTS } from "../src/pages/designer/designerParts";
+} from "../src/pages/speaker/speakerPlaces";
+import { DEFAULT_VENTS } from "../src/pages/speaker/speakerParts";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
@@ -34,13 +34,13 @@ import {
   PA_V2_MID_BOX,
   PA_V2_SUB_BIN,
 } from "../src/lib/defaults";
-import { defaultPaDesign } from "../src/pages/designer/designerTemplates";
+import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import {
-  DESIGNER_START,
-  DESIGNER_START_SPEAKER_NAMES,
-  DESIGNER_TEMPLATE,
-  type DesignerTemplate,
-} from "../src/constants/designerStarts";
+  SPEAKER_START,
+  SPEAKER_START_SPEAKER_NAMES,
+  SPEAKER_TEMPLATE,
+  type SpeakerTemplate,
+} from "../src/constants/speakerStarts";
 import {
   CABINET_CONSTRUCTION,
   CABINET_TOP,
@@ -57,10 +57,10 @@ import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { PANEL } from "../src/constants/cutParts";
 import { CM_PER_IN, LITERS_PER_CUBIC_IN, MM_PER_IN } from "../src/constants/units";
 import type { DriverKind, SpeakerChamber, SpeakerSpec } from "../src/types";
-import { DRAFT_SPEAKER_ID } from "../src/pages/designer/useDesigner";
+import { DRAFT_SPEAKER_ID } from "../src/pages/speaker/useSpeakerPage";
 
 /** What each template promises: its chambers' driver kinds (each entry once per driver), and its bands. */
-const EXPECTED: Record<DesignerTemplate, { chambers: DriverKind[][]; bands: string[] }> = {
+const EXPECTED: Record<SpeakerTemplate, { chambers: DriverKind[][]; bands: string[] }> = {
   empty: { chambers: [[]], bands: [SPEAKER_BAND.low] },
   paSubBox: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
   paMidHighBox: {
@@ -93,7 +93,7 @@ const EXPECTED: Record<DesignerTemplate, { chambers: DriverKind[][]; bands: stri
 /** The spec as a save stores it and the library opens it again: JSON, undefined fields dropped. */
 const saved = (spec: SpeakerSpec): SpeakerSpec => JSON.parse(JSON.stringify(spec));
 
-/** The model of a spec with its own input range, as the Designer runs it. */
+/** The model of a spec with its own input range, as the Speaker page runs it. */
 const modelOf = (spec: SpeakerSpec) => {
   const response = speakerResponse(spec, { feed: spec.input });
   return { response, limits: speakerLimits(spec, response, { feed: spec.input }) };
@@ -114,12 +114,12 @@ function onlyChamber(spec: SpeakerSpec): SpeakerChamber {
   return chamber;
 }
 
-test("designer templates: each builds a draft spec the model takes whole, with its chambers, drivers and bands", () => {
-  assert.deepEqual([...DESIGNER_TEMPLATES].sort(), Object.values(DESIGNER_TEMPLATE).sort());
-  for (const template of DESIGNER_TEMPLATES) {
+test("speaker templates: each builds a draft spec the model takes whole, with its chambers, drivers and bands", () => {
+  assert.deepEqual([...SPEAKER_TEMPLATES].sort(), Object.values(SPEAKER_TEMPLATE).sort());
+  for (const template of SPEAKER_TEMPLATES) {
     const spec = templateSpeaker(template);
     assert.equal(spec.id, DRAFT_SPEAKER_ID, template);
-    assert.equal(spec.name, DESIGNER_START_SPEAKER_NAMES[template], template);
+    assert.equal(spec.name, SPEAKER_START_SPEAKER_NAMES[template], template);
     // a template sets only the first values: the spec carries no template or role
     assert.deepEqual(
       Object.keys(spec).sort(),
@@ -161,20 +161,20 @@ test("designer templates: each builds a draft spec the model takes whole, with i
   }
 });
 
-test("designer templates: the picker lists every template, then the current designs", () => {
-  const starts = designerStarts(DEFAULT_PA.layout);
-  assert.deepEqual(starts.filter(isTemplate), [...DESIGNER_TEMPLATES]);
+test("speaker templates: the picker lists every template, then the current designs", () => {
+  const starts = speakerStarts(DEFAULT_PA.layout);
+  assert.deepEqual(starts.filter(isTemplate), [...SPEAKER_TEMPLATES]);
   assert.deepEqual(
     starts.filter((s) => !isTemplate(s)),
-    [DESIGNER_START.hifi, DESIGNER_START.paSub, DESIGNER_START.paTop],
+    [SPEAKER_START.hifi, SPEAKER_START.paSub, SPEAKER_START.paTop],
   );
-  assert.ok(designerStarts("tower").includes(DESIGNER_START.paTower));
+  assert.ok(speakerStarts("tower").includes(SPEAKER_START.paTower));
 });
 
-test("designer templates: the PA v2 sub bin's drivers share one throat, and the horn engine models it", () => {
+test("speaker templates: the PA v2 sub bin's drivers share one throat, and the horn engine models it", () => {
   for (const [template, count] of [
-    [DESIGNER_TEMPLATE.paV2SubBinOne, 1],
-    [DESIGNER_TEMPLATE.paV2SubBinTwo, 2],
+    [SPEAKER_TEMPLATE.paV2SubBinOne, 1],
+    [SPEAKER_TEMPLATE.paV2SubBinTwo, 2],
   ] as const) {
     const spec = templateSpeaker(template);
     const chamber = onlyChamber(spec);
@@ -221,8 +221,8 @@ test("designer templates: the PA v2 sub bin's drivers share one throat, and the 
   }
 });
 
-test("designer templates: the PA v2 mid box has two 10″ in one throat, tuned to ~95 Hz, crossed at the R-OSSE", () => {
-  const spec = templateSpeaker(DESIGNER_TEMPLATE.paV2MidBox);
+test("speaker templates: the PA v2 mid box has two 10″ in one throat, tuned to ~95 Hz, crossed at the R-OSSE", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2MidBox);
   const chamber = onlyChamber(spec);
   const result = hornDesignOf(chamber, { count: 1, angle: 2 });
   assert.ok(result.ok);
@@ -240,18 +240,18 @@ test("designer templates: the PA v2 mid box has two 10″ in one throat, tuned t
   assert.equal(spec.input.highpass?.hz, DEFAULT_PA.xoLo);
 });
 
-test("designer templates: the booth monitors cross to the subs at 70 Hz LR24 and cover 90–100°", () => {
-  for (const template of [DESIGNER_TEMPLATE.monitorCoax, DESIGNER_TEMPLATE.monitorHorn]) {
+test("speaker templates: the booth monitors cross to the subs at 70 Hz LR24 and cover 90–100°", () => {
+  for (const template of [SPEAKER_TEMPLATE.monitorCoax, SPEAKER_TEMPLATE.monitorHorn]) {
     const spec = templateSpeaker(template);
     assert.deepEqual(spec.input, { highpass: { hz: 70, type: "LR24" }, lowpass: null }, template);
     assert.equal(DEFAULT_MONITOR.highpass.hz, 70);
   }
-  const coax = onlyChamber(templateSpeaker(DESIGNER_TEMPLATE.monitorCoax));
+  const coax = onlyChamber(templateSpeaker(SPEAKER_TEMPLATE.monitorCoax));
   assert.equal(coax.drivers[0].driverId, DEFAULT_MONITOR.coax.id);
   const cov = DEFAULT_MONITOR.coax.hf?.cov ?? 0;
   assert.ok(cov >= 90 && cov <= 100, `${cov}°`);
   // the 8″ + horn: the horn in the baffle, tight above the woofer, crossed at 2.5 kHz
-  const spec = templateSpeaker(DESIGNER_TEMPLATE.monitorHorn);
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.monitorHorn);
   const horn = onlyChamber(spec);
   const woofer = horn.drivers.find((d) => d.kind === DRIVER_KIND.woofer);
   const tweeter = horn.drivers.find((d) => d.kind === DRIVER_KIND.tweeter);
@@ -265,8 +265,8 @@ test("designer templates: the booth monitors cross to the subs at 70 Hz LR24 and
   assert.equal(spec.bands[0].lowpass?.hz, DEFAULT_MONITOR.crossoverHz);
 });
 
-test("designer templates: the tower with the horn on top keeps an adjustable mid chamber and a flat top", () => {
-  const spec = templateSpeaker(DESIGNER_TEMPLATE.paTowerTopHorn);
+test("speaker templates: the tower with the horn on top keeps an adjustable mid chamber and a flat top", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paTowerTopHorn);
   const [sub, mid] = spec.cabinet.chambers;
   assert.equal(mid.dims.h, TOWER_MID_HEIGHT_IN);
   assert.equal(mid.at.yIn, sub.dims.h);
@@ -292,14 +292,14 @@ test("designer templates: the tower with the horn on top keeps an adjustable mid
   };
   assert.ok(air(taller) > air(spec) + 10);
   // the PA's own tower keeps its horn in the baffle under the arched top, and draws the arch
-  const arched = templateSpeaker(DESIGNER_TEMPLATE.paTowerBaffleHorn);
+  const arched = templateSpeaker(SPEAKER_TEMPLATE.paTowerBaffleHorn);
   assert.equal(arched.cabinet.top, CABINET_TOP.arched);
   assert.ok(drawsArchedTop(arched.cabinet, speakerLayout(arched.cabinet)));
 });
 
-test("designer settings: construction, top, a vent's and a mouth's positions survive a save", () => {
+test("speaker settings: construction, top, a vent's and a mouth's positions survive a save", () => {
   // construction and top
-  const base = templateSpeaker(DESIGNER_TEMPLATE.monitorCoax);
+  const base = templateSpeaker(SPEAKER_TEMPLATE.monitorCoax);
   const framed: SpeakerSpec = {
     ...base,
     cabinet: {
@@ -356,13 +356,13 @@ test("designer settings: construction, top, a vent's and a mouth's positions sur
   assert.ok(setRadiators.kind === VENT_KIND.radiator && setRadiators.position?.xIn === 0.5);
 
   // the PA's ports keep their rule's place: flared tubes, the letterbox, side ducts
-  const paSub = onlyChamber(templateSpeaker(DESIGNER_TEMPLATE.paSubBox));
-  const paCabinet = templateSpeaker(DESIGNER_TEMPLATE.paSubBox).cabinet;
+  const paSub = onlyChamber(templateSpeaker(SPEAKER_TEMPLATE.paSubBox));
+  const paCabinet = templateSpeaker(SPEAKER_TEMPLATE.paSubBox).cabinet;
   assert.equal(ventPlace(paCabinet, speakerLayout(paCabinet).chambers[0]), null);
   assert.equal(withVentPosition(paSub.vent, position), paSub.vent);
 
   // a horn mouth: Auto on the clear face's center; Custom moves it, inside the face
-  const bin = templateSpeaker(DESIGNER_TEMPLATE.paV2MidBox);
+  const bin = templateSpeaker(SPEAKER_TEMPLATE.paV2MidBox);
   const binPlaced = speakerLayout(bin.cabinet).chambers[0];
   const mouth = mouthPlace(bin.cabinet, binPlaced);
   assert.ok(mouth && mouth.position === undefined);
