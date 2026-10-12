@@ -4,7 +4,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
 import {
-  STACKS,
+  PA_FLOOR,
   atModelVolts,
   bandCurve,
   hifiCases,
@@ -206,7 +206,7 @@ test("speaker model: the golden PA designs match the PA models (sub, mid and hor
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
-    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
     const models = paModels(cfg);
     const subSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.sub);
     const topSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
@@ -427,7 +427,7 @@ test("speaker model: the PA top and tower sum their chambers' cones and the horn
   for (const seed of [stack, towerSeed]) {
     const cfg = paDesign(seed);
     const tower = cfg.layout === "tower";
-    const read = layersFromPa(cfg, { id: "pa", name: seed.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: seed.name }, PA_FLOOR);
     const { spec, feed } = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
     const models = paModels(cfg);
     const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);

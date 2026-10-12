@@ -11,7 +11,6 @@
 // The modal sum stops at a highest mode, which smooths the field within about a wavelength of that mode around each
 // driver; the swapped terms don't change that.
 import type { Complex } from "../../types";
-import type { StackBand } from "./dispersion";
 
 const C = 343;
 
@@ -27,7 +26,8 @@ export interface RoomModes {
 
 /** A driver as the modal sum sees it: a monopole at its place in the room, its mode shapes there, its images. */
 export interface ModalSource {
-  band: StackBand;
+  /** the radiator it is (lib/pa/coverage `CoverageVoice.id`): its output comes with each frequency */
+  voice: string;
   /** how much the box's DSP delays it, as a path length, m (see SceneSource.alignM) */
   alignM: number;
   /** cos(n π x / Lx) at the driver, n from 0, and likewise along y and z */
@@ -119,7 +119,7 @@ export function axisCos(
 /** A driver at (x, y, z) in the room (m, origin in a floor corner), ready for the modal sum. */
 export function modalSource(
   modes: RoomModes,
-  band: StackBand,
+  voice: ModalSource["voice"],
   alignM: number,
   x: number,
   y: number,
@@ -133,7 +133,7 @@ export function modalSource(
     images[3 * i + 2] = AXIS_IMAGES[axes[2]].at(z, H);
   }
   return {
-    band,
+    voice,
     alignM,
     cx: axisCos(modes.n[0], W, x),
     cy: axisCos(modes.n[1], L, y),

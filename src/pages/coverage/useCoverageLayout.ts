@@ -56,10 +56,6 @@ export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
   listener: { x: 3, y: 24 },
 };
 
-/** Room size limits, ft. */
-export const ROOM_WIDTH_FT: [number, number] = [16, 80];
-export const ROOM_LENGTH_FT: [number, number] = [16, 100];
-export const ROOM_CEILING_FT: [number, number] = [8, 40];
 /** How far the stacks may turn either way, degrees. */
 const MAX_AIM_DEG = 60;
 

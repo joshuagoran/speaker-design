@@ -1,5 +1,7 @@
 // The speaker designer's spec (lib/speaker): every golden design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
+import { PA_FLOOR } from "./speaker-cases";
+import { SPACE_SEAT_AREA } from "../src/constants/space";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs, fillConfigs, type GoldenConfig } from "./golden-configs";
@@ -59,7 +61,6 @@ import {
 } from "../src/constants/speakerSpec";
 import type {
   BandId,
-  CoverageLayout,
   DesignLayers,
   DriverKind,
   FillDesignState,
@@ -74,12 +75,6 @@ import type {
   SpeakerPort,
   SpeakerSpec,
 } from "../src/types";
-
-/** The coverage page's stack spots, left then right (its default layout's). */
-const STACKS: CoverageLayout["stacks"] = [
-  { x: -9, y: 3, aim: 12 },
-  { x: 9, y: 3, aim: -12 },
-];
 
 /**
  * A golden PA design as the planner holds it: the search's defaults, and what the planner sets that an older seed
@@ -151,7 +146,7 @@ const paCases: GoldenConfig[] = [
 test("speaker spec: every golden PA design reads into a stack with its boxes, drivers, vents and crossovers", () => {
   for (const c of paCases) {
     const cfg = paDesign(c);
-    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
     const { stack, space, speakers } = read;
     const tower = cfg.layout === "tower";
     assert.equal(stack.members.length, PA_MEMBER_COUNT[cfg.layout], c.name);
@@ -262,7 +257,7 @@ test("speaker spec: every golden PA design reads into a stack with its boxes, dr
 test("speaker spec: a tower whose round horn is narrower than the cabinet has an arched top", () => {
   const tower = paCases.map(paDesign).find((cfg) => cfg.layout === "tower" && towerArches(cfg));
   assert.ok(tower, "a golden tower with an arched top");
-  const [spec] = layersFromPa(tower, { id: "pa", name: "tower" }, STACKS).speakers;
+  const [spec] = layersFromPa(tower, { id: "pa", name: "tower" }, PA_FLOOR).speakers;
   assert.equal(spec.cabinet.top, CABINET_TOP.arched);
 });
 
@@ -271,7 +266,7 @@ test("speaker spec: the tower's chambers stack in one shell and share their part
   assert.ok(seed, "a tower seed");
   const cfg = paDesign(seed);
   const tower = speakerOf(
-    layersFromPa(cfg, { id: "pa", name: "tower" }, STACKS),
+    layersFromPa(cfg, { id: "pa", name: "tower" }, PA_FLOOR),
     SPEAKER_PART.tower,
   );
   const [subChamber, midChamber, hornChamber] = tower.cabinet.chambers;
@@ -307,7 +302,7 @@ test("speaker spec: the tower's chambers stack in one shell and share their part
 test("speaker spec: each PA layout stands the tops where the planner draws them, a channel each", () => {
   const base = paDesign(configs[0]);
   const read = (layout: PaLayout, spacerH = base.spacerH) =>
-    layersFromPa({ ...base, layout, spacerH }, { id: "pa", name: "layout" }, STACKS);
+    layersFromPa({ ...base, layout, spacerH }, { id: "pa", name: "layout" }, PA_FLOOR);
   const topOf = (r: DesignLayers) => {
     const top = r.stack.members.find((m) => m.speakerId === speakerOf(r, SPEAKER_PART.top).id);
     assert.ok(top);
@@ -322,8 +317,8 @@ test("speaker spec: each PA layout stands the tops where the planner draws them,
   assert.deepEqual(
     stack.space.placements.map((p) => [p.item, p.x, p.mirror]),
     [
-      [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, STACKS[0].x, false],
-      [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, STACKS[1].x, true],
+      [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, PA_FLOOR.stacks[0].x, false],
+      [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, PA_FLOOR.stacks[1].x, true],
     ],
   );
   // each amp's channels in order: the left stack's sub, then its top; the right stack's
@@ -353,8 +348,8 @@ test("speaker spec: each PA layout stands the tops where the planner draws them,
       .filter((p) => p.item.id === topId)
       .map((p) => [p.item.kind, p.liftIn, p.x, p.mirror]),
     [
-      [SPACE_ITEM.speaker, SATELLITE_COLUMN_H_IN, STACKS[0].x, false],
-      [SPACE_ITEM.speaker, SATELLITE_COLUMN_H_IN, STACKS[1].x, true],
+      [SPACE_ITEM.speaker, SATELLITE_COLUMN_H_IN, PA_FLOOR.stacks[0].x, false],
+      [SPACE_ITEM.speaker, SATELLITE_COLUMN_H_IN, PA_FLOOR.stacks[1].x, true],
     ],
   );
 });
@@ -519,10 +514,22 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
     const read = layersFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
     const { space, stack } = read;
     assert.deepEqual(
-      space.placements.map((p) => [p.x, p.y, p.aim, p.mirror]),
+      space.placements.map((p) => [p.x, p.y, p.aim, p.mirror, p.follows]),
       [
-        [-state.speakerSpacingFt / 2, state.distanceToWallFt, state.toeInDeg, false],
-        [state.speakerSpacingFt / 2, state.distanceToWallFt, -state.toeInDeg, true],
+        [
+          -state.speakerSpacingFt / 2,
+          state.distanceToWallFt,
+          { yawDeg: state.toeInDeg, pitchDeg: 0 },
+          false,
+          null,
+        ],
+        [
+          state.speakerSpacingFt / 2,
+          state.distanceToWallFt,
+          { yawDeg: -state.toeInDeg, pitchDeg: 0 },
+          true,
+          0,
+        ],
       ],
       name,
     );
@@ -553,18 +560,13 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
       name,
     );
     // the seat: the listening distance in front of the speakers, across as set
-    assert.deepEqual(
-      space.venue,
-      {
-        placement: state.placement,
-        listener: {
-          x: state.listeningSeat.x,
-          y: state.distanceToWallFt + state.listeningSeat.y,
-        },
-        earIn: state.earHeightIn,
-      },
-      name,
-    );
+    const seat = { x: state.listeningSeat.x, y: state.distanceToWallFt + state.listeningSeat.y };
+    assert.deepEqual(space.venue.listener, seat, name);
+    assert.equal(space.venue.earFt, state.earHeightIn / 12, name);
+    // a living room round the pair and the seat, the listening area at the seat
+    assert.deepEqual(space.venue.area, { ...seat, ...SPACE_SEAT_AREA }, name);
+    assert.ok(space.venue.room.widthFt >= state.speakerSpacingFt, name);
+    assert.ok(space.venue.room.lengthFt > seat.y, name);
   }
 });
 
@@ -743,7 +745,7 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
     HORN_ENGINE_GAP.vent,
   );
   // today's PA boxes: the box models work out their net air; the mid/high box holds two kinds of driver
-  const read = layersFromPa(paDesign(configs[0]), { id: "pa", name: "gaps" }, STACKS);
+  const read = layersFromPa(paDesign(configs[0]), { id: "pa", name: "gaps" }, PA_FLOOR);
   assert.equal(
     gapOf(chamberOf(speakerOf(read, SPEAKER_PART.sub), DRIVER_KIND.sub)),
     HORN_ENGINE_GAP.netLiters,

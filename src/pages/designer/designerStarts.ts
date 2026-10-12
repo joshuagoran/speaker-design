@@ -68,7 +68,7 @@ function currentSpeaker(start: DesignerCurrentStart, sources: DesignerSources): 
     case DESIGNER_CURRENT_START.paTop:
     case DESIGNER_CURRENT_START.paTower: {
       // the speakers alone are read: where the stacks stand (the coverage page's) doesn't change them
-      const read = layersFromPa(sources.pa, identity, DEFAULT_COVERAGE_LAYOUT.stacks);
+      const read = layersFromPa(sources.pa, identity, DEFAULT_COVERAGE_LAYOUT);
       const id = speakerIdentity(identity, PA_START_PARTS[start]).id;
       const found = read.speakers.find((s) => s.id === id);
       // a PA start the layout doesn't have (paStarts offers only the layout's): the empty speaker

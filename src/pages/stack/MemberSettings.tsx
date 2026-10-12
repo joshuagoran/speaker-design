@@ -11,6 +11,7 @@ import { entriesOf } from "../../lib/records";
 import { SET_BY, SET_BY_NAMES } from "../../constants/designer";
 import { AUTO_DELAY } from "../../constants/speakerSpec";
 import { STACK_TEXT } from "../../constants/stack";
+import { SPACE_PITCH_DEG } from "../../constants/space";
 import { FIELD_ROW, shownIn } from "../designer/designerFields";
 
 interface Props {
@@ -68,6 +69,14 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
           value={shownIn(pose.zIn)}
           step={0.5}
           onChange={(zIn) => setPose({ zIn })}
+        />
+        <NumberField
+          label={<Tooltip tip={STACK_TEXT.tiltTip}>{STACK_TEXT.tilt}</Tooltip>}
+          value={pose.pitchDeg}
+          min={-SPACE_PITCH_DEG}
+          max={SPACE_PITCH_DEG}
+          step={1}
+          onChange={(pitchDeg) => setPose({ pitchDeg })}
         />
       </div>
       <ToggleButton

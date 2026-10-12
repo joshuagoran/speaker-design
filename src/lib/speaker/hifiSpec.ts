@@ -43,11 +43,14 @@ import {
   flushBracing,
   NO_FILTERS,
   channelCounter,
+  homeVenue,
   lrFilter,
+  spacePlacement,
   speakerIdentity,
   stackMember,
   stuffingPctOf,
 } from "./specParts";
+import { INCHES_PER_FOOT } from "../../constants/units";
 
 /**
  * The box's vent, by box kind. A round port carries its elbows as the model works them out (the fewest that fit the
@@ -265,22 +268,21 @@ export function layersFromHifi(
     lowpass: null,
   };
   const channel = channelCounter();
-  /** the speaker's stack at `side` -1 (left) or 1 (right) of the middle */
-  const placement = (side: -1 | 1): SpacePlacement => ({
-    x: (side * state.speakerSpacingFt) / 2,
-    y: state.distanceToWallFt,
-    // toed in: the left one turns toward +x, the right one toward −x
-    aim: -side * state.toeInDeg,
-    item: { kind: SPACE_ITEM.stack, id: design.id },
-    liftIn: state.standHeightIn,
-    mirror: side === 1,
-    channels: passive
-      ? [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low, SPEAKER_BAND.high])]
-      : [
-          channel(SPEAKER_BAND.low, [SPEAKER_BAND.low]),
-          channel(SPEAKER_BAND.high, [SPEAKER_BAND.high]),
-        ],
-  });
+  /** the speaker's stack at `side` -1 (left) or 1 (right) of the middle; the right one follows the left */
+  const placement = (side: -1 | 1): SpacePlacement =>
+    spacePlacement(
+      { x: (side * state.speakerSpacingFt) / 2, y: state.distanceToWallFt },
+      { kind: SPACE_ITEM.stack, id: design.id },
+      state.standHeightIn,
+      passive
+        ? [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low, SPEAKER_BAND.high])]
+        : [
+            channel(SPEAKER_BAND.low, [SPEAKER_BAND.low]),
+            channel(SPEAKER_BAND.high, [SPEAKER_BAND.high]),
+          ],
+      // toed in: the left one turns toward +x, the right one toward −x
+      { yawDeg: -side * state.toeInDeg, mirror: side === 1, follows: side === 1 ? 0 : null },
+    );
   return {
     speakers: [speaker],
     stack: { ...design, members: [stackMember(speaker.id, crossover)], notes: "" },
@@ -289,15 +291,12 @@ export function layersFromHifi(
       placements: [placement(-1), placement(1)],
       amps,
       frontEnd: passive && !subHighpass ? null : { kind: FRONT_END_KIND.digital, dspId: null },
-      venue: {
-        placement: state.placement,
-        // the seat is `listeningSeat.y` back from the speakers
-        listener: {
-          x: state.listeningSeat.x,
-          y: state.distanceToWallFt + state.listeningSeat.y,
-        },
-        earIn: state.earHeightIn,
-      },
+      // the seat is `listeningSeat.y` back from the speakers
+      venue: homeVenue(
+        state.speakerSpacingFt,
+        { x: state.listeningSeat.x, y: state.distanceToWallFt + state.listeningSeat.y },
+        state.earHeightIn / INCHES_PER_FOOT,
+      ),
     },
   };
 }

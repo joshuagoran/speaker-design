@@ -13,6 +13,7 @@ export const PAGE_HASHES = {
   designerCutlist: "#designer-cutlist",
   designer: "#designer",
   stack: "#stack",
+  space: "#space",
 } as const;
 export type AppPage = keyof typeof PAGE_HASHES;
 
@@ -24,6 +25,8 @@ export const PROJECT_NAMES = {
   designer: "Designer",
   /** speakers in a fixed relationship (docs/speaker-designer-plan.md, L4a) */
   stack: "Stack",
+  /** stacks and speakers placed in a room (docs/speaker-designer-plan.md, L4b) */
+  space: "Space",
 } as const;
 export type ProjectId = keyof typeof PROJECT_NAMES;
 
@@ -33,6 +36,7 @@ export const PROJECT_NAV_LABELS: Record<ProjectId, string> = {
   hifi: "Hi-fi pages",
   designer: "Designer pages",
   stack: "Stack pages",
+  space: "Space pages",
 };
 
 /** Each project's pages, in the order its sub-tab row shows them, with the tab's label; the first is the project's home. */
@@ -53,4 +57,5 @@ export const PROJECT_PAGES = {
     ["designerCutlist", "Cutlist"],
   ],
   stack: [["stack", "Design"]],
+  space: [["space", "Design"]],
 } as const satisfies Record<ProjectId, readonly (readonly [AppPage, string])[]>;

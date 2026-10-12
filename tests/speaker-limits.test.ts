@@ -4,7 +4,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
 import {
-  STACKS,
+  PA_FLOOR,
   hifiCases,
   levelAt,
   maxDiff,
@@ -95,7 +95,7 @@ test("speaker limits: the golden PA designs meet the PA page's limits (sub, mid,
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
-    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
     const models = paModels(cfg);
     const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
     const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);

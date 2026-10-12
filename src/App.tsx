@@ -13,6 +13,8 @@ import { DesignerPage } from "./pages/designer/DesignerPage";
 import { useDesigner } from "./pages/designer/useDesigner";
 import { StackPage } from "./pages/stack/StackPage";
 import { useStack } from "./pages/stack/useStack";
+import { SpacePage } from "./pages/space/SpacePage";
+import { useSpace } from "./pages/space/useSpace";
 import { useEffect, useState, type MouseEvent } from "react";
 import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
@@ -50,8 +52,9 @@ export function App() {
   const fills = useFillsPlanner();
   const designer = useDesigner();
   const stack = useStack();
+  const space = useSpace();
   const project = projectOf(view);
-  // two levels: the project (PA stack, Hi-fi, Designer or Stack), then its own pages
+  // two levels: the project (PA stack, Hi-fi, Designer, Stack or Space), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
@@ -74,7 +77,11 @@ export function App() {
             <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">
               SpeakNow
             </h1>
-            <nav className="flex gap-1" style={{ fontFamily: FONT }} aria-label="Projects">
+            <nav
+              className="flex flex-wrap gap-1"
+              style={{ fontFamily: FONT }}
+              aria-label="Projects"
+            >
               {entriesOf(PROJECT_NAMES).map(([p, label]) => {
                 const home = PROJECT_PAGES[p][0][0],
                   on = p === project;
@@ -84,7 +91,7 @@ export function App() {
                     href={PAGE_HASHES[home]}
                     aria-current={on ? "page" : undefined}
                     onClick={navigateTo(home, PAGE_HASHES[home])}
-                    className={`px-4 py-2 rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}
+                    className={`px-4 max-sm:px-2.5 py-2 whitespace-nowrap rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}
                   >
                     {label}
                   </a>
@@ -123,6 +130,8 @@ export function App() {
           <DesignerCutlistPage designer={designer} />
         ) : view === "stack" ? (
           <StackPage stack={stack} designer={designer} planner={planner} />
+        ) : view === "space" ? (
+          <SpacePage space={space} stack={stack} designer={designer} planner={planner} />
         ) : view === "coverage" ? (
           <CoveragePage planner={planner} />
         ) : (

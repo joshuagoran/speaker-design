@@ -1,0 +1,79 @@
+import { useId } from "react";
+import { ToggleGroup } from "./ToggleGroup";
+import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
+import { formatHz } from "../../lib/format";
+import type { CoverageBand } from "../../types";
+
+/** The named bands, in the picker's order. */
+const NAMED_BANDS = ["sub", "kick", "mid", "high"] as const;
+
+/** A frequency's place on the slider (0–1000, log), and back. */
+const logPos = (f: number) =>
+  Math.round(
+    (Math.log(f / SINGLE_FREQ_RANGE[0]) / Math.log(SINGLE_FREQ_RANGE[1] / SINGLE_FREQ_RANGE[0])) *
+      1000,
+  );
+const fromPos = (p: number) =>
+  Math.round(
+    SINGLE_FREQ_RANGE[0] * Math.pow(SINGLE_FREQ_RANGE[1] / SINGLE_FREQ_RANGE[0], p / 1000),
+  );
+
+interface Props {
+  band: CoverageBand;
+  freqHz: number;
+  onBand: (band: CoverageBand) => void;
+  onFreqHz: (f: number) => void;
+  /** what one frequency shows, under its slider */
+  oneNote: string;
+}
+
+/** What a coverage map shows: a named band (its range beside it), or one frequency on a log slider. */
+export function CoverageBandPicker({ band, freqHz, onBand, onFreqHz, oneNote }: Props) {
+  const freqId = useId();
+  return (
+    <>
+      <ToggleGroup
+        label="Band"
+        value={band}
+        onChange={onBand}
+        options={[
+          ...NAMED_BANDS.map(
+            (b) =>
+              [
+                b,
+                <>
+                  {COVERAGE_BANDS[b].name}{" "}
+                  <span className="text-xs opacity-70">
+                    {formatHz(COVERAGE_BANDS[b].lo)}–{formatHz(COVERAGE_BANDS[b].hi)}
+                  </span>
+                </>,
+              ] as const,
+          ),
+          ["one", "One frequency"] as const,
+        ]}
+      />
+      {band === "one" && (
+        <div className="mt-3">
+          <div className="flex justify-between items-center gap-3 mb-1">
+            <label htmlFor={freqId} className="text-sm text-stone-500">
+              Frequency
+            </label>
+            <span className="text-sm tabular-nums font-medium">{formatHz(freqHz)}</span>
+          </div>
+          <input
+            id={freqId}
+            type="range"
+            min={0}
+            max={1000}
+            step={1}
+            value={logPos(freqHz)}
+            aria-valuetext={formatHz(freqHz)}
+            onChange={(e) => onFreqHz(fromPos(parseFloat(e.target.value)))}
+            className="w-full accent-stone-900"
+          />
+          <p className="text-xs text-stone-500 mt-1">{oneNote}</p>
+        </div>
+      )}
+    </>
+  );
+}
