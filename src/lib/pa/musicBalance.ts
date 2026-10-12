@@ -30,12 +30,7 @@ export type PaBalanceInputs = Pick<
 > &
   Pick<
     PaDesignInputs,
-    | "subMidCrossoverHz"
-    | "subMidCrossoverOrder"
-    | "subHighpassHz"
-    | "subHighpassType"
-    | "midHornCrossoverHz"
-    | "midHornCrossoverOrder"
+    "subMidCrossoverHz" | "subHighpassHz" | "subHighpassType" | "midHornCrossoverHz"
   > & {
     /** the sub box as modeled (at least what its parts need) */
     subBox: PaDesignInputs["subBoxDims"];

@@ -1,5 +1,7 @@
-// The PA floor's starting layout: the room, where the stacks stand, the listener and the target. The PA design's space
-// (lib/speaker/paSpec `paVenue`) and the speaker templates read it.
+// The PA floor's starting layout: the room, where the stacks stand, the listener and the target. The Coverage page
+// starts from it and resets to it (pages/coverage/useCoverageLayout); the Stack page (StackPage) and the Speaker page's
+// PA starts (speakerStarts, speakerTemplates) pass it to `layersFromPa` as the PA design's floor; the Space page's saves
+// (pages/space/spaceSaves) pass it to `paVenue`.
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { LISTENER_TARGET_DB } from "./optimize";
 import type { CoverageLayout } from "../../types";

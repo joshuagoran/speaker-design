@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
-import { balancedLevelsOf, coverageGeometry, musicBalanceOf } from "../../lib/pa/musicBalance";
+import {
+  balancedLevelsOf,
+  coverageGeometry,
+  musicBalanceOf,
+  type PaBalanceInputs,
+} from "../../lib/pa/musicBalance";
 import {
   audienceAverage,
   autoSubDelayMs,
@@ -38,24 +43,10 @@ interface CoverageJob {
   balance: MusicBalance;
 }
 
-/** The planner fields the map reads. */
+/** The planner fields the map reads: what the balanced levels read, and the crossovers' orders. */
 export type CoverageInputs = Pick<
   PaPlanner,
-  | "stackGeometry"
-  | "subBox"
-  | "effectiveMidBoxDims"
-  | "subModeled"
-  | "subAmpVoltage"
-  | "subMidCrossoverHz"
-  | "subMidCrossoverOrder"
-  | "subHighpassHz"
-  | "subHighpassType"
-  | "midHornCrossoverOrder"
-  | "midModeled"
-  | "hornModel"
-  | "midHornCrossoverHz"
-  | "midBelowSubDb"
-  | "hornBelowMidDb"
+  keyof PaBalanceInputs | "subMidCrossoverOrder" | "midHornCrossoverOrder"
 >;
 
 /** The map's results: the floor grid (null until the first one arrives), the boxes, the listener's level and response. */
