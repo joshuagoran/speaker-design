@@ -50,6 +50,7 @@ const views = [
   "#stack",
   "#stack-cutlist",
   "#space",
+  "#space-notes",
 ];
 const failures = [];
 

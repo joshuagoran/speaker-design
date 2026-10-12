@@ -116,7 +116,8 @@ export function App() {
         key={view}
         className="md:flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable]"
       >
-        {view === "notes" ? (
+        {/* the PA project's Notes and the Space project's are one static page (the PA page goes at L3f) */}
+        {view === "notes" || view === "spaceNotes" ? (
           <NotesPage />
         ) : view === "fills" ? (
           <FillsPage fills={fills} />

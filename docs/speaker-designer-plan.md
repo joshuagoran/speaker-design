@@ -350,7 +350,7 @@ Each PR stands alone. Lowest risk first.
       | Fills page (coaxial fill box)                                      | Speaker "Fill" template                                                                        | Done                                                 |
       | Fill chips (HF pad and power limit)                                | Speaker band chips                                                                             | Done: the HF pad chip (`tests/speaker-fill-chips`)   |
       | Fill delay and level to the mains                                  | Space                                                                                          | Done: "Align to the mains" (`tests/fill-align`)      |
-      | Notes: racks, signal path, amps, DSP, passive crossover, materials | Space "Notes" tab (static); rich text later                                                    | To do                                                |
+      | Notes: racks, signal path, amps, DSP, passive crossover, materials | Space "Notes" tab (static); rich text later                                                    | Done: the Space "Notes" tab                          |
 
     - **Totals** (`lib/speaker/speakerTotals`, `tests/stack-totals.test.ts`). The Speaker page shows the price and
       the weight. The price is the total of the Cutlist tab's purchased parts: the drivers, the horns, the radiators,
