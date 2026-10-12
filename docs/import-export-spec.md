@@ -14,8 +14,8 @@ is built yet.
 ## Not in scope
 
 - Share links (a design packed into a URL). A later step can reuse the same format.
-- Old saves from the PA and Hi-fi pages. Owner policy: clean code comes first. A user opens an old save on its page
-  and exports it from the Speaker, Stack or Space page.
+- Old saves from the PA and Hi-fi pages. Owner policy: clean code comes first. An old PA or Hi-fi save opens
+  through the L3f read adapter, as speakers and a stack, and the user exports it from the Speaker or Stack page.
 - Cutlist, chart and 3D exports. See [Later](#later).
 
 ## File format

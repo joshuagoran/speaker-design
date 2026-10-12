@@ -149,6 +149,9 @@ Each PR stands alone. Lowest risk first.
     in-memory designs (`layersFromPa`, `speakerFromHifi`, `layersFromHifi`, `speakerFromFill`,
     `layersFromFill` in `src/lib/speaker/`). Do not add code only to keep old saves working: no shims for old
     fields, no migration branches for old save formats, no compatibility layers.
+    - **One exception** (owner, Oct 2026). The PA and Hi-fi pages go away at L3f, so their saves get one read
+      adapter. It opens an old PA or Hi-fi save as speakers and a stack. The policy above still holds for all
+      other saves.
   - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's throat chamber and
     segments (`HornDesign`, PR #128). The chamber's net air and vent are the horn's rear chamber.
     `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. Alike drivers in one throat go to the engine
@@ -159,7 +162,8 @@ Each PR stands alone. Lowest risk first.
     `mount`.
   - New `speakers` and `stacks` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
     `firestore.rules` already covers every collection there (`users/{uid}/{document=**}`); no rule change.
-- **L2 Speaker library.** Speaker page saves go to `speakers`. No import from old saves (owner policy above).
+- **L2 Speaker library.** Speaker page saves go to `speakers`. No import from old saves (owner policy
+  above), except the PA and Hi-fi pages' saves: one read adapter at L3f.
 - **L3 Speaker page.** One page, "Speaker" (`#speaker`), designs any single speaker. The PA sub and
   mid/high boxes, the tower and the Hi-fi speaker become starting points, not layout pickers. The general
   chamber / driver / band model replaces the per-kind acoustic models step by step. This is the biggest step.
@@ -271,6 +275,22 @@ Each PR stands alone. Lowest risk first.
         position: every page places its vents by a rule.
       - Not movable: side ducts and the PA letterbox (their place is their shape), flared PA tubes (their place is
         part of the PA tube rule), and a Hi-fi slot (the model takes it along the bottom, with one shelf).
+  - **L3f Switch-over** (owner decisions, Oct 2026, #150). The PA page becomes a stack preset and the Hi-fi page
+    goes away. Then `designer` merges into `main`.
+    - The PA and Hi-fi optimizers stay. They become an "Optimize" button that works only on the PA and Hi-fi
+      presets. They stay until an optimizer for any speaker exists.
+    - The Space page replaces the Coverage page. `tests/space-coverage.test.ts` checks the Space page against the
+      Coverage page (see "Parity" in L4b).
+    - The PA project's Fills and Cutlist tabs go away, and the Hi-fi cutlist goes with the Hi-fi page. Fills become
+      Speaker presets. The Speaker project keeps its Cutlist tab.
+    - Old PA and Hi-fi saves open through one read adapter, as speakers and a stack (the exception in L1's "Old
+      saves").
+    - **Band levels in the preset** (owner decision). The PA page goes away, so it is not the source of the levels.
+      Today `paSpec` sets each band's Level to 0 dB (the horn takes the tilt), from a 2.83 V input. This is not the
+      PA page's music balance: on the Space page the horn plays 11.3 dB and the mid 1.8 dB away from it. When the PA
+      design becomes a preset, calculate the music balance once and save it in each band's Level in the preset
+      data. Later, an "Auto balance" button on the Stack page can set the band Levels for music, for any stack.
+    - Order: first the rename to the Speaker page (done), then L3f and the #150 UI fixes in parallel.
   - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
     reuses the PA and Hi-fi code.
     - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
@@ -423,19 +443,7 @@ Each PR stands alone. Lowest risk first.
     - A speaker in a stack takes its input range from the stack's crossover. Alone on the Speaker page, the user sets it.
     - **Sub highpass and subsonic.** When a sub highpass covers the box's subsonic, the box's subsonic is
       dropped; below 0.75 × Fb both stay. This rule comes with the crossovers between boxes.
-    - The PA page becomes a stack preset.
-      - **L3f owner decisions** (Oct 2026, #150).
-        - The PA and Hi-fi optimizers stay. They become an "Optimize" button that works only on the PA and Hi-fi
-          presets. They stay until an optimizer for any speaker exists.
-        - The Space page replaces the Coverage page. The parity tests show the same results.
-        - The Fills and Cutlist tabs go away. Fills become Speaker presets. The Speaker page has its own cutlist.
-        - Old PA and Hi-fi saves open through a read adapter, as speakers and a stack.
-        - Order: first the rename to the Speaker page (done), then L3f and the #150 UI fixes in parallel.
-      - **Band levels in the preset** (owner decision). The PA page goes away, so it is not the source of the levels.
-        Today `paSpec` sets each band's Level to 0 dB (the horn takes the tilt), from a 2.83 V input. This is not the
-        PA page's music balance: on the Space page the horn plays 11.3 dB and the mid 1.8 dB away from it. When the PA
-        design becomes a preset, calculate the music balance once and save it in each band's Level in the preset
-        data. Later, an "Auto balance" button on the Stack page can set the band Levels for music, for any stack.
+    - The PA page becomes a stack preset at L3f (see "L3f Switch-over" in L3).
     - **Done (L4a).**
       - **Types.** `StackSpec` (members, notes) and `StackMember` (speaker id, pose, mirror, crossover, level, delay or
         `AUTO_DELAY`). A pose is across, up and back from the stack's origin, or from the member it stands on (`on`).
