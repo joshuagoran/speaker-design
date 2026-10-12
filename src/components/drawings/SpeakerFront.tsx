@@ -1,4 +1,4 @@
-import type { SpeakerDriver, SpeakerSpec } from "../../types";
+import type { Horn, SpeakerDriver, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { AmtPlate, RibbonPlate } from "./HifiFront";
 import {
@@ -38,6 +38,8 @@ const HOLE_POINTS = 24;
 /** The drawing's size, px, and its margin. */
 const VIEW_PX = 150;
 const PAD_PX = 4;
+/** A rectangular horn mouth's corner radius in the drawing, in: square, as the catalog lists it, but not sharp. */
+const MOUTH_CORNER_IN = 0.25;
 
 /**
  * What the front drawing spans, in: across from the cabinet's center line and up from its bottom, the horns standing
@@ -102,6 +104,25 @@ export function SpeakerFront({ spec }: Props) {
     r: number,
     props: React.SVGProps<SVGCircleElement>,
   ) => <circle key={key} cx={px(cx)} cy={py(cy)} r={r * k} {...props} />;
+  /**
+   * a horn's mouth by its center and size, inches, in its catalog shape: a rectangle (`Horn.rect`, its corners barely
+   * rounded), else an ellipse (a circle when its width and height match)
+   */
+  const mouth = (
+    key: string,
+    horn: Pick<Horn, "rect">,
+    cx: number,
+    cy: number,
+    w: number,
+    h: number,
+    props: Pick<React.SVGProps<SVGElement>, "fill" | "stroke" | "strokeWidth">,
+    cornerIn = MOUTH_CORNER_IN,
+  ) =>
+    horn.rect ? (
+      rect(key, cx, cy, w, h, { rx: cornerIn * k, ...props })
+    ) : (
+      <ellipse key={key} cx={px(cx)} cy={py(cy)} rx={(w * k) / 2} ry={(h * k) / 2} {...props} />
+    );
   const opening = { fill: pal.ink };
   const cone = { fill: pal.edge, stroke: pal.muted, strokeWidth: 1 };
   /** a part on the back, behind the baffle */
@@ -157,8 +178,7 @@ export function SpeakerFront({ spec }: Props) {
       const foot = horn.size.w / 4;
       return [
         rect(`${key}f`, x, y + HORN_LIFT_IN / 2, foot, HORN_LIFT_IN, { fill: pal.ink }),
-        rect(`${key}h`, x, y + HORN_LIFT_IN + horn.size.h / 2, horn.size.w, horn.size.h, {
-          rx: (Math.min(horn.size.w, horn.size.h) * k) / 3,
+        mouth(`${key}h`, horn, x, y + HORN_LIFT_IN + horn.size.h / 2, horn.size.w, horn.size.h, {
           fill: pal.muted,
           stroke: pal.ink,
           strokeWidth: 1,
@@ -201,7 +221,7 @@ export function SpeakerFront({ spec }: Props) {
         if (!tw) return [];
         if (horn && !tw.ownGuide)
           return [
-            rect(key, x, y, horn.size.w, horn.size.h, { rx: 3, fill: pal.muted }),
+            mouth(key, horn, x, y, horn.size.w, horn.size.h, { fill: pal.muted }),
             circle(`${key}t`, x, y, 0.5, { fill: pal.edge }),
           ];
         const face = tw.ownGuide ?? tw.faceplate;
@@ -227,15 +247,13 @@ export function SpeakerFront({ spec }: Props) {
       }
       case DRIVER_KIND.compression: {
         if (horn) {
-          // its cutout in the baffle, as the tower opens it inside the chamber's walls
+          // its mouth in the baffle, at the size the tower opens it inside the chamber's walls, in the mouth's shape
           const cut = towerHornCutout(hornCutoutBox(placed, t), t, horn);
+          const style = { fill: pal.muted, stroke: pal.ink, strokeWidth: 1.2 };
           return [
-            rect(key, x, y, cut.w, cut.h, {
-              rx: (cut.shape === HORN_CUTOUT_SHAPE.rect ? cut.r : Math.min(cut.w, cut.h) / 2) * k,
-              fill: pal.muted,
-              stroke: pal.ink,
-              strokeWidth: 1.2,
-            }),
+            cut.shape === HORN_CUTOUT_SHAPE.circle
+              ? circle(key, x, y, cut.w / 2, style)
+              : mouth(key, horn, x, y, cut.w, cut.h, style, cut.r),
           ];
         }
         const cd = byId(CD_OPTIONS, d.driverId);
