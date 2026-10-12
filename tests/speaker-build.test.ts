@@ -11,6 +11,7 @@ import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import {
   defaultHornPlacement,
+  hornCutoutBox,
   hornFits,
   hornFitsWhereSet,
   slotOpeningsAt,
@@ -25,6 +26,7 @@ import {
   braceLb,
   braceParts,
   cutParts,
+  hornCutoutWords,
   midBoxBracing,
   midHardwarePlan,
   midSystem,
@@ -35,7 +37,7 @@ import {
   subWeightLb,
   towerMidWeightLb,
 } from "../src/lib/pa/calc";
-import { towerMidDims } from "../src/lib/pa/tower";
+import { towerHornCutout, towerMidDims } from "../src/lib/pa/tower";
 import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
 import { PA_PANEL_TARGET_HZ } from "../src/lib/pa/bracing";
 import {
@@ -437,6 +439,38 @@ test("speaker build: a horn that no longer fits where it is mounted is left out,
   // no binding posts for a horn that isn't there
   const plan = cabinetBuild(stacked).chambers[0].hardware;
   assert.ok(plan && !plan.parts.some((p) => p.kind === "posts"));
+});
+
+test("speaker build: a baffle horn's cutout is one size in the cutlist, the weight and the views", () => {
+  const rect = HORN_OPTIONS.find((h) => h.rect);
+  const cd = CD_OPTIONS[0];
+  assert.ok(rect && cd);
+  const left = chamberAt({ xIn: 0, yIn: 0 }, { w: 14, h: 24, d: 16 });
+  const right: SpeakerChamber = {
+    // taller than its neighbor: a stepped shell, each chamber a box of its own
+    ...chamberAt({ xIn: 14, yIn: 0 }, { w: 20, h: 26, d: 16 }),
+    drivers: [
+      {
+        kind: "compression",
+        driverId: cd.id,
+        count: 1,
+        position: { xIn: 0, yIn: 12 },
+        bands: [EMPTY_SPEAKER.bands[0].id],
+        horn: { hornId: rect.id, placement: HORN_PLACEMENT.baffle, mount: null },
+      },
+    ],
+  };
+  const spec = withCabinet({ chambers: [left, right] });
+  const t = spec.cabinet.panel.thicknessIn;
+  const placed = speakerLayout(spec.cabinet).chambers[1];
+  // the chamber beside another cuts within its own clear face (one wall off its width, not two)
+  assert.equal(hornCutoutBox(placed, t).w, right.dims.w - t + 2 * t);
+  const cut = towerHornCutout(hornCutoutBox(placed, t), t, rect);
+  const baffle = speakerCutParts(spec.cabinet, "butt").parts.find(
+    (p) => p.box === chamberCutBox(1) && p.part === "baffle",
+  );
+  assert.ok(baffle, "a baffle");
+  assert.ok(baffle.note.includes(`horn cutout ${hornCutoutWords(cut)}`), baffle.note);
 });
 
 test("speaker build: one shell's cutlist notes the hardware of the chamber that takes it", () => {

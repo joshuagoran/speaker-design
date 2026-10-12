@@ -44,6 +44,7 @@ import {
   type PlacedChamber,
   slotOpeningsAt,
   hornFitsWhereSet,
+  hornCutoutBox,
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { PANEL } from "../../constants/cutParts";
@@ -577,7 +578,7 @@ function chamberParts(
         }
         // the PA tower's way: set into the baffle, its mouth on the front plane
         const clearW = placed.clear.w;
-        hole((hx, hy) => hornBaffleHole({ w: clearW + 2 * T }, T, horn, hx, hy));
+        hole((hx, hy) => hornBaffleHole(hornCutoutBox(placed, T), T, horn, hx, hy));
         builds.push(() =>
           buildHorn(hornContext(c, horn, look.hornColor), {
             horn,

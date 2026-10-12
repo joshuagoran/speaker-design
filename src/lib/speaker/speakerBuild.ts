@@ -125,6 +125,7 @@ import {
   type PlacedChamber,
   type SpeakerLayout,
   hornFitsWhereSet,
+  hornCutoutBox,
 } from "./speakerLayout";
 import {
   DRIVER_CUTOUT_IN,
@@ -685,10 +686,16 @@ function cutoutsIn2(cabinet: SpeakerCabinet, placed: PlacedChamber): number {
     if (onTop(driver)) return sum;
     const cone = coneBuild(driver);
     const horn = driverHorn(driver);
+    // a cone's round cutout; a compression driver's horn as the tower cuts it; a tweeter's waveguide or plate by its
+    // own size (the cutlist's note)
     const one = cone
       ? (Math.PI / 4) * cone.body.cutoutIn ** 2
-      : horn
-        ? towerHornCutout(placed.dims, cabinet.panel.thicknessIn, horn).area
+      : horn && driver.kind === DRIVER_KIND.compression
+        ? towerHornCutout(
+            hornCutoutBox(placed, cabinet.panel.thicknessIn),
+            cabinet.panel.thicknessIn,
+            horn,
+          ).area
         : ((room) => (room ? room.w * room.h : 0))(datasheetRoom(driver));
     return sum + driver.count * one;
   }, 0);
@@ -980,7 +987,7 @@ function chamberNotes(
             const body = byId(CD_OPTIONS, driver.driverId)?.body;
             if (horn)
               baffle.push(
-                `horn cutout ${hornCutoutWords(towerHornCutout(placed.dims, t, horn))}, ${at(spot)}`,
+                `horn cutout ${hornCutoutWords(towerHornCutout(hornCutoutBox(placed, t), t, horn))}, ${at(spot)}`,
               );
             else if (body)
               baffle.push(

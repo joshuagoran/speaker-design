@@ -244,6 +244,15 @@ export function hornFits(
 }
 
 /**
+ * The box a baffle horn's cutout is sized in (lib/pa/tower towerHornCutout): the chamber's clear face and a wall each
+ * side, so a chamber beside another cuts within its own clear face. The cutlist, the weights, the 3D view and the front
+ * drawing all size it here.
+ */
+export const hornCutoutBox = (placed: Pick<PlacedChamber, "clear">, t: number) => ({
+  w: placed.clear.w + 2 * t,
+});
+
+/**
  * Whether a driver's horn fits where it is set (`hornFits`); a driver without a catalog horn always does. One that no
  * longer fits (a chamber now stands on its top horn, or the horn is larger than the chamber) can't be built there: the
  * views leave it out and the page says so.

@@ -15,6 +15,7 @@ import {
   type PlacedChamber,
   slotOpeningsAt,
   hornFitsWhereSet,
+  hornCutoutBox,
 } from "../../lib/speaker/speakerLayout";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../stack-view/stackHeights";
@@ -217,7 +218,7 @@ export function SpeakerFront({ spec }: Props) {
       case DRIVER_KIND.compression: {
         if (horn) {
           // its cutout in the baffle, as the tower opens it inside the chamber's walls
-          const cut = towerHornCutout({ w: placed.clear.w + 2 * t }, t, horn);
+          const cut = towerHornCutout(hornCutoutBox(placed, t), t, horn);
           return [
             rect(key, x, y, cut.w, cut.h, {
               rx: (cut.shape === HORN_CUTOUT_SHAPE.rect ? cut.r : Math.min(cut.w, cut.h) / 2) * k,
