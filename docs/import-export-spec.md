@@ -48,11 +48,17 @@ is built yet.
 - Version 1 has no older files, so the first PR reads only version 1. A newer file gets a clear message: "This
   file comes from a newer version of SpeakNow."
 - A test pins the current version to the spec types, so a type change without a version change fails the build.
+- **During alpha** (now), exported files can break between versions. When the version changes, the app rejects older
+  files with a clear message: "This file comes from an older version of SpeakNow and cannot be read." No upgrade steps
+  are written.
+- **The first public release** sets the version that the path below supports from then on. Its fixtures start at that
+  version.
 
-### Backward compatibility path (draft)
+### Backward compatibility path (draft, from the first public release)
 
-Exported files live outside the app, so they need a way forward. This applies to files only. Saves in the database
-still follow the owner policy: clean code first, no migration code for them.
+Exported files live outside the app, so they need a way forward. This path starts at the first public release; it does
+not apply during alpha. It applies to files only. Saves in the database still follow the owner policy: clean code
+first, no migration code for them.
 
 - **One step per version.** When the version goes from N to N + 1, the same PR adds one pure function,
   `upgradeVN(file): FileVN1`. It changes only what the new version changed: rename a field, set a new field to its
@@ -68,7 +74,7 @@ still follow the owner policy: clean code first, no migration code for them.
   target set to 280 Hz").
 - **Loss is visible.** When a step must drop or approximate a value, the preview lists it. The import never fails
   silently.
-- **Support window.** The app reads every version back to 1. If a step becomes too costly, the owner decides to drop
+- **Support window.** The app reads every version back to the first public release's version. If a step becomes too costly, the owner decides to drop
   the oldest versions; the message then names the oldest version the app reads.
 - **Export is always current.** The app never writes an old version.
 
@@ -142,6 +148,10 @@ The file is untrusted data.
 - A file holds catalog ids only. It does not copy catalog parts.
 - The PA and Hi-fi pages get no Export.
 - Exported files get a backward compatibility path (above). Database saves do not.
+- SpeakNow is in alpha. The backward compatibility path applies only from the first public release. During alpha,
+  exported files can break between versions: a version change rejects older files with a clear message, and no
+  upgrade steps are written. The first public release sets the version that the path supports from then on, and its
+  fixtures start there.
 
 ## Open questions
 

@@ -1,9 +1,23 @@
 // The Designer's one-line summaries, built from the spec and the catalog.
-import type { BandFilter, BoxBracing, SpeakerBand, SpeakerChamber, SpeakerSpec } from "../../types";
+import type {
+  BandFilter,
+  BoxBracing,
+  SpeakerBand,
+  SpeakerChamber,
+  SpeakerHorn,
+  SpeakerSpec,
+} from "../../types";
 import { formatDims, formatHz, formatWatts } from "../../lib/format";
-import { DESIGNER_TEXT, PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
+import {
+  DESIGNER_TEXT,
+  HORN_DRIVE_NAMES,
+  HORN_PATH_NAMES,
+  PORT_SHAPE_NAMES,
+  VENT_KIND_NAMES,
+} from "../../constants/designer";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { driverName } from "./designerParts";
+import { pathIn } from "./hornSections";
 
 /** "1 chamber", "2 chambers". */
 export const countText = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -11,7 +25,16 @@ export const countText = (n: number, one: string, many: string) => `${n} ${n ===
 /** A filter in words: its type and corner. */
 export const filterText = (f: BandFilter) => `${f.type} ${formatHz(f.hz)}`;
 
-/** A chamber in one line: its size, vent and drivers. */
+/** A horn in a few words: its drive, sections, path length and path, e.g. "front-loaded horn, 2 sections, 40 in, straight". */
+export const hornText = (horn: Pick<SpeakerHorn, "drive" | "path" | "segments">) =>
+  [
+    `${HORN_DRIVE_NAMES[horn.drive.kind].toLowerCase()} horn`,
+    countText(horn.segments.length, "section", "sections"),
+    `${pathIn(horn)} in`,
+    HORN_PATH_NAMES[horn.path].toLowerCase(),
+  ].join(", ");
+
+/** A chamber in one line: its size, vent, horn and drivers. */
 export function chamberText(chamber: SpeakerChamber) {
   const { vent } = chamber;
   const ventText =
@@ -23,7 +46,7 @@ export function chamberText(chamber: SpeakerChamber) {
     formatDims(chamber.dims),
     ventText,
     chamber.stuffingPct ? `stuffed ${chamber.stuffingPct}%` : null,
-    chamber.load.kind === CHAMBER_LOAD.horn ? "horn loaded" : null,
+    chamber.load.kind === CHAMBER_LOAD.horn ? hornText(chamber.load.horn) : null,
     drivers || "no drivers",
   ]
     .filter(Boolean)
