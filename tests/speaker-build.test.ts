@@ -38,7 +38,9 @@ import {
   CHAMBER_LOAD,
   HORN_DRIVE,
   HORN_PATH,
+  PORT_SHAPE,
   SPEAKER_PART,
+  VENT_KIND,
 } from "../src/constants/speakerSpec";
 import type {
   CornerJoint,
@@ -325,6 +327,39 @@ test("speaker build: a chamber beside or on another is sized to itself, for ever
         assert.equal(rowsOf(row, 1, "baffle")[0].a, right.dims.w - t, `${at}: baffle`);
       }
     }
+});
+
+test("speaker build: every slot of a chamber is cut and takes its air", () => {
+  const slotted = (n: number) =>
+    withCabinet({
+      chambers: [
+        {
+          ...chamberAt({ xIn: 0, yIn: 0 }, { w: 14, h: 20, d: 14 }),
+          vent: {
+            kind: VENT_KIND.vented,
+            port: { shape: PORT_SHAPE.slot, n, h: 1, w: 10, len: 6 },
+            maxSpeedMs: 17,
+          },
+        },
+      ],
+    });
+  const [one, two] = [1, 2].map((n) => slotted(n));
+  const shelves = speakerCutParts(two.cabinet, "butt").parts.filter((p) => p.part === "slotShelf");
+  assert.deepEqual(
+    shelves.map((p) => p.qty),
+    [2],
+  );
+  assert.ok(
+    speakerCutParts(two.cabinet, "butt").parts.some(
+      (p) => p.part === "baffle" && /2 × slot/.test(p.note),
+    ),
+  );
+  const [b1] = cabinetBuild(one.cabinet).chambers;
+  const [b2] = cabinetBuild(two.cabinet).chambers;
+  const t = one.cabinet.panel.thicknessIn;
+  const L = 16.387 / 1000;
+  assert.ok(Math.abs(b2.ventL - 2 * b1.ventL) < 1e-9, "both slots' air");
+  assert.ok(Math.abs(b2.woodL - b1.woodL - 10 * 6 * t * L) < 1e-9, "both shelves' wood");
 });
 
 test("speaker build: one shell's cutlist notes the hardware of the chamber that takes it", () => {

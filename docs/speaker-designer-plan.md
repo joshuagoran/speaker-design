@@ -71,7 +71,7 @@ Each PR stands alone. Lowest risk first.
 - **P1 Small 1″ waveguides (data).**
   - 4–6″ round or OS waveguides in `horns.ts`, with coverage, `lowHz` and US prices. Hi-fi offers them
     through `HIFI_WAVEGUIDES` with no code change.
-  - A `scope` flag so the PA optimizer (`HORN_OPTIONS` in `src/lib/pa/optimize.ts`) doesn't pick them.
+  - A `scope` flag so the PA optimizer (`HORN_OPTIONS` in `src/lib/pa/optimize.ts`) does not pick them.
   - A `hifiGuidePattern` chip: the crossover is below the waveguide's `lowHz`.
   - Golden and snapshots: unchanged.
 - **P2 Engine knobs.** No UI; Hi-fi defaults unchanged.
@@ -217,7 +217,38 @@ Each PR stands alone. Lowest risk first.
       the inset alone set the style, so a PA box with no inset drew as a Hi-fi box. This setting replaces that
       rule.
     - Movable ports and driver openings (see the owner decisions).
-    - **The spec fields (done).** The settings UI comes later.
+    - **Templates (done).** The "Start from" picker lists the templates first, then the designs you have now (the
+      current Hi-fi design, the PA design's sub and mid/high box, or its tower). A template builds a new spec from the
+      catalog and the defaults (`src/pages/designer/designerTemplates.ts`). It sets only the first values. The spec
+      keeps no template or role.
+      - PA sub, PA mid/high box: the PA page's starting design (`DEFAULT_PA`) through `systemFromPa`.
+      - PA tower, horn in the baffle: the PA page's tower, with its arched top.
+      - PA tower, horn on top (T1): the PA tower's sub and mid chamber, the horn on the mid chamber's lid, its mouth on
+        the front plane, a flat top. The mid chamber starts at `TOWER_MID_HEIGHT_IN`; its height is the chamber's
+        height setting, so it sets the mid's air and the tower's height. Any horn can sit there. The horn mount
+        applies where the driver bolts straight to the horn (`takesHornMountAt`).
+      - Hi-fi 2-way and Fill: the Hi-fi and Fills pages' starting designs through their adapters.
+      - DJ booth monitor (`DEFAULT_MONITOR`): a 10″ coaxial (100°) in the fill's box, or an 8″ with a 1″ compression
+        driver on a small 90° horn in the baffle, crossed at 2.5 kHz. Both have the input range's 70 Hz LR24
+        high-pass. A pair, hung or on pedestals, is the Space page's (no field for it).
+      - PA v2 sub bin (`PA_V2_SUB_BIN`, one or two 18″): one front-loaded horn chamber, the drivers stacked in one
+        throat (the engine's `drivers`), a straight conical flare, net rear air set (~324 L for two), a slot on each
+        front side, folded, tuned to ~35 Hz, a 30 Hz BW24 subsonic.
+      - PA v2 mid box (`PA_V2_MID_BOX`): two 10″ in one throat with a 1 L throat chamber and an exponential flare,
+        ~34 L rear air, side slots, tuned to ~95 Hz, crossed at the R-OSSE's lowest crossover.
+      - The PA v2 slots store their narrow size as the height and their long side as the width, in sizes of ⅛″. The
+        model reads only the area and the rectangle. The slot settings show the count, the narrow side, the long side
+        (where the slot sets one) and the length. "Auto" net air counts each slot and its shelf.
+      - Later, with movable ports: the side slots draw on the sides (today the views draw a slot along the bottom), and
+        "Auto" net air takes off the air of a horn's flare (today a horn chamber's net air is set).
+      - A horn mouth that a square would make taller than the clear face draws wider than square, up to the clear
+        width. The PA v2 bins' mouths then fit the face.
+    - **Cabinet settings (done).** A "Construction" fold: the construction, the baffle inset (a frame only) and the
+      top. A note says when an arched top cannot draw. In each chamber, a Hi-fi round port, passive radiators and a
+      horn's mouth have a position: "Auto" (the vent rule places it, and the fields show where) or "Custom" (a panel
+      for a vent, then "From left" and "From bottom", as the chamber's own position). Each driver entry shows its
+      position too. The moved notices say when a set position moves inside the clear face.
+    - **The spec fields (done).**
       - `SpeakerCabinet.construction` (`CABINET_CONSTRUCTION`): `frameInset` or `flushBox`. The 3D view reads it,
         not the inset. A flush box has no inset (`baffleInsetIn`), in the model and the views.
       - `SpeakerCabinet.top` (`CABINET_TOP`): `flat` or `arched`. The arch is a semicircle the full width, as
@@ -312,7 +343,7 @@ Each PR stands alone. Lowest risk first.
       baffle-step EQ, the woofer's drive at its limit is within 0.2 dB from 30 Hz to a third of the crossover. The
       tweeter's power is exact. Above that range the engines differ: the Hi-fi divides the coil's rating by the
       lowpass, and the PA and the model do not.
-  - **Later in L3.** The optimizer; the horn settings; the tower with the horn on top (T1); a "Place" picker for
+  - **Later in L3.** The optimizer; the horn settings; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
   the last two, in two phases. The name is "Stack", not "System".
@@ -349,7 +380,7 @@ Each PR stands alone. Lowest risk first.
 - Near-field accuracy at 0.5 m for big coaxes.
 - Optimizer runtime with coax candidates.
 - Page complexity: split `HifiPage.tsx` first.
-- Passive maker networks (3rd order) can't be expressed as `CrossoverOrder` (4 | 8).
+- Passive maker networks (3rd order) cannot be expressed as `CrossoverOrder` (4 | 8).
 - The tall tower with a loose horn on top: tipping, and securing the horn.
 
 ## Owner decisions (Oct 2026)
@@ -386,8 +417,8 @@ Each PR stands alone. Lowest risk first.
   - It covers a Hi-fi box's kick-back (tilt up) and PA tops angled down.
   - Today the Hi-fi spec has `tiltDeg`. PA tops angled down must fit the same model.
   - The 3D view and the Space page's coverage and levels both use it.
-- Ports and driver openings become settings you can move, like the drivers' positions. This comes with the
-  templates step or later. The spec fields are in (L3e); the settings UI comes later.
+- Ports and driver openings become settings you can move, like the drivers' positions. The spec fields and the
+  settings are in (L3e).
 
 ## Open questions for the owner
 

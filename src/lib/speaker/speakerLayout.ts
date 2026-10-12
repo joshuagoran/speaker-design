@@ -504,8 +504,8 @@ const shaped = (areaIn2: number, like: Dims2): Dims2 => {
 
 /**
  * The flare of a chamber's horn (its segments' areas and lengths, Hornresp's cm² and cm), throat at the back, mouth on
- * the baffle: the mouth as square as its area allows inside the clear face (it runs the clear width when wider than
- * that, and is cut to the clear face when larger than it), each section the mouth's shape; the mouth centered at the
+ * the baffle: the mouth as square as its area allows inside the clear face (wider than square where a square would be
+ * taller than the face, the clear width at most; cut to the clear face when larger than it), each section the mouth's shape; the mouth centered at the
  * horn's `mouthPosition` (kept inside the clear face), else on the clear face; the path at most the chamber's clear
  * depth (as the model takes it: less the back, the baffle and the baffle's inset). Null for a chamber with no horn or
  * no segments.
@@ -520,7 +520,8 @@ export function hornFlare(
   const areaIn2 = (cm2: number) => cm2 / (CM_PER_IN * CM_PER_IN);
   const { clear } = placed;
   const mouthArea = areaIn2(horn.segments[horn.segments.length - 1].s2);
-  const w = Math.min(clear.w, Math.sqrt(mouthArea));
+  // as square as it fits: wider than square where a square would be taller than the clear face
+  const w = Math.min(clear.w, Math.max(Math.sqrt(mouthArea), mouthArea / clear.h));
   const h = Math.min(clear.h, mouthArea / w);
   /** what the clear face leaves of the mouth's area: every section is drawn that much smaller */
   const fit = (w * h) / mouthArea;

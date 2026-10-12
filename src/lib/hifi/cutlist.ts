@@ -56,19 +56,19 @@ export const tweeterCutoutNote = (faceplate: Dims2, at: string, off: number) =>
   `tweeter: ${formatInches(faceplate.w)} × ${formatInches(faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${at}${offsetWords(off)}`;
 /** The words for a port too long to fit its box. */
 const TOO_LONG = "too long for this box (see the Hi-fi page)";
-/** A slot's opening on the baffle, at its floor (`at`, words). */
-export const slotOpeningNote = (port: Pick<SizedSlotPort, "w" | "h">, at: string) =>
-  `slot: ${formatInches(port.w)} × ${formatInches(port.h)}″ opening, centered, ${at}`;
-/** A slot's shelf as a cutlist row of `box`: its roof, running back from the baffle; `fits` false when too long. */
+/** A slot's openings on the baffle, at the floor (`at`, words): one, or `n` alike (the Hi-fi page's slot is one). */
+export const slotOpeningNote = (port: Pick<SizedSlotPort, "w" | "h" | "n">, at: string) =>
+  `${port.n > 1 ? `${port.n} × ` : ""}slot: ${formatInches(port.w)} × ${formatInches(port.h)}″ opening, centered, ${at}`;
+/** A slot's shelves as a cutlist row of `box`: each its slot's roof, running back from the baffle; `fits` false when too long. */
 export const slotShelfPart = (
   box: CutBoxId,
-  port: Pick<SizedSlotPort, "w" | "h" | "len">,
+  port: Pick<SizedSlotPort, "w" | "h" | "len" | "n">,
   t: number,
   fits: boolean,
 ): CutPart => ({
   box,
   part: "slotShelf",
-  qty: 1,
+  qty: port.n,
   a: port.w,
   b: port.len,
   t,

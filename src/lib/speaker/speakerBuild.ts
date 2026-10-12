@@ -441,7 +441,8 @@ function ventRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
   }
   const { port } = rule;
   if (port.shape === PORT_SHAPE.slot)
-    return [{ x: [0, iw], y: [0, port.h + t], z: [0, Math.min(inD, port.len)] }];
+    // the slots stacked along the floor, each under its shelf
+    return [{ x: [0, iw], y: [0, port.n * (port.h + t)], z: [0, Math.min(inD, port.len)] }];
   const tubes = roundPortsAt(f.placed, port);
   return tubes.spots.map((s) => {
     const c = insidePoint(f, { xIn: f.placed.cx + s.x, yIn: f.placed.y0 + s.y });

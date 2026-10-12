@@ -102,8 +102,8 @@ export interface ChamberVentModel {
  * A vented chamber's vent, null for any other: each port by the rule of the engine it comes from.
  * - Round tubes: the Hi-fi rule (1.46 r and a sharp bend's correction per elbow; absent elbows: straight), or the PA
  *   tube rule for `flared` tubes in a PA sub's chamber (lib/pa/tubes subTubeEndCorrection).
- * - A slot: one opening along the bottom, as wide as the chamber's clear face unless it sets its own width; its shelf
- *   takes air too. The Hi-fi rule, or the PA letterbox's where it has `fins`.
+ * - A slot: `n` openings (the PA letterbox one), each as wide as the chamber's clear face unless the slot sets its own
+ *   width (their shelves' wood: lib/speaker/speakerBuild). The Hi-fi rule, or the PA letterbox's where it has `fins`.
  * - Side ducts (PA): `n` ducts up the front edges, the dividers' height off each; their inner walls take air too.
  */
 export function chamberVentModel(
@@ -137,10 +137,11 @@ export function chamberVentModel(
             ),
         };
       }
+      // the Hi-fi page's slot is one (n 1); the Designer's can be more, alike
       return {
-        areaIn2: port.h * w,
+        areaIn2: port.n * port.h * w,
         lenIn: port.len,
-        openings: 1,
+        openings: port.n,
         endCorrectionIn: hifiSlotEndCorrection(dims, t, { h: port.h, w, len: port.len }),
       };
     }

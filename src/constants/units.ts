@@ -4,6 +4,9 @@ export const METERS_PER_FOOT = 0.3048;
 /** Meters in one inch. */
 export const METERS_PER_INCH = 0.0254;
 
+/** Millimeters in one inch. */
+export const MM_PER_IN = METERS_PER_INCH * 1000;
+
 /** Square meters in one square foot. */
 export const SQ_METERS_PER_SQ_FOOT = 0.09290304;
 

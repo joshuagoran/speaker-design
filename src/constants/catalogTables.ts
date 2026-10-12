@@ -6,6 +6,8 @@ export const CATALOG_TABLE_NAMES = {
   horns: "horns",
   hifiWoofers: "hi-fi woofers",
   hifiTweeters: "hi-fi tweeters",
+  hifiWaveguides: "hi-fi waveguides",
+  fills: "fill coaxials",
   passiveRadiators: "passive radiators",
   formats: "formats",
   cabinets: "cabinets",

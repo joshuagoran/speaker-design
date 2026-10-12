@@ -4,6 +4,7 @@ import type {
   Dims3,
   DriverKind,
   SpeakerBand,
+  SpeakerCabinet,
   SpeakerChamber,
   SpeakerChamberResponse,
   SpeakerDriver,
@@ -19,10 +20,14 @@ import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
 import {
+  DESIGNER_TEXT,
   DRIVER_KIND_NAMES,
   MODEL_GAP_TEXT,
   PORT_SHAPE_NAMES,
+  SET_BY,
+  SET_BY_NAMES,
   VENT_KIND_NAMES,
+  VENT_PANEL_NAMES,
 } from "../../constants/designer";
 import {
   CHAMBER_LOAD,
@@ -40,6 +45,10 @@ import {
   hornOptions,
 } from "./designerParts";
 import { countText } from "./designerText";
+import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./designerPlaces";
+import { PlaceFields } from "./PlaceFields";
+import { FIELD_ROW, shownIn } from "./designerFields";
+import { onTop, type PlacedChamber } from "../../lib/speaker/speakerLayout";
 
 /** The driver kinds as the kind picker lists them. */
 const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map(([id, name]) => ({
@@ -47,14 +56,8 @@ const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map((
   name,
 }));
 
-/** A row of number fields that wraps onto more lines where the pane is narrow. */
-const ROW = "flex flex-wrap gap-x-3 gap-y-3 mb-3";
-
 /** Where a chamber's net air comes from: worked out from its size (Auto), or typed in (Custom). */
-const NET_AIR = {
-  auto: "auto",
-  custom: "custom",
-} as const;
+const NET_AIR = SET_BY;
 
 /** What the net air's Auto value takes off the inside volume. */
 const NET_AIR_TIP = "Inside volume less walls, bracing, drivers and vent.";
@@ -65,14 +68,28 @@ interface Props {
   /** the model's reading of it */
   result: SpeakerChamberResponse | undefined;
   bands: readonly SpeakerBand[];
+  /** the cabinet it is in, and where its layout places it: its vent's and horn mouth's places read them */
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">;
+  placed: PlacedChamber | undefined;
   onEdit: (edit: (chamber: SpeakerChamber) => SpeakerChamber) => void;
   /** absent for the last chamber left */
   onRemove?: () => void;
 }
 
 /** One chamber's settings: size, air, place, vent and drivers. */
-export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemove }: Props) {
+export function ChamberSettings({
+  index,
+  chamber,
+  result,
+  bands,
+  cabinet,
+  placed,
+  onEdit,
+  onRemove,
+}: Props) {
   const { vent } = chamber;
+  const vents = placed ? ventPlace(cabinet, placed) : null;
+  const mouth = placed ? mouthPlace(cabinet, placed) : null;
   const bandOptions = bands.map((b): readonly [BandId, string] => [b.id, b.name]);
   const setDim = (k: keyof Dims3, v: number) =>
     onEdit((c) => ({ ...c, dims: { ...c.dims, [k]: v } }));
@@ -92,12 +109,12 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
           </Button>
         )}
       </div>
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         {(["w", "h", "d"] as const).map((k) => (
           <NumberField
             key={k}
             label={`${{ w: "Width", h: "Height", d: "Depth" }[k]}, in`}
-            value={chamber.dims[k]}
+            value={shownIn(chamber.dims[k])}
             min={1}
             step={0.25}
             onChange={(v) => setDim(k, v)}
@@ -105,17 +122,17 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
         ))}
       </div>
       <div className="text-sm text-stone-500 mb-1">Position</div>
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
         <NumberField
           label="From left, in"
-          value={chamber.at.xIn}
+          value={shownIn(chamber.at.xIn)}
           step={0.25}
           onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
         />
         <NumberField
           label="From bottom, in"
-          value={chamber.at.yIn}
+          value={shownIn(chamber.at.yIn)}
           step={0.25}
           onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
         />
@@ -130,10 +147,7 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             netLiters: v === NET_AIR.auto ? null : Math.round((result?.netLiters ?? 20) * 10) / 10,
           }))
         }
-        options={[
-          [NET_AIR.auto, "Auto"],
-          [NET_AIR.custom, "Custom"],
-        ]}
+        options={entriesOf(SET_BY_NAMES)}
       />
       <NumberField
         label={<Tooltip tip={NET_AIR_TIP}>Liters</Tooltip>}
@@ -164,6 +178,15 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
           settings come in a later phase).
         </p>
       )}
+      {mouth && (
+        <PlaceFields
+          label={DESIGNER_TEXT.mouthPlace}
+          value={mouth.position}
+          auto={mouth.auto}
+          widthIn={chamber.dims.w}
+          onChange={(p) => onEdit((c) => ({ ...c, load: withMouthPosition(c.load, p) }))}
+        />
+      )}
       <ToggleGroup
         label="Vent"
         className="mb-3"
@@ -185,6 +208,7 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             options={entriesOf(PORT_SHAPE_NAMES)}
           />
           <PortFields port={vent.port} onChange={setPort} />
+          {!vents && <p className="text-xs text-stone-500 mb-3">{DESIGNER_TEXT.ventFixed}</p>}
           <NumberField
             label="Air speed limit"
             value={vent.maxSpeedMs}
@@ -192,6 +216,7 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             step={0.5}
             unit="m/s"
             onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
+            className="mb-3"
           />
         </>
       )}
@@ -203,7 +228,7 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             value={byId(HIFI_PASSIVES_BY_SIZE, vent.radiators.id)}
             onChange={(p) => setVent({ ...vent, radiators: { ...vent.radiators, id: p.id } })}
           />
-          <div className={ROW}>
+          <div className={FIELD_ROW}>
             <NumberField
               label="Count"
               value={vent.radiators.n}
@@ -221,11 +246,40 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
           </div>
         </>
       )}
+      {vents && (
+        <PlaceFields
+          label={
+            vents.what === VENT_KIND.radiator
+              ? DESIGNER_TEXT.radiatorPlace
+              : DESIGNER_TEXT.portPlace
+          }
+          value={vents.position}
+          auto={vents.auto}
+          widthIn={chamber.dims.w}
+          onChange={(p) => onEdit((c) => ({ ...c, vent: withVentPosition(c.vent, p) }))}
+        >
+          {vents.position && (
+            <ToggleGroup
+              label={DESIGNER_TEXT.panel}
+              className="mb-2"
+              value={vents.position.panel}
+              onChange={(panel) =>
+                onEdit((c) => ({
+                  ...c,
+                  vent: withVentPosition(c.vent, vents.position && { ...vents.position, panel }),
+                }))
+              }
+              options={entriesOf(VENT_PANEL_NAMES)}
+            />
+          )}
+        </PlaceFields>
+      )}
       <h5 className="text-sm font-semibold mt-1 mb-2">Drivers</h5>
       {chamber.drivers.map((driver, i) => (
         <DriverFields
           key={i}
           driver={driver}
+          widthIn={chamber.dims.w}
           bandOptions={bandOptions}
           onEdit={(edit) => editDriver(i, edit)}
           onRemove={() => onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }))}
@@ -260,21 +314,40 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
   );
 }
 
-/** A port's size: round tubes, a slot (the chamber's width unless it sets one) or side ducts. */
+/**
+ * A port's size: round tubes, a slot (its opening's narrow side, and its long side where it sets one: else the chamber's
+ * clear width) or side ducts.
+ */
 function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: SpeakerPort) => void }) {
   if (port.shape === PORT_SHAPE.slot)
     return (
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         <NumberField
-          label="Height, in"
-          value={port.h}
-          min={0.25}
-          step={0.25}
-          onChange={(h) => onChange({ ...port, h })}
+          label="Count"
+          value={port.n}
+          min={1}
+          step={1}
+          onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
         />
         <NumberField
-          label="Length, in"
-          value={port.len}
+          label={DESIGNER_TEXT.slotNarrow}
+          value={shownIn(port.h)}
+          min={0.25}
+          step={0.125}
+          onChange={(h) => onChange({ ...port, h })}
+        />
+        {port.w !== undefined && (
+          <NumberField
+            label={DESIGNER_TEXT.slotLong}
+            value={shownIn(port.w)}
+            min={0.25}
+            step={0.25}
+            onChange={(w) => onChange({ ...port, w })}
+          />
+        )}
+        <NumberField
+          label={DESIGNER_TEXT.portLength}
+          value={shownIn(port.len)}
           min={0.5}
           step={0.5}
           onChange={(len) => onChange({ ...port, len })}
@@ -294,17 +367,17 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
             [2, "Two"],
           ]}
         />
-        <div className={ROW}>
+        <div className={FIELD_ROW}>
           <NumberField
             label="Throat, in"
-            value={port.throat}
+            value={shownIn(port.throat)}
             min={0.25}
             step={0.25}
             onChange={(throat) => onChange({ ...port, throat })}
           />
           <NumberField
-            label="Length, in"
-            value={port.len}
+            label={DESIGNER_TEXT.portLength}
+            value={shownIn(port.len)}
             min={0.5}
             step={0.5}
             onChange={(len) => onChange({ ...port, len })}
@@ -313,7 +386,7 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
       </>
     );
   return (
-    <div className={ROW}>
+    <div className={FIELD_ROW}>
       <NumberField
         label="Count"
         value={port.n}
@@ -323,14 +396,14 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
       />
       <NumberField
         label="Diameter, in"
-        value={port.dia}
+        value={shownIn(port.dia)}
         min={0.5}
         step={0.25}
         onChange={(dia) => onChange({ ...port, dia })}
       />
       <NumberField
-        label="Length, in"
-        value={port.len}
+        label={DESIGNER_TEXT.portLength}
+        value={shownIn(port.len)}
         min={0.5}
         step={0.5}
         onChange={(len) => onChange({ ...port, len })}
@@ -341,13 +414,15 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
 
 interface DriverProps {
   driver: SpeakerDriver;
+  /** its chamber's width: the position shows from its left side */
+  widthIn: number;
   bandOptions: readonly (readonly [BandId, string])[];
   onEdit: (edit: (d: SpeakerDriver) => SpeakerDriver) => void;
   onRemove: () => void;
 }
 
-/** One driver entry: its kind, part, count, band (a coaxial's two) and horn. */
-function DriverFields({ driver, bandOptions, onEdit, onRemove }: DriverProps) {
+/** One driver entry: its kind, part, count, place, band (a coaxial's two) and horn. */
+function DriverFields({ driver, widthIn, bandOptions, onEdit, onRemove }: DriverProps) {
   const coaxial = driver.kind === DRIVER_KIND.coaxial;
   const horns = hornOptions(driver.kind);
   const [lowBand, highBand = lowBand] = driver.bands;
@@ -381,6 +456,24 @@ function DriverFields({ driver, bandOptions, onEdit, onRemove }: DriverProps) {
         step={1}
         onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
       />
+      <div className={FIELD_ROW}>
+        {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
+        <NumberField
+          label={DESIGNER_TEXT.fromLeft}
+          value={shownIn(driver.position.xIn + widthIn / 2)}
+          step={0.25}
+          onChange={(v) =>
+            onEdit((d) => ({ ...d, position: { ...d.position, xIn: v - widthIn / 2 } }))
+          }
+        />
+        <NumberField
+          // a horn on the top: back from the baffle's front
+          label={onTop(driver) ? DESIGNER_TEXT.backFromFront : DESIGNER_TEXT.fromBottom}
+          value={shownIn(driver.position.yIn)}
+          step={0.25}
+          onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
+        />
+      </div>
       <ToggleGroup
         label={coaxial ? "Cone's band" : "Band"}
         className="mb-3"
