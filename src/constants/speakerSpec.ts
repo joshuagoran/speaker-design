@@ -89,6 +89,19 @@ export const CABINET_TOP_NAMES = {
   arched: "Arched",
 } as const satisfies Record<CabinetTop, string>;
 
+/**
+ * Why an arched top is drawn and cut flat, by id (lib/speaker `archBlock`): the first condition the cabinet misses. A
+ * frame, one shell, one chamber at the top, that chamber the full width, and at least half as tall as the cabinet is
+ * wide.
+ */
+export const ARCH_BLOCK = {
+  frame: "frame",
+  shell: "shell",
+  topChambers: "topChambers",
+  width: "width",
+  height: "height",
+} as const;
+
 /** A chamber's vent kinds, by id: the Hi-fi box kinds. A vented chamber's port is round, a slot or side ducts. */
 export const VENT_KIND = {
   sealed: "sealed",

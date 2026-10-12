@@ -342,6 +342,9 @@ Each PR stands alone. Lowest risk first.
         - Allow ribs on the outer panels around the flare.
         - Allow lightening cutouts in braces: holes in a flare wall or a frame where it carries no load.
         - The bracing check and the cutlist follow these rules.
+      - Exoskeletal bracing (owner, Oct 2026; #150), a later option beside "None" (no bracing, done): braces on the
+        outside of the box (ribs or a frame on the panels). They take no net air, and the panel stiffness uses the same
+        model as inside braces.
   - **L3d Inductance, limits and chips.**
     - **Voice-coil inductance.** Every T/S model reads the catalog's `Le`: the sealed, vented and passive-radiator
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in

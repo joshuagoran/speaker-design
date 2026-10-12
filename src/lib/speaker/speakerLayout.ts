@@ -6,6 +6,7 @@
 // seen from the front), y up from the cabinet's bottom. Both views draw the left speaker of a pair, so a driver's
 // `xIn` (+ toward the pair's inside) is + to the right, as the Hi-fi page draws it. Pure.
 import type {
+  ArchBlock,
   Dims2,
   Dims3,
   FacePoint,
@@ -51,6 +52,8 @@ import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
+  ARCH_BLOCK,
+  CABINET_CONSTRUCTION,
   CABINET_TOP,
   CHAMBER_LOAD,
   DRIVER_KIND,
@@ -537,22 +540,37 @@ export function ventMoved(cabinet: Pick<SpeakerCabinet, "panel">, placed: Placed
 }
 
 /**
- * Whether the views draw the cabinet's top arched: an `arched` top over chambers that share one shell, its top chamber
- * running the shell's whole width and at least half as tall as that (the semicircle stays inside it, as the tower's
- * horn section). Otherwise the top is drawn flat.
+ * The first of the layout's shape conditions for an arch that it misses: chambers that share one shell, one chamber at
+ * the top, running the shell's whole width and at least half as tall as that (the semicircle stays inside it, as the
+ * tower's horn section); null when it meets them all.
  */
-export function drawsArchedTop(
-  cabinet: Pick<SpeakerCabinet, "top">,
-  layout: SpeakerLayout,
-): boolean {
-  if (cabinet.top !== CABINET_TOP.arched || !layout.oneShell) return false;
+function archShapeBlock(layout: SpeakerLayout): ArchBlock | null {
+  if (!layout.oneShell) return ARCH_BLOCK.shell;
   const top = layout.chambers.filter((c) => Math.abs(c.y0 + c.dims.h - layout.size.h) < TOUCH_IN);
-  return (
-    top.length === 1 &&
-    Math.abs(top[0].dims.w - layout.size.w) < TOUCH_IN &&
-    top[0].dims.h >= layout.size.w / 2
-  );
+  if (top.length !== 1) return ARCH_BLOCK.topChambers;
+  if (Math.abs(top[0].dims.w - layout.size.w) >= TOUCH_IN) return ARCH_BLOCK.width;
+  if (top[0].dims.h < layout.size.w / 2) return ARCH_BLOCK.height;
+  return null;
 }
+
+/**
+ * Whether the views draw the cabinet's top arched: an `arched` top whose layout meets the arch's shape conditions
+ * (`archShapeBlock`). Otherwise the top is drawn flat.
+ */
+export const drawsArchedTop = (cabinet: Pick<SpeakerCabinet, "top">, layout: SpeakerLayout) =>
+  cabinet.top === CABINET_TOP.arched && archShapeBlock(layout) === null;
+
+/**
+ * Why the cabinet's arched top is drawn and cut flat: a flush box (the arch needs a frame), else the first shape
+ * condition the layout misses; null when the arch applies. The settings show it under the Top choice.
+ */
+export const archBlock = (
+  cabinet: Pick<SpeakerCabinet, "construction">,
+  layout: SpeakerLayout,
+): ArchBlock | null =>
+  cabinet.construction === CABINET_CONSTRUCTION.frameInset
+    ? archShapeBlock(layout)
+    : ARCH_BLOCK.frame;
 
 /** A horn-loaded chamber's flare as the views draw it, inches. */
 export interface HornFlare {

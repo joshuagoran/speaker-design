@@ -1,3 +1,4 @@
+import { HOVER_TRANSITION } from "./buttonStyles";
 import { useId } from "react";
 import { FormField } from "./FormField";
 
@@ -35,7 +36,7 @@ export function TextField({
       maxLength={maxLength}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
-      className={`px-3 rounded border border-stone-300 bg-panel text-sm ${className}`}
+      className={`px-3 font-value rounded border border-stone-300 bg-panel text-sm hover:border-stone-500 ${HOVER_TRANSITION} ${className}`}
     />
   );
   return label === undefined ? (

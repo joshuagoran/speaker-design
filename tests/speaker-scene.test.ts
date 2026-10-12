@@ -20,6 +20,7 @@ import {
   driverSpots,
   hornFlare,
   onTop,
+  archBlock,
   drawsArchedTop,
   radiatorsAt,
   roundPortsAt,
@@ -41,6 +42,7 @@ import { byIdOrThrow } from "../src/lib/tables";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
 import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
 import {
+  ARCH_BLOCK,
   CABINET_CONSTRUCTION,
   CABINET_TOP,
   CHAMBER_LOAD,
@@ -633,6 +635,32 @@ describe("the cabinet's construction and top", () => {
     expect(layout.size.h).toBeGreaterThanOrEqual(layout.size.w / 2);
     expect(drawsArchedTop(short.cabinet, layout)).toBe(false);
     expect(topCorner(short)).toBe(true);
+  });
+
+  test("the settings say why an arched top stays flat: the first condition it misses", () => {
+    const tower = caseSpec("PA tower");
+    const [sub, mid, top] = tower.cabinet.chambers;
+    const why = (spec: typeof tower) => archBlock(spec.cabinet, speakerLayout(spec.cabinet));
+    expect(why(tower)).toBe(null);
+    expect(why(withCabinet(tower, { construction: CABINET_CONSTRUCTION.flushBox }))).toBe(
+      ARCH_BLOCK.frame,
+    );
+    // a top chamber less than half the width tall
+    expect(
+      why(
+        withCabinet(tower, {
+          chambers: [sub, mid, { ...top, dims: { ...top.dims, h: top.dims.w / 2 - 2 } }],
+        }),
+      ),
+    ).toBe(ARCH_BLOCK.height);
+    // a top chamber narrower than the cabinet: no one shell
+    expect(
+      why(
+        withCabinet(tower, {
+          chambers: [sub, mid, { ...top, dims: { ...top.dims, w: top.dims.w - 4 } }],
+        }),
+      ),
+    ).toBe(ARCH_BLOCK.shell);
   });
 
   test("an arched back takes its holes: a port on the back of the tower's top chamber", () => {

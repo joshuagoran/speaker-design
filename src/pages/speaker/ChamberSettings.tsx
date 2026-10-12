@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   BandId,
   ChamberVent,
@@ -14,6 +15,8 @@ import type {
 } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { CardHeading } from "../../components/ui/CardHeading";
+import { SettingsFold } from "../../components/ui/SettingsFold";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
@@ -24,7 +27,9 @@ import { HIFI_PASSIVES_BY_SIZE } from "../../lib/hifi/hifiDriverLists";
 import {
   CHAMBER_LOAD_NAMES,
   SPEAKER_TEXT,
-  DRIVER_KIND_NAMES,
+  ALL_SIZES,
+  DRIVER_TYPE_NAMES,
+  wooferSizeName,
   HORN_PLACEMENT_NAMES,
   HORN_PLACEMENT_NO_FIT,
   MODEL_GAP_TEXT,
@@ -46,8 +51,15 @@ import {
   DEFAULT_VENTS,
   DRIVER_OPTIONS,
   NO_HORN,
+  WOOFER_OPTIONS,
+  WOOFER_SIZES,
   driverOfKind,
   hornOptions,
+  isWooferKind,
+  withWoofer,
+  wooferClearIn,
+  wooferFor,
+  wooferSizeOf,
 } from "./speakerParts";
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./speakerPlaces";
 import { PlaceFields } from "./PlaceFields";
@@ -64,17 +76,21 @@ import { hornById } from "../../lib/data";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
 import { HORN_MOUNT_DEFAULT } from "../../constants/hornMount";
 
-/** The driver kinds as the kind picker lists them. */
-const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map(([id, name]) => ({
+/** The driver types as the type picker lists them: one woofer type, then the other kinds. */
+const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_TYPE_NAMES).map(([id, name]) => ({
   id,
   name,
 }));
 
+/** The woofer size filter's choices: every size, then each catalog size (the id is the size, in). */
+const ALL_SIZES_OPTION: SelectOption = { id: "", name: ALL_SIZES };
+const SIZE_OPTIONS: readonly SelectOption[] = [
+  ALL_SIZES_OPTION,
+  ...WOOFER_SIZES.map((s) => ({ id: String(s), name: wooferSizeName(s) })),
+];
+
 /** Where a chamber's net air comes from: worked out from its size (Auto), or typed in (Custom). */
 const NET_AIR = SET_BY;
-
-/** What the net air's Auto value takes off the inside volume. */
-const NET_AIR_TIP = "Inside volume less walls, bracing, drivers and vent.";
 
 interface Props {
   index: number;
@@ -115,16 +131,27 @@ export function ChamberSettings({
   const firstBand = bands[0]?.id;
   /** the room a starting horn fills */
   const room = hornRoom(cabinet, chamber, placed);
+  /** the chamber's clear room, in: a new woofer's size fits it */
+  const clearIn = wooferClearIn(chamber, cabinet.panel.thicknessIn);
+  /**
+   * how many times a driver was removed: each driver's fields take it with their index as their key, so no field state
+   * (the woofer size filter) carries over to the next driver
+   */
+  const [driverRound, setDriverRound] = useState(0);
   return (
     <Card className="mb-3">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h4 className="font-semibold">Chamber {index + 1}</h4>
-        {onRemove && (
-          <Button size="xs" onClick={onRemove}>
-            Remove chamber
-          </Button>
-        )}
-      </div>
+      <CardHeading
+        className="mb-3"
+        action={
+          onRemove && (
+            <Button size="xs" onClick={onRemove}>
+              Remove chamber
+            </Button>
+          )
+        }
+      >
+        Chamber {index + 1}
+      </CardHeading>
       <div className={FIELD_ROW}>
         {(["w", "h", "d"] as const).map((k) => (
           <NumberField
@@ -137,24 +164,29 @@ export function ChamberSettings({
           />
         ))}
       </div>
-      <div className="text-sm text-stone-500 mb-1">Position</div>
-      <div className={FIELD_ROW}>
-        {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
-        <NumberField
-          label="From left, in"
-          value={shownIn(chamber.at.xIn)}
-          step={0.25}
-          onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
-        />
-        <NumberField
-          label="From bottom, in"
-          value={shownIn(chamber.at.yIn)}
-          step={0.25}
-          onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
-        />
-      </div>
+      {/* most designs never move a chamber: its position waits in a closed fold */}
+      <SettingsFold
+        title={SPEAKER_TEXT.advanced}
+        summary={SPEAKER_TEXT.chamberAt(shownIn(chamber.at.xIn), shownIn(chamber.at.yIn))}
+      >
+        <div className={FIELD_ROW}>
+          {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
+          <NumberField
+            label={SPEAKER_TEXT.fromLeft}
+            value={shownIn(chamber.at.xIn)}
+            step={0.25}
+            onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
+          />
+          <NumberField
+            label={SPEAKER_TEXT.fromBottom}
+            value={shownIn(chamber.at.yIn)}
+            step={0.25}
+            onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
+          />
+        </div>
+      </SettingsFold>
       <ToggleGroup
-        label={<Tooltip tip={NET_AIR_TIP}>Net air</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.netAirTip}>Net air</Tooltip>}
         className="mb-2"
         value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
         onChange={(v) =>
@@ -166,22 +198,17 @@ export function ChamberSettings({
         options={entriesOf(SET_BY_NAMES)}
       />
       <NumberField
-        label={<Tooltip tip={NET_AIR_TIP}>Liters</Tooltip>}
+        label="Volume, L"
         // Auto: the model's value, read-only
         value={chamber.netLiters ?? shownTenth(result?.netLiters ?? 0)}
         disabled={chamber.netLiters === null}
         min={0.5}
         step={0.5}
-        unit="L"
         onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
         className="mb-3"
       />
       <NumberField
-        label={
-          <Tooltip tip="Fill makes the box act larger. 10% is normal. 15% is heavy.">
-            Stuffing (%)
-          </Tooltip>
-        }
+        label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>Stuffing, %</Tooltip>}
         value={chamber.stuffingPct}
         min={0}
         step={5}
@@ -244,7 +271,7 @@ export function ChamberSettings({
           <PortFields port={vent.port} onChange={setPort} />
           {!vents && <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
-            label="Air speed limit"
+            label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
             value={vent.maxSpeedMs}
             min={1}
             step={0.5}
@@ -271,7 +298,7 @@ export function ChamberSettings({
               onChange={(n) => setVent({ ...vent, radiators: { ...vent.radiators, n } })}
             />
             <NumberField
-              label="Added mass, g"
+              label={<Tooltip tip={SPEAKER_TEXT.radiatorMassTip}>Added mass, g</Tooltip>}
               value={vent.radiators.addG}
               min={0}
               step={5}
@@ -306,31 +333,42 @@ export function ChamberSettings({
           )}
         </PlaceFields>
       )}
-      <h5 className="text-sm font-semibold mt-1 mb-2">Drivers</h5>
+      <CardHeading sub className="mt-1 mb-2">
+        Drivers
+      </CardHeading>
       {chamber.drivers.map((driver, i) => (
         <DriverFields
-          key={i}
+          key={`${driverRound}:${i}`}
           driver={driver}
           widthIn={chamber.dims.w}
+          clearIn={clearIn}
           placed={placed}
           bandOptions={bandOptions}
           onEdit={(edit) => editDriver(i, edit)}
-          onRemove={() => onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }))}
+          onRemove={() => {
+            setDriverRound((r) => r + 1);
+            onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }));
+          }}
         />
       ))}
       {firstBand && (
         <Button
+          variant="primary"
           size="xs"
           onClick={() =>
             onEdit((c) => ({
               ...c,
               drivers: [
                 ...c.drivers,
-                driverOfKind(DRIVER_KIND.woofer, {
-                  count: 1,
-                  position: { xIn: 0, yIn: c.dims.h / 2 },
-                  bands: [firstBand],
-                }),
+                // a woofer of the largest size that fits the chamber
+                withWoofer(
+                  driverOfKind(DRIVER_KIND.woofer, {
+                    count: 1,
+                    position: { xIn: 0, yIn: c.dims.h / 2 },
+                    bands: [firstBand],
+                  }),
+                  wooferFor(clearIn),
+                ),
               ],
             }))
           }
@@ -449,6 +487,8 @@ interface DriverProps {
   driver: SpeakerDriver;
   /** its chamber's width: the position shows from its left side */
   widthIn: number;
+  /** its chamber's clear room, in (`wooferClearIn`): a woofer picked by type fits it */
+  clearIn: number;
   /** its chamber as the layout places it: which places its horn fits */
   placed: PlacedChamber | undefined;
   bandOptions: readonly (readonly [BandId, string])[];
@@ -456,8 +496,25 @@ interface DriverProps {
   onRemove: () => void;
 }
 
-/** One driver entry: its kind, part, count, place, band (a coaxial's two) and horn. */
-function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }: DriverProps) {
+/**
+ * One driver entry: its type, part, count, place, band (a coaxial's two) and horn. Woofers are one list (the PA subs,
+ * the PA mid-bass drivers and the Hi-fi woofers), with a size filter that starts at the woofer's own size.
+ */
+function DriverFields({
+  driver,
+  widthIn,
+  clearIn,
+  placed,
+  bandOptions,
+  onEdit,
+  onRemove,
+}: DriverProps) {
+  const woofer = isWooferKind(driver.kind);
+  const type = isWooferKind(driver.kind) ? DRIVER_KIND.woofer : driver.kind;
+  /** every woofer size shows; else only the woofer's own size */
+  const [allSizes, setAllSizes] = useState(false);
+  const size = allSizes ? null : wooferSizeOf(driver);
+  const woofers = size === null ? WOOFER_OPTIONS : WOOFER_OPTIONS.filter((o) => o.size === size);
   const coaxial = driver.kind === DRIVER_KIND.coaxial;
   const horns = hornOptions(driver.kind);
   const horn = driver.horn && hornById(driver.horn.hornId);
@@ -482,28 +539,60 @@ function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }
     }));
   return (
     <div className="border-t border-stone-300 pt-3 mb-3">
-      <SelectField
-        label="Kind"
-        options={KIND_OPTIONS}
-        value={byId(KIND_OPTIONS, driver.kind)}
-        onChange={(o) => {
-          // the picker lists exactly the kinds (KIND_OPTIONS)
-          const kind = keysOf(DRIVER_KIND_NAMES).find((k) => k === o.id);
-          if (kind && kind !== driver.kind) onEdit((d) => kindChanged(d, kind));
-        }}
-      />
-      <SelectField
-        label="Model"
-        options={DRIVER_OPTIONS[driver.kind]}
-        value={byId(DRIVER_OPTIONS[driver.kind], driver.driverId)}
-        onChange={(o) => onEdit((d) => ({ ...d, driverId: o.id }))}
-      />
+      <div className="grid grid-cols-2 gap-x-3">
+        <SelectField
+          label="Type"
+          className={woofer ? undefined : "col-span-2 mb-4"}
+          options={TYPE_OPTIONS}
+          value={byId(TYPE_OPTIONS, type)}
+          onChange={(o) => {
+            // the picker lists exactly the types (TYPE_OPTIONS)
+            const next = keysOf(DRIVER_TYPE_NAMES).find((k) => k === o.id);
+            if (!next || next === type) return;
+            if (next === DRIVER_KIND.woofer) {
+              setAllSizes(false);
+              onEdit((d) => withWoofer(d, wooferFor(clearIn)));
+            } else onEdit((d) => kindChanged(d, next));
+          }}
+        />
+        {woofer && (
+          <SelectField
+            label="Size"
+            options={SIZE_OPTIONS}
+            value={size === null ? ALL_SIZES_OPTION : byId(SIZE_OPTIONS, String(size))}
+            onChange={(o) => {
+              const picked = WOOFER_SIZES.find((s) => String(s) === o.id);
+              setAllSizes(picked === undefined);
+              // a size the woofer is not: the first woofer of that size
+              const first = WOOFER_OPTIONS.find((w) => w.size === picked);
+              if (first && picked !== wooferSizeOf(driver)) onEdit((d) => withWoofer(d, first));
+            }}
+          />
+        )}
+      </div>
+      {woofer ? (
+        <SelectField
+          label="Model"
+          options={woofers}
+          value={byId(woofers, driver.driverId)}
+          onChange={(o) => onEdit((d) => withWoofer(d, o))}
+          group={size === null ? (o) => wooferSizeName(o.size) : undefined}
+        />
+      ) : (
+        <SelectField
+          label="Model"
+          options={DRIVER_OPTIONS[driver.kind]}
+          value={byId(DRIVER_OPTIONS[driver.kind], driver.driverId)}
+          onChange={(o) => onEdit((d) => ({ ...d, driverId: o.id }))}
+        />
+      )}
       <NumberField
         label="Count"
         value={driver.count}
         min={1}
         step={1}
         onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
+        className="mb-3"
       />
       <div className={FIELD_ROW}>
         {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
@@ -541,7 +630,7 @@ function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }
       )}
       {horns.length > 0 && (
         <SelectField
-          label="Horn or waveguide"
+          label={<Tooltip tip={SPEAKER_TEXT.driverHornTip}>Horn or waveguide</Tooltip>}
           options={horns}
           value={driver.horn ? byId(horns, driver.horn.hornId) : NO_HORN}
           onChange={(o) =>
@@ -559,7 +648,7 @@ function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }
       )}
       {driver.horn && (
         <ToggleGroup
-          label="Horn mounting"
+          label={<Tooltip tip={SPEAKER_TEXT.hornMountTip}>Horn mounting</Tooltip>}
           className="mb-3"
           value={driver.horn.placement}
           onChange={(placement) =>

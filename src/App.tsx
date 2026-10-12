@@ -1,3 +1,4 @@
+import { PRESSED_CLASSES } from "./components/ui/buttonStyles";
 import { usePaPlanner } from "./pages/pa-stack/hooks/usePaPlanner";
 import { PaStackPage } from "./pages/pa-stack/PaStackPage";
 import { NotesPage } from "./pages/notes/NotesPage";
@@ -91,7 +92,7 @@ export function App() {
                     href={PAGE_HASHES[home]}
                     aria-current={on ? "page" : undefined}
                     onClick={navigateTo(home, PAGE_HASHES[home])}
-                    className={`px-4 max-sm:px-2.5 py-2 whitespace-nowrap rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}
+                    className={`px-4 max-sm:px-2.5 py-2 whitespace-nowrap rounded border-2 text-base font-semibold ${on ? PRESSED_CLASSES : "border-stone-300 hover:border-stone-500"}`}
                   >
                     {label}
                   </a>

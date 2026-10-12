@@ -93,7 +93,7 @@ export function Slider({ label, value, min, max, step, unit, onChange, extra, ra
     <div className="mb-3">
       <div className="flex justify-between items-center gap-3 mb-1">
         <span className="flex items-center gap-2">
-          <label htmlFor={id} className="text-sm text-stone-500">
+          <label htmlFor={id} className="text-sm font-label text-stone-500">
             {label}
           </label>
           {extra}

@@ -26,7 +26,7 @@ export function PageTabs<Id extends string>({ tabs, current, label, onNavigate }
           href={href}
           aria-current={current === v ? "page" : undefined}
           onClick={onNavigate(v, href)}
-          className={`py-2 -mb-px border-b-2 text-sm ${current === v ? "border-stone-900 font-semibold" : "border-transparent text-stone-500 hover:text-stone-900"}`}
+          className={`py-2 -mb-px border-b-2 text-sm ${current === v ? "border-cmy-c font-semibold" : "border-transparent text-stone-500 hover:text-stone-900"}`}
         >
           {text}
         </a>

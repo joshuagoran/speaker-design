@@ -1,6 +1,7 @@
 import { FONT } from "../../styles/fonts";
 import { MD_UP } from "../../styles/layout";
 import { useHeightAnimation } from "../../hooks/useHeightAnimation";
+import { HOVER_TRANSITION } from "./buttonStyles";
 
 /**
  * The widths a section folds at: phones only (the result sections, always open from md up), md and up only (the PA
@@ -96,7 +97,7 @@ export function FoldHeading<Id extends string>({
         type="button"
         onClick={() => toggle(id)}
         aria-expanded={open}
-        className={`w-full flex justify-between items-center gap-3 text-left ${at.minH} ${at.inert} ${buttonClassName}`}
+        className={`group w-full flex justify-between items-center gap-3 text-left ${at.minH} ${at.inert} ${buttonClassName}`}
       >
         <span className="min-w-0 flex-1 flex flex-col">
           <span>{title}</span>
@@ -106,7 +107,10 @@ export function FoldHeading<Id extends string>({
             </span>
           )}
         </span>
-        <span className={`${at.only} text-stone-500 text-base`} aria-hidden="true">
+        <span
+          className={`${at.only} text-stone-500 text-base group-hover:text-stone-900 group-focus-visible:text-stone-900 ${HOVER_TRANSITION}`}
+          aria-hidden="true"
+        >
           {open ? "−" : "+"}
         </span>
       </button>

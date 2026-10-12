@@ -2,11 +2,13 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
+import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
 import type {
   BACK_JOINT_NAMES,
   BOX_AXIS_NAMES,
   BRACE_PANEL_NAMES,
   BRACE_STYLE_NAMES,
+  SPEAKER_BRACE_STYLE_NAMES,
   STRENGTH_LOAD_NAMES,
 } from "./constants/bracing";
 import type { INPUT_RANGE_LIMIT, LIMIT_NAMES } from "./constants/limits";
@@ -16,6 +18,7 @@ import type { HORN_PROFILE } from "./constants/hornEngine";
 import type {
   AUTO_DELAY,
   CABINET_CONSTRUCTION,
+  ARCH_BLOCK,
   CABINET_TOP,
   CHAMBER_LOAD,
   FIRST_ORDER_FILTER,
@@ -2055,11 +2058,16 @@ export type CabinetConstruction = (typeof CABINET_CONSTRUCTION)[keyof typeof CAB
 /** A cabinet's top shape, by id (`CABINET_TOP`). */
 export type CabinetTop = (typeof CABINET_TOP)[keyof typeof CABINET_TOP];
 
+/** Why an arched top is drawn and cut flat, by id (`ARCH_BLOCK`). */
+export type ArchBlock = (typeof ARCH_BLOCK)[keyof typeof ARCH_BLOCK];
+
 /**
  * A cabinet: its chambers, panels and shape, and its bracing as the PA boxes take it: the style (ribs, window braces or
  * both), how the back is fixed (glued or screwed), and the target every panel's first mode should clear.
  */
-export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "braceStyle" | "backJoint">> {
+export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "backJoint">> {
+  /** the bracing style, or none: the panels unbraced */
+  braceStyle: SpeakerBraceStyle;
   chambers: readonly SpeakerChamber[];
   panel: SpeakerPanel;
   /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ by default (lib/pa/bracing) */
@@ -2500,6 +2508,8 @@ export interface StackLimits {
 export type HornMountId = keyof typeof HORN_MOUNT_NAMES;
 /** A bracing style's id (`BRACE_STYLE_NAMES` holds the name it shows). */
 export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
+/** A Speaker cabinet's bracing: a style, or none (`NO_BRACING`). */
+export type SpeakerBraceStyle = keyof typeof SPEAKER_BRACE_STYLE_NAMES;
 /** A box panel the bracing rule reads, by id (`BRACE_PANEL_NAMES` holds the name it shows). */
 export type BracePanelId = keyof typeof BRACE_PANEL_NAMES;
 /** A box axis, from the inside corner: x across, y up, z back from the baffle. */
@@ -2796,6 +2806,21 @@ export interface CutPart {
   grain?: GrainDir;
   /** a waterfall strip: the panels' lengths along `b`, in cut order */
   pieces?: number[];
+}
+
+/** What a bought part is, by id (`PURCHASED_PART_NAMES` holds the name the cutlist shows). */
+export type PurchasedPartKind = keyof typeof PURCHASED_PART_NAMES;
+
+/** A part bought for a speaker, as the Cutlist page's purchased parts table and its CSV list it. */
+export interface PurchasedPart {
+  kind: PurchasedPartKind;
+  /** the maker and model, as the catalog names it */
+  model: string;
+  count: number;
+  /** US dollars each; null where no US vendor price is known */
+  unit: number | null;
+  /** where the price comes from (the catalog's free-text source: a vendor, an estimate); null where none is known */
+  source: string | null;
 }
 
 /** What the cutlist needs for a sub and mid pair. */

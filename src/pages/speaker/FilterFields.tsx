@@ -1,9 +1,10 @@
+import { Tooltip } from "../../components/ui/Tooltip";
 import type { BandFilter, FilterType, SpeakerBand } from "../../types";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
-import { FILTER_TYPE_NAMES } from "../../constants/speakerPage";
+import { FILTER_TYPE_NAMES, SPEAKER_TEXT } from "../../constants/speakerPage";
 
 /** The filter types, as the picker lists them after its first choice. */
 const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(FILTER_TYPE_NAMES).map(([id, name]) => ({
@@ -35,9 +36,12 @@ export function FilterFields({ filters, newCornerHz, offName, onEdit }: Props) {
     const filter = filters[side];
     const set = (f: BandFilter | null) => onEdit((b) => ({ ...b, [side]: f }));
     return (
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 items-end">
+      // one grid for every row: the select spans both columns when there is no corner, so each row has the same width
+      // and the select and the corner field sit on one line
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 items-start mb-4">
         <SelectField
           label={label}
+          className={filter ? "" : "col-span-2"}
           options={options}
           value={filter ? byId(options, filter.type) : off}
           onChange={(o) => {
@@ -47,7 +51,7 @@ export function FilterFields({ filters, newCornerHz, offName, onEdit }: Props) {
         />
         {filter && (
           <NumberField
-            label="Corner"
+            label={<Tooltip tip={SPEAKER_TEXT.cornerTip}>Corner</Tooltip>}
             value={filter.hz}
             min={10}
             step={10}
