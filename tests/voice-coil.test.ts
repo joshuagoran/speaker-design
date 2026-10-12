@@ -6,9 +6,19 @@ import assert from "node:assert";
 import { boxModel, closedBox } from "../src/lib/pa/calc";
 import { passiveRadiatorBox } from "../src/lib/hifi/hifi";
 import { coilFactor } from "../src/lib/acoustics/driverCircuit";
-import { abs } from "../src/lib/acoustics/complex";
-import { HIFI_PASSIVES, MID_OPTIONS } from "../src/lib/data";
-import type { BoxModelTS } from "../src/types";
+import {
+  abs,
+  add,
+  complex,
+  divide,
+  imaginary,
+  multiply,
+  reciprocal,
+} from "../src/lib/acoustics/complex";
+import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../src/constants/acoustics";
+import { HIFI_PASSIVES, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import type { BoxModelTS, Complex } from "../src/types";
+import { massLineSPL, near } from "./helpers";
 
 const mid = MID_OPTIONS.find((o) => o.id === "f12pr300");
 assert.ok(mid, "the catalog has the mid");
@@ -60,5 +70,98 @@ test("voice coil: with Le the box models roll off at the top and keep the bass",
     );
     // and the cone travels less there
     assert.ok(at(b, f).xmm < at(a, f).xmm, `${kind}: less excursion at 4 kHz`);
+  }
+});
+
+// An independent reference for the coil: the plain series circuit in the mechanical domain, i = V/(Re + jωLe + Bl²/Zm),
+// v = Bl·i/Zm, with Zm the cone's mechanical impedance and the box's air on its back, Sd²·Zbox (half space, 1 m).
+const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500");
+assert.ok(sub?.ts.Le, "the catalog's f18fh500 lists Le");
+const fh500 = sub.ts;
+const { Le: _subLe, ...fh500Bare } = fh500;
+const VbL = 150;
+const Cab = VbL / 1000 / (AIR_DENSITY * SPEED_OF_SOUND ** 2);
+/** The sealed box's acoustic impedance, 1/(jωCab). */
+const sealedBox = (w: number) => reciprocal(imaginary(w * Cab));
+/** The vented box's acoustic impedance at tuning Fb: the box air, the port (mass and loss) and the leak in parallel. */
+const ventedBox = (Fb: number) => (w: number) => {
+  const wb = 2 * Math.PI * Fb,
+    Map = 1 / (wb * wb * Cab);
+  const port = complex((wb * Map) / BOX_PORT_Q, w * Map);
+  const leak = complex(BOX_LEAK_Q / (wb * Cab));
+  return reciprocal(add(add(imaginary(w * Cab), reciprocal(port)), reciprocal(leak)));
+};
+/** The cone's mechanical impedance with the box behind it, N·s/m. */
+const mechanical = (ts: BoxModelTS, f: number, box: (w: number) => Complex) => {
+  const w = 2 * Math.PI * f,
+    Mms = ts.Mms / 1000,
+    Sd = ts.Sd / 1e4,
+    Cms = 1 / ((2 * Math.PI * ts.Fs) ** 2 * Mms);
+  const Rms = (2 * Math.PI * ts.Fs * Mms) / ts.Qms;
+  return add(complex(Rms, w * Mms - 1 / (w * Cms)), multiply(complex(Sd * Sd), box(w)));
+};
+/** The SPL of the series circuit at `volts`: the cone's flow, or (`radiated`) the flow into the box air for a vented box. */
+function seriesSPL(
+  ts: BoxModelTS,
+  f: number,
+  volts: number,
+  box: (w: number) => Complex,
+  radiated = false,
+) {
+  const w = 2 * Math.PI * f,
+    Sd = ts.Sd / 1e4,
+    Zm = mechanical(ts, f, box);
+  const coil = complex(ts.Re, (w * (ts.Le ?? 0)) / 1000);
+  const i = divide(complex(volts), add(coil, divide(complex(ts.Bl * ts.Bl), Zm)));
+  const Ud = multiply(complex(Sd), divide(multiply(complex(ts.Bl), i), Zm));
+  // a vented box radiates what flows into its air (cone less port and leak): Ud·Zbox·jωCab
+  const U = radiated ? multiply(multiply(Ud, box(w)), imaginary(w * Cab)) : Ud;
+  return 20 * Math.log10((AIR_DENSITY * w * abs(U)) / (2 * Math.PI) / 2e-5);
+}
+const wide = { fmin: 20, fmax: 5000, N: 400 };
+
+test("voice coil: at 250 Hz the box models match the series circuit with Re + jωLe (f18fh500)", () => {
+  const sealed = closedBox(fh500, VbL, null, null, 2.83, { ...wide, hpOrder: 4, lpOrder: 4 });
+  const vented = boxModel(fh500, VbL, 60, 12, 5, 2.83, "BW24", wide);
+  assert.ok(sealed && vented);
+  const s = near(sealed.curve, 250),
+    v = near(vented.curve, 250);
+  const sRef = seriesSPL(fh500, s.f, 2.83, sealedBox),
+    vRef = seriesSPL(fh500, v.f, 2.83, ventedBox(vented.Fb), true);
+  assert.ok(Math.abs(s.raw - sRef) < 0.05, `sealed: ${s.raw.toFixed(3)} vs ${sRef.toFixed(3)} dB`);
+  assert.ok(Math.abs(v.raw - vRef) < 0.05, `vented: ${v.raw.toFixed(3)} vs ${vRef.toFixed(3)} dB`);
+});
+
+test("voice coil: the level never passes the mass line scaled by ωMms/|Zm| (the current cannot pass V/Re)", () => {
+  for (const ts of [fh500, coil]) {
+    const r = closedBox(ts, VbL, null, null, 2.83, { ...wide, hpOrder: 4, lpOrder: 4 });
+    assert.ok(r);
+    for (const o of r.curve) {
+      const bound =
+        massLineSPL(ts, 2.83) +
+        20 *
+          Math.log10((2 * Math.PI * o.f * (ts.Mms / 1000)) / abs(mechanical(ts, o.f, sealedBox)));
+      assert.ok(
+        o.raw <= bound + 1e-9,
+        `${o.f.toFixed(0)} Hz: ${o.raw.toFixed(3)} > ${bound.toFixed(3)} dB`,
+      );
+    }
+  }
+});
+
+test("voice coil: well above the coil's resonance with the motional capacitance (2 kHz) Le lowers the level", () => {
+  const sealed = (ts: BoxModelTS) =>
+    closedBox(ts, VbL, null, null, 2.83, { ...wide, hpOrder: 4, lpOrder: 4 })?.curve;
+  const vented = (ts: BoxModelTS) => boxModel(ts, VbL, 60, 12, 5, 2.83, "BW24", wide)?.curve;
+  for (const [kind, run] of [
+    ["sealed", sealed],
+    ["vented", vented],
+  ] as const) {
+    const withLe = run(fh500),
+      without = run(fh500Bare);
+    assert.ok(withLe && without, kind);
+    const a = near(withLe, 2000).raw,
+      b = near(without, 2000).raw;
+    assert.ok(a < b, `${kind}: ${a.toFixed(2)} vs ${b.toFixed(2)} dB without Le`);
   }
 });

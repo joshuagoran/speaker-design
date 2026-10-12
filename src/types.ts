@@ -177,8 +177,8 @@ export interface SubTS extends ThieleSmall {
 
 /**
  * Hi-fi woofers also list 2.83 V sensitivity and nominal impedance (informational; no model reads them), and their
- * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) has no inductance or LF impedance in its table,
- * so those two are absent there.
+ * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) takes its inductance from the fill table where
+ * the maker publishes it, but that table has no LF impedance, so `imp` is absent there.
  */
 export interface HifiWooferTS extends ThieleSmall {
   sens: number;
