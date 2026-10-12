@@ -5,6 +5,8 @@ import assert from "node:assert";
 import type { GoldenConfig } from "./golden-configs";
 import type { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
+import type { PaFloor } from "../src/lib/speaker/paSpec";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/pages/coverage/useCoverageLayout";
 import { hifiBox, hifiGridTop, needsWaveguide } from "../src/lib/hifi/hifi";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { hornResponse, midSystem, subSystem } from "../src/lib/pa/calc";
@@ -32,7 +34,6 @@ import {
 } from "../src/constants/speakerSpec";
 import type {
   BandId,
-  CoverageLayout,
   DesignLayers,
   FrequencyPoint,
   HifiDesignState,
@@ -117,11 +118,8 @@ export const hifiCases: { name: string; state: HifiDesignState }[] = [
   { name: "passive", state: { ...DEFAULT_HIFI, drive: "passive" } },
 ];
 
-/** The coverage page's stack spots, left then right (they don't move the speakers' responses). */
-export const STACKS: CoverageLayout["stacks"] = [
-  { x: -9, y: 3, aim: 12 },
-  { x: 9, y: 3, aim: -12 },
-];
+/** The coverage page's default floor: the stacks' spots, left then right (they don't move the speakers' responses). */
+export const PA_FLOOR: PaFloor = DEFAULT_COVERAGE_LAYOUT;
 
 /** A golden PA design as the planner holds it (as tests/speaker-spec.test.ts reads it). */
 export function paDesign(c: GoldenConfig): PaPlannerDesign {

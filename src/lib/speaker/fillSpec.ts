@@ -28,11 +28,14 @@ import {
   flushBracing,
   NO_FILTERS,
   channelCounter,
+  homeVenue,
   lrFilter,
+  spacePlacement,
   speakerIdentity,
   stackMember,
   stuffingPctOf,
 } from "./specParts";
+import { SEATED_EAR_FT, SPACE_HOME_ROOM } from "../../constants/space";
 import { STUFFING_VOLUME_GAIN } from "../pa/calc";
 
 /**
@@ -120,19 +123,14 @@ export function layersFromFill(state: FillDesignState, design: SpecIdentity): De
     space: {
       ...design,
       placements: [
-        {
-          x: 0,
-          y: 0,
-          aim: 0,
-          item: { kind: SPACE_ITEM.stack, id: design.id },
-          liftIn: 0,
-          mirror: false,
-          channels: [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low, SPEAKER_BAND.high])],
-        },
+        spacePlacement({ x: 0, y: 0 }, { kind: SPACE_ITEM.stack, id: design.id }, 0, [
+          channel(SPEAKER_BAND.low, [SPEAKER_BAND.low, SPEAKER_BAND.high]),
+        ]),
       ],
       amps: [{ id: SPEAKER_BAND.low, model: null, watts: state.ampWatts }],
       frontEnd: { kind: FRONT_END_KIND.digital, dspId: null },
-      venue: null,
+      // a seated listener in a living room, in front of it
+      venue: homeVenue(0, { x: 0, y: SPACE_HOME_ROOM.lengthFt / 2 }, SEATED_EAR_FT),
     },
   };
 }

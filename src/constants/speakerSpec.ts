@@ -200,3 +200,6 @@ export const SPEAKERS_COLLECTION = "speakers";
 
 /** The saved stacks' collection under users/{uid}, next to the speaker library. */
 export const STACKS_COLLECTION = "stacks";
+
+/** The saved spaces' collection under users/{uid}, next to the speaker library and the stacks. */
+export const SPACES_COLLECTION = "spaces";

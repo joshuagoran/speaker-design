@@ -3,6 +3,7 @@
 // each chamber, driver, horn and port where the spec and its layout (lib/speaker/speakerLayout) put them, the walls the
 // tower's chambers share, a horn-loaded chamber's mouth and flare, and every geometry the build makes reachable from the
 // scene (the 3D view frees what it can reach: stack-view/SceneView3D).
+import { PA_FLOOR } from "./speaker-cases";
 import { describe, expect, test, vi } from "vite-plus/test";
 import * as THREE from "three";
 import {
@@ -54,7 +55,6 @@ import {
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { configs, type GoldenConfig } from "./golden-configs";
 import type {
-  CoverageLayout,
   HifiDesignState,
   PaPlannerDesign,
   SpeakerChamber,
@@ -64,11 +64,6 @@ import type {
 
 const EPS = 1e-6;
 
-/** The coverage page's stack spots (they don't change the speakers). */
-const STACKS: CoverageLayout["stacks"] = [
-  { x: -9, y: 3, aim: 12 },
-  { x: 9, y: 3, aim: -12 },
-];
 const IDENTITY = { id: "golden", name: "Golden" };
 
 /** A golden PA design as the planner holds it (as tests/speaker-spec.test.ts reads it). */
@@ -85,7 +80,7 @@ function paDesign(c: GoldenConfig): PaPlannerDesign {
 }
 /** A PA design's speaker of `part`, read through the adapter. */
 function paSpeaker(c: GoldenConfig, part: SpeakerPart): SpeakerSpec {
-  const read = layersFromPa(paDesign(c), IDENTITY, STACKS);
+  const read = layersFromPa(paDesign(c), IDENTITY, PA_FLOOR);
   const id = speakerIdentity(IDENTITY, part).id;
   const found = read.speakers.find((s) => s.id === id);
   if (!found) throw new Error(`no ${part} in ${c.name}`);

@@ -3,7 +3,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
-import { STACKS, paDesign } from "./speaker-cases";
+import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { stackLayout } from "../src/lib/speaker/stackLayout";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
@@ -15,7 +15,7 @@ import type { SavedConfig, StackDesign } from "../src/types";
 
 /** A PA design's stack, with a set delay, a mirror and notes, so every field goes round. */
 function paStack(): StackDesign {
-  const read = layersFromPa(paDesign(configs[0]), { id: "draft", name: "PA design" }, STACKS);
+  const read = layersFromPa(paDesign(configs[0]), { id: "draft", name: "PA design" }, PA_FLOOR);
   const [sub, top] = read.stack.members;
   return {
     stack: {

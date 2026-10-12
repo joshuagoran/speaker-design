@@ -4,7 +4,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
-import { STACKS, maxDiff, paDesign, paModels } from "./speaker-cases";
+import { PA_FLOOR, maxDiff, paDesign, paModels } from "./speaker-cases";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
 import { SPEAKER_RESPONSE_FREQUENCIES, speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
@@ -67,7 +67,7 @@ test("stack model: a PA design's stack meets the PA page's system chart and sums
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
-    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
     const models = paModels(cfg);
     const speakers = withPaAir(read, models);
     const response = stackResponse(read.stack, speakers);
@@ -126,7 +126,7 @@ test("stack model: a PA design's stack meets the PA page's system chart and sums
 
 test("stack model: a member's input range follows its crossover; the model is the speaker's on that range", () => {
   const cfg = paDesign(configs[0]);
-  const read = layersFromPa(cfg, { id: "pa", name: "crossover" }, STACKS);
+  const read = layersFromPa(cfg, { id: "pa", name: "crossover" }, PA_FLOOR);
   const crossover = { highpass: lrFilter(150, 8), lowpass: null };
   const stack = {
     ...read.stack,
@@ -161,7 +161,7 @@ const sumAt = (response: ReturnType<typeof stackResponse>, f: number) =>
 test("stack model: an auto delay puts the sub in phase with the mid at the crossover; the tops wait where it leads", () => {
   for (const c of configs.filter((g) => g.layout !== "tower")) {
     const cfg = paDesign(c);
-    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
     const [sub, top] = read.stack.members;
     assert.equal(sub.delayMs, AUTO_DELAY, c.name);
     const auto = stackResponse(read.stack, read.speakers);
@@ -201,7 +201,7 @@ test("stack model: an auto delay puts the sub in phase with the mid at the cross
 
 test("stack model: a set delay is kept; an auto member that crosses no member takes 0", () => {
   const cfg = paDesign(configs[0]);
-  const read = layersFromPa(cfg, { id: "pa", name: "delays" }, STACKS);
+  const read = layersFromPa(cfg, { id: "pa", name: "delays" }, PA_FLOOR);
   const [sub, top] = read.stack.members;
   const delays = (members: StackMember[]) =>
     stackResponse({ members }, read.speakers).members.map((m) => m?.delayMs);
@@ -223,7 +223,7 @@ test("stack model: a set delay is kept; an auto member that crosses no member ta
 
 test("stack model: one input for the stack: the sub sets its limit low down, the top up high", () => {
   const cfg = paDesign(configs[0]);
-  const read = layersFromPa(cfg, { id: "pa", name: "limits" }, STACKS);
+  const read = layersFromPa(cfg, { id: "pa", name: "limits" }, PA_FLOOR);
   const response = stackResponse(read.stack, read.speakers);
   const limits = stackLimits(read.stack, response);
   assert.equal(limits.sum.length, response.sum.length);

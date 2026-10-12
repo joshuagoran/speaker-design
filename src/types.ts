@@ -2160,6 +2160,11 @@ export interface StackPose {
   zIn: number;
   /** the member it stands on, as an index into the stack's members (an earlier one); null: the stack's base */
   on: number | null;
+  /**
+   * its tilt in the stack, degrees, + up: turned about its bottom front edge (a top angled down on its sub), added to
+   * its cabinet's kick-back (`SpeakerCabinet.tiltDeg`). What stands on it doesn't follow it.
+   */
+  pitchDeg: number;
 }
 
 /** One speaker in a stack: where it stands, and what the front end does to its feed. */
@@ -2207,16 +2212,37 @@ export interface SpaceChannel {
 export type SpaceItemKind = (typeof SPACE_ITEM)[keyof typeof SPACE_ITEM];
 
 /**
- * A stack or a speaker placed in a space: its spot and aim on the floor, the gap under it (a plinth, a stand), a
- * mirror image, and the amp channels it takes.
+ * Where a placed stack or speaker points, degrees: its yaw on the floor from straight down the room (+ turns toward +x,
+ * a toe-in or pan) and its pitch (+ up). The one aim model: a member's tilt in its stack (`StackPose.pitchDeg`) and its
+ * cabinet's kick-back (`SpeakerCabinet.tiltDeg`) add to the pitch (lib/speaker/spaceLayout).
  */
-export interface SpacePlacement extends FloorPlacement {
+export interface SpaceAim {
+  yawDeg: number;
+  pitchDeg: number;
+}
+
+/**
+ * A stack or a speaker placed in a space: its spot on the floor (its base's front center, ft), the lift under it (a
+ * plinth, a stand), its aim, a mirror image, what the front end does to its feed, and the amp channels it takes.
+ */
+export interface SpacePlacement extends FloorPoint {
   item:
     | { kind: typeof SPACE_ITEM.stack; id: StackSpec["id"] }
     | { kind: typeof SPACE_ITEM.speaker; id: SpeakerSpec["id"] };
   /** the gap under it, in: a plinth, a stand, or 0 */
   liftIn: number;
+  aim: SpaceAim;
   mirror: boolean;
+  /**
+   * a left and right pair: the earlier placement (an index) this one is the mirror image of across the room's center
+   * line; its item, spot, lift and aim follow that one's, x and yaw turned over, the image mirrored. Null: placed on its
+   * own.
+   */
+  follows: number | null;
+  /** the front end's level on its feed, against the space's other placements, dB (a fill under the mains) */
+  levelDb: number;
+  /** the front end's delay on its feed, ms (a fill waiting for the mains) */
+  delayMs: number;
   channels: readonly SpaceChannel[];
 }
 
@@ -2230,11 +2256,24 @@ export interface SpaceFrontEnd {
   dspId: DspUnit["id"] | null;
 }
 
-/** Where a space plays: the boxes' boundary (their distance to it is in their placements) and the listener. */
+/** The floor the space's level stats count: a rectangle, its center and its size, ft. */
+export interface ListeningArea extends FloorPoint {
+  widthFt: number;
+  lengthFt: number;
+}
+
+/** Where a space plays: the room, the listener (a probe), the listening area and the level it should get. */
 export interface SpaceVenue {
-  placement: HifiPlacement;
+  room: CoverageRoom;
   listener: FloorPoint;
-  earIn: HifiDesignState["earHeightIn"];
+  /** the ear's height above the floor, ft: the map and the levels are worked out there */
+  earFt: CoverageLayout["earFt"];
+  area: ListeningArea;
+  /**
+   * the level the listening area's average should get, dB SPL, the same in every band: the space is turned down to it,
+   * never past its limit
+   */
+  targetDb: CoverageLayout["targetDb"];
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
@@ -2245,8 +2284,7 @@ export interface SpaceSpec {
   amps: readonly SpaceAmp[];
   /** null: none (passive speakers straight off the amps) */
   frontEnd: SpaceFrontEnd | null;
-  /** null where the design sets none (the PA page's room is the coverage page's) */
-  venue: SpaceVenue | null;
+  venue: SpaceVenue;
 }
 
 /** One design read in all three layers (lib/speaker read adapters): its speakers, its stack, and its space. */
@@ -3669,6 +3707,21 @@ export interface SavedSpeakerData extends SavedConfigData {
 
 /** A stack and the speakers its members name, as the Stack page holds them. */
 export type StackDesign = Pick<DesignLayers, "stack" | "speakers">;
+
+/** A space and the stacks and speakers it places, as the Space page holds them. */
+export interface SpaceDesign extends Pick<DesignLayers, "space" | "speakers"> {
+  stacks: readonly StackSpec[];
+}
+
+/**
+ * A saved space: the space without its id and name (the document's), and a copy of each stack and speaker it places (by
+ * id), so it opens as it was saved.
+ */
+export interface SavedSpaceData extends SavedConfigData {
+  space: Omit<SpaceSpec, "id" | "name">;
+  stacks: readonly StackSpec[];
+  speakers: readonly SpeakerSpec[];
+}
 
 /**
  * A saved stack: the stack without its id and name (the document's), and a copy of each speaker its members name (by

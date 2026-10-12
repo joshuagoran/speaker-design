@@ -86,7 +86,7 @@ export function StackPage({ stack, designer, planner }: Props) {
       layersFromPa(
         paPlannerDesign(planner),
         { id: DRAFT_STACK_ID, name: STACK_TEXT.paName },
-        DEFAULT_COVERAGE_LAYOUT.stacks,
+        DEFAULT_COVERAGE_LAYOUT,
       ),
     );
   const summaries: Record<StackSettingsSection, string> = {
