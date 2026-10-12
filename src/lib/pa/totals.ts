@@ -20,10 +20,10 @@ export function priceTotal(prices: readonly (number | null)[]): { sum: number; m
 const HARDWARE_ROW = "Handles, input dishes, jacks and horn posts (weight in the boxes)";
 
 /** The plinth's weight in the totals, lb, when the stack stands on one. */
-const PLINTH_LB = 6;
+export const PA_PLINTH_LB = 6;
 
 /** The horn's fixings in the totals, lb and in, over the catalog horn's weight and height. */
-const HORN_FIXINGS = { lb: 1, in: 1 };
+export const PA_HORN_FIXINGS = { lb: 1, in: 1 };
 
 /** One totals row: its name, parts price ($, null where a part has no price), driver lb, cabinet lb and height, in. */
 export type PaTotalsRow = [
@@ -90,9 +90,9 @@ export function paTotals(d: PaTotalsInputs) {
     [
       "Horn",
       d.hornOption.price,
-      (d.hornOption.lb || 0) + HORN_FIXINGS.lb,
+      (d.hornOption.lb || 0) + PA_HORN_FIXINGS.lb,
       0,
-      d.hornOption.size.h + HORN_FIXINGS.in,
+      d.hornOption.size.h + PA_HORN_FIXINGS.in,
     ],
   ];
   // round tubes: the pipe and elbows from the catalog (no price where a part has no US vendor)
@@ -115,7 +115,7 @@ export function paTotals(d: PaTotalsInputs) {
   rows.push([HARDWARE_ROW, d.subHardware.price + (d.midHardware?.price ?? 0), 0, 0, 0]);
   const sum = (i: 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
   const driverLb = sum(2);
-  const cabinetLb = sum(3) + (d.plinthHeightIn ? PLINTH_LB : 0);
+  const cabinetLb = sum(3) + (d.plinthHeightIn ? PA_PLINTH_LB : 0);
   return {
     rows,
     // a part with no price (null) leaves the totals short, and they carry the mark
