@@ -2053,10 +2053,15 @@ export type CabinetConstruction = (typeof CABINET_CONSTRUCTION)[keyof typeof CAB
 /** A cabinet's top shape, by id (`CABINET_TOP`). */
 export type CabinetTop = (typeof CABINET_TOP)[keyof typeof CABINET_TOP];
 
-/** A cabinet: its chambers, panels and shape. Bracing and back joint as the PA boxes take them (absent: the defaults). */
-export interface SpeakerCabinet extends Pick<PaDesignConfig, "braceStyle" | "backJoint"> {
+/**
+ * A cabinet: its chambers, panels and shape, and its bracing as the PA boxes take it: the style (ribs, window braces or
+ * both), how the back is fixed (glued or screwed), and the target every panel's first mode should clear.
+ */
+export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "braceStyle" | "backJoint">> {
   chambers: readonly SpeakerChamber[];
   panel: SpeakerPanel;
+  /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ by default (lib/pa/bracing) */
+  braceTargetHz: number;
   /**
    * how the shell is built: the PA's frame, its baffle set back by `insetIn`, or the Hi-fi's flush box, its baffle over
    * the whole front

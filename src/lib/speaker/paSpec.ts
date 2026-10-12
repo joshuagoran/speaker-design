@@ -32,6 +32,9 @@ import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter, ventSpeedLimit } from
 import { modelTubeElbows } from "../pa/tubes";
 import { towerMidDims, towerSpec } from "../pa/tower";
 import { takesHornMount } from "../pa/hornMount";
+import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
+import { defaultBraceStyleNear } from "../bracing";
+import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
@@ -199,8 +202,10 @@ const paCabinet = (
   insetIn: cfg.inset,
   roundoverIn: 0,
   tiltDeg: 0,
-  braceStyle: cfg.braceStyle,
-  backJoint: cfg.backJoint,
+  // the PA page's style (the plywood's where it sets none), back joint and panel target
+  braceStyle: cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+  backJoint: cfg.backJoint ?? DEFAULT_BACK_JOINT,
+  braceTargetHz: PA_PANEL_TARGET_HZ,
 });
 
 /** An active band: its own amp channel of `ampW`, its filters in the DSP. */

@@ -131,9 +131,8 @@ export const DESIGNER_TEXT = {
   chamberWeight: (n: number) => `Chamber ${n} weight`,
   /** under the weight and bracing, with the bracing rule's panel target in words */
   buildNote: (target: string) =>
-    `Each chamber is braced by the PA bracing rule: every panel over ${target}. Its net air counts the braces, the vent's walls, the baffle cleats and the hardware. The weight counts the panels, braces, drivers with their horns, radiators and hardware. The Cutlist tab lists every part.`,
+    `Each chamber is braced by the PA bracing rule, to the bracing target: every panel above ${target}. The panels that still miss it are listed above. Each chamber's net air counts the braces, the vent's walls, the baffle cleats and the hardware. The weight counts the panels, braces, drivers with their horns, radiators and hardware. The Cutlist tab lists every part.`,
   noBraces: "no braces",
-  hornBraces: "no braces (the horn's walls hold its panels)",
   inputRange: "Input range",
   inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
   inputOff: "Off",
@@ -141,6 +140,13 @@ export const DESIGNER_TEXT = {
   top: "Top",
   inset: "Baffle inset, in",
   insetTip: "How far the baffle sits behind the frame's front edge.",
+  braceStyle: "Bracing",
+  braceTarget: "Bracing target",
+  /** the target's tooltip, with the PA boxes' target in words */
+  braceTargetTip: (pa: string) =>
+    `The rule adds braces until each panel's first resonance is above this. The PA boxes use ${pa}.`,
+  /** the lowest bracing target the setting takes, Hz */
+  braceTargetMinHz: 50,
   archNotDrawn:
     "The arch draws over a top chamber that runs the full width and is at least half as tall as the cabinet is wide, in one shell. The top of this cabinet is drawn flat.",
   fromLeft: "From left, in",

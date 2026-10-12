@@ -89,6 +89,11 @@ export const BACK_JOINT_CUT_NOTES = {
   screwed: "screwed into the rear rabbet, no glue (it comes off): seal it with foam tape",
   glued: "glued into the rear rabbet",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** A flush box's back panel, by its joint: over the rear edges or in their rabbets, glued, or screwed to come off. */
+export const BACK_JOINT_FLUSH_NOTES = {
+  screwed: "screwed on, no glue (it comes off): seal it with foam tape",
+  glued: "glued on",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /**
  * A screwed back's screws into each window brace's rear rail: their spacing along the rail (in) and their diameter
  * (mm, a #8 wood screw). The cutlist's note names the spacing; the bracing rule's jointed rail (lib/bracing

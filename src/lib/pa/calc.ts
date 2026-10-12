@@ -880,8 +880,10 @@ function paBracing(
   hole: PlateHole,
   /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined,
+  /** every panel's first mode should clear it, Hz */
+  targetHz: number,
 ): BoxBracing {
-  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r},${hole.ringKg ?? 0}|${ts ? `${ts.Sd},${ts.Xmax},${ts.disp}` : ""}`;
+  const key = `${targetHz}|${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r},${hole.ringKg ?? 0}|${ts ? `${ts.Sd},${ts.Xmax},${ts.disp}` : ""}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
   return remember(
@@ -893,7 +895,7 @@ function paBracing(
         wall: paPanelStock(t),
         baffle: paPanelStock(BAFFLE_PLY_IN),
       },
-      { sup, stops, keepOut, style, back, hole, ts },
+      { sup, stops, keepOut, style, back, hole, ts, targetHz },
     ),
   );
 }
@@ -914,22 +916,24 @@ export interface BraceInputs {
   hole?: PlateHole;
   /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined;
+  /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ, or a Designer cabinet's own */
+  targetHz: number;
 }
 /**
- * A box's braces and ribs by rule (lib/bracing braceBox): its six panels (paBoxPanels) to PA_PANEL_TARGET_HZ, the
+ * A box's braces and ribs by rule (lib/bracing braceBox): its six panels (paBoxPanels) to the target, the
  * braces cut from the wall stock, and the strength checks' loads: the driver's pressure in the box's air and a load
  * spread over the lid. The PA boxes' rule (paBracing), for any shell and stock.
  */
 export function braceShell(
   { inside, wall, baffle }: BraceShell,
-  { sup, stops, keepOut, style, back, hole, ts }: BraceInputs,
+  { sup, stops, keepOut, style, back, hole, ts, targetHz }: BraceInputs,
 ): BoxBracing {
   const insideL = (inside.iw * inside.ih * inside.inD * 16.387) / 1000;
   const lidM2 = inside.iw * inside.inD * IN2_M2;
   return braceBox({
     inner: { x: inside.iw, y: inside.ih, z: inside.inD },
     panels: paBoxPanels(inside, wall, baffle, sup, stops, back, hole),
-    targetHz: PA_PANEL_TARGET_HZ,
+    targetHz,
     style,
     braceStock: wall,
     keepOut,
@@ -960,6 +964,8 @@ export function subBoxBracing(
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
   back: BackJointId = DEFAULT_BACK_JOINT,
+  /** every panel's first mode should clear it, Hz (a Designer cabinet's own target) */
+  targetHz: number = PA_PANEL_TARGET_HZ,
 ): BoxBracing {
   const bs = braceStyle ?? defaultBraceStyleNear(t);
   // the duct's length counts only where it changes the bracing (its flags)
@@ -968,7 +974,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
+  const key = `${targetHz}|${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -1011,6 +1017,7 @@ export function subBoxBracing(
         drv,
       ),
       drv.ts,
+      targetHz,
     ),
   );
 }
@@ -1045,6 +1052,7 @@ export function midBoxBracing(
     back,
     baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid),
     mid.ts,
+    PA_PANEL_TARGET_HZ,
   );
 }
 /**
@@ -1407,8 +1415,10 @@ export function subHardwarePlan(
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,
   back: BackJointId = DEFAULT_BACK_JOINT,
+  /** the bracing's panel target, Hz (subBoxBracing) */
+  targetHz: number = PA_PANEL_TARGET_HZ,
 ): BoxHardwarePlan {
-  const bracing = subBoxBracing(box, t, inset, style, v, drv, braceStyle, handles, back);
+  const bracing = subBoxBracing(box, t, inset, style, v, drv, braceStyle, handles, back, targetHz);
   return subHardwarePlacement(box, t, inset, style, v, drv, handles, bracing);
 }
 /** The mid box's hardware placed before its braces (as subHardwarePlacement); null in the tower. */
@@ -1511,8 +1521,9 @@ export function towerCutParts(
     b: inD,
     t,
     note: partitionNote(
-      `top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor)`,
+      `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor)`,
       back,
+      true,
     ),
   };
   const braces = extra.bracing
@@ -1541,9 +1552,12 @@ export const hornCutoutWords = (
       ? `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″ (trace the mouth's outline)`
       : `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″, ${formatInches(hc.r)}″ corners`;
 
-/** A partition row's note: where it sits (`where`), its notches round the cleats, its back edge and its seal. */
-export const partitionNote = (where: string, back: BackJointId) =>
-  `level, ${where}; notch the front corners 3/4″ square round the baffle cleats; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`;
+/**
+ * A partition row's note: where it sits (`where`), its notches round a frame's baffle cleats (`cleats`), its back edge
+ * and its seal.
+ */
+export const partitionNote = (where: string, back: BackJointId, cleats: boolean) =>
+  `${where}${cleats ? "; notch the front corners 3/4″ square round the baffle cleats" : ""}; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`;
 
 /**
  * A frame shell's rows (boxParts of the whole `dims`, label `box`) with an arched top: a semicircle the full width, its

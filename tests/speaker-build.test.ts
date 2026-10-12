@@ -29,6 +29,7 @@ import {
 } from "../src/lib/pa/calc";
 import { towerMidDims } from "../src/lib/pa/tower";
 import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
+import { PA_PANEL_TARGET_HZ } from "../src/lib/pa/bracing";
 import { hornById, CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, EMPTY_SPEAKER } from "../src/lib/defaults";
 import { SHELL_CUT_BOX, chamberCutBox } from "../src/constants/cutParts";
@@ -404,7 +405,7 @@ test("speaker build: one shell's cutlist notes the hardware of the chamber that 
   assert.ok(back && /input dish/.test(back.note), "the dish's cutout on the back");
 });
 
-test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamber takes no braces", () => {
+test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamber's walls are braced", () => {
   const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 20, h: 24, d: 16 });
   const top = chamberAt({ xIn: 0, yIn: 24 }, { w: 20, h: 14, d: 16 });
   const arched = { chambers: [lower, top], top: CABINET_TOP.arched };
@@ -443,7 +444,26 @@ test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamb
       },
     ],
   });
-  assert.equal(cabinetBuild(horn.cabinet).chambers[0].bracing, null);
+  // the rear chamber's walls round the flare are braced to the target; the flare holds itself
+  const braced = cabinetBuild(horn.cabinet).chambers[0].bracing;
+  assert.equal(braced.targetHz, horn.cabinet.braceTargetHz);
+  assert.ok(braced.panels.length === 6);
+});
+
+test("speaker build: the bracing target sets how hard the rule braces; the PA's is the default", () => {
+  const box = (braceTargetHz: number) =>
+    withCabinet({
+      chambers: [chamberAt({ xIn: 0, yIn: 0 }, { w: 30, h: 40, d: 30 })],
+      braceTargetHz,
+    });
+  assert.equal(EMPTY_SPEAKER.cabinet.braceTargetHz, PA_PANEL_TARGET_HZ);
+  const wood = (hz: number) => {
+    const [c] = cabinetBuild(box(hz).cabinet).chambers;
+    assert.equal(c.bracing.targetHz, hz);
+    return c.bracing.windowIn3 + c.bracing.ribIn3;
+  };
+  assert.ok(wood(150) < wood(PA_PANEL_TARGET_HZ), "a lower target takes less wood");
+  assert.ok(wood(PA_PANEL_TARGET_HZ) < wood(400), "a higher one more");
 });
 
 test("speaker build: the net air counts the braces; the build is worked out once per cabinet", () => {
@@ -451,7 +471,7 @@ test("speaker build: the net air counts the braces; the build is worked out once
   const build = cabinetBuild(big.cabinet);
   assert.equal(cabinetBuild(big.cabinet), build, "remembered");
   const [c] = build.chambers;
-  assert.ok(c.bracing && c.bracing.windowIn3 + c.bracing.ribIn3 > 0, "a big box takes braces");
+  assert.ok(c.bracing.windowIn3 + c.bracing.ribIn3 > 0, "a big box takes braces");
   assert.ok(c.woodL > 0);
   const net = speakerResponse(big).chambers;
   assert.equal(net.length, 1);

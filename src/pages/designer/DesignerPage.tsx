@@ -70,8 +70,9 @@ import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
 import { bandText, bracingText, chamberText, countText, inputText } from "./designerText";
 import { braceNoteLines } from "../../lib/bracingNotes";
-import { formatHz } from "../../lib/format";
 import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { formatHz } from "../../lib/format";
+import { BRACE_STYLE_NAMES, BRACE_STYLE_SUMMARY, BRACE_STYLE_TIPS } from "../../constants/bracing";
 import { bandChips, chamberChips } from "./designerChips";
 import { designerStarts, startGroup, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
@@ -135,7 +136,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     );
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
-  const { chambers, construction, top, insetIn } = spec.cabinet;
+  const { chambers, construction, top, insetIn, braceStyle, braceTargetHz } = spec.cabinet;
   const framed = construction === CABINET_CONSTRUCTION.frameInset;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
@@ -149,6 +150,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     construction: [
       `${CABINET_CONSTRUCTION_NAMES[construction]}${framed ? `, inset ${formatInches(insetIn)}` : ""}`,
       `${CABINET_TOP_NAMES[top].toLowerCase()} top`,
+      `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
     ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
     bands: [
@@ -311,14 +313,12 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               ))}
             </ul>
             {build.chambers.flatMap((c, i) =>
-              c.bracing
-                ? braceNoteLines(`${DESIGNER_TEXT.chamber} ${i + 1}`, c.bracing).map((line) => (
-                    <Notice key={line}>{line}</Notice>
-                  ))
-                : [],
+              braceNoteLines(`${DESIGNER_TEXT.chamber} ${i + 1}`, c.bracing).map((line) => (
+                <Notice key={line}>{line}</Notice>
+              )),
             )}
             <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
-              {DESIGNER_TEXT.buildNote(formatHz(PA_PANEL_TARGET_HZ))}
+              {DESIGNER_TEXT.buildNote(formatHz(braceTargetHz))}
             </p>
           </section>
           {limits.bands.length > 0 && (
@@ -431,6 +431,33 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               {top === CABINET_TOP.arched && !drawsArchedTop(spec.cabinet, layout) && (
                 <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.archNotDrawn}</p>
               )}
+              <ToggleGroup
+                label={DESIGNER_TEXT.braceStyle}
+                className="mb-3"
+                value={braceStyle}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, braceStyle: v }))}
+                options={keysOf(BRACE_STYLE_NAMES).map(
+                  (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
+                )}
+              />
+              <NumberField
+                label={
+                  <Tooltip tip={DESIGNER_TEXT.braceTargetTip(formatHz(PA_PANEL_TARGET_HZ))}>
+                    {DESIGNER_TEXT.braceTarget}
+                  </Tooltip>
+                }
+                value={braceTargetHz}
+                min={DESIGNER_TEXT.braceTargetMinHz}
+                step={10}
+                unit="Hz"
+                onChange={(v) =>
+                  designer.editCabinet((c) => ({
+                    ...c,
+                    braceTargetHz: Math.max(DESIGNER_TEXT.braceTargetMinHz, v),
+                  }))
+                }
+                className="mb-3"
+              />
             </>,
           )}
           {section(

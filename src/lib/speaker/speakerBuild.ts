@@ -74,7 +74,7 @@ import { subDriverDepthIn, subTubeKit } from "../pa/tubes";
 import { towerHornCutout } from "../pa/tower";
 import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
 import { DRIVER_CLEARANCE_IN, NO_SUPPORTS } from "../pa/bracing";
-import { defaultBraceStyleNear, panelStock } from "../bracing";
+import { panelStock } from "../bracing";
 import { panelLbPerSqFt } from "../panel";
 import { HIFI_FALLBACK_LB, HIFI_FIXINGS_LB, hifiPortElbows, radiatorsLb } from "../hifi/hifi";
 import {
@@ -124,7 +124,7 @@ import {
   HIFI_MOTOR_CUTOUT_SHARE,
   MID_DEPTH_FALLBACK_IN,
 } from "../../data/catalog/driver-cutouts";
-import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
+import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
@@ -157,8 +157,8 @@ export interface ChamberInside {
 export interface ChamberBuild {
   /** its rows' box in the cutlist */
   box: ChamberCutBoxId;
-  /** its braces and ribs by rule; null for a horn-loaded chamber */
-  bracing: BoxBracing | null;
+  /** its braces and ribs by rule (a horn-loaded chamber's round its flare) */
+  bracing: BoxBracing;
   /** its hardware (a shell's lowest chamber, when the cabinet has some); null for none */
   hardware: BoxHardwarePlan | null;
   inside: ChamberInside;
@@ -451,6 +451,24 @@ function ventRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
   });
 }
 
+/**
+ * The room a horn built into the chamber takes, which no brace or rib may enter: its flare from the mouth on the baffle
+ * back along its path (drawn straight, at most the chamber's inside depth: speakerLayout `hornFlare`), as wide and tall
+ * as the mouth, and its drivers' at the throat, a cone's depth further. The rear chamber's walls round it are braced; the
+ * flare's own walls hold themselves. None for a chamber without a horn.
+ */
+function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
+  const flare = hornFlare(cabinet, f.placed);
+  if (!flare) return [];
+  const pathIn = flare.segments.reduce((sum, s) => sum + s.length, 0);
+  const coneIn = Math.max(0, ...f.placed.chamber.drivers.map((d) => coneBuild(d)?.depthIn ?? 0));
+  const c = insidePoint(f, {
+    xIn: flare.mouth.x + flare.mouth.w / 2,
+    yIn: flare.mouth.y + flare.mouth.h / 2,
+  });
+  return [roomAround(c, flare.mouth.w, flare.mouth.h, 0, Math.min(f.inside.inD, pathIn + coneIn))];
+}
+
 /** The bracing rule's results on general chambers, by their inputs (the page asks again on every change). */
 const BRACE_MEMO = new Map<string, BoxBracing>();
 const BRACE_MEMO_MAX = 2000;
@@ -477,8 +495,7 @@ function chamberBracing(
 ): Pick<ChamberBuild, "bracing" | "hardware"> {
   const t = cabinet.panel.thicknessIn;
   const inset = baffleInsetIn(cabinet);
-  const style = cabinet.braceStyle ?? defaultBraceStyleNear(t);
-  const back = cabinet.backJoint ?? DEFAULT_BACK_JOINT;
+  const { braceStyle: style, backJoint: back, braceTargetHz: targetHz } = cabinet;
   const { chamber } = f.placed;
   if (f.paSub) {
     const { sub, style: portStyle, vent } = f.paSub;
@@ -493,14 +510,18 @@ function chamberBracing(
         style,
         handles ?? undefined,
         back,
+        targetHz,
       ),
       hardware: handles
-        ? subHardwarePlan(f.box, t, inset, portStyle, vent, sub, style, handles, back)
+        ? subHardwarePlan(f.box, t, inset, portStyle, vent, sub, style, handles, back, targetHz)
         : null,
     };
   }
   const drivers = chamberDrivers(f, baffleIn(cabinet));
-  const keepOut = { driver: drivers.regions, vent: ventRegions(cabinet, f) };
+  const keepOut = {
+    driver: [...drivers.regions, ...flareRegions(cabinet, f)],
+    vent: ventRegions(cabinet, f),
+  };
   const plan = (bracing: BoxBracing | null) =>
     handles &&
     planBoxHardware({
@@ -518,7 +539,6 @@ function chamberBracing(
       keepOut,
     });
   const placed = plan(null);
-  if (chamber.load.kind === CHAMBER_LOAD.horn) return { bracing: null, hardware: placed };
   const wall = panelStock(t, cabinet.panel.material);
   const bracing = bracedShell(
     {
@@ -532,6 +552,7 @@ function chamberBracing(
       keepOut: { ...keepOut, hardware: placed ? hardwareKeepOut(placed) : [] },
       style,
       back,
+      targetHz,
       ...(drivers.hole ? { hole: drivers.hole } : {}),
       ts: drivers.ts,
     },
@@ -1005,7 +1026,10 @@ export function speakerCutParts(
   const t = cabinet.panel.thicknessIn;
   const frame = isFrame(cabinet);
   const inset = baffleInsetIn(cabinet);
-  const back = cabinet.backJoint ?? DEFAULT_BACK_JOINT;
+  const back = cabinet.backJoint;
+  /** a flush box's back, by its joint, and screwed to the window braces' rails where they meet it */
+  const flushBack = (hwBack: string | undefined, rails: boolean) =>
+    joinNotes([BACK_JOINT_FLUSH_NOTES[back], rails && BACK_JOINT_RAIL_NOTES[back], hwBack]);
   const arched = cutsArchedTop(cabinet, layout);
   const roundover = frame ? false : roundoverNote(cabinet.roundoverIn, t, joint);
   const parts: CutPart[] = [],
@@ -1056,7 +1080,10 @@ export function speakerCutParts(
         ...flushBoxPanels(SHELL_CUT_BOX, size, t, joint, {
           side: hw.side,
           baffle: [...notes.flatMap((n) => n.baffle), roundover],
-          back: hw.back,
+          back: flushBack(
+            hw.back,
+            build.chambers.some((c) => railsOnBack(c.bracing)),
+          ),
         }),
       );
     const inD = Math.min(...frames.map((f) => f.inside.inD));
@@ -1077,9 +1104,10 @@ export function speakerCutParts(
           t,
           note: partitionNote(
             across
-              ? `top face ${formatInches(wall.y + t)}″ up from the bottom`
+              ? `level, top face ${formatInches(wall.y + t)}″ up from the bottom`
               : `upright, its right face ${formatInches(wall.x + t + size.w / 2)}″ from the left`,
             back,
+            frame,
           ),
         });
       }
@@ -1109,7 +1137,7 @@ export function speakerCutParts(
       : flushBoxPanels(box, f.box, t, joint, {
           side: hw.side,
           baffle: [...notes.baffle, roundover],
-          back: hw.back,
+          back: flushBack(hw.back, railsOnBack(bracing)),
         });
     const walls = withoutGivenWalls(own, shared, joint, t, frame);
     parts.push(

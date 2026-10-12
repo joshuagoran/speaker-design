@@ -60,9 +60,8 @@ export const speakerSummary = (spec: Pick<SpeakerSpec, "cabinet" | "bands">) =>
     countText(spec.bands.length, "band", "bands"),
   ].join(" · ");
 
-/** A chamber's braces in words: its window braces and ribs, or none (a horn-loaded chamber's walls hold it). */
-export function bracingText(bracing: Pick<BoxBracing, "windows" | "ribs"> | null): string {
-  if (!bracing) return DESIGNER_TEXT.hornBraces;
+/** A chamber's braces in words: its window braces and ribs, or none. */
+export function bracingText(bracing: Pick<BoxBracing, "windows" | "ribs">): string {
   const windows = bracing.windows.x.length + bracing.windows.y.length + bracing.windows.z.length;
   const ribs = bracing.ribs.reduce((sum, r) => sum + r.at.length, 0);
   const parts = [
