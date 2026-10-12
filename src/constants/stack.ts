@@ -26,7 +26,8 @@ export const STACK_TEXT = {
   fromPa: "From the current PA design",
   fromPaHint: "Both replace this stack; open a saved stack from the library above.",
   clear: "Start empty",
-  oldSave: "Save from the PA or Hi-fi page",
+  oldSave: "PA or Hi-fi page save",
+  oldSaveBad: "This save does not open. Some of its fields are not valid.",
   openOldSave: "Open as a stack",
   oldSaveHint:
     "Opens the save as speakers and a stack. It replaces this stack. Save it in the library above to keep it.",

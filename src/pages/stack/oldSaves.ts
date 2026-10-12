@@ -1,7 +1,16 @@
 // The one read adapter for old saves (docs/speaker-designer-plan.md, L1 "Old saves" and L3f): a save from the PA page
 // (`configs`) or the Hi-fi page (`hifiConfigs`) opens as speakers and a stack. The PA and Hi-fi pages go away at L3f;
-// this is the only code that reads their saves after that, and the only place with old-save rules. Pure.
+// after that this is the only code that reads their saves. Pure.
+//
+// The rules for each saved field are the pages' own, and most still live beside the code they serve, because the PA
+// and Hi-fi pages' loads use them too: `savedHardware` (lib/pa/hardware), `savedHornColor` (lib/pa/hornColor),
+// `savedHornMount` (lib/pa/hornMount), `savedMusicBalance` (lib/pa/musicBalance), `savedPortStyle`
+// (constants/portStyles), `savedCrossoverOrder` (constants/crossovers), `savedBackJoint` and `savedStackBraceStyle`
+// (constants/bracing), and `restoredPanel`, `savedPanelExactIn` and `panelFor` (lib/panel; `panelFor` names the size of
+// a save from before the panel sizes by its wall thickness, 0.75 in as 3/4). `savedVentSpec` is here already; the others
+// move here when the PA and Hi-fi pages go.
 import type {
+  HifiBoxKind,
   PaDesignConfig,
   PaPlannerDesign,
   SavedConfig,
@@ -44,6 +53,8 @@ import { savedPortStyle } from "../../constants/portStyles";
 import { savedBackJoint, savedStackBraceStyle } from "../../constants/bracing";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { PA_SLIDERS } from "../../constants/paSliders";
+import { PA_LAYOUT_NAMES } from "../../constants/paLayouts";
+import { keysOf } from "../../lib/records";
 import { OLD_SAVE_COLLECTIONS, OLD_SAVE_KIND, type OldSaveKind } from "../../constants/speakerSpec";
 import { defaultPaDesign } from "../speaker/speakerTemplates";
 import { DRAFT_STACK_ID } from "./stackSaves";
@@ -196,11 +207,11 @@ export function hifiDesignFromSaved(c: Partial<SavedHifiConfig>): {
   };
 }
 
-/** An old save as the Stack page lists it: which page it is from, and the document. */
-export interface OldSave {
-  /** unique across both collections: the collection and the document's id */
-  id: string;
-  name: string;
+/**
+ * An old save as the Stack page lists it: which page it is from, and the document. Its id is unique across both
+ * collections: the collection and the document's id.
+ */
+export interface OldSave extends Pick<SavedConfig, "id" | "name"> {
   kind: OldSaveKind;
   doc: SavedConfig;
 }
@@ -209,21 +220,51 @@ export interface OldSave {
 export const oldSavesOf = (kind: OldSaveKind, docs: readonly SavedConfig[]): OldSave[] =>
   docs.map((doc) => ({ id: `${OLD_SAVE_COLLECTIONS[kind]}/${doc.id}`, name: doc.name, kind, doc }));
 
+/** Whether a field the save holds reads as a size: absent, or a box of three finite numbers. */
+const sizeOk = (x: unknown) =>
+  x === undefined ||
+  (typeof x === "object" &&
+    x !== null &&
+    ["w", "h", "d"].every((k) => {
+      const v: unknown = Reflect.get(x, k);
+      return typeof v === "number" && Number.isFinite(v);
+    }));
+
+/** Whether a field the save holds is absent or one of `ids`. */
+const oneOf = (x: unknown, ids: readonly string[]) =>
+  x === undefined || (typeof x === "string" && ids.includes(x));
+
+/** The box kinds a Hi-fi save can hold. */
+const HIFI_BOX_KINDS: readonly HifiBoxKind[] = ["sealed", "vented", "radiator"];
+
+/** Whether the document reads as its page's save: the fields the speakers can't do without, where it holds them. */
+const readsAs = (kind: OldSaveKind, doc: SavedConfig) =>
+  kind === OLD_SAVE_KIND.pa
+    ? oneOf(doc.layout, keysOf(PA_LAYOUT_NAMES)) && sizeOk(doc.cDim) && sizeOk(doc.mDim)
+    : oneOf(doc.box, HIFI_BOX_KINDS) && sizeOk(doc.dim);
+
 /**
  * An old save opened as a new, unsaved stack named as the save: the PA design's speakers and stack (on the PA floor's
- * starting layout), or the Hi-fi speaker in a stack of one.
+ * starting layout), or the Hi-fi speaker in a stack of one. Null for a document that doesn't read as its page's save
+ * (a layout or box kind it can't have, a size that isn't numbers), or that the adapters can't read in.
  */
-export function stackFromOldSave({ kind, doc }: Pick<OldSave, "kind" | "doc">): StackDesign {
+export function stackFromOldSave({ kind, doc }: Pick<OldSave, "kind" | "doc">): StackDesign | null {
+  if (!readsAs(kind, doc)) return null;
   const identity = { id: DRAFT_STACK_ID, name: doc.name };
-  if (kind === OLD_SAVE_KIND.pa) {
-    const { stack, speakers } = layersFromPa(
-      paDesignFromSaved(doc),
-      identity,
-      DEFAULT_COVERAGE_LAYOUT,
-    );
+  try {
+    if (kind === OLD_SAVE_KIND.pa) {
+      const { stack, speakers } = layersFromPa(
+        paDesignFromSaved(doc),
+        identity,
+        DEFAULT_COVERAGE_LAYOUT,
+      );
+      return { stack, speakers };
+    }
+    const { state, look } = hifiDesignFromSaved(doc);
+    const { stack, speakers } = layersFromHifi(state, look, identity);
     return { stack, speakers };
+  } catch {
+    // a document written elsewhere, with values no page wrote: it doesn't open (the page says so)
+    return null;
   }
-  const { state, look } = hifiDesignFromSaved(doc);
-  const { stack, speakers } = layersFromHifi(state, look, identity);
-  return { stack, speakers };
 }

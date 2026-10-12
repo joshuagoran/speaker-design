@@ -40,7 +40,7 @@ import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
-import { stackFromOldSave } from "./oldSaves";
+import { stackFromOldSave, type OldSave } from "./oldSaves";
 import { useOldSaves } from "./useOldSaves";
 import type { StackPlanner } from "./useStack";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -82,6 +82,13 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
   const oldSaves = useOldSaves();
   const [oldPick, setOldPick] = useState<string>("");
   const oldPicked = oldSaves.find((o) => o.id === oldPick) ?? oldSaves[0];
+  /** whether the save last opened doesn't read as its page's (it opens as nothing, and a notice says so) */
+  const [oldSaveBad, setOldSaveBad] = useState(false);
+  const openOldSave = (save: OldSave) => {
+    const opened = stackFromOldSave(save);
+    setOldSaveBad(!opened);
+    if (opened) stack.setDesign(opened);
+  };
   /** each member's name: its speaker's, numbered */
   const names = members.map(
     (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
@@ -257,15 +264,16 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                     label={STACK_TEXT.oldSave}
                     options={oldSaves}
                     value={oldPicked}
-                    onChange={(o) => setOldPick(o.id)}
+                    onChange={(o) => {
+                      setOldPick(o.id);
+                      setOldSaveBad(false);
+                    }}
                     group={(o) => OLD_SAVE_GROUP_NAMES[o.kind]}
                   />
-                  <Button
-                    className="mb-2"
-                    onClick={() => stack.setDesign(stackFromOldSave(oldPicked))}
-                  >
+                  <Button className="mb-2" onClick={() => openOldSave(oldPicked)}>
                     {STACK_TEXT.openOldSave}
                   </Button>
+                  {oldSaveBad && <Notice>{STACK_TEXT.oldSaveBad}</Notice>}
                   <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.oldSaveHint}</p>
                 </>
               )}

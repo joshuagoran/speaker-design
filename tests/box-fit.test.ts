@@ -3,9 +3,6 @@
 // what the parts need, and a box a driver, vent or wall change or a loaded save leaves too small is shown, modeled,
 // drawn and saved at the fitted size. The size the user set is kept, so switching back to a smaller part brings it back.
 import { describe, expect, test } from "vite-plus/test";
-import assert from "node:assert";
-import { createElement } from "react";
-import { renderToString } from "react-dom/server";
 import { useHifiPlanner, type HifiPlanner } from "../src/pages/hifi/useHifiPlanner";
 import { usePaDesign, type PaDesign } from "../src/pages/pa-stack/hooks/usePaDesign";
 import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
@@ -20,18 +17,7 @@ import { driverClearance, subDriverClearanceNeededIn } from "../src/lib/pa/chips
 import { HIFI_BOX_LAYOUT, HIFI_BOX_SLIDERS } from "../src/constants/hifiLayout";
 import { byIdOrThrow } from "../src/lib/tables";
 import type { HifiDesignState } from "../src/types";
-
-/** Renders `use` once per step, each step's state updates rendering it again for the next. */
-function runSteps<T>(use: () => T, steps: ((hook: T) => void)[]) {
-  let done = 0;
-  function Probe() {
-    const hook = use();
-    if (done < steps.length) steps[done++](hook);
-    return null;
-  }
-  renderToString(createElement(Probe));
-  assert.equal(done, steps.length, "every step ran");
-}
+import { runSteps } from "./render-steps";
 
 const design = (over: Partial<HifiDesignState>) => deriveHifiDesign({ ...DEFAULT_HIFI, ...over });
 const byWoofer = (size: number) => {
