@@ -23,6 +23,7 @@ import {
 } from "../../constants/speakerSpec";
 import {
   DIRECT_LOAD,
+  FLUSH_BOX,
   NO_FILTERS,
   channelCounter,
   lrFilter,
@@ -88,7 +89,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
         material: PLYWOOD_MATERIAL,
         thicknessIn: PANEL_STOCK[FILL_PANEL].in,
       },
-      insetIn: 0,
+      ...FLUSH_BOX,
       roundoverIn: 0,
       tiltDeg: 0,
     },

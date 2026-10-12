@@ -3,8 +3,9 @@
 // the engine its catalog table comes from: the PA's subs and mids (buildCone, the driver bodies), its letterbox, side
 // ducts and flared tubes (buildSubwoofer's vent parts) and its horns (buildHorn, set into the baffle as the tower sets
 // one, or on the top as the mid box carries one); the Hi-fi's woofers, coaxials, tweeters, waveguides, round ports,
-// slots and passive radiators (buildHifiScene's parts). The cabinet is the PA's frame with the baffle set back when the
-// spec has an inset, else the Hi-fi box with its baffle over the whole front and its roundover.
+// slots and passive radiators (buildHifiScene's parts). The cabinet is built as its construction says: the PA's frame
+// with the baffle set back by the inset (its top arched where the spec says so and the chambers share one shell), or
+// the Hi-fi box with its baffle over the whole front and its roundover (its top drawn flat for now).
 import * as THREE from "three";
 import { createSceneContext, type SceneContext } from "./sceneContext";
 import { BAFFLE_THICKNESS_IN, buildCabinet } from "./buildCabinet";
@@ -35,15 +36,17 @@ import {
   onTop,
   PORT_RULE,
   portRule,
+  radiatorsAt,
+  roundPortsAt,
   speakerLayout,
   type FaceRect,
   type PlacedChamber,
 } from "../../lib/speaker/speakerLayout";
+import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { PANEL } from "../../constants/cutParts";
 import {
   CD_OPTIONS,
   FILL_OPTIONS,
-  HIFI_PASSIVES,
   MID_OPTIONS,
   SUB_OPTIONS,
   driverMountKind,
@@ -57,13 +60,19 @@ import { subDriverDepthIn } from "../../lib/pa/tubes";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 import { hornBodyColor } from "../../lib/pa/hornColor";
 import { TOWER_HORN_WALL_GAP_IN } from "../../lib/pa/tower";
-import { RADIATOR_PANEL } from "../../lib/hifi/hifi";
-import { radiatorSpots, roundPortSpots, slotOpening } from "../../lib/hifi/boxLayout";
+import { slotOpening } from "../../lib/hifi/boxLayout";
 import { MID_DEPTH_FALLBACK_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { THREAD_MOUNT } from "../../constants/throatMounts";
-import { CHAMBER_LOAD, DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import {
+  CABINET_CONSTRUCTION,
+  CABINET_TOP,
+  CHAMBER_LOAD,
+  DRIVER_KIND,
+  PORT_SHAPE,
+  VENT_KIND,
+} from "../../constants/speakerSpec";
 import type { BoxRegion, Horn, RadiatorPanel, SpeakerDriver, SpeakerSpec } from "../../types";
 
 /** The Designer scene's own meshes (every reused part keeps its builder's names). */
@@ -104,9 +113,10 @@ export interface SpeakerSceneProps {
 }
 
 /**
- * What the scene reads of its props, as a key that changes exactly when the scene does: the panels' thickness, inset
- * and roundover; each chamber's place, size, vent (a port's sizes, the radiators' part and count), drivers (part,
- * count, position, horn) and horn path (its drive, path and segments' areas and lengths); the look and the cutaway.
+ * What the scene reads of its props, as a key that changes exactly when the scene does: the construction, the top, the
+ * panels' thickness, inset and roundover; each chamber's place, size, vent (a port's sizes and position, the radiators'
+ * part, count and position), drivers (part, count, position, horn) and horn path (its drive, path, segments' areas and
+ * lengths, and mouth position); the look and the cutaway.
  * The model's own inputs (stuffing, net air, bands, a port's elbows, a horn's profiles and throat chamber) are left out.
  */
 export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
@@ -114,8 +124,10 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
   return JSON.stringify({
     cutaway,
     look,
+    construction: cabinet.construction,
+    top: cabinet.top,
     wall: cabinet.panel.thicknessIn,
-    inset: cabinet.insetIn,
+    inset: baffleInsetIn(cabinet),
     roundover: cabinet.roundoverIn,
     chambers: cabinet.chambers.map(({ at, dims, vent, drivers, load }) => ({
       at,
@@ -129,7 +141,12 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
                 vent.port.shape === PORT_SHAPE.duct ? vent.port : { ...vent.port, elbows: null },
             }
           : vent.kind === VENT_KIND.radiator
-            ? { kind: vent.kind, id: vent.radiators.id, n: vent.radiators.n }
+            ? {
+                kind: vent.kind,
+                id: vent.radiators.id,
+                n: vent.radiators.n,
+                position: vent.position,
+              }
             : { kind: vent.kind },
       drivers: drivers.map(({ kind, driverId, count, position, horn }) => ({
         kind,
@@ -144,6 +161,7 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
               drive: load.horn.drive.kind,
               path: load.horn.path,
               segments: load.horn.segments.map(({ s1, s2, length }) => [s1, s2, length]),
+              mouth: load.horn.mouthPosition,
             }
           : null,
     })),
@@ -180,10 +198,10 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
   const { cabinet, look } = spec;
   const T = cabinet.panel.thicknessIn;
   /** the PA's frame, its baffle set back by the inset; else the Hi-fi box, its baffle over the whole front */
-  const frame = cabinet.insetIn > 0;
+  const frame = cabinet.construction === CABINET_CONSTRUCTION.frameInset;
   const ctx = createSceneContext({
     wall: T,
-    inset: frame ? cabinet.insetIn : 0,
+    inset: baffleInsetIn(cabinet),
     cabFinish: look.cabFinish ?? DEFAULT_PA.cabFinish,
     baffleColor: look.baffleColor ?? DEFAULT_PA.baffleColor,
     cutaway,
@@ -262,6 +280,8 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           baffleHoles: holes(baffleCy, PANEL.baffle),
           backHoles: holes(dims.h / 2, PANEL.back),
           y: 0,
+          // the arch is a semicircle the full width: drawn on one shell at least half as tall as it is wide
+          archTop: layout.oneShell && cabinet.top === CABINET_TOP.arched && dims.h >= dims.w / 2,
           baffleBottom,
         },
       ).baffleZ;
@@ -417,7 +437,7 @@ function chamberParts(
 ): ChamberParts {
   const { chamber, dims } = placed;
   const T = ctx.wall;
-  const frame = cabinet.insetIn > 0;
+  const frame = cabinet.construction === CABINET_CONSTRUCTION.frameInset;
   /** a horn built into the box, and how far its throat is behind the baffle's face */
   const flare = hornFlare(cabinet, placed);
   const flareIn = flare ? flare.segments.reduce((sum, s) => sum + s.length, 0) : 0;
@@ -616,29 +636,47 @@ function chamberParts(
         addSlotShelf(ctx, { opening, len: port.len, shellFrontZ: innerZ }),
       );
     } else {
-      const spots = roundPortSpots(port);
-      baffle.push((ox, oy) =>
+      // on the baffle, or on the back: there the tubes run in from the back's outer face (a group turned to face back,
+      // so across is mirrored)
+      const { panel, spots } = roundPortsAt(port);
+      (panel === PANEL.back ? back : baffle).push((ox, oy) =>
         spots.map((s) => circlePath(ox + s.x, oy + s.y, s.r + HIFI_BOX_LAYOUT.portTubeWallIn)),
       );
-      builds.push(({ zf }) => addRoundPorts(ctx, { spots, port, dim: dims, zf }));
+      builds.push(({ zf }) => {
+        if (panel === PANEL.baffle) {
+          addRoundPorts(ctx, { spots, port, dim: dims, zf });
+          return;
+        }
+        const group = new THREE.Group();
+        group.rotation.y = Math.PI;
+        ctx.group.add(group);
+        addRoundPorts(
+          { ...ctx, group },
+          { spots: spots.map((s) => ({ ...s, x: -s.x })), port, dim: dims, zf: dims.d / 2 },
+        );
+      });
     }
   }
 
-  // the passive radiators, on the Hi-fi page's panel (the back)
-  if (chamber.vent.kind === VENT_KIND.radiator) {
-    const { id, n } = chamber.vent.radiators;
-    const drv = byId(HIFI_PASSIVES, id);
-    const spots = drv ? radiatorSpots({ drv, n }, RADIATOR_PANEL, T) : [];
+  // the passive radiators, where the layout puts them (by the Hi-fi rule, on the back, unless the vent sets a position)
+  const radiators = radiatorsAt(cabinet, chamber);
+  if (radiators.length) {
     const k = HIFI_FRONT_PARTS.radiatorFrameIn;
     const on = (panel: RadiatorPanel) => (ox: number, oy: number) =>
-      spots
+      radiators
         .filter((s) => s.panel === panel)
-        .map((s) => ellipsePath(ox, oy + s.y, s.shape.w / 2 - k, s.shape.h / 2 - k));
+        .map((s) => ellipsePath(ox + s.x, oy + s.y, s.shape.w / 2 - k, s.shape.h / 2 - k));
     baffle.push(on(PANEL.baffle));
     back.push(on(PANEL.back));
     builds.push(({ zf, innerZ }) => {
       const sideZ = (-dims.d / 2 + innerZ) / 2;
-      for (const s of spots) addRadiator(ctx, s, { dim: dims, zf, sideZ });
+      for (const s of radiators) {
+        // each in a group at its place across (the Hi-fi part centers it on its panel)
+        const group = new THREE.Group();
+        group.position.x = s.x;
+        ctx.group.add(group);
+        addRadiator({ ...ctx, group }, s, { dim: dims, zf, sideZ });
+      }
     });
   }
 

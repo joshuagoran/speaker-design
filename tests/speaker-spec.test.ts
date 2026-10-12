@@ -14,6 +14,8 @@ import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
 import { boxInternalLiters, midGrossLiters, slotFolds } from "../src/lib/pa/calc";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { panelNominalNear } from "../src/lib/panel";
+import { byIdOrThrow } from "../src/lib/tables";
+import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { hornGrid, hornModel } from "../src/lib/acoustics/hornModel";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import {
@@ -37,6 +39,8 @@ import {
 } from "../src/constants/paLayouts";
 import { CM_PER_IN } from "../src/constants/units";
 import {
+  CABINET_CONSTRUCTION,
+  CABINET_TOP,
   CHAMBER_LOAD,
   DRIVER_KIND,
   FRONT_END_KIND,
@@ -125,6 +129,11 @@ const PA_PORT_SHAPE: Record<PortStyle, SpeakerPort["shape"]> = {
 };
 /** How many sources each layout places. */
 const PA_SOURCE_COUNT: Record<PaLayout, number> = { stack: 4, pole: 4, satellite: 3, tower: 2 };
+
+/** Whether the design's horn arches the tower's top (lib/pa/tower `towerSpec`). */
+const towerArches = (cfg: PaPlannerDesign) =>
+  towerSpec(cfg.cDim, cfg.wall, byIdOrThrow(HORN_OPTIONS, cfg.horn, CATALOG_TABLE_NAMES.horns))
+    .archTop;
 
 /** The golden PA designs, and a pole layout (no seed has one). */
 const paCases: GoldenConfig[] = [
@@ -227,7 +236,24 @@ test("speaker spec: every golden PA design reads into a system with its boxes, d
     );
     assert.equal(system.frontEnd?.kind, FRONT_END_KIND.digital, c.name);
     assert.equal(subBox.cabinet.panel.thicknessIn, cfg.wall, c.name);
+
+    // the PA's frame and inset baffle on every box; the tower's top arched where its horn arches it, else flat; the
+    // vents placed by their rule
+    const archTop = tower && towerArches(cfg);
+    for (const box of speakers) {
+      assert.equal(box.cabinet.construction, CABINET_CONSTRUCTION.frameInset, c.name);
+      assert.equal(box.cabinet.insetIn, cfg.inset, c.name);
+      assert.equal(box.cabinet.top, archTop ? CABINET_TOP.arched : CABINET_TOP.flat, c.name);
+    }
+    assert.ok(!("position" in port), `${c.name}: the sub's vent placed by its rule`);
   }
+});
+
+test("speaker spec: a tower whose round horn is narrower than the cabinet has an arched top", () => {
+  const tower = paCases.map(paDesign).find((cfg) => cfg.layout === "tower" && towerArches(cfg));
+  assert.ok(tower, "a golden tower with an arched top");
+  const [spec] = systemFromPa(tower, { id: "pa", name: "tower" }, STACKS).speakers;
+  assert.equal(spec.cabinet.top, CABINET_TOP.arched);
 });
 
 test("speaker spec: the tower's chambers stack in one shell and share their partitions", () => {
@@ -330,6 +356,11 @@ test("speaker spec: every golden fill reads in as a coaxial in its box, the high
     const [spec] = speakers;
     const [chamber] = spec.cabinet.chambers;
     assert.deepEqual(chamber.dims, state.boxDims, c.name);
+    assert.deepEqual(
+      [spec.cabinet.construction, spec.cabinet.top, spec.cabinet.insetIn],
+      [CABINET_CONSTRUCTION.flushBox, CABINET_TOP.flat, 0],
+      c.name,
+    );
     assert.equal(chamber.vent.kind, c.boxType, c.name);
     if (chamber.vent.kind === VENT_KIND.vented)
       assert.deepEqual(chamber.vent.port, { shape: PORT_SHAPE.round, ...state.portSpec }, c.name);
@@ -408,6 +439,16 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
     // the box the page models, drawn and saved: the size set, fitted to what its parts need
     assert.deepEqual(chamber.dims, deriveHifiDesign(state).speakerConfig.dim, name);
     assert.equal(chamber.vent.kind, state.boxType, name);
+    assert.deepEqual(
+      [spec.cabinet.construction, spec.cabinet.top, spec.cabinet.insetIn],
+      [CABINET_CONSTRUCTION.flushBox, CABINET_TOP.flat, 0],
+      name,
+    );
+    // the port and the radiators placed by the Hi-fi rule
+    if (chamber.vent.kind === VENT_KIND.vented)
+      assert.ok(!("position" in chamber.vent.port), `${name}: the port placed by its rule`);
+    if (chamber.vent.kind === VENT_KIND.radiator)
+      assert.ok(!("position" in chamber.vent), `${name}: the radiators placed by their rule`);
     if (chamber.vent.kind === VENT_KIND.vented) {
       const { port } = chamber.vent;
       assert.deepEqual([port.shape, port.len], [state.portSpec.shape, state.portSpec.len], name);

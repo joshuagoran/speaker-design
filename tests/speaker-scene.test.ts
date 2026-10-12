@@ -19,9 +19,13 @@ import {
   driverSpots,
   hornFlare,
   onTop,
+  radiatorsAt,
+  roundPortsAt,
   speakerLayout,
   type PlacedChamber,
 } from "../src/lib/speaker/speakerLayout";
+import { chamberNetLiters } from "../src/lib/speaker/chamberAir";
+import { PANEL } from "../src/constants/cutParts";
 import { systemFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
@@ -32,11 +36,14 @@ import { byIdOrThrow } from "../src/lib/tables";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
 import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
 import {
+  CABINET_CONSTRUCTION,
+  CABINET_TOP,
   CHAMBER_LOAD,
   DRIVER_KIND,
   HORN_DRIVE,
   HORN_PATH,
   HORN_PLACEMENT,
+  PORT_SHAPE,
   SPEAKER_PART,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
@@ -225,10 +232,12 @@ describe("each golden design's spec", () => {
         s.children.filter((c) => c.name !== SPEAKER_GROUP_NAMES.chamber),
       );
       const box = boxOf(...panels);
-      // the PA's frame (a spec with an inset) draws its roundover's bevel proud of the outline, as the PA page does
-      const proud = spec.cabinet.insetIn > 0 ? ROUNDOVER_IN : 0;
+      // the PA's frame draws its roundover's bevel proud of the outline, as the PA page does
+      const proud =
+        spec.cabinet.construction === CABINET_CONSTRUCTION.frameInset ? ROUNDOVER_IN : 0;
       expect(box.min.y, name).toBeCloseTo(-proud, 6);
-      expect(box.max.y, name).toBeCloseTo(size.h + proud, 6);
+      // an arched top's crown is a curve's vertex, stored in single precision
+      expect(box.max.y, name).toBeCloseTo(size.h + proud, 4);
       expect(box.min.x, name).toBeCloseTo(-size.w / 2 - proud, 6);
       expect(box.max.x, name).toBeCloseTo(size.w / 2 + proud, 6);
       expect(box.max.z, name).toBeCloseTo(size.d / 2, 6);
@@ -518,4 +527,182 @@ test("every geometry a build makes is in the scene, so the view frees it (three-
       });
       expect(reachable.size, `${name}${cutaway ? ", cutaway" : ""}`).toBe(made);
     }
+});
+
+/** The shells' own panels' bounds: everything in them but the chambers' parts. */
+function shellBox(spec: SpeakerSpec) {
+  const shells = named(buildSpeakerScene({ spec, cutaway: false }), SPEAKER_GROUP_NAMES.shell);
+  return boxOf(
+    ...shells.flatMap((s) => s.children.filter((c) => c.name !== SPEAKER_GROUP_NAMES.chamber)),
+  );
+}
+const caseSpec = (name: string) => {
+  const found = CASES.find((c) => c.name === name);
+  if (!found) throw new Error(`no case ${name}`);
+  return found.spec;
+};
+const withCabinet = (spec: SpeakerSpec, over: Partial<SpeakerSpec["cabinet"]>): SpeakerSpec => ({
+  ...spec,
+  cabinet: { ...spec.cabinet, ...over },
+});
+/** The spec with its one chamber's vent changed. */
+const withVent = (spec: SpeakerSpec, vent: SpeakerChamber["vent"]): SpeakerSpec => {
+  const [chamber] = spec.cabinet.chambers;
+  return withCabinet(spec, { chambers: [{ ...chamber, vent }] });
+};
+
+describe("the cabinet's construction and top", () => {
+  test("the construction, not the inset, picks the cabinet: a PA box with no inset keeps its frame", () => {
+    const flush = caseSpec("PA sub, folded slot, flush");
+    expect(flush.cabinet.insetIn).toBe(0);
+    expect(flush.cabinet.construction).toBe(CABINET_CONSTRUCTION.frameInset);
+    // the frame's roundover bevel stands proud of the outline; the flush box's edges don't
+    expect(shellBox(flush).min.y).toBeCloseTo(-ROUNDOVER_IN, 6);
+    const box = withCabinet(flush, { construction: CABINET_CONSTRUCTION.flushBox });
+    expect(shellBox(box).min.y).toBeCloseTo(0, 6);
+  });
+
+  test("a flush box takes no inset: its baffle is its front, in the model and the 3D view", () => {
+    const box = withCabinet(caseSpec("PA sub, folded slot, flush"), {
+      construction: CABINET_CONSTRUCTION.flushBox,
+    });
+    const inset = withCabinet(box, { insetIn: 3 });
+    const [chamber] = box.cabinet.chambers;
+    expect(chamberNetLiters(inset.cabinet, chamber, 0)).toBe(
+      chamberNetLiters(box.cabinet, chamber, 0),
+    );
+    expect(speakerSceneKey({ spec: inset, cutaway: false })).toBe(
+      speakerSceneKey({ spec: box, cutaway: false }),
+    );
+  });
+
+  test("an arched top is a semicircle the full width over the tower's one shell", () => {
+    const tower = caseSpec("PA tower");
+    expect(tower.cabinet.top).toBe(CABINET_TOP.arched);
+    const flat = withCabinet(tower, { top: CABINET_TOP.flat });
+    const { size } = speakerLayout(tower.cabinet);
+    /** whether the shell has a vertex in a top corner of its outline */
+    const topCorner = (spec: SpeakerSpec) => {
+      const [shell] = named(buildSpeakerScene({ spec, cutaway: false }), SPEAKER_GROUP_NAMES.shell);
+      const v = new THREE.Vector3();
+      let found = false;
+      for (const panel of shell.children.filter((c) => c.name !== SPEAKER_GROUP_NAMES.chamber))
+        panel.traverse((m) => {
+          if (!(m instanceof THREE.Mesh)) return;
+          const at = m.geometry.getAttribute("position");
+          for (let i = 0; i < at.count && !found; i++) {
+            v.fromBufferAttribute(at, i).applyMatrix4(m.matrixWorld);
+            found = Math.abs(v.x) > size.w / 2 - 1 && v.y > size.h - 1;
+          }
+        });
+      return found;
+    };
+    expect(topCorner(tower)).toBe(false);
+    expect(topCorner(flat)).toBe(true);
+    expect(speakerSceneKey({ spec: tower, cutaway: false })).not.toBe(
+      speakerSceneKey({ spec: flat, cutaway: false }),
+    );
+  });
+});
+
+describe("vent and mouth positions", () => {
+  /** each round port's flange (its lip on the panel's outer face), in world coordinates */
+  const lips = (spec: SpeakerSpec) =>
+    named(buildSpeakerScene({ spec, cutaway: false }), HIFI_MESH_NAMES.port)
+      .filter((o) => o instanceof THREE.Mesh && o.geometry instanceof THREE.ShapeGeometry)
+      .map(worldOf);
+
+  test("a round port at a set position: the layout and the 3D view put it there, on the baffle or the back", () => {
+    const spec = caseSpec("Hi-fi on a waveguide (in the baffle), vented");
+    const [chamber] = spec.cabinet.chambers;
+    if (chamber.vent.kind !== VENT_KIND.vented) throw new Error("no port");
+    const { vent } = chamber;
+    const { port } = vent;
+    // a round port's shape is absent or round
+    if (port.shape === PORT_SHAPE.slot || port.shape === PORT_SHAPE.duct)
+      throw new Error("no round port");
+    // absent: the Hi-fi rule, on the baffle
+    expect(roundPortsAt(port).panel).toBe(PANEL.baffle);
+    const [placed] = speakerLayout(spec.cabinet).chambers;
+    for (const panel of [PANEL.baffle, PANEL.back] as const) {
+      const position = { panel, xIn: 2, yIn: 8 };
+      const moved = withVent(spec, { ...vent, port: { ...port, position } });
+      const at = roundPortsAt({ ...port, position });
+      expect(at.panel).toBe(panel);
+      const mean = (pick: (s: { x: number; y: number }) => number) =>
+        at.spots.reduce((sum, s) => sum + pick(s), 0) / at.spots.length;
+      expect(mean((s) => s.x)).toBeCloseTo(2, 9);
+      expect(mean((s) => s.y)).toBeCloseTo(8, 9);
+      const drawn = lips(moved);
+      expect(drawn).toHaveLength(at.spots.length);
+      drawn.forEach((w, i) => {
+        // seen from the front, on the back too
+        expect(w.x, panel).toBeCloseTo(placed.cx + at.spots[i].x, 6);
+        expect(w.y, panel).toBeCloseTo(placed.y0 + at.spots[i].y, 6);
+        if (panel === PANEL.baffle) expect(w.z, panel).toBeGreaterThan(frontZ(spec) - EPS);
+        else expect(w.z, panel).toBeLessThan(frontZ(spec) - placed.dims.d + EPS);
+      });
+      expect(speakerSceneKey({ spec: moved, cutaway: false })).not.toBe(
+        speakerSceneKey({ spec, cutaway: false }),
+      );
+    }
+  });
+
+  test("radiators at a set position: the stack's center on its panel", () => {
+    const spec = caseSpec("Hi-fi default, radiators");
+    const [chamber] = spec.cabinet.chambers;
+    if (chamber.vent.kind !== VENT_KIND.radiator) throw new Error("no radiators");
+    expect(radiatorsAt(spec.cabinet, chamber).every((s) => s.panel === PANEL.back)).toBe(true);
+    const moved = withVent(spec, {
+      ...chamber.vent,
+      position: { panel: PANEL.baffle, xIn: 1, yIn: 10 },
+    });
+    const [placed] = speakerLayout(moved.cabinet).chambers;
+    const spots = radiatorsAt(moved.cabinet, placed.chamber);
+    expect(spots.length).toBeGreaterThan(0);
+    expect(spots.every((s) => s.panel === PANEL.baffle && s.x === 1)).toBe(true);
+    expect(spots.reduce((sum, s) => sum + s.y, 0) / spots.length).toBeCloseTo(10, 9);
+    const drawn = named(
+      buildSpeakerScene({ spec: moved, cutaway: false }),
+      HIFI_MESH_NAMES.radiator,
+    );
+    expect(drawn).toHaveLength(spots.length);
+    drawn.forEach((o, i) => {
+      const w = worldOf(o);
+      expect(w.x).toBeCloseTo(placed.cx + 1, 6);
+      expect(w.y).toBeCloseTo(placed.y0 + spots[i].y, 6);
+      // on the baffle's face
+      expect(w.z).toBeCloseTo(frontZ(moved), 6);
+    });
+  });
+
+  test("a horn-loaded chamber's mouth at a set position: the mouth and its flare there", () => {
+    const sub = paSpeaker(defaultPa, SPEAKER_PART.sub);
+    const [base] = sub.cabinet.chambers;
+    const horn: SpeakerChamber = {
+      ...base,
+      netLiters: 40,
+      vent: { kind: VENT_KIND.sealed },
+      load: {
+        kind: CHAMBER_LOAD.horn,
+        horn: {
+          throatChamber: 2,
+          segments: [{ profile: HORN_PROFILE.exponential, s1: 100, s2: 400, length: 20 }],
+          portOffset: 0,
+          drive: { kind: HORN_DRIVE.back },
+          path: HORN_PATH.straight,
+          mouthPosition: { xIn: 1, yIn: 6 },
+        },
+      },
+    };
+    const spec = withCabinet(sub, { chambers: [horn] });
+    const [placed] = speakerLayout(spec.cabinet).chambers;
+    const flare = hornFlare(spec.cabinet, placed);
+    if (!flare) throw new Error("no flare");
+    expect(flare.mouth.x + flare.mouth.w / 2).toBeCloseTo(placed.cx + 1, 9);
+    expect(flare.mouth.y + flare.mouth.h / 2).toBeCloseTo(placed.y0 + 6, 9);
+    const [mesh] = named(buildSpeakerScene({ spec, cutaway: false }), SPEAKER_MESH_NAMES.hornFlare);
+    expect(worldOf(mesh).x).toBeCloseTo(placed.cx + 1, 6);
+    expect(worldOf(mesh).y).toBeCloseTo(placed.y0 + 6, 6);
+  });
 });

@@ -1,5 +1,6 @@
 // The ids of the speaker designer's spec (SpeakerSpec, SystemSpec in src/types.ts; read adapters in lib/speaker).
 import type {
+  CabinetConstruction,
   DriverKind,
   HifiBoxKind,
   PanelNominal,
@@ -57,6 +58,27 @@ export const SPEAKER_BAND_NAMES = {
 export const HORN_PLACEMENT = {
   baffle: "baffle",
   top: "top",
+} as const;
+
+/**
+ * How a cabinet's shell is built, by id: the PA's frame with its baffle set back by the inset, or the Hi-fi's flush box
+ * with its baffle over the whole front.
+ */
+export const CABINET_CONSTRUCTION = {
+  frameInset: "frameInset",
+  flushBox: "flushBox",
+} as const;
+
+/** The name the settings show for each construction. */
+export const CABINET_CONSTRUCTION_NAMES = {
+  frameInset: "Frame and inset baffle",
+  flushBox: "Flush box",
+} as const satisfies Record<CabinetConstruction, string>;
+
+/** A cabinet's top shapes, by id: flat, or a semicircle the full width of the cabinet (the PA tower's arched top). */
+export const CABINET_TOP = {
+  flat: "flat",
+  arched: "arched",
 } as const;
 
 /** A chamber's vent kinds, by id: the Hi-fi box kinds. A vented chamber's port is round, a slot or side ducts. */

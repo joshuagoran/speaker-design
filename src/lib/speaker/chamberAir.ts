@@ -11,7 +11,12 @@ import { ELBOW_COUNTS, type ElbowCount } from "../tubeFold";
 import { SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
 import { LITERS_PER_CUBIC_IN } from "../../constants/units";
-import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import {
+  CABINET_CONSTRUCTION,
+  DRIVER_KIND,
+  PORT_SHAPE,
+  VENT_KIND,
+} from "../../constants/speakerSpec";
 
 /** How close two edges count as touching, in. */
 export const TOUCH_IN = 1e-9;
@@ -60,6 +65,10 @@ export function chamberClearFace(
   return { w: dims.w - (left ? 1 : 2) * t, h: dims.h - (below ? 1 : 2) * t };
 }
 
+/** How far the baffle sits behind the cabinet's front, in: the frame's inset; a flush box's baffle is its front. */
+export const baffleInsetIn = (cabinet: Pick<SpeakerCabinet, "construction" | "insetIn">) =>
+  cabinet.construction === CABINET_CONSTRUCTION.frameInset ? cabinet.insetIn : 0;
+
 /** The PA port styles the tube rule reads: tubes in the baffle's corners, or in a row along the bottom. */
 const PA_CORNER_TUBES = "round4" satisfies PortStyle;
 const PA_ROW_TUBES = "round2" satisfies PortStyle;
@@ -75,7 +84,7 @@ const elbowCountOf = (elbows: number): ElbowCount =>
   ELBOW_COUNTS.reduce((best, e) => (Math.abs(e - elbows) < Math.abs(best - elbows) ? e : best));
 
 /** The parts of a cabinet the air and vent rules read. */
-type CabinetAir = Pick<SpeakerCabinet, "chambers" | "panel" | "insetIn">;
+type CabinetAir = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
 
 /** A vented chamber's vent as the vented box model takes it (lib/pa/calc boxModel). */
 export interface ChamberVentModel {
@@ -127,7 +136,7 @@ export function chamberVentModel(
               dims,
               { slotH: port.h, len: port.len },
               t,
-              cabinet.insetIn,
+              baffleInsetIn(cabinet),
               !!port.folded,
             ),
           volumeL,
@@ -148,7 +157,7 @@ export function chamberVentModel(
         areaIn2: port.n * port.throat * open,
         lenIn: port.len,
         openings: port.n,
-        endCorrectionIn: sideDuctEndCorrection(dims, port, t, cabinet.insetIn, port.n),
+        endCorrectionIn: sideDuctEndCorrection(dims, port, t, baffleInsetIn(cabinet), port.n),
         volumeL: port.n * (port.throat + t) * open * port.len * LITERS_PER_CUBIC_IN,
       };
     }
@@ -167,7 +176,7 @@ export function chamberVentModel(
               port.corners ? PA_CORNER_TUBES : PA_ROW_TUBES,
               { nt: port.n, dia: port.dia, len: port.len },
               t,
-              cabinet.insetIn,
+              baffleInsetIn(cabinet),
               sub,
               elbowCountOf(port.elbows ?? 0),
             )
@@ -180,8 +189,9 @@ export function chamberVentModel(
 
 /**
  * The chamber's air as the box models take it, L: its `netLiters` where set; else, by the Hi-fi engine's rule (lib/hifi
- * hifiBox), its clear volume (the clear face, and its depth less the back, the baffle and the baffle's inset) with 3%
- * off for bracing and damping, less the cones' displacement and the vent's volume, and at least 1 L.
+ * hifiBox), its clear volume (the clear face, and its depth less the back, the baffle and the baffle's inset,
+ * `baffleInsetIn`) with 3% off for bracing and damping, less the cones' displacement and the vent's volume, and at
+ * least 1 L.
  */
 export function chamberNetLiters(
   cabinet: CabinetAir,
@@ -191,7 +201,7 @@ export function chamberNetLiters(
   if (chamber.netLiters !== null) return chamber.netLiters;
   const t = cabinet.panel.thicknessIn;
   const face = chamberClearFace(cabinet, chamber);
-  const depth = chamber.dims.d - 2 * t - cabinet.insetIn;
+  const depth = chamber.dims.d - 2 * t - baffleInsetIn(cabinet);
   const clearL = Math.max(0, face.w * face.h * depth) * LITERS_PER_CUBIC_IN;
   const ventL = chamberVentModel(cabinet, chamber)?.volumeL ?? 0;
   return Math.max(1, clearL * HIFI_NET_SHARE - displacementL - ventL);

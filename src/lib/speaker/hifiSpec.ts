@@ -40,6 +40,7 @@ import {
 } from "../../constants/speakerSpec";
 import {
   DIRECT_LOAD,
+  FLUSH_BOX,
   NO_FILTERS,
   channelCounter,
   lrFilter,
@@ -209,7 +210,7 @@ export function speakerFromHifi(
         material: state.panelMaterial,
         thicknessIn: fit.wallThicknessIn,
       },
-      insetIn: 0,
+      ...FLUSH_BOX,
       roundoverIn: state.roundoverIn,
       tiltDeg: state.tiltDeg ?? 0,
     },

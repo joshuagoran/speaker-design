@@ -15,6 +15,8 @@ import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { HORN_PROFILE } from "./constants/hornEngine";
 import type {
   AUTO_DELAY,
+  CABINET_CONSTRUCTION,
+  CABINET_TOP,
   CHAMBER_LOAD,
   FIRST_ORDER_FILTER,
   FRONT_END_KIND,
@@ -1885,6 +1887,18 @@ export interface FacePoint {
   yIn: number;
 }
 
+/** A panel a vent can be cut into (`PANEL`): the baffle, or the back. */
+export type VentPanel = Extract<RadiatorPanel, "baffle" | "back">;
+
+/**
+ * Where a vent sits on its chamber, as a driver entry's position: its panel, and its group's center, `xIn` across from
+ * the chamber's center line (+ toward the inside of a pair, seen from the front on the back panel too) and `yIn` up
+ * from the chamber's bottom.
+ */
+export interface VentPosition extends FacePoint {
+  panel: VentPanel;
+}
+
 /** What every driver entry has, whatever its kind. */
 interface SpeakerDriverBase {
   count: number;
@@ -1919,6 +1933,12 @@ export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
 export interface SpeakerRoundPort extends RoundPort {
   flared?: boolean;
   corners?: boolean;
+  /**
+   * where the row of tubes sits (its center), on the baffle or the back; absent: the Hi-fi rule's place, centered along
+   * the baffle's bottom (lib/hifi/boxLayout roundPortSpots). Flared tubes keep the PA layout: their place is part of
+   * the PA tube rule, so they don't take one.
+   */
+  position?: VentPosition;
 }
 
 /**
@@ -1949,7 +1969,15 @@ export type ChamberVent =
       port: SpeakerPort;
       maxSpeedMs: PaDesignConfig["portMax"];
     }
-  | { kind: Extract<HifiBoxKind, "radiator">; radiators: RadiatorSelection };
+  | {
+      kind: Extract<HifiBoxKind, "radiator">;
+      radiators: RadiatorSelection;
+      /**
+       * where the radiators sit (the stack's center), on the baffle or the back; absent: the Hi-fi rule's place,
+       * stacked up the back from its bottom (lib/hifi/boxLayout radiatorSpots on `RADIATOR_PANEL`)
+       */
+      position?: VentPosition;
+    };
 
 /**
  * How a horn's drivers drive its path (`HORN_DRIVE`).
@@ -1976,6 +2004,12 @@ export type HornPath = (typeof HORN_PATH)[keyof typeof HORN_PATH];
 export interface SpeakerHorn extends Pick<HornDesign, "throatChamber" | "segments" | "portOffset"> {
   drive: HornDrive;
   path: HornPath;
+  /**
+   * the mouth's center on the baffle, `xIn` across from the chamber's center line and `yIn` up from its bottom, as a
+   * driver's position: a back-loaded horn's mouth is apart from the drivers on the baffle, and a folded path can end
+   * anywhere on it. Absent: centered on the chamber's clear face.
+   */
+  mouthPosition?: FacePoint;
 }
 
 /** How a chamber's drivers meet the air (`CHAMBER_LOAD`): straight, or through a horn built into the box. */
@@ -2016,11 +2050,27 @@ export interface SpeakerPanel {
   thicknessIn: PaDesignConfig["wall"];
 }
 
+/** How a cabinet's shell is built, by id (`CABINET_CONSTRUCTION`, its name in `CABINET_CONSTRUCTION_NAMES`). */
+export type CabinetConstruction = (typeof CABINET_CONSTRUCTION)[keyof typeof CABINET_CONSTRUCTION];
+
+/** A cabinet's top shape, by id (`CABINET_TOP`). */
+export type CabinetTop = (typeof CABINET_TOP)[keyof typeof CABINET_TOP];
+
 /** A cabinet: its chambers, panels and shape. Bracing and back joint as the PA boxes take them (absent: the defaults). */
 export interface SpeakerCabinet extends Pick<PaDesignConfig, "braceStyle" | "backJoint"> {
   chambers: readonly SpeakerChamber[];
   panel: SpeakerPanel;
-  /** how far the baffle sits behind the frame's front, in; 0 flush */
+  /**
+   * how the shell is built: the PA's frame, its baffle set back by `insetIn`, or the Hi-fi's flush box, its baffle over
+   * the whole front
+   */
+  construction: CabinetConstruction;
+  /**
+   * the top's shape: flat, or arched, a semicircle the full width of the cabinet over its top chamber (the PA tower's,
+   * lib/pa/tower `towerSpec`)
+   */
+  top: CabinetTop;
+  /** how far the frame's baffle sits behind its front, in; 0 flush. A flush box has none (`baffleInsetIn`). */
   insetIn: PaDesignConfig["inset"];
   /** the baffle edges' roundover radius, in; 0 sharp */
   roundoverIn: HifiDesignState["roundoverIn"];

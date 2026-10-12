@@ -43,7 +43,7 @@ import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../constants/panelSizes"
 import { HIFI_DRIVE } from "../constants/hifiEngine";
 import { SPEAKER_BAND, SPEAKER_BAND_NAMES, VENT_KIND } from "../constants/speakerSpec";
 import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
-import { DIRECT_LOAD, NO_FILTERS, stuffingPctOf } from "./speaker/specParts";
+import { DIRECT_LOAD, FLUSH_BOX, NO_FILTERS, stuffingPctOf } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
 
@@ -215,14 +215,14 @@ export const DEFAULT_SPEAKER_BAND: Omit<SpeakerBand, "id" | "name"> = {
 };
 
 /**
- * The Designer's empty speaker: one chamber (DEFAULT_SPEAKER_CHAMBER) in the PA's ¾″ birch ply, flush and sharp-edged,
- * one low band with no filters and the full input range; the PA's look.
+ * The Designer's empty speaker: one chamber (DEFAULT_SPEAKER_CHAMBER) in the PA's ¾″ birch ply, a flush box with a
+ * flat top and sharp edges, one low band with no filters and the full input range; the PA's look.
  */
 export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
   cabinet: {
     chambers: [DEFAULT_SPEAKER_CHAMBER],
     panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
-    insetIn: 0,
+    ...FLUSH_BOX,
     roundoverIn: 0,
     tiltDeg: 0,
   },
