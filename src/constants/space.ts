@@ -113,21 +113,30 @@ export const SPACE_TEXT = {
     "An analog front end has fixed cards with no delay: a stack's alignment or a placement's delay needs a DSP.",
   noFrontEnd:
     "No front end: only passive speakers straight off the amps. The model still uses each stack's filters.",
-  room: "Room",
-  width: "Width, ft",
-  length: "Length, ft",
-  ceiling: "Ceiling, ft",
   outdoors: "Outdoors",
-  crowd: "Full dance floor",
   areaWidth: "Area width, ft",
   areaLength: "Area length, ft",
   areaCenter: "Area center from the front wall, ft",
-  listenerAcross: "Listener across, ft",
-  listenerDown: "Listener from the front wall, ft",
   ear: "Ear height, ft",
-  target: "Target at the listening area, dB",
-  band: "Band",
-  oneFrequency: "One frequency",
+  target: "Target at the listening area",
+  listenerHint:
+    "The dashed box on the map is the listening area. Tap the map, or drag the cyan dot, to move the listener.",
+  mapHint:
+    "Drag a placement to move it, its dot to turn it, or the listener (tap the floor to put them there).",
+  oneNote: (hz: number) =>
+    `One frequency adds everything with phase: the interference between the placements shows plainly. Up to ${hz} Hz; above that it's finer than the map.`,
+  areaAverage: "Area average",
+  areaMax: "Area at the limit",
+  listener: "Listener",
+  within3: "Area ≥ −3 dB",
+  within6: "Area ≥ −6 dB",
+  spread: "Spread, 10–90 %",
+  responseY: "dB SPL at the listener",
+  cannotReach: (target: number, atLimit: number) =>
+    `It cannot reach ${target} dB at the listening area in this band: ${atLimit.toFixed(1)} dB at its limit.`,
+  turnedDown: (db: number, target: number) =>
+    `Turned down ${db.toFixed(1)} dB so the listening area gets ${target} dB in this band.`,
+  listenerVs: "The listener against the target:",
   modelNote:
     "Each placement plays its stack's response (each member's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the listening area's average gets the target.",
 } as const;

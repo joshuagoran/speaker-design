@@ -11,18 +11,35 @@ import {
 } from "../src/pages/coverage/useCoverageMap";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/pages/coverage/useCoverageLayout";
 import { defaultPaDesign } from "../src/pages/designer/designerTemplates";
-import { autoSubDelayMs, computeCoverageGrid, COVERAGE_GRID_COLS } from "../src/lib/pa/coverage";
+import {
+  autoSubDelayMs,
+  computeCoverageGrid,
+  coverageScene,
+  coverageSlots,
+  COVERAGE_GRID_COLS,
+} from "../src/lib/pa/coverage";
+import { abs, add, complex } from "../src/lib/acoustics/complex";
+import { SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import {
   computeSpaceGrid,
   spaceGridRequest,
   spaceLevelAt,
   spaceModel,
+  spaceOutputs,
+  type SpaceModel,
 } from "../src/lib/speaker/spaceCoverage";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { keysOf } from "../src/lib/records";
 import { PLINTH_HEIGHT_IN } from "../src/constants/paLayouts";
-import type { CoverageBand, CoverageGrid, CoverageLayout, SpaceDesign } from "../src/types";
+import type {
+  CoverageBand,
+  CoverageGrid,
+  CoverageLayout,
+  CoverageLevels,
+  FrequencyPoint,
+  SpaceDesign,
+} from "../src/types";
 
 /** The PA coverage page's inputs for the starting design, as the planner derives them. */
 function paInputs(): CoverageInputs {
@@ -70,19 +87,54 @@ function paInputs(): CoverageInputs {
   };
 }
 
-/** The coverage page's grid for the starting design on `layout`, in `band`. */
-function paGrid(layout: CoverageLayout, band: CoverageBand): CoverageGrid {
+/** The coverage page's stack and band levels for the starting design (its music balance), each band moved by `shift` dB. */
+function paRequest(shift: Partial<Record<keyof CoverageLevels, number>> = {}) {
   const p = paInputs();
   const geometry = coverageGeometry(p);
   const balanced = balancedLevelsOf(p, geometry, musicBalanceOf(p));
   assert.ok(geometry && balanced);
   const stack = { ...geometry, subDelayMs: autoSubDelayMs(geometry, balanced.levels) ?? 0 };
-  return computeCoverageGrid({
-    stack,
-    levels: balanced.levels,
-    layout: { ...layout, band },
-    cols: COVERAGE_GRID_COLS,
-  });
+  const moved = <P extends FrequencyPoint>(c: P[], db = 0) =>
+    c.map((o) => ({ ...o, spl: o.spl + db }));
+  const { sub, mid, horn } = balanced.levels;
+  const levels: CoverageLevels = {
+    sub: sub && moved(sub, shift.sub),
+    mid: moved(mid, shift.mid),
+    horn: moved(horn, shift.horn),
+  };
+  return { stack, levels };
+}
+
+/** The coverage page's grid for the starting design on `layout`, in `band`. */
+function paGrid(layout: CoverageLayout, band: CoverageBand, req = paRequest()): CoverageGrid {
+  return computeCoverageGrid({ ...req, layout: { ...layout, band }, cols: COVERAGE_GRID_COLS });
+}
+
+/** Each page band, the speaker band that plays it in the PA design's space, and where the two are compared, Hz. */
+const BAND_PAIRS = [
+  ["sub", SPEAKER_BAND.low, 50],
+  ["mid", SPEAKER_BAND.mid, 400],
+  ["horn", SPEAKER_BAND.high, 4000],
+] as const;
+
+/**
+ * How much louder each band plays in the space than on the page, dB, at 1 m on axis at its frequency (`BAND_PAIRS`):
+ * the left stack's voices of that band against the page's band, each at its limit.
+ */
+function bandGapsDb(layout: CoverageLayout, model: SpaceModel) {
+  const req = paRequest();
+  const scene = coverageScene(req.stack, layout);
+  const out: Partial<Record<keyof CoverageLevels, number>> = {};
+  for (const [page, band, f] of BAND_PAIRS) {
+    const v = coverageSlots(scene, req.levels, [f], true)[0].out[page];
+    const own = spaceOutputs(model, f);
+    const sum = model.feeds
+      .filter((x) => x.placement === 0 && x.band === band)
+      .reduce((acc, x) => add(acc, own[x.id] ?? complex(0)), complex(0));
+    assert.ok(v, page);
+    out[page] = 20 * Math.log10(abs(sum) / abs(v));
+  }
+  return out;
 }
 
 /** The starting PA design read in as a space on `layout`. */
@@ -97,37 +149,112 @@ const shape = (g: CoverageGrid) => {
   return [...g.db].map((v) => v - mean);
 };
 
+/** How far apart two maps' shapes are (each cell less its map's mean): the mean and 90th percentile of the cells, dB. */
+function shapeGap(a: CoverageGrid, b: CoverageGrid) {
+  const sa = shape(a),
+    sb = shape(b);
+  const diffs = sa.map((v, i) => Math.abs(v - sb[i])).sort((x, y) => x - y);
+  return {
+    mean: diffs.reduce((sum, v) => sum + v, 0) / diffs.length,
+    p90: diffs[Math.floor(diffs.length * 0.9)],
+  };
+}
+
+/** A map tolerance: the mean and 90th percentile of the cells' differences, dB. */
+type ShapeTolerance = Record<Exclude<CoverageBand, "one">, ReturnType<typeof shapeGap>>;
+
 /**
- * Tolerances against the coverage page, on its default floor: the map's shape (each cell less the map's mean, so each
- * band's level drops out) in each band, the mean and the 90th percentile of the cells' differences, dB. The space plays
- * the PA design's stack (lib/speaker/stackResponse): its own sub delay (the stack's alignment), its band levels and its
- * drivers where the speakers put them; the page balances each band at its limit and stacks the drivers on one line.
+ * The PA design's space against the coverage page, as each plays it. The space plays the PA design's stack
+ * (lib/speaker/stackResponse): its band levels at one input, its own sub delay, and its drivers where the speakers put
+ * them; the page balances each band at its limit to its music balance and stacks the drivers on one line.
  *
- * On the starting design (Oct 2026): sub mean 0.05, p90 0.08; kick 0.10, 0.19; mid 0.28, 0.58; high 0.00, 0.00.
+ * - The sub plays at its music limit in both: within SUB_GAP_DB. The stack's top plays louder than the page's balance
+ *   (the PA stack's band levels are gains on each box's 2.83 V response, not the page's balance at the limits): on the
+ *   starting design the mid −1.8 dB at 400 Hz and the horn +11.3 dB at 4 kHz.
+ * - The map's shape (each cell less the map's mean, so each band's level drops out) on the page's default floor,
+ *   indoors (PAGE_SHAPE_DB): on the starting design (Oct 2026) sub mean 0.05, p90 0.08; kick 0.10, 0.19; mid 0.28, 0.58;
+ *   high 0.00, 0.00 (the concrete room's diffuse field evens the high band out).
  */
-const SHAPE_DB: Record<Exclude<CoverageBand, "one">, { mean: number; p90: number }> = {
+const SUB_GAP_DB = 0.5;
+const PAGE_SHAPE_DB: ShapeTolerance = {
   sub: { mean: 0.1, p90: 0.15 },
   kick: { mean: 0.2, p90: 0.3 },
   mid: { mean: 0.4, p90: 0.8 },
   high: { mean: 0.05, p90: 0.05 },
 };
 
+/**
+ * With the page's bands moved to the space's levels (`bandGapsDb`), the same engine: the map's shape indoors and
+ * outdoors (the direct sound and the floor bounce alone). The rest is the stack's own sub delay and the drivers' places.
+ * On the starting design (Oct 2026), indoors: sub mean 0.05, p90 0.08; kick 0.07, 0.15; mid 0.01, 0.03; high 0.00,
+ * 0.00. Outdoors: sub 0.02, 0.05; kick 0.04, 0.09; mid 0.08, 0.16; high 0.00, 0.00.
+ */
+const SAME_LEVELS_SHAPE_DB: Record<"indoors" | "outdoors", ShapeTolerance> = {
+  indoors: {
+    sub: { mean: 0.1, p90: 0.15 },
+    kick: { mean: 0.15, p90: 0.3 },
+    mid: { mean: 0.05, p90: 0.1 },
+    high: { mean: 0.05, p90: 0.05 },
+  },
+  outdoors: {
+    sub: { mean: 0.05, p90: 0.1 },
+    kick: { mean: 0.1, p90: 0.2 },
+    mid: { mean: 0.15, p90: 0.3 },
+    high: { mean: 0.05, p90: 0.05 },
+  },
+};
+
+/** The coverage page's default floor, and the same floor outdoors. */
+const FLOORS = {
+  indoors: DEFAULT_COVERAGE_LAYOUT,
+  outdoors: {
+    ...DEFAULT_COVERAGE_LAYOUT,
+    room: { ...DEFAULT_COVERAGE_LAYOUT.room, outdoors: true },
+  },
+} as const satisfies Record<keyof typeof SAME_LEVELS_SHAPE_DB, CoverageLayout>;
+
+/** Asserts each band's map is within its tolerance. */
+function assertShapes(
+  what: string,
+  tol: ShapeTolerance,
+  page: (band: keyof ShapeTolerance) => CoverageGrid,
+  space: (band: keyof ShapeTolerance) => CoverageGrid,
+) {
+  for (const band of keysOf(tol)) {
+    const gap = shapeGap(page(band), space(band));
+    assert.ok(gap.mean <= tol[band].mean, `${what}, ${band}: mean ${gap.mean.toFixed(2)} dB`);
+    assert.ok(
+      gap.p90 <= tol[band].p90,
+      `${what}, ${band}: 90th percentile ${gap.p90.toFixed(2)} dB`,
+    );
+  }
+}
+
 test("space model: the PA design's space maps the floor as the coverage page does", () => {
-  const layout = DEFAULT_COVERAGE_LAYOUT;
+  const layout = FLOORS.indoors;
   const design = paSpace(layout);
   const model = spaceModel(design);
   assert.ok(!model.missing && !model.unassigned);
-  for (const band of keysOf(SHAPE_DB)) {
-    const tol = SHAPE_DB[band];
-    const page = shape(paGrid(layout, band));
-    const space = shape(
-      computeSpaceGrid(spaceGridRequest(model, design.space.venue, band, 0, COVERAGE_GRID_COLS)),
+  const gaps = bandGapsDb(layout, model);
+  assert.ok(Math.abs(gaps.sub ?? Infinity) < SUB_GAP_DB, `sub ${gaps.sub} dB`);
+  const spaceGrid = (band: CoverageBand) =>
+    computeSpaceGrid(spaceGridRequest(model, design.space.venue, band, 0, COVERAGE_GRID_COLS));
+  assertShapes("as played", PAGE_SHAPE_DB, (band) => paGrid(layout, band), spaceGrid);
+});
+
+test("space model: with the page's levels, the space's engine maps the floor as the page does", () => {
+  for (const floor of keysOf(FLOORS)) {
+    const layout = FLOORS[floor];
+    const design = paSpace(layout);
+    const model = spaceModel(design);
+    const req = paRequest(bandGapsDb(layout, model));
+    assertShapes(
+      floor,
+      SAME_LEVELS_SHAPE_DB[floor],
+      (band) => paGrid(layout, band, req),
+      (band) =>
+        computeSpaceGrid(spaceGridRequest(model, design.space.venue, band, 0, COVERAGE_GRID_COLS)),
     );
-    const diffs = page.map((v, i) => Math.abs(v - space[i])).sort((x, y) => x - y);
-    const mean = diffs.reduce((sum, v) => sum + v, 0) / diffs.length;
-    const p90 = diffs[Math.floor(diffs.length * 0.9)];
-    assert.ok(mean <= tol.mean, `${band}: mean ${mean.toFixed(2)} dB`);
-    assert.ok(p90 <= tol.p90, `${band}: 90th percentile ${p90.toFixed(2)} dB`);
   }
 });
 

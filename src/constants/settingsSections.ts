@@ -48,3 +48,12 @@ export const STACK_SETTINGS_SECTIONS = {
   crossovers: "Crossovers",
 } as const;
 export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;
+
+/** The Space settings column's fold sections, by id, and the name each shows. */
+export const SPACE_SETTINGS_SECTIONS = {
+  space: "Space",
+  room: "Room and listeners",
+  placements: "Placements",
+  hardware: "Hardware",
+} as const;
+export type SpaceSettingsSection = keyof typeof SPACE_SETTINGS_SECTIONS;

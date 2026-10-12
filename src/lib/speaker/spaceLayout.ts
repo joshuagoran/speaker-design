@@ -10,6 +10,7 @@
 // Room coordinates are feet: x across from the center line (+ to the right, seen from the audience), y down the room
 // from the front wall, z up from the floor. A stack's own coordinates are inches (lib/speaker/stackLayout).
 import type {
+  BandId,
   DriverPart,
   SpaceDesign,
   SpacePlacement,
@@ -115,7 +116,7 @@ export interface PlacedDriver {
   chamber: SpeakerChamber;
   driver: SpeakerDriver;
   part: DriverPart;
-  band: string;
+  band: BandId;
   /** a horn-loaded chamber's mouth, in, where the spot is its mouth */
   mouth: { w: number; h: number } | null;
   at: RoomPoint;
@@ -158,7 +159,7 @@ export type BandOfPart = (
   chamber: SpeakerChamber,
   driver: SpeakerDriver,
   part: DriverPart,
-) => string | null;
+) => BandId | null;
 
 /**
  * Each placement laid out in the room. `bandOf` names the band each driver part feeds (lib/speaker/spaceCoverage

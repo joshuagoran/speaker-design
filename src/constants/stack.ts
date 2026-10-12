@@ -41,6 +41,9 @@ export const STACK_TEXT = {
     "Its bottom above the base, or above the top of the member under it (a gap, a spacer, a stand).",
   back: "Back, in",
   backTip: "Its front behind the stack's front, or behind the front of the member under it.",
+  tilt: "Tilt, °",
+  tiltTip:
+    "Its tilt in the stack, + up, about its bottom front edge: a top angled down on its sub. The Space page's coverage uses it; the response here is on axis.",
   mirror: "Mirror image",
   level: "Level",
   delay: "Delay",

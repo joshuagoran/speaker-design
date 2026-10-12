@@ -6,6 +6,8 @@ export const COVERAGE_TEST_IDS = {
   map: "coverage-map",
   /** a stack's toe-in handle on the map */
   aimHandle: "coverage-aim-handle",
+  /** the listening area's outline on the map (the Space page's) */
+  area: "coverage-area",
   /** the amp power table */
   ampPower: "coverage-amp-power",
 } as const;

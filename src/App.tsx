@@ -13,6 +13,8 @@ import { DesignerPage } from "./pages/designer/DesignerPage";
 import { useDesigner } from "./pages/designer/useDesigner";
 import { StackPage } from "./pages/stack/StackPage";
 import { useStack } from "./pages/stack/useStack";
+import { SpacePage } from "./pages/space/SpacePage";
+import { useSpace } from "./pages/space/useSpace";
 import { useEffect, useState, type MouseEvent } from "react";
 import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
@@ -50,8 +52,9 @@ export function App() {
   const fills = useFillsPlanner();
   const designer = useDesigner();
   const stack = useStack();
+  const space = useSpace();
   const project = projectOf(view);
-  // two levels: the project (PA stack, Hi-fi, Designer or Stack), then its own pages
+  // two levels: the project (PA stack, Hi-fi, Designer, Stack or Space), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
@@ -123,6 +126,8 @@ export function App() {
           <DesignerCutlistPage designer={designer} />
         ) : view === "stack" ? (
           <StackPage stack={stack} designer={designer} planner={planner} />
+        ) : view === "space" ? (
+          <SpacePage space={space} stack={stack} designer={designer} planner={planner} />
         ) : view === "coverage" ? (
           <CoveragePage planner={planner} />
         ) : (

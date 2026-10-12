@@ -8,6 +8,7 @@
 // The whole space plays from one input. At its music limit the placement with the least headroom (less its level) sets
 // the level; the page then turns it down so the listening area's average gets the target, never past the limit.
 import type {
+  BandId,
   Complex,
   CoverageBand,
   CoverageGrid,
@@ -160,6 +161,9 @@ export interface SpacePlacementModel {
 
 /** What a voice plays: its band's pressure at 1 m (one per speaker-model frequency), its level, delay, baffle and share. */
 interface VoiceFeed extends CoverageVoice {
+  /** the placement it belongs to, and the band it plays */
+  placement: number;
+  band: BandId;
   pressure: readonly Complex[];
   /** the member's level and the placement's, dB */
   gainDb: number;
@@ -269,6 +273,8 @@ export function spaceModel(design: SpaceDesign): SpaceModel {
       const id = `${k}/${d.member}/${d.band}/${JSON.stringify(pattern)}`;
       if (!feeds.has(id))
         feeds.set(id, {
+          placement: k,
+          band: d.band,
           id,
           pattern,
           pressure: band.pressure,
