@@ -406,6 +406,10 @@ Each PR stands alone. Lowest risk first.
        across the bottom, through the mouth). Draw and cut them where the rear chamber is, for example side slots,
        and keep them clear of the flare.
     - Later in the same item: folded paths. They replace the straight placeholder of today.
+  - **Positioning** (owner, Oct 2026; planned). All positions use one rule: x from the center line (0 = centered, +
+    to the right in the front view), y up from the bottom. This applies to chambers (in the cabinet), driver groups,
+    vents, horn mouths and later movable parts. Today chamber `at` is the lower-left corner, and that changes to this
+    rule. Old saves can break. This step can go with the movable ports and driver openings work, or earlier.
   - **Later in L3.** The optimizer; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
@@ -511,6 +515,10 @@ Each PR stands alone. Lowest risk first.
   - The 3D view and the Space page's coverage and levels both use it.
 - Ports and driver openings become settings you can move, like the drivers' positions. The spec fields and the
   settings are in (L3e).
+- Positioning: all positions use one rule: x from the center line (0 = centered, + to the right in the front view),
+  y up from the bottom. This applies to chambers (in the cabinet), driver groups, vents, horn mouths and later movable
+  parts. Today chamber `at` is the lower-left corner, and that changes to this rule. Old saves can break. Planned:
+  see "Positioning" in L3.
 
 ## Open questions for the owner
 
