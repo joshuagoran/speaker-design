@@ -20,7 +20,7 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { HIFI_NET_SHARE, hifiBox, hifiGridTop, linkwitzRileyFilter } from "../src/lib/hifi/hifi";
 import {
   boxModel,

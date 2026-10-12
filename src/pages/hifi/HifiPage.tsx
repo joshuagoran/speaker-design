@@ -11,7 +11,7 @@ import {
   TWEETER_GROUP_LABELS,
   TWEETER_KIND_LABELS,
   HIFI_TWEETERS_BY_TYPE,
-} from "./hifiDriverLists";
+} from "../../lib/hifi/hifiDriverLists";
 import { HifiResultCard } from "./HifiResultCard";
 import { hifiSceneProps } from "./hifiSceneProps";
 import { ToggleButton } from "../../components/ui/ToggleButton";

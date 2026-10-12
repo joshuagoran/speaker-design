@@ -19,7 +19,7 @@ import {
   tweeterOffset,
   tweeterOffsetMax,
 } from "../src/lib/hifi/hifi";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { formatInches } from "../src/lib/format";
 import type { Dims2, HifiConfig } from "../src/types";

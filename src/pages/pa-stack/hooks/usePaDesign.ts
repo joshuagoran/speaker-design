@@ -3,7 +3,7 @@ import { useMidDesign } from "./useMidDesign";
 import { useHornDesign } from "./useHornDesign";
 import { useCrossovers } from "./useCrossovers";
 import { useCabinetStyle } from "./useCabinetStyle";
-import { useCutlistOptions } from "./useCutlistOptions";
+import { useCutlistOptions } from "../../cutlist/useCutlistOptions";
 import {
   SUB_OPTIONS,
   MID_OPTIONS,
@@ -38,11 +38,11 @@ import type {
   SubDriver,
   VentSpec,
 } from "../../../types";
-import { derivePaDesign } from "./paDesign";
-import type { PaDerivedDesign } from "./paDesign";
+import { derivePaDesign } from "../../../lib/pa/paDesign";
+import type { PaDerivedDesign } from "../../../lib/pa/paDesign";
 import type { CabinetStyle } from "./useCabinetStyle";
 import type { Crossovers } from "./useCrossovers";
-import type { CutlistOptions } from "./useCutlistOptions";
+import type { CutlistOptions } from "../../cutlist/useCutlistOptions";
 import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";

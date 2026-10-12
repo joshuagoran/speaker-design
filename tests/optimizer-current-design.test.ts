@@ -16,7 +16,7 @@ import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { nearMissClosestText } from "../src/lib/pa/nearMiss";
 import { CARD_LABELS, NEAR_MISS_YOURS } from "../src/constants/optimizerText";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
+import { derivePaDesign } from "../src/lib/pa/paDesign";
 import { subBassLevel } from "../src/lib/pa/calc";
 import { SUB_OPTIONS } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";

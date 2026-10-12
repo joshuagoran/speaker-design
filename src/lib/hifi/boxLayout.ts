@@ -189,7 +189,7 @@ type HifiBoxFitState = Pick<
  * The box as the Hi-fi model takes it, from the page's state: the waveguide in use and the tweeter on it, the
  * radiators (their added mass kept under the most allowed), the walls' exact thickness, and the size the user set fitted
  * to at least what the parts need (each up to its slider's step). A design made too small by a part or wall change, or
- * saved that way, is modeled, drawn and saved at the fitted size. The page (pages/hifi/hifiDesign) and the speaker spec
+ * saved that way, is modeled, drawn and saved at the fitted size. The Hi-fi design (lib/hifi/hifiDesign) and the speaker spec
  * (lib/speaker/hifiSpec) both read it.
  */
 export function hifiBoxFit(state: HifiBoxFitState) {

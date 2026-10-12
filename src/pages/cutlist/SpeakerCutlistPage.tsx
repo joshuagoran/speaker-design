@@ -1,6 +1,6 @@
 import type { PanelExactIn, Setter } from "../../types";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
-import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CutlistOptions } from "./useCutlistOptions";
 import { speakerCutParts } from "../../lib/speaker/speakerBuild";
 import { defaultPanelIn } from "../../lib/panel";
 import { CutlistPage } from "./CutlistPage";

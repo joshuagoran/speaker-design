@@ -19,7 +19,7 @@ import {
   tweeterAxisSeat,
 } from "../src/lib/hifi/hifi";
 import { hifiAxisWooferDb } from "../src/lib/hifi/optimize";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WOOFERS } from "../src/lib/data";
 import { HIFI_COAX_DRIVE, HIFI_NEAR_FIELD_M, HIFI_PAIR_SUM_DB } from "../src/constants/hifiEngine";
