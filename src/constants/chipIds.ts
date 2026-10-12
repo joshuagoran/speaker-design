@@ -78,6 +78,7 @@ export const CHIP_IDS = {
     "speakerTubeFit",
     "speakerHardwareFit",
     "speakerKeepsUp",
+    "speakerHfPad",
   ],
   /** the Stack page's checks between its members (src/pages/stack/stackChips.ts) */
   stack: ["stackKeepsUp"],

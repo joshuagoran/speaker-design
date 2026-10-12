@@ -186,8 +186,8 @@ export function speakerLimits(
       const driveV = bandDriveVolts(band);
       const power = driverPower(driver, band, driveV);
       if (!power) continue;
-      const { programW, ...rest } = power;
-      drivers.push({ band: id, driver, ...rest });
+      const { programW } = power;
+      drivers.push({ band: id, driver, ...power });
       // the most voltage it takes, against the band's drive: the same at every frequency (a power ceiling)
       const s = Math.sqrt(power.watts * power.imp) / driveV;
       /** the voltage its program rating allows */

@@ -348,7 +348,7 @@ Each PR stands alone. Lowest risk first.
       | Cutlist of the whole stack (both boxes on the same sheets)         | Stack: a Cutlist tab that packs every member's parts                                           | Done: the Stack Cutlist tab (`tests/stack-cutlist`)  |
       | Bought parts                                                       | Speaker Cutlist parts table (#150)                                                             | With #150                                            |
       | Fills page (coaxial fill box)                                      | Speaker "Fill" template                                                                        | Done                                                 |
-      | Fill chips (HF pad and power limit)                                | Speaker band chips                                                                             | To do                                                |
+      | Fill chips (HF pad and power limit)                                | Speaker band chips                                                                             | Done: the HF pad chip (`tests/speaker-fill-chips`)   |
       | Fill delay and level to the mains                                  | Space                                                                                          | To do (plan P5)                                      |
       | Notes: racks, signal path, amps, DSP, passive crossover, materials | Space "Notes" tab (static); rich text later                                                    | To do                                                |
 

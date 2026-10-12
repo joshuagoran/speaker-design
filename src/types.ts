@@ -2449,6 +2449,8 @@ export interface SpeakerDriverPower {
   who: Extract<LimitId, "amp" | "thermal">;
   /** the program rating's derating at the band's highpass (1 = none) */
   derate: number;
+  /** its program rating (2 × AES), derated, W into `imp` */
+  programW: number;
 }
 
 /** A speaker at its limits (lib/speaker/speakerLimits `speakerLimits`). */

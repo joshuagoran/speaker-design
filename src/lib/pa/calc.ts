@@ -2126,6 +2126,13 @@ export function subMusicOutputAt(
   return subMusicLevel(nearestPoint(mdl.curve, xoLo), lim, AMP_V, xoLo, order);
 }
 
+/**
+ * The amp power, W into 8 Ω, at which an HF section of `imp` Ω behind a passive pad of `pad` dB reaches its rating
+ * `ratingW` (W into its impedance): the Fills page's and the Speaker page's HF headroom check.
+ */
+export const hfLimitWatts = (ratingW: number, imp: number, pad: number) =>
+  ((ratingW * imp) / 8) * Math.pow(10, pad / 10);
+
 // ---- horn ----
 // Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24 (or, order 8, LR48)
 // highpass at the crossover and 12 dB/oct below the horn's loading limit. Power: amp voltage into
@@ -2539,7 +2546,7 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
   // power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox)
   const hf = drv.hf;
   const pad = hf ? Math.max(0, hf.sens + 10 * Math.log10(8 / hf.imp) - (drv.lfSens || sens)) : 0;
-  const hfLimW = hf ? ((2 * hf.aes * hf.imp) / 8) * Math.pow(10, pad / 10) : null; // amp watts (8 ohm rating)
+  const hfLimW = hf ? hfLimitWatts(2 * hf.aes, hf.imp, pad) : null; // amp watts (8 ohm rating)
   const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1; // 1/2" birch ~1.6 lb/ft2
   const portLimited = vented && max.some((o) => o.who === "port");
   const common = { V, gross, pArea, disp, net, eff, max, sens, f3, pad, hfLimW, lb, portLimited };

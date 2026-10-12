@@ -16,7 +16,9 @@ import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./speakerParts";
 import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
-import { ductFitChip, hardwareFitChip, tubeFitChip } from "../../lib/pa/chips";
+import { ductFitChip, hardwareFitChip, hfHeadroomChip, tubeFitChip } from "../../lib/pa/chips";
+import { hfLimitWatts } from "../../lib/pa/calc";
+import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import type { CabinetBuild } from "../../lib/speaker/speakerBuild";
 import type { SpeakerCabinet } from "../../types";
@@ -76,6 +78,16 @@ export function bandChips(
             "speakerHfPower",
           ];
     })();
+    // a passive band's HF section behind its pad (its Level below 0) on the amp it shares: where it reaches its
+    // rating, as the Fills page's check
+    const pad = Math.max(0, -(band?.levelDb ?? 0));
+    const padChip: SpeakerChip | null =
+      hf && band?.drive === HIFI_DRIVE.passive
+        ? [
+            ...hfHeadroomChip(pad, hf.programW, hfLimitWatts(hf.programW, hf.imp, pad), band.ampW),
+            "speakerHfPad",
+          ]
+        : null;
     // the driver's power check says the same as the band's limit (both the amp, or both the program rating): one chip
     const same = hfChip !== null && hf?.who === b.who;
     const chips: SpeakerChip[] = [
@@ -86,6 +98,7 @@ export function bandChips(
         "speakerBandLimit",
       ],
       ...(hfChip && !same ? [hfChip] : []),
+      ...(padChip ? [padChip] : []),
       ...keepUps
         .filter((k) => response?.bands[k.upper]?.id === b.id)
         .map((k): SpeakerChip => [

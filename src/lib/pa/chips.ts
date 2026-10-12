@@ -598,23 +598,32 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
       : ["warn", "Little kick", `${f3.toFixed(0)} Hz −3 dB: the kick's attack only.`, "fillKick"],
   );
   if (hf && hfLimW != null)
-    F.push(
-      hfLimW < ampW
-        ? [
-            "warn",
-            "HF limits first",
-            `With a ${pad.toFixed(0)} dB pad, the HF reaches its ${2 * hf.aes} W rating at ${Math.round(hfLimW)} W of the ${ampW} W amp.`,
-            "fillHfHeadroom",
-          ]
-        : [
-            "ok",
-            "HF has headroom",
-            `With a ${pad.toFixed(0)} dB pad, the HF reaches its rating at ${Math.round(hfLimW)} W of amp.`,
-            "fillHfHeadroom",
-          ],
-    );
+    F.push([...hfHeadroomChip(pad, 2 * hf.aes, hfLimW, ampW), "fillHfHeadroom"]);
   else F.push(["warn", "HF not modeled", "No published HF specs.", "fillHfUnmodeled"]);
   return F;
+}
+
+/**
+ * An HF section through a passive pad `pad` dB on the amp it shares: the amp power at which it reaches its program
+ * rating `ratingW` (`hfLimW`, W into 8 Ω) against the amp's `ampW`. The Fills page's and the Speaker page's check.
+ */
+export function hfHeadroomChip(
+  pad: number,
+  ratingW: number,
+  hfLimW: number,
+  ampW: number,
+): ChipBody {
+  return hfLimW < ampW
+    ? [
+        "warn",
+        "HF limits first",
+        `With a ${pad.toFixed(0)} dB pad, the HF reaches its ${Math.round(ratingW)} W rating at ${Math.round(hfLimW)} W of the ${ampW} W amp.`,
+      ]
+    : [
+        "ok",
+        "HF has headroom",
+        `With a ${pad.toFixed(0)} dB pad, the HF reaches its rating at ${Math.round(hfLimW)} W of amp.`,
+      ];
 }
 
 /**
