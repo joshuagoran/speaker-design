@@ -30,7 +30,7 @@ import { startLayers } from "../stack/stackPresets";
 import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
 import { withSubPlacement } from "../../lib/speaker/subPlacement";
-import { fillAlignment } from "../../lib/speaker/fillAlign";
+import { fillAlignment, placementLead } from "../../lib/speaker/fillAlign";
 import { SUB_PLACEMENT } from "../../constants/subPlacement";
 import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
@@ -201,6 +201,21 @@ export function spaceFromStart(
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
 
+/** One grid for the worker: the request, and the frequency its band's target is read at, Hz. */
+interface GridJob {
+  req: Omit<SpaceGridRequest, "cols">;
+  centerHz: number;
+}
+
+/**
+ * The mean of a request's levels at the spots, dB, skipping levels that aren't finite; null when none is (no spots, or
+ * nothing reaches them).
+ */
+function oneMeterAverage(req: Omit<SpaceGridRequest, "cols">, spots: readonly FloorPoint[]) {
+  const levels = spots.map((p) => spaceLevelAt(req, p)).filter(Number.isFinite);
+  return levels.length ? levels.reduce((a, b) => a + b, 0) / levels.length : null;
+}
+
 /**
  * The system's gain, dB: what brings the listening area's average (at the limit) down to the target, or 0 (the limit)
  * when it doesn't reach it.
@@ -245,23 +260,24 @@ export function useSpace() {
   );
 
   // the worker queue: one job at a time, and only the newest waiting job is kept (as the coverage page's)
-  const [shown, setShown] = useState<{ grid: CoverageGrid; req: typeof req } | null>(null);
+  // each job carries the frequency its band's target is read at, so a grid on show keeps its own band's target
+  const [shown, setShown] = useState<(GridJob & { grid: CoverageGrid }) | null>(null);
   const [failed, setFailed] = useState<{ req: typeof req; message: string } | null>(null);
   const busy = useRef(false);
-  const want = useRef<typeof req | null>(null);
+  const want = useRef<GridJob | null>(null);
   const pump = () => {
     if (busy.current || !want.current) return;
     const next = want.current;
     want.current = null;
     busy.current = true;
-    runSpaceGrid({ ...next, cols: COVERAGE_GRID_COLS })
+    runSpaceGrid({ ...next.req, cols: COVERAGE_GRID_COLS })
       .then(
         (grid) => {
-          setShown({ grid, req: next });
+          setShown({ ...next, grid });
           setFailed(null);
         },
         (e: unknown) =>
-          setFailed({ req: next, message: e instanceof Error ? e.message : String(e) }),
+          setFailed({ req: next.req, message: e instanceof Error ? e.message : String(e) }),
       )
       .finally(() => {
         busy.current = false;
@@ -271,7 +287,7 @@ export function useSpace() {
   const placed = model.scene.sources.length > 0;
   useEffect(() => {
     if (!placed) return;
-    want.current = req;
+    want.current = { req, centerHz: bandCenterHz(band, freqHz) };
     pump();
   }, [req, placed]);
 
@@ -289,42 +305,67 @@ export function useSpace() {
     () => (placed ? spaceLevelAt(req, venue.listener) : null),
     [placed, req, venue.listener],
   );
-  /** the mean of the levels 1 m in front of each placement, at the limit, when that is the reference */
-  const stacksAtLimit = useMemo(() => {
-    if (!placed || levelRef !== COVERAGE_LEVEL_REF.stacks) return null;
-    const levels = oneMeterSpots({ space: { ...space, placements } }, room).map((p) =>
-      spaceLevelAt(req, p),
-    );
-    return levels.reduce((a, b) => a + b, 0) / levels.length;
-    // the spots read the placements and the room
-  }, [placed, levelRef, placements, room, req]);
+  /** the spots 1 m in front of each placement that holds a modeled stack or speaker */
+  const meterSpots = useMemo(
+    () =>
+      oneMeterSpots({ space: { ...space, placements } }, room).filter(
+        (_, k) => model.placements[k]?.response,
+      ),
+    // the spots read the placements, the room and which placements the model holds
+    [placements, room, model],
+  );
+  /** a request's level at the limit at the reference, when points alone give it (not the audience average) */
+  const pointRefAtLimit = (r: Omit<SpaceGridRequest, "cols">) =>
+    levelRef === COVERAGE_LEVEL_REF.listener
+      ? spaceLevelAt(r, venue.listener)
+      : levelRef === COVERAGE_LEVEL_REF.stacks
+        ? oneMeterAverage(r, meterSpots)
+        : null;
+  const refAtLimit = useMemo(
+    () => (placed ? pointRefAtLimit(req) : null),
+    // the reference reads these
+    [placed, req, levelRef, venue.listener, meterSpots],
+  );
   // the grid on show: the listening area's average at the limit, and the gain that brings the reference to the target
   const areaAtLimit = useMemo(
     () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, spots, venue.area) : null),
     [shown, placed, spots, venue.area],
   );
-  const refAtLimit =
-    levelRef === COVERAGE_LEVEL_REF.audience
-      ? areaAtLimit
-      : levelRef === COVERAGE_LEVEL_REF.listener
-        ? listenerAtLimit
-        : stacksAtLimit;
+  const fromGrid = levelRef === COVERAGE_LEVEL_REF.audience;
+  // the grid on show with the target and gain of the band it belongs to (an older band's while the next computes)
   const view = useMemo<CoverageGridView | null>(() => {
     if (!shown || !placed) return null;
-    const gain = systemGain(target, refAtLimit);
-    return {
-      grid: shown.grid,
-      room: shown.req.room,
-      target: target - gain,
-      gain,
-      atLimit: refAtLimit,
-    };
-  }, [shown, placed, target, refAtLimit]);
+    const atLimit = fromGrid
+      ? areaAtLimit
+      : shown.req === req
+        ? refAtLimit
+        : pointRefAtLimit(shown.req);
+    const t = spaceTargetAt(venue.targetDb, shown.centerHz, crossovers, balance);
+    const g = systemGain(t, atLimit);
+    return { grid: shown.grid, room: shown.req.room, target: t - g, gain: g, atLimit };
+    // the reference reads these (an older grid's, the listener or the 1 m spots too)
+  }, [
+    shown,
+    placed,
+    fromGrid,
+    areaAtLimit,
+    req,
+    refAtLimit,
+    venue.listener,
+    meterSpots,
+    venue.targetDb,
+    crossovers,
+    balance,
+  ]);
+  // the audience average needs the grid, so its gain and target follow the grid on show, never mixing that grid's
+  // average with the current band's target (as the coverage page's)
+  const currentAtLimit = fromGrid ? (view ? view.atLimit : null) : refAtLimit;
+  const refTarget = fromGrid && view ? view.target + view.gain : target;
   const stats = useMemo(
     () => (view ? coverageStats(view.grid, view.room, spots, view.target, venue.area) : null),
     [view, spots, venue.area],
   );
-  const gain = view ? view.gain : 0;
+  const gain = fromGrid ? (view ? view.gain : 0) : systemGain(target, currentAtLimit);
   /** each band's level at the middle of the listening area at the space's level, and its target */
   const bandLevels = useMemo(
     () =>
@@ -389,10 +430,7 @@ export function useSpace() {
   const editPlacement = (k: number, edit: (p: SpacePlacement) => SpacePlacement) =>
     editPlacements((list) => list.map((p, i) => (i === k ? edit(p) : p)));
   /** the placement a map drag moves: the one a mirror pair's follower follows */
-  const leadOf = (k: number): number => {
-    const j = space.placements[k]?.follows;
-    return j !== null && j !== undefined && j >= 0 && j < k ? leadOf(j) : k;
-  };
+  const leadOf = (k: number) => placementLead(space.placements, k);
   const isFollower = (k: number) => leadOf(k) !== k;
   const editVenue = (edit: (v: SpaceVenue) => SpaceVenue) =>
     editSpace((s) => ({ ...s, venue: edit(s.venue) }));
@@ -426,7 +464,9 @@ export function useSpace() {
     target,
     levelRef,
     balance,
-    refDb: refAtLimit !== null ? refAtLimit + gain : null,
+    /** the target the reference's level is held to: the shown grid's band's, for the audience average */
+    refTarget,
+    refDb: currentAtLimit !== null ? currentAtLimit + gain : null,
     bandLevels,
     response,
     targetCurve,
@@ -488,12 +528,18 @@ export function useSpace() {
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /**
-     * sets placement `k`'s delay and level to play with the mains at the listener (lib/speaker/fillAlign); false when
-     * there is nothing to align to
+     * sets the delay and level of placement `k` and its mirror partners to play with placement `to` and its partners at
+     * the listener (lib/speaker/fillAlign); false when there is nothing to align to
      */
-    alignToMains: (k: number) => {
-      const aligned = fillAlignment(model, venue, space.placements, k);
-      if (aligned) editPlacement(k, (p) => ({ ...p, ...aligned }));
+    alignTo: (k: number, to: number) => {
+      const aligned = fillAlignment(model, venue, space.placements, k, to);
+      if (aligned)
+        editPlacements((list) =>
+          list.map((p, i) => {
+            const set = aligned.find((a) => a.placement === i);
+            return set ? { ...p, levelDb: set.levelDb, delayMs: set.delayMs } : p;
+          }),
+        );
       return aligned !== null;
     },
     /** the room's settings (`RoomFields`) */

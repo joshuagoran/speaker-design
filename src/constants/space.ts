@@ -1,5 +1,7 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
-import type { CoverageBand, CoverageRoom } from "../types";
+import type { CoverageBand, CoverageLevelRef, CoverageRoom } from "../types";
+import type { ToggleOption } from "../components/ui/ToggleGroup";
+import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 16 × 22 ft, a 9 ft ceiling, drywall all
@@ -70,6 +72,23 @@ export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
  */
 export const FILL_PRECEDENCE_MS = 5;
 
+/** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
+const SPACE_ONE_METER = "1 m from the speakers";
+const SPACE_ONE_METER_TIP =
+  "The mean level at ear height, 1 m in front of each placed stack or speaker that has a model, on its aim.";
+
+/** The Space page's "Measured at" choices: the PA's, with its own 1 m reference. */
+export const SPACE_LEVEL_REFS: readonly ToggleOption<CoverageLevelRef>[] = COVERAGE_LEVEL_REFS.map(
+  ([id, label]) =>
+    id === COVERAGE_LEVEL_REF.stacks ? [id, SPACE_ONE_METER, SPACE_ONE_METER_TIP] : [id, label],
+);
+
+/** Each Space reference as a sentence names it ("the target at …"). */
+export const SPACE_LEVEL_REF_PLACE: Record<CoverageLevelRef, string> = {
+  ...COVERAGE_LEVEL_REF_PLACE,
+  stacks: SPACE_ONE_METER,
+};
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
@@ -115,10 +134,14 @@ export const SPACE_TEXT = {
   mirror: "Mirror image",
   level: "Level, dB",
   delay: "Delay, ms",
-  alignFill: "Align to the mains",
-  alignFillTip:
-    "For a fill: sets this placement's delay and level for the listener. The sound arrives just after the mains, at the level of the mains in the mid band. Move the listener to the area the fill covers first.",
-  alignFillNone: "Nothing to align to: place the mains first, with a modeled speaker.",
+  alignTo: "Align to",
+  alignToTip:
+    "For a fill: the placement it plays after. Align sets the delay and level of this placement and its mirror pair for the listener. The sound arrives just after the placement you pick and its mirror pair, at their level in the mid band. Move the listener to the area the fill covers first.",
+  align: "Align",
+  /** a mirror pair in the "Align to" list: its placements' names */
+  pairName: (names: readonly string[]) => names.join(" + "),
+  alignFillNone:
+    "Cannot align: this placement and the one you pick must each hold a modeled stack or speaker.",
   feedTip:
     "The front end's level and delay on this placement's feed (a fill under, and after, the mains).",
   amps: "Amps",

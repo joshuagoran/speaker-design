@@ -28,8 +28,13 @@ interface Props {
   onFollows: (follows: SpacePlacement["follows"]) => void;
   onRemove: () => void;
   onMirrorPair: () => void;
-  /** sets its delay and level to play with the mains at the listener; false when there is nothing to align to */
-  onAlign: () => boolean;
+  /** the space's placement groups (one on its own, or a mirror pair), by their leads (lib/speaker/fillAlign) */
+  groups: readonly (readonly number[])[];
+  /**
+   * sets its delay and level (and its mirror partners') to play with placement `to` and its partners at the listener;
+   * false when there is nothing to align to
+   */
+  onAlign: (to: number) => boolean;
 }
 
 /** The picker's id for a placement on its own (a placement's index for one it follows). */
@@ -54,10 +59,18 @@ export function PlacementSettings({
   onFollows,
   onRemove,
   onMirrorPair,
+  groups,
   onAlign,
 }: Props) {
   /** the last alignment found nothing to align to */
   const [alignFailed, setAlignFailed] = useState(false);
+  /** the group picked to align to, by its lead's index; null: the first one listed */
+  const [alignPick, setAlignPick] = useState<string | null>(null);
+  // it aligns to any group but its own: each listed by its lead, named by its placements
+  const targets: SelectOption[] = groups
+    .filter((g) => !g.includes(index))
+    .map((g) => ({ id: String(g[0]), name: SPACE_TEXT.pairName(g.map((i) => names[i] ?? "")) }));
+  const alignTo = (alignPick !== null ? byId(targets, alignPick) : undefined) ?? targets[0];
   const alone: SelectOption = { id: ALONE_ID, name: SPACE_TEXT.followsNone };
   // it can follow an earlier placement only
   const leads = [alone, ...names.slice(0, index).map((name, i) => ({ id: String(i), name }))];
@@ -152,10 +165,20 @@ export function PlacementSettings({
           onChange={(delayMs) => onEdit((p) => ({ ...p, delayMs }))}
         />
       </div>
-      {index > 0 && (
+      {alignTo && (
         <div className="mb-3">
-          <Button size="xs" onClick={() => setAlignFailed(!onAlign())}>
-            <Tooltip tip={SPACE_TEXT.alignFillTip}>{SPACE_TEXT.alignFill}</Tooltip>
+          <SelectField
+            label={<Tooltip tip={SPACE_TEXT.alignToTip}>{SPACE_TEXT.alignTo}</Tooltip>}
+            className="mb-2"
+            options={targets}
+            value={alignTo}
+            onChange={(o) => {
+              setAlignPick(o.id);
+              setAlignFailed(false);
+            }}
+          />
+          <Button size="xs" onClick={() => setAlignFailed(!onAlign(Number(alignTo.id)))}>
+            {SPACE_TEXT.align}
           </Button>
           {alignFailed && (
             <div className="mt-2">

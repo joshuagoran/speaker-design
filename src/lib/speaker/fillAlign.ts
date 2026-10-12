@@ -1,11 +1,13 @@
-// A fill's delay and level against the mains (docs/speaker-designer-plan.md P5, the Space page): a placement turned and
-// timed so that, at the listener, it arrives just after the mains and plays at their level. Pure.
+// A fill's delay and level against a reference (docs/speaker-designer-plan.md P5, the Space page): a placement turned
+// and timed so that, at the listener, it arrives just after the placement it is aligned to and plays at its level. Pure.
 //
-// The mains are every other placement but the fill's mirror partner. Delay: the mains' first arrival at the listener
-// (each driver's path at the speed of sound, with its member's and its placement's delay) less the fill's own first
-// arrival (with its members' delays), plus FILL_PRECEDENCE_MS so the sound still seems to come from the mains (the
-// precedence effect); never below 0. Level: the fill's level moved by the mains' level at the listener less the fill's
-// own, in FILL_ALIGN_BAND (the voice range a fill is there for), at the space's input.
+// A placement and its mirror partners play as one group (`placementGroup`): the fill is its whole group, and the
+// reference is the group the user picks, less the fill's own. Delay: the reference's first arrival at the listener (each
+// driver's path at the speed of sound, with its member's and its placement's delay) less the fill group's own first
+// arrival (with its members' delays), plus FILL_PRECEDENCE_MS so the sound still seems to come from the reference (the
+// precedence effect); never below 0. The same delay goes to each placement in the group, so a pair stays a pair. Level:
+// each placement in the group moves by the reference's level at the listener less the whole group's, in FILL_ALIGN_BAND
+// (the voice range a fill is there for), at the space's input.
 import type { SpacePlacement, SpaceVenue } from "../../types";
 import { spaceGridRequest, spaceLevelAt, type SpaceModel } from "./spaceCoverage";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
@@ -15,63 +17,90 @@ import { FILL_ALIGN_BAND, FILL_PRECEDENCE_MS } from "../../constants/space";
 /** Milliseconds in a second. */
 const MS_PER_S = 1000;
 
-/** The placements a placement plays with as one: itself and its mirror partner (the one it follows, or follows it). */
-const pairOf = (placements: readonly Pick<SpacePlacement, "follows">[], k: number) =>
-  new Set(
-    placements.flatMap((p, i) =>
-      i === k || p.follows === k || placements[k]?.follows === i ? [i] : [],
-    ),
+/** The placement placement `k` follows at the end of its chain of mirror partners (itself when it is on its own). */
+export function placementLead(
+  placements: readonly Pick<SpacePlacement, "follows">[],
+  k: number,
+): number {
+  const j = placements[k]?.follows;
+  return j !== null && j !== undefined && j >= 0 && j < k ? placementLead(placements, j) : k;
+}
+
+/** The placements that play with placement `k` as one: itself and its mirror partners (one lead and its followers). */
+export function placementGroup(
+  placements: readonly Pick<SpacePlacement, "follows">[],
+  k: number,
+): number[] {
+  const lead = placementLead(placements, k);
+  return placements.flatMap((_, i) => (placementLead(placements, i) === lead ? [i] : []));
+}
+
+/** The space's placement groups (a placement on its own, or a mirror pair), in the order of their leads. */
+export const placementGroups = (placements: readonly Pick<SpacePlacement, "follows">[]) =>
+  placements.flatMap((_, i) =>
+    placementLead(placements, i) === i ? [placementGroup(placements, i)] : [],
   );
 
+/** One placement's delay and level, as an alignment sets them. */
+export type FillSetting = Pick<SpacePlacement, "levelDb" | "delayMs"> & { placement: number };
+
 /**
- * Placement `k`'s delay and level to play with the mains at the listener; null when it has no mains or no sound there
- * (nothing else placed, or a placement with no modeled drivers).
+ * Placement `k`'s group (it and its mirror partners) with the delay and level to play with placement `to`'s group at the
+ * listener; null when there is nothing to align to or no sound there (the same group, or a group with no modeled
+ * drivers).
  */
 export function fillAlignment(
   model: SpaceModel,
   venue: Pick<SpaceVenue, "room" | "earFt" | "listener">,
   placements: readonly Pick<SpacePlacement, "follows" | "levelDb" | "delayMs">[],
   k: number,
-): Pick<SpacePlacement, "levelDb" | "delayMs"> | null {
-  const pair = pairOf(placements, k);
+  to: number,
+): FillSetting[] | null {
+  const fill = new Set(placementGroup(placements, k));
+  const ref = new Set(placementGroup(placements, to).filter((i) => !fill.has(i)));
   const at = { x: venue.listener.x, y: venue.listener.y, z: venue.earFt };
   /** each placement's first arrival at the listener, s, with its members' delays (and its own, `withOwn`) */
   const arrival = (i: number, withOwn: boolean) => {
     const p = model.placements[i];
-    if (!p?.response) return null;
+    if (!p?.response) return [];
     const own = withOwn ? p.item.placement.delayMs : 0;
-    const times = p.item.drivers.flatMap((d) => {
+    return p.item.drivers.flatMap((d) => {
       const member = p.response?.members[d.member];
       if (!member) return [];
       const r = Math.hypot(d.at.x - at.x, d.at.y - at.y, d.at.z - at.z) * METERS_PER_FOOT;
       return [r / SPEED_OF_SOUND + (member.delayMs + own) / MS_PER_S];
     });
-    return times.length ? Math.min(...times) : null;
   };
-  const mains = model.placements.flatMap((_, i) => {
-    if (pair.has(i)) return [];
-    const t = arrival(i, true);
-    return t === null ? [] : [t];
-  });
-  const fill = arrival(k, false);
-  if (!mains.length || fill === null) return null;
-  const delayMs = Math.max(0, (Math.min(...mains) - fill) * MS_PER_S + FILL_PRECEDENCE_MS);
-  // each side's level at the listener: the other side's voices silent
+  const refTimes = [...ref].flatMap((i) => arrival(i, true));
+  const fillTimes = [...fill].flatMap((i) => arrival(i, false));
+  if (!refTimes.length || !fillTimes.length) return null;
+  const delayMs = Math.max(
+    0,
+    (Math.min(...refTimes) - Math.min(...fillTimes)) * MS_PER_S + FILL_PRECEDENCE_MS,
+  );
+  // each group's level at the listener: every other voice silent
   const req = spaceGridRequest(model, venue, FILL_ALIGN_BAND, 0, 1);
-  const levelOf = (keep: (placement: number) => boolean) =>
+  const levelOf = (group: ReadonlySet<number>) =>
     spaceLevelAt(
       {
         ...req,
         outputs: req.outputs.map((out) =>
           Object.fromEntries(
-            model.feeds.flatMap((f) => (keep(f.placement) && out[f.id] ? [[f.id, out[f.id]]] : [])),
+            model.feeds.flatMap((f) =>
+              group.has(f.placement) && out[f.id] ? [[f.id, out[f.id]]] : [],
+            ),
           ),
         ),
       },
       venue.listener,
     );
-  const mainsDb = levelOf((i) => !pair.has(i));
-  const fillDb = levelOf((i) => i === k);
-  if (!Number.isFinite(mainsDb) || !Number.isFinite(fillDb)) return null;
-  return { delayMs, levelDb: (placements[k]?.levelDb ?? 0) + mainsDb - fillDb };
+  const refDb = levelOf(ref);
+  const fillDb = levelOf(fill);
+  if (!Number.isFinite(refDb) || !Number.isFinite(fillDb)) return null;
+  // every placement in the group moves by the same step, so the group as a whole lands on the reference's level
+  return [...fill].map((i) => ({
+    placement: i,
+    delayMs,
+    levelDb: (placements[i]?.levelDb ?? 0) + refDb - fillDb,
+  }));
 }
