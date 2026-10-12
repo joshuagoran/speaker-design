@@ -366,7 +366,8 @@ Each PR stands alone. Lowest risk first.
       lowpass, and the PA and the model do not.
   - **Horn settings (done).** A horn-loaded chamber shows a "Horn" section in its chamber settings, with a one-line
     summary (drive, sections, path length, path):
-    - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The spec
+    - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The areas
+      show to 0.1 in² and the lengths to 0.01 in; two areas less than 0.05 in² apart are the same joint. The spec
       keeps the engine's cm² and cm; `src/pages/designer/hornSections.ts` converts in one place. Add and remove
       sections (at least one stays). The sections chain: a new section starts at the last end area, a new end area
       moves the next start with it, and a removed section's next one starts where the removed one did. A start area

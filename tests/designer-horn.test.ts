@@ -140,10 +140,10 @@ test("designer horn: editing a section changes the response, the 3D flare and th
   assert.equal(flareOf(folded)?.placeholder, true);
 });
 
-test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.08 in²)", () => {
+test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.1 in²)", () => {
   const segments = hornOf(BIN).segments;
   const shown = shownIn2(segments[0].s2);
-  assert.equal(shown, 630.08, "the bin's first joint as the field shows it");
+  assert.equal(shown, 630.1, "the bin's first joint as the field shows it, to the tenth");
   // typed into the second section's start: no step, and it snaps to the first section's end
   const start = withSectionSize(segments, 1, "s1", shown);
   assert.ok(!stepsIn(start, 1));
@@ -154,8 +154,8 @@ test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's
   assert.equal(end[1].s1, end[0].s2);
   const moved = withSectionSize(end, 0, "s2", 700);
   assert.equal(moved[1].s1, specSize("s2", 700), "still chained after the retype");
-  // a real step (0.01 in² apart) stays a step
-  assert.ok(stepsIn(withSectionSize(segments, 1, "s1", shown + 0.01), 1));
+  // a real step (0.1 in² apart, the fields' last digit) stays a step
+  assert.ok(stepsIn(withSectionSize(segments, 1, "s1", shown + 0.1), 1));
 });
 
 test("designer horn: typing an end area keystroke by keystroke doesn't join a stepped pair", () => {
@@ -214,10 +214,12 @@ test("designer horn: sections chain as they are edited, added and removed", () =
 });
 
 test("designer horn: in² and in round-trip to the spec's cm² and cm, and the spec survives a save", () => {
-  for (const typed of [0.25, 12.5, 178.37, 1234.56]) {
+  // areas show to the tenth, lengths to the hundredth
+  for (const typed of [0.3, 12.5, 178.4, 1234.6])
     assert.equal(shownIn2(specSize("s1", typed)), typed);
+  assert.equal(shownIn2(specSize("s1", 178.37)), 178.4);
+  for (const typed of [0.25, 12.5, 178.37, 1234.56])
     assert.equal(shownInOfCm(specSize("length", typed)), typed);
-  }
   assert.equal(specSize("length", 1), CM_PER_IN);
   assert.equal(specSize("s2", 1), CM_PER_IN * CM_PER_IN);
   const edited = withSegments(BIN, (s) =>
