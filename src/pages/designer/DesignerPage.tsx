@@ -80,6 +80,7 @@ const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
   panel: planner.wallPanel,
   hornMount: planner.hornMount,
   spacerH: planner.spacerHeightIn,
+  hardware: planner.hardware,
 });
 
 /**

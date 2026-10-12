@@ -2073,6 +2073,11 @@ export interface SpeakerCabinet extends Pick<PaDesignConfig, "braceStyle" | "bac
   roundoverIn: HifiDesignState["roundoverIn"];
   /** the kick-back: the baffle tilted back so the axis points this far up, degrees */
   tiltDeg: NonNullable<HifiConfig["tiltDeg"]>;
+  /**
+   * the PA boxes' hardware (lib/pa/hardware): these handles, the input dish with its two jacks, and the horn's binding
+   * posts on a chamber whose horn stands on its top; in each shell's lowest chamber. Absent: none (the Hi-fi box).
+   */
+  hardware?: BoxHandles;
 }
 
 /** A filter's alignment and slope: Butterworth or Linkwitz-Riley at 24 or 48 dB/oct, or first order (a capacitor). */
@@ -2134,7 +2139,7 @@ export type SpeakerPart = (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART];
 
 /** The PA design as the planner holds it: every field set (a save can lack the later ones). */
 export type PaPlannerDesign = PaDesignConfig &
-  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH">>;
+  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH" | "hardware">>;
 
 /** What a source does in a system, by id (`SOURCE_ROLE`). */
 export type SourceRole = (typeof SOURCE_ROLE)[keyof typeof SOURCE_ROLE];
@@ -2567,7 +2572,7 @@ export type HandleId = (typeof HANDLES)[number]["id"];
 /** What a box's handle setting holds: a handle model, or none. */
 export type HandleChoice = HandleId | typeof NO_HANDLES;
 /** The boxes that take hardware: the sub and the mid (top) box. */
-export type HardwareBoxId = Extract<CutBoxId, "sub" | "mid">;
+export type HardwareBoxId = Extract<NamedCutBoxId, "sub" | "mid">;
 /**
  * A box's handles: the model (two, one each side) and how far they sit from the preset, the box's center of gravity:
  * up (in) and back toward the rear (in).
@@ -2624,8 +2629,12 @@ export interface BoxHardwarePlan {
 
 /** A cutlist part's stable id (`CUT_PART_NAMES` holds the name it shows). */
 export type CutPartId = keyof typeof CUT_PART_NAMES;
-/** The box a cutlist part belongs to, by id (`CUT_BOX_NAMES` holds the name it shows). */
-export type CutBoxId = keyof typeof CUT_BOX_NAMES;
+/** A named box a cutlist part belongs to, by id (`CUT_BOX_NAMES` holds the name it shows). */
+export type NamedCutBoxId = keyof typeof CUT_BOX_NAMES;
+/** A Designer chamber's cutlist box, by its place in the cabinet (`chamberCutBox`: "chamber1", "chamber2" …). */
+export type ChamberCutBoxId = `chamber${number}`;
+/** The box a cutlist part belongs to: a named one, or a Designer chamber (`cutBoxName` gives the name it shows). */
+export type CutBoxId = NamedCutBoxId | ChamberCutBoxId;
 
 /** Which of a part's dimensions runs along the grain (the sheet's length): `a`, `b`, or either. */
 export type GrainDir = "a" | "b" | "any";

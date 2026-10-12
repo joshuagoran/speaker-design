@@ -1,0 +1,1101 @@
+// A speaker spec's build, chamber by chamber: its braces and ribs by the PA boxes' bracing rule, its hardware, its cut
+// parts, the wood and the vent inside its air, its net air and its weight. Pure.
+//
+// - Bracing: every chamber of direct radiators is braced as its own box by the PA rule (lib/pa/calc braceShell: each
+//   panel over PA_PANEL_TARGET_HZ, with the cabinet's style and back joint), its drivers, vent and hardware kept clear.
+//   A chamber with a PA sub and a PA port in a frame cabinet runs the PA sub box's own rule (subBoxBracing), so the PA
+//   designs match the PA page. A horn-loaded chamber takes none (the horn's walls hold its panels).
+// - Hardware (`SpeakerCabinet.hardware`): the PA presets (lib/pa/hardware) in each shell's lowest chamber.
+// - Net air: the chamber's clear volume less its drivers, the vent's air, the wood inside (the braces and ribs, the
+//   vent's walls, a frame's baffle cleats round its clear face) and the hardware's recesses. No allowance: every part is
+//   counted.
+// - Cut parts: chambers that fill one box of one depth share one shell (`SHELL_CUT_BOX`) with partitions inside, and an
+//   arched top where the views draw one on a frame; any other chamber is its own box, less the walls another chamber
+//   gives it. A frame is the PA boxes' (lib/pa/calc boxParts), a flush box the Hi-fi box's (lib/hifi/cutlist
+//   flushBoxPanels).
+// - Weight: the PA's rule on a frame (its box weights: the 3/4″ baffle and the walls by their outside faces, the braces,
+//   the fixings; a chamber over another adds what it builds, as the tower's cabinet over its sub box), the Hi-fi's on a
+//   flush box; the drivers with their horns, the radiators and the hardware.
+import type {
+  BoxBracing,
+  BoxHandles,
+  BoxHardwarePlan,
+  BoxRegion,
+  ChamberCutBoxId,
+  CornerJoint,
+  CutBoxId,
+  CutPart,
+  Dims3,
+  FacePoint,
+  PlateHole,
+  PortStyle,
+  SpeakerCabinet,
+  SpeakerChamber,
+  SpeakerDriver,
+  SpeakerPort,
+  SubDriver,
+  ThieleSmall,
+  VentSpec,
+} from "../../types";
+import type { HardwareDriver } from "../pa/hardware";
+import {
+  BAFFLE_PLY_IN,
+  MID_FIXINGS_LB,
+  SUB_FIXINGS_LB,
+  archStripIn,
+  archedShellParts,
+  boxParts,
+  braceParts,
+  braceShell,
+  braceWoodIn3,
+  coneKeepOut,
+  cutoutNote,
+  formatInches,
+  hardwareCutNotes,
+  hornCutoutWords,
+  internalWoodLiters,
+  isRoundPort,
+  paConeBody,
+  partitionNote,
+  railsOnBack,
+  subBoxBracing,
+  subCutNote,
+  subHardwarePlan,
+  subKeepOut,
+  subVentParts,
+  type BraceInputs,
+  type BraceShell,
+  type ConeBody,
+  type HardwareCutNotes,
+} from "../pa/calc";
+import { subDriverDepthIn, subTubeKit } from "../pa/tubes";
+import { towerHornCutout } from "../pa/tower";
+import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
+import { DRIVER_CLEARANCE_IN, NO_SUPPORTS } from "../pa/bracing";
+import { defaultBraceStyleNear, panelStock } from "../bracing";
+import { panelLbPerSqFt } from "../panel";
+import { HIFI_FALLBACK_LB, HIFI_FIXINGS_LB, hifiPortElbows, radiatorsLb } from "../hifi/hifi";
+import {
+  aboveBaffleEdge,
+  flushBoxPanels,
+  joinNotes,
+  offsetWords,
+  radiatorCutoutNote,
+  roundPortHoleNote,
+  roundPortLine,
+  roundoverNote,
+  sizedCutout,
+  slotOpeningNote,
+  slotShelfPart,
+  tweeterCutoutNote,
+} from "../hifi/cutlist";
+import {
+  CD_OPTIONS,
+  FILL_OPTIONS,
+  HIFI_PASSIVES,
+  MID_OPTIONS,
+  SUB_OPTIONS,
+  hifiDriverById,
+} from "../data";
+import { byId } from "../tables";
+import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls } from "./chamberAir";
+import {
+  PORT_RULE,
+  driverAcrossIn,
+  driverHorn,
+  driverSpots,
+  driversOnBaffle,
+  drawsArchedTop,
+  hornFlare,
+  onTop,
+  portRule,
+  radiatorsAt,
+  roundPortsAt,
+  speakerLayout,
+  type PlacedChamber,
+  type SpeakerLayout,
+} from "./speakerLayout";
+import {
+  DRIVER_CUTOUT_IN,
+  HIFI_DEPTH_PER_SIZE,
+  HIFI_DRIVER_CUTOUT_IN,
+  HIFI_MOTOR_CUTOUT_SHARE,
+  MID_DEPTH_FALLBACK_IN,
+} from "../../data/catalog/driver-cutouts";
+import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
+import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
+import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
+import { DRIVER_KIND_NAMES } from "../../constants/designer";
+import { HARDWARE_BOX } from "../../constants/hardware";
+import {
+  CABINET_CONSTRUCTION,
+  CHAMBER_LOAD,
+  DRIVER_KIND,
+  PORT_SHAPE,
+  VENT_KIND,
+} from "../../constants/speakerSpec";
+
+/** The least air the build gives a chamber, L (the Hi-fi box model's floor). */
+const MIN_NET_L = 1;
+/** The joint the build cuts a chamber with to count the wood inside it (the joint doesn't move the inside). */
+const COUNT_JOINT: CornerJoint = "butt";
+/** in² to ft² */
+const SQ_IN_PER_SQ_FT = 144;
+
+/** A chamber's inside behind the baffle, in: its clear width and height, its depth, and a bottom slot's band. */
+export interface ChamberInside {
+  iw: number;
+  ih: number;
+  inD: number;
+  band: number;
+}
+
+/** One chamber's build. */
+export interface ChamberBuild {
+  /** its rows' box in the cutlist */
+  box: ChamberCutBoxId;
+  /** its braces and ribs by rule; null for a horn-loaded chamber */
+  bracing: BoxBracing | null;
+  /** its hardware (a shell's lowest chamber, when the cabinet has some); null for none */
+  hardware: BoxHardwarePlan | null;
+  inside: ChamberInside;
+  /** its clear volume, the vent's air in it, the wood inside it and the hardware's recesses, L */
+  clearL: number;
+  ventL: number;
+  woodL: number;
+  recessL: number;
+  /** what it weighs, lb: its wood (panels and braces) with the fixings, its drivers and radiators, its hardware */
+  lb: { wood: number; drivers: number; hardware: number; total: number };
+}
+
+/** A cabinet's build: each chamber's, in the cabinet's order, and the whole speaker's weight, lb. */
+export interface CabinetBuild {
+  chambers: ChamberBuild[];
+  lb: number;
+}
+
+/** A chamber as the build places it: its index and place, its box as the PA rules take it, its inside. */
+interface ChamberFrame {
+  index: number;
+  placed: PlacedChamber;
+  /** its outside as its own box, with a wall added where another chamber gives it one (so the inside is its clear face) */
+  box: Dims3;
+  inside: ChamberInside;
+  /** the walls other chambers give it */
+  shared: { below: boolean; left: boolean };
+  /** its PA sub and port, where the PA sub box's rules apply */
+  paSub: PaSub | null;
+}
+
+/** Whether a cabinet is a frame (the PA's, its baffle set back on cleats) rather than a flush box (the Hi-fi's). */
+const isFrame = (cabinet: Pick<SpeakerCabinet, "construction">) =>
+  cabinet.construction === CABINET_CONSTRUCTION.frameInset;
+
+/** The baffle's thickness, in: a frame's 3/4″, a flush box's walls'. */
+const baffleIn = (cabinet: SpeakerCabinet) =>
+  isFrame(cabinet) ? BAFFLE_PLY_IN : cabinet.panel.thicknessIn;
+
+/** A PA sub chamber: its sub and its port as the PA's rules take them (its style and vent sizes). */
+interface PaSub {
+  sub: SubDriver;
+  style: PortStyle;
+  vent: VentSpec;
+}
+
+/** A PA port's sizes as the PA's rules take them (VentSpec): the sizes its style doesn't read stay 0. */
+function paVentOf(port: SpeakerPort): VentSpec {
+  const none: VentSpec = { slotH: 0, nt: 0, dia: 0, throat: 0, len: port.len };
+  switch (port.shape) {
+    case PORT_SHAPE.duct:
+      return { ...none, throat: port.throat, div: port.div };
+    case PORT_SHAPE.slot:
+      return { ...none, slotH: port.h };
+    default:
+      return { ...none, nt: port.n, dia: port.dia };
+  }
+}
+
+/**
+ * The chamber's PA sub and port, where the PA sub box's rules apply: a frame cabinet, a direct chamber with a catalog
+ * sub, and a PA port (side ducts, the letterbox or flared tubes: speakerLayout `portRule`). Null otherwise.
+ */
+function paSubOf(cabinet: SpeakerCabinet, chamber: SpeakerChamber): PaSub | null {
+  if (!isFrame(cabinet) || chamber.load.kind !== CHAMBER_LOAD.direct) return null;
+  const rule = portRule(chamber);
+  const entry = chamber.drivers.find((d) => d.kind === DRIVER_KIND.sub);
+  const sub = entry ? byId(SUB_OPTIONS, entry.driverId) : undefined;
+  if (rule?.rule !== PORT_RULE.pa || !sub || chamber.vent.kind !== VENT_KIND.vented) return null;
+  return { sub, style: rule.portStyle, vent: paVentOf(chamber.vent.port) };
+}
+
+/** The chambers placed, each with its box, inside and PA sub. */
+function chamberFrames(cabinet: SpeakerCabinet, layout: SpeakerLayout): ChamberFrame[] {
+  const t = cabinet.panel.thicknessIn;
+  return layout.chambers.map((placed, index) => {
+    const { chamber } = placed;
+    const shared = sharedWalls(cabinet, chamber);
+    const paSub = paSubOf(cabinet, chamber);
+    return {
+      index,
+      placed,
+      box: {
+        w: chamber.dims.w + (shared.left ? t : 0),
+        h: chamber.dims.h + (shared.below ? t : 0),
+        d: chamber.dims.d,
+      },
+      inside: {
+        iw: placed.clear.w,
+        ih: placed.clear.h,
+        inD: isFrame(cabinet)
+          ? chamber.dims.d - baffleInsetIn(cabinet) - BAFFLE_PLY_IN - t
+          : chamber.dims.d - 2 * t,
+        band: paSub?.style === "slots" ? paSub.vent.slotH + t : 0,
+      },
+      shared,
+      paSub,
+    };
+  });
+}
+
+/** A cone's body, depth, weight and figures as the bracing and the hardware read them. */
+interface ConeBuild {
+  body: ConeBody;
+  depthIn: number;
+  lb: number;
+  ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp">;
+}
+
+/** A cone driver's body (its catalog's, or the Hi-fi estimates where the catalog has none); null for another kind. */
+function coneBuild(driver: SpeakerDriver): ConeBuild | null {
+  const hifiCone = (size: number, lb: number, ts: ConeBuild["ts"]): ConeBuild => {
+    const cutoutIn = HIFI_DRIVER_CUTOUT_IN[size] ?? driverAcrossIn(driver);
+    return {
+      body: { cutoutIn, motorIn: cutoutIn * HIFI_MOTOR_CUTOUT_SHARE },
+      depthIn: size * HIFI_DEPTH_PER_SIZE,
+      lb,
+      ts,
+    };
+  };
+  switch (driver.kind) {
+    case DRIVER_KIND.sub: {
+      const sub = byId(SUB_OPTIONS, driver.driverId);
+      return sub
+        ? { body: paConeBody(sub.size), depthIn: subDriverDepthIn(sub), lb: sub.lb, ts: sub.ts }
+        : null;
+    }
+    case DRIVER_KIND.mid: {
+      const mid = byId(MID_OPTIONS, driver.driverId);
+      return mid
+        ? {
+            body: paConeBody(mid.size),
+            depthIn: mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size],
+            lb: mid.lb || 0,
+            ts: mid.ts,
+          }
+        : null;
+    }
+    case DRIVER_KIND.woofer: {
+      const woofer = hifiDriverById("woofer", driver.driverId);
+      return woofer ? hifiCone(woofer.size, woofer.lb || HIFI_FALLBACK_LB.woofer, woofer.ts) : null;
+    }
+    case DRIVER_KIND.coaxial: {
+      const coax = byId(FILL_OPTIONS, driver.driverId);
+      return coax ? hifiCone(coax.size, coax.lb || HIFI_FALLBACK_LB.woofer, coax.ts) : null;
+    }
+    case DRIVER_KIND.compression:
+    case DRIVER_KIND.tweeter:
+      return null;
+  }
+}
+
+/** One driver's weight, lb: its catalog weight (the Hi-fi fallbacks where a Hi-fi part lists none) and its horn's. */
+function driverLb(driver: SpeakerDriver): number {
+  const hornLb = driverHorn(driver)?.lb || 0;
+  switch (driver.kind) {
+    case DRIVER_KIND.sub:
+      return (byId(SUB_OPTIONS, driver.driverId)?.lb || 0) + hornLb;
+    case DRIVER_KIND.mid:
+      return (byId(MID_OPTIONS, driver.driverId)?.lb || 0) + hornLb;
+    case DRIVER_KIND.compression:
+      return (byId(CD_OPTIONS, driver.driverId)?.lb || 0) + hornLb;
+    case DRIVER_KIND.woofer:
+      return (hifiDriverById("woofer", driver.driverId)?.lb || HIFI_FALLBACK_LB.woofer) + hornLb;
+    case DRIVER_KIND.tweeter:
+      return (hifiDriverById("tweeter", driver.driverId)?.lb || HIFI_FALLBACK_LB.tweeter) + hornLb;
+    case DRIVER_KIND.coaxial:
+      return (byId(FILL_OPTIONS, driver.driverId)?.lb || HIFI_FALLBACK_LB.woofer) + hornLb;
+  }
+}
+
+/**
+ * A datasheet driver's room behind the baffle's front (a compression driver or a tweeter, with its horn where it drives
+ * one), across and deep, in: the horn's mouth, and its body with the driver's behind it; without a horn, the driver's
+ * body or a tweeter's plate (its depth taken as the plate's width).
+ */
+function datasheetRoom(driver: SpeakerDriver): Dims3 | null {
+  const horn = driverHorn(driver);
+  const body =
+    driver.kind === DRIVER_KIND.compression ? byId(CD_OPTIONS, driver.driverId)?.body : undefined;
+  if (horn) return { w: horn.size.w, h: horn.size.h, d: horn.size.d + (body?.depth ?? 0) };
+  if (body) return { w: body.dia, h: body.dia, d: body.depth };
+  if (driver.kind !== DRIVER_KIND.tweeter) return null;
+  const tweeter = hifiDriverById("tweeter", driver.driverId);
+  const plate = tweeter && (tweeter.ownGuide ?? tweeter.faceplate);
+  return plate ? { w: plate.w, h: plate.h, d: plate.w } : null;
+}
+
+/** A front-view point as the chamber's inside takes it: in from its inside corner, above a slot's band. */
+const insidePoint = (f: ChamberFrame, p: FacePoint) => ({
+  x: p.xIn - f.placed.clear.x,
+  y: p.yIn - f.placed.clear.y - f.inside.band,
+});
+
+/** A box `w` × `h` round `c` in the inside, from `z0` to `z1` back from the baffle, with the drivers' clearance. */
+const roomAround = (
+  c: { x: number; y: number },
+  w: number,
+  h: number,
+  z0: number,
+  z1: number,
+): BoxRegion => ({
+  x: [c.x - w / 2 - DRIVER_CLEARANCE_IN, c.x + w / 2 + DRIVER_CLEARANCE_IN],
+  y: [c.y - h / 2 - DRIVER_CLEARANCE_IN, c.y + h / 2 + DRIVER_CLEARANCE_IN],
+  z: [z0, z1],
+});
+
+/**
+ * What the bracing reads of a chamber's drivers: each one's room behind the baffle (a cone's basket and motor, a horn
+ * or a tweeter's body), the largest cone's cutout as the baffle's hole with its weight on its edge, the cones' figures
+ * for the pressure check (their areas and displacements add), and the heaviest cone for the hardware's center of
+ * gravity. Drivers off the baffle (a horn on the top, a horn's drivers inside) take none.
+ */
+function chamberDrivers(f: ChamberFrame, baffleT: number) {
+  const { placed } = f;
+  const regions: BoxRegion[] = [];
+  let hole: PlateHole | undefined;
+  let heaviest: HardwareDriver | null = null;
+  let ts: ConeBuild["ts"] | undefined;
+  if (!driversOnBaffle(placed.chamber)) return { regions, hole, ts, heaviest };
+  for (const driver of placed.chamber.drivers) {
+    if (onTop(driver)) continue;
+    const cone = coneBuild(driver);
+    const room = cone ? null : datasheetRoom(driver);
+    for (const spot of driverSpots(placed, driver)) {
+      const c = insidePoint(f, spot);
+      if (cone) {
+        regions.push(...coneKeepOut(c, cone.body, cone.depthIn));
+        const r = cone.body.cutoutIn / 2;
+        if (!hole || r > hole.r) hole = { cx: c.x, cy: c.y, r, ringKg: cone.lb * KG_PER_LB };
+        if (!heaviest || cone.lb > heaviest.lb)
+          heaviest = { center: c, lb: cone.lb, depthIn: cone.depthIn };
+      } else if (room) regions.push(roomAround(c, room.w, room.h, 0, room.d - baffleT));
+    }
+    if (cone) {
+      const disp = (cone.ts.disp ?? 0) * driver.count;
+      ts = {
+        Sd: (ts?.Sd ?? 0) + cone.ts.Sd * driver.count,
+        Xmax: ts ? Math.min(ts.Xmax, cone.ts.Xmax) : cone.ts.Xmax,
+        disp: (ts?.disp ?? 0) + disp,
+      };
+    }
+  }
+  return { regions, hole, ts, heaviest };
+}
+
+/** How far a passive radiator takes room behind its panel, in: its travel both ways and an inch of frame. */
+const radiatorRoomIn = (xmaxMm: number) => 1 + (2 * xmaxMm) / 25.4;
+
+/**
+ * The room the chamber's vent takes, which no brace or rib may enter: a PA port's parts and air as the PA sub box
+ * keeps them clear (subKeepOut, with the port rule's sub), a Hi-fi slot along the floor as far back as it runs, each
+ * Hi-fi tube's run back from its panel, and each radiator's travel behind its panel.
+ */
+function ventRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
+  const { chamber } = f.placed;
+  const { iw, inD } = f.inside;
+  const t = cabinet.panel.thicknessIn;
+  const fromPanel = (panel: string, depth: number): readonly [number, number] =>
+    panel === PANEL.back ? [Math.max(0, inD - depth), inD] : [0, Math.min(inD, depth)];
+  if (chamber.vent.kind === VENT_KIND.radiator) {
+    const drv = byId(HIFI_PASSIVES, chamber.vent.radiators.id);
+    if (!drv) return [];
+    const depth = radiatorRoomIn(drv.Xmax);
+    return radiatorsAt(cabinet, f.placed).spots.flatMap((s) =>
+      s.panel === PANEL.side
+        ? []
+        : [
+            {
+              x: [iw / 2 + s.x - s.shape.w / 2, iw / 2 + s.x + s.shape.w / 2],
+              y: [s.y - t - s.shape.h / 2, s.y - t + s.shape.h / 2],
+              z: fromPanel(s.panel, depth),
+            },
+          ],
+    );
+  }
+  const rule = portRule(chamber);
+  if (!rule || chamber.vent.kind !== VENT_KIND.vented) return [];
+  if (rule.rule === PORT_RULE.pa) {
+    const vent = paVentOf(chamber.vent.port);
+    return [...subKeepOut(f.box, t, baffleInsetIn(cabinet), rule.portStyle, vent, rule.sub).vent];
+  }
+  const { port } = rule;
+  if (port.shape === PORT_SHAPE.slot)
+    return [{ x: [0, iw], y: [0, port.h + t], z: [0, Math.min(inD, port.len)] }];
+  const tubes = roundPortsAt(f.placed, port);
+  return tubes.spots.map((s) => {
+    const c = insidePoint(f, { xIn: f.placed.cx + s.x, yIn: f.placed.y0 + s.y });
+    return roomAround(c, 2 * s.r, 2 * s.r, ...fromPanel(tubes.panel, port.len));
+  });
+}
+
+/** The bracing rule's results on general chambers, by their inputs (the page asks again on every change). */
+const BRACE_MEMO = new Map<string, BoxBracing>();
+const BRACE_MEMO_MAX = 2000;
+/** The bracing rule on a shell and its inputs, remembered. */
+function bracedShell(shell: BraceShell, inputs: BraceInputs): BoxBracing {
+  const key = JSON.stringify([shell, inputs]);
+  const hit = BRACE_MEMO.get(key);
+  if (hit) return hit;
+  if (BRACE_MEMO.size >= BRACE_MEMO_MAX) BRACE_MEMO.clear();
+  const b = braceShell(shell, inputs);
+  BRACE_MEMO.set(key, b);
+  return b;
+}
+
+/**
+ * A chamber's braces and ribs and its hardware. The hardware is placed first (the handles at the center of gravity,
+ * the dish low on the back, the horn's posts on a top with a horn on it), then the braces round its recesses, then the
+ * hardware checked against them, as the PA boxes do.
+ */
+function chamberBracing(
+  cabinet: SpeakerCabinet,
+  f: ChamberFrame,
+  handles: BoxHandles | null,
+): Pick<ChamberBuild, "bracing" | "hardware"> {
+  const t = cabinet.panel.thicknessIn;
+  const inset = baffleInsetIn(cabinet);
+  const style = cabinet.braceStyle ?? defaultBraceStyleNear(t);
+  const back = cabinet.backJoint ?? DEFAULT_BACK_JOINT;
+  const { chamber } = f.placed;
+  if (f.paSub) {
+    const { sub, style: portStyle, vent } = f.paSub;
+    return {
+      bracing: subBoxBracing(
+        f.box,
+        t,
+        inset,
+        portStyle,
+        vent,
+        sub,
+        style,
+        handles ?? undefined,
+        back,
+      ),
+      hardware: handles
+        ? subHardwarePlan(f.box, t, inset, portStyle, vent, sub, style, handles, back)
+        : null,
+    };
+  }
+  const drivers = chamberDrivers(f, baffleIn(cabinet));
+  const keepOut = { driver: drivers.regions, vent: ventRegions(cabinet, f) };
+  const plan = (bracing: BoxBracing | null) =>
+    handles &&
+    planBoxHardware({
+      box: chamber.drivers.some(onTop) ? HARDWARE_BOX.mid : HARDWARE_BOX.sub,
+      dims: f.box,
+      t,
+      inset,
+      handles,
+      driver: drivers.heaviest ?? {
+        center: { x: f.inside.iw / 2, y: f.inside.ih / 2 },
+        lb: 0,
+        depthIn: 0,
+      },
+      bracing,
+      keepOut,
+    });
+  const placed = plan(null);
+  if (chamber.load.kind === CHAMBER_LOAD.horn) return { bracing: null, hardware: placed };
+  const wall = panelStock(t, cabinet.panel.material);
+  const bracing = bracedShell(
+    {
+      inside: f.inside,
+      wall,
+      baffle: isFrame(cabinet) ? panelStock(BAFFLE_PLY_IN, cabinet.panel.material) : wall,
+    },
+    {
+      sup: NO_SUPPORTS,
+      stops: NO_SUPPORTS,
+      keepOut: { ...keepOut, hardware: placed ? hardwareKeepOut(placed) : [] },
+      style,
+      back,
+      ...(drivers.hole ? { hole: drivers.hole } : {}),
+      ts: drivers.ts,
+    },
+  );
+  return { bracing, hardware: plan(bracing) };
+}
+
+/** Whether two chambers touch: one stands on the other, or right beside it, along part of the edge. */
+function touching(a: SpeakerChamber, b: SpeakerChamber): boolean {
+  const overlap = (a0: number, a1: number, b0: number, b1: number) => a0 < b1 && b0 < a1;
+  const onTopOf = (lo: SpeakerChamber, hi: SpeakerChamber) =>
+    Math.abs(lo.at.yIn + lo.dims.h - hi.at.yIn) < TOUCH_IN &&
+    overlap(lo.at.xIn, lo.at.xIn + lo.dims.w, hi.at.xIn, hi.at.xIn + hi.dims.w);
+  const rightOf = (l: SpeakerChamber, r: SpeakerChamber) =>
+    Math.abs(l.at.xIn + l.dims.w - r.at.xIn) < TOUCH_IN &&
+    overlap(l.at.yIn, l.at.yIn + l.dims.h, r.at.yIn, r.at.yIn + r.dims.h);
+  return onTopOf(a, b) || onTopOf(b, a) || rightOf(a, b) || rightOf(b, a);
+}
+
+/** Each chamber's shell's lowest (then leftmost) chamber: chambers that touch form one shell. */
+function shellBases(chambers: readonly SpeakerChamber[]): number[] {
+  const group = chambers.map((_, i) => i);
+  const find = (i: number): number => (group[i] === i ? i : (group[i] = find(group[i])));
+  chambers.forEach((a, i) =>
+    chambers.forEach((b, j) => {
+      if (j > i && touching(a, b)) group[find(j)] = find(i);
+    }),
+  );
+  const lowest = (i: number, j: number) => {
+    const a = chambers[i].at,
+      b = chambers[j].at;
+    return a.yIn < b.yIn - TOUCH_IN || (Math.abs(a.yIn - b.yIn) < TOUCH_IN && a.xIn < b.xIn)
+      ? i
+      : j;
+  };
+  const base = new Map<number, number>();
+  chambers.forEach((_, i) => {
+    const g = find(i);
+    const seen = base.get(g);
+    base.set(g, seen === undefined ? i : lowest(seen, i));
+  });
+  return chambers.map((_, i) => base.get(find(i)) ?? i);
+}
+
+/**
+ * Whether the cutlist and the weights take the cabinet's top arched: an arched top the views draw (`drawsArchedTop`) on
+ * a frame (the flush box draws and cuts it flat, as the 3D view does).
+ */
+export const cutsArchedTop = (cabinet: SpeakerCabinet, layout: SpeakerLayout) =>
+  isFrame(cabinet) && drawsArchedTop(cabinet, layout);
+
+/** A cutout's area on the baffle for each of the chamber's drivers on it, in²: a cone's cutout, a horn's, a plate's. */
+function cutoutsIn2(cabinet: SpeakerCabinet, placed: PlacedChamber): number {
+  if (!driversOnBaffle(placed.chamber)) return 0;
+  return placed.chamber.drivers.reduce((sum, driver) => {
+    if (onTop(driver)) return sum;
+    const cone = coneBuild(driver);
+    const horn = driverHorn(driver);
+    const one = cone
+      ? (Math.PI / 4) * cone.body.cutoutIn ** 2
+      : horn
+        ? towerHornCutout(placed.dims, cabinet.panel.thicknessIn, horn).area
+        : ((room) => (room ? room.w * room.h : 0))(datasheetRoom(driver));
+    return sum + driver.count * one;
+  }, 0);
+}
+
+/**
+ * The chamber's panels' and braces' weight with its fixings, lb. A shell's lowest chamber weighs as a box of its own
+ * (its six outside faces, as the PA weighs its sub and mid boxes and the Hi-fi its box); each chamber over or beside it
+ * adds what it builds: its baffle less its drivers' cutouts and its back, its outside walls by their outside faces, and
+ * the partitions it builds at their inside size (the tower's cabinet over its sub box). The top chamber of an arched
+ * top takes the arch: its faces to the springline and the half disc, its sides to the springline, the bent strip.
+ */
+function woodLb(
+  cabinet: SpeakerCabinet,
+  layout: SpeakerLayout,
+  f: ChamberFrame,
+  isBase: boolean,
+  bracing: BoxBracing | null,
+): number {
+  const { placed, shared, inside } = f;
+  const { w, h, d } = placed.dims;
+  const t = cabinet.panel.thicknessIn;
+  const wallRate = panelLbPerSqFt(t, cabinet.panel.material);
+  const baffleRate = isFrame(cabinet)
+    ? panelLbPerSqFt(BAFFLE_PLY_IN, cabinet.panel.material)
+    : wallRate;
+  const arched =
+    cutsArchedTop(cabinet, layout) && Math.abs(placed.y0 + h - layout.size.h) < TOUCH_IN;
+  const R = layout.size.w / 2;
+  const face = arched ? w * (h - R) + (Math.PI / 2) * R * R : w * h;
+  const sideH = arched ? h - R : h;
+  const top = arched ? archStripIn(w, t) * d : w * d;
+  /** the partitions it builds: its top wall under a chamber, its right wall beside one */
+  const above = placed.walls.some((p) => p.shared && p.w >= p.h);
+  const right = placed.walls.some((p) => p.shared && p.w < p.h);
+  const panels = isBase
+    ? face * baffleRate + (face + top + w * d + 2 * sideH * d) * wallRate
+    : (face - cutoutsIn2(cabinet, placed)) * baffleRate +
+      (face +
+        (above ? inside.iw * inside.inD : top) +
+        (shared.below ? 0 : w * d) +
+        (shared.left ? 0 : sideH * d) +
+        (right ? inside.ih * inside.inD : sideH * d)) *
+        wallRate;
+  const braces = (braceWoodIn3(bracing) * wallRate) / SQ_IN_PER_SQ_FT / t;
+  const cones = placed.chamber.drivers.filter((dr) => coneBuild(dr) !== null);
+  const fixings = isFrame(cabinet)
+    ? placed.chamber.drivers.some((dr) => dr.kind === DRIVER_KIND.sub)
+      ? SUB_FIXINGS_LB
+      : cones.length
+        ? MID_FIXINGS_LB
+        : 0
+    : isBase
+      ? HIFI_FIXINGS_LB
+      : 0;
+  return panels / SQ_IN_PER_SQ_FT + braces + fixings;
+}
+
+/** The chamber's radiators' weight, lb (none for another vent, or a radiator the catalog doesn't have). */
+function chamberRadiatorsLb(chamber: SpeakerChamber): number {
+  if (chamber.vent.kind !== VENT_KIND.radiator) return 0;
+  const drv = byId(HIFI_PASSIVES, chamber.vent.radiators.id);
+  return drv ? radiatorsLb({ ...chamber.vent.radiators, drv }) : 0;
+}
+
+/** The chamber's wood inside its air, L: its braces and ribs, its vent's walls, a frame's baffle cleats round its face. */
+function insideWoodL(cabinet: SpeakerCabinet, f: ChamberFrame, bracing: BoxBracing | null) {
+  return internalWoodLiters(
+    [...countShell(cabinet, f, bracing), ...ventParts(cabinet, f).parts],
+    chamberCutBox(f.index),
+  );
+}
+
+/** The chamber cut as its own box for counting the wood inside it: a frame's cleats and braces, a flush box's braces. */
+function countShell(cabinet: SpeakerCabinet, f: ChamberFrame, bracing: BoxBracing | null) {
+  const box = chamberCutBox(f.index);
+  const t = cabinet.panel.thicknessIn;
+  if (isFrame(cabinet))
+    return boxParts(box, f.box.w, f.box.h, f.box.d, t, baffleInsetIn(cabinet), COUNT_JOINT, {
+      band: f.inside.band,
+      bracing,
+    }).P;
+  return bracing ? braceParts(box, bracing, insideAxes(f), t) : [];
+}
+
+/** The chamber's inside on the bracing's axes. */
+const insideAxes = (f: ChamberFrame) => ({ x: f.inside.iw, y: f.inside.ih, z: f.inside.inD });
+
+/**
+ * The chamber's vent as cutlist rows and bought parts: a PA port's parts (a slot's shelf and fins, side ducts' walls and
+ * dividers; flared tubes bought, with their stock pipe: lib/pa/calc subVentParts), a Hi-fi slot's shelf, a Hi-fi
+ * round port's tubes bought.
+ */
+function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]; vent: string[] } {
+  const { chamber } = f.placed;
+  const rule = portRule(chamber);
+  if (!rule || chamber.vent.kind !== VENT_KIND.vented) return { parts: [], vent: [] };
+  const box = chamberCutBox(f.index);
+  const t = cabinet.panel.thicknessIn;
+  if (rule.rule === PORT_RULE.pa) {
+    const vent = paVentOf(chamber.vent.port);
+    const kit = isRoundPort(rule.portStyle)
+      ? subTubeKit(f.box, rule.portStyle, vent, t, baffleInsetIn(cabinet), rule.sub)
+      : null;
+    return subVentParts(box, f.box, t, rule.portStyle, vent, kit);
+  }
+  const { port } = rule;
+  const elbows = hifiPortElbows(
+    chamber.dims,
+    t,
+    port.shape === PORT_SHAPE.slot ? { ...port, w: port.w ?? f.inside.iw } : port,
+  );
+  if (port.shape === PORT_SHAPE.slot)
+    return {
+      parts: [slotShelfPart(box, { ...port, w: port.w ?? f.inside.iw }, t, elbows != null)],
+      vent: [],
+    };
+  return { parts: [], vent: [roundPortLine(port, elbows)] };
+}
+
+/** The build of each cabinet the page asked for (a spec's cabinet doesn't change in place). */
+const BUILDS = new WeakMap<SpeakerCabinet, CabinetBuild>();
+
+/** The cabinet's build: each chamber's bracing, hardware, inside air and weight, and the whole speaker's weight. */
+export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
+  const hit = BUILDS.get(cabinet);
+  if (hit) return hit;
+  const layout = speakerLayout(cabinet);
+  const frames = chamberFrames(cabinet, layout);
+  const bases = shellBases(cabinet.chambers);
+  const chambers = frames.map((f): ChamberBuild => {
+    const isBase = bases[f.index] === f.index;
+    const { bracing, hardware } = chamberBracing(
+      cabinet,
+      f,
+      isBase && cabinet.hardware ? cabinet.hardware : null,
+    );
+    const { chamber } = f.placed;
+    const vent = chamberVentModel(cabinet, chamber);
+    const radiators = chamberRadiatorsLb(chamber);
+    const wood = woodLb(cabinet, layout, f, isBase, bracing);
+    const drivers = chamber.drivers.reduce((sum, d) => sum + d.count * driverLb(d), 0) + radiators;
+    const hardwareLb = hardware?.lb ?? 0;
+    return {
+      box: chamberCutBox(f.index),
+      bracing,
+      hardware,
+      inside: f.inside,
+      clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
+      ventL: vent ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
+      woodL: insideWoodL(cabinet, f, bracing),
+      recessL: hardware?.liters ?? 0,
+      lb: { wood, drivers, hardware: hardwareLb, total: wood + drivers + hardwareLb },
+    };
+  });
+  const build = { chambers, lb: chambers.reduce((sum, c) => sum + c.lb.total, 0) };
+  BUILDS.set(cabinet, build);
+  return build;
+}
+
+/**
+ * The chamber's air as the box models take it, L: its `netLiters` where set; else its clear volume less the cones'
+ * displacement (`displacementL`), the vent's air, the wood inside it and the hardware's recesses (`cabinetBuild`), and
+ * at least 1 L.
+ */
+export function chamberNetLiters(
+  cabinet: SpeakerCabinet,
+  chamber: SpeakerChamber,
+  displacementL: number,
+): number {
+  if (chamber.netLiters !== null) return chamber.netLiters;
+  const build = cabinetBuild(cabinet).chambers[cabinet.chambers.indexOf(chamber)];
+  if (!build) return MIN_NET_L;
+  return Math.max(
+    MIN_NET_L,
+    build.clearL - displacementL - build.ventL - build.woodL - build.recessL,
+  );
+}
+
+// ---- the cutlist ----
+
+/** A driver entry's name in a baffle note: its kind as the Designer names it. */
+const kindWord = (driver: SpeakerDriver) => DRIVER_KIND_NAMES[driver.kind];
+
+/**
+ * Where a part sits on a baffle, as the notes mark it: its center up from the baffle's bottom edge and across from its
+ * center line. `edgeY` is the baffle's bottom edge, `centerX` its center, both in the cabinet's front view.
+ */
+interface BaffleMarks {
+  up: (y: number) => string;
+  across: (x: number) => string;
+}
+
+/** The marks on a frame's baffle: up from its bottom edge, which sits `edgeY` up the cabinet. */
+const frameMarks = (edgeY: number, centerX: number): BaffleMarks => ({
+  up: (y) => `${formatInches(y - edgeY)}″ up from its bottom edge`,
+  across: (x) => offsetWords(x - centerX),
+});
+
+/** The marks on a flush box's baffle, whose box stands `boxY` up the cabinet (lib/hifi/cutlist aboveBaffleEdge). */
+const flushMarks = (boxY: number, centerX: number, joint: CornerJoint, t: number): BaffleMarks => ({
+  up: (y) => aboveBaffleEdge(y - boxY, joint, t),
+  across: (x) => offsetWords(x - centerX),
+});
+
+/**
+ * The chamber's cutouts, by panel, as cutlist notes: each driver on the baffle at its spot (a cone's cutout, a horn's,
+ * a tweeter's plate), a PA sub's tube holes (lib/pa/calc subCutNote), a Hi-fi port or slot, the radiators on their
+ * panel, a horn-loaded chamber's mouth. A PA sub in a box of its own keeps the PA page's note, without its place.
+ */
+function chamberNotes(
+  cabinet: SpeakerCabinet,
+  f: ChamberFrame,
+  marks: BaffleMarks,
+  ownBox: boolean,
+): { baffle: string[]; back: string[]; side: string[] } {
+  const { placed } = f;
+  const { chamber } = placed;
+  const t = cabinet.panel.thicknessIn;
+  const baffle: string[] = [],
+    back: string[] = [],
+    side: string[] = [];
+  const at = (p: FacePoint) => `centered ${marks.up(p.yIn)}${marks.across(p.xIn)}`;
+  if (f.paSub) {
+    const { sub, style, vent } = f.paSub;
+    const kit = isRoundPort(style)
+      ? subTubeKit(f.box, style, vent, t, baffleInsetIn(cabinet), sub)
+      : null;
+    const note = subCutNote(sub, vent, kit);
+    const entry = chamber.drivers.find((d) => d.kind === DRIVER_KIND.sub);
+    const [spot] = entry ? driverSpots(placed, entry) : [];
+    baffle.push(ownBox || !spot ? note : `sub ${note}, ${at(spot)}`);
+  }
+  if (driversOnBaffle(chamber))
+    for (const driver of chamber.drivers) {
+      if (f.paSub && driver.kind === DRIVER_KIND.sub) continue;
+      const horn = driverHorn(driver);
+      if (onTop(driver)) {
+        baffle.push(`${kindWord(driver)}: no cutout, its horn stands on the top`);
+        continue;
+      }
+      for (const spot of driverSpots(placed, driver)) {
+        switch (driver.kind) {
+          case DRIVER_KIND.sub:
+          case DRIVER_KIND.mid: {
+            const size =
+              driver.kind === DRIVER_KIND.sub
+                ? byId(SUB_OPTIONS, driver.driverId)?.size
+                : byId(MID_OPTIONS, driver.driverId)?.size;
+            if (size)
+              baffle.push(
+                `${kindWord(driver)}: ${cutoutNote(DRIVER_CUTOUT_IN[size])}, ${at(spot)}`,
+              );
+            break;
+          }
+          case DRIVER_KIND.woofer:
+          case DRIVER_KIND.coaxial: {
+            const size =
+              driver.kind === DRIVER_KIND.woofer
+                ? hifiDriverById("woofer", driver.driverId)?.size
+                : byId(FILL_OPTIONS, driver.driverId)?.size;
+            if (size)
+              baffle.push(
+                `${kindWord(driver).toLowerCase()}: ${sizedCutout(size)}, center ${marks.up(spot.yIn)}${marks.across(spot.xIn)}`,
+              );
+            break;
+          }
+          case DRIVER_KIND.tweeter: {
+            const tweeter = hifiDriverById("tweeter", driver.driverId);
+            const plate = horn ? horn.size : (tweeter?.ownGuide ?? tweeter?.faceplate);
+            if (plate)
+              baffle.push(tweeterCutoutNote(plate, marks.up(spot.yIn), 0) + marks.across(spot.xIn));
+            break;
+          }
+          case DRIVER_KIND.compression: {
+            const body = byId(CD_OPTIONS, driver.driverId)?.body;
+            if (horn)
+              baffle.push(
+                `horn cutout ${hornCutoutWords(towerHornCutout(placed.dims, t, horn))}, ${at(spot)}`,
+              );
+            else if (body)
+              baffle.push(
+                `${kindWord(driver)}: ${formatInches(body.dia)}″ round cutout, ${at(spot)}`,
+              );
+            break;
+          }
+        }
+      }
+    }
+  const flare = hornFlare(cabinet, placed);
+  if (flare)
+    baffle.push(
+      `horn mouth: ${formatInches(flare.mouth.w)} × ${formatInches(flare.mouth.h)}″ opening, ${at({
+        xIn: flare.mouth.x + flare.mouth.w / 2,
+        yIn: flare.mouth.y + flare.mouth.h / 2,
+      })}`,
+    );
+  const rule = portRule(chamber);
+  if (rule?.rule === PORT_RULE.hifi) {
+    const { port } = rule;
+    if (port.shape === PORT_SHAPE.slot)
+      baffle.push(slotOpeningNote({ ...port, w: port.w ?? f.inside.iw }, marks.up(placed.clear.y)));
+    else {
+      const tubes = roundPortsAt(placed, port);
+      const note = port.position
+        ? `${roundPortHoleNote(port)}, ${at({
+            xIn: placed.cx + tubes.spots.reduce((s, p) => s + p.x, 0) / tubes.spots.length,
+            yIn: placed.y0 + tubes.spots.reduce((s, p) => s + p.y, 0) / tubes.spots.length,
+          })}`
+        : roundPortHoleNote(port);
+      (tubes.panel === PANEL.back ? back : baffle).push(note);
+    }
+  }
+  if (chamber.vent.kind === VENT_KIND.radiator) {
+    const drv = byId(HIFI_PASSIVES, chamber.vent.radiators.id);
+    const { spots } = radiatorsAt(cabinet, placed);
+    const panel = spots[0]?.panel ?? chamber.vent.position?.panel;
+    if (drv && panel) {
+      const note = radiatorCutoutNote({ drv, n: chamber.vent.radiators.n }, panel);
+      (panel === PANEL.back ? back : panel === PANEL.side ? side : baffle).push(note);
+    }
+  }
+  return { baffle, back, side };
+}
+
+/** The hardware's cutout notes on a box's panels, with more notes on its sides and back (vents, radiators). */
+function withNotes(
+  hw: HardwareCutNotes | undefined,
+  more: { back: readonly string[]; side: readonly string[] },
+): HardwareCutNotes {
+  const join = (a: string | undefined, b: readonly string[]) => joinNotes([a, ...b]) || undefined;
+  return { ...hw, side: join(hw?.side, more.side), back: join(hw?.back, more.back) };
+}
+
+/**
+ * A chamber's own box less the walls other chambers give it (its box carries a wall there for the inside): its floor
+ * where it stands on a chamber (the top alone is cut), its left side where it stands beside one.
+ */
+function withoutGivenWalls(parts: CutPart[], shared: ChamberFrame["shared"]): CutPart[] {
+  return parts.map((p) =>
+    shared.below && p.part === "topBottom"
+      ? {
+          ...p,
+          qty: p.qty - 1,
+          note: joinNotes(["top only: its floor is the chamber below's top", p.note]),
+        }
+      : shared.left && p.part === "side"
+        ? {
+            ...p,
+            qty: p.qty - 1,
+            note: joinNotes([
+              "right side only: its left side is the chamber beside it's right side",
+              p.note,
+            ]),
+          }
+        : p,
+  );
+}
+
+/** The hardware's parts as bought, for the line under the list. */
+const hardwareLine = (box: CutBoxId, plan: BoxHardwarePlan) =>
+  `${cutBoxName(box)} hardware: ${plan.bought
+    .map(({ part, qty }) => `${qty} × ${part.name} ($${part.price.toFixed(2)}, ${part.src})`)
+    .join(", ")}`;
+
+/**
+ * The speaker's cutlist rows and bought parts, at the corner joint `joint`. Chambers that fill one box of one depth
+ * (`SpeakerLayout.oneShell`) share one shell: its sides, top and bottom (or an arched top), back and baffle under
+ * `SHELL_CUT_BOX`, every chamber's cutouts on the one baffle, and each chamber's partitions, braces and vent parts
+ * under its own box. Any other chamber is a box of its own (`chamberCutBox`), less the walls another chamber gives it.
+ */
+export function speakerCutParts(
+  cabinet: SpeakerCabinet,
+  joint: CornerJoint,
+): { parts: CutPart[]; also: string[] } {
+  const layout = speakerLayout(cabinet);
+  const frames = chamberFrames(cabinet, layout);
+  const build = cabinetBuild(cabinet);
+  const t = cabinet.panel.thicknessIn;
+  const frame = isFrame(cabinet);
+  const inset = baffleInsetIn(cabinet);
+  const back = cabinet.backJoint ?? DEFAULT_BACK_JOINT;
+  const arched = cutsArchedTop(cabinet, layout);
+  const roundover = frame ? false : roundoverNote(cabinet.roundoverIn, t, joint);
+  const parts: CutPart[] = [],
+    also: string[] = [];
+  /** a chamber's braces, vent parts and bought vent parts */
+  const insideParts = (f: ChamberFrame) => {
+    const { bracing } = build.chambers[f.index];
+    const vent = ventParts(cabinet, f);
+    also.push(...vent.vent);
+    return [
+      ...(bracing ? braceParts(chamberCutBox(f.index), bracing, insideAxes(f), t) : []),
+      ...vent.parts,
+    ];
+  };
+  for (const c of build.chambers) if (c.hardware) also.push(hardwareLine(c.box, c.hardware));
+  if (layout.oneShell && frames.length > 1) {
+    const { size } = layout;
+    const base = frames.reduce((lo, f) => (f.placed.y0 < lo.placed.y0 - TOUCH_IN ? f : lo));
+    // a bottom slot's band under the one baffle, where its chamber runs the shell's width
+    const band = Math.abs(base.placed.dims.w - size.w) < TOUCH_IN ? base.inside.band : 0;
+    const marks = frame ? frameMarks(t + band, 0) : flushMarks(0, 0, joint, t);
+    const notes = frames.map((f) => chamberNotes(cabinet, f, marks, false));
+    const plan = build.chambers[base.index].hardware;
+    const hw = withNotes(plan ? hardwareCutNotes(plan, base.box, t) : undefined, {
+      back: notes.flatMap((n) => n.back),
+      side: notes.flatMap((n) => n.side),
+    });
+    if (frame) {
+      const shell = boxParts(SHELL_CUT_BOX, size.w, size.h, size.d, t, inset, joint, {
+        band,
+        cutNote: joinNotes(notes.flatMap((n) => n.baffle)),
+        hardware: hw,
+        back,
+        backRails: build.chambers.some((c) => railsOnBack(c.bracing)),
+      }).P;
+      parts.push(
+        ...(arched
+          ? archedShellParts(shell, SHELL_CUT_BOX, size, t, joint, {
+              back,
+              band,
+              sideHardware: hw.side,
+            })
+          : shell),
+      );
+    } else
+      parts.push(
+        ...flushBoxPanels(SHELL_CUT_BOX, size, t, joint, {
+          side: hw.side,
+          baffle: [...notes.flatMap((n) => n.baffle), roundover],
+          back: hw.back,
+        }),
+      );
+    const inD = Math.min(...frames.map((f) => f.inside.inD));
+    for (const f of frames) {
+      const box = chamberCutBox(f.index);
+      for (const wall of f.placed.walls.filter((w) => w.shared)) {
+        const across = wall.w >= wall.h;
+        const lo = across ? Math.max(wall.x, -size.w / 2 + t) : Math.max(wall.y, t);
+        const hi = across
+          ? Math.min(wall.x + wall.w, size.w / 2 - t)
+          : Math.min(wall.y + wall.h, size.h - t);
+        parts.push({
+          box,
+          part: "partition",
+          qty: 1,
+          a: hi - lo,
+          b: inD,
+          t,
+          note: partitionNote(
+            across
+              ? `top face ${formatInches(wall.y + t)}″ up from the bottom`
+              : `upright, its right face ${formatInches(wall.x + t + size.w / 2)}″ from the left`,
+            back,
+          ),
+        });
+      }
+      parts.push(...insideParts(f));
+    }
+    return { parts, also };
+  }
+  for (const f of frames) {
+    const box = chamberCutBox(f.index);
+    const { placed, shared } = f;
+    const boxY = placed.y0 - (shared.below ? t : 0);
+    const centerX = placed.x0 - (shared.left ? t : 0) + f.box.w / 2;
+    const marks = frame
+      ? frameMarks(placed.clear.y + f.inside.band, centerX)
+      : flushMarks(boxY, centerX, joint, t);
+    const notes = chamberNotes(cabinet, f, marks, true);
+    const { bracing, hardware } = build.chambers[f.index];
+    const hw = withNotes(hardware ? hardwareCutNotes(hardware, f.box, t) : undefined, notes);
+    const own = frame
+      ? boxParts(box, f.box.w, f.box.h, f.box.d, t, inset, joint, {
+          band: f.inside.band,
+          cutNote: joinNotes(notes.baffle),
+          bracing,
+          hardware: hw,
+          back,
+        }).P
+      : flushBoxPanels(box, f.box, t, joint, {
+          side: hw.side,
+          baffle: [...notes.baffle, roundover],
+          back: hw.back,
+        });
+    const walls = withoutGivenWalls(own, shared);
+    parts.push(
+      ...(arched && frames.length === 1
+        ? archedShellParts(walls, box, f.box, t, joint, {
+            back,
+            band: f.inside.band,
+            sideHardware: hw.side,
+          })
+        : walls),
+    );
+    // a frame's own box already carries its braces (boxParts)
+    if (frame) parts.push(...ventPartsOf(f));
+    else parts.push(...insideParts(f));
+  }
+  return { parts, also };
+
+  function ventPartsOf(f: ChamberFrame) {
+    const vent = ventParts(cabinet, f);
+    also.push(...vent.vent);
+    return vent.parts;
+  }
+}

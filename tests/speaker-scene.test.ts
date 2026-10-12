@@ -26,7 +26,7 @@ import {
   ventMoved,
   type PlacedChamber,
 } from "../src/lib/speaker/speakerLayout";
-import { chamberNetLiters } from "../src/lib/speaker/chamberAir";
+import { chamberNetLiters } from "../src/lib/speaker/speakerBuild";
 import { PANEL } from "../src/constants/cutParts";
 import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
 import { systemFromPa } from "../src/lib/speaker/paSpec";
@@ -34,6 +34,7 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { paSearchDesign } from "../src/lib/pa/optimize";
 import { panelNominalNear } from "../src/lib/panel";
+import { savedHardware } from "../src/lib/pa/hardware";
 import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES, MID_BOXES } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
@@ -79,6 +80,7 @@ function paDesign(c: GoldenConfig): PaPlannerDesign {
     panel: c.panel ?? panelNominalNear(cfg.wall),
     hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
     spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
+    hardware: savedHardware(c.hardware),
   };
 }
 /** A PA design's speaker of `part`, read through the adapter. */

@@ -95,7 +95,7 @@ import {
   RIB_HALF_LAP_NOTE,
 } from "../../constants/bracing";
 import {
-  BIRCH_PLY_STIFFNESS,
+  panelStock,
   BOX_AXES,
   braceBox,
   defaultBraceStyleNear,
@@ -113,6 +113,7 @@ import {
   NO_SUPPORTS,
   PA_PANEL_TARGET_HZ,
   paBoxPanels,
+  type PaBoxInside,
   type PaBoxSupports,
 } from "./bracing";
 import { hardwareKeepOut, hardwareLiters, mountedCutout, planBoxHardware } from "./hardware";
@@ -551,8 +552,8 @@ export const plywoodLbPerSqFt = (t: number) => panelLbPerSqFt(t, PLYWOOD_MATERIA
 // Bracing by rule (lib/bracing): each panel's first plate resonance, and the window braces or ribs that lift every
 // panel over PA_PANEL_TARGET_HZ. The cutlist, the volumes, the weights and the 3D view all read these.
 // ---------------------------------------------------------------
-/** The baffle's ply, in: 3/4″ whatever the walls. */
-const BAFFLE_PLY_IN = 0.75;
+/** The frame's baffle ply, in: 3/4″ whatever the walls. */
+export const BAFFLE_PLY_IN = 0.75;
 /** A side duct's flared ends stand this much proud of its throat, in (a strip set at 20°, as the 3D view and the fit check draw it). */
 const SIDE_DUCT_FLARE_IN = 0.43;
 /** A side duct's width off its side wall, in: the throat, the wall, and the flare its ends stand out by. */
@@ -562,11 +563,7 @@ const sideDuctWidthIn = (v: Pick<VentSpec, "throat">, t: number) =>
  * A PA panel's stock for the plate model, from its exact thickness: the one place bracing reads the panel thickness and
  * its weight (lib/panel, plywood), with birch ply's moduli.
  */
-export const paPanelStock = (t: number): PlateStock => ({
-  t,
-  lbPerSqFt: panelLbPerSqFt(t, PLYWOOD_MATERIAL),
-  ...BIRCH_PLY_STIFFNESS,
-});
+export const paPanelStock = (t: number): PlateStock => panelStock(t, PLYWOOD_MATERIAL);
 /** A PA box's inside as boxParts cuts it: behind a 3/4″ baffle set `inset` back, `band` of a bottom slot under it. */
 const paInside = (box: Dims3, t: number, inset: number, band = 0) => ({
   iw: box.w - 2 * t,
@@ -676,21 +673,26 @@ export function subVentStops(
   const across = [...(style === "vslots" ? [w] : []), iw - w];
   return { ...lines, top: across, bottom: across };
 }
+/** A cone's size behind the baffle as the braces keep clear of it: its cutout's and its motor's diameters, in. */
+export interface ConeBody {
+  cutoutIn: number;
+  motorIn: number;
+}
 /**
- * A driver's room behind the baffle, which no brace or rib may enter, as boxes round its axis: the cutout's square at
- * the baffle (the basket comes through it), stepping in along the basket to the motor's (DRIVER_MOTOR_DIA_IN) and back
- * to the back of the magnet (lib/pa/bracing's shares), each with DRIVER_CLEARANCE_IN to spare. `depthIn` is the
- * mounting depth from the baffle's front.
+ * A cone driver's room behind the baffle, which no brace or rib may enter, as boxes round its axis: the cutout's square
+ * at the baffle (the basket comes through it), stepping in along the basket to the motor's and back to the back of the
+ * magnet (lib/pa/bracing's shares), each with DRIVER_CLEARANCE_IN to spare. `depthIn` is the mounting depth from the
+ * baffle's front.
  */
-export function driverKeepOut(
+export function coneKeepOut(
   center: { x: number; y: number },
-  size: SubDriver["size"] | MidDriver["size"],
+  body: ConeBody,
   depthIn: number,
 ): BoxRegion[] {
   const c = DRIVER_CLEARANCE_IN;
   const depth = Math.max(0, depthIn - BAFFLE_PLY_IN),
-    rCut = DRIVER_CUTOUT_IN[size] / 2,
-    rMotor = Math.min(rCut, DRIVER_MOTOR_DIA_IN[size] / 2);
+    rCut = body.cutoutIn / 2,
+    rMotor = Math.min(rCut, body.motorIn / 2);
   const zRing = BASKET_RING_SHARE * depth,
     zMotor = MOTOR_START_SHARE * depth;
   const box = (r: number, z0: number, z1: number): BoxRegion => ({
@@ -711,6 +713,17 @@ export function driverKeepOut(
     box(rMotor, zMotor, depth + c),
   ];
 }
+/** A PA cone's body by its size class: the typical cutout and the class's motor (DRIVER_MOTOR_DIA_IN). */
+export const paConeBody = (size: SubDriver["size"] | MidDriver["size"]): ConeBody => ({
+  cutoutIn: DRIVER_CUTOUT_IN[size],
+  motorIn: DRIVER_MOTOR_DIA_IN[size],
+});
+/** A PA cone's room behind the baffle (coneKeepOut), by its size class. */
+export const driverKeepOut = (
+  center: { x: number; y: number },
+  size: SubDriver["size"] | MidDriver["size"],
+  depthIn: number,
+): BoxRegion[] => coneKeepOut(center, paConeBody(size), depthIn);
 /** Where the sub driver's center sits on the inside of the baffle, in from the box's inside corner (the 3D view's). */
 export function subDriverCenter(
   box: Dims3,
@@ -871,29 +884,62 @@ function paBracing(
   const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r},${hole.ringKg ?? 0}|${ts ? `${ts.Sd},${ts.Xmax},${ts.disp}` : ""}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
-  const inside = paInside(box, t, inset, band);
-  const wall = paPanelStock(t);
-  // the strength checks' loads: the driver's pressure in the box's air, a lid's load spread over the lid
-  const insideL = (inside.iw * inside.ih * inside.inD * 16.387) / 1000;
-  const lidM2 = inside.iw * inside.inD * IN2_M2;
   return remember(
     BRACING_MEMO,
     key,
-    braceBox({
-      inner: { x: inside.iw, y: inside.ih, z: inside.inD },
-      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup, stops, back, hole),
-      targetHz: PA_PANEL_TARGET_HZ,
-      style,
-      braceStock: wall,
-      keepOut,
-      loads: {
-        pressurePa: ts ? driverPressurePa(ts.Sd, ts.Xmax, insideL - (ts.disp ?? 0)) : 0,
-        pressureLimitPa: PRESSURE_STRESS_LIMIT_PA,
-        lidPa: STACK_LOAD_N / lidM2,
-        lidLimitPa: LID_STRESS_LIMIT_PA,
+    braceShell(
+      {
+        inside: paInside(box, t, inset, band),
+        wall: paPanelStock(t),
+        baffle: paPanelStock(BAFFLE_PLY_IN),
       },
-    }),
+      { sup, stops, keepOut, style, back, hole, ts },
+    ),
   );
+}
+/** A box's shell as the bracing rule reads it: its inside behind the baffle, and its walls' and baffle's stock. */
+export interface BraceShell {
+  inside: PaBoxInside;
+  wall: PlateStock;
+  baffle: PlateStock;
+}
+/** What the bracing rule reads besides the shell: the supports and stops, the keep-out, style, back and driver. */
+export interface BraceInputs {
+  sup: PaBoxSupports;
+  stops: PaBoxSupports;
+  keepOut: BoxKeepOut;
+  style: BraceStyleId;
+  back: BackJointId;
+  /** the largest cutout on the baffle, in from the baffle's corner; absent: none */
+  hole?: PlateHole;
+  /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
+  ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined;
+}
+/**
+ * A box's braces and ribs by rule (lib/bracing braceBox): its six panels (paBoxPanels) to PA_PANEL_TARGET_HZ, the
+ * braces cut from the wall stock, and the strength checks' loads: the driver's pressure in the box's air and a load
+ * spread over the lid. The PA boxes' rule (paBracing), for any shell and stock.
+ */
+export function braceShell(
+  { inside, wall, baffle }: BraceShell,
+  { sup, stops, keepOut, style, back, hole, ts }: BraceInputs,
+): BoxBracing {
+  const insideL = (inside.iw * inside.ih * inside.inD * 16.387) / 1000;
+  const lidM2 = inside.iw * inside.inD * IN2_M2;
+  return braceBox({
+    inner: { x: inside.iw, y: inside.ih, z: inside.inD },
+    panels: paBoxPanels(inside, wall, baffle, sup, stops, back, hole),
+    targetHz: PA_PANEL_TARGET_HZ,
+    style,
+    braceStock: wall,
+    keepOut,
+    loads: {
+      pressurePa: ts ? driverPressurePa(ts.Sd, ts.Xmax, insideL - (ts.disp ?? 0)) : 0,
+      pressureLimitPa: PRESSURE_STRESS_LIMIT_PA,
+      lidPa: STACK_LOAD_N / lidM2,
+      lidLimitPa: LID_STRESS_LIMIT_PA,
+    },
+  });
 }
 /** The hardware's recesses as a keep-out key (the bracing memo's). */
 const regionsKey = (rs: readonly BoxRegion[]) =>
@@ -1032,8 +1078,10 @@ export const midBraceEstimate = (
 export const braceWoodIn3 = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined) =>
   b ? b.windowIn3 + b.ribIn3 : 0;
 /** Their weight at the wall ply, lb. */
-const braceLb = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined, wall: number) =>
-  (braceWoodIn3(b) * plywoodLbPerSqFt(wall)) / 144 / wall;
+export const braceLb = (
+  b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined,
+  wall: number,
+) => (braceWoodIn3(b) * plywoodLbPerSqFt(wall)) / 144 / wall;
 
 // ---------------------------------------------------------------
 // Cutlist: panels for the sub and mid boxes from the planner's current
@@ -1058,7 +1106,7 @@ export const formatInches = (x: number) => {
 export { formatThickness } from "../panel";
 
 /** Whether a box's window braces have rails on its back: a frame across x or y has a rear rail; one across z stands parallel to it. */
-const railsOnBack = (b: Pick<BoxBracing, "windows"> | null | undefined) =>
+export const railsOnBack = (b: Pick<BoxBracing, "windows"> | null | undefined) =>
   !!b && b.windows.x.length + b.windows.y.length > 0;
 /** The back panel's cutlist note: how it goes into the rabbet, and onto the window braces' rear rails where they meet it. */
 const backNote = (back: BackJointId, rails: boolean) => {
@@ -1440,17 +1488,10 @@ export function towerCutParts(
     band = extra.band;
   // the baffle's bottom edge sits a wall (and the slot's band) up from the cabinet's bottom
   const onBaffle = (y: number) => `${formatInches(y - t - band)}″ up from its bottom edge`;
-  const hc = towerHornCutout(subBox, t, horn);
-  const hornHole =
-    hc.shape === "circle"
-      ? `${formatInches(hc.w)}″ round`
-      : hc.shape === "outline"
-        ? `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″ (trace the mouth's outline)`
-        : `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″, ${formatInches(hc.r)}″ corners`;
   const cutNote = [
     `sub ${extra.cutNote}`,
     `mid ${cutoutNote(DRIVER_CUTOUT_IN[mid.size])}, centered ${onBaffle(spec.midCenter)}`,
-    `horn cutout ${hornHole}, centered ${onBaffle(spec.hornCenter)}`,
+    `horn cutout ${hornCutoutWords(towerHornCutout(subBox, t, horn))}, centered ${onBaffle(spec.hornCenter)}`,
   ].join("; ");
   const shell = boxParts("sub", W, H, D, t, inset, joint, {
     band,
@@ -1469,15 +1510,67 @@ export function towerCutParts(
     a: iw,
     b: inD,
     t,
-    note: `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor); notch the front corners 3/4″ square round the baffle cleats; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`,
+    note: partitionNote(
+      `top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor)`,
+      back,
+    ),
   };
   const braces = extra.bracing
     ? braceParts("sub", extra.bracing, { x: iw, y: subBox.h - 2 * t, z: inD }, t)
     : [];
-  if (!spec.archTop) return [...shell, partitions, ...braces];
-  // the arch: the outer radius is half the cabinet's width, its springline that far below the top
+  return [
+    ...(spec.archTop
+      ? archedShellParts(shell, "sub", { w: W, h: H, d: D }, t, joint, {
+          back,
+          band,
+          sideHardware: extra.hardware?.side,
+        })
+      : shell),
+    partitions,
+    ...braces,
+  ];
+}
+
+/** A horn's baffle cutout (towerHornCutout) in words: a round hole, a traced outline, or a rectangle with its corners. */
+export const hornCutoutWords = (
+  hc: Pick<ReturnType<typeof towerHornCutout>, "shape" | "w" | "h" | "r">,
+) =>
+  hc.shape === "circle"
+    ? `${formatInches(hc.w)}″ round`
+    : hc.shape === "outline"
+      ? `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″ (trace the mouth's outline)`
+      : `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″, ${formatInches(hc.r)}″ corners`;
+
+/** A partition row's note: where it sits (`where`), its notches round the cleats, its back edge and its seal. */
+export const partitionNote = (where: string, back: BackJointId) =>
+  `level, ${where}; notch the front corners 3/4″ square round the baffle cleats; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`;
+
+/**
+ * A frame shell's rows (boxParts of the whole `dims`, label `box`) with an arched top: a semicircle the full width, its
+ * outer radius half the width and its springline that far below the top. The sides stop at the springline, a bent
+ * strip makes the top, the back and baffle take its curve (which a straight guillotine cut can't make), one cleat runs
+ * across the bottom and the uprights stop at the springline. The PA tower's top (lib/pa/tower towerSpec), on any frame
+ * shell.
+ */
+export function archedShellParts(
+  shell: CutPart[],
+  box: CutBoxId,
+  dims: Dims3,
+  t: number,
+  joint: CornerJoint,
+  extra: {
+    back: BackJointId;
+    /** a bottom slot's band under the baffle */
+    band: number;
+    /** the handles' cutout note on the sides */
+    sideHardware?: string;
+  },
+): CutPart[] {
+  const { w: W, h: H, d: D } = dims;
+  const { back, band } = extra;
   const R = W / 2,
-    spring = H - R;
+    spring = H - R,
+    iw = W - 2 * t;
   const curve = (r: number) =>
     `arched top, ${formatInches(r)}″ radius: cut the blank square, then the arch with a jigsaw or a router on a circle jig (not a straight guillotine cut)`;
   const arched = shell.flatMap((p): CutPart[] => {
@@ -1489,7 +1582,7 @@ export function towerCutParts(
           note: [
             sideJointNote(joint, t, "the bottom edge", back),
             "top edge square, under the arched top's ends",
-            extra.hardware?.side,
+            extra.sideHardware,
           ]
             .filter(Boolean)
             .join("; "),
@@ -1504,7 +1597,7 @@ export function towerCutParts(
   });
   const cleats: CutPart[] = [
     {
-      box: "sub",
+      box,
       part: "baffleCleat",
       qty: 1,
       a: 0.75,
@@ -1513,7 +1606,7 @@ export function towerCutParts(
       note: "glue and screw behind the baffle, across the bottom; glue blocks round the arch",
     },
     {
-      box: "sub",
+      box,
       part: "baffleCleat",
       qty: 2,
       a: 0.75,
@@ -1523,15 +1616,114 @@ export function towerCutParts(
     },
   ];
   const bent: CutPart = {
-    box: "sub",
+    box,
     part: "archTop",
     qty: 1,
     a: D,
-    b: Math.PI * (R - t / 2),
+    b: archStripIn(W, t),
     t,
     note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut; ${rearRabbetNote(t, back)}'s arch`,
   };
-  return [...arched, ...cleats, bent, partitions, ...braces];
+  return [...arched, ...cleats, bent];
+}
+
+/** An arched top's bent strip, in: the semicircle's length on its centerline, a wall in from the outer radius. */
+export const archStripIn = (w: number, t: number) => Math.PI * (w / 2 - t / 2);
+
+/** The sub's round tubes as bought: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes). */
+export type SubTubeKit = ReturnType<typeof subTubeKit>;
+/** The sub box's baffle note: the driver's cutout, and its tubes' holes where it has round tubes (`kit`). */
+export const subCutNote = (
+  sub: Pick<SubDriver, "size">,
+  cVent: Pick<VentSpec, "nt" | "dia">,
+  kit: SubTubeKit | null,
+) =>
+  cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
+  (kit
+    ? `; ${cVent.nt} × ${formatInches(kit.pipe?.odIn ?? cVent.dia)}″ tube holes, rounded over ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
+    : "");
+/**
+ * The sub's vent as cutlist rows of `box`: a bottom slot's shelf and fins (and its rear channel wall where it folds),
+ * a side duct's walls and dividers; round tubes as a line of bought parts (`vent`) from their kit.
+ */
+export function subVentParts(
+  box: CutBoxId,
+  subBox: Dims3,
+  t: number,
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  kit: SubTubeKit | null,
+): { parts: CutPart[]; vent: string[] } {
+  const iw = subBox.w - 2 * t,
+    ih = subBox.h - 2 * t;
+  if (portStyle === "slots") {
+    const folded = slotFolds(subBox, cVent, t);
+    const len = folded ? foldedShelfIn(subBox, cVent.slotH, t) : cVent.len;
+    const parts: CutPart[] = [
+      { box, part: "ductShelf", qty: 1, a: iw, b: len, t, note: "roof of the bottom slot" },
+      {
+        box,
+        part: "ductFin",
+        qty: 2,
+        a: cVent.slotH,
+        b: folded ? len : slotFinIn(subBox, t),
+        t,
+        note: folded
+          ? "splits the slot in three"
+          : "splits the slot in three; runs on to the back panel, a floor rib past the shelf",
+      },
+    ];
+    if (folded)
+      parts.push({
+        box,
+        part: "ductRearWall",
+        qty: 1,
+        a: iw,
+        b: foldedRearWallIn(subBox, cVent, t),
+        t,
+        note: "rear channel, rises up the back",
+      });
+    return { parts, vent: [] };
+  }
+  if (portStyle === "vslots" || portStyle === "vslot1") {
+    const n = portStyle === "vslot1" ? 1 : 2;
+    return {
+      parts: [
+        {
+          box,
+          part: "sideDuctWall",
+          qty: n,
+          a: ih,
+          b: cVent.len,
+          t,
+          note: `${formatInches(cVent.throat)}″ throat; 20° chamfer both ends`,
+        },
+        {
+          box,
+          part: "ductDivider",
+          qty: 2 * n,
+          a: cVent.throat,
+          b: cVent.len,
+          t: ductDividerIn(cVent),
+          note: "",
+        },
+      ],
+      vent: [],
+    };
+  }
+  if (!kit) return { parts: [], vent: [] };
+  return {
+    parts: [],
+    vent: [
+      `${cVent.nt} × ${formatInches(cVent.dia)}″ port tube, ${formatInches(cVent.len)}″ long on its centerline` +
+        (kit.elbows
+          ? ` with ${ELBOW_WORDS[kit.elbows]} (${cVent.nt * kit.elbows} × 90° elbow)`
+          : "") +
+        (kit.pipe
+          ? `, cut from ${kit.sticks} × ${kit.pipe.stickFt} ft Sch 40 PVC; flare each inner mouth ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
+          : `; no stock pipe in the catalog for ${formatInches(cVent.dia)}″`),
+    ],
+  };
 }
 
 export function cutParts({
@@ -1554,7 +1746,6 @@ export function cutParts({
 }: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
     all: CutPart[] = [];
-  const vent: string[] = [];
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, inset, sub) : null;
   const subExtra = {
@@ -1590,83 +1781,15 @@ export function cutParts({
       : undefined,
     band: portStyle === "slots" ? cVent.slotH + t : 0,
     back: backJoint,
-    cutNote:
-      cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
-      (kit
-        ? `; ${cVent.nt} × ${formatInches(kit.pipe?.odIn ?? cVent.dia)}″ tube holes, rounded over ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
-        : ""),
+    cutNote: subCutNote(sub, cVent, kit),
   };
   // the tower's whole cabinet, unless only the sub box's parts are asked for (its volume reads no more)
   if (layout === "tower" && !subOnly) {
     if (!horn) throw new Error("the tower's cutlist needs its horn (towerSpec)");
     all.push(...towerCutParts(subBox, t, inset, joint, horn, mid, subExtra));
   } else all.push(...boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, subExtra).P);
-  const iw = subBox.w - 2 * t,
-    ih = subBox.h - 2 * t;
-  if (portStyle === "slots") {
-    const folded = slotFolds(subBox, cVent, t);
-    const len = folded ? foldedShelfIn(subBox, cVent.slotH, t) : cVent.len;
-    all.push({
-      box: "sub",
-      part: "ductShelf",
-      qty: 1,
-      a: iw,
-      b: len,
-      t,
-      note: "roof of the bottom slot",
-    });
-    all.push({
-      box: "sub",
-      part: "ductFin",
-      qty: 2,
-      a: cVent.slotH,
-      b: folded ? len : slotFinIn(subBox, t),
-      t,
-      note: folded
-        ? "splits the slot in three"
-        : "splits the slot in three; runs on to the back panel, a floor rib past the shelf",
-    });
-    if (folded)
-      all.push({
-        box: "sub",
-        part: "ductRearWall",
-        qty: 1,
-        a: iw,
-        b: foldedRearWallIn(subBox, cVent, t),
-        t,
-        note: "rear channel, rises up the back",
-      });
-  } else if (portStyle === "vslots" || portStyle === "vslot1") {
-    const n = portStyle === "vslot1" ? 1 : 2;
-    all.push({
-      box: "sub",
-      part: "sideDuctWall",
-      qty: n,
-      a: ih,
-      b: cVent.len,
-      t,
-      note: `${formatInches(cVent.throat)}″ throat; 20° chamfer both ends`,
-    });
-    all.push({
-      box: "sub",
-      part: "ductDivider",
-      qty: 2 * n,
-      a: cVent.throat,
-      b: cVent.len,
-      t: ductDividerIn(cVent),
-      note: "",
-    });
-  } else if (kit) {
-    vent.push(
-      `${cVent.nt} × ${formatInches(cVent.dia)}″ port tube, ${formatInches(cVent.len)}″ long on its centerline` +
-        (kit.elbows
-          ? ` with ${ELBOW_WORDS[kit.elbows]} (${cVent.nt * kit.elbows} × 90° elbow)`
-          : "") +
-        (kit.pipe
-          ? `, cut from ${kit.sticks} × ${kit.pipe.stickFt} ft Sch 40 PVC; flare each inner mouth ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
-          : `; no stock pipe in the catalog for ${formatInches(cVent.dia)}″`),
-    );
-  }
+  const ventParts = subVentParts("sub", subBox, t, portStyle, cVent, kit);
+  all.push(...ventParts.parts);
   if (layout !== "tower" && !subOnly) {
     const midPlan =
       hardware &&
@@ -1679,7 +1802,7 @@ export function cutParts({
     });
     all.push(...m.P);
   }
-  return { parts: all, vent };
+  return { parts: all, vent: ventParts.vent };
 }
 
 // Where `x` falls on an ascending axis: the cell's lower index and the fraction across it, clamped to the axis' ends.
@@ -2097,7 +2220,7 @@ export function towerMidWeightLb(
   // the front and back over the sub box: a rectangle, or one to the arch's springline and a half disc
   const face = spec.archTop ? W * (ext - R) + (Math.PI / 2) * R * R : W * ext;
   const sides = 2 * D * (spec.archTop ? ext - R : ext);
-  const top = spec.archTop ? Math.PI * (R - wall / 2) * D : W * D;
+  const top = spec.archTop ? archStripIn(W, wall) * D : W * D;
   const partitions =
     (spec.partitions.length - 1) * (W - 2 * wall) * (D - inset - BAFFLE_PLY_IN - wall);
   const cutouts =

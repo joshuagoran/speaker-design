@@ -182,14 +182,16 @@ const sealedChamber = (
 
 /**
  * The plywood shell: the PA's frame with its inset baffle (an inset of 0 too), the design's panels, inset and bracing,
- * and the `top` given (flat but on the tower, whose horn can arch it); the PA boxes stand upright with sharp-edged
+ * the box's `hardware` (its handles, as the PA page sets them), and the `top` given (flat but on the tower, whose horn can arch it); the PA boxes stand upright with sharp-edged
  * baffles.
  */
 const paCabinet = (
   cfg: PaPlannerDesign,
   chambers: SpeakerCabinet["chambers"],
+  hardware: SpeakerCabinet["hardware"],
   top: SpeakerCabinet["top"] = CABINET_TOP.flat,
 ): SpeakerCabinet => ({
+  hardware,
   chambers,
   panel: { nominal: cfg.panel, material: PLYWOOD_MATERIAL, thicknessIn: cfg.wall },
   construction: CABINET_CONSTRUCTION.frameInset,
@@ -271,7 +273,7 @@ const subSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
     cfg,
     system,
     SPEAKER_PART.sub,
-    paCabinet(cfg, [subChamber(cfg)]),
+    paCabinet(cfg, [subChamber(cfg)], cfg.hardware.sub),
     [subBand(cfg, null)],
     subInput(cfg),
   );
@@ -282,12 +284,16 @@ const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
     cfg,
     system,
     SPEAKER_PART.top,
-    paCabinet(cfg, [
-      sealedChamber({ xIn: 0, yIn: 0 }, cfg.mDim, [
-        midDriver(cfg, cfg.mDim.h / 2),
-        hornDriver(cfg, HORN_PLACEMENT.top, { xIn: 0, yIn: 0 }),
-      ]),
-    ]),
+    paCabinet(
+      cfg,
+      [
+        sealedChamber({ xIn: 0, yIn: 0 }, cfg.mDim, [
+          midDriver(cfg, cfg.mDim.h / 2),
+          hornDriver(cfg, HORN_PLACEMENT.top, { xIn: 0, yIn: 0 }),
+        ]),
+      ],
+      cfg.hardware.mid,
+    ),
     [
       activeBand(
         SPEAKER_BAND.mid,
@@ -328,6 +334,8 @@ function towerSpeaker(cfg: PaPlannerDesign, system: SpecIdentity): SpeakerSpec {
           [hornDriver(cfg, HORN_PLACEMENT.baffle, { xIn: 0, yIn: tower.hornCenter - hornFloor })],
         ),
       ],
+      // the tower's one cabinet takes the sub box's hardware (lib/pa/hardware boxTakesHardware)
+      cfg.hardware.sub,
       tower.archTop ? CABINET_TOP.arched : CABINET_TOP.flat,
     ),
     [

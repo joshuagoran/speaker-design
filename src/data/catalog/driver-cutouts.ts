@@ -63,3 +63,16 @@ export const DRIVER_MOTOR_DIA_IN: Record<SubSize | MidSize, number> = {
   12: 7.25,
   10: 6,
 };
+
+/**
+ * A Hi-fi cone's motor diameter as a share of its cutout, where the catalog lists none: about the PA size classes'
+ * (DRIVER_MOTOR_DIA_IN over DRIVER_CUTOUT_IN runs 0.60 to 0.65). The Designer's braces keep clear of the basket
+ * narrowing to it.
+ */
+export const HIFI_MOTOR_CUTOUT_SHARE = 0.65;
+
+/**
+ * A Hi-fi cone's mounting depth per inch of its nominal size, where the catalog lists none: about the PA mid-bass
+ * fallbacks' (MID_DEPTH_FALLBACK_IN: 5″ for a 10″, 7″ for a 15″).
+ */
+export const HIFI_DEPTH_PER_SIZE = 0.5;

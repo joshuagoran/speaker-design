@@ -11,6 +11,7 @@ import {
   paDesign,
   paModels,
   speakerAndFeed,
+  withHifiNet,
   withNet,
 } from "./speaker-cases";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -176,7 +177,11 @@ const sameLimit = (a: LimitId, b: LimitId, scale: number) =>
 test("speaker limits: the Hi-fi designs meet the Hi-fi page's limits (woofer, tweeter)", () => {
   for (const { name, state: given } of hifiCases) {
     const state = { ...given, baffleStepCompensationDb: 0 };
-    const spec = speakerFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
+    // on the Hi-fi engine's net air (its 3% allowance for bracing and damping: tests/speaker-response.test.ts)
+    const spec = withHifiNet(
+      speakerFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name }),
+      state,
+    );
     const model = modelOf(spec, NO_FILTERS);
     const sys = deriveHifiDesign(state).speakerModel?.speakerSystem;
     assert.ok(sys, name);
