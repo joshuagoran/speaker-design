@@ -29,6 +29,8 @@ import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { startLayers } from "../stack/stackPresets";
 import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
+import { withSubPlacement } from "../../lib/speaker/subPlacement";
+import { SUB_PLACEMENT } from "../../constants/subPlacement";
 import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
 import { fromStored, type StoredCoverageLayout } from "../coverage/useCoverageLayout";
@@ -53,6 +55,7 @@ import type {
   SpeakerSpec,
   StackDesign,
   StackSpec,
+  SubPlacement,
 } from "../../types";
 
 /** What the library's row says when a document holds no space. */
@@ -178,12 +181,21 @@ export function withStack(
  * the current PA design on the Coverage page's floor (as that page last left it). A PA design takes its music balance
  * in its band Levels.
  */
-export function spaceFromStart(start: StackStart, pa: PaPlannerDesign): SpaceDesign {
+export function spaceFromStart(
+  start: StackStart,
+  pa: PaPlannerDesign,
+  subs: SubPlacement = SUB_PLACEMENT.stacks,
+): SpaceDesign {
   const floor = fromStored(readStoredJson<StoredCoverageLayout>(COVERAGE_LAYOUT_KEY, {}));
-  const read = startLayers(
-    start,
-    { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] },
-    { pa, floor },
+  // the subs where the preset puts them (lib/speaker/subPlacement), at the coverage floor's cluster spot
+  const read = withSubPlacement(
+    startLayers(
+      start,
+      { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] },
+      { pa, floor },
+    ),
+    subs,
+    floor.cluster,
   );
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }

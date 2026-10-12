@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { SpeakerSpec } from "../../types";
+import type { SpeakerSpec, SubPlacement } from "../../types";
+import { SUB_PLACEMENT, SUB_PLACEMENT_OPTIONS } from "../../constants/subPlacement";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
@@ -98,6 +99,8 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     group: startGroup(id),
   }));
   const [start, setStart] = useState<StackStart>(STACK_START.paStack);
+  /** where a PA start puts its subs */
+  const [subs, setSubs] = useState<SubPlacement>(SUB_PLACEMENT.stacks);
   const [stackPick, setStackPick] = useState("");
   const [speakerPick, setSpeakerPick] = useState("");
   const pickedStack = stacks.find((o) => o.id === stackPick) ?? stacks[0];
@@ -318,13 +321,22 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
               />
               <div className="flex flex-wrap gap-2 mb-2">
                 <Button
-                  onClick={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
+                  onClick={() =>
+                    space.setDesign(spaceFromStart(start, paPlannerDesign(planner), subs))
+                  }
                 >
                   {SPEAKER_START_TEXT.startOver}
                 </Button>
                 <Button onClick={() => space.setDesign(emptySpace())}>{SPACE_TEXT.clear}</Button>
               </div>
               <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.startHint}</p>
+              <ToggleGroup
+                label={<Tooltip tip={SPACE_TEXT.subsHint}>{SPACE_TEXT.subs}</Tooltip>}
+                className="mb-3"
+                value={subs}
+                onChange={setSubs}
+                options={SUB_PLACEMENT_OPTIONS}
+              />
             </>,
           )}
           {section(

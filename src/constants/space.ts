@@ -77,6 +77,9 @@ export const SPACE_TEXT = {
   startHint:
     "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on the Coverage page's floor, and the Hi-fi pair in its room. A PA start sets each band's level to the PA page's music balance. Open a saved space from the library above.",
   clear: "Start empty",
+  subs: "Subs",
+  subsHint:
+    "Where a PA start puts its subs. In a center pair or one center sub, the subs stand at the middle of the front and the tops stay at their height, on stands. A tower or satellite start keeps its own layout.",
   savedStack: "Saved stack",
   savedSpeaker: "Saved speaker",
   addStack: "Place stack",
