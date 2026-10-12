@@ -62,7 +62,7 @@ describe("Stack cutlist: the PA presets cut as the PA page cuts them", () => {
           hardware: cfg.hardware,
           horn,
         }).parts;
-        expect([...pieces(ours)].sort()).toEqual([...pieces(page)].sort());
+        expect(Object.fromEntries(pieces(ours))).toEqual(Object.fromEntries(pieces(page)));
         // the same pieces on the same sheets
         const sheets = (parts: CutPart[]) =>
           layoutCutlist(parts, { ...SETTINGS, joint }, { countsOnly: true }).groups.reduce(

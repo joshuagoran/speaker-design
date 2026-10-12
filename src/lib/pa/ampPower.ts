@@ -3,9 +3,9 @@ import type {
   BalancedLevels,
   FrequencyPoint,
   HornResponse,
+  LimitId,
   PaMaxPoint,
   SubLimits,
-  SubLimitWho,
 } from "../../types";
 
 /** An amp channel of the stack: one per driver, named as the coverage map's pads name the bands. */
@@ -15,12 +15,15 @@ export type AmpChannel = keyof BalancedLevels["pads"];
 export interface ChannelMax {
   wAtMax: number;
   ampW: number;
-  who: SubLimitWho;
+  who: LimitId;
 }
 
-/** A channel at the target level: its max, the headroom to it, and the average and peak power there. */
-export interface ChannelPower extends ChannelMax {
-  channel: AmpChannel;
+/**
+ * A channel at the target level: its max, the headroom to it, and the average and peak power there. `C` names the
+ * channel: the PA stack's band, or a Space page channel's key.
+ */
+export interface ChannelPower<C extends string = AmpChannel> extends ChannelMax {
+  channel: C;
   /** dB from the target up to the max */
   headroomDb: number;
   avgW: number;
@@ -74,7 +77,7 @@ export function midMax(
   ampV: number,
   band: readonly [lo: number, hi: number],
 ): ChannelMax | null {
-  let low: { db: number; who: SubLimitWho } | null = null;
+  let low: { db: number; who: LimitId } | null = null;
   for (const [i, p] of max.entries()) {
     const at = curve[i];
     if (p.f < band[0] || p.f > band[1] || !at) continue;
@@ -103,7 +106,11 @@ export const hornMax = (h: Pick<HornResponse, "P" | "pAmp" | "who">): ChannelMax
 const PEAK_MARGIN_DB = 0.05;
 
 /** A channel at the target, `headroom` dB under its max. */
-export function channelPower(channel: AmpChannel, max: ChannelMax, headroom: number): ChannelPower {
+export function channelPower<C extends string>(
+  channel: C,
+  max: ChannelMax,
+  headroom: number,
+): ChannelPower<C> {
   const avgW = powerAtTarget(max.wAtMax, headroom),
     peakW = peakPower(avgW),
     maxPeakW = peakPower(max.wAtMax, SINE_CREST_DB),

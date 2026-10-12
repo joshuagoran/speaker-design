@@ -1,4 +1,4 @@
-import type { SubLimitWho } from "../types";
+import type { LimitId } from "../types";
 
 /** Club music (house, techno): how far its peaks rise above its average, dB. The amp power table's peak watts use it. */
 export const MUSIC_CREST_DB = 10;
@@ -10,11 +10,12 @@ export const MUSIC_CREST_DB = 10;
 export const SINE_CREST_DB = 10 * Math.log10(2);
 
 /** The amp power table's flag when a driver's peaks pass its limit, by the limit (`ChannelPower.who`). */
-export const PAST_LIMIT_ON_PEAKS: Record<SubLimitWho, string> = {
+export const PAST_LIMIT_ON_PEAKS: Record<LimitId, string> = {
   amp: "Clips on peaks",
   Xmax: "Past Xmax on peaks",
   thermal: "Past rating on peaks",
   port: "Port past limit on peaks",
+  radiator: "Radiators past Xmax on peaks",
 };
 
 /** The Coverage page's amp power table: its heading, column names and notes. */
@@ -28,4 +29,9 @@ export const AMP_POWER_TEXT = {
   headroom: "Peak headroom",
   limit: "Limit",
   crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. Max peak is the power at the first limit.`,
+  /** the Space page's column head over each channel */
+  channel: "Channel",
+  /** the Space page's note: what the table reads */
+  spaceNote:
+    "Each amp channel at the space's level, from its band's music limit. A channel that feeds more than one band shows the band that takes the most power.",
 } as const;
