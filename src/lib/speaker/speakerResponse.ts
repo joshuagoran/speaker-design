@@ -257,6 +257,22 @@ export function passbandDb(curve: readonly FrequencyPoint[]) {
   return pass.reduce((sum, o) => sum + o.spl, 0) / pass.length;
 }
 
+/**
+ * The edges of a curve's passband, Hz: the lowest and the highest frequency where it is within PASSBAND_DB of its
+ * highest point; null for an empty curve.
+ */
+export function passbandEdgesHz(curve: readonly FrequencyPoint[]) {
+  const top = Math.max(...curve.map((o) => o.spl));
+  const pass = curve.filter((o) => o.spl >= top - PASSBAND_DB);
+  return pass.length ? { lowHz: pass[0].f, highHz: pass[pass.length - 1].f } : null;
+}
+
+/** The middle of a curve's passband, Hz: halfway on a log axis between its edges (`passbandEdgesHz`); 0 for none. */
+export function passbandCenterHz(curve: readonly FrequencyPoint[]) {
+  const edges = passbandEdgesHz(curve);
+  return edges ? Math.sqrt(edges.lowHz * edges.highHz) : 0;
+}
+
 /** Whether a band's (or a feed's) filter corners are positive frequencies. */
 const filtersOk = ({ highpass, lowpass }: SpeakerFeed) =>
   (!highpass || positive(highpass.hz)) && (!lowpass || positive(lowpass.hz));
