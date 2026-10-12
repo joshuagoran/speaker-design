@@ -16,6 +16,7 @@ import type { HORN_PROFILE } from "./constants/hornEngine";
 import type {
   AUTO_DELAY,
   CABINET_CONSTRUCTION,
+  ARCH_BLOCK,
   CABINET_TOP,
   CHAMBER_LOAD,
   FIRST_ORDER_FILTER,
@@ -2054,6 +2055,9 @@ export type CabinetConstruction = (typeof CABINET_CONSTRUCTION)[keyof typeof CAB
 
 /** A cabinet's top shape, by id (`CABINET_TOP`). */
 export type CabinetTop = (typeof CABINET_TOP)[keyof typeof CABINET_TOP];
+
+/** Why an arched top is drawn and cut flat, by id (`ARCH_BLOCK`). */
+export type ArchBlock = (typeof ARCH_BLOCK)[keyof typeof ARCH_BLOCK];
 
 /**
  * A cabinet: its chambers, panels and shape, and its bracing as the PA boxes take it: the style (ribs, window braces or

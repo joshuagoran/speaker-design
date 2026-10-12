@@ -30,7 +30,7 @@ import { Card } from "../../components/ui/Card";
 import { CardHeading } from "../../components/ui/CardHeading";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
 import {
-  drawsArchedTop,
+  archBlock,
   driverHorn,
   hornFlare,
   speakerLayout,
@@ -61,7 +61,7 @@ import {
   SPEAKER_SETTINGS_SECTIONS,
   type SpeakerSettingsSection,
 } from "../../constants/settingsSections";
-import { SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
+import { ARCH_BLOCK_TEXT, SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
 import {
   CABINET_CONSTRUCTION,
   CABINET_CONSTRUCTION_NAMES,
@@ -161,6 +161,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
   /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
   const firstHorn = chambers.flatMap((c) => c.drivers.map(driverHorn)).find((h) => h !== null);
   const layout = speakerLayout(spec.cabinet);
+  /** why an arched top stays flat; null when it applies */
+  const arch = archBlock(spec.cabinet, layout);
   /** the horns built into the chambers, as the views draw them */
   const flares = layout.chambers.flatMap((c) => hornFlare(spec.cabinet, c) ?? []);
   const summaries: Record<SpeakerSettingsSection, string> = {
@@ -468,8 +470,12 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, top: v }))}
                 options={entriesOf(CABINET_TOP_NAMES)}
               />
-              {top === CABINET_TOP.arched && !drawsArchedTop(spec.cabinet, layout) && (
-                <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.archNotDrawn}</p>
+              {top === CABINET_TOP.arched && arch !== null && (
+                <div className="mb-3">
+                  <Notice>
+                    {SPEAKER_TEXT.archFlat} {ARCH_BLOCK_TEXT[arch]}
+                  </Notice>
+                </div>
               )}
               <ToggleGroup
                 label={SPEAKER_TEXT.backJoint}

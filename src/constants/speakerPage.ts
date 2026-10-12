@@ -1,5 +1,6 @@
 // The Speaker page's names and choices (src/pages/speaker): the spec's ids as the page shows them.
 import type {
+  ArchBlock,
   ChamberLoad,
   DriverKind,
   FilterType,
@@ -102,6 +103,15 @@ export const DRIVE_NAMES = {
   passive: "Passive",
 } as const satisfies Record<HifiDrive, string>;
 
+/** Why an arched top stays flat, by `ARCH_BLOCK` id: the condition the cabinet misses, in words. */
+export const ARCH_BLOCK_TEXT = {
+  frame: "An arch needs the frame and inset baffle construction.",
+  shell: "An arch needs all chambers in one box: the same depth, with no gaps.",
+  topChambers: "An arch needs one chamber at the top.",
+  width: "An arch needs the top chamber to be the full width of the cabinet.",
+  height: "An arch needs the top chamber to be at least half as tall as the cabinet is wide.",
+} as const satisfies Record<ArchBlock, string>;
+
 /** Why the model leaves a chamber or driver out, in words. */
 export const MODEL_GAP_TEXT = {
   unknownDriver: "a driver isn't in its catalog",
@@ -178,8 +188,8 @@ export const SPEAKER_TEXT = {
   /** the target's tooltip, with the PA boxes' target in words */
   braceTargetTip: (pa: string) =>
     `The rule adds braces until each panel's first resonance is above this. The PA boxes use ${pa}.`,
-  archNotDrawn:
-    "The arch draws over a top chamber that runs the full width and is at least half as tall as the cabinet is wide, in one shell. The top of this cabinet is drawn flat.",
+  /** under the Top choice when an arched top cannot apply: the start of the reason (`ARCH_BLOCK_TEXT`) */
+  archFlat: "The top stays flat.",
   fromLeft: "From left, in",
   fromBottom: "From bottom, in",
   backFromFront: "Back from front, in",
