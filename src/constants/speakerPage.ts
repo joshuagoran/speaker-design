@@ -14,6 +14,7 @@ import type {
   VentPanel,
 } from "../types";
 import { FIRST_ORDER_FILTER } from "./speakerSpec";
+import { UI_TEXT } from "./uiText";
 
 /** Each driver kind as the Speaker page names it: the catalog table it picks from. */
 export const DRIVER_KIND_NAMES = {
@@ -211,6 +212,12 @@ export const SPEAKER_TEXT = {
   insetTip: "How far the baffle is behind the front edge of the frame.",
   braceStyle: "Bracing",
   backJoint: "Back panel",
+  wallPanel: "Wall panels",
+  /** the wall panels' tooltip, with the frame box's baffle thickness in words */
+  wallPanelTip: (baffle: string) =>
+    `The panel size of the sides, top, bottom and back. On a frame box, the baffle stays ${baffle}. On a flush box, the baffle is this size too. Thinner walls get more braces.`,
+  /** the construction summary's wall panels, by their thickness in words */
+  wallPanelSummary: (t: string) => `${t} walls`,
   braceTarget: "Bracing target",
   /** the target's tooltip, with the PA boxes' target in words */
   braceTargetTip: (pa: string) =>
@@ -229,6 +236,8 @@ export const SPEAKER_TEXT = {
   slotNarrow: "Opening, narrow side, in",
   slotLong: "Opening, long side, in",
   portLength: "Length, in",
+  /** the side ducts' dividers' tooltip: the shared tip, and which thickness each size takes */
+  ductDividersTip: `${UI_TEXT.ductDividersTip} Dividers of the wall size have the thickness of the walls. You can measure it on the Cutlist page. Dividers of a different size have the default thickness.`,
   ventFixed: "The shape of this port sets its position (the PA port rule or the slot rule).",
   load: "Load",
   loadTip:

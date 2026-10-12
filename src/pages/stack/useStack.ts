@@ -3,6 +3,17 @@ import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { stackLimits, stackResponse } from "../../lib/speaker/stackResponse";
 import { stackTotals } from "../../lib/speaker/speakerTotals";
 import { BASE_POSE } from "../../lib/speaker/specParts";
+import {
+  AUTO_BALANCE_TILT,
+  autoBalanceStack,
+  sharedCrossovers,
+  withStackLevels,
+} from "../../lib/speaker/autoBalance";
+import {
+  AUTO_BALANCE_MODE,
+  AUTO_BALANCE_STATUS,
+  type AutoBalanceMode,
+} from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { emptyStack, stackFromSaved, stackSnapshot } from "./stackSaves";
 import { STACK_TEXT } from "../../constants/stack";
@@ -63,6 +74,16 @@ export function useStack() {
   const limits = useMemo(() => stackLimits({ members }, response), [members, response]);
   // the members' price, weight and the stack's height
   const totals = useMemo(() => stackTotals({ members }, speakers), [members, speakers]);
+  // the band Levels auto balance sets across the members, flat or with the PA music tilt, from the same response
+  // (lib/speaker/autoBalance)
+  const [balanceMode, setBalanceMode] = useState<AutoBalanceMode>(AUTO_BALANCE_MODE.flat);
+  const balance = useMemo(
+    () =>
+      autoBalanceStack({ stack: { members }, speakers }, response, AUTO_BALANCE_TILT[balanceMode]),
+    [members, speakers, response, balanceMode],
+  );
+  // the members that share a speaker with different crossovers: auto balance takes the first one's
+  const shared = useMemo(() => sharedCrossovers(members), [members]);
   const store = useConfigStore(STACKS_COLLECTION);
   const editStack = (edit: (stack: StackSpec) => StackSpec) =>
     setDesign((d) => ({ ...d, stack: edit(d.stack) }));
@@ -74,6 +95,26 @@ export function useStack() {
     response,
     limits,
     totals,
+    balance,
+    shared,
+    balanceMode,
+    setBalanceMode,
+    /**
+     * sets the band Levels auto balance gives in the stack's speakers, every member's level 0 dB: one edit. Worked out
+     * from the design as it is now, since `balance` reads the deferred values, which can lag a step behind an edit.
+     */
+    applyBalance: () => {
+      const now =
+        design.stack.members === members && design.speakers === speakers
+          ? balance
+          : autoBalanceStack(
+              design,
+              stackResponse(design.stack, design.speakers),
+              AUTO_BALANCE_TILT[balanceMode],
+            );
+      if (now.status === AUTO_BALANCE_STATUS.balanced)
+        setDesign((d) => withStackLevels(d, now.levels));
+    },
     store,
     snapshot: () => stackSnapshot(design),
     /** opens a saved stack: the document's id and name, its members and its speakers */

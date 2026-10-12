@@ -89,7 +89,7 @@ export function useConfigStore(collection: string) {
         if (un) un();
       };
     }
-    (async () => {
+    void (async () => {
       try {
         // boundary: the artifact host's `use("db")` resolves to the database handle (typed `unknown` in env.d.ts)
         const d = (

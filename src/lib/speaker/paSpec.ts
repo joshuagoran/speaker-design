@@ -69,6 +69,7 @@ import {
   stackMember,
   stuffingPctOf,
 } from "./specParts";
+import { ductDividerOf } from "./cabinetPanels";
 
 /** The sub's round tubes as a round port: `nt` tubes of `dia`, `len` long, with the elbows the model takes. */
 const roundTubes = (cfg: PaPlannerDesign, sub: SubDriver): SpeakerPort => ({
@@ -88,6 +89,8 @@ const sideDucts = (cfg: PaPlannerDesign, n: 1 | 2): SpeakerPort => ({
   throat: cfg.cVent.throat,
   len: cfg.cVent.len,
   div: cfg.cVent.div,
+  // the PA page's size; a design that names none: the size nearest the thickness
+  divider: cfg.divider ?? ductDividerOf(cfg.cVent),
 });
 
 /** The sub's vent as a chamber's port, by port style. */

@@ -1352,7 +1352,10 @@ export interface PaDesignConfig {
   wall: number;
   /** the walls' nominal size; absent in designs saved before the sizes (their `wall` names it) */
   panel?: PanelNominal;
-  /** the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: ½″ */
+  /**
+   * the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: the size
+   * nearest `cVent.div`, ½″ where it has none
+   */
   divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
@@ -1930,8 +1933,13 @@ export type SpeakerDriver = {
   [K in DriverKind]: SpeakerDriverBase & { kind: K; driverId: SpeakerDriverParts[K]["id"] };
 }[DriverKind];
 
-/** Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each. */
-export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
+/**
+ * Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each, and
+ * their dividers' nominal size (`divider`) and exact thickness (`div`). A spec saved before the size has no `divider`:
+ * it is the size nearest `div` (lib/speaker/cabinetPanels `ductDividerOf`).
+ */
+export interface SideDuctPort
+  extends Pick<VentSpec, "throat" | "len" | "div">, Pick<PaDesignConfig, "divider"> {
   shape: (typeof PORT_SHAPE)["duct"];
   n: 1 | 2;
 }

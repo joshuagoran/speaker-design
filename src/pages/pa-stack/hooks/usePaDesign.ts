@@ -47,6 +47,7 @@ import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 import { useEffect, useMemo, useRef } from "react";
+import { hornExitsDiffer } from "../../../lib/speaker/driverParts";
 
 /** What `usePaDesign` returns: every design state and setter, plus the models and sizes derived from them. */
 export interface PaDesign
@@ -204,7 +205,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [midSize]);
-  const hornExitMismatch = hornOption.exit !== compressionDriver.exit;
+  const hornExitMismatch = hornExitsDiffer(hornOption, compressionDriver);
 
   /** The walls' exact thickness and plywood thickness, in. */
   const wallThicknessIn = panelIn(wallPanel, PLYWOOD_MATERIAL, panelExactIn);
