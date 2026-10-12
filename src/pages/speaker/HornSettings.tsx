@@ -1,7 +1,7 @@
 import { CardHeading } from "../../components/ui/CardHeading";
 import { useRef, useState } from "react";
 import type { HornSegment, SpeakerHorn } from "../../types";
-import { AnimatedDetails } from "../../components/ui/AnimatedDetails";
+import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
@@ -149,14 +149,10 @@ export function HornSettings({ horn, onEdit }: Props) {
       <Button size="xs" className="mb-3" onClick={() => editSegments(withSectionAdded)}>
         {SPEAKER_TEXT.addSection}
       </Button>
-      <AnimatedDetails
-        summary={`${SPEAKER_TEXT.hornAdvanced} · ${SPEAKER_TEXT.hornSteps(steps)}`}
-        className="mb-3 text-sm rounded border border-stone-300 px-3 py-2"
-        summaryClassName="cursor-pointer py-1"
-      >
+      <SettingsFold title={SPEAKER_TEXT.advanced} summary={SPEAKER_TEXT.hornSteps(steps)}>
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.hornStepsTip}>{SPEAKER_TEXT.hornStepsSetting}</Tooltip>}
-          className="mt-2 mb-1"
+          className="mb-1"
           value={stepsOn}
           onChange={(on) => {
             setStepsOn(on);
@@ -165,7 +161,7 @@ export function HornSettings({ horn, onEdit }: Props) {
           }}
           options={STEPS_OPTIONS}
         />
-      </AnimatedDetails>
+      </SettingsFold>
       <NumberField
         label={<Tooltip tip={SPEAKER_TEXT.hornThroatTip}>{SPEAKER_TEXT.hornThroat}</Tooltip>}
         value={shownIn(horn.throatChamber)}

@@ -15,6 +15,7 @@ import type {
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { CardHeading } from "../../components/ui/CardHeading";
+import { SettingsFold } from "../../components/ui/SettingsFold";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
@@ -142,22 +143,27 @@ export function ChamberSettings({
           />
         ))}
       </div>
-      <div className="text-sm font-label text-stone-500 mb-1">Position</div>
-      <div className={FIELD_ROW}>
-        {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
-        <NumberField
-          label="From left, in"
-          value={shownIn(chamber.at.xIn)}
-          step={0.25}
-          onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
-        />
-        <NumberField
-          label="From bottom, in"
-          value={shownIn(chamber.at.yIn)}
-          step={0.25}
-          onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
-        />
-      </div>
+      {/* most designs never move a chamber: its position waits in a closed fold */}
+      <SettingsFold
+        title={SPEAKER_TEXT.advanced}
+        summary={SPEAKER_TEXT.chamberAt(shownIn(chamber.at.xIn), shownIn(chamber.at.yIn))}
+      >
+        <div className={FIELD_ROW}>
+          {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
+          <NumberField
+            label={SPEAKER_TEXT.fromLeft}
+            value={shownIn(chamber.at.xIn)}
+            step={0.25}
+            onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
+          />
+          <NumberField
+            label={SPEAKER_TEXT.fromBottom}
+            value={shownIn(chamber.at.yIn)}
+            step={0.25}
+            onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
+          />
+        </div>
+      </SettingsFold>
       <ToggleGroup
         label={<Tooltip tip={NET_AIR_TIP}>Net air</Tooltip>}
         className="mb-2"

@@ -6,14 +6,14 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
 }
 
-/** Segment-style button that shows a pressed state. */
+/** Segment-style button that shows a pressed state. Disabled looks as a disabled `Button`: gray fill, readable text. */
 export function ToggleButton({ on, size = "md", className = "", ...p }: Props) {
   return (
     <button
       type="button"
       aria-pressed={!!on}
       {...p}
-      className={`rounded border ${HOVER_TRANSITION} disabled:opacity-40 disabled:cursor-not-allowed ${BUTTON_SIZE_CLASSES[size]} ${on ? PRESSED_CLASSES : "border-stone-300 bg-panel hover:border-stone-500"} ${className}`}
+      className={`rounded border ${HOVER_TRANSITION} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed ${BUTTON_SIZE_CLASSES[size]} ${on ? PRESSED_CLASSES : "border-stone-300 bg-panel hover:border-stone-500"} ${className}`}
     />
   );
 }

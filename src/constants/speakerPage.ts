@@ -213,7 +213,10 @@ export const SPEAKER_TEXT = {
   /** the note under a section that starts with a step, by the section's number */
   hornStep: (n: number) =>
     `Section ${n} starts at a different area than section ${n - 1} ends. This makes a step in the horn.`,
-  hornAdvanced: "Advanced",
+  /** the closed fold for settings most designs leave alone (a horn's steps, a chamber's position) */
+  advanced: "Advanced",
+  /** the chamber Advanced fold's summary: its position, in */
+  chamberAt: (x: number, y: number) => `${x} in from left, ${y} in up`,
   /** the Advanced fold's summary: the steps in the horn now */
   hornSteps: (n: number) => `Steps: ${n === 0 ? "none" : n}`,
   hornStepsSetting: "Steps",
