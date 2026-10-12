@@ -11,14 +11,14 @@ import {
   portRule,
   radiatorsAt,
   roundPortsAt,
-  speakerLayout,
+  speakerBounds,
   type PlacedChamber,
   slotOpeningsAt,
   hornFitsWhereSet,
   hornCutoutBox,
 } from "../../lib/speaker/speakerLayout";
 import { paConeRadius } from "../stack-view/buildCone";
-import { HORN_LIFT_IN } from "../stack-view/stackHeights";
+import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
 import { byId } from "../../lib/tables";
 import { isAmt, isRibbon } from "../../lib/hifi/hifi";
@@ -48,28 +48,11 @@ const mouthShape = (horn: Horn) =>
   towerHornCutout({ w: horn.size.w + 2 * TOWER_HORN_WALL_GAP_IN }, 0, horn);
 
 /**
- * What the front drawing spans, in: across from the cabinet's center line and up from its bottom, the horns standing
- * on its top included, and its margin at the drawing's scale (a drawing placed among others lines up with them).
+ * What the front drawing spans, in: the speaker's extent (lib/speaker/speakerLayout `speakerBounds`, the horns on its
+ * top included), and its margin at the drawing's scale (a drawing placed among others lines up with them).
  */
 export function speakerFrontFrame(cabinet: Pick<SpeakerSpec["cabinet"], "chambers" | "panel">) {
-  const layout = speakerLayout(cabinet);
-  // the horns on the top stand above the cabinet: the drawing's bounds take them in
-  const topHorns = layout.chambers.flatMap((placed) =>
-    placed.chamber.drivers.flatMap((d) => {
-      const horn = driverHorn(d);
-      return horn && onTop(d) && hornFitsWhereSet(placed, d)
-        ? driverSpots(placed, d).map((s) => ({
-            x: s.xIn,
-            y: s.yIn,
-            w: horn.size.w,
-            h: horn.size.h,
-          }))
-        : [];
-    }),
-  );
-  const minX = Math.min(-layout.size.w / 2, ...topHorns.map((h) => h.x - h.w / 2)),
-    maxX = Math.max(layout.size.w / 2, ...topHorns.map((h) => h.x + h.w / 2)),
-    maxY = Math.max(layout.size.h, ...topHorns.map((h) => h.y + HORN_LIFT_IN + h.h));
+  const { layout, minX, maxX, maxY } = speakerBounds(cabinet);
   /** px per inch */
   const k = (VIEW_PX - 2 * PAD_PX) / Math.max(maxX - minX, maxY);
   return { layout, minX, maxX, maxY, k, padIn: PAD_PX / k };

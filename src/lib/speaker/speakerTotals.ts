@@ -3,14 +3,16 @@
 // The price is the purchased parts' total, as the Cutlist tab's table sums it (`speakerPurchasedParts`): the drivers,
 // their horns, the passive radiators, the port tubes and elbows, and the hardware. The plywood is not in it, as the PA
 // page's totals leave it out. The weight is the speaker's build (`cabinetBuild`). A stack's height is its highest
-// member's top over the stack's base, a horn on a lid included, as the front drawing spans it (`speakerFrontFrame`).
+// point over the stack's base: each member's box and the horns on its lid (`speakerBounds`), tilted as the aim model
+// tilts them (lib/speaker/stackLayout `memberPoint`: its kick-back and its tilt in the stack, about its bottom front
+// edge).
 import type { SpeakerCabinet, SpeakerSpec, StackSpec } from "../../types";
 import { cabinetBuild, speakerPurchasedParts } from "./speakerBuild";
-import { stackLayout } from "./stackLayout";
+import { boxCorners, memberPitch, memberPoint, ORIGIN, stackLayout } from "./stackLayout";
+import { speakerBounds } from "./speakerLayout";
 import { purchasedTotal } from "../cutlistCsv";
 import { formatDollars } from "../format";
 import { UI_TEXT } from "../../constants/uiText";
-import { speakerFrontFrame } from "../../components/drawings/SpeakerFront";
 
 /** A speaker's purchased parts total, US dollars (the parts with a price), and whether some part has no price. */
 export const speakerPrice = (cabinet: SpeakerCabinet) =>
@@ -25,8 +27,8 @@ export const priceText = ({ dollars, partial }: PriceTotal) =>
 
 /**
  * A stack's totals: the members' purchased parts (`dollars`, `partial` when some part has no price), their weight, lb,
- * and the height of the highest member's top over the stack's base, in. A member whose speaker is missing adds
- * nothing.
+ * and the height of its highest point over the stack's base, in (a member's box and the horns on its lid, tilted). A
+ * member whose speaker is missing adds nothing.
  */
 export function stackTotals(
   stack: Pick<StackSpec, "members">,
@@ -36,13 +38,21 @@ export function stackTotals(
     partial = false,
     lb = 0,
     heightIn = 0;
-  for (const { speaker, at } of stackLayout(stack, speakers)) {
-    if (!speaker) continue;
+  stackLayout(stack, speakers).forEach((placed, k) => {
+    const { speaker } = placed;
+    if (!speaker) return;
+    const member = stack.members[k];
     const price = speakerPrice(speaker.cabinet);
     dollars += price.dollars;
     partial ||= price.partial;
     lb += cabinetBuild(speaker.cabinet).lb;
-    heightIn = Math.max(heightIn, at.y + speakerFrontFrame(speaker.cabinet).maxY);
-  }
+    const { layout, topHorns } = speakerBounds(speaker.cabinet);
+    const inStack = memberPoint(placed, member.mirror, memberPitch(speaker, member));
+    for (const corner of [
+      ...boxCorners(ORIGIN, layout.size),
+      ...topHorns.flatMap((horn) => boxCorners(horn, horn)),
+    ])
+      heightIn = Math.max(heightIn, inStack(corner).y);
+  });
   return { dollars, partial, lb, heightIn };
 }

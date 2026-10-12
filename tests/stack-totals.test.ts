@@ -1,10 +1,11 @@
 // The Stack page's totals (lib/speaker/speakerTotals) against the PA page's (lib/pa/totals) for the PA presets, and the
-// Speaker page's price against the Cutlist tab's purchased parts.
+// Speaker page's price against the Cutlist tab's purchased parts, and a tilted member's height.
 import { describe, expect, test } from "vite-plus/test";
 import { derivePaDesign, paDesignInputsOf } from "../src/lib/pa/paDesign";
 import { PA_HORN_FIXINGS, PA_PLINTH_LB, paTotals } from "../src/lib/pa/totals";
 import { priceText, speakerPrice, stackTotals } from "../src/lib/speaker/speakerTotals";
 import { cabinetBuild, speakerPurchasedParts } from "../src/lib/speaker/speakerBuild";
+import { speakerBounds } from "../src/lib/speaker/speakerLayout";
 import { braceLb } from "../src/lib/pa/calc";
 import { startLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
@@ -12,7 +13,8 @@ import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { PLINTH_HEIGHT_IN } from "../src/constants/paLayouts";
 import { UI_TEXT } from "../src/constants/uiText";
-import type { PaLayout } from "../src/types";
+import { RAD } from "../src/constants/units";
+import type { PaLayout, SpeakerSpec, StackSpec } from "../src/types";
 
 /** The PA layout of each PA preset. */
 const PRESETS = [
@@ -75,4 +77,54 @@ test("the Speaker page's price is the Cutlist tab's purchased parts total, marke
   }
   expect(priceText({ dollars: 1234.4, partial: true })).toBe(`$1,234${UI_TEXT.partialPriceMark}`);
   expect(priceText({ dollars: 99.6, partial: false })).toBe("$100");
+});
+
+describe("a tilted member's highest point sets the stack's height", () => {
+  // the PA stack preset: the top (a 15 in box, its horn on its lid) on the sub
+  const start = startLayers(
+    STACK_PRESET.paStack,
+    { id: "test", name: "test" },
+    { pa: defaultPaDesign("stack"), floor: DEFAULT_COVERAGE_LAYOUT },
+  );
+  const [sub, top] = start.speakers;
+  const [horn] = speakerBounds(top.cabinet).topHorns;
+  /** the top's bottom: on the sub's lid, its gap above it */
+  const base = speakerBounds(sub.cabinet).layout.size.h + start.stack.members[1].pose.yIn;
+  /** the stack with the top tilted in the stack and its cabinet kicked back, degrees */
+  const tilted = (pitchDeg: number, tiltDeg = 0) => {
+    const stack: Pick<StackSpec, "members"> = {
+      members: start.stack.members.map((m, k) =>
+        k === 1 ? { ...m, pose: { ...m.pose, pitchDeg } } : m,
+      ),
+    };
+    const speakers: SpeakerSpec[] = [sub, { ...top, cabinet: { ...top.cabinet, tiltDeg } }];
+    return stackTotals(stack, speakers).heightIn;
+  };
+
+  test("the preset stands as built: the horn's top over the top over the sub", () => {
+    expect(horn).toBeDefined();
+    expect(tilted(0)).toBeCloseTo(base + horn.y + horn.h, 9);
+  });
+
+  test("+15 deg: the front turns up about the bottom front edge, the horn's top front corner is highest", () => {
+    // turning about the bottom front edge, a point (up y, back z) rises to y cos + z sin(-pitch)
+    const p = 15 * RAD;
+    expect(tilted(15)).toBeCloseTo(base + (horn.y + horn.h) * Math.cos(p), 9);
+    expect(tilted(15)).toBeLessThan(tilted(0));
+  });
+
+  test("-10 deg: the back rises, the horn's top back corner is highest", () => {
+    const p = 10 * RAD;
+    expect(tilted(-10)).toBeCloseTo(
+      base + (horn.y + horn.h) * Math.cos(p) + (horn.z + horn.d) * Math.sin(p),
+      9,
+    );
+    expect(tilted(-10)).toBeGreaterThan(tilted(0));
+  });
+
+  test("the cabinet's kick-back tilts it as the tilt in the stack does, the two added", () => {
+    expect(tilted(0, 15)).toBeCloseTo(tilted(15), 9);
+    expect(tilted(-10, 25)).toBeCloseTo(tilted(15), 9);
+    expect(tilted(0, -10)).toBeCloseTo(tilted(-10), 9);
+  });
 });
