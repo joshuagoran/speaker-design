@@ -4,6 +4,8 @@ import type {
   FilterType,
   HifiBoxKind,
   HifiDrive,
+  HornDrive,
+  HornPath,
   HornPlacement,
   SpeakerModelGap,
   SpeakerPort,
@@ -73,6 +75,19 @@ export const HORN_PLACEMENT_NO_FIT = {
   baffle: "The horn's mouth is larger than the chamber's clear face.",
   top: "Another chamber stands on this chamber's top.",
 } as const satisfies Record<HornPlacement, string>;
+
+/** How a horn's path runs, as the Horn settings name it (`HORN_PATH`). */
+export const HORN_PATH_NAMES = {
+  straight: "Straight",
+  folded: "Folded",
+} as const satisfies Record<HornPath, string>;
+
+/** How a horn's drivers drive its path, as the Horn settings name it (`HORN_DRIVE`). */
+export const HORN_DRIVE_NAMES = {
+  front: "Front-loaded",
+  tapped: "Tapped",
+  back: "Back-loaded",
+} as const satisfies Record<HornDrive["kind"], string>;
 
 /** Each band drive as the Designer names it. */
 export const DRIVE_NAMES = {
@@ -169,4 +184,23 @@ export const DESIGNER_TEXT = {
   slotLong: "Opening, long side, in",
   portLength: "Length, in",
   ventFixed: "This port's place comes from its shape (the PA port rule or the slot rule).",
+  horn: "Horn",
+  hornSections: "Flare sections",
+  hornSection: (n: number) => `Section ${n}`,
+  hornProfile: "Profile",
+  hornStart: "Start area, in²",
+  hornEnd: "End area, in²",
+  hornLength: "Length, in",
+  hornThroat: "Throat chamber",
+  hornThroatTip: "The air between the cones and the horn's throat. 0 for none.",
+  hornPath: "Path",
+  hornPathTip:
+    "The model reads only the sections. A folded path is drawn straight for now (its fold layout comes later).",
+  hornDrive: "Drive",
+  hornDriveNote:
+    "Only a front-loaded horn runs in the horn engine today. A tapped or back-loaded horn is a gap in the model.",
+  hornStep:
+    "This section starts with a step: its start area is not the previous section's end area.",
+  addSection: "Add section",
+  removeSection: "Remove section",
 } as const;

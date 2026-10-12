@@ -48,9 +48,9 @@ import {
   driverOfKind,
   hornOptions,
 } from "./designerParts";
-import { countText } from "./designerText";
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./designerPlaces";
 import { PlaceFields } from "./PlaceFields";
+import { HornSettings } from "./HornSettings";
 import { FIELD_ROW, shownIn } from "./designerFields";
 import {
   defaultHornPlacement,
@@ -88,7 +88,7 @@ interface Props {
   onRemove?: () => void;
 }
 
-/** One chamber's settings: size, air, place, vent and drivers. */
+/** One chamber's settings: size, air, place, horn, vent and drivers. */
 export function ChamberSettings({
   index,
   chamber,
@@ -185,10 +185,16 @@ export function ChamberSettings({
         className="mb-3"
       />
       {chamber.load.kind === CHAMBER_LOAD.horn && (
-        <p className="text-sm text-stone-500 mb-3">
-          Horn loaded: {countText(chamber.load.horn.segments.length, "segment", "segments")} (its
-          settings come in a later phase).
-        </p>
+        <HornSettings
+          horn={chamber.load.horn}
+          onEdit={(edit) =>
+            onEdit((c) =>
+              c.load.kind === CHAMBER_LOAD.horn
+                ? { ...c, load: { ...c.load, horn: edit(c.load.horn) } }
+                : c,
+            )
+          }
+        />
       )}
       {mouth && (
         <PlaceFields
