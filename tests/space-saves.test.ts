@@ -9,7 +9,9 @@ import { resolvedPlacement } from "../src/lib/speaker/spaceLayout";
 import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
 import { assignChannel, channelGroups, numberChannels } from "../src/lib/speaker/spaceHardware";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
-import { withStack, withoutPlacement } from "../src/pages/space/useSpace";
+import { fittedSpace, withFollows, withStack, withoutPlacement } from "../src/pages/space/useSpace";
+import { hardwareGaps } from "../src/lib/speaker/spaceHardware";
+import { FRONT_END_KIND } from "../src/constants/speakerSpec";
 import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import type { SavedConfig, SpaceDesign } from "../src/types";
 
@@ -110,4 +112,92 @@ test("space hardware: band groups, channel numbers in order, a library stack cop
   assert.equal(copy.stacks.length, 2);
   assert.equal(copy.speakers.length, design.speakers.length);
   assert.equal(design.space.placements[0].item.kind, SPACE_ITEM.stack);
+});
+
+test("space edits: a placement keeps where it stands when it starts or stops following; a new item drops its channels", () => {
+  const design = paSpace();
+  const { placements } = design.space;
+  const right = resolvedPlacement(placements, 1);
+  // on its own: where its lead put it, not its stored spot under the lead
+  const [, alone] = withFollows(placements, 1, null);
+  assert.equal(alone.follows, null);
+  assert.deepEqual(
+    [alone.x, alone.y, alone.liftIn, alone.aim, alone.mirror, alone.item],
+    [right.x, right.y, right.liftIn, right.aim, right.mirror, right.item],
+  );
+  assert.deepEqual(alone.channels, placements[1].channels);
+  // a speaker alone, set to follow the stack: it takes the stack, and its channels (the speaker's bands) go
+  const speakerAlone = {
+    ...alone,
+    item: { kind: SPACE_ITEM.speaker, id: design.speakers[1].id },
+    x: 5,
+  };
+  const list = [placements[0], speakerAlone];
+  const [, following] = withFollows(list, 1, 0);
+  assert.equal(following.follows, 0);
+  assert.deepEqual(following.item, placements[0].item);
+  assert.deepEqual(following.channels, []);
+  assert.equal(following.x, -placements[0].x);
+  // the hardware reads the stack it follows: its auto sub delay needs a DSP's
+  const analog = {
+    ...design,
+    space: {
+      ...design.space,
+      frontEnd: { kind: FRONT_END_KIND.analog, dspId: null },
+      placements: list,
+    },
+  };
+  const speakerLead = {
+    ...analog,
+    space: {
+      ...analog.space,
+      placements: [
+        { ...placements[0], item: speakerAlone.item, delayMs: 0 },
+        { ...speakerAlone, follows: 0 },
+      ],
+    },
+  };
+  assert.equal(
+    hardwareGaps(speakerLead).analogDelay,
+    false,
+    "the lead is a speaker alone: no delay",
+  );
+  const lead = {
+    ...analog,
+    space: {
+      ...analog.space,
+      placements: [
+        { ...placements[0], delayMs: 0 },
+        { ...speakerAlone, follows: 0 },
+      ],
+    },
+  };
+  assert.equal(
+    hardwareGaps(lead).analogDelay,
+    true,
+    "the follower plays the lead's stack, with its auto delay",
+  );
+});
+
+test("space edits: a smaller room keeps the placements, the listener and the listening area inside", () => {
+  const design = paSpace();
+  const { venue } = design.space;
+  const shrunk = fittedSpace({
+    ...design.space,
+    venue: {
+      ...venue,
+      room: { ...venue.room, widthFt: 16, lengthFt: 20 },
+      listener: { x: 0, y: 30 },
+    },
+  });
+  // the stacks at ±9 ft stand against the side walls of a 16 ft room
+  assert.deepEqual(
+    shrunk.placements.map((p) => p.x),
+    [-8, 8],
+  );
+  assert.deepEqual(shrunk.venue.listener, { x: 0, y: 20 });
+  const { area } = shrunk.venue;
+  assert.ok(area.widthFt <= 16 && area.lengthFt <= 20);
+  assert.ok(Math.abs(area.x) + area.widthFt / 2 <= 8 + 1e-9);
+  assert.ok(area.y - area.lengthFt / 2 >= 0 && area.y + area.lengthFt / 2 <= 20 + 1e-9);
 });

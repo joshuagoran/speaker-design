@@ -11,7 +11,7 @@ import type {
 import { ampById } from "../data";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { AUTO_DELAY, FRONT_END_KIND } from "../../constants/speakerSpec";
-import { placementStack } from "./spaceLayout";
+import { placementStack, resolvedPlacement } from "./spaceLayout";
 
 /**
  * The channels a speaker's bands need: each active band one of its own, and its passive bands one between them (their
@@ -63,9 +63,9 @@ export function hardwareGaps(design: SpaceDesign) {
     const has = amp.model ? ampById(amp.model).model.channels : null;
     return has !== null && used > has ? [{ amp: i, used, has }] : [];
   });
-  const delays = placements.some((p) => {
+  const delays = placements.some((p, k) => {
     if (p.delayMs) return true;
-    const stack = placementStack(design, p.item);
+    const stack = placementStack(design, resolvedPlacement(placements, k).item);
     return !!stack && stack.stack.members.some((m) => m.delayMs === AUTO_DELAY || m.delayMs > 0);
   });
   return { over, analogDelay: frontEnd?.kind === FRONT_END_KIND.analog && delays };

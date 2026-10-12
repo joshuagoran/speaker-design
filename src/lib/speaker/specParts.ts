@@ -7,6 +7,7 @@ import type {
   FloorPoint,
   SpaceAmp,
   SpaceChannel,
+  SpaceAim,
   SpacePlacement,
   SpaceVenue,
   SpeakerCabinet,
@@ -106,7 +107,7 @@ export const spacePlacement = (
     yawDeg = 0,
     mirror = false,
     follows = null,
-  }: { yawDeg?: number } & Partial<Pick<SpacePlacement, "mirror" | "follows">> = {},
+  }: Partial<Pick<SpaceAim, "yawDeg">> & Partial<Pick<SpacePlacement, "mirror" | "follows">> = {},
 ): SpacePlacement => ({
   x: spot.x,
   y: spot.y,

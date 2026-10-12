@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { SpeakerSpec } from "../../types";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
+import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
@@ -32,8 +33,7 @@ import {
   SPACE_SETTINGS_SECTIONS,
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
-import { SPACE_TEXT } from "../../constants/space";
-import { FRONT_END_KIND } from "../../constants/speakerSpec";
+import { FRONT_END_NAMES, NO_FRONT_END, SPACE_TEXT } from "../../constants/space";
 import { isSavedSpeaker, type Designer } from "../designer/useDesigner";
 import { paPlannerDesign } from "../designer/DesignerPage";
 import { stackFromSaved } from "../stack/stackSaves";
@@ -51,23 +51,6 @@ interface Props {
   /** the speaker library: the Designer's store */
   designer: Pick<Designer, "store">;
   planner: PaPlanner;
-}
-
-/** The height the map may take: on phones, half the screen; from md up, most of it. */
-function useMapMaxHeight() {
-  const read = () =>
-    typeof window === "undefined"
-      ? 640
-      : window.innerWidth < 768
-        ? Math.max(260, window.innerHeight * 0.5 - 40)
-        : Math.max(420, Math.min(760, window.innerHeight * 0.8));
-  const [h, setH] = useState(read);
-  useEffect(() => {
-    const on = () => setH(read());
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  return h;
 }
 
 /** A share as a whole percentage. */
@@ -138,8 +121,8 @@ export function SpacePage({ space, stack, designer, planner }: Props) {
       : []),
     ...(stats
       ? ([
-          [SPACE_TEXT.within3, pct(stats.within3)],
-          [SPACE_TEXT.within6, pct(stats.within6)],
+          [SPACE_TEXT.areaAtLeast(formatSigned(-3, 0)), pct(stats.within3)],
+          [SPACE_TEXT.areaAtLeast(formatSigned(COVERAGE_EDGE_DB, 0)), pct(stats.within6)],
           [SPACE_TEXT.spread, stats.spread.toFixed(1), "dB"],
         ] satisfies StatTileItem[])
       : []),
@@ -151,7 +134,7 @@ export function SpacePage({ space, stack, designer, planner }: Props) {
     hardware:
       `${design.space.amps.length} amp${design.space.amps.length === 1 ? "" : "s"} · ` +
       `${placements.reduce((n, p) => n + p.channels.length, 0)} channels · ` +
-      `${design.space.frontEnd ? (design.space.frontEnd.kind === FRONT_END_KIND.digital ? "DSP" : "analog") : "no front end"}`,
+      `${SPACE_TEXT.frontEnd}: ${FRONT_END_NAMES[design.space.frontEnd?.kind ?? NO_FRONT_END]}`,
   };
   const section = (id: SpaceSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -358,7 +341,9 @@ export function SpacePage({ space, stack, designer, planner }: Props) {
                   index={k}
                   placement={p}
                   names={names}
+                  room={venue.room}
                   onEdit={(edit) => space.editPlacement(k, edit)}
+                  onFollows={(follows) => space.setFollows(k, follows)}
                   onRemove={() => space.removePlacement(k)}
                   onMirrorPair={() => space.addMirrorPair(k)}
                 />

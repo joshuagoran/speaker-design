@@ -1,5 +1,5 @@
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CoverageMap, type MapBox } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { Button } from "../../components/ui/Button";
@@ -15,6 +15,7 @@ import { CoverageBandPicker } from "../../components/ui/CoverageBandPicker";
 import { RoomFields } from "../../components/ui/RoomFields";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
+import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
 import type { SubPlacement } from "../../types";
 import { useCoverageLayout } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
@@ -54,23 +55,6 @@ const SUB_PLACEMENTS: [SubPlacement, string][] = [
 
 interface Props {
   planner: CoverageInputs;
-}
-
-/** The height the map may take: on phones, half the screen, so it stays in view above the open settings sheet. */
-function useMapMaxHeight() {
-  const read = () =>
-    typeof window === "undefined"
-      ? 640
-      : window.innerWidth < 768
-        ? Math.max(260, window.innerHeight * 0.5 - 40)
-        : Math.max(420, Math.min(760, window.innerHeight * 0.8));
-  const [h, setH] = useState(read);
-  useEffect(() => {
-    const on = () => setH(read());
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  return h;
 }
 
 /** Audience coverage: both stacks on a floor plan, level against the target across the room, and the listener's response. */
@@ -313,7 +297,7 @@ export function CoveragePage({ planner }: Props) {
               freqHz={layout.freqHz}
               onBand={state.setBand}
               onFreqHz={state.setFreqHz}
-              oneNote={`One frequency adds everything with phase: the interference between the stacks shows plainly. Up to ${SINGLE_FREQ_RANGE[1]} Hz; above that it's finer than the map.`}
+              oneNote={`One frequency adds everything with phase, so the interference between the stacks is easy to see. The limit is ${SINGLE_FREQ_RANGE[1]} Hz. Above it, the pattern is finer than the map.`}
             />
           </div>
 

@@ -1,4 +1,4 @@
-import type { SpacePlacement } from "../../types";
+import type { SpacePlacement, SpaceVenue } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { NumberField } from "../../components/ui/NumberField";
@@ -19,13 +19,20 @@ interface Props {
   placement: SpacePlacement;
   /** each placement's name, in the space's order */
   names: readonly string[];
+  /** the room, whose floor bounds its spot */
+  room: Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
   onEdit: (edit: (p: SpacePlacement) => SpacePlacement) => void;
+  /** sets the placement it follows (an index), or none */
+  onFollows: (follows: SpacePlacement["follows"]) => void;
   onRemove: () => void;
   onMirrorPair: () => void;
 }
 
 /** The picker's id for a placement on its own (a placement's index for one it follows). */
 const ALONE_ID = "alone";
+
+/** A value kept between `lo` and `hi`. */
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** A value rounded to a tenth, as a field shows it. */
 const tenth = (v: number) => Math.round(v * 10) / 10;
@@ -38,7 +45,9 @@ export function PlacementSettings({
   index,
   placement,
   names,
+  room,
   onEdit,
+  onFollows,
   onRemove,
   onMirrorPair,
 }: Props) {
@@ -46,6 +55,8 @@ export function PlacementSettings({
   // it can follow an earlier placement only
   const leads = [alone, ...names.slice(0, index).map((name, i) => ({ id: String(i), name }))];
   const follows = placement.follows !== null;
+  /** how far either side of the center line its spot may go, ft */
+  const half = room.widthFt / 2;
   return (
     <Card className="mb-3">
       <div className="flex items-center justify-between gap-2 mb-3">
@@ -59,9 +70,7 @@ export function PlacementSettings({
           label={<Tooltip tip={SPACE_TEXT.followsTip}>{SPACE_TEXT.follows}</Tooltip>}
           options={leads}
           value={placement.follows === null ? alone : byId(leads, String(placement.follows))}
-          onChange={(o) =>
-            onEdit((p) => ({ ...p, follows: o.id === ALONE_ID ? null : Number(o.id) }))
-          }
+          onChange={(o) => onFollows(o.id === ALONE_ID ? null : Number(o.id))}
         />
       )}
       {!follows && (
@@ -70,15 +79,18 @@ export function PlacementSettings({
             <NumberField
               label={<Tooltip tip={SPACE_TEXT.acrossTip}>{SPACE_TEXT.across}</Tooltip>}
               value={shownIn(placement.x)}
+              min={-half}
+              max={half}
               step={0.5}
-              onChange={(x) => onEdit((p) => ({ ...p, x }))}
+              onChange={(x) => onEdit((p) => ({ ...p, x: clamp(x, -half, half) }))}
             />
             <NumberField
               label={SPACE_TEXT.down}
               value={shownIn(placement.y)}
               min={0}
+              max={room.lengthFt}
               step={0.5}
-              onChange={(y) => onEdit((p) => ({ ...p, y }))}
+              onChange={(y) => onEdit((p) => ({ ...p, y: clamp(y, 0, room.lengthFt) }))}
             />
             <NumberField
               label={<Tooltip tip={SPACE_TEXT.liftTip}>{SPACE_TEXT.lift}</Tooltip>}

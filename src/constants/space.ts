@@ -32,6 +32,16 @@ export const DRIVER_PART = {
   hf: "hf",
 } as const;
 
+/** The front end picker's id for none. */
+export const NO_FRONT_END = "none";
+
+/** The front end choices' names: none, fixed analog cards, or a DSP (`FRONT_END_KIND`). */
+export const FRONT_END_NAMES = {
+  [NO_FRONT_END]: "None",
+  analog: "Analog",
+  digital: "DSP",
+} as const;
+
 /** A seat's listening area, ft: a sofa's width, a little deep. */
 export const SPACE_SEAT_AREA = { widthFt: 6, lengthFt: 4 } as const;
 
@@ -48,6 +58,9 @@ export const SPACE_PITCH_DEG = 30;
 /** The highest lift under a placement, in (a tall stand, a fly bar). */
 export const SPACE_LIFT_MAX_IN = 240;
 
+/** An amp by its number in the space (1 up). */
+const ampName = (n: number) => `Amp ${n}`;
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
@@ -62,7 +75,7 @@ export const SPACE_TEXT = {
   hardware: "Hardware",
   noPlacements: "Place a saved stack or speaker, or start from the current PA design.",
   missing:
-    "A placement names a stack or speaker this space doesn't hold, so the model leaves it out.",
+    "A placement names a stack or speaker that is not in this space. The model leaves it out.",
   fromPa: "From the current PA design",
   fromPaHint:
     "Replaces this space with the PA design on the Coverage page's floor. Open a saved space from the library above.",
@@ -103,10 +116,12 @@ export const SPACE_TEXT = {
   frontEnd: "Front end",
   dsp: "DSP unit",
   noDsp: "Other DSP",
-  channel: (amp: number, ch: number) => `Amp ${amp} ch ${ch}`,
+  /** an amp by its number in the space (1 up) */
+  amp: ampName,
+  channel: (amp: number, ch: number) => `${ampName(amp)} ch ${ch}`,
   unassigned: "No channel",
   channelsOver: (amp: number, used: number, has: number) =>
-    `Amp ${amp} has ${has} channels; this space uses ${used}.`,
+    `${ampName(amp)} has ${has} channels; this space uses ${used}.`,
   noChannel:
     "A band has no amp channel: the model drives it at its own amp power (set in the Designer).",
   analogDelay:
@@ -124,12 +139,12 @@ export const SPACE_TEXT = {
   mapHint:
     "Drag a placement to move it, its dot to turn it, or the listener (tap the floor to put them there).",
   oneNote: (hz: number) =>
-    `One frequency adds everything with phase: the interference between the placements shows plainly. Up to ${hz} Hz; above that it's finer than the map.`,
+    `One frequency adds everything with phase, so the interference between the placements is easy to see. The limit is ${hz} Hz. Above it, the pattern is finer than the map.`,
   areaAverage: "Area average",
   areaMax: "Area at the limit",
   listener: "Listener",
-  within3: "Area ≥ −3 dB",
-  within6: "Area ≥ −6 dB",
+  /** the share of the listening area at or above a level against the target */
+  areaAtLeast: (db: string) => `Area ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
   cannotReach: (target: number, atLimit: number) =>

@@ -11,7 +11,7 @@ import { byId } from "../../lib/tables";
 import { assignChannel, channelGroups, hardwareGaps } from "../../lib/speaker/spaceHardware";
 import { placementStack, resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { FRONT_END_KIND } from "../../constants/speakerSpec";
-import { SPACE_TEXT } from "../../constants/space";
+import { FRONT_END_NAMES, NO_FRONT_END, SPACE_TEXT } from "../../constants/space";
 import type { SpacePlanner } from "./useSpace";
 
 /** The amp picker's choices: every catalog model, its brand, channels and 8 Ω power. */
@@ -38,13 +38,11 @@ const DSP_OPTIONS: readonly SelectOption[] = [
 /** A new amp's power before a model is picked, W per channel. */
 const NEW_AMP_W = 500;
 
-/** The front end picker's choice for none. */
-const NO_FRONT_END = "none";
 /** The front end's choices: none, fixed analog cards, or a DSP. */
 const FRONT_ENDS = [
-  [NO_FRONT_END, "None"],
-  [FRONT_END_KIND.analog, "Analog"],
-  [FRONT_END_KIND.digital, "DSP"],
+  [NO_FRONT_END, FRONT_END_NAMES[NO_FRONT_END]],
+  [FRONT_END_KIND.analog, FRONT_END_NAMES.analog],
+  [FRONT_END_KIND.digital, FRONT_END_NAMES.digital],
 ] as const;
 
 interface Props {
@@ -62,7 +60,7 @@ export function HardwareSettings({ design, names, space }: Props) {
   const { amps, frontEnd, placements } = design.space;
   const gaps = hardwareGaps(design);
   const ampName = (a: SpaceAmp, i: number) =>
-    `Amp ${i + 1}${a.model ? ` · ${byId(AMP_OPTIONS, a.model)?.name ?? a.model}` : ` · ${a.watts} W`}`;
+    `${SPACE_TEXT.amp(i + 1)}${a.model ? ` · ${byId(AMP_OPTIONS, a.model)?.name ?? a.model}` : ` · ${a.watts} W`}`;
   const ampOptions: SelectOption[] = [
     NO_CHANNEL,
     ...amps.map((a, i) => ({ id: a.id, name: ampName(a, i) })),
@@ -95,7 +93,7 @@ export function HardwareSettings({ design, names, space }: Props) {
       {amps.map((a, i) => (
         <Card key={a.id} className="mb-3">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="font-semibold">Amp {i + 1}</span>
+            <span className="font-semibold">{SPACE_TEXT.amp(i + 1)}</span>
             <Button size="xs" onClick={() => space.removeAmp(i)}>
               {SPACE_TEXT.remove}
             </Button>

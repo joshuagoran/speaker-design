@@ -26,6 +26,7 @@ import type {
   CoverageGrid,
   CoverageGridView,
   FloorPoint,
+  ListeningArea,
   PaPlannerDesign,
   SavedConfig,
   SpaceAmp,
@@ -47,11 +48,68 @@ const NEW_SPOT: FloorPoint = { x: 0, y: 3 };
 /** Snaps to a quarter foot. */
 const snap = (v: number) => Math.round(v * 4) / 4;
 
+/** A value kept between `lo` and `hi`. */
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
 /** A point kept on the room's floor, ft. */
-const onFloor = (p: FloorPoint, room: SpaceVenue["room"]): FloorPoint => ({
-  x: snap(Math.max(-room.widthFt / 2, Math.min(room.widthFt / 2, p.x))),
-  y: snap(Math.max(0, Math.min(room.lengthFt, p.y))),
+const inRoom = <P extends FloorPoint>(p: P, room: SpaceVenue["room"]): P => ({
+  ...p,
+  x: clamp(p.x, -room.widthFt / 2, room.widthFt / 2),
+  y: clamp(p.y, 0, room.lengthFt),
 });
+
+/** A point snapped to a quarter foot and kept on the room's floor, ft (a drag). */
+const onFloor = (p: FloorPoint, room: SpaceVenue["room"]): FloorPoint =>
+  inRoom({ x: snap(p.x), y: snap(p.y) }, room);
+
+/** A listening area kept inside the room: no wider or longer than it, its edges on its floor. */
+function areaInRoom(area: ListeningArea, room: SpaceVenue["room"]): ListeningArea {
+  const widthFt = Math.min(area.widthFt, room.widthFt),
+    lengthFt = Math.min(area.lengthFt, room.lengthFt);
+  return {
+    widthFt,
+    lengthFt,
+    x: clamp(area.x, -(room.widthFt - widthFt) / 2, (room.widthFt - widthFt) / 2),
+    y: clamp(area.y, lengthFt / 2, room.lengthFt - lengthFt / 2),
+  };
+}
+
+/**
+ * A space kept inside its room (after the room changes size): each placement's spot on the floor (a follower's stored
+ * spot too, so it lands inside when it goes on its own), the listener, and the listening area.
+ */
+export function fittedSpace(space: SpaceSpec): SpaceSpec {
+  const { room } = space.venue;
+  return {
+    ...space,
+    placements: space.placements.map((p) => inRoom(p, room)),
+    venue: {
+      ...space.venue,
+      listener: inRoom(space.venue.listener, room),
+      area: areaInRoom(space.venue.area, room),
+    },
+  };
+}
+
+/**
+ * The placements with placement `k` set to follow placement `follows` (an earlier one), or to stand on its own (null).
+ * Either way it keeps where it stands as it stands: on its own, where its lead put it; following, its lead's item, spot,
+ * lift and aim mirrored, its channels dropped when its item changes (they fed the old item's bands).
+ */
+export function withFollows(
+  placements: readonly SpacePlacement[],
+  k: number,
+  follows: SpacePlacement["follows"],
+): SpacePlacement[] {
+  const before = resolvedPlacement(placements, k);
+  const set = placements.map((p, i) => (i === k ? { ...p, follows } : p));
+  // on its own it stays as it stood; following, it stands as its lead puts it
+  const after = follows === null ? before : resolvedPlacement(set, k);
+  const sameItem = JSON.stringify(after.item) === JSON.stringify(before.item);
+  return set.map((p, i) =>
+    i === k ? { ...after, follows, channels: sameItem ? after.channels : [] } : p,
+  );
+}
 
 /**
  * The placements left when placement `k` goes: one that followed it keeps where it stood, on its own; the later ones'
@@ -286,10 +344,12 @@ export function useSpace() {
       }),
     /** adds placement `k`'s mirror image across the center line, following it, on channels of its own (none yet) */
     addMirrorPair: (k: number) =>
-      editPlacements((list) => [
-        ...list,
-        { ...list[k], follows: k, mirror: !list[k].mirror, channels: [] },
-      ]),
+      editPlacements((list) =>
+        withFollows([...list, { ...list[k], channels: [] }], list.length, k),
+      ),
+    /** sets placement `k` to follow placement `follows`, or to stand on its own (null), where it stands */
+    setFollows: (k: number, follows: SpacePlacement["follows"]) =>
+      editPlacements((list) => withFollows(list, k, follows)),
     /** removes a placement; a stack or speaker nothing places any more stays (the save keeps only what is placed) */
     removePlacement: (k: number) => editPlacements((list) => withoutPlacement(list, k)),
     /** moves a placement on the floor (a follower moves the one it follows, mirrored) */
@@ -312,7 +372,11 @@ export function useSpace() {
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /** the room's settings (`RoomFields`) */
     room: {
-      setRoomSize: (size) => editVenue((v) => ({ ...v, room: { ...v.room, ...size } })),
+      // a smaller room keeps what it holds inside
+      setRoomSize: (size) =>
+        editSpace((s) =>
+          fittedSpace({ ...s, venue: { ...s.venue, room: { ...s.venue.room, ...size } } }),
+        ),
       setMaterial: (surface, material) =>
         editVenue((v) => ({
           ...v,
