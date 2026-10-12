@@ -21,6 +21,7 @@
 // presets).
 // Pure.
 import type {
+  BandFilter,
   BandId,
   FrequencyPoint,
   MusicBalance,
@@ -28,6 +29,7 @@ import type {
   SpeakerResponse,
   SpeakerSpec,
   StackDesign,
+  StackMember,
   StackResponse,
 } from "../../types";
 import { curveLevelAt } from "../pa/coverage";
@@ -288,6 +290,29 @@ export function autoBalanceStack(
   for (const { key, levelDb } of chain)
     levels[key.speakerId] = { ...levels[key.speakerId], [key.band]: levelDb };
   return { status: AUTO_BALANCE_STATUS.balanced, levels };
+}
+
+const sameFilter = (a: BandFilter | null, b: BandFilter | null) =>
+  a?.hz === b?.hz && a?.type === b?.type;
+
+/**
+ * The speakers that two or more members share with different crossovers: for each, the members that use it, numbered
+ * from 1. Auto balance takes the first member's crossover for a shared speaker (an owner decision), so the Stack page
+ * says so when the crossovers differ.
+ */
+export function sharedCrossovers(
+  members: readonly Pick<StackMember, "speakerId" | "crossover">[],
+): number[][] {
+  const bySpeaker = new Map<SpeakerSpec["id"], number[]>();
+  members.forEach((m, k) => bySpeaker.set(m.speakerId, [...(bySpeaker.get(m.speakerId) ?? []), k]));
+  return [...bySpeaker.values()]
+    .filter((ks) => {
+      const [first, ...rest] = ks.map((k) => members[k].crossover);
+      return rest.some(
+        (c) => !sameFilter(c.highpass, first.highpass) || !sameFilter(c.lowpass, first.lowpass),
+      );
+    })
+    .map((ks) => ks.map((k) => k + 1));
 }
 
 /** The stack with these Levels in its speakers' bands, and every member's level 0 dB (the balance is in the bands). */

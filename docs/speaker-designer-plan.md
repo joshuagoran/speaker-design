@@ -675,7 +675,9 @@ Each PR stands alone. Lowest risk first.
         - UI: one shared button with its toggle (`src/components/ui/AutoBalanceButton`), in the Speaker page's "Bands"
           fold and the Stack page's "Members" fold. It is one edit, as any other, and one Undo step (see "Undo and
           Redo" below).
-        - Open: a speaker in two stack members uses the first member's crossover.
+        - A shared speaker (owner, Oct 2026): when two or more stack members use the same speaker, auto balance uses
+          the crossover of the first member. When the crossovers of these members are different, a notice on the Stack
+          page says so (`sharedCrossovers`; the words in `src/constants/autoBalance`).
   - **Weight limit per box** (owner, Oct 2026). There is no weight check on a page. The fixed 125 lb sub check in
     `src/lib/pa/chips.ts` goes with the PA page. A maximum weight per box is only a limit of the optimizer (see
     "Optimizer rethink" in L3f): the user sets it, and no tower or layout rule sets it.

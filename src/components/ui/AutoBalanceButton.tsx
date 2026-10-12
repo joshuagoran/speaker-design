@@ -26,6 +26,8 @@ interface Props<L> {
   onMode: (mode: AutoBalanceMode) => void;
   /** what the tooltip adds for this page (the Stack page: the member levels) */
   tipExtra?: string;
+  /** what the page adds when the button is on (the Stack page: a speaker that members share with different crossovers) */
+  notes?: readonly string[];
   className?: string;
 }
 
@@ -56,6 +58,7 @@ export function AutoBalanceButton<L>({
   mode,
   onMode,
   tipExtra,
+  notes = [],
   className = "",
 }: Props<L>) {
   const tip = MODE_TIP[mode];
@@ -74,6 +77,8 @@ export function AutoBalanceButton<L>({
           {AUTO_BALANCE_TEXT.what}
         </Tooltip>
       </div>
+      {balance.status === AUTO_BALANCE_STATUS.balanced &&
+        notes.map((note) => <Notice key={note}>{note}</Notice>)}
       {balance.status === AUTO_BALANCE_STATUS.oneBand && (
         <p className="text-xs text-stone-500 mt-1">{AUTO_BALANCE_TEXT.oneBand}</p>
       )}

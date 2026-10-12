@@ -47,6 +47,12 @@ export const AUTO_BALANCE_TEXT = {
   /** a crossover outside the model's frequency range (the frequency charts' axis), Hz */
   outOfRange: (minHz: number, maxHz: number) =>
     `Auto balance did not change the levels. A crossover is out of the range of the model: ${minHz} Hz to ${maxHz} Hz.`,
+  /**
+   * members that use the same speaker with different crossovers, numbered from 1: auto balance takes the first
+   * member's crossover (lib/speaker/autoBalance `sharedCrossovers`)
+   */
+  sharedCrossover: (members: readonly number[]) =>
+    `Members ${members.slice(0, -1).join(", ")} and ${members[members.length - 1]} use the same speaker with different crossovers. Auto balance uses the crossover of member ${members[0]}.`,
   /** a band of a stack member's speaker, as the notice names it */
   memberBand: (speaker: string, band: string) => `${speaker} (${band})`,
 } as const;

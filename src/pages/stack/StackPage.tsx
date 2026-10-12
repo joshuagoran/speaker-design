@@ -325,6 +325,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   mode={stack.balanceMode}
                   onMode={stack.setBalanceMode}
                   tipExtra={AUTO_BALANCE_TEXT.stackTip}
+                  notes={stack.shared.map((ks) => AUTO_BALANCE_TEXT.sharedCrossover(ks))}
                 />
               )}
               {picked ? (

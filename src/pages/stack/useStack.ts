@@ -5,6 +5,7 @@ import { BASE_POSE } from "../../lib/speaker/specParts";
 import {
   AUTO_BALANCE_TILT,
   autoBalanceStack,
+  sharedCrossovers,
   withStackLevels,
 } from "../../lib/speaker/autoBalance";
 import {
@@ -78,6 +79,8 @@ export function useStack() {
       autoBalanceStack({ stack: { members }, speakers }, response, AUTO_BALANCE_TILT[balanceMode]),
     [members, speakers, response, balanceMode],
   );
+  // the members that share a speaker with different crossovers: auto balance takes the first one's
+  const shared = useMemo(() => sharedCrossovers(members), [members]);
   const store = useConfigStore(STACKS_COLLECTION);
   const editStack = (edit: (stack: StackSpec) => StackSpec) =>
     setDesign((d) => ({ ...d, stack: edit(d.stack) }));
@@ -89,6 +92,7 @@ export function useStack() {
     response,
     limits,
     balance,
+    shared,
     balanceMode,
     setBalanceMode,
     /**

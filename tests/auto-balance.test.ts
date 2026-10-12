@@ -11,6 +11,7 @@ import {
   autoBalanceSpeaker,
   autoBalanceStack,
   chainLevels,
+  sharedCrossovers,
   tiltAt,
   withSpeakerLevels,
   withStackLevels,
@@ -26,7 +27,7 @@ import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { defaultPaDesign, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { keysOf } from "../src/lib/records";
 import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts";
-import { AUTO_BALANCE_STATUS } from "../src/constants/autoBalance";
+import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../src/constants/autoBalance";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { DRIVER_KIND, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import type { SpeakerSpec } from "../src/types";
@@ -305,6 +306,30 @@ test("auto balance: a stack balances across its members, every member at 0 dB", 
     autoBalanceStack(lost, stackResponse(lost.stack, lost.speakers)).status,
     AUTO_BALANCE_STATUS.unmodeled,
   );
+});
+
+test("auto balance: a speaker two members share takes the first member's crossover, and the Stack page says so", () => {
+  const layers = layersFromPa(defaultPaDesign("stack"), ID, DEFAULT_COVERAGE_LAYOUT);
+  const [sub, top] = layers.stack.members;
+  // the top speaker on a second member, its crossover 200 Hz higher
+  const xo = top.crossover.highpass;
+  assert.ok(xo);
+  const other = { ...top, crossover: { ...top.crossover, highpass: { ...xo, hz: xo.hz + 200 } } };
+  const twice = { ...layers, stack: { ...layers.stack, members: [sub, top, other] } };
+  assert.deepStrictEqual(sharedCrossovers(twice.stack.members), [[2, 3]]);
+  assert.equal(
+    AUTO_BALANCE_TEXT.sharedCrossover([2, 3]),
+    "Members 2 and 3 use the same speaker with different crossovers. Auto balance uses the crossover of member 2.",
+  );
+  // the balance is the one without the second member: the first member's crossover counts
+  const once = autoBalanceStack(layers, stackResponse(layers.stack, layers.speakers));
+  const shared = autoBalanceStack(twice, stackResponse(twice.stack, twice.speakers));
+  assert.equal(shared.status, AUTO_BALANCE_STATUS.balanced);
+  assert.deepStrictEqual(shared, once);
+  // the same crossover on both: nothing to say
+  const same = [sub, top, { ...top }];
+  assert.deepStrictEqual(sharedCrossovers(same), []);
+  assert.deepStrictEqual(sharedCrossovers(layers.stack.members), []);
 });
 
 test("auto balance: with the PA music tilt, on every PA preset it gives the PA page's balance within 0.01 dB", () => {
