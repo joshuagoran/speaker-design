@@ -1352,7 +1352,10 @@ export interface PaDesignConfig {
   wall: number;
   /** the walls' nominal size; absent in designs saved before the sizes (their `wall` names it) */
   panel?: PanelNominal;
-  /** the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: ½″ */
+  /**
+   * the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: the size
+   * nearest `cVent.div`, ½″ where it has none
+   */
   divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;

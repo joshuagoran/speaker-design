@@ -11,6 +11,7 @@ import type {
   SpeakerChamber,
   SpeakerChamberResponse,
   SpeakerDriver,
+  SpeakerPanel,
   SpeakerPort,
 } from "../../types";
 import { Button } from "../../components/ui/Button";
@@ -274,7 +275,7 @@ export function ChamberSettings({
             }
             options={entriesOf(PORT_SHAPE_NAMES)}
           />
-          <PortFields port={vent.port} onChange={setPort} />
+          <PortFields port={vent.port} walls={cabinet.panel} onChange={setPort} />
           {!vents && <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
             label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
@@ -395,7 +396,16 @@ export function ChamberSettings({
  * A port's size: round tubes, a slot (its opening's narrow side, and its long side where it sets one: else the chamber's
  * clear width) or side ducts.
  */
-function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: SpeakerPort) => void }) {
+function PortFields({
+  port,
+  walls,
+  onChange,
+}: {
+  port: SpeakerPort;
+  /** the walls: side-duct dividers of their size take their thickness */
+  walls: Pick<SpeakerPanel, "nominal" | "thicknessIn">;
+  onChange: (p: SpeakerPort) => void;
+}) {
   if (port.shape === PORT_SHAPE.slot)
     return (
       <div className={FIELD_ROW}>
@@ -461,10 +471,10 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
           />
         </div>
         <ToggleGroup
-          label={<Tooltip tip={UI_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
+          label={<Tooltip tip={SPEAKER_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
           className="mb-3"
           value={ductDividerOf(port)}
-          onChange={(divider) => onChange(withDuctDivider(port, divider))}
+          onChange={(divider) => onChange(withDuctDivider(port, divider, walls))}
           options={PANEL_NOMINAL_OPTIONS}
         />
       </>

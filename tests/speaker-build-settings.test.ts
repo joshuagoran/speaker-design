@@ -8,7 +8,12 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
-import { ductDividerOf, withDuctDivider, withWallPanel } from "../src/lib/speaker/cabinetPanels";
+import {
+  ductDividerOf,
+  withDuctDivider,
+  withMeasuredWalls,
+  withWallPanel,
+} from "../src/lib/speaker/cabinetPanels";
 import { stackFromOldSave } from "../src/pages/stack/oldSaves";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { panelIn } from "../src/lib/panel";
@@ -106,7 +111,7 @@ test("build settings: a PA design's side ducts carry its divider size, as the Sp
   assert.equal(ductsOf(thick).divider, "3/4");
   assert.equal(ductsOf(thick).div, panelIn("3/4", PLYWOOD_MATERIAL, {}));
   // the Speaker page's Dividers set to ¾″ on the ½″ design's sub: the PA page's ¾″ ducts, in the duct and net-air models
-  const set = withDucts(half, withDuctDivider(ductsOf(half), "3/4"));
+  const set = withDucts(half, withDuctDivider(ductsOf(half), "3/4", half.cabinet.panel));
   assert.deepStrictEqual(ductsOf(set), ductsOf(thick));
   const [setRun, thickRun] = [speakerResponse(set), speakerResponse(thick)];
   assert.equal(setRun.chambers[0].netLiters, thickRun.chambers[0].netLiters);
@@ -120,6 +125,33 @@ test("build settings: a PA design's side ducts carry its divider size, as the Sp
   const { divider: _d, ...old } = ductsOf(thick);
   assert.equal(ductDividerOf(old), "3/4");
   assert.equal(ductDividerOf({}), DUCT_DIVIDER_DEFAULT);
+});
+
+test("build settings: dividers of the walls' size share the walls' measured thickness, as on the PA page", () => {
+  const measured = 0.7;
+  const plain = subOf(ductsAt("3/4"));
+  // the Cutlist page measures the ¾″ walls: the ¾″ dividers take it too, as the PA page's one ¾″ measurement
+  const set = withMeasuredWalls(plain.cabinet, measured);
+  assert.equal(set.panel.thicknessIn, measured);
+  assert.equal(ductsOf({ ...plain, cabinet: set }).div, measured);
+  const paDesign = ductsAt("3/4");
+  const pa = subOf({ ...paDesign, wall: measured, cVent: { ...paDesign.cVent, div: measured } });
+  assert.deepStrictEqual(set, pa.cabinet);
+  // dividers of another size keep their default thickness (the Cutlist page measures only the walls)
+  const half = subOf(ductsAt("1/2"));
+  const halfSet = withMeasuredWalls(half.cabinet, measured);
+  assert.deepStrictEqual(ductsOf({ ...half, cabinet: halfSet }), ductsOf(half));
+  // the measurement cleared: the walls and their size's dividers back at the default
+  assert.deepStrictEqual(
+    withMeasuredWalls(set, panelIn("3/4", PLYWOOD_MATERIAL, {})),
+    plain.cabinet,
+  );
+  // a divider size picked to match the walls takes their current thickness; another size its default
+  assert.equal(withDuctDivider(ductsOf(half), "3/4", set.panel).div, measured);
+  assert.equal(
+    withDuctDivider(ductsOf(half), "5/8", set.panel).div,
+    panelIn("5/8", PLYWOOD_MATERIAL, {}),
+  );
 });
 
 test("build settings: an old PA save opens with its wall and divider sizes", () => {
