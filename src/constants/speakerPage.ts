@@ -218,6 +218,24 @@ export const SPEAKER_TEXT = {
     `The panel size of the sides, top, bottom and back. On a frame box, the baffle stays ${baffle}. On a flush box, the baffle is this size too. Thinner walls get more braces.`,
   /** the construction summary's wall panels, by their thickness in words */
   wallPanelSummary: (t: string) => `${t} walls`,
+  hardware: "Hardware",
+  hardwareTip:
+    "The PA box hardware: two handles, an input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell. None: no hardware.",
+  hardwareNone: "None",
+  hardwareOn: "Handles and input dish",
+  handles: "Handles",
+  /** the line under the hardware settings: the input dish, its jacks and the horn's posts, by their catalog names */
+  hardwareNote: (
+    dish: string,
+    jack: string,
+    posts: string,
+    dishPlace: string,
+    postsPlace: string,
+  ) =>
+    `The lowest chamber of each shell: ${dish} input dish with 2 × ${jack} (in, link), ${dishPlace}. Under a horn on its top: ${posts}, ${postsPlace}.`,
+  /** the construction summary's hardware: the handles' name, or none */
+  hardwareSummary: (handles: string) => `hardware with ${handles}`,
+  noHardwareSummary: "no hardware",
   braceTarget: "Bracing target",
   /** the target's tooltip, with the PA boxes' target in words */
   braceTargetTip: (pa: string) =>

@@ -64,6 +64,7 @@ Keep token use low. These rules apply to every session and every subagent.
 - Before a push, run `vp check` and the affected test files only. CI runs the full suite, the build and the phone check. Run them locally only when CI fails or the change touches the build or the layout.
 - Review each code PR one time. Fix the findings without a second review. A docs-only PR gets a light review or none.
 - Put related small changes in one PR, so there are fewer review and CI cycles.
+- Keep at most 1-2 open PRs at a time. Start the next one when one merges.
 - Take screenshots only when the owner asks, or for a taste decision.
 - Never wait in the foreground. Waits for CI or long jobs run in the background. Ask the owner before any job that takes minutes.
 - The owner batches notes in one message. Answer in one message, with questions in one short list.

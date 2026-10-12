@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
 import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { HandleFields } from "../../components/ui/HandleFields";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
@@ -47,6 +48,9 @@ import { PANEL_NOMINAL_OPTIONS, formatThickness } from "../../lib/panel";
 import { withWallPanel } from "../../lib/speaker/cabinetPanels";
 import { BAFFLE_PLY_IN } from "../../lib/pa/calc";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
+import { handlePart } from "../../lib/pa/hardware";
+import { HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
+import { HARDWARE_PRESET_WORDS, NO_HANDLES_LABEL } from "../../constants/hardware";
 import {
   RESULT_MAX_WIDTH,
   READING_WIDTH,
@@ -119,6 +123,12 @@ const SUM_LINE_PX = 4;
 /** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
 
+/** The hardware setting's choices: none, or the PA boxes' handles, input dish and horn posts. */
+const HARDWARE_OPTIONS = [
+  [false, SPEAKER_TEXT.hardwareNone],
+  [true, SPEAKER_TEXT.hardwareOn],
+] as const;
+
 /** The PA design as the planner holds it, every field set. */
 export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
   ...planner.snapshot(),
@@ -161,8 +171,17 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
     );
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
-  const { chambers, construction, top, insetIn, braceStyle, braceTargetHz, backJoint, panel } =
-    spec.cabinet;
+  const {
+    chambers,
+    construction,
+    top,
+    insetIn,
+    braceStyle,
+    braceTargetHz,
+    backJoint,
+    panel,
+    hardware,
+  } = spec.cabinet;
   const framed = construction === CABINET_CONSTRUCTION.frameInset;
   /** no bracing: the panels are left unbraced */
   const unbraced = braceStyle === NO_BRACING;
@@ -185,6 +204,11 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
         ? SPEAKER_TEXT.notBracedSummary
         : `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
       BACK_JOINT_SUMMARY[backJoint],
+      hardware
+        ? SPEAKER_TEXT.hardwareSummary(
+            handlePart(hardware.model)?.name ?? NO_HANDLES_LABEL.toLowerCase(),
+          )
+        : SPEAKER_TEXT.noHardwareSummary,
     ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
     bands: [
@@ -554,6 +578,42 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   }
                   className="mb-3"
                 />
+              )}
+              <ToggleGroup
+                label={<Tooltip tip={SPEAKER_TEXT.hardwareTip}>{SPEAKER_TEXT.hardware}</Tooltip>}
+                className="mb-3"
+                value={hardware !== null}
+                onChange={(on) =>
+                  speakerPage.editCabinet((c) => ({
+                    ...c,
+                    // on: the PA sub box's preset handles
+                    hardware: on ? (c.hardware ?? DEFAULT_PA.hardware.sub) : null,
+                  }))
+                }
+                options={HARDWARE_OPTIONS}
+              />
+              {hardware && (
+                <>
+                  <HandleFields
+                    label={SPEAKER_TEXT.handles}
+                    handles={hardware}
+                    onChange={(change) =>
+                      speakerPage.editCabinet((c) => ({
+                        ...c,
+                        hardware: c.hardware && { ...c.hardware, ...change },
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-stone-500 mb-3">
+                    {SPEAKER_TEXT.hardwareNote(
+                      INPUT_PLATE.name,
+                      INPUT_JACK.name,
+                      HORN_POSTS.name,
+                      HARDWARE_PRESET_WORDS.plate,
+                      HARDWARE_PRESET_WORDS.posts,
+                    )}
+                  </p>
+                </>
               )}
             </>,
           )}
