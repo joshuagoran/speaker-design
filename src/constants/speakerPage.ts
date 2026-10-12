@@ -224,15 +224,9 @@ export const SPEAKER_TEXT = {
   hardwareNone: "None",
   hardwareOn: "Handles and input dish",
   handles: "Handles",
-  /** the line under the hardware settings: the input dish, its jacks and the horn's posts, by their catalog names */
-  hardwareNote: (
-    dish: string,
-    jack: string,
-    posts: string,
-    dishPlace: string,
-    postsPlace: string,
-  ) =>
-    `The lowest chamber of each shell: ${dish} input dish with 2 × ${jack} (in, link), ${dishPlace}. Under a horn on its top: ${posts}, ${postsPlace}.`,
+  /** where the hardware note (constants/hardware `hardwareNote`) puts the input dish, and the horn's posts */
+  hardwareDishBox: "The lowest chamber of each shell",
+  hardwarePostsBox: "Under a horn on its top",
   /** the construction summary's hardware: the handles' name, or none */
   hardwareSummary: (handles: string) => `hardware with ${handles}`,
   noHardwareSummary: "no hardware",

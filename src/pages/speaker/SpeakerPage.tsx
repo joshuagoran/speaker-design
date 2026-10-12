@@ -53,7 +53,7 @@ import { BAFFLE_PLY_IN } from "../../lib/pa/calc";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
 import { handlePart } from "../../lib/pa/hardware";
 import { HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
-import { HARDWARE_PRESET_WORDS, NO_HANDLES_LABEL } from "../../constants/hardware";
+import { HARDWARE_PRESET_WORDS, NO_HANDLES_LABEL, hardwareNote } from "../../constants/hardware";
 import {
   RESULT_MAX_WIDTH,
   READING_WIDTH,
@@ -643,12 +643,18 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                     }
                   />
                   <p className="text-xs text-stone-500 mb-3">
-                    {SPEAKER_TEXT.hardwareNote(
-                      INPUT_PLATE.name,
-                      INPUT_JACK.name,
-                      HORN_POSTS.name,
-                      HARDWARE_PRESET_WORDS.plate,
-                      HARDWARE_PRESET_WORDS.posts,
+                    {hardwareNote(
+                      {
+                        box: SPEAKER_TEXT.hardwareDishBox,
+                        name: INPUT_PLATE.name,
+                        jack: INPUT_JACK.name,
+                        place: HARDWARE_PRESET_WORDS.plate,
+                      },
+                      {
+                        box: SPEAKER_TEXT.hardwarePostsBox,
+                        name: HORN_POSTS.name,
+                        place: HARDWARE_PRESET_WORDS.posts,
+                      },
                     )}
                   </p>
                 </>

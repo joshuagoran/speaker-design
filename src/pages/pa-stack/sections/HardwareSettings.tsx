@@ -3,7 +3,7 @@ import { HandleFields } from "../../../components/ui/HandleFields";
 import { hardwareChip } from "../../../lib/pa/chips";
 import { boxTakesHardware } from "../../../lib/pa/hardware";
 import { HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../../data/catalog/cabinet-hardware";
-import { HARDWARE_KIND_NAMES, HARDWARE_PRESET_WORDS } from "../../../constants/hardware";
+import { HARDWARE_PRESET_WORDS, hardwareNote } from "../../../constants/hardware";
 import { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 import { keysOf } from "../../../lib/records";
 import type { BoxHandles, HardwareBoxId } from "../../../types";
@@ -33,10 +33,21 @@ export function HardwareSettings({ planner }: Props) {
         />
       ))}
       <div className="text-xs text-stone-500 mb-2">
-        Each box: {INPUT_PLATE.name} {HARDWARE_KIND_NAMES.plate} with 2 × {INPUT_JACK.name} (in,
-        link), {HARDWARE_PRESET_WORDS.plate}.{" "}
-        {boxTakesHardware("mid", layout) &&
-          `${PA_SETTINGS_TABS.mid} box: ${HORN_POSTS.name} for the horn, ${HARDWARE_PRESET_WORDS.posts}.`}
+        {hardwareNote(
+          {
+            box: "Each box",
+            name: INPUT_PLATE.name,
+            jack: INPUT_JACK.name,
+            place: HARDWARE_PRESET_WORDS.plate,
+          },
+          boxTakesHardware("mid", layout)
+            ? {
+                box: `${PA_SETTINGS_TABS.mid} box`,
+                name: `${HORN_POSTS.name} for the horn`,
+                place: HARDWARE_PRESET_WORDS.posts,
+              }
+            : null,
+        )}
       </div>
       <WarningChips chips={chips} />
     </div>

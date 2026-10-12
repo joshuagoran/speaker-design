@@ -17,7 +17,7 @@ import { curveLevelAt } from "../pa/coverage";
 import { KEEP_UP_SLACK_DB, type ChipBody } from "../pa/chips";
 import { formatHz } from "../format";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
-import { crossoverHz } from "./stackResponse";
+import { crossingPairs, type CrossingPair } from "./stackResponse";
 
 /** One part's headroom: for music over its passband, and at a frequency, dB, both against the one input. */
 interface Side {
@@ -28,10 +28,7 @@ interface Side {
 }
 
 /** Two parts that cross: the lower and upper part's indexes, where they cross, Hz, and the gap, dB. */
-export interface KeepUp {
-  lower: number;
-  upper: number;
-  hz: number;
+export interface KeepUp extends CrossingPair {
   gapDb: number;
 }
 
@@ -50,31 +47,17 @@ function gapAt(lower: Side, upper: Side, hz: number): number | null {
   return lower.musicRoomDb === null || room === null ? null : room - lower.musicRoomDb;
 }
 
-/** Each pair that crosses: the part whose lowpass meets the other's highpass is the lower one. */
+/** Each pair that crosses (`crossingPairs`) with both parts' sides known, and its gap. */
 function crossings(
-  filters: readonly Parameters<typeof crossoverHz>[0][],
+  filters: readonly Parameters<typeof crossingPairs>[0][number][],
   sides: readonly (Side | null)[],
 ): KeepUp[] {
-  const out: KeepUp[] = [];
-  filters.forEach((a, i) =>
-    filters.forEach((b, j) => {
-      const lp = a.crossover.lowpass,
-        hp = b.crossover.highpass;
-      const sa = sides[i],
-        sb = sides[j];
-      if (i === j || !lp || !hp || !sa || !sb) return;
-      const hz = crossoverHz(
-        { crossover: { lowpass: lp, highpass: null } },
-        {
-          crossover: { lowpass: null, highpass: hp },
-        },
-      );
-      if (hz === null) return;
-      const gapDb = gapAt(sa, sb, hz);
-      if (gapDb !== null) out.push({ lower: i, upper: j, hz, gapDb });
-    }),
-  );
-  return out;
+  return crossingPairs(filters).flatMap((c) => {
+    const sa = sides[c.lower],
+      sb = sides[c.upper];
+    const gapDb = sa && sb ? gapAt(sa, sb, c.hz) : null;
+    return gapDb === null ? [] : [{ ...c, gapDb }];
+  });
 }
 
 /**

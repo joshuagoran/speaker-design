@@ -25,6 +25,18 @@ export const HARDWARE_KIND_NAMES = {
   posts: "horn binding posts",
 } as const;
 
+/**
+ * The line under the hardware settings (the PA's Build section and the Speaker page): the box the input dish goes on
+ * and the dish, its jacks and where; then, when a horn takes them, where its binding posts go, what they are and where.
+ * Parts by their catalog names (data/catalog/cabinet-hardware).
+ */
+export const hardwareNote = (
+  dish: { box: string; name: string; jack: string; place: string },
+  posts: { box: string; name: string; place: string } | null,
+) =>
+  `${dish.box}: ${dish.name} ${HARDWARE_KIND_NAMES.plate} with 2 × ${dish.jack} (in, link), ${dish.place}.` +
+  (posts ? ` ${posts.box}: ${posts.name}, ${posts.place}.` : "");
+
 /** Each panel a part goes on, in a sentence ("left side"). */
 export const HARDWARE_PANEL_WORDS = {
   sideL: "left side",

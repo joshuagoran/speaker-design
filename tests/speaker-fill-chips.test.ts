@@ -34,6 +34,15 @@ test("speaker fill chips: with the Fills page's pad, the HF reaches its rating w
     });
     if (!page || page.hfLimW === null || !driver.hf) continue;
     const spec = withHfLevel(speakerFromFill(state, { id: "fill", name: driver.name }), -page.pad);
+    // with no pad there is nothing to check: no chip
+    const unpadded = withHfLevel(spec, 0);
+    assert.ok(
+      !bandChips(unpadded, speakerLimits(unpadded, speakerResponse(unpadded)))
+        .flatMap((b) => b.chips)
+        .some((c) => c[3] === "speakerHfPad"),
+      driver.name,
+    );
+    if (page.pad <= 0) continue;
     const limits = speakerLimits(spec, speakerResponse(spec));
     const hf = limits.drivers.find((d) => d.band === SPEAKER_BAND.high);
     assert.ok(hf, driver.name);

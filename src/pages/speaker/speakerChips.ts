@@ -78,11 +78,11 @@ export function bandChips(
             "speakerHfPower",
           ];
     })();
-    // a passive band's HF section behind its pad (its Level below 0) on the amp it shares: where it reaches its
-    // rating, as the Fills page's check
+    // a passive band's HF section behind a pad (its Level below 0) on the amp it shares: where it reaches its rating,
+    // as the Fills page's check; no chip without a pad
     const pad = Math.max(0, -(band?.levelDb ?? 0));
     const padChip: SpeakerChip | null =
-      hf && band?.drive === HIFI_DRIVE.passive
+      hf && band?.drive === HIFI_DRIVE.passive && pad > 0
         ? [
             ...hfHeadroomChip(pad, hf.programW, hfLimitWatts(hf.programW, hf.imp, pad), band.ampW),
             "speakerHfPad",

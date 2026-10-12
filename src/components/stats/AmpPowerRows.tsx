@@ -31,7 +31,7 @@ export function AmpPowerRows({ rows, firstColumn }: Props) {
   return (
     <div className="overflow-x-auto">
       <table className="text-sm w-full min-w-[760px] table-fixed border-collapse tabular-nums">
-        {/* wide enough at the least width that no cell wraps */}
+        {/* wide enough at the least width that no figure wraps (a long first-column name may) */}
         <colgroup>
           <col className="w-[19%]" />
           <col className="w-[10%]" />
@@ -55,7 +55,8 @@ export function AmpPowerRows({ rows, firstColumn }: Props) {
         <tbody>
           {rows.map(({ key, name, power: r }) => (
             <tr key={key} className="border-b border-stone-300">
-              <td className={`${td} truncate`}>{name}</td>
+              {/* a long name (a Space placement's band) wraps rather than clipping */}
+              <td className="py-1 pr-3 align-top break-words">{name}</td>
               <td className={`${td} text-right`}>{formatWatts(r.avgW)}</td>
               <td className={`${td} text-right ${tone(r)}`}>{formatWatts(r.peakW)}</td>
               <td className={`${td} text-right`}>{formatWatts(r.maxPeakW)}</td>

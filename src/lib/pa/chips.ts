@@ -30,6 +30,7 @@ import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../tubeFold
 import { PA_SLIDERS } from "../../constants/paSliders";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { PA_SETTINGS_TABS } from "../../constants/paSettingsTabs";
+import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import {
   HARDWARE_ADVICE,
   HARDWARE_FIT_TITLES,
@@ -420,7 +421,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
-            "Mid limits first",
+            KEEP_UP_TEXT.shortTitle(PA_SETTINGS_TABS.mid),
             `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${midBelowSubDb} dB for the mid band. ` +
               (m.who === "amp"
                 ? wNeed <= 2 * ts.aes
@@ -505,7 +506,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
       gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
-            "Horn limits first",
+            KEEP_UP_TEXT.shortTitle(PA_SETTINGS_TABS.horn),
             `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hornBelowMidDb} dB for the HF band. ` +
               (hornModel.who === "amp" && (wNeed * 8) / hornModel.imp <= hornModel.pProg
                 ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel is enough.`
