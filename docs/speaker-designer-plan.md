@@ -424,6 +424,11 @@ Each PR stands alone. Lowest risk first.
     - **Sub highpass and subsonic.** When a sub highpass covers the box's subsonic, the box's subsonic is
       dropped; below 0.75 × Fb both stay. This rule comes with the crossovers between boxes.
     - The PA page becomes a stack preset.
+      - **Band levels in the preset** (owner decision). The PA page goes away, so it is not the source of the levels.
+        Today `paSpec` sets each band's Level to 0 dB (the horn takes the tilt), from a 2.83 V input. This is not the
+        PA page's music balance: on the Space page the horn plays 11.3 dB and the mid 1.8 dB away from it. When the PA
+        design becomes a preset, calculate the music balance once and save it in each band's Level in the preset
+        data. Later, an "Auto balance" button on the Stack page can set the band Levels for music, for any stack.
     - **Done (L4a).**
       - **Types.** `StackSpec` (members, notes) and `StackMember` (speaker id, pose, mirror, crossover, level, delay or
         `AUTO_DELAY`). A pose is across, up and back from the stack's origin, or from the member it stands on (`on`).
