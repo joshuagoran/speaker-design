@@ -17,6 +17,7 @@ import {
   shownInOfCm,
   stepCount,
   stepsIn,
+  stepsLatched,
   withSectionAdded,
   withSectionProfile,
   withSectionRemoved,
@@ -64,9 +65,9 @@ export function HornSettings({ horn, onEdit }: Props) {
    */
   const joinedAtFocus = useRef<boolean | null>(null);
   const steps = stepCount(segments);
-  /** Steps turned on; a horn with a step has them on whatever this is */
-  const [stepsPicked, setStepsPicked] = useState(false);
-  const stepsOn = stepsPicked || steps > 0;
+  /** Steps on: latched while the horn has a step, so a field typed back to smooth stays; only Off turns it off */
+  const [stepsOn, setStepsOn] = useState(() => stepsLatched(false, segments));
+  if (stepsLatched(stepsOn, segments) !== stepsOn) setStepsOn(true);
   const editSegments = (edit: (list: readonly HornSegment[]) => HornSegment[] | null) =>
     onEdit((h) => {
       const next = edit(h.segments);
@@ -151,7 +152,7 @@ export function HornSettings({ horn, onEdit }: Props) {
           className="mt-2 mb-1"
           value={stepsOn}
           onChange={(on) => {
-            setStepsPicked(on);
+            setStepsOn(on);
             // off: every start back to the previous end
             if (!on) editSegments(withStepsSmoothed);
           }}

@@ -47,7 +47,7 @@ import {
 import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { CM_PER_IN } from "../../constants/units";
+import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
@@ -594,7 +594,7 @@ export function hornFlare(
   // a zero, negative or missing size draws nothing (the model names it a gap), never a NaN flare
   if (!load.horn.segments.every(isSizedSegment)) return null;
   const horn: SpeakerHorn = load.horn;
-  const areaIn2 = (cm2: number) => cm2 / (CM_PER_IN * CM_PER_IN);
+  const areaIn2 = (cm2: number) => cm2 / CM2_PER_IN2;
   const { clear } = placed;
   const mouthArea = areaIn2(horn.segments[horn.segments.length - 1].s2);
   // as square as it fits: wider than square where a square would be taller than the clear face

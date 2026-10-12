@@ -16,7 +16,7 @@ import { coneDepthIn } from "../src/lib/speaker/speakerBuild";
 import { DESIGNER_TEMPLATE, type DesignerTemplate } from "../src/constants/designerStarts";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { CM_PER_IN } from "../src/constants/units";
+import { CM_PER_IN, CM2_PER_IN2 } from "../src/constants/units";
 import type { ChamberLoad, SpeakerSpec } from "../src/types";
 
 const responseOf = (spec: SpeakerSpec) => speakerResponse(spec, { feed: spec.input });
@@ -64,7 +64,7 @@ test("designer horn load: Horn starts one conical section from the cones to the 
     assert.equal(s.s1, sd, template);
     // the mouth: the clear face, drawn whole (not clipped, not a placeholder)
     const placed = speakerLayout(horned.cabinet).chambers[i];
-    const clearCm2 = placed.clear.w * placed.clear.h * CM_PER_IN * CM_PER_IN;
+    const clearCm2 = placed.clear.w * placed.clear.h * CM2_PER_IN2;
     assert.ok(Math.abs(s.s2 - clearCm2) < 1e-6, template);
     const flare = hornFlare(horned.cabinet, placed);
     assert.ok(flare, `${template}: the flare draws`);
@@ -115,4 +115,21 @@ test("designer horn load: a chamber without a cone can't take a horn; the same l
   assert.equal(withChamberLoad(hf, CHAMBER_LOAD.horn, room, 10), hf);
   const bin = templateSpeaker(DESIGNER_TEMPLATE.paV2SubBinOne).cabinet.chambers[0];
   assert.equal(withChamberLoad(bin, CHAMBER_LOAD.horn, room, 10), bin, "already a horn");
+});
+
+test("designer horn load: the flare's air follows each section's flare law", () => {
+  const section = { s1: 100, s2: 400, length: 50 };
+  const con = flareLiters({ segments: [{ ...section, profile: HORN_PROFILE.conical }] });
+  const exp = flareLiters({ segments: [{ ...section, profile: HORN_PROFILE.exponential }] });
+  // conical: (50/3)(100 + 400 + 200) cm³; exponential: 300 · 50 / ln 4 cm³
+  assert.ok(Math.abs(con - ((50 / 3) * 700) / 1000) < 1e-3, `${con}`);
+  assert.ok(Math.abs(exp - (300 * 50) / Math.log(4) / 1000) < 1e-3, `${exp}`);
+  assert.ok(
+    exp < con,
+    "an exponential flare holds less air than a conical one between the same areas",
+  );
+  // equal areas: a straight duct either way
+  const duct = { s1: 200, s2: 200, length: 30 };
+  for (const profile of [HORN_PROFILE.conical, HORN_PROFILE.exponential])
+    assert.ok(Math.abs(flareLiters({ segments: [{ ...duct, profile }] }) - 6) < 1e-3, profile);
 });

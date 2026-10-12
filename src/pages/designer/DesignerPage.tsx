@@ -498,7 +498,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             <>
               {chambers.map((chamber, i) => (
                 <ChamberSettings
-                  key={i}
+                  key={designer.chamberKey(i)}
                   index={i}
                   chamber={chamber}
                   result={response.chambers[i]}
@@ -506,11 +506,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   cabinet={spec.cabinet}
                   placed={layout.chambers[i]}
                   onEdit={(edit) => designer.editChamber(i, edit)}
-                  onRemove={
-                    one
-                      ? undefined
-                      : () => designer.editChambers((list) => list.filter((_, k) => k !== i))
-                  }
+                  onRemove={one ? undefined : () => designer.removeChamber(i)}
                 />
               ))}
               <Button

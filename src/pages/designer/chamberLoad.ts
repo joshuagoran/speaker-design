@@ -1,6 +1,13 @@
 // A chamber's load as the Designer's Load setting switches it: Direct, or Horn with a starting horn made from the
 // chamber's cones and size. Pure.
-import type { ChamberLoad, Dims2, SpeakerCabinet, SpeakerChamber, SpeakerHorn } from "../../types";
+import type {
+  ChamberLoad,
+  Dims2,
+  HornSegment,
+  SpeakerCabinet,
+  SpeakerChamber,
+  SpeakerHorn,
+} from "../../types";
 import { coneParts } from "../../lib/speaker/driverParts";
 import { clearDepthIn } from "../../lib/speaker/chamberAir";
 import { coneDepthIn, MIN_NET_L } from "../../lib/speaker/speakerBuild";
@@ -8,11 +15,8 @@ import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
-import { CM_PER_IN, LITERS_PER_CUBIC_IN } from "../../constants/units";
+import { CM_PER_IN, CM2_PER_IN2, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { shownTenth } from "./designerFields";
-
-/** Square centimeters in one square inch. */
-const CM2_PER_IN2 = CM_PER_IN * CM_PER_IN;
 
 /** The shortest path a starting horn takes, in: where the cones fill the chamber's depth. */
 const MIN_PATH_IN = 1;
@@ -67,12 +71,25 @@ export function startingHorn(
   };
 }
 
-/** The air inside a horn's flare, L: each conical section a cone's frustum, L/3 (S1 + S2 + √(S1 S2)). */
+/**
+ * The air inside one section, in³, by its flare law: a conical section is a cone's frustum, L/3 (S1 + S2 + √(S1 S2));
+ * an exponential one, S1 e^(mx) along its length, holds (S2 − S1) L / ln(S2 / S1) (S1 L where the two are equal).
+ */
+function sectionIn3(s: HornSegment): number {
+  const [a, b, len] = [s.s1 / CM2_PER_IN2, s.s2 / CM2_PER_IN2, s.length / CM_PER_IN];
+  switch (s.profile) {
+    case HORN_PROFILE.conical:
+      return (len / 3) * (a + b + Math.sqrt(a * b));
+    case HORN_PROFILE.exponential: {
+      const ratio = Math.log(b / a);
+      return Math.abs(ratio) < 1e-9 ? a * len : ((b - a) * len) / ratio;
+    }
+  }
+}
+
+/** The air inside a horn's flare, L: every section's, each by its flare law (`sectionIn3`). */
 export const flareLiters = (horn: Pick<SpeakerHorn, "segments">) =>
-  horn.segments.reduce((sum, s) => {
-    const [a, b, len] = [s.s1 / CM2_PER_IN2, s.s2 / CM2_PER_IN2, s.length / CM_PER_IN];
-    return sum + (len / 3) * (a + b + Math.sqrt(a * b)) * LITERS_PER_CUBIC_IN;
-  }, 0);
+  horn.segments.reduce((sum, s) => sum + sectionIn3(s) * LITERS_PER_CUBIC_IN, 0);
 
 /**
  * The chamber with its load switched to `kind`. Horn: a starting horn (`startingHorn`), and its net air set to the rear

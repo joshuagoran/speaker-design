@@ -68,6 +68,16 @@ const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
  */
 export function useDesigner() {
   const [spec, setSpec] = useState<SpeakerSpec>(emptySpeaker);
+  /**
+   * how many times the chamber list was replaced (a start, a saved speaker opened) or lost a chamber: each chamber's
+   * settings take it with their index as their key, so no settings state carries over to another chamber
+   */
+  const [chamberRound, setChamberRound] = useState(0);
+  /** the whole spec replaced: every chamber's settings start again */
+  const replaceSpec = (next: SpeakerSpec) => {
+    setSpec(next);
+    setChamberRound((n) => n + 1);
+  };
   // the model reads only the cabinet, the bands and the input range (a name edit doesn't run it), a step behind the
   // typing: a horn chamber takes tens of ms, so the settings stay responsive
   const cabinet = useDeferredValue(spec.cabinet);
@@ -92,6 +102,11 @@ export function useDesigner() {
     editCabinet((c) => ({ ...c, chambers: edit(c.chambers) }));
   const editChamber = (i: number, edit: (chamber: SpeakerChamber) => SpeakerChamber) =>
     editChambers((list) => editAt(list, i, edit));
+  /** removes chamber `i`: the chambers after it move up, so every chamber's settings start again */
+  const removeChamber = (i: number) => {
+    editChambers((list) => list.filter((_, k) => k !== i));
+    setChamberRound((n) => n + 1);
+  };
   const editDriver = (chamber: number, i: number, edit: (driver: SpeakerDriver) => SpeakerDriver) =>
     editChamber(chamber, (c) => ({ ...c, drivers: editAt(c.drivers, i, edit) }));
   const editBands = (edit: (bands: readonly SpeakerBand[]) => SpeakerBand[]) =>
@@ -136,11 +151,13 @@ export function useDesigner() {
       store.flash(MISSING_SPEAKER_TEXT);
       return;
     }
-    setSpec({ ...saved, id: c.id, name: c.name });
+    replaceSpec({ ...saved, id: c.id, name: c.name });
   };
   return {
     spec,
-    setSpec,
+    setSpec: replaceSpec,
+    /** chamber `i`'s settings key: its index in this chamber list */
+    chamberKey: (i: number) => `${chamberRound}:${i}`,
     response,
     limits,
     build,
@@ -156,6 +173,7 @@ export function useDesigner() {
     editCabinet,
     editChambers,
     editChamber,
+    removeChamber,
     editDriver,
     editBands,
     editBand,

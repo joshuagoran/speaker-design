@@ -1,11 +1,8 @@
 // A horn's flare sections as the Designer's Horn settings show and edit them: areas in in² and lengths in in, the
 // spec's own cm² and cm (the horn engine's, Hornresp's) converted here only. Pure.
 import type { HornSegment, SpeakerHorn } from "../../types";
-import { CM_PER_IN } from "../../constants/units";
+import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { shownIn, shownTenth } from "./designerFields";
-
-/** Square centimeters in one square inch. */
-const CM2_PER_IN2 = CM_PER_IN * CM_PER_IN;
 
 /** A new section's end area over its start area: it doubles, as a flare step. */
 const NEW_SECTION_AREA_RATIO = 2;
@@ -115,6 +112,13 @@ export const stepsIn = (segments: readonly HornSegment[], i: number) => {
 /** How many sections start with a step (`stepsIn`). */
 export const stepCount = (segments: readonly HornSegment[]) =>
   segments.filter((_, i) => stepsIn(segments, i)).length;
+
+/**
+ * Whether Steps is on, given whether it was on and the sections now: once on it stays on (a step typed back to the
+ * previous end keeps its start area field), and a step turns it on. Only the user turns it off.
+ */
+export const stepsLatched = (on: boolean, segments: readonly HornSegment[]) =>
+  on || stepCount(segments) > 0;
 
 /** The sections smooth: each start area after the first set to the previous section's end area, so no step is left. */
 export const withStepsSmoothed = (segments: readonly HornSegment[]): HornSegment[] =>

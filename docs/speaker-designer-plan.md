@@ -371,7 +371,7 @@ Each PR stands alone. Lowest risk first.
   - **Horn settings (done).** A horn-loaded chamber shows a "Horn" section in its chamber settings, with a one-line
     summary (drive, sections, path length, path):
     - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The areas
-      show to 0.1 in² and the lengths to 0.01 in; two areas less than 0.05 in² apart are the same joint. The spec
+      show to 0.1 in² and the lengths to 0.01 in; two areas at most 0.05 in² apart are the same joint. The spec
       keeps the engine's cm² and cm; `src/pages/designer/hornSections.ts` converts in one place. Add and remove
       sections (at least one stays). The sections chain: a new section starts at the last end area, a new end area
       moves the next start with it, and a removed section's next one starts where the removed one did. A start area
@@ -379,8 +379,8 @@ Each PR stands alone. Lowest risk first.
     - Steps (owner, Oct 2026): a horn is smooth by default. Each section's start area is the previous section's end
       area, and only the first section shows its start area. Templates and new sections have no steps. An "Advanced"
       fold (`AnimatedDetails`; its summary says "Steps: none" or "Steps: 2") holds a "Steps" setting. Only when it is
-      on does each section after the first show its start area, so a step can be made. It is on while the horn has a
-      step. A step shows a note: "Section 2 starts at a different area than section 1 ends. This makes a step in the
+      on does each section after the first show its start area, so a step can be made. A step turns it on, and it stays
+      on until the user turns it off (`stepsLatched`). A step shows a note: "Section 2 starts at a different area than section 1 ends. This makes a step in the
       horn." Turning it off sets each start area back to the previous end area (`withStepsSmoothed`).
     - The throat chamber, L (as the net air). The path: straight or folded.
     - The drive: front-loaded can be picked; tapped and back-loaded show, but cannot be picked, with a note that the

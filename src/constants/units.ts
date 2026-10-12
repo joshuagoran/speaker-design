@@ -33,3 +33,6 @@ export const LITERS_PER_CUBIC_IN = 16.387 / 1000;
 
 /** Centimeters in one inch: the spec's sizes are in inches, the horn engine's (Hornresp's) in cm. */
 export const CM_PER_IN = METERS_PER_INCH * CM_PER_M;
+
+/** Square centimeters in one square inch: the spec's areas in in², the horn engine's (Hornresp's) in cm². */
+export const CM2_PER_IN2 = CM_PER_IN * CM_PER_IN;

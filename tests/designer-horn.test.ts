@@ -12,6 +12,7 @@ import {
   specSize,
   stepCount,
   stepsIn,
+  stepsLatched,
   withSectionAdded,
   withSectionProfile,
   withSectionRemoved,
@@ -305,4 +306,21 @@ test("designer horn: a step shows a note that names the two sections", () => {
     "Section 2 starts at a different area than section 1 ends. This makes a step in the horn.",
   ]);
   assert.equal(stepsIn(withStepsSmoothed(stepped), 1), false, "no note once smooth");
+});
+
+test("designer horn: Steps stays on when a step is typed back to smooth; only Off turns it off", () => {
+  const segments = hornOf(BIN).segments;
+  // smooth and never turned on: off
+  assert.equal(stepsLatched(false, segments), false);
+  // a step: on, whatever it was
+  const stepped = withSectionSize(segments, 1, "s1", 100);
+  let on = stepsLatched(false, stepped);
+  assert.equal(on, true);
+  // the start area typed back down to the previous end: no step, but Steps stays on (the field stays)
+  const typedBack = withSectionSize(stepped, 1, "s1", shownIn2(segments[0].s2));
+  assert.equal(stepCount(typedBack), 0);
+  on = stepsLatched(on, typedBack);
+  assert.equal(on, true);
+  // the user's Off: off, and the sections smooth
+  assert.equal(stepsLatched(false, withStepsSmoothed(typedBack)), false);
 });
