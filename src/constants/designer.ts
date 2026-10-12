@@ -141,6 +141,7 @@ export const DESIGNER_TEXT = {
   inset: "Baffle inset, in",
   insetTip: "How far the baffle sits behind the frame's front edge.",
   braceStyle: "Bracing",
+  backJoint: "Back panel",
   braceTarget: "Bracing target",
   /** the target's tooltip, with the PA boxes' target in words */
   braceTargetTip: (pa: string) =>

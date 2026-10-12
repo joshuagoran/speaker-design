@@ -30,9 +30,16 @@ import {
 import { towerMidDims } from "../src/lib/pa/tower";
 import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
 import { PA_PANEL_TARGET_HZ } from "../src/lib/pa/bracing";
+import {
+  BACK_JOINT_FLUSH_NOTES,
+  BACK_JOINT_NAMES,
+  BACK_JOINT_PARTITION_NOTES,
+  GLUED_BACK,
+} from "../src/constants/bracing";
 import { hornById, CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, EMPTY_SPEAKER } from "../src/lib/defaults";
 import { SHELL_CUT_BOX, chamberCutBox } from "../src/constants/cutParts";
+import { keysOf } from "../src/lib/records";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import {
   CABINET_CONSTRUCTION,
@@ -448,6 +455,23 @@ test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamb
   const braced = cabinetBuild(horn.cabinet).chambers[0].bracing;
   assert.equal(braced.targetHz, horn.cabinet.braceTargetHz);
   assert.ok(braced.panels.length === 6);
+});
+
+test("speaker build: the back joint sets the bracing and the back's and partitions' notes", () => {
+  const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 16, h: 20, d: 14 });
+  const upper = chamberAt({ xIn: 0, yIn: 20 }, { w: 16, h: 12, d: 14 });
+  assert.equal(EMPTY_SPEAKER.cabinet.backJoint, GLUED_BACK, "a flush box starts glued");
+  for (const backJoint of keysOf(BACK_JOINT_NAMES)) {
+    const spec = withCabinet({ chambers: [lower, upper], backJoint });
+    const parts = speakerCutParts(spec.cabinet, "butt").parts;
+    const back = parts.find((p) => p.part === "back");
+    const partition = parts.find((p) => p.part === "partition");
+    assert.ok(back && partition);
+    assert.ok(back.note.includes(BACK_JOINT_FLUSH_NOTES[backJoint]), backJoint);
+    assert.ok(partition.note.includes(BACK_JOINT_PARTITION_NOTES[backJoint]), backJoint);
+    assert.ok(!/cleats/.test(partition.note), "a flush box has no baffle cleats");
+    assert.equal(cabinetBuild(spec.cabinet).chambers[0].bracing.panels.length, 6);
+  }
 });
 
 test("speaker build: the bracing target sets how hard the rule braces; the PA's is the default", () => {

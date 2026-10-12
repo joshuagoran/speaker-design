@@ -72,7 +72,14 @@ import { bandText, bracingText, chamberText, countText, inputText } from "./desi
 import { braceNoteLines } from "../../lib/bracingNotes";
 import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
 import { formatHz } from "../../lib/format";
-import { BRACE_STYLE_NAMES, BRACE_STYLE_SUMMARY, BRACE_STYLE_TIPS } from "../../constants/bracing";
+import {
+  BACK_JOINT_NAMES,
+  BACK_JOINT_SUMMARY,
+  BACK_JOINT_TIPS,
+  BRACE_STYLE_NAMES,
+  BRACE_STYLE_SUMMARY,
+  BRACE_STYLE_TIPS,
+} from "../../constants/bracing";
 import { bandChips, chamberChips } from "./designerChips";
 import { designerStarts, startGroup, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
@@ -136,7 +143,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     );
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
-  const { chambers, construction, top, insetIn, braceStyle, braceTargetHz } = spec.cabinet;
+  const { chambers, construction, top, insetIn, braceStyle, braceTargetHz, backJoint } =
+    spec.cabinet;
   const framed = construction === CABINET_CONSTRUCTION.frameInset;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
@@ -151,6 +159,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       `${CABINET_CONSTRUCTION_NAMES[construction]}${framed ? `, inset ${formatInches(insetIn)}` : ""}`,
       `${CABINET_TOP_NAMES[top].toLowerCase()} top`,
       `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
+      BACK_JOINT_SUMMARY[backJoint],
     ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
     bands: [
@@ -431,6 +440,15 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               {top === CABINET_TOP.arched && !drawsArchedTop(spec.cabinet, layout) && (
                 <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.archNotDrawn}</p>
               )}
+              <ToggleGroup
+                label={DESIGNER_TEXT.backJoint}
+                className="mb-3"
+                value={backJoint}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, backJoint: v }))}
+                options={keysOf(BACK_JOINT_NAMES).map(
+                  (id) => [id, BACK_JOINT_NAMES[id], BACK_JOINT_TIPS[id]] as const,
+                )}
+              />
               <ToggleGroup
                 label={DESIGNER_TEXT.braceStyle}
                 className="mb-3"
