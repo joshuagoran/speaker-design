@@ -4,13 +4,10 @@ import type { Dims3, Horn, PaLayout } from "../../types";
 import { HORN_MESHES } from "../../data/meshes";
 import { MM_IN } from "./geometry";
 import { towerSpec } from "../../lib/pa/tower";
-import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
+import { HORN_LIFT_IN, MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 
 /** Roundover on the cabinet frame's edges; it also pushes the frame's outline out by this much. */
 export const ROUNDOVER_IN = 0.25;
-/** The horn sits this far above the mid box (its axis = this + hornAxisUp). */
-export const HORN_LIFT_IN = 0.3;
-
 /**
  * How far a horn's axis is above its bottom: half its height, or for a horn drawn from its mesh, how far the mesh's
  * origin (the driver's axis) is above its lowest point. The planner's heights and the 3D view both use it.

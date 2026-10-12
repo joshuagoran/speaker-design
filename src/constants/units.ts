@@ -1,3 +1,6 @@
+/** Radians in a degree. */
+export const RAD = Math.PI / 180;
+
 /** Meters in one foot. */
 export const METERS_PER_FOOT = 0.3048;
 

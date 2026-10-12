@@ -49,6 +49,7 @@ import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
+import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
@@ -643,5 +644,35 @@ export function hornFlare(
     placeholder,
     mouthClipped: fit < 1 - 1e-9,
     mouthMoved: set?.moved ?? false,
+  };
+}
+
+/**
+ * A speaker's extent, in: its layout, across from the cabinet's center line (`minX`, `maxX`) and up from its bottom
+ * (`maxY`), the horns standing on its top included. Each such horn's box (`topHorns`) is its mouth's width and height
+ * and its body's depth, `HORN_LIFT_IN` above its lid and back from the front by its position's `yIn`, as the 3D view
+ * sets it (x and y its box's bottom center at the mouth, z its mouth's distance back from the front).
+ */
+export function speakerBounds(cabinet: Pick<SpeakerCabinet, "chambers" | "panel">) {
+  const layout = speakerLayout(cabinet);
+  const topHorns = layout.chambers.flatMap((placed) =>
+    placed.chamber.drivers.flatMap((d) => {
+      const horn = driverHorn(d);
+      return horn && onTop(d) && hornFitsWhereSet(placed, d)
+        ? driverSpots(placed, d).map((s) => ({
+            x: s.xIn,
+            y: s.yIn + HORN_LIFT_IN,
+            z: d.position.yIn,
+            ...horn.size,
+          }))
+        : [];
+    }),
+  );
+  return {
+    layout,
+    topHorns,
+    minX: Math.min(-layout.size.w / 2, ...topHorns.map((h) => h.x - h.w / 2)),
+    maxX: Math.max(layout.size.w / 2, ...topHorns.map((h) => h.x + h.w / 2)),
+    maxY: Math.max(layout.size.h, ...topHorns.map((h) => h.y + h.h)),
   };
 }

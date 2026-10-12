@@ -14,6 +14,9 @@ export const TOWER_MID_HEIGHT_IN = 15.5;
 /** Gap between the sub's top and the mid box in the stack layout, in. */
 export const MID_GAP_IN = 0.4;
 
+/** A horn on a box's top sits this far above its lid, in (its axis = this + `hornAxisUp`). */
+export const HORN_LIFT_IN = 0.3;
+
 /** Satellite layout: the stands' height, which is where the mid boxes sit, in. */
 export const SATELLITE_COLUMN_H_IN = 34;
 

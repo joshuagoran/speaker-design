@@ -20,10 +20,19 @@ import type {
   StackMember,
   StackSpec,
 } from "../../types";
-import { stackLayout, driverSpotsIn, type StackPoint } from "./stackLayout";
+import {
+  stackLayout,
+  driverSpotsIn,
+  boxCorners,
+  memberPitch,
+  memberPoint,
+  ORIGIN,
+  tilt,
+  type StackPoint,
+} from "./stackLayout";
 import { stackMember } from "./specParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
-import { INCHES_PER_FOOT } from "../../constants/units";
+import { INCHES_PER_FOOT, RAD } from "../../constants/units";
 import { DRIVER_PART } from "../../constants/space";
 
 /** A point in the room, ft: across, down the room, up. */
@@ -32,9 +41,6 @@ export interface RoomPoint {
   y: number;
   z: number;
 }
-
-/** Radians in a degree. */
-const RAD = Math.PI / 180;
 
 /**
  * The placement as it stands: one that follows an earlier one (a mirror pair) takes that one's item, spot, lift and aim,
@@ -77,15 +83,6 @@ export function placementStack(
     : null;
 }
 
-/** Turns a point (in, across / up / back) about the origin by `pitch` radians, + up: the front rises. */
-function tilt(p: StackPoint, pitch: number): StackPoint {
-  const c = Math.cos(pitch),
-    s = Math.sin(pitch);
-  const forward = -p.z,
-    up = p.y;
-  return { x: p.x, y: forward * s + up * c, z: -(forward * c - up * s) };
-}
-
 /** A placement's frame: a point in its stack (in) to the room (ft), and its yaw and pitch, radians. */
 export function placementFrame(p: SpacePlacement) {
   const yaw = p.aim.yawDeg * RAD,
@@ -125,7 +122,7 @@ export interface PlacedDriver {
   pitch: number;
 }
 
-/** One member's box placed in the room: its eight corners, ft (front bottom left first, as `BOX_CORNERS`). */
+/** One member's box placed in the room: its eight corners, ft (front bottom left first, as `boxCorners`). */
 export interface PlacedBox {
   member: number;
   speaker: SpeakerSpec;
@@ -133,18 +130,6 @@ export interface PlacedBox {
   /** its pitch, radians: the placement's, its tilt in the stack and its kick-back */
   pitch: number;
 }
-
-/** A box's corners, each as a share of its width (from its left), height and depth (from its front). */
-const BOX_CORNERS: readonly [number, number, number][] = [
-  [-0.5, 0, 0],
-  [0.5, 0, 0],
-  [0.5, 1, 0],
-  [-0.5, 1, 0],
-  [-0.5, 0, 1],
-  [0.5, 0, 1],
-  [0.5, 1, 1],
-  [-0.5, 1, 1],
-];
 
 /** One placement laid out: as it stands (`resolvedPlacement`), its stack, its boxes and drivers; null stack: missing. */
 export interface PlacedItem {
@@ -182,21 +167,16 @@ export function spaceLayout(
       const { speaker } = m;
       if (!speaker) return;
       const member: StackMember = stack.stack.members[k2];
-      const memberPitch = (speaker.cabinet.tiltDeg + member.pose.pitchDeg) * RAD;
-      const side = member.mirror ? -1 : 1;
+      const memberTilt = memberPitch(speaker, member);
+      const inStack = memberPoint(m, member.mirror, memberTilt);
       /** a point of the member (in: across its center line, up from its bottom, back from its front) in the room */
-      const inRoom = (q: StackPoint) => {
-        const t = tilt({ ...q, x: side * q.x }, memberPitch);
-        return frame.toRoom({ x: m.at.x + t.x, y: m.at.y + t.y, z: m.at.z + t.z });
-      };
-      const pitch = frame.pitch + memberPitch;
+      const inRoom = (q: StackPoint) => frame.toRoom(inStack(q));
+      const pitch = frame.pitch + memberTilt;
       boxes.push({
         member: k2,
         speaker,
         pitch,
-        corners: BOX_CORNERS.map(([w, h, d]) =>
-          inRoom({ x: w * m.size.w, y: h * m.size.h, z: d * m.size.d }),
-        ),
+        corners: boxCorners(ORIGIN, m.size).map(inRoom),
       });
       for (const spot of driverSpotsIn(speaker))
         for (const part of [DRIVER_PART.cone, DRIVER_PART.hf]) {

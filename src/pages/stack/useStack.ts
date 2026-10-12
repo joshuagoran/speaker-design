@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { stackLimits, stackResponse } from "../../lib/speaker/stackResponse";
+import { stackTotals } from "../../lib/speaker/speakerTotals";
 import { BASE_POSE } from "../../lib/speaker/specParts";
 import {
   AUTO_BALANCE_TILT,
@@ -61,7 +62,7 @@ export function withSpeaker(speakers: readonly SpeakerSpec[], speaker: SpeakerSp
 }
 
 /**
- * The Stack page's state: the stack and the speakers its members name, its response and limits, the edits the settings
+ * The Stack page's state: the stack and the speakers its members name, its response, limits and totals, the edits the settings
  * make and the library (the signed-in user's `stacks`). Held in App, so the stack survives switching pages.
  */
 export function useStack() {
@@ -71,6 +72,8 @@ export function useStack() {
   const speakers = useDeferredValue(design.speakers);
   const response = useMemo(() => stackResponse({ members }, speakers), [members, speakers]);
   const limits = useMemo(() => stackLimits({ members }, response), [members, response]);
+  // the members' price, weight and the stack's height
+  const totals = useMemo(() => stackTotals({ members }, speakers), [members, speakers]);
   // the band Levels auto balance sets across the members, flat or with the PA music tilt, from the same response
   // (lib/speaker/autoBalance)
   const [balanceMode, setBalanceMode] = useState<AutoBalanceMode>(AUTO_BALANCE_MODE.flat);
@@ -91,6 +94,7 @@ export function useStack() {
     setDesign,
     response,
     limits,
+    totals,
     balance,
     shared,
     balanceMode,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { BandId, PaPlannerDesign } from "../../types";
 import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
@@ -16,6 +16,9 @@ import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
+import { STATS } from "../../components/optimizer/StatRow";
+import { priceText, speakerPrice } from "../../lib/speaker/speakerTotals";
+import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
@@ -239,7 +242,9 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
       ? [[SPEAKER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
       : []),
   ];
+  const price = useMemo(() => speakerPrice(spec.cabinet), [spec.cabinet]);
   const buildTiles: StatTileItem[] = [
+    [STATS.partsPrice, priceText(price), ""],
     [SPEAKER_TEXT.weight, build.lb.toFixed(0), "lb"],
     ...(one
       ? []
@@ -294,7 +299,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               <Notice>{SPEAKER_TEXT.ventMoved}</Notice>
             )}
           </section>
-          {/* Response beside Maximum output (and Weight and bracing under Response) once the pane is wide enough */}
+          {/* Response beside Maximum output (and Price, weight and bracing under Response) once the pane is wide enough */}
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} mt-5 ${resultsGridClass(wide)}`}>
             <section className={cell("col-start-1 row-start-1")}>
               <SectionHeading className="mb-3">{SPEAKER_TEXT.response}</SectionHeading>
@@ -347,6 +352,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             >
               <SectionHeading className="mb-3">{SPEAKER_TEXT.build}</SectionHeading>
               <StatTileGrid tiles={buildTiles} className="mb-3" />
+              {price.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
               {unbraced ? (
                 <Notice>{SPEAKER_TEXT.notBraced}</Notice>
               ) : (
@@ -371,6 +377,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                     : [];
                 })}
               <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
+                {SPEAKER_TEXT.priceNote}{" "}
                 {unbraced
                   ? SPEAKER_TEXT.buildNoteUnbraced
                   : SPEAKER_TEXT.buildNote(formatHz(braceTargetHz))}

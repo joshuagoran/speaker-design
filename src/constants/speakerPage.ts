@@ -174,8 +174,11 @@ export const SPEAKER_TEXT = {
   noFilter: "None",
   /** a band the user adds, by its place among the bands */
   newBandName: (n: number) => `Band ${n}`,
-  build: "Weight and bracing",
+  build: "Price, weight and bracing",
   weight: "Weight",
+  /** under the price, weight and bracing, before the bracing words */
+  priceNote:
+    "The price is the total of the purchased parts on the Cutlist tab: the drivers, the horns, the radiators, the port tubes and the hardware. It does not include the plywood.",
   /** a chamber's weight tile, by its place */
   chamberWeight: (n: number) => `Chamber ${n} weight`,
   /** under the weight and bracing, with the bracing rule's panel target in words */

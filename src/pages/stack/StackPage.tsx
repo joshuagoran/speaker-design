@@ -15,6 +15,10 @@ import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
+import { STATS } from "../../components/optimizer/StatRow";
+import { priceText } from "../../lib/speaker/speakerTotals";
+import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
+import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { StackFront } from "../../components/drawings/StackFront";
 import { byId } from "../../lib/tables";
@@ -78,7 +82,7 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  */
 export function StackPage({ stack, speakerPage, planner }: Props) {
   const pal = usePalette();
-  const { design, response, limits, store, snapshot, restore } = stack;
+  const { design, response, limits, totals, store, snapshot, restore } = stack;
   const { members, name, notes } = design.stack;
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   /** the library's speakers, as the picker lists them */
@@ -153,6 +157,11 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
       ? [[STACK_TEXT.stackMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
       : []),
   ];
+  const totalTiles: StatTileItem[] = [
+    [STATS.partsPrice, priceText(totals), ""],
+    [SPEAKER_TEXT.weight, totals.lb.toFixed(0), "lb"],
+    [STATS.stackHeight, totals.heightIn.toFixed(0), "in"],
+  ];
   const gaps = modeled.some(({ m }) => m.response.gaps.length > 0);
   return (
     <SettingsLayout
@@ -178,6 +187,13 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
               </div>
               <p className="text-xs text-stone-500 mt-2">{STACK_TEXT.front}</p>
             </Card>
+            {members.length > 0 && (
+              <>
+                <StatTileGrid tiles={totalTiles} className="mt-5 mb-3" />
+                {totals.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
+                <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.totalsNote}</p>
+              </>
+            )}
             {members.length === 0 && <Notice>{STACK_TEXT.noMembers}</Notice>}
             {response.members.some((m) => m === null) && <Notice>{STACK_TEXT.missing}</Notice>}
           </section>

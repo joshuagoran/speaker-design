@@ -1,8 +1,10 @@
 // Where a stack's members stand, inches: each member's box (its bottom center at its front, and its size) from its
 // pose, and the center of each of its bands in the front view. The stack model (lib/speaker/stackResponse) reads the
 // band centers for the paths to the listening point; the Stack page's front drawing reads the boxes. x is across from
-// the stack's center line (+ to the right seen from the front), y up from its base, z back from its front. Pure.
-import type { BandId, Dims3, SpeakerSpec, StackSpec } from "../../types";
+// the stack's center line (+ to the right seen from the front), y up from its base, z back from its front. A member
+// tilts about its bottom front edge (`memberPoint`), as the aim model in lib/speaker/spaceLayout says. Pure.
+import type { BandId, Dims3, SpeakerSpec, StackMember, StackSpec } from "../../types";
+import { RAD } from "../../constants/units";
 import {
   driverHorn,
   driverSpots,
@@ -29,6 +31,55 @@ export interface PlacedMember {
   /** the center of each band its drivers feed, in the stack (mirrored with the member) */
   bands: { id: BandId; center: StackPoint }[];
 }
+
+/** A box's corners, each as a share of its width (from its left), height and depth (from its front). */
+const BOX_CORNERS: readonly [number, number, number][] = [
+  [-0.5, 0, 0],
+  [0.5, 0, 0],
+  [0.5, 1, 0],
+  [-0.5, 1, 0],
+  [-0.5, 0, 1],
+  [0.5, 0, 1],
+  [0.5, 1, 1],
+  [-0.5, 1, 1],
+];
+
+/** The stack's origin (a member's own: its bottom center at its front). */
+export const ORIGIN: StackPoint = { x: 0, y: 0, z: 0 };
+
+/** A box's eight corners, in, from its bottom center at its front (`at`) and its size: front bottom left first. */
+export const boxCorners = (at: StackPoint, size: Dims3): StackPoint[] =>
+  BOX_CORNERS.map(([w, h, d]) => ({
+    x: at.x + w * size.w,
+    y: at.y + h * size.h,
+    z: at.z + d * size.d,
+  }));
+
+/** Turns a point (in, across / up / back) about the origin by `pitch` radians, + up: the front rises. */
+export function tilt(p: StackPoint, pitch: number): StackPoint {
+  const c = Math.cos(pitch),
+    s = Math.sin(pitch);
+  const forward = -p.z,
+    up = p.y;
+  return { x: p.x, y: forward * s + up * c, z: -(forward * c - up * s) };
+}
+
+/** A member's tilt, radians, + up (the front rises): its cabinet's kick-back and its tilt in the stack. */
+export const memberPitch = (
+  speaker: Pick<SpeakerSpec, "cabinet">,
+  member: { pose: Pick<StackMember["pose"], "pitchDeg"> },
+) => (speaker.cabinet.tiltDeg + member.pose.pitchDeg) * RAD;
+
+/**
+ * A member's points in its stack, in: a point of the member (across its center line, up from its bottom, back from its
+ * front) mirrored with it, tilted by `pitch` radians (`memberPitch`) about its bottom front edge and set at its place.
+ */
+export const memberPoint =
+  (m: Pick<PlacedMember, "at">, mirror: StackMember["mirror"], pitch: number) =>
+  (q: StackPoint): StackPoint => {
+    const t = tilt({ ...q, x: (mirror ? -1 : 1) * q.x }, pitch);
+    return { x: m.at.x + t.x, y: m.at.y + t.y, z: m.at.z + t.z };
+  };
 
 /**
  * Each driver entry's spots in its speaker's front view, in (x from the cabinet's center line, y up from its bottom):
