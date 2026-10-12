@@ -268,7 +268,7 @@ export const DEFAULT_MONITOR = {
   tweeter: byIdOrThrow(HIFI_TWEETERS, "de250", CATALOG_TABLE_NAMES.hifiTweeters),
   waveguide: byIdOrThrow(HIFI_WAVEGUIDES, "me20", CATALOG_TABLE_NAMES.horns),
   crossoverHz: 2500,
-  hornBox: { dims: { w: 11, h: 18, d: 12 }, port: { shape: "round", n: 1, dia: 3, len: 6 } },
+  hornBox: { dims: { w: 11, h: 20, d: 11 }, port: { shape: "round", n: 1, dia: 3, len: 6 } },
 } satisfies {
   highpass: { hz: BandFilter["hz"]; order: CrossoverOrder };
   coax: FillDriver;

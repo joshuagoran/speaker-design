@@ -4,6 +4,7 @@ import type {
   Dims3,
   DriverKind,
   SpeakerBand,
+  SpeakerCabinet,
   SpeakerChamber,
   SpeakerChamberResponse,
   SpeakerDriver,
@@ -19,10 +20,14 @@ import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
 import {
+  DESIGNER_TEXT,
   DRIVER_KIND_NAMES,
   MODEL_GAP_TEXT,
   PORT_SHAPE_NAMES,
+  SET_BY,
+  SET_BY_NAMES,
   VENT_KIND_NAMES,
+  VENT_PANEL_NAMES,
 } from "../../constants/designer";
 import {
   CHAMBER_LOAD,
@@ -40,6 +45,9 @@ import {
   hornOptions,
 } from "./designerParts";
 import { countText } from "./designerText";
+import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./designerPlaces";
+import { PlaceFields } from "./PlaceFields";
+import { onTop, type PlacedChamber } from "../../lib/speaker/speakerLayout";
 
 /** The driver kinds as the kind picker lists them. */
 const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map(([id, name]) => ({
@@ -51,10 +59,7 @@ const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map((
 const ROW = "flex flex-wrap gap-x-3 gap-y-3 mb-3";
 
 /** Where a chamber's net air comes from: worked out from its size (Auto), or typed in (Custom). */
-const NET_AIR = {
-  auto: "auto",
-  custom: "custom",
-} as const;
+const NET_AIR = SET_BY;
 
 /** What the net air's Auto value takes off the inside volume. */
 const NET_AIR_TIP = "Inside volume less walls, bracing, drivers and vent.";
@@ -65,14 +70,28 @@ interface Props {
   /** the model's reading of it */
   result: SpeakerChamberResponse | undefined;
   bands: readonly SpeakerBand[];
+  /** the cabinet it is in, and where its layout places it: its vent's and horn mouth's places read them */
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">;
+  placed: PlacedChamber | undefined;
   onEdit: (edit: (chamber: SpeakerChamber) => SpeakerChamber) => void;
   /** absent for the last chamber left */
   onRemove?: () => void;
 }
 
 /** One chamber's settings: size, air, place, vent and drivers. */
-export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemove }: Props) {
+export function ChamberSettings({
+  index,
+  chamber,
+  result,
+  bands,
+  cabinet,
+  placed,
+  onEdit,
+  onRemove,
+}: Props) {
   const { vent } = chamber;
+  const vents = placed ? ventPlace(cabinet, placed) : null;
+  const mouth = placed ? mouthPlace(cabinet, placed) : null;
   const bandOptions = bands.map((b): readonly [BandId, string] => [b.id, b.name]);
   const setDim = (k: keyof Dims3, v: number) =>
     onEdit((c) => ({ ...c, dims: { ...c.dims, [k]: v } }));
@@ -130,10 +149,7 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             netLiters: v === NET_AIR.auto ? null : Math.round((result?.netLiters ?? 20) * 10) / 10,
           }))
         }
-        options={[
-          [NET_AIR.auto, "Auto"],
-          [NET_AIR.custom, "Custom"],
-        ]}
+        options={entriesOf(SET_BY_NAMES)}
       />
       <NumberField
         label={<Tooltip tip={NET_AIR_TIP}>Liters</Tooltip>}
@@ -164,6 +180,15 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
           settings come in a later phase).
         </p>
       )}
+      {mouth && (
+        <PlaceFields
+          label={DESIGNER_TEXT.mouthPlace}
+          value={mouth.position}
+          auto={mouth.auto}
+          widthIn={chamber.dims.w}
+          onChange={(p) => onEdit((c) => ({ ...c, load: withMouthPosition(c.load, p) }))}
+        />
+      )}
       <ToggleGroup
         label="Vent"
         className="mb-3"
@@ -185,6 +210,7 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             options={entriesOf(PORT_SHAPE_NAMES)}
           />
           <PortFields port={vent.port} onChange={setPort} />
+          {!vents && <p className="text-xs text-stone-500 mb-3">{DESIGNER_TEXT.ventFixed}</p>}
           <NumberField
             label="Air speed limit"
             value={vent.maxSpeedMs}
@@ -192,6 +218,7 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             step={0.5}
             unit="m/s"
             onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
+            className="mb-3"
           />
         </>
       )}
@@ -221,11 +248,40 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
           </div>
         </>
       )}
+      {vents && (
+        <PlaceFields
+          label={
+            vents.what === VENT_KIND.radiator
+              ? DESIGNER_TEXT.radiatorPlace
+              : DESIGNER_TEXT.portPlace
+          }
+          value={vents.position}
+          auto={vents.auto}
+          widthIn={chamber.dims.w}
+          onChange={(p) => onEdit((c) => ({ ...c, vent: withVentPosition(c.vent, p) }))}
+        >
+          {vents.position && (
+            <ToggleGroup
+              label={DESIGNER_TEXT.panel}
+              className="mb-2"
+              value={vents.position.panel}
+              onChange={(panel) =>
+                onEdit((c) => ({
+                  ...c,
+                  vent: withVentPosition(c.vent, vents.position && { ...vents.position, panel }),
+                }))
+              }
+              options={entriesOf(VENT_PANEL_NAMES)}
+            />
+          )}
+        </PlaceFields>
+      )}
       <h5 className="text-sm font-semibold mt-1 mb-2">Drivers</h5>
       {chamber.drivers.map((driver, i) => (
         <DriverFields
           key={i}
           driver={driver}
+          widthIn={chamber.dims.w}
           bandOptions={bandOptions}
           onEdit={(edit) => editDriver(i, edit)}
           onRemove={() => onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }))}
@@ -341,13 +397,15 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
 
 interface DriverProps {
   driver: SpeakerDriver;
+  /** its chamber's width: the position shows from its left side */
+  widthIn: number;
   bandOptions: readonly (readonly [BandId, string])[];
   onEdit: (edit: (d: SpeakerDriver) => SpeakerDriver) => void;
   onRemove: () => void;
 }
 
-/** One driver entry: its kind, part, count, band (a coaxial's two) and horn. */
-function DriverFields({ driver, bandOptions, onEdit, onRemove }: DriverProps) {
+/** One driver entry: its kind, part, count, place, band (a coaxial's two) and horn. */
+function DriverFields({ driver, widthIn, bandOptions, onEdit, onRemove }: DriverProps) {
   const coaxial = driver.kind === DRIVER_KIND.coaxial;
   const horns = hornOptions(driver.kind);
   const [lowBand, highBand = lowBand] = driver.bands;
@@ -381,6 +439,24 @@ function DriverFields({ driver, bandOptions, onEdit, onRemove }: DriverProps) {
         step={1}
         onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
       />
+      <div className={ROW}>
+        {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
+        <NumberField
+          label={DESIGNER_TEXT.fromLeft}
+          value={Math.round((driver.position.xIn + widthIn / 2) * 100) / 100}
+          step={0.25}
+          onChange={(v) =>
+            onEdit((d) => ({ ...d, position: { ...d.position, xIn: v - widthIn / 2 } }))
+          }
+        />
+        <NumberField
+          // a horn on the top: back from the baffle's front
+          label={onTop(driver) ? DESIGNER_TEXT.backFromFront : DESIGNER_TEXT.fromBottom}
+          value={driver.position.yIn}
+          step={0.25}
+          onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
+        />
+      </div>
       <ToggleGroup
         label={coaxial ? "Cone's band" : "Band"}
         className="mb-3"

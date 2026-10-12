@@ -221,6 +221,12 @@ function monitorHorn(identity: SpecIdentity): SpeakerSpec {
 /** A length in mm, in inches. */
 const inches = (mm: number) => mm / MM_PER_IN;
 
+/** How finely a template's box sizes are given, in: an eighth, as a saw is set. */
+const BOX_STEP_IN = 1 / 8;
+
+/** A box size to the nearest step. */
+const boxSize = (v: number) => Math.round(v / BOX_STEP_IN) * BOX_STEP_IN;
+
 /**
  * A PA v2 box's plywood shell around one horn chamber: the PA's frame and panels, its mouth flush with the front (no
  * inset: every mouth of the stack is on one plane), a flat top.
@@ -250,10 +256,14 @@ const paV2Band = (
   ampW,
 });
 
-/** A slot on each front side of a PA v2 box: `widthMm` wide, the opening's height, `lengthMm` long. */
+/**
+ * A slot on each front side of a PA v2 box: `widthMm` wide, the opening's height (`longIn`) tall, `lengthMm` long. The
+ * spec takes the slot's narrow size as its height and its long size as its width: the model reads only the area and the
+ * opening's rectangle, and the views draw a Hi-fi slot along the bottom (a slot's place isn't movable yet).
+ */
 const sideSlots = (
   widthMm: number,
-  heightIn: number,
+  longIn: number,
   lengthMm: number,
   folded: boolean,
 ): SpeakerChamber["vent"] => ({
@@ -261,8 +271,8 @@ const sideSlots = (
   port: {
     shape: PORT_SHAPE.slot,
     n: 2,
-    w: inches(widthMm),
-    h: heightIn,
+    h: inches(widthMm),
+    w: longIn,
     len: inches(lengthMm),
     folded,
   },
@@ -288,7 +298,11 @@ function paV2SubBin(count: 1 | 2, identity: SpecIdentity): SpeakerSpec {
   }));
   const chamber: SpeakerChamber = {
     at: { xIn: 0, yIn: 0 },
-    dims: { w: inches(bin.widthMm), h: openingIn + 2 * t, d: inches(bin.depthMm) },
+    dims: {
+      w: boxSize(inches(bin.widthMm)),
+      h: boxSize(openingIn + 2 * t),
+      d: boxSize(inches(bin.depthMm)),
+    },
     // the rear chamber and the wedges beside the flare: a shape the box models can't work out
     netLiters: bin.rearLiters * count,
     stuffingPct: 0,
@@ -333,7 +347,11 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
   const center = t + openingIn / 2;
   const chamber: SpeakerChamber = {
     at: { xIn: 0, yIn: 0 },
-    dims: { w: inches(box.widthMm), h: openingIn + 2 * t, d: inches(box.depthMm) },
+    dims: {
+      w: boxSize(inches(box.widthMm)),
+      h: boxSize(openingIn + 2 * t),
+      d: boxSize(inches(box.depthMm)),
+    },
     // the rear chamber, the sealed wedges left out
     netLiters: box.rearLiters,
     stuffingPct: 0,

@@ -6,6 +6,7 @@ import type {
   HifiDrive,
   SpeakerModelGap,
   SpeakerPort,
+  VentPanel,
 } from "../types";
 import { FIRST_ORDER_FILTER } from "./speakerSpec";
 
@@ -41,6 +42,24 @@ export const FILTER_TYPE_NAMES = {
   BW48: "BW48",
   LR48: "LR48",
 } as const satisfies Record<FilterType, string>;
+
+/** Where a setting's value comes from, by id: worked out by its rule (Auto), or typed in (Custom). */
+export const SET_BY = {
+  auto: "auto",
+  custom: "custom",
+} as const;
+
+/** The name the settings show for each. */
+export const SET_BY_NAMES = {
+  auto: "Auto",
+  custom: "Custom",
+} as const satisfies Record<keyof typeof SET_BY, string>;
+
+/** The panels a vent can be cut into, as the Designer names them. */
+export const VENT_PANEL_NAMES = {
+  baffle: "Baffle",
+  back: "Back",
+} as const satisfies Record<VentPanel, string>;
 
 /** Each band drive as the Designer names it. */
 export const DRIVE_NAMES = {
@@ -96,4 +115,19 @@ export const DESIGNER_TEXT = {
   inputRange: "Input range",
   inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
   inputOff: "Off",
+  construction: "Construction",
+  top: "Top",
+  inset: "Baffle inset, in",
+  insetTip: "How far the baffle sits behind the frame's front edge.",
+  archNotDrawn:
+    "The arch draws over a top chamber that runs the full width and is at least half as tall as the cabinet is wide, in one shell. This cabinet's top is drawn flat.",
+  fromLeft: "From left, in",
+  fromBottom: "From bottom, in",
+  backFromFront: "Back from front, in",
+  placeTip: "Seen from the front: from the chamber's left side and its bottom, to the center.",
+  portPlace: "Port position",
+  radiatorPlace: "Radiator position",
+  mouthPlace: "Horn mouth position",
+  panel: "Panel",
+  ventFixed: "This port's place comes from its shape (the PA port rule or the slot rule).",
 } as const;

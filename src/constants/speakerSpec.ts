@@ -1,6 +1,7 @@
 // The ids of the speaker designer's spec (SpeakerSpec, SystemSpec in src/types.ts; read adapters in lib/speaker).
 import type {
   CabinetConstruction,
+  CabinetTop,
   DriverKind,
   HifiBoxKind,
   PanelNominal,
@@ -80,6 +81,12 @@ export const CABINET_TOP = {
   flat: "flat",
   arched: "arched",
 } as const;
+
+/** The name the settings show for each top shape. */
+export const CABINET_TOP_NAMES = {
+  flat: "Flat",
+  arched: "Arched",
+} as const satisfies Record<CabinetTop, string>;
 
 /** A chamber's vent kinds, by id: the Hi-fi box kinds. A vented chamber's port is round, a slot or side ducts. */
 export const VENT_KIND = {

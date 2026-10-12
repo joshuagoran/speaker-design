@@ -8,6 +8,9 @@ import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsCol
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
+import { NumberField } from "../../components/ui/NumberField";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { Tooltip } from "../../components/ui/Tooltip";
 import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
@@ -25,9 +28,16 @@ import {
 import { cabinetFinishName, paintName } from "../../lib/data";
 import { Card } from "../../components/ui/Card";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
-import { driverHorn, hornFlare, speakerLayout, ventMoved } from "../../lib/speaker/speakerLayout";
+import {
+  drawsArchedTop,
+  driverHorn,
+  hornFlare,
+  speakerLayout,
+  ventMoved,
+} from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
-import { keysOf } from "../../lib/records";
+import { entriesOf, keysOf } from "../../lib/records";
+import { formatInches } from "../../lib/format";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
@@ -43,6 +53,12 @@ import {
   type DesignerSettingsSection,
 } from "../../constants/settingsSections";
 import { DESIGNER_TEXT, MODEL_GAP_TEXT } from "../../constants/designer";
+import {
+  CABINET_CONSTRUCTION,
+  CABINET_CONSTRUCTION_NAMES,
+  CABINET_TOP,
+  CABINET_TOP_NAMES,
+} from "../../constants/speakerSpec";
 import {
   DESIGNER_START,
   DESIGNER_START_NAMES,
@@ -115,7 +131,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     );
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
-  const { chambers } = spec.cabinet;
+  const { chambers, construction, top, insetIn } = spec.cabinet;
+  const framed = construction === CABINET_CONSTRUCTION.frameInset;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
   /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
@@ -125,6 +142,10 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
   const flares = layout.chambers.flatMap((c) => hornFlare(spec.cabinet, c) ?? []);
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
+    construction: [
+      `${CABINET_CONSTRUCTION_NAMES[construction]}${framed ? `, inset ${formatInches(insetIn)}` : ""}`,
+      `${CABINET_TOP_NAMES[top].toLowerCase()} top`,
+    ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
     bands: [
       countText(spec.bands.length, "band", "bands"),
@@ -346,6 +367,38 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             </>,
           )}
           {section(
+            "construction",
+            <>
+              <ToggleGroup
+                label={DESIGNER_TEXT.construction}
+                className="mb-3"
+                value={construction}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, construction: v }))}
+                options={entriesOf(CABINET_CONSTRUCTION_NAMES)}
+              />
+              {framed && (
+                <NumberField
+                  label={<Tooltip tip={DESIGNER_TEXT.insetTip}>{DESIGNER_TEXT.inset}</Tooltip>}
+                  value={insetIn}
+                  min={0}
+                  step={0.125}
+                  onChange={(v) => designer.editCabinet((c) => ({ ...c, insetIn: v }))}
+                  className="mb-3"
+                />
+              )}
+              <ToggleGroup
+                label={DESIGNER_TEXT.top}
+                className="mb-2"
+                value={top}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, top: v }))}
+                options={entriesOf(CABINET_TOP_NAMES)}
+              />
+              {top === CABINET_TOP.arched && !drawsArchedTop(spec.cabinet, layout) && (
+                <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.archNotDrawn}</p>
+              )}
+            </>,
+          )}
+          {section(
             "chambers",
             <>
               {chambers.map((chamber, i) => (
@@ -355,6 +408,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   chamber={chamber}
                   result={response.chambers[i]}
                   bands={spec.bands}
+                  cabinet={spec.cabinet}
+                  placed={layout.chambers[i]}
                   onEdit={(edit) => designer.editChamber(i, edit)}
                   onRemove={
                     one
