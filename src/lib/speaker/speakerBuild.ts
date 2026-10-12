@@ -124,6 +124,7 @@ import {
   speakerLayout,
   type PlacedChamber,
   type SpeakerLayout,
+  hornFitsWhereSet,
 } from "./speakerLayout";
 import {
   DRIVER_CUTOUT_IN,
@@ -596,7 +597,9 @@ function chamberBracing(
   const plan = (bracing: BoxBracing | null) =>
     handles &&
     planBoxHardware({
-      box: chamber.drivers.some(onTop) ? HARDWARE_BOX.mid : HARDWARE_BOX.sub,
+      box: chamber.drivers.some((d) => onTop(d) && hornFitsWhereSet(f.placed, d))
+        ? HARDWARE_BOX.mid
+        : HARDWARE_BOX.sub,
       dims: f.box,
       t,
       inset,
@@ -929,6 +932,10 @@ function chamberNotes(
     for (const driver of chamber.drivers) {
       if (f.paSub && driver.kind === DRIVER_KIND.sub) continue;
       const horn = driverHorn(driver);
+      if (!hornFitsWhereSet(placed, driver)) {
+        baffle.push(`${kindWord(driver)}: ${DESIGNER_TEXT.hornNoFitNote}`);
+        continue;
+      }
       if (onTop(driver)) {
         const mount = driver.horn?.mount;
         baffle.push(

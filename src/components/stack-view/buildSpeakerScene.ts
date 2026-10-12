@@ -43,6 +43,7 @@ import {
   type FaceRect,
   type PlacedChamber,
   slotOpeningsAt,
+  hornFitsWhereSet,
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { PANEL } from "../../constants/cutParts";
@@ -597,7 +598,8 @@ function chamberParts(
     for (const spot of driverSpots(placed, driver)) {
       const x = spot.xIn - placed.cx,
         y = spot.yIn - placed.y0;
-      if (onBaffle || onTop(driver)) addDriver(driver, x, y);
+      // a horn that no longer fits where it is set isn't built (the page says so)
+      if ((onBaffle || onTop(driver)) && hornFitsWhereSet(placed, driver)) addDriver(driver, x, y);
       else builds.push(({ zf }) => addHornDriver(ctx, placed, driver, { x, y, z: zf - flareIn }));
     }
 

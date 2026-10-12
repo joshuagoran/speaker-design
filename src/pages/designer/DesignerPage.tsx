@@ -34,6 +34,7 @@ import {
   hornFlare,
   speakerLayout,
   ventMoved,
+  hornFitsWhereSet,
 } from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -265,6 +266,9 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               <Notice>{DESIGNER_TEXT.hornMouthClipped}</Notice>
             )}
             {flares.some((f) => f.mouthMoved) && <Notice>{DESIGNER_TEXT.hornMouthMoved}</Notice>}
+            {layout.chambers.some((c) =>
+              c.chamber.drivers.some((d) => !hornFitsWhereSet(c, d)),
+            ) && <Notice>{DESIGNER_TEXT.hornNoFit}</Notice>}
             {layout.chambers.some((c) => ventMoved(spec.cabinet, c)) && (
               <Notice>{DESIGNER_TEXT.ventMoved}</Notice>
             )}

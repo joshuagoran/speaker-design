@@ -34,6 +34,7 @@ import {
   hornById,
 } from "../data";
 import { byId } from "../tables";
+import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
 import { baffleInsetIn, sharedWalls, TOUCH_IN } from "./chamberAir";
 import { RADIATOR_PANEL } from "../hifi/hifi";
@@ -227,19 +228,33 @@ export const onTop = (driver: Pick<SpeakerDriver, "horn">) =>
   driver.horn?.placement === HORN_PLACEMENT.top;
 
 /**
- * Whether a catalog horn fits where it would sit on a chamber. In the baffle: its mouth inside the chamber's clear face
- * (a rectangular horn's width runs to the clear face, as the tower cuts it, so only its height must fit). On the top:
- * its mouth no wider than the chamber, and no chamber standing on this one.
+ * Whether a catalog horn fits where it would sit on a chamber. In the baffle: its mouth's height inside the chamber's
+ * clear face, and its width too unless the tower's cutout trims it to the clear face (a rectangular horn, or one drawn
+ * from its mesh: lib/pa/tower towerHornCutout). On the top: no chamber standing on this one (a horn wider than the
+ * chamber stands over its edges, as on the PA mid box).
  */
 export function hornFits(
-  horn: Pick<Horn, "size" | "rect">,
+  horn: Pick<Horn, "id" | "size" | "rect">,
   placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
   placement: HornPlacement,
 ): boolean {
-  if (placement === HORN_PLACEMENT.top)
-    return horn.size.w <= placed.dims.w && !placed.walls.some((w) => w.shared && w.w >= w.h);
-  return horn.size.h <= placed.clear.h && (!!horn.rect || horn.size.w <= placed.clear.w);
+  if (placement === HORN_PLACEMENT.top) return !placed.walls.some((w) => w.shared && w.w >= w.h);
+  const trimmed = !!horn.rect || MESHED_HORN_IDS.has(horn.id);
+  return horn.size.h <= placed.clear.h && (trimmed || horn.size.w <= placed.clear.w);
 }
+
+/**
+ * Whether a driver's horn fits where it is set (`hornFits`); a driver without a catalog horn always does. One that no
+ * longer fits (a chamber now stands on its top horn, or the horn is larger than the chamber) can't be built there: the
+ * views leave it out and the page says so.
+ */
+export const hornFitsWhereSet = (
+  placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
+  driver: Pick<SpeakerDriver, "horn">,
+) => {
+  const horn = driverHorn(driver);
+  return !horn || !driver.horn || hornFits(horn, placed, driver.horn.placement);
+};
 
 /**
  * Where a newly picked horn sits on a chamber: the catalog's `rect` flag sets the first choice (a rectangular horn in
@@ -247,7 +262,7 @@ export function hornFits(
  * other place. The user can pick either place that fits.
  */
 export function defaultHornPlacement(
-  horn: Pick<Horn, "size" | "rect">,
+  horn: Pick<Horn, "id" | "size" | "rect">,
   placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
 ): HornPlacement {
   const first = horn.rect ? HORN_PLACEMENT.baffle : HORN_PLACEMENT.top;

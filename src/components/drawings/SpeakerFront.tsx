@@ -14,6 +14,7 @@ import {
   speakerLayout,
   type PlacedChamber,
   slotOpeningsAt,
+  hornFitsWhereSet,
 } from "../../lib/speaker/speakerLayout";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../stack-view/stackHeights";
@@ -54,7 +55,7 @@ export function SpeakerFront({ spec }: Props) {
   const topHorns = layout.chambers.flatMap((placed) =>
     placed.chamber.drivers.flatMap((d) => {
       const horn = driverHorn(d);
-      return horn && onTop(d)
+      return horn && onTop(d) && hornFitsWhereSet(placed, d)
         ? driverSpots(placed, d).map((s) => ({
             x: s.xIn,
             y: s.yIn,
@@ -300,6 +301,8 @@ export function SpeakerFront({ spec }: Props) {
         // the drivers on the baffle (a front-loaded horn's sit inside, at its throat) and the horns on the top
         chamber.drivers.forEach((d, j) => {
           if (!driversOnBaffle(chamber) && !onTop(d)) return;
+          // a horn that no longer fits where it is set isn't drawn (the page says so)
+          if (!hornFitsWhereSet(placed, d)) return;
           driverSpots(placed, d).forEach((s, n) =>
             parts.push(...driver(d, placed, s.xIn, s.yIn, `d${i}.${j}.${n}`)),
           );
