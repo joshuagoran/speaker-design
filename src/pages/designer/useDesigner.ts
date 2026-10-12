@@ -2,6 +2,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
+import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
 import { DESIGNER_TEXT } from "../../constants/designer";
 import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designerStarts";
@@ -82,6 +83,8 @@ export function useDesigner() {
     () => speakerLimits({ cabinet, bands }, response, { feed }),
     [cabinet, bands, feed, response],
   );
+  // each chamber's braces, hardware and weight (the response's net air reads the same build)
+  const build = useMemo(() => cabinetBuild(cabinet), [cabinet]);
   const store = useConfigStore(SPEAKERS_COLLECTION);
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
     setSpec((s) => ({ ...s, cabinet: edit(s.cabinet) }));
@@ -140,6 +143,7 @@ export function useDesigner() {
     setSpec,
     response,
     limits,
+    build,
     store,
     snapshot,
     restore,

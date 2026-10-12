@@ -10,8 +10,8 @@ import { formatInches, formatThickness } from "../../lib/pa/calc";
 import { cutRowKey } from "../../lib/pa/cutlist";
 import { usePalette } from "../../hooks/useTheme";
 import {
-  CUT_BOX_NAMES,
-  CUT_BOX_TINTS,
+  cutBoxName,
+  cutBoxTint,
   CUT_PART_NAMES,
   PANEL_MATERIAL_NAMES,
 } from "../../constants/cutParts";
@@ -73,7 +73,7 @@ export function SheetDrawing({
     uses.set(it.box, names);
   }
   const use = [...uses]
-    .map(([box, names]) => `${CUT_BOX_NAMES[box]} ${[...names].join(", ")}`)
+    .map(([box, names]) => `${cutBoxName(box)} ${[...names].join(", ")}`)
     .join("; ");
   const textWidth = (s: string) => fs * CHAR_EM * s.length;
   // a grain arrow down a piece, from y0 to y1 (sheet units)
@@ -179,7 +179,7 @@ export function SheetDrawing({
             <g
               key={i}
               tabIndex={0}
-              aria-label={`${tag}: ${CUT_BOX_NAMES[it.box]} ${CUT_PART_NAMES[it.part]}, ${formatInches(it.w)} × ${formatInches(it.h)}″`}
+              aria-label={`${tag}: ${cutBoxName(it.box)} ${CUT_PART_NAMES[it.part]}, ${formatInches(it.w)} × ${formatInches(it.h)}″`}
               onMouseEnter={() => onHot(key)}
               onMouseLeave={() => onHot(null)}
               onFocus={() => onHot(key)}
@@ -187,13 +187,13 @@ export function SheetDrawing({
               opacity={dim ? 0.35 : 1}
               className="cursor-default outline-none"
             >
-              <title>{`${tag}: ${CUT_BOX_NAMES[it.box]} ${CUT_PART_NAMES[it.part]}`}</title>
+              <title>{`${tag}: ${cutBoxName(it.box)} ${CUT_PART_NAMES[it.part]}`}</title>
               <rect
                 x={x}
                 y={y}
                 width={w}
                 height={h}
-                fill={pal[CUT_BOX_TINTS[it.box]]}
+                fill={pal[cutBoxTint(it.box)]}
                 stroke={edge}
                 strokeWidth={isHot ? 3 : it.crossed ? 2 : 0.8}
               />

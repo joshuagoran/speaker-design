@@ -24,6 +24,7 @@ import {
 import {
   DIRECT_LOAD,
   FLUSH_BOX,
+  flushBracing,
   NO_FILTERS,
   channelCounter,
   lrFilter,
@@ -90,6 +91,9 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
         thicknessIn: PANEL_STOCK[FILL_PANEL].in,
       },
       ...FLUSH_BOX,
+      ...flushBracing(PANEL_STOCK[FILL_PANEL].in),
+      // the fill page counts no handles or input dish
+      hardware: null,
       roundoverIn: 0,
       tiltDeg: 0,
     },

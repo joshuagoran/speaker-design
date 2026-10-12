@@ -1,16 +1,16 @@
 // A chamber's clear face inside its walls, with the partition rule of `SpeakerChamber.dims`: two chambers that touch
-// share one wall, the lower (or left) chamber's; and its air and vent as the box models take them. Pure.
+// share one wall, the lower (or left) chamber's; and its vent as the box models take it (its net air: lib/speaker
+// speakerBuild). Pure.
 //
 // Symbols kept short are the established ones: t is the wall's thickness, in (as lib/pa/calc and lib/hifi name it).
 import type { Dims2, PortStyle, SpeakerCabinet, SpeakerChamber } from "../../types";
-import { HIFI_NET_SHARE, hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
+import { hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
 import { ductDividerIn, sideDuctEndCorrection, slotInnerEndCorrection } from "../pa/calc";
 import { rectangleEndCorrection } from "../acoustics/radiation";
 import { subTubeEndCorrection, type TubeDriver } from "../pa/tubes";
 import { ELBOW_COUNTS, type ElbowCount } from "../tubeFold";
 import { SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
-import { LITERS_PER_CUBIC_IN } from "../../constants/units";
 import {
   CABINET_CONSTRUCTION,
   DRIVER_KIND,
@@ -96,8 +96,6 @@ export interface ChamberVentModel {
   openings: number;
   /** each opening's end corrections, both ends and any bends, in */
   endCorrectionIn: number;
-  /** what the vent and its walls take out of the chamber's air, L */
-  volumeL: number;
 }
 
 /**
@@ -105,7 +103,7 @@ export interface ChamberVentModel {
  * - Round tubes: the Hi-fi rule (1.46 r and a sharp bend's correction per elbow; absent elbows: straight), or the PA
  *   tube rule for `flared` tubes in a PA sub's chamber (lib/pa/tubes subTubeEndCorrection).
  * - A slot: `n` openings (the PA letterbox one), each as wide as the chamber's clear face unless the slot sets its own
- *   width; each shelf takes air too. The Hi-fi rule, or the PA letterbox's where it has `fins`.
+ *   width (their shelves' wood: lib/speaker/speakerBuild). The Hi-fi rule, or the PA letterbox's where it has `fins`.
  * - Side ducts (PA): `n` ducts up the front edges, the dividers' height off each; their inner walls take air too.
  */
 export function chamberVentModel(
@@ -120,10 +118,7 @@ export function chamberVentModel(
   switch (port.shape) {
     case PORT_SHAPE.slot: {
       const w = port.w ?? face.w;
-      /** one opening's air and the shelf over it */
-      const eachL = (port.h + t) * w * port.len * LITERS_PER_CUBIC_IN;
       if (port.fins !== undefined) {
-        const volumeL = eachL;
         // the PA letterbox (lib/pa/calc ventGeometry): its fins take their thickness off the width; its mouth on the
         // floor (which mirrors it), its inner end as the PA slot's, straight or folded
         const open = w - port.fins * t;
@@ -140,7 +135,6 @@ export function chamberVentModel(
               baffleInsetIn(cabinet),
               !!port.folded,
             ),
-          volumeL,
         };
       }
       // the Hi-fi page's slot is one (n 1); the Designer's can be more, alike
@@ -149,7 +143,6 @@ export function chamberVentModel(
         lenIn: port.len,
         openings: port.n,
         endCorrectionIn: hifiSlotEndCorrection(dims, t, { h: port.h, w, len: port.len }),
-        volumeL: port.n * eachL,
       };
     }
     case PORT_SHAPE.duct: {
@@ -160,7 +153,6 @@ export function chamberVentModel(
         lenIn: port.len,
         openings: port.n,
         endCorrectionIn: sideDuctEndCorrection(dims, port, t, baffleInsetIn(cabinet), port.n),
-        volumeL: port.n * (port.throat + t) * open * port.len * LITERS_PER_CUBIC_IN,
       };
     }
     default: {
@@ -183,30 +175,9 @@ export function chamberVentModel(
               elbowCountOf(port.elbows ?? 0),
             )
           : hifiRoundEndCorrection(port, port.elbows ?? 0),
-        volumeL: areaIn2 * port.len * LITERS_PER_CUBIC_IN,
       };
     }
   }
-}
-
-/**
- * The chamber's air as the box models take it, L: its `netLiters` where set; else, by the Hi-fi engine's rule (lib/hifi
- * hifiBox), its clear volume (the clear face, and its depth less the back, the baffle and the baffle's inset,
- * `baffleInsetIn`) with 3% off for bracing and damping, less the cones' displacement and the vent's volume, and at
- * least 1 L.
- */
-export function chamberNetLiters(
-  cabinet: CabinetAir,
-  chamber: SpeakerChamber,
-  displacementL: number,
-): number {
-  if (chamber.netLiters !== null) return chamber.netLiters;
-  const t = cabinet.panel.thicknessIn;
-  const face = chamberClearFace(cabinet, chamber);
-  const depth = chamber.dims.d - 2 * t - baffleInsetIn(cabinet);
-  const clearL = Math.max(0, face.w * face.h * depth) * LITERS_PER_CUBIC_IN;
-  const ventL = chamberVentModel(cabinet, chamber)?.volumeL ?? 0;
-  return Math.max(1, clearL * HIFI_NET_SHARE - displacementL - ventL);
 }
 
 /** The air the box models take for a chamber of `netLiters`: its stuffing makes it act `stuffingPct` % bigger. */

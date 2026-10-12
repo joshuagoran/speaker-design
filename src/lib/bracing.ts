@@ -55,6 +55,7 @@ import type {
   BraceStyleId,
   EdgeHold,
   PanelEdge,
+  PanelMaterial,
   PanelNominal,
   PlateHole,
   PanelResonance,
@@ -64,7 +65,7 @@ import type {
 } from "../types";
 import { LB_FT2_KG_M2 } from "../constants/units";
 import { BACK_RAIL_SCREW_DIAMETER_MM, BACK_RAIL_SCREW_SPACING_IN } from "../constants/bracing";
-import { panelNominalNear } from "./panel";
+import { panelLbPerSqFt, panelNominalNear } from "./panel";
 import { beamHz, holedPlateHz, restrainedPlateHz } from "./plateModes";
 import { plateStressFactor } from "./strength";
 
@@ -93,6 +94,13 @@ export const MDF_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
   eWeak: 2.2e9,
   nu: 0.25,
 };
+
+/** A panel's stock for the plate model at its exact thickness: its weight from the catalog (lib/panel), its moduli. */
+export const panelStock = (t: number, mat: PanelMaterial): PlateStock => ({
+  t,
+  lbPerSqFt: panelLbPerSqFt(t, mat),
+  ...(mat === "mdf" ? MDF_STIFFNESS : BIRCH_PLY_STIFFNESS),
+});
 
 /** A window brace's rails, inches: the frame left round the cut-out center. */
 export const WINDOW_RAIL_IN = 2;

@@ -32,6 +32,9 @@ import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter, ventSpeedLimit } from
 import { modelTubeElbows } from "../pa/tubes";
 import { towerMidDims, towerSpec } from "../pa/tower";
 import { takesHornMount } from "../pa/hornMount";
+import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
+import { defaultBraceStyleNear } from "../bracing";
+import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
@@ -182,14 +185,16 @@ const sealedChamber = (
 
 /**
  * The plywood shell: the PA's frame with its inset baffle (an inset of 0 too), the design's panels, inset and bracing,
- * and the `top` given (flat but on the tower, whose horn can arch it); the PA boxes stand upright with sharp-edged
- * baffles.
+ * the box's `hardware` (its handles, as the PA page sets them), and the `top` given (flat but on the tower, whose horn
+ * can arch it); the PA boxes stand upright with sharp-edged baffles.
  */
 const paCabinet = (
   cfg: PaPlannerDesign,
   chambers: SpeakerCabinet["chambers"],
+  hardware: SpeakerCabinet["hardware"],
   top: SpeakerCabinet["top"] = CABINET_TOP.flat,
 ): SpeakerCabinet => ({
+  hardware,
   chambers,
   panel: { nominal: cfg.panel, material: PLYWOOD_MATERIAL, thicknessIn: cfg.wall },
   construction: CABINET_CONSTRUCTION.frameInset,
@@ -197,8 +202,10 @@ const paCabinet = (
   insetIn: cfg.inset,
   roundoverIn: 0,
   tiltDeg: 0,
-  braceStyle: cfg.braceStyle,
-  backJoint: cfg.backJoint,
+  // the PA page's style (the plywood's where it sets none), back joint and panel target
+  braceStyle: cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+  backJoint: cfg.backJoint ?? DEFAULT_BACK_JOINT,
+  braceTargetHz: PA_PANEL_TARGET_HZ,
 });
 
 /** An active band: its own amp channel of `ampW`, its filters in the DSP. */
@@ -271,7 +278,7 @@ const subSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
     cfg,
     system,
     SPEAKER_PART.sub,
-    paCabinet(cfg, [subChamber(cfg)]),
+    paCabinet(cfg, [subChamber(cfg)], cfg.hardware.sub),
     [subBand(cfg, null)],
     subInput(cfg),
   );
@@ -282,12 +289,16 @@ const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
     cfg,
     system,
     SPEAKER_PART.top,
-    paCabinet(cfg, [
-      sealedChamber({ xIn: 0, yIn: 0 }, cfg.mDim, [
-        midDriver(cfg, cfg.mDim.h / 2),
-        hornDriver(cfg, HORN_PLACEMENT.top, { xIn: 0, yIn: 0 }),
-      ]),
-    ]),
+    paCabinet(
+      cfg,
+      [
+        sealedChamber({ xIn: 0, yIn: 0 }, cfg.mDim, [
+          midDriver(cfg, cfg.mDim.h / 2),
+          hornDriver(cfg, HORN_PLACEMENT.top, { xIn: 0, yIn: 0 }),
+        ]),
+      ],
+      cfg.hardware.mid,
+    ),
     [
       activeBand(
         SPEAKER_BAND.mid,
@@ -328,6 +339,8 @@ function towerSpeaker(cfg: PaPlannerDesign, system: SpecIdentity): SpeakerSpec {
           [hornDriver(cfg, HORN_PLACEMENT.baffle, { xIn: 0, yIn: tower.hornCenter - hornFloor })],
         ),
       ],
+      // the tower's one cabinet takes the sub box's hardware (lib/pa/hardware boxTakesHardware)
+      cfg.hardware.sub,
       tower.archTop ? CABINET_TOP.arched : CABINET_TOP.flat,
     ),
     [

@@ -13,13 +13,15 @@ import {
   roundPortsAt,
   speakerLayout,
   type PlacedChamber,
+  slotOpeningsAt,
+  hornFitsWhereSet,
+  hornCutoutBox,
 } from "../../lib/speaker/speakerLayout";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../stack-view/stackHeights";
 import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
 import { byId } from "../../lib/tables";
 import { isAmt, isRibbon } from "../../lib/hifi/hifi";
-import { slotOpening } from "../../lib/hifi/boxLayout";
 import { PANEL } from "../../constants/cutParts";
 import { subVentHoles, subVentPlan } from "../stack-view/buildSubwoofer";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
@@ -54,7 +56,7 @@ export function SpeakerFront({ spec }: Props) {
   const topHorns = layout.chambers.flatMap((placed) =>
     placed.chamber.drivers.flatMap((d) => {
       const horn = driverHorn(d);
-      return horn && onTop(d)
+      return horn && onTop(d) && hornFitsWhereSet(placed, d)
         ? driverSpots(placed, d).map((s) => ({
             x: s.xIn,
             y: s.yIn,
@@ -102,10 +104,11 @@ export function SpeakerFront({ spec }: Props) {
     if (!rule) return [];
     if (rule.rule === PORT_RULE.hifi) {
       const { port } = rule;
-      if (port.shape === PORT_SHAPE.slot) {
-        const o = slotOpening(dims, t, port);
-        return [rect(`v${i}`, cx, y0 + o.y + o.h / 2, o.w, o.h, opening)];
-      }
+      if (port.shape === PORT_SHAPE.slot)
+        // each of the stacked slots
+        return slotOpeningsAt(placed, port, t).map((o, j) =>
+          rect(`v${i}.${j}`, cx + o.x, y0 + o.y + o.h / 2, o.w, o.h, opening),
+        );
       // each cut to its tube's outside, as the 3D view cuts it
       const { panel, spots } = roundPortsAt(placed, port);
       return spots.map((s, j) =>
@@ -215,7 +218,7 @@ export function SpeakerFront({ spec }: Props) {
       case DRIVER_KIND.compression: {
         if (horn) {
           // its cutout in the baffle, as the tower opens it inside the chamber's walls
-          const cut = towerHornCutout({ w: placed.clear.w + 2 * t }, t, horn);
+          const cut = towerHornCutout(hornCutoutBox(placed, t), t, horn);
           return [
             rect(key, x, y, cut.w, cut.h, {
               rx: (cut.shape === HORN_CUTOUT_SHAPE.rect ? cut.r : Math.min(cut.w, cut.h) / 2) * k,
@@ -299,6 +302,8 @@ export function SpeakerFront({ spec }: Props) {
         // the drivers on the baffle (a front-loaded horn's sit inside, at its throat) and the horns on the top
         chamber.drivers.forEach((d, j) => {
           if (!driversOnBaffle(chamber) && !onTop(d)) return;
+          // a horn that no longer fits where it is set isn't drawn (the page says so)
+          if (!hornFitsWhereSet(placed, d)) return;
           driverSpots(placed, d).forEach((s, n) =>
             parts.push(...driver(d, placed, s.xIn, s.yIn, `d${i}.${j}.${n}`)),
           );

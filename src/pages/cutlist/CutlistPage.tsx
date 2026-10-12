@@ -57,9 +57,10 @@ import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
 import {
-  CUT_BOX_NAMES,
-  CUT_BOX_TAGS,
-  CUT_BOX_TINTS,
+  cutBoxHeading,
+  cutBoxName,
+  cutBoxTag,
+  cutBoxTint,
   CUT_PART_NAMES,
   GRAIN_LOOK_NAMES,
   PANEL_MATERIAL_NAMES,
@@ -117,7 +118,7 @@ const GRAIN_ROWS = GRAIN_LOOKS.map(
 const plural = (n: number, what: string) => `${n} ${what}${n === 1 ? "" : "s"}`;
 /** A part as the notes under a layout name it: its box, then the part, e.g. "Sub Baffle". */
 const partName = (p: Pick<CutPart, "box" | "part">) =>
-  `${CUT_BOX_NAMES[p.box]} ${CUT_PART_NAMES[p.part]}`;
+  `${cutBoxName(p.box)} ${CUT_PART_NAMES[p.part]}`;
 
 /** A part's size: along the grain first when it is locked, otherwise short side first. */
 const sizeOf = (p: CutPart): [string, string] => {
@@ -209,15 +210,16 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
   // each row's tag (S1, S2 … M1 … H1 …); its pieces on the sheets carry the same tag
   const allRows = cutRows(cut.parts);
   const { tags, byBox } = cutRowTags(allRows);
-  const tagOf = (p: CutPart) => tags.get(cutRowKey(p)) ?? CUT_BOX_TAGS[p.box];
+  const tagOf = (p: CutPart) => tags.get(cutRowKey(p)) ?? cutBoxTag(p.box);
   // the highlighted row, while it is still in the list (a settings change can take it away)
   const hotRow = hot != null && tags.has(hot) ? hot : null;
-  const boxes = entriesOf(CUT_BOX_NAMES).flatMap(([box, name]) => {
-    const rows = byBox.get(box);
-    return rows
-      ? [{ box, name, rows, pieces: rows.reduce((a, p) => a + p.qty, 0) * boxSetCount }]
-      : [];
-  });
+  // each box's rows, in the order the parts list them
+  const boxes = [...byBox].map(([box, rows]) => ({
+    box,
+    name: cutBoxHeading(box),
+    rows,
+    pieces: rows.reduce((a, p) => a + p.qty, 0) * boxSetCount,
+  }));
   const drawn = new Set(
     cut.groups.flatMap((g) => g.sheets.flatMap((s) => s.items.map((it) => cutRowKey(it)))),
   );
@@ -226,7 +228,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
   const totalSheets = cut.groups.reduce((a, g) => a + g.sheets.length, 0);
   const rips = cut.groups.reduce((a, g) => a + g.cuts.rips, 0);
   const crosscuts = cut.groups.reduce((a, g) => a + g.cuts.crosscuts, 0);
-  const boxColor = (box: CutBoxId) => pal[CUT_BOX_TINTS[box]];
+  const boxColor = (box: CutBoxId) => pal[cutBoxTint(box)];
 
   const summaries: Record<CutlistSettingsSection, string> = {
     boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, proj.set)}`,
@@ -288,7 +290,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                   className="pt-4 pb-1 text-left border-b border-stone-300"
                 >
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className="text-base font-bold">{name} box</span>
+                    <span className="text-base font-bold">{name}</span>
                     <span className="text-xs font-normal text-stone-500">
                       {plural(rows.length, "part")} · {plural(pieces, "piece")}
                     </span>

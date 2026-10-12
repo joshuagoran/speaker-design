@@ -41,6 +41,7 @@ import {
 import {
   DIRECT_LOAD,
   FLUSH_BOX,
+  flushBracing,
   NO_FILTERS,
   channelCounter,
   lrFilter,
@@ -211,6 +212,9 @@ export function speakerFromHifi(
         thicknessIn: fit.wallThicknessIn,
       },
       ...FLUSH_BOX,
+      ...flushBracing(fit.wallThicknessIn),
+      // the Hi-fi page counts no handles or input dish
+      hardware: null,
       roundoverIn: state.roundoverIn,
       tiltDeg: state.tiltDeg ?? 0,
     },
