@@ -311,6 +311,13 @@ Each PR stands alone. Lowest risk first.
       - A PA sub with a PA port keeps the PA rule's place for its bracing and hardware, even where its position is
         moved.
       - The Hi-fi page keeps its own 3% allowance.
+      - Bracing in horn-loaded chambers (owner, Oct 2026). Today the PA v2 sub bins get no braces: no frame fits past
+        the mouth, the flare and the throat cones. The fix:
+        - Count the flare walls as full braces. They tie the side walls together and split the panels into small
+          areas, as in many real horn bins.
+        - Allow ribs on the outer panels around the flare.
+        - Allow lightening cutouts in braces: holes in a flare wall or a frame where it carries no load.
+        - The bracing check and the cutlist follow these rules.
   - **L3d Inductance, limits and chips.**
     - **Voice-coil inductance.** Every T/S model reads the catalog's `Le`: the sealed, vented and passive-radiator
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
