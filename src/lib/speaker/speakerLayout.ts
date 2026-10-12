@@ -10,6 +10,7 @@ import type {
   Dims3,
   FacePoint,
   Horn,
+  HornPlacement,
   PaPortGeometry,
   PortStyle,
   SpeakerCabinet,
@@ -224,6 +225,35 @@ export const driverHorn = (driver: Pick<SpeakerDriver, "horn">): Horn | null =>
 /** Whether a driver entry's horn stands on its chamber's top (its position's `yIn` is then back from the front). */
 export const onTop = (driver: Pick<SpeakerDriver, "horn">) =>
   driver.horn?.placement === HORN_PLACEMENT.top;
+
+/**
+ * Whether a catalog horn fits where it would sit on a chamber. In the baffle: its mouth inside the chamber's clear face
+ * (a rectangular horn's width runs to the clear face, as the tower cuts it, so only its height must fit). On the top:
+ * its mouth no wider than the chamber, and no chamber standing on this one.
+ */
+export function hornFits(
+  horn: Pick<Horn, "size" | "rect">,
+  placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
+  placement: HornPlacement,
+): boolean {
+  if (placement === HORN_PLACEMENT.top)
+    return horn.size.w <= placed.dims.w && !placed.walls.some((w) => w.shared && w.w >= w.h);
+  return horn.size.h <= placed.clear.h && (!!horn.rect || horn.size.w <= placed.clear.w);
+}
+
+/**
+ * Where a newly picked horn sits on a chamber: the catalog's `rect` flag sets the first choice (a rectangular horn in
+ * the baffle, a round one freestanding on the top, as the Hi-fi page's waveguides), where it fits (`hornFits`); else the
+ * other place. The user can pick either place that fits.
+ */
+export function defaultHornPlacement(
+  horn: Pick<Horn, "size" | "rect">,
+  placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
+): HornPlacement {
+  const first = horn.rect ? HORN_PLACEMENT.baffle : HORN_PLACEMENT.top;
+  const other = horn.rect ? HORN_PLACEMENT.top : HORN_PLACEMENT.baffle;
+  return hornFits(horn, placed, first) || !hornFits(horn, placed, other) ? first : other;
+}
 
 /**
  * How wide one driver of an entry is on the baffle, in: a PA cone's nominal size, a Hi-fi woofer's or a coaxial's

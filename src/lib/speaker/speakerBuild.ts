@@ -125,6 +125,7 @@ import {
   MID_DEPTH_FALLBACK_IN,
 } from "../../data/catalog/driver-cutouts";
 import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
+import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
 import { DRIVER_KIND_NAMES } from "../../constants/designer";
@@ -827,7 +828,10 @@ function chamberNotes(
       if (f.paSub && driver.kind === DRIVER_KIND.sub) continue;
       const horn = driverHorn(driver);
       if (onTop(driver)) {
-        baffle.push(`${kindWord(driver)}: no cutout, its horn stands on the top`);
+        const mount = driver.horn?.mount;
+        baffle.push(
+          `${kindWord(driver)}: no cutout, its horn stands on the top${mount ? `, on the ${HORN_MOUNT_NAMES[mount].toLowerCase()}` : ""}`,
+        );
         continue;
       }
       for (const spot of driverSpots(placed, driver)) {

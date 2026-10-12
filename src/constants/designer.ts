@@ -4,6 +4,7 @@ import type {
   FilterType,
   HifiBoxKind,
   HifiDrive,
+  HornPlacement,
   SpeakerModelGap,
   SpeakerPort,
   VentPanel,
@@ -60,6 +61,18 @@ export const VENT_PANEL_NAMES = {
   baffle: "Baffle",
   back: "Back",
 } as const satisfies Record<VentPanel, string>;
+
+/** Each place a horn on a driver can sit, as the Designer names it (`HORN_PLACEMENT`). */
+export const HORN_PLACEMENT_NAMES = {
+  baffle: "In the baffle",
+  top: "Freestanding on top",
+} as const satisfies Record<HornPlacement, string>;
+
+/** Why a horn can't sit in a place, by place (the place's button shows it). */
+export const HORN_PLACEMENT_NO_FIT = {
+  baffle: "The horn's mouth is larger than the chamber's clear face.",
+  top: "The horn is wider than the chamber, or another chamber stands on it.",
+} as const satisfies Record<HornPlacement, string>;
 
 /** Each band drive as the Designer names it. */
 export const DRIVE_NAMES = {

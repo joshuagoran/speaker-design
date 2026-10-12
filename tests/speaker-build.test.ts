@@ -9,6 +9,7 @@ import { systemFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { defaultHornPlacement, hornFits, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { hifiCutParts } from "../src/lib/hifi/cutlist";
 import { RADIATOR_PANEL } from "../src/lib/hifi/hifi";
@@ -38,6 +39,7 @@ import {
   CHAMBER_LOAD,
   HORN_DRIVE,
   HORN_PATH,
+  HORN_PLACEMENT,
   PORT_SHAPE,
   SPEAKER_PART,
   VENT_KIND,
@@ -360,6 +362,24 @@ test("speaker build: every slot of a chamber is cut and takes its air", () => {
   const L = 16.387 / 1000;
   assert.ok(Math.abs(b2.ventL - 2 * b1.ventL) < 1e-9, "both slots' air");
   assert.ok(Math.abs(b2.woodL - b1.woodL - 10 * 6 * t * L) < 1e-9, "both shelves' wood");
+});
+
+test("speaker build: a horn sits in the baffle or on the top wherever it fits, whatever its catalog shape", () => {
+  const round = HORN_OPTIONS.find((h) => !h.rect && h.size.w <= 10);
+  const rect = HORN_OPTIONS.find((h) => h.rect);
+  assert.ok(round && rect);
+  const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 20, h: 24, d: 16 });
+  const upper = chamberAt({ xIn: 0, yIn: 24 }, { w: 20, h: 16, d: 16 });
+  const [low, high] = speakerLayout(withCabinet({ chambers: [lower, upper] }).cabinet).chambers;
+  // a small round horn fits both places on the top chamber; the catalog's shape only sets the first choice
+  assert.ok(
+    hornFits(round, high, HORN_PLACEMENT.baffle) && hornFits(round, high, HORN_PLACEMENT.top),
+  );
+  assert.equal(defaultHornPlacement(round, high), HORN_PLACEMENT.top);
+  assert.equal(defaultHornPlacement(rect, high), HORN_PLACEMENT.baffle);
+  // nothing stands on a chamber with another on it
+  assert.ok(!hornFits(round, low, HORN_PLACEMENT.top));
+  assert.equal(defaultHornPlacement(round, low), HORN_PLACEMENT.baffle);
 });
 
 test("speaker build: one shell's cutlist notes the hardware of the chamber that takes it", () => {
