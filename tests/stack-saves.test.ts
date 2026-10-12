@@ -8,7 +8,8 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { stackLayout } from "../src/lib/speaker/stackLayout";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
 import { stackFromSaved, stackSnapshot } from "../src/pages/stack/stackSaves";
-import { withoutMember } from "../src/pages/stack/useStack";
+import { withSpeaker, withoutMember } from "../src/pages/stack/useStack";
+import { STACK_TEXT } from "../src/constants/stack";
 import { AUTO_DELAY } from "../src/constants/speakerSpec";
 import type { SavedConfig, StackDesign } from "../src/types";
 
@@ -83,4 +84,18 @@ test("stack saves: removing a member, the ones on it drop to where it stood, and
   // its pose keeps its gap over the base, the sub's height not counted (it is gone)
   assert.equal(after.y, stack.members[0].pose.yIn + stack.members[1].pose.yIn);
   assert.ok(before.y > after.y);
+});
+
+test("stack saves: adding a library speaker the stack already holds keeps the members' copy", () => {
+  const { speakers } = paStack();
+  const [sub] = speakers;
+  // the same speaker: the stack's copy
+  assert.equal(withSpeaker(speakers, sub), sub);
+  // a newer copy under the same id: added under a new id and a numbered name, the old copy left as it was
+  const newer = { ...sub, bands: sub.bands.map((b) => ({ ...b, levelDb: b.levelDb - 1 })) };
+  const added = withSpeaker(speakers, newer);
+  assert.notEqual(added.id, sub.id);
+  assert.equal(added.name, STACK_TEXT.copyName(sub.name, 2));
+  assert.deepEqual(added.bands, newer.bands);
+  assert.equal(withSpeaker([...speakers, added], { ...newer, name: sub.name }).id, `${sub.id}/3`);
 });

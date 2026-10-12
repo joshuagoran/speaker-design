@@ -4,6 +4,7 @@ import { stackLimits, stackResponse } from "../../lib/speaker/stackResponse";
 import { BASE_POSE } from "../../lib/speaker/specParts";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { emptyStack, stackFromSaved, stackSnapshot } from "./stackSaves";
+import { STACK_TEXT } from "../../constants/stack";
 import type { SavedConfig, SpeakerSpec, StackDesign, StackMember, StackSpec } from "../../types";
 
 /** What the library's row says when a document holds no stack. */
@@ -34,6 +35,18 @@ export function withoutMember(members: readonly StackMember[], k: number): Stack
     }
     return [{ ...m, pose: { ...m.pose, on: on !== null && on > k ? on - 1 : on } }];
   });
+}
+
+/**
+ * The copy of a library speaker a new member names: the stack's own copy where it is the same speaker; where the stack
+ * holds an older copy under that id (its members keep it), the library's one under a new id and a numbered name.
+ */
+export function withSpeaker(speakers: readonly SpeakerSpec[], speaker: SpeakerSpec): SpeakerSpec {
+  const held = speakers.find((s) => s.id === speaker.id);
+  if (!held || JSON.stringify(held) === JSON.stringify(speaker)) return held ?? speaker;
+  let n = 2;
+  while (speakers.some((s) => s.id === `${speaker.id}/${n}`)) n++;
+  return { ...speaker, id: `${speaker.id}/${n}`, name: STACK_TEXT.copyName(speaker.name, n) };
 }
 
 /**
@@ -70,24 +83,22 @@ export function useStack() {
     setNotes: (notes: string) => editStack((s) => ({ ...s, notes })),
     editMember: (k: number, edit: (member: StackMember) => StackMember) =>
       editMembers((list) => list.map((m, i) => (i === k ? edit(m) : m))),
-    /**
-     * adds a speaker on top of the highest member (or on the base), on its own input range as its crossover; its copy
-     * replaces an older copy of the same speaker
-     */
+    /** adds a speaker on top of the highest member (or on the base), on its own input range as its crossover */
     addSpeaker: (speaker: SpeakerSpec) =>
       setDesign((d) => {
         const n = d.stack.members.length;
+        const copy = withSpeaker(d.speakers, speaker);
         const member: StackMember = {
-          speakerId: speaker.id,
+          speakerId: copy.id,
           pose: { ...BASE_POSE, on: n ? n - 1 : null },
           mirror: false,
-          crossover: speaker.input,
+          crossover: copy.input,
           levelDb: 0,
           delayMs: 0,
         };
         return {
           stack: { ...d.stack, members: [...d.stack.members, member] },
-          speakers: [...d.speakers.filter((s) => s.id !== speaker.id), speaker],
+          speakers: d.speakers.some((s) => s.id === copy.id) ? d.speakers : [...d.speakers, copy],
         };
       }),
     /** removes a member; a speaker no member names any more goes with it */
