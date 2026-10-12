@@ -8,7 +8,10 @@ import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsCol
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
-import { SelectField, type SelectOption } from "../../components/ui/SelectField";
+import { NumberField } from "../../components/ui/NumberField";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
@@ -25,9 +28,16 @@ import {
 import { cabinetFinishName, paintName } from "../../lib/data";
 import { Card } from "../../components/ui/Card";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
-import { driverHorn, hornFlare, speakerLayout, ventMoved } from "../../lib/speaker/speakerLayout";
+import {
+  drawsArchedTop,
+  driverHorn,
+  hornFlare,
+  speakerLayout,
+  ventMoved,
+} from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
-import { keysOf } from "../../lib/records";
+import { entriesOf, keysOf } from "../../lib/records";
+import { formatInches } from "../../lib/format";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
@@ -44,6 +54,12 @@ import {
 } from "../../constants/settingsSections";
 import { DESIGNER_TEXT, MODEL_GAP_TEXT } from "../../constants/designer";
 import {
+  CABINET_CONSTRUCTION,
+  CABINET_CONSTRUCTION_NAMES,
+  CABINET_TOP,
+  CABINET_TOP_NAMES,
+} from "../../constants/speakerSpec";
+import {
   DESIGNER_START,
   DESIGNER_START_NAMES,
   DESIGNER_START_TEXT,
@@ -54,7 +70,7 @@ import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
 import { bandText, chamberText, countText, inputText } from "./designerText";
 import { bandChips, chamberChips } from "./designerChips";
-import { paStarts, startSpeaker } from "./designerStarts";
+import { designerStarts, startGroup, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import type { HifiPlanner } from "../hifi/useHifiPlanner";
@@ -84,19 +100,19 @@ const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
 
 /**
  * The Designer: one speaker from its chambers, drivers and bands, its response and its maximum output on fixed axes
- * with the limits' checks, and the speaker library. A design starts empty, from a saved speaker, or from the current PA
- * or Hi-fi design.
+ * with the limits' checks, and the speaker library. A design starts from a template (empty, the PA, Hi-fi, monitor,
+ * fill and PA v2 boxes), from a saved speaker, or from the current PA or Hi-fi design.
  */
 export function DesignerPage({ designer, planner, hifi }: Props) {
   const pal = usePalette();
   const { spec, response, limits, store, snapshot, restore } = designer;
   const folds = useFolds("designer.settingsFolds", keysOf(DESIGNER_SETTINGS_SECTIONS));
-  const starts: DesignerStart[] = [
-    DESIGNER_START.empty,
-    DESIGNER_START.hifi,
-    ...paStarts(planner.layout),
-  ];
-  const startOptions: SelectOption[] = starts.map((id) => ({ id, name: DESIGNER_START_NAMES[id] }));
+  const starts = designerStarts(planner.layout);
+  const startOptions = starts.map((id) => ({
+    id,
+    name: DESIGNER_START_NAMES[id],
+    group: startGroup(id),
+  }));
   const [start, setStart] = useState<DesignerStart>(DESIGNER_START.empty);
   const startFrom = () =>
     designer.setSpec(
@@ -115,7 +131,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     );
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
-  const { chambers } = spec.cabinet;
+  const { chambers, construction, top, insetIn } = spec.cabinet;
+  const framed = construction === CABINET_CONSTRUCTION.frameInset;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
   /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
@@ -125,6 +142,10 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
   const flares = layout.chambers.flatMap((c) => hornFlare(spec.cabinet, c) ?? []);
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
+    construction: [
+      `${CABINET_CONSTRUCTION_NAMES[construction]}${framed ? `, inset ${formatInches(insetIn)}` : ""}`,
+      `${CABINET_TOP_NAMES[top].toLowerCase()} top`,
+    ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
     bands: [
       countText(spec.bands.length, "band", "bands"),
@@ -334,7 +355,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 label={DESIGNER_START_TEXT.startFrom}
                 options={startOptions}
                 value={byId(startOptions, start)}
-                onChange={(o) => setStart(starts.find((s) => s === o.id) ?? DESIGNER_START.empty)}
+                onChange={(o) => setStart(o.id)}
+                group={(o) => o.group}
               />
               <Button onClick={startFrom} className="mb-2">
                 {DESIGNER_START_TEXT.startOver}
@@ -342,6 +364,38 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               <p className="text-xs text-stone-500 mb-2">
                 Starting over replaces this design; open a saved speaker from the library above.
               </p>
+            </>,
+          )}
+          {section(
+            "construction",
+            <>
+              <ToggleGroup
+                label={DESIGNER_TEXT.construction}
+                className="mb-3"
+                value={construction}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, construction: v }))}
+                options={entriesOf(CABINET_CONSTRUCTION_NAMES)}
+              />
+              {framed && (
+                <NumberField
+                  label={<Tooltip tip={DESIGNER_TEXT.insetTip}>{DESIGNER_TEXT.inset}</Tooltip>}
+                  value={insetIn}
+                  min={0}
+                  step={0.125}
+                  onChange={(v) => designer.editCabinet((c) => ({ ...c, insetIn: v }))}
+                  className="mb-3"
+                />
+              )}
+              <ToggleGroup
+                label={DESIGNER_TEXT.top}
+                className="mb-2"
+                value={top}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, top: v }))}
+                options={entriesOf(CABINET_TOP_NAMES)}
+              />
+              {top === CABINET_TOP.arched && !drawsArchedTop(spec.cabinet, layout) && (
+                <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.archNotDrawn}</p>
+              )}
             </>,
           )}
           {section(
@@ -354,6 +408,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   chamber={chamber}
                   result={response.chambers[i]}
                   bands={spec.bands}
+                  cabinet={spec.cabinet}
+                  placed={layout.chambers[i]}
                   onEdit={(edit) => designer.editChamber(i, edit)}
                   onRemove={
                     one
