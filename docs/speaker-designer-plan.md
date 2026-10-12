@@ -366,6 +366,10 @@ Each PR stands alone. Lowest risk first.
       lowpass, and the PA and the model do not.
   - **Later in L3.** The optimizer; the horn settings; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
+  - **Horn settings** (owner, Oct 2026; no fixed slot, start when it fits best). A "Horn" fold for each horn-loaded
+    chamber: a list of flare sections that the user can edit (profile conical or exponential, start area, end area,
+    length), the throat chamber, and the path (straight or folded). The model, the 3D view and the cutlist already read
+    these values, so this is mostly UI. Today the page says "its settings come in a later phase".
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
   the last two, in two phases. The name is "Stack", not "System".
   - **Data.** L1's `SystemSpec` splits in two:
