@@ -77,7 +77,10 @@ export const CHIP_IDS = {
     "speakerDuctFit",
     "speakerTubeFit",
     "speakerHardwareFit",
+    "speakerKeepsUp",
   ],
+  /** the Stack page's checks between its members (src/pages/stack/stackChips.ts) */
+  stack: ["stackKeepsUp"],
 } as const;
 
 /** The checks that name what sets a section's level; a result card says that in its "Limited by" line instead. */

@@ -458,7 +458,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 />
                 <StatTileGrid tiles={maxTiles} className="mt-5 mb-3" />
                 <div className={`${READING_WIDTH} flex flex-col gap-3 mb-3`}>
-                  {bandChips(spec, limits).map(({ id, chips }) => (
+                  {bandChips(spec, limits, response).map(({ id, chips }) => (
                     <div key={id}>
                       <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
                       <WarningChips chips={chips} />

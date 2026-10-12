@@ -45,6 +45,8 @@ import { inputText } from "../speaker/speakerText";
 import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
+import { stackKeepUpChips } from "./stackChips";
+import { WarningChips } from "../../components/chips/WarningChips";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
 import { STACK_STARTS, startGroup, startLayers } from "./stackPresets";
 import {
@@ -163,6 +165,8 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
     [STATS.stackHeight, totals.heightIn.toFixed(0), "in"],
   ];
   const gaps = modeled.some(({ m }) => m.response.gaps.length > 0);
+  /** keep-up at each crossover between members */
+  const keepUps = stackKeepUpChips(design.stack, response, limits, names);
   return (
     <SettingsLayout
       results={
@@ -269,6 +273,16 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 ]}
                 marks={marks}
               />
+              {keepUps.length > 0 && (
+                <div className={`${READING_WIDTH} flex flex-col gap-3 mt-3`}>
+                  {keepUps.map(({ heading, chips }) => (
+                    <div key={heading}>
+                      <h4 className="text-xs font-semibold text-stone-500 mb-1">{heading}</h4>
+                      <WarningChips chips={chips} />
+                    </div>
+                  ))}
+                </div>
+              )}
               <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>{STACK_TEXT.maxNote}</p>
             </section>
           )}

@@ -8,12 +8,14 @@ import type {
   LimitPeak,
   SpeakerChamberLimits,
   SpeakerLimits,
+  SpeakerResponse,
   SpeakerSpec,
 } from "../../types";
 import { formatHz, formatWatts } from "../../lib/format";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./speakerParts";
+import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
 import { ductFitChip, hardwareFitChip, tubeFitChip } from "../../lib/pa/chips";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import type { CabinetBuild } from "../../lib/speaker/speakerBuild";
@@ -28,11 +30,20 @@ const RATED_OHMS = 8;
 /** A peak against its limit: its share, %, rounded. */
 const pctOf = (p: LimitPeak) => Math.round((100 * p.peak) / p.limit);
 
-/** Each band's checks, in the spec's order: what sets its level, and a datasheet driver's power. */
+/**
+ * Each band's checks, in the spec's order: what sets its level, a datasheet driver's power and, with the response, its
+ * keep-up against the band under it at their crossover in the box (lib/speaker/keepUp).
+ */
 export function bandChips(
   spec: Pick<SpeakerSpec, "bands" | "input">,
   limits: SpeakerLimits,
+  response?: Pick<SpeakerResponse, "bands">,
 ): { id: BandId; chips: SpeakerChip[] }[] {
+  const keepUps = response ? speakerKeepUps(spec.bands, response, limits) : [];
+  const nameOf = (k: number) => {
+    const id = response?.bands[k]?.id;
+    return spec.bands.find((b) => b.id === id)?.name ?? id ?? "";
+  };
   return limits.bands.map((b) => {
     const band = spec.bands.find((s) => s.id === b.id);
     const amp = band ? ` from the ${formatWatts(band.ampW)} amp` : "";
@@ -75,6 +86,12 @@ export function bandChips(
         "speakerBandLimit",
       ],
       ...(hfChip && !same ? [hfChip] : []),
+      ...keepUps
+        .filter((k) => response?.bands[k.upper]?.id === b.id)
+        .map((k): SpeakerChip => [
+          ...keepUpChip(k, nameOf(k.lower), nameOf(k.upper)),
+          "speakerKeepsUp",
+        ]),
     ];
     return { id: b.id, chips };
   });

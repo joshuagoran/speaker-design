@@ -23,6 +23,8 @@ import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { bandChips, chamberChips, chamberFitChips } from "../src/pages/speaker/speakerChips";
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
+import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
+import { stackKeepUpChips } from "../src/pages/stack/stackChips";
 import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { keysOf } from "../src/lib/records";
@@ -167,12 +169,21 @@ const speakerSpecs = [
   ),
 ];
 const speakerLists = speakerSpecs.flatMap((spec) => {
-  const limits = speakerLimits(spec, speakerResponse(spec));
+  const response = speakerResponse(spec);
+  const limits = speakerLimits(spec, response);
   return [
-    ...bandChips(spec, limits).map((b) => b.chips),
+    ...bandChips(spec, limits, response).map((b) => b.chips),
     ...limits.chambers.flatMap((c) => (c ? [chamberChips(c, c.band)] : [])),
     ...chamberFitChips(spec.cabinet, cabinetBuild(spec.cabinet)),
   ];
+});
+
+// the Stack page's lists, one per crossing between members: the golden PA stacks
+const stackLists = configs.flatMap((c) => {
+  const read = layersFromPa(paDesign(c), { id: "pa", name: c.name }, PA_FLOOR);
+  const response = stackResponse(read.stack, read.speakers);
+  const limits = stackLimits(read.stack, response);
+  return stackKeepUpChips(read.stack, response, limits, ["1", "2", "3"]).map((k) => k.chips);
 });
 
 const lists: [ChipSection, Chip[][]][] = [
@@ -183,6 +194,7 @@ const lists: [ChipSection, Chip[][]][] = [
   ["hifi", hifiLists],
   ["hardware", hardwareLists],
   ["speaker", speakerLists],
+  ["stack", stackLists],
 ];
 
 test("every chip carries an id of its own section, and a list has one chip per check", () => {
