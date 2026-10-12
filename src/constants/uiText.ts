@@ -32,4 +32,7 @@ export const UI_TEXT = {
   fullScreen: "Full screen",
   closeFullScreen: "Close full screen",
   cutaway: "Cutaway",
+  /** the side ducts' dividers' size, on the PA page's vent and the Speaker page's side ducts, and its tip */
+  ductDividers: "Dividers",
+  ductDividersTip: "Two per duct. Thicker dividers make the vent smaller, so it tunes lower.",
 } as const;

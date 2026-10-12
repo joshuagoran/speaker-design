@@ -445,11 +445,7 @@ export function SettingsPanel({ planner }: Props) {
                     onChange={(v) => setSubVentField("throat", v)}
                   />
                   <ToggleGroup
-                    label={
-                      <Tooltip tip="Two per duct. Thicker dividers shrink the vent, so it tunes lower.">
-                        Dividers
-                      </Tooltip>
-                    }
+                    label={<Tooltip tip={UI_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
                     value={ductDividerPanel}
                     onChange={setDuctDividerPanel}
                     options={PANEL_NOMINAL_OPTIONS}

@@ -1,17 +1,20 @@
-// The Speaker page's build settings from the PA page: the wall panels' size. A PA design's speaker carries the PA
-// page's choice, and the Speaker page's setting builds the same box as the PA page's.
+// The Speaker page's build settings from the PA page: the wall panels' size and the side ducts' dividers' size. A PA
+// design's speaker (and an old PA save's) carries the PA page's choices, and the Speaker page's settings build the
+// same box as the PA page's.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { PA_FLOOR, speakerAndFeed } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
+import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
-import { withWallPanel } from "../src/lib/speaker/cabinetPanels";
+import { ductDividerOf, withDuctDivider, withWallPanel } from "../src/lib/speaker/cabinetPanels";
+import { stackFromOldSave } from "../src/pages/stack/oldSaves";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { panelIn } from "../src/lib/panel";
-import { PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
-import { SPEAKER_PART } from "../src/constants/speakerSpec";
-import type { PaPlannerDesign, PanelNominal, SpeakerSpec } from "../src/types";
+import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
+import { OLD_SAVE_KIND, PORT_SHAPE, SPEAKER_PART, VENT_KIND } from "../src/constants/speakerSpec";
+import type { PaPlannerDesign, PanelNominal, SideDuctPort, SpeakerSpec } from "../src/types";
 
 /** The PA page's starting design at a wall size, its bracing style set (else it follows the walls). */
 const paAt = (panel: PanelNominal, more: Partial<PaPlannerDesign> = {}): PaPlannerDesign => ({
@@ -20,6 +23,31 @@ const paAt = (panel: PanelNominal, more: Partial<PaPlannerDesign> = {}): PaPlann
   panel,
   wall: panelIn(panel, PLYWOOD_MATERIAL, {}),
   ...more,
+});
+
+/** The PA page's starting design with two side ducts, their dividers at a size (on the vent at its thickness). */
+const ductsAt = (divider: PanelNominal, panel: PanelNominal = "3/4"): PaPlannerDesign => {
+  const d = paAt(panel);
+  const div = panelIn(divider, PLYWOOD_MATERIAL, {});
+  return { ...d, portStyle: "vslots", divider, cVent: { ...d.cVent, div } };
+};
+
+/** A spec's first chamber's side ducts. */
+function ductsOf(spec: SpeakerSpec): SideDuctPort {
+  const { vent } = spec.cabinet.chambers[0];
+  assert.ok(vent.kind === VENT_KIND.vented && vent.port.shape === PORT_SHAPE.duct);
+  return vent.port;
+}
+
+/** The spec with its first chamber's side ducts replaced. */
+const withDucts = (spec: SpeakerSpec, port: SideDuctPort): SpeakerSpec => ({
+  ...spec,
+  cabinet: {
+    ...spec.cabinet,
+    chambers: spec.cabinet.chambers.map((c, i) =>
+      i === 0 && c.vent.kind === VENT_KIND.vented ? { ...c, vent: { ...c.vent, port } } : c,
+    ),
+  },
 });
 
 /** A PA design's sub, as the Speaker page reads it. */
@@ -54,4 +82,46 @@ test("build settings: the spec keeps its panel sizes through a save and an open"
     speakerResponse(opened).chambers[0].netLiters,
     speakerResponse(spec).chambers[0].netLiters,
   );
+});
+
+test("build settings: a PA design's side ducts carry its divider size, as the Speaker page's setting sets it", () => {
+  const half = subOf(ductsAt("1/2"));
+  const thick = subOf(ductsAt("3/4"));
+  assert.equal(ductsOf(half).divider, "1/2");
+  assert.equal(ductsOf(thick).divider, "3/4");
+  assert.equal(ductsOf(thick).div, panelIn("3/4", PLYWOOD_MATERIAL, {}));
+  // the Speaker page's Dividers set to ¾″ on the ½″ design's sub: the PA page's ¾″ ducts, in the duct and net-air models
+  const set = withDucts(half, withDuctDivider(ductsOf(half), "3/4"));
+  assert.deepStrictEqual(ductsOf(set), ductsOf(thick));
+  const [setRun, thickRun] = [speakerResponse(set), speakerResponse(thick)];
+  assert.equal(setRun.chambers[0].netLiters, thickRun.chambers[0].netLiters);
+  assert.equal(setRun.chambers[0].fb, thickRun.chambers[0].fb);
+  assert.ok(
+    (thickRun.chambers[0].fb ?? 0) < (speakerResponse(half).chambers[0].fb ?? 0),
+    "tunes lower",
+  );
+  assert.deepStrictEqual(cabinetBuild(set.cabinet), cabinetBuild(thick.cabinet));
+  // a spec saved before the size: the size nearest the thickness, ½″ where it has none
+  const { divider: _d, ...old } = ductsOf(thick);
+  assert.equal(ductDividerOf(old), "3/4");
+  assert.equal(ductDividerOf({}), DUCT_DIVIDER_DEFAULT);
+});
+
+test("build settings: an old PA save opens with its wall and divider sizes", () => {
+  const design = ductsAt("3/4", "1/2");
+  const opened = stackFromOldSave({
+    kind: OLD_SAVE_KIND.pa,
+    doc: { ...design, id: "doc1", name: "Old" },
+  });
+  const subId = opened && speakerIdentity(opened.stack, SPEAKER_PART.sub).id;
+  const sub = opened?.speakers.find((s) => s.id === subId);
+  assert.ok(sub);
+  // the walls and dividers at their sizes' thicknesses: the build, cutlist and weight read them
+  assert.deepStrictEqual(sub.cabinet.panel, {
+    nominal: "1/2",
+    material: PLYWOOD_MATERIAL,
+    thicknessIn: panelIn("1/2", PLYWOOD_MATERIAL, {}),
+  });
+  assert.equal(ductsOf(sub).divider, "3/4");
+  assert.equal(ductsOf(sub).div, panelIn("3/4", PLYWOOD_MATERIAL, {}));
 });

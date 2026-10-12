@@ -75,6 +75,9 @@ import {
 import { hornById } from "../../lib/data";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
 import { HORN_MOUNT_DEFAULT } from "../../constants/hornMount";
+import { UI_TEXT } from "../../constants/uiText";
+import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
+import { ductDividerOf, withDuctDivider } from "../../lib/speaker/cabinetPanels";
 
 /** The driver types as the type picker lists them: one woofer type, then the other kinds. */
 const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_TYPE_NAMES).map(([id, name]) => ({
@@ -454,6 +457,13 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
             onChange={(len) => onChange({ ...port, len })}
           />
         </div>
+        <ToggleGroup
+          label={<Tooltip tip={UI_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
+          className="mb-3"
+          value={ductDividerOf(port)}
+          onChange={(divider) => onChange(withDuctDivider(port, divider))}
+          options={PANEL_NOMINAL_OPTIONS}
+        />
       </>
     );
   return (

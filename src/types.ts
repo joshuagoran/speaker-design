@@ -1930,8 +1930,13 @@ export type SpeakerDriver = {
   [K in DriverKind]: SpeakerDriverBase & { kind: K; driverId: SpeakerDriverParts[K]["id"] };
 }[DriverKind];
 
-/** Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each. */
-export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
+/**
+ * Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each, and
+ * their dividers' nominal size (`divider`) and exact thickness (`div`). A spec saved before the size has no `divider`:
+ * it is the size nearest `div` (lib/speaker/cabinetPanels `ductDividerOf`).
+ */
+export interface SideDuctPort
+  extends Pick<VentSpec, "throat" | "len" | "div">, Pick<PaDesignConfig, "divider"> {
   shape: (typeof PORT_SHAPE)["duct"];
   n: 1 | 2;
 }
