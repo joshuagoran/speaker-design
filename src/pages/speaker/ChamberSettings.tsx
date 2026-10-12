@@ -73,7 +73,9 @@ import {
   onTop,
   type PlacedChamber,
 } from "../../lib/speaker/speakerLayout";
-import { hornById } from "../../lib/data";
+import { CD_OPTIONS, hornById } from "../../lib/data";
+import { hornMountChoice } from "../../components/stack-view/hornMountChoice";
+import { HornMountField } from "../../components/ui/HornMountField";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
 import { HORN_MOUNT_DEFAULT } from "../../constants/hornMount";
 import { UI_TEXT } from "../../constants/uiText";
@@ -556,6 +558,11 @@ function DriverFields({
       mount: picked && takesHornMountAt(picked, placement) ? (mount ?? HORN_MOUNT_DEFAULT) : null,
     };
   };
+  /** the mount under a compression driver's horn on the top, as the 3D view draws it; null where none applies */
+  const cd =
+    driver.kind === DRIVER_KIND.compression ? byId(CD_OPTIONS, driver.driverId) : undefined;
+  const mountChoice =
+    horn && cd && driver.horn?.mount ? hornMountChoice(horn, cd, widthIn, driver.horn.mount) : null;
   const [lowBand, highBand = lowBand] = driver.bands;
   const setBand = (slot: 0 | 1, band: BandId) =>
     onEdit((d) => ({
@@ -697,6 +704,13 @@ function DriverFields({
               ? { values: noFit, why: noFit.map((p) => HORN_PLACEMENT_NO_FIT[p]).join(" ") }
               : undefined
           }
+        />
+      )}
+      {mountChoice && (
+        <HornMountField
+          choice={mountChoice}
+          onChange={(mount) => onEdit((d) => (d.horn ? { ...d, horn: { ...d.horn, mount } } : d))}
+          className="mb-3"
         />
       )}
       <Button size="xs" onClick={onRemove}>
