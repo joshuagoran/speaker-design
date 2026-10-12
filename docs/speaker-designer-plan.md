@@ -211,6 +211,10 @@ Each PR stands alone. Lowest risk first.
     - Not drawn yet: the aim (see the owner decisions) and the PA plinth. The arched top draws in 3D on a PA frame
       with one shell, over a top chamber that runs the full width and is at least half the width tall
       (`drawsArchedTop`, L3e). The front drawing and the Hi-fi box draw it flat.
+    - Known issue: a horn-loaded chamber's vent draws in the wrong place. The vent rules place its ports and slots as
+      for a direct box, for example a slot across the bottom that runs through the horn's mouth. The vent of a horn
+      chamber goes where the rear chamber is (for example slots in the sides). "Horn bin construction" (below) fixes
+      it.
   - **L3e Templates.** The templates step adds these cabinet settings:
     - A top shape: `flat` or `arched`. Then the PA tower's arched top draws and cuts correctly.
     - A "Construction" setting: "Frame and inset baffle" (the PA style) or "Flush box" (the Hi-fi style). Before,
@@ -392,6 +396,9 @@ Each PR stands alone. Lowest risk first.
     2. The cutlist: each flare board, wedge and slot board is a cut part, with its angle.
     3. The bracing: the flare boards count as braces (see "Bracing in horn-loaded chambers" in L3c).
     4. The net air: from the real wedges and the rear chamber, not an estimate.
+    5. The vents: today the vent rules place a horn chamber's ports and slots as for a direct box (for example a slot
+       across the bottom, through the mouth). Draw and cut them where the rear chamber is, for example side slots,
+       and keep them clear of the flare.
     - Later in the same item: folded paths. They replace the straight placeholder of today.
   - **Later in L3.** The optimizer; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
