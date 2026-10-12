@@ -12,14 +12,13 @@ import type {
   Horn,
   PaPortGeometry,
   PortStyle,
-  RoundPort,
-  SlotPort,
   SpeakerCabinet,
   SpeakerChamber,
   SpeakerDriver,
   SpeakerHorn,
   SpeakerPort,
   SpeakerRoundPort,
+  SpeakerSlotPort,
   SubDriver,
   VentPanel,
   VentPosition,
@@ -45,9 +44,11 @@ import {
 } from "../hifi/boxLayout";
 import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
+import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { CM_PER_IN } from "../../constants/units";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
+  CABINET_TOP,
   CHAMBER_LOAD,
   DRIVER_KIND,
   HORN_DRIVE,
@@ -294,7 +295,7 @@ export type PortRule =
       portGeom: Partial<PaPortGeometry>;
       sub: Pick<SubDriver, "size" | "depthIn">;
     }
-  | { rule: typeof PORT_RULE.hifi; port: RoundPort | SlotPort };
+  | { rule: typeof PORT_RULE.hifi; port: SpeakerRoundPort | SpeakerSlotPort };
 
 export function portRule(chamber: SpeakerChamber): PortRule | null {
   if (chamber.vent.kind !== VENT_KIND.vented) return null;
@@ -336,33 +337,93 @@ export function portRule(chamber: SpeakerChamber): PortRule | null {
   }
 }
 
-/** A vent's spots placed at `position`: the rule's spots moved together so that their center is at it. */
-function movedTo<S extends { x: number; y: number }>(spots: S[], position: VentPosition): S[] {
-  if (!spots.length) return spots;
+/** How far a set position may be off before the layout counts it as moved, in. */
+const MOVED_IN = 1e-9;
+
+/**
+ * A group of parts moved together into `face`: each part's center and its half size; the least shift that puts every
+ * part inside it, or the group centered on it where the group is larger. `moved`: it had to shift.
+ */
+function intoFace<S extends { x: number; y: number }>(
+  spots: S[],
+  half: (s: S) => Dims2,
+  face: FaceRect,
+): { spots: S[]; moved: boolean } {
+  if (!spots.length) return { spots, moved: false };
+  const shift = (lo: number, hi: number, faceLo: number, faceSize: number) =>
+    hi - lo > faceSize
+      ? faceLo + faceSize / 2 - (lo + hi) / 2
+      : Math.max(faceLo - lo, Math.min(0, faceLo + faceSize - hi));
+  const dx = shift(
+    Math.min(...spots.map((s) => s.x - half(s).w)),
+    Math.max(...spots.map((s) => s.x + half(s).w)),
+    face.x,
+    face.w,
+  );
+  const dy = shift(
+    Math.min(...spots.map((s) => s.y - half(s).h)),
+    Math.max(...spots.map((s) => s.y + half(s).h)),
+    face.y,
+    face.h,
+  );
+  return {
+    spots: spots.map((s) => ({ ...s, x: s.x + dx, y: s.y + dy })),
+    moved: Math.abs(dx) > MOVED_IN || Math.abs(dy) > MOVED_IN,
+  };
+}
+
+/** The chamber's clear face in its own coordinates: from its center line across and its bottom up. */
+const localClear = ({ clear, cx, y0 }: PlacedChamber): FaceRect => ({
+  ...clear,
+  x: clear.x - cx,
+  y: clear.y - y0,
+});
+
+/**
+ * A vent's spots placed at `position`: the rule's spots moved together so that their center is at it, then into the
+ * chamber's clear face (`moved` where that shifts them: the views draw them there, and the page says so).
+ */
+function movedTo<S extends { x: number; y: number }>(
+  placed: PlacedChamber,
+  spots: S[],
+  half: (s: S) => Dims2,
+  position: VentPosition,
+): { spots: S[]; moved: boolean } {
+  if (!spots.length) return { spots, moved: false };
   const mean = (pick: (s: S) => number) =>
     spots.reduce((sum, s) => sum + pick(s), 0) / spots.length;
   const dx = position.xIn - mean((s) => s.x),
     dy = position.yIn - mean((s) => s.y);
-  return spots.map((s) => ({ ...s, x: s.x + dx, y: s.y + dy }));
+  const at = spots.map((s) => ({ ...s, x: s.x + dx, y: s.y + dy }));
+  return intoFace(at, half, localClear(placed));
 }
 
-/** A Hi-fi round port's tubes placed: their panel, and each tube's center from the chamber's center line and bottom. */
+/**
+ * A Hi-fi round port's tubes placed: their panel, each tube's center from the chamber's center line and bottom, and
+ * whether a set position was moved to keep them inside the clear face.
+ */
 export interface PlacedRoundPorts {
   panel: VentPanel;
   spots: RoundSpot[];
+  moved: boolean;
 }
 
 /**
  * A Hi-fi round port's tubes on their chamber: at the port's `position` (the row's center, on its panel) where set,
- * else by the Hi-fi rule (lib/hifi/boxLayout `roundPortSpots`: a row centered along the baffle's bottom).
+ * each cut (its tube's outside) kept inside the clear face; else by the Hi-fi rule (lib/hifi/boxLayout
+ * `roundPortSpots`: a row centered along the baffle's bottom).
  */
 export function roundPortsAt(
+  placed: PlacedChamber,
   port: Pick<SpeakerRoundPort, "n" | "dia" | "position">,
 ): PlacedRoundPorts {
   const spots = roundPortSpots(port);
-  return port.position
-    ? { panel: port.position.panel, spots: movedTo(spots, port.position) }
-    : { panel: PANEL.baffle, spots };
+  if (!port.position) return { panel: PANEL.baffle, spots, moved: false };
+  const cut = (s: RoundSpot) => {
+    const r = s.r + HIFI_BOX_LAYOUT.portTubeWallIn;
+    return { w: r, h: r };
+  };
+  return { panel: port.position.panel, ...movedTo(placed, spots, cut, port.position) };
 }
 
 /** A passive radiator placed: its spot on its panel (lib/hifi/boxLayout), and its center across from the center. */
@@ -371,23 +432,51 @@ export interface PlacedRadiator extends RadiatorSpot {
 }
 
 /**
- * A radiator chamber's radiators on it: at the vent's `position` (the stack's center, on its panel) where set, else by
- * the Hi-fi rule (lib/hifi/boxLayout `radiatorSpots`: stacked up `RADIATOR_PANEL` from its bottom, centered across);
- * none for any other chamber or a radiator id the catalog doesn't have.
+ * A radiator chamber's radiators on it: at the vent's `position` (the stack's center, on its panel) where set, each
+ * kept inside the clear face; else by the Hi-fi rule (lib/hifi/boxLayout `radiatorSpots`: stacked up `RADIATOR_PANEL`
+ * from its bottom, centered across). None for any other chamber or a radiator id the catalog doesn't have. `moved`: a
+ * set position was moved to keep them inside.
  */
 export function radiatorsAt(
   cabinet: Pick<SpeakerCabinet, "panel">,
-  chamber: Pick<SpeakerChamber, "vent">,
-): PlacedRadiator[] {
-  const { vent } = chamber;
-  if (vent.kind !== VENT_KIND.radiator) return [];
+  placed: PlacedChamber,
+): { spots: PlacedRadiator[]; moved: boolean } {
+  const { vent } = placed.chamber;
+  if (vent.kind !== VENT_KIND.radiator) return { spots: [], moved: false };
   const drv = byId(HIFI_PASSIVES, vent.radiators.id);
-  if (!drv) return [];
+  if (!drv) return { spots: [], moved: false };
   const panel = vent.position?.panel ?? RADIATOR_PANEL;
   const spots = radiatorSpots({ drv, n: vent.radiators.n }, panel, cabinet.panel.thicknessIn).map(
     (s) => ({ ...s, x: 0 }),
   );
-  return vent.position ? movedTo(spots, vent.position) : spots;
+  if (!vent.position) return { spots, moved: false };
+  return movedTo(placed, spots, (s) => ({ w: s.shape.w / 2, h: s.shape.h / 2 }), vent.position);
+}
+
+/** Whether the chamber's vent has a set position the layout moved to keep it inside the clear face. */
+export function ventMoved(cabinet: Pick<SpeakerCabinet, "panel">, placed: PlacedChamber): boolean {
+  const rule = portRule(placed.chamber);
+  if (rule?.rule === PORT_RULE.hifi && rule.port.shape !== PORT_SHAPE.slot)
+    return roundPortsAt(placed, rule.port).moved;
+  return radiatorsAt(cabinet, placed).moved;
+}
+
+/**
+ * Whether the views draw the cabinet's top arched: an `arched` top over chambers that share one shell, its top chamber
+ * running the shell's whole width and at least half as tall as that (the semicircle stays inside it, as the tower's
+ * horn section). Otherwise the top is drawn flat.
+ */
+export function drawsArchedTop(
+  cabinet: Pick<SpeakerCabinet, "top">,
+  layout: SpeakerLayout,
+): boolean {
+  if (cabinet.top !== CABINET_TOP.arched || !layout.oneShell) return false;
+  const top = layout.chambers.filter((c) => Math.abs(c.y0 + c.dims.h - layout.size.h) < TOUCH_IN);
+  return (
+    top.length === 1 &&
+    Math.abs(top[0].dims.w - layout.size.w) < TOUCH_IN &&
+    top[0].dims.h >= layout.size.w / 2
+  );
 }
 
 /** A horn-loaded chamber's flare as the views draw it, inches. */
@@ -403,6 +492,8 @@ export interface HornFlare {
   placeholder: boolean;
   /** the mouth is larger than the clear face: drawn at the clear face, every section shrunk alike */
   mouthClipped: boolean;
+  /** the horn's `mouthPosition` would put the mouth past the clear face: drawn moved inside it */
+  mouthMoved: boolean;
 }
 
 /** An area of `areaIn2` in the shape of `like` (its width over its height), in. */
@@ -415,8 +506,9 @@ const shaped = (areaIn2: number, like: Dims2): Dims2 => {
  * The flare of a chamber's horn (its segments' areas and lengths, Hornresp's cm² and cm), throat at the back, mouth on
  * the baffle: the mouth as square as its area allows inside the clear face (it runs the clear width when wider than
  * that, and is cut to the clear face when larger than it), each section the mouth's shape; the mouth centered at the
- * horn's `mouthPosition`, else on the clear face; the path at most the chamber's clear depth (as the model takes it:
- * less the back, the baffle and the baffle's inset). Null for a chamber with no horn or no segments.
+ * horn's `mouthPosition` (kept inside the clear face), else on the clear face; the path at most the chamber's clear
+ * depth (as the model takes it: less the back, the baffle and the baffle's inset). Null for a chamber with no horn or
+ * no segments.
  */
 export function hornFlare(
   cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
@@ -432,9 +524,14 @@ export function hornFlare(
   const h = Math.min(clear.h, mouthArea / w);
   /** what the clear face leaves of the mouth's area: every section is drawn that much smaller */
   const fit = (w * h) / mouthArea;
-  const center = horn.mouthPosition
-    ? { x: placed.cx + horn.mouthPosition.xIn, y: placed.y0 + horn.mouthPosition.yIn }
-    : { x: clear.x + clear.w / 2, y: clear.y + clear.h / 2 };
+  const set = horn.mouthPosition
+    ? intoFace(
+        [{ x: placed.cx + horn.mouthPosition.xIn, y: placed.y0 + horn.mouthPosition.yIn }],
+        () => ({ w: w / 2, h: h / 2 }),
+        clear,
+      )
+    : null;
+  const [center] = set?.spots ?? [{ x: clear.x + clear.w / 2, y: clear.y + clear.h / 2 }];
   const mouth = { x: center.x - w / 2, y: center.y - h / 2, w, h };
   const pathIn = horn.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
   const depthIn = placed.dims.d - 2 * cabinet.panel.thicknessIn - baffleInsetIn(cabinet);
@@ -449,5 +546,6 @@ export function hornFlare(
     })),
     placeholder,
     mouthClipped: fit < 1 - 1e-9,
+    mouthMoved: set?.moved ?? false,
   };
 }

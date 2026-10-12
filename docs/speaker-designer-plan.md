@@ -207,7 +207,8 @@ Each PR stands alone. Lowest risk first.
     - A folded path, or a path longer than the chamber, is a straight placeholder. A note says so.
     - A mouth larger than the clear face is drawn at the clear face. A note says so.
     - Not drawn yet: the aim (see the owner decisions) and the PA plinth. The arched top draws in 3D on a PA frame
-      with one shell only (L3e). The front drawing and the Hi-fi box draw it flat.
+      with one shell, over a top chamber that runs the full width and is at least half the width tall
+      (`drawsArchedTop`, L3e). The front drawing and the Hi-fi box draw it flat.
   - **L3e Templates.** The templates step adds these cabinet settings:
     - A top shape: `flat` or `arched`. Then the PA tower's arched top draws and cuts correctly.
     - A "Construction" setting: "Frame and inset baffle" (the PA style) or "Flush box" (the Hi-fi style). Before,
@@ -220,9 +221,14 @@ Each PR stands alone. Lowest risk first.
       - `SpeakerCabinet.top` (`CABINET_TOP`): `flat` or `arched`. The arch is a semicircle the full width, as
         `towerSpec` builds it.
       - A Hi-fi round port and a radiator vent can have a `position`: a panel (baffle or back) and the center of the
-        group, as a driver's position. Absent: the vent rule places it.
+        group, as a driver's position. Absent: the vent rule places it. Flared PA tubes cannot have one (the type
+        forbids it).
       - A horn in the box can have a `mouthPosition` on the baffle. Absent: the mouth is on the center of the clear
         face. A back-loaded horn needs it, because its drivers are on the baffle too.
+      - A set position past the clear face moves inside it, to the nearest place that fits. The page shows a notice.
+      - A port at a set position folds inside its chamber. In the upper half, its riser goes down. On the back, it
+        runs from the back to the inside face of the baffle. The model's elbow count still uses the Hi-fi rule's row
+        along the bottom.
       - The PA adapter gives `frameInset` (an inset of 0 too). The tower's top is `arched` where `towerSpec` arches
         it. The Hi-fi and fill adapters and the empty speaker give `flushBox` and a flat top. No adapter sets a
         position: every page places its vents by a rule.

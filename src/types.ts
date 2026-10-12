@@ -1928,18 +1928,15 @@ export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
  * Round tubes, with the PA sub's details where they are its tubes: `flared` ends (the PA tube rule: the flares, the
  * neighboring mouths, a wall facing the inner mouth, the sub driver's depth as the stop; lib/pa/tubes
  * subTubeEndCorrection), in the baffle's `corners` round a centered driver (`round4`) or in a row along the bottom.
- * Without `flared`, the Hi-fi round port rule.
+ * Without `flared`, the Hi-fi round port rule: the tubes can then take a `position`, where the row sits (its center),
+ * on the baffle or the back; absent, the Hi-fi rule's place, centered along the baffle's bottom (lib/hifi/boxLayout
+ * roundPortSpots). Flared tubes keep the PA layout: their place is part of the PA tube rule.
  */
-export interface SpeakerRoundPort extends RoundPort {
-  flared?: boolean;
-  corners?: boolean;
-  /**
-   * where the row of tubes sits (its center), on the baffle or the back; absent: the Hi-fi rule's place, centered along
-   * the baffle's bottom (lib/hifi/boxLayout roundPortSpots). Flared tubes keep the PA layout: their place is part of
-   * the PA tube rule, so they don't take one.
-   */
-  position?: VentPosition;
-}
+export type SpeakerRoundPort = RoundPort &
+  (
+    | { flared?: false; corners?: never; position?: VentPosition }
+    | { flared: true; corners?: boolean; position?: never }
+  );
 
 /**
  * A slot, with the PA sub's letterbox details where it is one: `fins` dividers of the wall's thickness across it, its

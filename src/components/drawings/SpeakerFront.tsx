@@ -107,7 +107,7 @@ export function SpeakerFront({ spec }: Props) {
         return [rect(`v${i}`, cx, y0 + o.y + o.h / 2, o.w, o.h, opening)];
       }
       // each cut to its tube's outside, as the 3D view cuts it
-      const { panel, spots } = roundPortsAt(port);
+      const { panel, spots } = roundPortsAt(placed, port);
       return spots.map((s, j) =>
         circle(
           `v${i}.${j}`,
@@ -288,7 +288,7 @@ export function SpeakerFront({ spec }: Props) {
             />,
           );
         // the passive radiators: on the baffle as a cone, on the back dashed
-        radiatorsAt(cabinet, chamber).forEach((s, j) =>
+        radiatorsAt(cabinet, placed).spots.forEach((s, j) =>
           parts.push(
             rect(`p${i}.${j}`, placed.cx + s.x, placed.y0 + s.y, s.shape.w, s.shape.h, {
               rx: (s.shape.w * k) / 2,

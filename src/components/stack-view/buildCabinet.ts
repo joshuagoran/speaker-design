@@ -11,7 +11,7 @@ export const BAFFLE_THICKNESS_IN = 0.75;
  * A cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back, a 3/4" baffle set back by the inset on
  * cleats, painted, and a back panel. With `archTop` the top is a semicircle the full width of the cabinet. `baffleHoles`
  * are in the baffle's centered coordinates; `baffleBottom` leaves that much of the baffle's lower edge open. `backHoles`
- * (a passive radiator's cutout) are in the box's centered front-view coordinates, on a flat-topped cabinet.
+ * (a passive radiator's or a port's cutout) are in the box's centered front-view coordinates, on either top.
  * Returns the z of the baffle face and the y of the top.
  */
 export function buildCabinet(
@@ -71,6 +71,7 @@ export function buildCabinet(
     baffle.position.set(x, bcy, d / 2 - REVEAL - BT);
     parent.add(baffle);
     const bk = archOutlinePath(new THREE.Shape(), R - T, -h / 2 + T, acy, R - T);
+    backHoles.forEach((hp) => bk.holes.push(hp));
     const back = new THREE.Mesh(
       new THREE.ExtrudeGeometry(bk, { depth: T, bevelEnabled: false, curveSegments: 48 }),
       shell,

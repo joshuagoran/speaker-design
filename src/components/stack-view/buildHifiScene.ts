@@ -25,7 +25,7 @@ import {
   type RadiatorSpot,
   type RoundSpot,
 } from "../../lib/hifi/boxLayout";
-import { ELBOW_COUNTS, MAX_ELBOWS, tubeElbows, tubeLegs } from "../../lib/tubeFold";
+import { ELBOW_COUNTS, MAX_ELBOWS, tubeElbows, tubeLegs, type TubeRoom } from "../../lib/tubeFold";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
@@ -368,14 +368,32 @@ export function addSlotShelf(
   ctx.group.add(shelf);
 }
 
-/** The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/tubeFold). */
+/**
+ * The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/tubeFold). `fold`, for
+ * a port placed elsewhere (the Designer's set position): the room its tubes have and whether the riser heads down;
+ * absent, the Hi-fi box's room (`hifiTubeRoom`), rising.
+ */
 export function addRoundPorts(
   ctx: SceneContext,
-  { spots, port, dim, zf }: { spots: RoundSpot[]; port: RoundPort; dim: Dims3; zf: number },
+  {
+    spots,
+    port,
+    dim,
+    zf,
+    fold,
+  }: {
+    spots: RoundSpot[];
+    port: RoundPort;
+    dim: Dims3;
+    zf: number;
+    fold?: { room: TubeRoom; down: boolean };
+  },
 ) {
   const T = ctx.wall;
   // the fewest elbows that fit, as the model takes them (lib/hifi hifiPortElbows); a port too long for any: the most
-  const room = hifiTubeRoom(dim, T);
+  const room = fold?.room ?? hifiTubeRoom(dim, T);
+  /** the riser's way: up, or down */
+  const up = fold?.down ? -1 : 1;
   const e = tubeElbows(room, port.dia, port.len) ?? ELBOW_COUNTS[MAX_ELBOWS];
   const legs = tubeLegs(room, port.dia, port.len, e);
   const r = port.dia / 2;
@@ -401,14 +419,14 @@ export function addRoundPorts(
       continue;
     }
     addPipe(tube, V(s.x, s.y, zf), V(s.x, s.y, zc + bend));
-    addElbow(tube, bend, V(s.x, s.y + bend, zc + bend), V(0, -1, 0), V(0, 0, -1));
-    const top = s.y + legs.rise;
+    addElbow(tube, bend, V(s.x, s.y + up * bend, zc + bend), V(0, -up, 0), V(0, 0, -1));
+    const top = s.y + up * legs.rise;
     if (e === 1) {
-      addPipe(tube, V(s.x, s.y + bend, zc), V(s.x, top, zc));
+      addPipe(tube, V(s.x, s.y + up * bend, zc), V(s.x, top, zc));
       continue;
     }
-    addPipe(tube, V(s.x, s.y + bend, zc), V(s.x, top - bend, zc));
-    addElbow(tube, bend, V(s.x, top - bend, zc + bend), V(0, 0, -1), V(0, 1, 0));
+    addPipe(tube, V(s.x, s.y + up * bend, zc), V(s.x, top - up * bend, zc));
+    addElbow(tube, bend, V(s.x, top - up * bend, zc + bend), V(0, 0, -1), V(0, up, 0));
     addPipe(tube, V(s.x, top, zc + bend), V(s.x, top, zc + legs.back));
   }
 }

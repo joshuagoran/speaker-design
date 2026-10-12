@@ -4,7 +4,7 @@
 // ducts and flared tubes (buildSubwoofer's vent parts) and its horns (buildHorn, set into the baffle as the tower sets
 // one, or on the top as the mid box carries one); the Hi-fi's woofers, coaxials, tweeters, waveguides, round ports,
 // slots and passive radiators (buildHifiScene's parts). The cabinet is built as its construction says: the PA's frame
-// with the baffle set back by the inset (its top arched where the spec says so and the chambers share one shell), or
+// with the baffle set back by the inset (its top arched where the layout draws it: lib/speaker drawsArchedTop), or
 // the Hi-fi box with its baffle over the whole front and its roundover (its top drawn flat for now).
 import * as THREE from "three";
 import { createSceneContext, type SceneContext } from "./sceneContext";
@@ -30,6 +30,7 @@ import { circlePath, flareGeometry, roundedRectPath } from "./geometry";
 import { ROUNDOVER_IN } from "./stackHeights";
 import {
   driverHorn,
+  drawsArchedTop,
   driverSpots,
   driversOnBaffle,
   hornFlare,
@@ -67,7 +68,6 @@ import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { THREAD_MOUNT } from "../../constants/throatMounts";
 import {
   CABINET_CONSTRUCTION,
-  CABINET_TOP,
   CHAMBER_LOAD,
   DRIVER_KIND,
   PORT_SHAPE,
@@ -280,8 +280,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           baffleHoles: holes(baffleCy, PANEL.baffle),
           backHoles: holes(dims.h / 2, PANEL.back),
           y: 0,
-          // the arch is a semicircle the full width: drawn on one shell at least half as tall as it is wide
-          archTop: layout.oneShell && cabinet.top === CABINET_TOP.arched && dims.h >= dims.w / 2,
+          archTop: drawsArchedTop(cabinet, layout),
           baffleBottom,
         },
       ).baffleZ;
@@ -638,13 +637,34 @@ function chamberParts(
     } else {
       // on the baffle, or on the back: there the tubes run in from the back's outer face (a group turned to face back,
       // so across is mirrored)
-      const { panel, spots } = roundPortsAt(port);
+      const { panel, spots } = roundPortsAt(placed, port);
       (panel === PANEL.back ? back : baffle).push((ox, oy) =>
         spots.map((s) => circlePath(ox + s.x, oy + s.y, s.r + HIFI_BOX_LAYOUT.portTubeWallIn)),
       );
-      builds.push(({ zf }) => {
-        if (panel === PANEL.baffle) {
+      builds.push(({ zf, innerZ }) => {
+        if (!port.position) {
           addRoundPorts(ctx, { spots, port, dim: dims, zf });
+          return;
+        }
+        // a set position: the tubes fold inside the chamber from where they are, the riser toward the farther of its
+        // floor and top, the run from the port's panel to the inside face of the one facing it. The model's elbow count
+        // (`port.elbows`) still takes the Hi-fi rule's row along the bottom.
+        const clearLo = placed.clear.y - placed.y0,
+          clearHi = clearLo + placed.clear.h;
+        const rowY = spots.reduce((sum, s) => sum + s.y, 0) / Math.max(1, spots.length);
+        const down = rowY > (clearLo + clearHi) / 2;
+        const backZ = -dims.d / 2;
+        const onBack = panel === PANEL.back;
+        const fold = {
+          room: {
+            run: onBack ? innerZ - backZ : zf - (backZ + T),
+            rise: down ? rowY - clearLo : clearHi - rowY,
+            stop: onBack ? T : zf - innerZ,
+          },
+          down,
+        };
+        if (!onBack) {
+          addRoundPorts(ctx, { spots, port, dim: dims, zf, fold });
           return;
         }
         const group = new THREE.Group();
@@ -652,14 +672,14 @@ function chamberParts(
         ctx.group.add(group);
         addRoundPorts(
           { ...ctx, group },
-          { spots: spots.map((s) => ({ ...s, x: -s.x })), port, dim: dims, zf: dims.d / 2 },
+          { spots: spots.map((s) => ({ ...s, x: -s.x })), port, dim: dims, zf: -backZ, fold },
         );
       });
     }
   }
 
   // the passive radiators, where the layout puts them (by the Hi-fi rule, on the back, unless the vent sets a position)
-  const radiators = radiatorsAt(cabinet, chamber);
+  const radiators = radiatorsAt(cabinet, placed).spots;
   if (radiators.length) {
     const k = HIFI_FRONT_PARTS.radiatorFrameIn;
     const on = (panel: RadiatorPanel) => (ox: number, oy: number) =>

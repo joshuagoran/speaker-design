@@ -72,6 +72,10 @@ export const DESIGNER_TEXT = {
     "A folded horn path, or one longer than its chamber is deep, is drawn straight and shortened to fit for now (its fold layout comes later).",
   hornMouthClipped:
     "A horn mouth larger than its chamber's clear face is drawn at the clear face, its flare shrunk to match.",
+  hornMouthMoved:
+    "A horn mouth set past its chamber's clear face is drawn moved inside it, at the nearest place that fits.",
+  ventMoved:
+    "A port or radiator set past its chamber's clear face is drawn moved inside it, at the nearest place that fits.",
   response: "Response",
   chambers: "Chambers",
   bands: "Bands",
