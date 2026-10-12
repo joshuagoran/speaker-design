@@ -1,5 +1,5 @@
 // The Stack page's words (src/pages/stack).
-import { STACK_LISTEN_DISTANCE_M } from "./speakerSpec";
+import { STACK_LISTEN_DISTANCE_M, type OldSaveKind } from "./speakerSpec";
 
 export const STACK_TEXT = {
   /** the name a new stack starts with */
@@ -26,6 +26,10 @@ export const STACK_TEXT = {
   fromPa: "From the current PA design",
   fromPaHint: "Both replace this stack; open a saved stack from the library above.",
   clear: "Start empty",
+  oldSave: "Save from the PA or Hi-fi page",
+  openOldSave: "Open as a stack",
+  oldSaveHint:
+    "Opens the save as speakers and a stack. It replaces this stack. Save it in the library above to keep it.",
   notes: "Notes",
   librarySpeaker: "Saved speaker",
   addMember: "Add member",
@@ -53,3 +57,9 @@ export const STACK_TEXT = {
   /** a library speaker's newer copy beside the one the stack's members already name */
   copyName: (name: string, n: number) => `${name} (copy ${n})`,
 } as const;
+
+/** The heading each page's old saves are listed under on the Stack page. */
+export const OLD_SAVE_GROUP_NAMES = {
+  pa: "PA page saves",
+  hifi: "Hi-fi page saves",
+} as const satisfies Record<OldSaveKind, string>;

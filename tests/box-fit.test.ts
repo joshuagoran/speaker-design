@@ -10,7 +10,7 @@ import { useHifiPlanner, type HifiPlanner } from "../src/pages/hifi/useHifiPlann
 import { usePaDesign, type PaDesign } from "../src/pages/pa-stack/hooks/usePaDesign";
 import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
-import { savedVentSpec } from "../src/pages/pa-stack/hooks/usePaDesign";
+import { savedVentSpec } from "../src/pages/stack/oldSaves";
 import { HIFI_TWEETERS, HIFI_WOOFERS, midDriversOfSize } from "../src/lib/data";
 import { hifiBoxMin, roundPortSpots } from "../src/lib/hifi/boxLayout";
 import { RADIATOR_PANEL, wooferFitsBaffle } from "../src/lib/hifi/hifi";
