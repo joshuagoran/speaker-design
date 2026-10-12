@@ -29,12 +29,14 @@ import type {
   FacePoint,
   PlateHole,
   PortStyle,
+  RadiatorPanel,
   SpeakerCabinet,
   SpeakerChamber,
   SpeakerDriver,
   SpeakerPort,
   SubDriver,
   ThieleSmall,
+  VentPanel,
   VentSpec,
 } from "../../types";
 import type { HardwareDriver } from "../pa/hardware";
@@ -402,6 +404,9 @@ function chamberDrivers(f: ChamberFrame, baffleT: number) {
   return { regions, hole, ts, heaviest };
 }
 
+/** Whether a radiator's panel is one a vent can take (the baffle or the back), not a side. */
+const isVentPanel = (panel: RadiatorPanel): panel is VentPanel => panel !== PANEL.side;
+
 /** How far a passive radiator takes room behind its panel, in: its travel both ways and an inch of frame. */
 const radiatorRoomIn = (xmaxMm: number) => 1 + (2 * xmaxMm) / 25.4;
 
@@ -414,23 +419,19 @@ function ventRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
   const { chamber } = f.placed;
   const { iw, inD } = f.inside;
   const t = cabinet.panel.thicknessIn;
-  const fromPanel = (panel: string, depth: number): readonly [number, number] =>
+  const fromPanel = (panel: VentPanel, depth: number): readonly [number, number] =>
     panel === PANEL.back ? [Math.max(0, inD - depth), inD] : [0, Math.min(inD, depth)];
   if (chamber.vent.kind === VENT_KIND.radiator) {
     const drv = byId(HIFI_PASSIVES, chamber.vent.radiators.id);
     if (!drv) return [];
     const depth = radiatorRoomIn(drv.Xmax);
-    return radiatorsAt(cabinet, f.placed).spots.flatMap((s) =>
-      s.panel === PANEL.side
-        ? []
-        : [
-            {
-              x: [iw / 2 + s.x - s.shape.w / 2, iw / 2 + s.x + s.shape.w / 2],
-              y: [s.y - t - s.shape.h / 2, s.y - t + s.shape.h / 2],
-              z: fromPanel(s.panel, depth),
-            },
-          ],
-    );
+    // each radiator on the baffle or the back (one on a side takes no room a rib on the baffle or back could need)
+    return radiatorsAt(cabinet, f.placed).spots.flatMap((s) => {
+      const { panel } = s;
+      if (!isVentPanel(panel)) return [];
+      const c = insidePoint(f, { xIn: f.placed.cx + s.x, yIn: f.placed.y0 + s.y });
+      return [roomAround(c, s.shape.w, s.shape.h, ...fromPanel(panel, depth))];
+    });
   }
   const rule = portRule(chamber);
   if (!rule || chamber.vent.kind !== VENT_KIND.vented) return [];
@@ -1021,7 +1022,8 @@ export function speakerCutParts(
   for (const c of build.chambers) if (c.hardware) also.push(hardwareLine(c.box, c.hardware));
   if (layout.oneShell && frames.length > 1) {
     const { size } = layout;
-    const base = frames.reduce((lo, f) => (f.placed.y0 < lo.placed.y0 - TOUCH_IN ? f : lo));
+    // the shell's lowest (then leftmost) chamber, which takes the hardware (shellBases)
+    const base = frames[shellBases(cabinet.chambers)[0]];
     // a bottom slot's band under the one baffle, where its chamber runs the shell's width
     const band = Math.abs(base.placed.dims.w - size.w) < TOUCH_IN ? base.inside.band : 0;
     const marks = frame ? frameMarks(t + band, 0) : flushMarks(0, 0, joint, t);

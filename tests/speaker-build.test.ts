@@ -27,6 +27,7 @@ import {
   towerMidWeightLb,
 } from "../src/lib/pa/calc";
 import { towerMidDims } from "../src/lib/pa/tower";
+import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
 import { hornById, CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, EMPTY_SPEAKER } from "../src/lib/defaults";
 import { SHELL_CUT_BOX, chamberCutBox } from "../src/constants/cutParts";
@@ -324,6 +325,28 @@ test("speaker build: a chamber beside or on another is sized to itself, for ever
         assert.equal(rowsOf(row, 1, "baffle")[0].a, right.dims.w - t, `${at}: baffle`);
       }
     }
+});
+
+test("speaker build: one shell's cutlist notes the hardware of the chamber that takes it", () => {
+  // listed right then left: the lowest, then leftmost chamber takes the handles and the dish
+  const right = chamberAt({ xIn: 12, yIn: 0 }, { w: 12, h: 24, d: 16 });
+  const left = chamberAt({ xIn: 0, yIn: 0 }, { w: 12, h: 24, d: 16 });
+  const spec = withCabinet({
+    chambers: [right, left],
+    construction: CABINET_CONSTRUCTION.frameInset,
+    insetIn: 0.75,
+    hardware: DEFAULT_HARDWARE.sub,
+  });
+  const build = cabinetBuild(spec.cabinet);
+  assert.deepEqual(
+    build.chambers.map((c) => c.hardware !== null),
+    [false, true],
+  );
+  const parts = speakerCutParts(spec.cabinet, "butt").parts;
+  const side = parts.find((p) => p.box === SHELL_CUT_BOX && p.part === "side");
+  const back = parts.find((p) => p.box === SHELL_CUT_BOX && p.part === "back");
+  assert.ok(side && /handle/.test(side.note), "the handles' cutouts on the sides");
+  assert.ok(back && /input dish/.test(back.note), "the dish's cutout on the back");
 });
 
 test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamber takes no braces", () => {
