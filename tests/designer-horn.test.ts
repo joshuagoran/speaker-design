@@ -6,6 +6,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { templateSpeaker } from "../src/pages/designer/designerTemplates";
 import {
+  joinsNext,
   shownIn2,
   shownInOfCm,
   specSize,
@@ -137,6 +138,41 @@ test("designer horn: editing a section changes the response, the 3D flare and th
   const folded = withHorn(BIN, (h) => ({ ...h, path: HORN_PATH.folded }));
   assert.equal(maxDiff(BIN, folded), 0);
   assert.equal(flareOf(folded)?.placeholder, true);
+});
+
+test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.08 in²)", () => {
+  const segments = hornOf(BIN).segments;
+  const shown = shownIn2(segments[0].s2);
+  assert.equal(shown, 630.08, "the bin's first joint as the field shows it");
+  // typed into the second section's start: no step, and it snaps to the first section's end
+  const start = withSectionSize(segments, 1, "s1", shown);
+  assert.ok(!stepsIn(start, 1));
+  assert.equal(start[1].s1, segments[0].s2);
+  // typed into the first section's end: the second section still follows it
+  const end = withSectionSize(segments, 0, "s2", shown);
+  assert.ok(joinsNext(end, 0));
+  assert.equal(end[1].s1, end[0].s2);
+  const moved = withSectionSize(end, 0, "s2", 700);
+  assert.equal(moved[1].s1, specSize("s2", 700), "still chained after the retype");
+  // a real step (0.01 in² apart) stays a step
+  assert.ok(stepsIn(withSectionSize(segments, 1, "s1", shown + 0.01), 1));
+});
+
+test("designer horn: typing an end area keystroke by keystroke doesn't join a stepped pair", () => {
+  const segments = withSectionSize(hornOf(BIN).segments, 1, "s1", 50);
+  assert.ok(stepsIn(segments, 1), "a step: the second section starts at 50 in²");
+  // "500" typed into the first section's end, one keystroke at a time; the joint as it was when the field took focus
+  const joined = joinsNext(segments, 0);
+  assert.equal(joined, false);
+  let typed = segments;
+  for (const v of [5, 50, 500]) typed = withSectionSize(typed, 0, "s2", v, joined);
+  assert.equal(shownIn2(typed[0].s2), 500);
+  assert.equal(shownIn2(typed[1].s1), 50, "the second section keeps its start");
+  // a chained pair follows every keystroke
+  const chained = hornOf(BIN).segments;
+  let follow = chained;
+  for (const v of [5, 50, 500]) follow = withSectionSize(follow, 0, "s2", v, joinsNext(chained, 0));
+  assert.equal(shownIn2(follow[1].s1), 500);
 });
 
 test("designer horn: sections chain as they are edited, added and removed", () => {

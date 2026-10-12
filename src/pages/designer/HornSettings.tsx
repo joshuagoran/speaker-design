@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { HornSegment, SpeakerHorn } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
@@ -7,9 +8,10 @@ import { entriesOf, keysOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
 import { DESIGNER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/designer";
 import { HORN_DRIVE } from "../../constants/speakerSpec";
-import { FIELD_ROW } from "./designerFields";
+import { FIELD_ROW, shownIn } from "./designerFields";
 import { hornText } from "./designerText";
 import {
+  joinsNext,
   shownIn2,
   shownInOfCm,
   stepsIn,
@@ -27,7 +29,7 @@ const DRIVES_NOT_MODELED = keysOf(HORN_DRIVE_NAMES).filter((k) => k !== HORN_DRI
 const SECTION_FIELDS: readonly { size: HornSectionSize; label: string; step: number }[] = [
   { size: "s1", label: DESIGNER_TEXT.hornStart, step: 1 },
   { size: "s2", label: DESIGNER_TEXT.hornEnd, step: 1 },
-  { size: "length", label: DESIGNER_TEXT.hornLength, step: 0.25 },
+  { size: "length", label: DESIGNER_TEXT.portLength, step: 0.25 },
 ];
 
 /** A section's size as its field shows it: an area in in², a length in in. */
@@ -45,6 +47,11 @@ interface Props {
  */
 export function HornSettings({ horn, onEdit }: Props) {
   const { segments } = horn;
+  /**
+   * whether the section whose end area is being typed met the next one when its field took focus: the chain follows
+   * that, not each keystroke's value (null: no end area field has focus)
+   */
+  const joinedAtFocus = useRef<boolean | null>(null);
   const editSegments = (edit: (list: readonly HornSegment[]) => HornSegment[] | null) =>
     onEdit((h) => {
       const next = edit(h.segments);
@@ -74,14 +81,35 @@ export function HornSettings({ horn, onEdit }: Props) {
           />
           <div className={FIELD_ROW}>
             {SECTION_FIELDS.map(({ size, label, step }) => (
-              <NumberField
+              // `contents`: the wrapper only hears the field's focus, the row lays out the field
+              <div
                 key={size}
-                label={label}
-                value={shownSize(s, size)}
-                min={0}
-                step={step}
-                onChange={(v) => editSegments((list) => withSectionSize(list, i, size, v))}
-              />
+                className="contents"
+                onFocus={() => {
+                  joinedAtFocus.current = size === "s2" ? joinsNext(segments, i) : null;
+                }}
+                onBlur={() => {
+                  joinedAtFocus.current = null;
+                }}
+              >
+                <NumberField
+                  label={label}
+                  value={shownSize(s, size)}
+                  min={0}
+                  step={step}
+                  onChange={(v) =>
+                    editSegments((list) =>
+                      withSectionSize(
+                        list,
+                        i,
+                        size,
+                        v,
+                        joinedAtFocus.current ?? joinsNext(list, i),
+                      ),
+                    )
+                  }
+                />
+              </div>
             ))}
           </div>
           {stepsIn(segments, i) && (
@@ -94,7 +122,7 @@ export function HornSettings({ horn, onEdit }: Props) {
       </Button>
       <NumberField
         label={<Tooltip tip={DESIGNER_TEXT.hornThroatTip}>{DESIGNER_TEXT.hornThroat}</Tooltip>}
-        value={Math.round(horn.throatChamber * 100) / 100}
+        value={shownIn(horn.throatChamber)}
         min={0}
         step={0.1}
         unit="L"

@@ -191,7 +191,6 @@ export const DESIGNER_TEXT = {
   hornProfile: "Profile",
   hornStart: "Start area, in²",
   hornEnd: "End area, in²",
-  hornLength: "Length, in",
   hornThroat: "Throat chamber",
   hornThroatTip: "The air between the cones and the horn's throat. 0 for none.",
   hornPath: "Path",
