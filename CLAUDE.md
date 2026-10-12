@@ -54,3 +54,16 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Never attach session links (e.g. `Claude-Session:` trailers or claude.ai/code URLs) to commit messages, PR descriptions or comments.
 - Two layers enforce this: `.claude/settings.json` (`attribution.sessionUrl: false`) turns the links off in cloud sessions, and `.github/workflows/no-session-links.yml` strips them from PR bodies and fails a PR whose commits carry one.
 - A PR that finishes an issue says `Closes #N` so merging closes it.
+
+## Agents and usage
+
+Keep token use low. These rules apply to every session and every subagent.
+
+- Models: reviewers and docs-only agents use Sonnet at medium effort; basic web searches use Haiku. Code work uses the session model.
+- Give a small fix to a new agent with a short, focused prompt. Do not send more work to a long-running agent with a large context.
+- Before a push, run `vp check` and the affected test files only. CI runs the full suite, the build and the phone check. Run them locally only when CI fails or the change touches the build or the layout.
+- Review each code PR one time. Fix the findings without a second review. A docs-only PR gets a light review or none.
+- Put related small changes in one PR, so there are fewer review and CI cycles.
+- Take screenshots only when the owner asks, or for a taste decision.
+- Never wait in the foreground. Waits for CI or long jobs run in the background. Ask the owner before any job that takes minutes.
+- The owner batches notes in one message. Answer in one message, with questions in one short list.

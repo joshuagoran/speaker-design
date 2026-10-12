@@ -470,9 +470,14 @@ export interface AmpModel {
   ampClass: AmpClass | null;
   /** output channels, unbridged */
   channels: number;
-  /** watts per channel into 8 Ω and into 4 Ω */
+  /** watts per channel into 8 Ω and into 4 Ω (channel 1's, where `ch2` is set; so are w2 and w16) */
   w8: number;
   w4: number;
+  /** watts per channel into 2 Ω and into 16 Ω; null where the maker publishes no continuous rating */
+  w2: number | null;
+  w16: number | null;
+  /** channel 2's watts, where it differs from channel 1 (Crown's dual-level bi-amp models) */
+  ch2?: Pick<AmpModel, "w16" | "w8" | "w4" | "w2">;
   /** voltage gain, dB; null where the maker publishes neither gain nor sensitivity */
   gainDb: number | null;
   /** the speaker-power range its limiter can be set to, watts; null where the limiter takes no speaker power */
