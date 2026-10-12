@@ -11,7 +11,8 @@ import {
 import { resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { numberChannels } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
-import { layersFromPa } from "../../lib/speaker/paSpec";
+import { startLayers } from "../stack/stackPresets";
+import { STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
 import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
@@ -19,7 +20,7 @@ import { fromStored, type StoredCoverageLayout } from "../coverage/useCoverageLa
 import { COVERAGE_LAYOUT_KEY } from "../../constants/coverageTestIds";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
-import { SPACE_TEXT, SPACE_YAW_DEG } from "../../constants/space";
+import { SPACE_YAW_DEG } from "../../constants/space";
 import { DRAFT_SPACE_ID, emptySpace, spaceFromSaved, spaceSnapshot } from "./spaceSaves";
 import type {
   CoverageBand,
@@ -157,10 +158,18 @@ export function withStack(
   return { stack, stacks, speakers };
 }
 
-/** The PA design read in as a space on the Coverage page's floor (as that page last left it). */
-export function spaceFromPa(cfg: PaPlannerDesign): SpaceDesign {
+/**
+ * A start read in as a space: a preset (a PA layout on the PA floor's starting layout, or the Hi-fi pair in its room), or
+ * the current PA design on the Coverage page's floor (as that page last left it). A PA design takes its music balance
+ * in its band Levels.
+ */
+export function spaceFromStart(start: StackStart, pa: PaPlannerDesign): SpaceDesign {
   const floor = fromStored(readStoredJson<StoredCoverageLayout>(COVERAGE_LAYOUT_KEY, {}));
-  const read = layersFromPa(cfg, { id: DRAFT_SPACE_ID, name: SPACE_TEXT.paName }, floor);
+  const read = startLayers(
+    start,
+    { id: DRAFT_SPACE_ID, name: STACK_START_NAMES[start] },
+    { pa, floor },
+  );
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
 

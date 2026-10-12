@@ -15,7 +15,7 @@ import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { StackFront } from "../../components/drawings/StackFront";
-import { layersFromPa } from "../../lib/speaker/paSpec";
+import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { formatHz } from "../../lib/format";
 import { DEFAULT_PA } from "../../lib/defaults";
@@ -40,6 +40,13 @@ import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
+import { STACK_STARTS, startGroup, startLayers } from "./stackPresets";
+import {
+  STACK_START,
+  STACK_START_NAMES,
+  STACK_START_TEXT,
+  type StackStart,
+} from "../../constants/stackPresets";
 import type { StackPlanner } from "./useStack";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 
@@ -81,14 +88,21 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
     (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
   );
   const lineOf = (k: number) => bandLine(pal, k, members.length);
-  const fromPa = () =>
-    stack.setDesign(
-      layersFromPa(
-        paPlannerDesign(planner),
-        { id: DRAFT_STACK_ID, name: STACK_TEXT.paName },
-        DEFAULT_COVERAGE_LAYOUT,
-      ),
+  const startOptions = STACK_STARTS.map((id) => ({
+    id,
+    name: STACK_START_NAMES[id],
+    group: startGroup(id),
+  }));
+  const [start, setStart] = useState<StackStart>(STACK_START.paStack);
+  /** replaces the stack with the start's: a preset, or the current PA design on the PA floor's starting layout */
+  const startFrom = () => {
+    const { stack: started, speakers } = startLayers(
+      start,
+      { id: DRAFT_STACK_ID, name: STACK_START_NAMES[start] },
+      { pa: paPlannerDesign(planner), floor: DEFAULT_COVERAGE_LAYOUT },
     );
+    stack.setDesign({ stack: started, speakers });
+  };
   const summaries: Record<StackSettingsSection, string> = {
     stack: `${name} · ${members.length} member${members.length === 1 ? "" : "s"}`,
     members: names.join(" · ") || STACK_TEXT.noMembers,
@@ -240,11 +254,18 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 maxLength={200}
                 onChange={stack.setNotes}
               />
+              <SelectField
+                label={STACK_START_TEXT.startFrom}
+                options={startOptions}
+                value={byId(startOptions, start)}
+                onChange={(o) => setStart(o.id)}
+                group={(o) => o.group}
+              />
               <div className="flex flex-wrap gap-2 mb-2">
-                <Button onClick={fromPa}>{STACK_TEXT.fromPa}</Button>
+                <Button onClick={startFrom}>{STACK_START_TEXT.startOver}</Button>
                 <Button onClick={() => stack.setDesign(emptyStack())}>{STACK_TEXT.clear}</Button>
               </div>
-              <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.fromPaHint}</p>
+              <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.startHint}</p>
             </>,
           )}
           {section(

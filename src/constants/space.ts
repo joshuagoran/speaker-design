@@ -64,8 +64,6 @@ const ampName = (n: number) => `Amp ${n}`;
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
-  /** the name a space read from the PA design takes */
-  paName: "PA design",
   coverage: "Coverage",
   side: "Side view",
   sideNote:
@@ -73,12 +71,11 @@ export const SPACE_TEXT = {
   response: "Response at the listener",
   levels: "Levels at the listening area",
   hardware: "Hardware",
-  noPlacements: "Place a saved stack or speaker, or start from the current PA design.",
+  noPlacements: "Place a saved stack or speaker, or start from a preset.",
   missing:
     "A placement names a stack or speaker that is not in this space. The model leaves it out.",
-  fromPa: "From the current PA design",
-  fromPaHint:
-    "Replaces this space with the PA design on the Coverage page's floor. Open a saved space from the library above.",
+  startHint:
+    "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on the Coverage page's floor, and the Hi-fi pair in its room. A PA start sets each band's level to the PA page's music balance. Open a saved space from the library above.",
   clear: "Start empty",
   savedStack: "Saved stack",
   savedSpeaker: "Saved speaker",

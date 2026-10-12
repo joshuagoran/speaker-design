@@ -42,7 +42,15 @@ import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { PlacementSettings } from "./PlacementSettings";
 import { HardwareSettings } from "./HardwareSettings";
 import { emptySpace, itemName } from "./spaceSaves";
-import { spaceFromPa, type SpacePlanner } from "./useSpace";
+import { spaceFromStart, type SpacePlanner } from "./useSpace";
+import { STACK_STARTS, startGroup } from "../stack/stackPresets";
+import {
+  STACK_START,
+  STACK_START_NAMES,
+  STACK_START_TEXT,
+  type StackStart,
+} from "../../constants/stackPresets";
+import { byId } from "../../lib/tables";
 
 interface Props {
   space: SpacePlanner;
@@ -80,6 +88,12 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     const saved: unknown = Reflect.get(c, "speaker");
     return isSavedSpeaker(saved) ? [{ id: c.id, name: c.name, spec: saved }] : [];
   });
+  const startOptions = STACK_STARTS.map((id) => ({
+    id,
+    name: STACK_START_NAMES[id],
+    group: startGroup(id),
+  }));
+  const [start, setStart] = useState<StackStart>(STACK_START.paStack);
   const [stackPick, setStackPick] = useState("");
   const [speakerPick, setSpeakerPick] = useState("");
   const pickedStack = stacks.find((o) => o.id === stackPick) ?? stacks[0];
@@ -269,13 +283,22 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
             "space",
             <>
               <TextField label="Name" value={name} maxLength={60} onChange={space.setName} />
+              <SelectField
+                label={STACK_START_TEXT.startFrom}
+                options={startOptions}
+                value={byId(startOptions, start)}
+                onChange={(o) => setStart(o.id)}
+                group={(o) => o.group}
+              />
               <div className="flex flex-wrap gap-2 mb-2">
-                <Button onClick={() => space.setDesign(spaceFromPa(paPlannerDesign(planner)))}>
-                  {SPACE_TEXT.fromPa}
+                <Button
+                  onClick={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
+                >
+                  {STACK_START_TEXT.startOver}
                 </Button>
                 <Button onClick={() => space.setDesign(emptySpace())}>{SPACE_TEXT.clear}</Button>
               </div>
-              <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.fromPaHint}</p>
+              <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.startHint}</p>
             </>,
           )}
           {section(
