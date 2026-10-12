@@ -35,9 +35,12 @@ export function FilterFields({ filters, newCornerHz, offName, onEdit }: Props) {
     const filter = filters[side];
     const set = (f: BandFilter | null) => onEdit((b) => ({ ...b, [side]: f }));
     return (
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 items-end">
+      // one grid for every row: the select spans both columns when there is no corner, so each row has the same width
+      // and the select and the corner field sit on one line
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 items-start mb-4">
         <SelectField
           label={label}
+          className={filter ? "" : "col-span-2"}
           options={options}
           value={filter ? byId(options, filter.type) : off}
           onChange={(o) => {

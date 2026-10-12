@@ -49,12 +49,14 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         step={0.5}
         unit="dB"
         onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
+        className="mb-4"
       />
       <ToggleGroup
         label="Drive"
         value={band.drive}
         onChange={(drive) => onEdit((b) => ({ ...b, drive }))}
         options={entriesOf(DRIVE_NAMES)}
+        className="mb-4"
       />
       <NumberField
         // passive: the channel it shares

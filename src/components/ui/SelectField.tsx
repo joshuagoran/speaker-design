@@ -16,6 +16,8 @@ interface Props<T extends SelectOption> {
   onChange: (option: T) => void;
   extra?: React.ReactNode;
   group?: (option: T) => string;
+  /** the row's classes: its bottom margin by default */
+  className?: string;
 }
 
 /** group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance */
@@ -26,6 +28,7 @@ export function SelectField<T extends SelectOption>({
   onChange,
   extra,
   group,
+  className,
 }: Props<T>) {
   const opt = (o: T) => (
     <option key={o.id} value={o.id}>
@@ -41,7 +44,7 @@ export function SelectField<T extends SelectOption>({
     : null;
   const id = useId();
   return (
-    <FormField label={label} htmlFor={id} extra={extra}>
+    <FormField label={label} htmlFor={id} extra={extra} className={className}>
       <select
         id={id}
         value={value?.id ?? ""}
@@ -49,7 +52,8 @@ export function SelectField<T extends SelectOption>({
           const picked = byId(options, e.target.value);
           if (picked) onChange(picked);
         }}
-        className="w-full px-3 py-2 rounded border border-stone-300 bg-panel text-sm hover:border-stone-500"
+        // the same height as a text or number field, so a select and a field side by side line up
+        className="w-full h-[38px] px-3 py-2 rounded border border-stone-300 bg-panel text-sm hover:border-stone-500"
       >
         {groups
           ? groups.map(({ heading, items }) => (
