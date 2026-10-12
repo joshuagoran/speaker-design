@@ -28,7 +28,8 @@ import type {
   Setter,
 } from "../../types";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useHifiCutlistOptions } from "../cutlist/useHifiCutlistOptions";
+import { useStoredCutlistOptions } from "../cutlist/useStoredCutlistOptions";
+import { CUTLIST_PROJECT } from "../../constants/cutlistProjects";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
 import type { CabinetStyle } from "../pa-stack/hooks/useCabinetStyle";
 import { panelFor, panelIn, restoredPanel } from "../../lib/panel";
@@ -92,7 +93,7 @@ export function useHifiPlanner(): HifiPlanner {
   const [boxDims, setBoxDims] = useState<Dims3>(DEFAULT_HIFI.boxDims);
   const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_HIFI.wallPanel);
   const [panelMaterial, setPanelMaterial] = useState<PanelMaterial>(DEFAULT_HIFI.panelMaterial);
-  const cutlist = useHifiCutlistOptions();
+  const cutlist = useStoredCutlistOptions(CUTLIST_PROJECT.hifi);
   const { panelExactIn } = cutlist;
   // the walls' exact thickness: the nominal size at the Cutlist page's measured thickness (lib/panel)
   const wallThicknessIn = panelIn(wallPanel, panelMaterial, panelExactIn);

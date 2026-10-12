@@ -93,6 +93,14 @@ export const DESIGNER_TEXT = {
   noFilter: "None",
   /** a band the user adds, by its place among the bands */
   newBandName: (n: number) => `Band ${n}`,
+  build: "Weight and bracing",
+  weight: "Weight",
+  /** a chamber's weight tile, by its place */
+  chamberWeight: (n: number) => `Chamber ${n} weight`,
+  buildNote:
+    "Each chamber is braced by the PA bracing rule: every panel over 280 Hz. Its net air counts the braces, the vent's walls, the baffle cleats and the hardware. The weight counts the panels, braces, drivers with their horns, radiators and hardware. The Cutlist tab lists every part.",
+  noBraces: "no braces",
+  hornBraces: "no braces (the horn's walls hold its panels)",
   inputRange: "Input range",
   inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
   inputOff: "Off",

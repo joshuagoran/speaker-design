@@ -52,7 +52,8 @@ import {
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
-import { bandText, chamberText, countText, inputText } from "./designerText";
+import { bandText, bracingText, chamberText, countText, inputText } from "./designerText";
+import { braceNoteLines } from "../../lib/bracingNotes";
 import { bandChips, chamberChips } from "./designerChips";
 import { paStarts, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
@@ -90,7 +91,7 @@ const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
  */
 export function DesignerPage({ designer, planner, hifi }: Props) {
   const pal = usePalette();
-  const { spec, response, limits, store, snapshot, restore } = designer;
+  const { spec, response, limits, build, store, snapshot, restore } = designer;
   const folds = useFolds("designer.settingsFolds", keysOf(DESIGNER_SETTINGS_SECTIONS));
   const starts: DesignerStart[] = [
     DESIGNER_START.empty,
@@ -182,6 +183,16 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       ? [[DESIGNER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
       : []),
   ];
+  const buildTiles: StatTileItem[] = [
+    [DESIGNER_TEXT.weight, build.lb.toFixed(0), "lb"],
+    ...(one
+      ? []
+      : build.chambers.map((c, i): StatTileItem => [
+          DESIGNER_TEXT.chamberWeight(i + 1),
+          c.lb.total.toFixed(0),
+          "lb",
+        ])),
+  ];
   const fbMarks = response.chambers.flatMap((c, i) =>
     c.fb !== null ? [{ f: c.fb, label: one ? "Fb" : `Fb ${i + 1}` }] : [],
   );
@@ -265,6 +276,27 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             )}
             <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>{DESIGNER_TEXT.modelNote}</p>
+          </section>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+            <SectionHeading className="mb-3">{DESIGNER_TEXT.build}</SectionHeading>
+            <StatTileGrid tiles={buildTiles} className="mb-3" />
+            <ul className="text-sm mb-3">
+              {build.chambers.map((c, i) => (
+                <li key={c.box}>
+                  {DESIGNER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
+                </li>
+              ))}
+            </ul>
+            {build.chambers.flatMap((c, i) =>
+              c.bracing
+                ? braceNoteLines(`${DESIGNER_TEXT.chamber} ${i + 1}`, c.bracing).map((line) => (
+                    <Notice key={line}>{line}</Notice>
+                  ))
+                : [],
+            )}
+            <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
+              {DESIGNER_TEXT.buildNote}
+            </p>
           </section>
           {limits.bands.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
