@@ -120,7 +120,7 @@ export const DESIGNER_TEXT = {
   inset: "Baffle inset, in",
   insetTip: "How far the baffle sits behind the frame's front edge.",
   archNotDrawn:
-    "The arch draws over a top chamber that runs the full width and is at least half as tall as the cabinet is wide, in one shell. This cabinet's top is drawn flat.",
+    "The arch draws over a top chamber that runs the full width and is at least half as tall as the cabinet is wide, in one shell. The top of this cabinet is drawn flat.",
   fromLeft: "From left, in",
   fromBottom: "From bottom, in",
   backFromFront: "Back from front, in",
@@ -129,5 +129,8 @@ export const DESIGNER_TEXT = {
   radiatorPlace: "Radiator position",
   mouthPlace: "Horn mouth position",
   panel: "Panel",
+  slotNarrow: "Opening, narrow side, in",
+  slotLong: "Opening, long side, in",
+  portLength: "Length, in",
   ventFixed: "This port's place comes from its shape (the PA port rule or the slot rule).",
 } as const;

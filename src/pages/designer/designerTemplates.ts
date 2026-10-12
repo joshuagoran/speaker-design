@@ -93,7 +93,7 @@ export function defaultPaDesign(layout: PaLayout = DEFAULT_PA.layout): PaPlanner
 
 /** One speaker of the PA page's starting design in `layout`, under the template's identity. */
 function paSpeaker(layout: PaLayout, part: SpeakerPart, identity: SpecIdentity): SpeakerSpec {
-  // the speakers alone are read: where the stacks stand (the coverage page's) doesn't change them
+  // the speakers alone are read: where the stacks stand (the coverage page's) does not change them
   const read = systemFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT.stacks);
   const id = speakerIdentity(identity, part).id;
   const found = read.speakers.find((s) => s.id === id);
@@ -134,14 +134,13 @@ function towerTopHorn(identity: SpecIdentity): SpeakerSpec {
 /** A Hi-fi design state on the page's defaults, with these parts, crossover and vented box. */
 const hifiState = (
   parts: Pick<HifiDesignState, "woofer" | "tweeter" | "crossoverHz">,
-  box: typeof DEFAULT_MONITOR.hornBox | typeof DEFAULT_MONITOR.coaxBox,
+  box: Pick<HifiDesignState, "boxDims" | "portSpec">,
   wallPanel: HifiDesignState["wallPanel"] = DEFAULT_HIFI.wallPanel,
 ): HifiDesignState => ({
   ...DEFAULT_HIFI,
   ...parts,
   boxType: VENT_KIND.vented,
-  boxDims: box.dims,
-  portSpec: box.port,
+  ...box,
   wallPanel,
 });
 
@@ -221,11 +220,11 @@ function monitorHorn(identity: SpecIdentity): SpeakerSpec {
 /** A length in mm, in inches. */
 const inches = (mm: number) => mm / MM_PER_IN;
 
-/** How finely a template's box sizes are given, in: an eighth, as a saw is set. */
-const BOX_STEP_IN = 1 / 8;
+/** How finely a template's box and slot sizes are given, in: an eighth, as a saw is set. */
+const SIZE_STEP_IN = 1 / 8;
 
-/** A box size to the nearest step. */
-const boxSize = (v: number) => Math.round(v / BOX_STEP_IN) * BOX_STEP_IN;
+/** A length, in, to the nearest step. */
+const stepped = (inchesIn: number) => Math.round(inchesIn / SIZE_STEP_IN) * SIZE_STEP_IN;
 
 /**
  * A PA v2 box's plywood shell around one horn chamber: the PA's frame and panels, its mouth flush with the front (no
@@ -259,7 +258,7 @@ const paV2Band = (
 /**
  * A slot on each front side of a PA v2 box: `widthMm` wide, the opening's height (`longIn`) tall, `lengthMm` long. The
  * spec takes the slot's narrow size as its height and its long size as its width: the model reads only the area and the
- * opening's rectangle, and the views draw a Hi-fi slot along the bottom (a slot's place isn't movable yet).
+ * opening's rectangle, and the views draw a Hi-fi slot along the bottom (a slot's place is not movable yet).
  */
 const sideSlots = (
   widthMm: number,
@@ -271,9 +270,9 @@ const sideSlots = (
   port: {
     shape: PORT_SHAPE.slot,
     n: 2,
-    h: inches(widthMm),
-    w: longIn,
-    len: inches(lengthMm),
+    h: stepped(inches(widthMm)),
+    w: stepped(longIn),
+    len: stepped(inches(lengthMm)),
     folded,
   },
   maxSpeedMs: DEFAULT_PA.portMax,
@@ -299,11 +298,11 @@ function paV2SubBin(count: 1 | 2, identity: SpecIdentity): SpeakerSpec {
   const chamber: SpeakerChamber = {
     at: { xIn: 0, yIn: 0 },
     dims: {
-      w: boxSize(inches(bin.widthMm)),
-      h: boxSize(openingIn + 2 * t),
-      d: boxSize(inches(bin.depthMm)),
+      w: stepped(inches(bin.widthMm)),
+      h: stepped(openingIn + 2 * t),
+      d: stepped(inches(bin.depthMm)),
     },
-    // the rear chamber and the wedges beside the flare: a shape the box models can't work out
+    // the rear chamber and the wedges beside the flare: a shape the box models cannot work out
     netLiters: bin.rearLiters * count,
     stuffingPct: 0,
     vent: sideSlots(bin.slotWidthMm, openingIn, bin.slotLengthMm, true),
@@ -348,9 +347,9 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
   const chamber: SpeakerChamber = {
     at: { xIn: 0, yIn: 0 },
     dims: {
-      w: boxSize(inches(box.widthMm)),
-      h: boxSize(openingIn + 2 * t),
-      d: boxSize(inches(box.depthMm)),
+      w: stepped(inches(box.widthMm)),
+      h: stepped(openingIn + 2 * t),
+      d: stepped(inches(box.depthMm)),
     },
     // the rear chamber, the sealed wedges left out
     netLiters: box.rearLiters,

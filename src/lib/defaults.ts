@@ -32,7 +32,6 @@ import type {
   FillDriver,
   Format,
   HifiDesignState,
-  HifiPort,
   HifiTweeter,
   HifiWaveguide,
   HifiWoofer,
@@ -54,7 +53,7 @@ import type {
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../constants/panelSizes";
 import { HIFI_DRIVE } from "../constants/hifiEngine";
-import { SPEAKER_BAND, SPEAKER_BAND_NAMES, VENT_KIND } from "../constants/speakerSpec";
+import { PORT_SHAPE, SPEAKER_BAND, SPEAKER_BAND_NAMES, VENT_KIND } from "../constants/speakerSpec";
 import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
 import { DIRECT_LOAD, FLUSH_BOX, NO_FILTERS, stuffingPctOf } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
@@ -244,11 +243,8 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
   look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
 };
 
-/** A vented box's starting size and round port, as the Hi-fi page takes them. */
-interface StartBox {
-  dims: HifiDesignState["boxDims"];
-  port: HifiPort;
-}
+/** A vented box's starting size and port, as the Hi-fi page takes them. */
+type StartBox = Pick<HifiDesignState, "boxDims" | "portSpec">;
 
 /**
  * The Designer's DJ booth monitor templates (docs/speaker-designer-plan.md P4 and the owner decisions): a pair, one on
@@ -263,12 +259,18 @@ interface StartBox {
 export const DEFAULT_MONITOR = {
   highpass: { hz: 70, order: 4 },
   coax: byIdOrThrow(FILL_OPTIONS, "celftx1025", CATALOG_TABLE_NAMES.fills),
-  coaxBox: { dims: DEFAULT_FILL.boxDims, port: { shape: "round", ...DEFAULT_FILL.portSpec } },
+  coaxBox: {
+    boxDims: DEFAULT_FILL.boxDims,
+    portSpec: { shape: PORT_SHAPE.round, ...DEFAULT_FILL.portSpec },
+  },
   woofer: byIdOrThrow(HIFI_WOOFERS, "f8pr200", CATALOG_TABLE_NAMES.hifiWoofers),
   tweeter: byIdOrThrow(HIFI_TWEETERS, "de250", CATALOG_TABLE_NAMES.hifiTweeters),
-  waveguide: byIdOrThrow(HIFI_WAVEGUIDES, "me20", CATALOG_TABLE_NAMES.horns),
+  waveguide: byIdOrThrow(HIFI_WAVEGUIDES, "me20", CATALOG_TABLE_NAMES.hifiWaveguides),
   crossoverHz: 2500,
-  hornBox: { dims: { w: 11, h: 20, d: 11 }, port: { shape: "round", n: 1, dia: 3, len: 6 } },
+  hornBox: {
+    boxDims: { w: 11, h: 20, d: 11 },
+    portSpec: { shape: PORT_SHAPE.round, n: 1, dia: 3, len: 6 },
+  },
 } satisfies {
   highpass: { hz: BandFilter["hz"]; order: CrossoverOrder };
   coax: FillDriver;

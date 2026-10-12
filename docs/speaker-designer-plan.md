@@ -71,7 +71,7 @@ Each PR stands alone. Lowest risk first.
 - **P1 Small 1″ waveguides (data).**
   - 4–6″ round or OS waveguides in `horns.ts`, with coverage, `lowHz` and US prices. Hi-fi offers them
     through `HIFI_WAVEGUIDES` with no code change.
-  - A `scope` flag so the PA optimizer (`HORN_OPTIONS` in `src/lib/pa/optimize.ts`) doesn't pick them.
+  - A `scope` flag so the PA optimizer (`HORN_OPTIONS` in `src/lib/pa/optimize.ts`) does not pick them.
   - A `hifiGuidePattern` chip: the crossover is below the waveguide's `lowHz`.
   - Golden and snapshots: unchanged.
 - **P2 Engine knobs.** No UI; Hi-fi defaults unchanged.
@@ -234,10 +234,15 @@ Each PR stands alone. Lowest risk first.
         front side, folded, tuned to ~35 Hz, a 30 Hz BW24 subsonic.
       - PA v2 mid box (`PA_V2_MID_BOX`): two 10″ in one throat with a 1 L throat chamber and an exponential flare,
         ~34 L rear air, side slots, tuned to ~95 Hz, crossed at the R-OSSE's lowest crossover.
-      - The PA v2 slots store their narrow size as the height: the model reads only the area and the rectangle. The
-        views draw a slot along the bottom, not on the sides.
+      - The PA v2 slots store their narrow size as the height and their long side as the width, in sizes of ⅛″. The
+        model reads only the area and the rectangle. The slot settings show the count, the narrow side, the long side
+        (where the slot sets one) and the length. "Auto" net air counts each slot and its shelf.
+      - Later, with movable ports: the side slots draw on the sides (today the views draw a slot along the bottom), and
+        "Auto" net air takes off the air of a horn's flare (today a horn chamber's net air is set).
+      - A horn mouth that a square would make taller than the clear face draws wider than square, up to the clear
+        width. The PA v2 bins' mouths then fit the face.
     - **Cabinet settings (done).** A "Construction" fold: the construction, the baffle inset (a frame only) and the
-      top. A note says when an arched top can't draw. In each chamber, a Hi-fi round port, passive radiators and a
+      top. A note says when an arched top cannot draw. In each chamber, a Hi-fi round port, passive radiators and a
       horn's mouth have a position: "Auto" (the vent rule places it, and the fields show where) or "Custom" (a panel
       for a vent, then "From left" and "From bottom", as the chamber's own position). Each driver entry shows its
       position too. The moved notices say when a set position moves inside the clear face.
@@ -345,7 +350,7 @@ Each PR stands alone. Lowest risk first.
 - Near-field accuracy at 0.5 m for big coaxes.
 - Optimizer runtime with coax candidates.
 - Page complexity: split `HifiPage.tsx` first.
-- Passive maker networks (3rd order) can't be expressed as `CrossoverOrder` (4 | 8).
+- Passive maker networks (3rd order) cannot be expressed as `CrossoverOrder` (4 | 8).
 - The tall tower with a loose horn on top: tipping, and securing the horn.
 
 ## Owner decisions (Oct 2026)

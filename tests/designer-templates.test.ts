@@ -55,7 +55,7 @@ import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { TOWER_MID_HEIGHT_IN } from "../src/constants/paLayouts";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { PANEL } from "../src/constants/cutParts";
-import { CM_PER_IN, MM_PER_IN } from "../src/constants/units";
+import { CM_PER_IN, LITERS_PER_CUBIC_IN, MM_PER_IN } from "../src/constants/units";
 import type { DriverKind, SpeakerChamber, SpeakerSpec } from "../src/types";
 import { DRAFT_SPEAKER_ID } from "../src/pages/designer/useDesigner";
 
@@ -183,9 +183,22 @@ test("designer templates: the PA v2 sub bin's drivers share one throat, and the 
     assert.ok(chamber.vent.kind === VENT_KIND.vented);
     const { port } = chamber.vent;
     assert.ok(port.shape === PORT_SHAPE.slot && port.w !== undefined && port.folded);
-    // ~600 cm² of slot per driver
+    // ~600 cm² of slot per driver (the sizes in eighths of an inch)
     const slotCm2 = port.n * port.h * port.w * CM_PER_IN * CM_PER_IN;
-    assert.ok(Math.abs(slotCm2 / count - 600) < 10, `${slotCm2.toFixed(0)} cm²`);
+    assert.ok(Math.abs(slotCm2 / count / 600 - 1) < 0.05, `${slotCm2.toFixed(0)} cm²`);
+    // the mouth fits the clear face: wider than square, not clipped
+    const flare = hornFlare(spec.cabinet, speakerLayout(spec.cabinet).chambers[0]);
+    assert.ok(flare && !flare.mouthClipped, `${template}: the mouth fits`);
+    // Auto net air counts both slots and their shelves
+    const auto: SpeakerChamber = { ...chamber, netLiters: null };
+    const oneSlot: SpeakerChamber = { ...auto, vent: { ...chamber.vent, port: { ...port, n: 1 } } };
+    const airOf = (c: SpeakerChamber) =>
+      speakerResponse(
+        { ...spec, cabinet: { ...spec.cabinet, chambers: [c] } },
+        { feed: spec.input },
+      ).chambers[0].netLiters;
+    const slotL = port.h * port.w * port.len * LITERS_PER_CUBIC_IN;
+    assert.ok(airOf(oneSlot) - airOf(auto) > slotL, "the second slot takes its air");
     const result = hornDesignOf(chamber, { count: 1, angle: 2 });
     assert.ok(result.ok, template);
     const { design } = result;

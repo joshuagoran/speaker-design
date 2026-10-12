@@ -47,6 +47,7 @@ import {
 import { countText } from "./designerText";
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./designerPlaces";
 import { PlaceFields } from "./PlaceFields";
+import { FIELD_ROW, shownIn } from "./designerFields";
 import { onTop, type PlacedChamber } from "../../lib/speaker/speakerLayout";
 
 /** The driver kinds as the kind picker lists them. */
@@ -54,9 +55,6 @@ const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map((
   id,
   name,
 }));
-
-/** A row of number fields that wraps onto more lines where the pane is narrow. */
-const ROW = "flex flex-wrap gap-x-3 gap-y-3 mb-3";
 
 /** Where a chamber's net air comes from: worked out from its size (Auto), or typed in (Custom). */
 const NET_AIR = SET_BY;
@@ -111,12 +109,12 @@ export function ChamberSettings({
           </Button>
         )}
       </div>
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         {(["w", "h", "d"] as const).map((k) => (
           <NumberField
             key={k}
             label={`${{ w: "Width", h: "Height", d: "Depth" }[k]}, in`}
-            value={chamber.dims[k]}
+            value={shownIn(chamber.dims[k])}
             min={1}
             step={0.25}
             onChange={(v) => setDim(k, v)}
@@ -124,17 +122,17 @@ export function ChamberSettings({
         ))}
       </div>
       <div className="text-sm text-stone-500 mb-1">Position</div>
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
         <NumberField
           label="From left, in"
-          value={chamber.at.xIn}
+          value={shownIn(chamber.at.xIn)}
           step={0.25}
           onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
         />
         <NumberField
           label="From bottom, in"
-          value={chamber.at.yIn}
+          value={shownIn(chamber.at.yIn)}
           step={0.25}
           onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
         />
@@ -230,7 +228,7 @@ export function ChamberSettings({
             value={byId(HIFI_PASSIVES_BY_SIZE, vent.radiators.id)}
             onChange={(p) => setVent({ ...vent, radiators: { ...vent.radiators, id: p.id } })}
           />
-          <div className={ROW}>
+          <div className={FIELD_ROW}>
             <NumberField
               label="Count"
               value={vent.radiators.n}
@@ -316,21 +314,40 @@ export function ChamberSettings({
   );
 }
 
-/** A port's size: round tubes, a slot (the chamber's width unless it sets one) or side ducts. */
+/**
+ * A port's size: round tubes, a slot (its opening's narrow side, and its long side where it sets one: else the chamber's
+ * clear width) or side ducts.
+ */
 function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: SpeakerPort) => void }) {
   if (port.shape === PORT_SHAPE.slot)
     return (
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         <NumberField
-          label="Height, in"
-          value={port.h}
-          min={0.25}
-          step={0.25}
-          onChange={(h) => onChange({ ...port, h })}
+          label="Count"
+          value={port.n}
+          min={1}
+          step={1}
+          onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
         />
         <NumberField
-          label="Length, in"
-          value={port.len}
+          label={DESIGNER_TEXT.slotNarrow}
+          value={shownIn(port.h)}
+          min={0.25}
+          step={0.125}
+          onChange={(h) => onChange({ ...port, h })}
+        />
+        {port.w !== undefined && (
+          <NumberField
+            label={DESIGNER_TEXT.slotLong}
+            value={shownIn(port.w)}
+            min={0.25}
+            step={0.25}
+            onChange={(w) => onChange({ ...port, w })}
+          />
+        )}
+        <NumberField
+          label={DESIGNER_TEXT.portLength}
+          value={shownIn(port.len)}
           min={0.5}
           step={0.5}
           onChange={(len) => onChange({ ...port, len })}
@@ -350,17 +367,17 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
             [2, "Two"],
           ]}
         />
-        <div className={ROW}>
+        <div className={FIELD_ROW}>
           <NumberField
             label="Throat, in"
-            value={port.throat}
+            value={shownIn(port.throat)}
             min={0.25}
             step={0.25}
             onChange={(throat) => onChange({ ...port, throat })}
           />
           <NumberField
-            label="Length, in"
-            value={port.len}
+            label={DESIGNER_TEXT.portLength}
+            value={shownIn(port.len)}
             min={0.5}
             step={0.5}
             onChange={(len) => onChange({ ...port, len })}
@@ -369,7 +386,7 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
       </>
     );
   return (
-    <div className={ROW}>
+    <div className={FIELD_ROW}>
       <NumberField
         label="Count"
         value={port.n}
@@ -379,14 +396,14 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
       />
       <NumberField
         label="Diameter, in"
-        value={port.dia}
+        value={shownIn(port.dia)}
         min={0.5}
         step={0.25}
         onChange={(dia) => onChange({ ...port, dia })}
       />
       <NumberField
-        label="Length, in"
-        value={port.len}
+        label={DESIGNER_TEXT.portLength}
+        value={shownIn(port.len)}
         min={0.5}
         step={0.5}
         onChange={(len) => onChange({ ...port, len })}
@@ -439,11 +456,11 @@ function DriverFields({ driver, widthIn, bandOptions, onEdit, onRemove }: Driver
         step={1}
         onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
       />
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
         <NumberField
           label={DESIGNER_TEXT.fromLeft}
-          value={Math.round((driver.position.xIn + widthIn / 2) * 100) / 100}
+          value={shownIn(driver.position.xIn + widthIn / 2)}
           step={0.25}
           onChange={(v) =>
             onEdit((d) => ({ ...d, position: { ...d.position, xIn: v - widthIn / 2 } }))
@@ -452,7 +469,7 @@ function DriverFields({ driver, widthIn, bandOptions, onEdit, onRemove }: Driver
         <NumberField
           // a horn on the top: back from the baffle's front
           label={onTop(driver) ? DESIGNER_TEXT.backFromFront : DESIGNER_TEXT.fromBottom}
-          value={driver.position.yIn}
+          value={shownIn(driver.position.yIn)}
           step={0.25}
           onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
         />

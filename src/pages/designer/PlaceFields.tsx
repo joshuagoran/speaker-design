@@ -4,12 +4,7 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf } from "../../lib/records";
 import { DESIGNER_TEXT, SET_BY, SET_BY_NAMES } from "../../constants/designer";
-
-/** A row of number fields that wraps onto more lines where the pane is narrow (as the chamber's). */
-const ROW = "flex flex-wrap gap-x-3 gap-y-3 mb-3";
-
-/** A position as the fields show it, to the hundredth of an inch. */
-const shown = (v: number) => Math.round(v * 100) / 100;
+import { FIELD_ROW, shownIn } from "./designerFields";
 
 interface Props<P extends FacePoint> {
   label: React.ReactNode;
@@ -47,23 +42,23 @@ export function PlaceFields<P extends FacePoint>({
           onChange(
             v === SET_BY.auto
               ? undefined
-              : (value ?? { ...auto, xIn: shown(auto.xIn), yIn: shown(auto.yIn) }),
+              : (value ?? { ...auto, xIn: shownIn(auto.xIn), yIn: shownIn(auto.yIn) }),
           )
         }
         options={entriesOf(SET_BY_NAMES)}
       />
       {value && children}
-      <div className={ROW}>
+      <div className={FIELD_ROW}>
         <NumberField
           label={DESIGNER_TEXT.fromLeft}
-          value={shown(at.xIn + widthIn / 2)}
+          value={shownIn(at.xIn + widthIn / 2)}
           disabled={!value}
           step={0.25}
           onChange={(v) => value && onChange({ ...value, xIn: v - widthIn / 2 })}
         />
         <NumberField
           label={DESIGNER_TEXT.fromBottom}
-          value={shown(at.yIn)}
+          value={shownIn(at.yIn)}
           disabled={!value}
           step={0.25}
           onChange={(yIn) => value && onChange({ ...value, yIn })}

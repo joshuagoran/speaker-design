@@ -20,7 +20,7 @@ import { RADIATOR_PANEL } from "../../lib/hifi/hifi";
 import { PANEL } from "../../constants/cutParts";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 
-/** A radiator panel as a vent's: a side panel isn't one a vent position names, so the back stands for it. */
+/** A radiator panel as a vent's: a vent position does not name a side panel, so the back stands for it. */
 const ventPanelOf = (panel: RadiatorPanel): VentPanel =>
   panel === PANEL.side ? PANEL.back : panel;
 
@@ -60,7 +60,7 @@ export interface VentPlace {
 
 /**
  * The chamber's vent as a position moves it: its set position and its rule's place (the center of the round ports' row
- * along the baffle's bottom, or of the radiators' stack on `RADIATOR_PANEL`). Null for a vent that doesn't move: sealed,
+ * along the baffle's bottom, or of the radiators' stack on `RADIATOR_PANEL`). Null for a vent that does not move: sealed,
  * slots, side ducts and the PA's flared tubes.
  */
 export function ventPlace(
