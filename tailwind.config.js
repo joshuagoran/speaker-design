@@ -64,7 +64,7 @@ export default {
       boxShadow: { sheet: `0 -6px 20px ${v("shadow", 0.1)}` },
       fontFamily: { sans: font, serif: font, mono: font },
       // three weight levels for settings: a card's title over a field's label over the field's value
-      fontWeight: { title: "700", label: "500", value: "400" },
+      fontWeight: { title: "800", label: "600", value: "400" },
     },
   },
   plugins: [
