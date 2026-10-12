@@ -55,7 +55,13 @@ import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../constants/panelSizes"
 import { HIFI_DRIVE } from "../constants/hifiEngine";
 import { PORT_SHAPE, SPEAKER_BAND, SPEAKER_BAND_NAMES, VENT_KIND } from "../constants/speakerSpec";
 import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
-import { DIRECT_LOAD, FLUSH_BOX, NO_FILTERS, stuffingPctOf } from "./speaker/specParts";
+import {
+  DIRECT_LOAD,
+  FLUSH_BOX,
+  NO_FILTERS,
+  flushBracing,
+  stuffingPctOf,
+} from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
 
@@ -235,6 +241,8 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
     chambers: [DEFAULT_SPEAKER_CHAMBER],
     panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
     ...FLUSH_BOX,
+    ...flushBracing(DEFAULT_PA.wall),
+    hardware: null,
     roundoverIn: 0,
     tiltDeg: 0,
   },

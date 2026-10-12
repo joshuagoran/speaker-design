@@ -363,7 +363,7 @@ export function addSlotShelf(
 ) {
   const T = ctx.wall;
   const shelf = new THREE.Mesh(new THREE.BoxGeometry(opening.w, T, len), ctx.materials.inner);
-  shelf.position.set(0, opening.y + opening.h + T / 2, shellFrontZ - len / 2);
+  shelf.position.set(opening.x, opening.y + opening.h + T / 2, shellFrontZ - len / 2);
   shelf.name = HIFI_MESH_NAMES.slotShelf;
   ctx.group.add(shelf);
 }

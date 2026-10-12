@@ -3,6 +3,8 @@ import type {
   ChamberVent,
   Dims3,
   DriverKind,
+  HornAttachment,
+  HornPlacement,
   SpeakerBand,
   SpeakerCabinet,
   SpeakerChamber,
@@ -22,6 +24,8 @@ import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
 import {
   DESIGNER_TEXT,
   DRIVER_KIND_NAMES,
+  HORN_PLACEMENT_NAMES,
+  HORN_PLACEMENT_NO_FIT,
   MODEL_GAP_TEXT,
   PORT_SHAPE_NAMES,
   SET_BY,
@@ -48,7 +52,15 @@ import { countText } from "./designerText";
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./designerPlaces";
 import { PlaceFields } from "./PlaceFields";
 import { FIELD_ROW, shownIn } from "./designerFields";
-import { onTop, type PlacedChamber } from "../../lib/speaker/speakerLayout";
+import {
+  defaultHornPlacement,
+  hornFits,
+  onTop,
+  type PlacedChamber,
+} from "../../lib/speaker/speakerLayout";
+import { hornById } from "../../lib/data";
+import { takesHornMountAt } from "../../lib/pa/hornMount";
+import { HORN_MOUNT_DEFAULT } from "../../constants/hornMount";
 
 /** The driver kinds as the kind picker lists them. */
 const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map(([id, name]) => ({
@@ -280,6 +292,7 @@ export function ChamberSettings({
           key={i}
           driver={driver}
           widthIn={chamber.dims.w}
+          placed={placed}
           bandOptions={bandOptions}
           onEdit={(edit) => editDriver(i, edit)}
           onRemove={() => onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }))}
@@ -416,15 +429,31 @@ interface DriverProps {
   driver: SpeakerDriver;
   /** its chamber's width: the position shows from its left side */
   widthIn: number;
+  /** its chamber as the layout places it: which places its horn fits */
+  placed: PlacedChamber | undefined;
   bandOptions: readonly (readonly [BandId, string])[];
   onEdit: (edit: (d: SpeakerDriver) => SpeakerDriver) => void;
   onRemove: () => void;
 }
 
 /** One driver entry: its kind, part, count, place, band (a coaxial's two) and horn. */
-function DriverFields({ driver, widthIn, bandOptions, onEdit, onRemove }: DriverProps) {
+function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }: DriverProps) {
   const coaxial = driver.kind === DRIVER_KIND.coaxial;
   const horns = hornOptions(driver.kind);
+  const horn = driver.horn && hornById(driver.horn.hornId);
+  /** the places its horn doesn't fit */
+  const noFit = keysOf(HORN_PLACEMENT_NAMES).filter(
+    (p) => horn && placed && !hornFits(horn, placed, p),
+  );
+  /** its horn at `placement`, with the mount a horn on a top takes where it applies */
+  const placedAt = (hornId: string, placement: HornPlacement, mount: HornAttachment["mount"]) => {
+    const picked = hornById(hornId);
+    return {
+      hornId,
+      placement,
+      mount: picked && takesHornMountAt(picked, placement) ? (mount ?? HORN_MOUNT_DEFAULT) : null,
+    };
+  };
   const [lowBand, highBand = lowBand] = driver.bands;
   const setBand = (slot: 0 | 1, band: BandId) =>
     onEdit((d) => ({
@@ -496,17 +525,33 @@ function DriverFields({ driver, widthIn, bandOptions, onEdit, onRemove }: Driver
           options={horns}
           value={driver.horn ? byId(horns, driver.horn.hornId) : NO_HORN}
           onChange={(o) =>
-            onEdit((d) => ({
-              ...d,
-              horn:
-                o.id === NO_HORN.id
-                  ? null
-                  : {
-                      hornId: o.id,
-                      placement: d.horn?.placement ?? HORN_PLACEMENT.baffle,
-                      mount: d.horn?.mount ?? null,
-                    },
-            }))
+            onEdit((d) => {
+              const picked = hornById(o.id);
+              if (o.id === NO_HORN.id || !picked) return { ...d, horn: null };
+              // a new horn takes the place its catalog entry suggests, where it fits
+              const placement = placed
+                ? defaultHornPlacement(picked, placed)
+                : (d.horn?.placement ?? HORN_PLACEMENT.baffle);
+              return { ...d, horn: placedAt(o.id, placement, d.horn?.mount ?? null) };
+            })
+          }
+        />
+      )}
+      {driver.horn && (
+        <ToggleGroup
+          label="Horn mounting"
+          className="mb-3"
+          value={driver.horn.placement}
+          onChange={(placement) =>
+            onEdit((d) =>
+              d.horn ? { ...d, horn: placedAt(d.horn.hornId, placement, d.horn.mount) } : d,
+            )
+          }
+          options={entriesOf(HORN_PLACEMENT_NAMES)}
+          disabled={
+            noFit.length
+              ? { values: noFit, why: noFit.map((p) => HORN_PLACEMENT_NO_FIT[p]).join(" ") }
+              : undefined
           }
         />
       )}

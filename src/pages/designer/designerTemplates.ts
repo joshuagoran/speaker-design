@@ -20,6 +20,8 @@ import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerFromFill } from "../../lib/speaker/fillSpec";
 import { lrFilter, speakerIdentity } from "../../lib/speaker/specParts";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
+import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { defaultBraceStyleNear } from "../../lib/bracing";
 import { HIFI_COAXES, HORN_OPTIONS } from "../../lib/data";
 import { driverLayout, tweeterOnGuide, waveguideFor } from "../../lib/hifi/hifi";
 import { byId, byIdOrThrow } from "../../lib/tables";
@@ -239,6 +241,10 @@ const paV2Cabinet = (chamber: SpeakerChamber): SpeakerCabinet => ({
   roundoverIn: 0,
   tiltDeg: 0,
   backJoint: DEFAULT_PA.backJoint,
+  braceStyle: defaultBraceStyleNear(DEFAULT_PA.wall),
+  braceTargetHz: PA_PANEL_TARGET_HZ,
+  // the PA v2 boxes' handles are not designed yet
+  hardware: null,
 });
 
 /** An active band on the PA's DSP. */

@@ -34,6 +34,7 @@ import {
   hornFlare,
   speakerLayout,
   ventMoved,
+  hornFitsWhereSet,
 } from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -68,7 +69,19 @@ import {
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
-import { bandText, chamberText, countText, inputText } from "./designerText";
+import { bandText, bracingText, chamberText, countText, inputText } from "./designerText";
+import { braceNoteLines } from "../../lib/bracingNotes";
+import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { formatHz } from "../../lib/format";
+import {
+  BACK_JOINT_NAMES,
+  BACK_JOINT_SUMMARY,
+  BACK_JOINT_TIPS,
+  BRACE_STYLE_NAMES,
+  BRACE_TARGET_RANGE_HZ,
+  BRACE_STYLE_SUMMARY,
+  BRACE_STYLE_TIPS,
+} from "../../constants/bracing";
 import { bandChips, chamberChips } from "./designerChips";
 import { designerStarts, startGroup, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
@@ -96,6 +109,7 @@ export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
   panel: planner.wallPanel,
   hornMount: planner.hornMount,
   spacerH: planner.spacerHeightIn,
+  hardware: planner.hardware,
 });
 
 /**
@@ -105,7 +119,7 @@ export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
  */
 export function DesignerPage({ designer, planner, hifi }: Props) {
   const pal = usePalette();
-  const { spec, response, limits, store, snapshot, restore } = designer;
+  const { spec, response, limits, build, store, snapshot, restore } = designer;
   const folds = useFolds("designer.settingsFolds", keysOf(DESIGNER_SETTINGS_SECTIONS));
   const starts = designerStarts(planner.layout);
   const startOptions = starts.map((id) => ({
@@ -131,7 +145,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     );
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
-  const { chambers, construction, top, insetIn } = spec.cabinet;
+  const { chambers, construction, top, insetIn, braceStyle, braceTargetHz, backJoint } =
+    spec.cabinet;
   const framed = construction === CABINET_CONSTRUCTION.frameInset;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
@@ -145,6 +160,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     construction: [
       `${CABINET_CONSTRUCTION_NAMES[construction]}${framed ? `, inset ${formatInches(insetIn)}` : ""}`,
       `${CABINET_TOP_NAMES[top].toLowerCase()} top`,
+      `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
+      BACK_JOINT_SUMMARY[backJoint],
     ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
     bands: [
@@ -202,6 +219,16 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       ? [[DESIGNER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
       : []),
   ];
+  const buildTiles: StatTileItem[] = [
+    [DESIGNER_TEXT.weight, build.lb.toFixed(0), "lb"],
+    ...(one
+      ? []
+      : build.chambers.map((c, i): StatTileItem => [
+          DESIGNER_TEXT.chamberWeight(i + 1),
+          c.lb.total.toFixed(0),
+          "lb",
+        ])),
+  ];
   const fbMarks = response.chambers.flatMap((c, i) =>
     c.fb !== null ? [{ f: c.fb, label: one ? "Fb" : `Fb ${i + 1}` }] : [],
   );
@@ -240,6 +267,9 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               <Notice>{DESIGNER_TEXT.hornMouthClipped}</Notice>
             )}
             {flares.some((f) => f.mouthMoved) && <Notice>{DESIGNER_TEXT.hornMouthMoved}</Notice>}
+            {layout.chambers.some((c) =>
+              c.chamber.drivers.some((d) => !hornFitsWhereSet(c, d)),
+            ) && <Notice>{DESIGNER_TEXT.hornNoFit}</Notice>}
             {layout.chambers.some((c) => ventMoved(spec.cabinet, c)) && (
               <Notice>{DESIGNER_TEXT.ventMoved}</Notice>
             )}
@@ -285,6 +315,31 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             )}
             <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>{DESIGNER_TEXT.modelNote}</p>
+          </section>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+            <SectionHeading className="mb-3">{DESIGNER_TEXT.build}</SectionHeading>
+            <StatTileGrid tiles={buildTiles} className="mb-3" />
+            <ul className="text-sm mb-3">
+              {build.chambers.map((c, i) => (
+                <li key={c.box}>
+                  {DESIGNER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
+                </li>
+              ))}
+            </ul>
+            {build.chambers.flatMap((c, i) => {
+              const lines = braceNoteLines(`${DESIGNER_TEXT.chamber} ${i + 1}`, c.bracing);
+              return lines.length
+                ? [
+                    <Notice key={`under${i}`}>
+                      {DESIGNER_TEXT.underTarget(i + 1, formatHz(braceTargetHz))}
+                    </Notice>,
+                    ...lines.map((line) => <Notice key={line}>{line}</Notice>),
+                  ]
+                : [];
+            })}
+            <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
+              {DESIGNER_TEXT.buildNote(formatHz(braceTargetHz))}
+            </p>
           </section>
           {limits.bands.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
@@ -396,6 +451,46 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               {top === CABINET_TOP.arched && !drawsArchedTop(spec.cabinet, layout) && (
                 <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.archNotDrawn}</p>
               )}
+              <ToggleGroup
+                label={DESIGNER_TEXT.backJoint}
+                className="mb-3"
+                value={backJoint}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, backJoint: v }))}
+                options={keysOf(BACK_JOINT_NAMES).map(
+                  (id) => [id, BACK_JOINT_NAMES[id], BACK_JOINT_TIPS[id]] as const,
+                )}
+              />
+              <ToggleGroup
+                label={DESIGNER_TEXT.braceStyle}
+                className="mb-3"
+                value={braceStyle}
+                onChange={(v) => designer.editCabinet((c) => ({ ...c, braceStyle: v }))}
+                options={keysOf(BRACE_STYLE_NAMES).map(
+                  (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
+                )}
+              />
+              <NumberField
+                label={
+                  <Tooltip tip={DESIGNER_TEXT.braceTargetTip(formatHz(PA_PANEL_TARGET_HZ))}>
+                    {DESIGNER_TEXT.braceTarget}
+                  </Tooltip>
+                }
+                value={braceTargetHz}
+                min={BRACE_TARGET_RANGE_HZ.min}
+                max={BRACE_TARGET_RANGE_HZ.max}
+                step={10}
+                unit="Hz"
+                onChange={(v) =>
+                  designer.editCabinet((c) => ({
+                    ...c,
+                    braceTargetHz: Math.min(
+                      BRACE_TARGET_RANGE_HZ.max,
+                      Math.max(BRACE_TARGET_RANGE_HZ.min, v),
+                    ),
+                  }))
+                }
+                className="mb-3"
+              />
             </>,
           )}
           {section(

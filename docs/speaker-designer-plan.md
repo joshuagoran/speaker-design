@@ -181,12 +181,14 @@ Each PR stands alone. Lowest risk first.
     response is on axis at 1 m in half space. It does not include the baffle step, diffraction, the room,
     directivity or the driver positions.
   - **Parity (L3a).** `tests/speaker-response.test.ts` compares the model with today's engines.
-    - Hi-fi (8 designs): each band within 0.05 dB, the sum within 0.1 dB (the Hi-fi sum leaves out the box
-      phase), and the net air and Fb or Qtc exact.
+    - Hi-fi (8 designs), with the net air set to the Hi-fi engine's: each band within 0.05 dB, the sum within
+      0.15 dB (the Hi-fi sum leaves out the box phase), and Fb or Qtc exact. From the size (L3c), the net air is
+      the Hi-fi engine's plus its 3% allowance, exactly: these boxes need no braces.
     - PA (every golden design), with the net air set to today's: every band within 0.05 dB, Fb and the mid's
       Qtc exact (slots, tubes and side ducts).
-    - PA, with the net air from the size: the model takes a 3% bracing allowance, where the PA counts its
-      braces, vent walls and hardware. The difference is up to 0.5 dB on the sub and 0.35 dB on the mid.
+    - PA, with the net air from the size (L3c): the sub's net air is the PA's exactly. The mid's is 1.0% to 2.7%
+      less (it counts its baffle cleats, which the PA's mid leaves out; up to 0.13 dB), and 3.7% less in the
+      tower (its mid chamber also takes the rule's braces, which the PA page leaves out).
     - The PA top box and the tower sum their bands with phase round each crossover, the same as a sum built
       from the engines.
     - Gaps: a Hi-fi design with a sub highpass keeps the box's subsonic in the spec (the Hi-fi engine drops
@@ -265,8 +267,50 @@ Each PR stands alone. Lowest risk first.
         position: every page places its vents by a rule.
       - Not movable: side ducts and the PA letterbox (their place is their shape), flared PA tubes (their place is
         part of the PA tube rule), and a Hi-fi slot (the model takes it along the bottom, with one shelf).
-  - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
-    replaces the 3% allowance.
+  - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
+    reuses the PA and Hi-fi code.
+    - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
+      `lib/pa/calc`), to the cabinet's bracing target (`SpeakerCabinet.braceTargetHz`, default `PA_PANEL_TARGET_HZ`,
+      280 Hz), with its style and back joint. The rule keeps clear of the drivers at their positions, the vent and the
+      hardware. A chamber with a PA sub and a PA port in a frame runs the PA sub box's own rule (`subBoxBracing`). A
+      horn-loaded chamber's walls are braced too; its flare is kept clear and holds itself. The "Weight and bracing"
+      section lists each panel that still misses the target.
+    - **Construction fold** (owner, Oct 2026): the back joint ("Glued" / "Screwed"; a flush box starts glued, a PA
+      design keeps the PA page's), the bracing style and the bracing target. The bracing and the cutlist notes follow
+      them.
+    - **Horn mounting** (owner, Oct 2026). A horn on a driver sits "In the baffle" or "Freestanding on top", in each
+      driver's settings, for any horn the geometry allows (`hornFits`), small round horns too. The catalog's `rect`
+      flag only sets the first choice (`defaultHornPlacement`). A horn on a top takes its mount where it applies
+      (`takesHornMountAt`); the model, the layout, the 3D view and the cutlist read the placement.
+    - **Hardware.** `SpeakerCabinet.hardware` holds the PA handles. With it, each shell's lowest chamber takes the
+      handles, the input dish and, under a horn on its top, the binding posts. The PA adapter sets the PA page's
+      handles. Null: no hardware (the Hi-fi box, the fill, the empty speaker).
+    - **Net air (Auto).** The clear volume less the drivers, the vent's air, the wood inside (braces, ribs, vent
+      walls, a frame's baffle cleats) and the hardware's recesses. The 3% allowance is gone.
+    - **Cutlist.** Chambers that fill one box of one depth share one shell (the `Shell` group) with partitions inside,
+      and the arched top (`archedShellParts`, the tower's) where the views draw one on a frame. Any other chamber is a
+      box of its own, less the walls another chamber gives it. A frame cuts as the PA boxes (`boxParts`), a flush box
+      as the Hi-fi box (`flushBoxPanels`). Every driver, horn mouth, port and radiator is noted at its position.
+      The Designer's Cutlist tab lays the rows out on sheets as the PA and Hi-fi tabs do (the shared Cutlist page:
+      `layoutCutlist`, which packs them with `packSheets`).
+    - **Weight.** A frame takes the PA rule: the lowest chamber of a shell weighs as a box of its own, and each chamber
+      over or beside it adds what it builds (the tower's cabinet over its sub box). A flush box takes the Hi-fi rule.
+      Each chamber adds its drivers with their horns, its radiators and its hardware.
+    - **UI.** The Designer's Cutlist tab (the shared Cutlist page), and a "Weight and bracing" section: the speaker's
+      weight, each chamber's weight and braces, and each panel left under the target.
+    - **Parity** (`tests/speaker-build.test.ts`). On every golden PA design: the sub's bracing, net air and weight
+      exact, the mid box's bracing and weight exact, and the same cut pieces for every joint. The tower's mid
+      chamber adds the rule's braces (one window brace, 3.6 lb on "lil tower"), which the PA page leaves out. On the
+      Hi-fi designs: the same cut pieces and bought parts for every joint, and the Hi-fi weight plus the waveguide's
+      (the Hi-fi page leaves it out).
+    - **Next.**
+      - Double baffle: the next bracing item. A laminate count on the baffle, which the bracing (a stiffer baffle) and
+        the cutlist read.
+      - Handles: a setting in the Construction fold, when it makes sense (owner, Oct 2026). The spec field is in
+        (`SpeakerCabinet.hardware`); the PA adapter sets it.
+      - A PA sub with a PA port keeps the PA rule's place for its bracing and hardware, even where its position is
+        moved.
+      - The Hi-fi page keeps its own 3% allowance.
   - **L3d Inductance, limits and chips.**
     - **Voice-coil inductance.** Every T/S model reads the catalog's `Le`: the sealed, vented and passive-radiator
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
@@ -408,7 +452,7 @@ Each PR stands alone. Lowest risk first.
 - The spec's ports carry the PA port details (the letterbox's fins and fold, the flared tubes), so the PA subs
   match the PA page exactly.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
-  allowance stays until L3c.
+  allowance is gone from the Designer (L3c): the net air counts the real braces.
 - The sub highpass and subsonic rule waits for the Stack phase (L4a).
 - The cabinet gets a top shape (`flat` or `arched`) with the templates step (L3e). The PA tower's arched top then
   draws and cuts correctly.

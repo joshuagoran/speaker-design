@@ -4,6 +4,7 @@ import { NotesPage } from "./pages/notes/NotesPage";
 import { FillsPage } from "./pages/fills/FillsPage";
 import { PaCutlistPage } from "./pages/cutlist/PaCutlistPage";
 import { HifiCutlistPage } from "./pages/cutlist/HifiCutlistPage";
+import { DesignerCutlistPage } from "./pages/cutlist/DesignerCutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
 import { CoveragePage } from "./pages/coverage/CoveragePage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
@@ -118,6 +119,8 @@ export function App() {
           <PaCutlistPage planner={planner} />
         ) : view === "designer" ? (
           <DesignerPage designer={designer} planner={planner} hifi={hifi} />
+        ) : view === "designerCutlist" ? (
+          <DesignerCutlistPage designer={designer} />
         ) : view === "stack" ? (
           <StackPage stack={stack} designer={designer} planner={planner} />
         ) : view === "coverage" ? (

@@ -10,6 +10,7 @@ export const PAGE_HASHES = {
   notes: "#notes",
   hifi: "#hifi",
   hifiCutlist: "#hifi-cutlist",
+  designerCutlist: "#designer-cutlist",
   designer: "#designer",
   stack: "#stack",
 } as const;
@@ -47,6 +48,9 @@ export const PROJECT_PAGES = {
     ["hifi", "Design"],
     ["hifiCutlist", "Cutlist"],
   ],
-  designer: [["designer", "Design"]],
+  designer: [
+    ["designer", "Design"],
+    ["designerCutlist", "Cutlist"],
+  ],
   stack: [["stack", "Design"]],
 } as const satisfies Record<ProjectId, readonly (readonly [AppPage, string])[]>;

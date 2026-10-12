@@ -14,6 +14,7 @@ import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
 import { boxInternalLiters, midGrossLiters, slotFolds } from "../src/lib/pa/calc";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { panelNominalNear } from "../src/lib/panel";
+import { savedHardware } from "../src/lib/pa/hardware";
 import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { hornGrid, hornModel } from "../src/lib/acoustics/hornModel";
@@ -82,7 +83,7 @@ const STACKS: CoverageLayout["stacks"] = [
 
 /**
  * A golden PA design as the planner holds it: the search's defaults, and what the planner sets that an older seed
- * lacks (its mid box's size, the panel its walls are, the horn mount and spacer it starts on).
+ * lacks (its mid box's size, the panel its walls are, the horn mount and spacer it starts on, its handles).
  */
 function paDesign(c: GoldenConfig): PaPlannerDesign {
   const cfg = paSearchDesign({ cur: c });
@@ -92,6 +93,7 @@ function paDesign(c: GoldenConfig): PaPlannerDesign {
     panel: c.panel ?? panelNominalNear(cfg.wall),
     hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
     spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
+    hardware: savedHardware(c.hardware),
   };
 }
 

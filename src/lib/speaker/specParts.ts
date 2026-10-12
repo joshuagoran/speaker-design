@@ -14,6 +14,9 @@ import type {
   StackPose,
 } from "../../types";
 import { crossoverSlopeName } from "../../constants/crossovers";
+import { GLUED_BACK } from "../../constants/bracing";
+import { defaultBraceStyleNear } from "../bracing";
+import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
 import {
   CABINET_CONSTRUCTION,
   CABINET_TOP,
@@ -39,6 +42,18 @@ export const FLUSH_BOX: Pick<SpeakerCabinet, "construction" | "top" | "insetIn">
   top: CABINET_TOP.flat,
   insetIn: 0,
 };
+
+/**
+ * A flush box's bracing at walls `t` thick: the plywood's style for that thickness, a glued back (the Hi-fi box's and
+ * the fill's backs are glued on), and the PA boxes' panel target.
+ */
+export const flushBracing = (
+  t: number,
+): Pick<SpeakerCabinet, "braceStyle" | "backJoint" | "braceTargetHz"> => ({
+  braceStyle: defaultBraceStyleNear(t),
+  backJoint: GLUED_BACK,
+  braceTargetHz: PA_PANEL_TARGET_HZ,
+});
 
 /** A feed with no filters: the full range (no input range, no crossover between boxes). */
 export const NO_FILTERS: SpeakerSpec["input"] = { highpass: null, lowpass: null };

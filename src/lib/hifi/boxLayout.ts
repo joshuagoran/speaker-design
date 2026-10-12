@@ -38,6 +38,8 @@ export const roundPortSpots = ({ n, dia }: Pick<RoundPort, "n" | "dia">): RoundS
 
 /** The slot's opening on the front: the inside width, from the bottom panel up to the slot's roof. */
 export const slotOpening = (dim: Pick<Dims3, "w">, wall: number, { h }: Pick<SlotPort, "h">) => ({
+  /** its center, across from the box's center line */
+  x: 0,
   w: dim.w - 2 * wall,
   h,
   /** its bottom */

@@ -1,7 +1,7 @@
 // The Designer's one-line summaries, built from the spec and the catalog.
-import type { BandFilter, SpeakerBand, SpeakerChamber, SpeakerSpec } from "../../types";
+import type { BandFilter, BoxBracing, SpeakerBand, SpeakerChamber, SpeakerSpec } from "../../types";
 import { formatDims, formatHz, formatWatts } from "../../lib/format";
-import { PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
+import { DESIGNER_TEXT, PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { driverName } from "./designerParts";
 
@@ -59,3 +59,14 @@ export const speakerSummary = (spec: Pick<SpeakerSpec, "cabinet" | "bands">) =>
     spec.cabinet.chambers.map(chamberText).join("; "),
     countText(spec.bands.length, "band", "bands"),
   ].join(" · ");
+
+/** A chamber's braces in words: its window braces and ribs, or none. */
+export function bracingText(bracing: Pick<BoxBracing, "windows" | "ribs">): string {
+  const windows = bracing.windows.x.length + bracing.windows.y.length + bracing.windows.z.length;
+  const ribs = bracing.ribs.reduce((sum, r) => sum + r.at.length, 0);
+  const parts = [
+    windows > 0 && countText(windows, "window brace", "window braces"),
+    ribs > 0 && countText(ribs, "rib", "ribs"),
+  ].filter((p): p is string => !!p);
+  return parts.length ? parts.join(", ") : DESIGNER_TEXT.noBraces;
+}

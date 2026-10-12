@@ -24,7 +24,7 @@ import type {
 } from "../../types";
 import { PLYWOOD_SHEETS, formatInches } from "./calc";
 import { keysOf } from "../records";
-import { CUT_BOX_NAMES, CUT_BOX_TAGS } from "../../constants/cutParts";
+import { cutBoxName, cutBoxTag } from "../../constants/cutParts";
 
 type SheetSize = Pick<PlywoodSheet, "w" | "h">;
 type Rect = Pick<PlacedPart<PackRect>, "x" | "y" | "w" | "h">;
@@ -124,7 +124,7 @@ export const cutRowTags = (rows: readonly CutPart[]) => {
     const list = byBox.get(p.box) ?? [];
     list.push(p);
     byBox.set(p.box, list);
-    tags.set(cutRowKey(p), `${CUT_BOX_TAGS[p.box]}${list.length}`);
+    tags.set(cutRowKey(p), `${cutBoxTag(p.box)}${list.length}`);
   }
   return { tags, byBox };
 };
@@ -652,7 +652,7 @@ export function waterfallStrips(
       wide = Math.max(side.a, top.a);
     if (len > usable.h + EPS || wide > usable.w + EPS) {
       notes.push(
-        `${CUT_BOX_NAMES[box]}: the side-top-side strip is ${formatInches(len)}″, over the sheet's ${formatInches(usable.h)}″. Cut separately.`,
+        `${cutBoxName(box)}: the side-top-side strip is ${formatInches(len)}″, over the sheet's ${formatInches(usable.h)}″. Cut separately.`,
       );
       continue;
     }

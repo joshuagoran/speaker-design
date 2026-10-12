@@ -24,7 +24,7 @@ import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFol
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { panelLbPerSqFt } from "../panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
-import { BIRCH_PLY_STIFFNESS, MDF_STIFFNESS, plateFirstModeHz } from "../bracing";
+import { panelStock, plateFirstModeHz } from "../bracing";
 import type {
   Complex,
   BracePanelId,
@@ -346,11 +346,7 @@ export function hifiPanelResonances(
   t: number,
   mat: PanelMaterial | undefined,
 ): PanelResonance[] {
-  const stock = {
-    t,
-    lbPerSqFt: panelWeightLb(t, mat),
-    ...(mat === "mdf" ? MDF_STIFFNESS : BIRCH_PLY_STIFFNESS),
-  };
+  const stock = panelStock(t, mat ?? PLYWOOD_MATERIAL);
   const w = dim.w - 2 * t,
     h = dim.h - 2 * t,
     d = dim.d - 2 * t;
@@ -722,6 +718,15 @@ export function tweeterLevelInBox(
       : own;
   return { ...level, tSens283, trim };
 }
+/** What the Hi-fi weights take for a part with no listed weight, lb: a woofer, a tweeter, a passive radiator. */
+export const HIFI_FALLBACK_LB = { woofer: 5, tweeter: 1.5, radiator: 0.75 } as const;
+/** A Hi-fi speaker's hardware besides its drivers, lb: the screws, the terminals and the damping. */
+export const HIFI_FIXINGS_LB = 1;
+/** Grams in a pound, as the radiators' added mass is weighed. */
+const GRAMS_PER_LB = 454;
+/** The radiators' weight, lb: each one's listed weight (or the fallback) and its added mass. */
+export const radiatorsLb = (pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">) =>
+  pr.n * ((pr.drv.lb || HIFI_FALLBACK_LB.radiator) + (pr.addG || 0) / GRAMS_PER_LB);
 /**
  * One speaker's weight, lb: the box, the drivers (a coaxial once: its woofer carries it), a pound of hardware and the
  * radiators with their added mass (no amps).
@@ -733,10 +738,10 @@ export const hifiWeightLb = (
   pr: PassiveRadiatorChoice | null,
 ) =>
   boxWeightLb(cfg.dim, cfg.wall || 0.75, cfg.mat) +
-  (w.lb || 5) +
-  (isCoax(w, t) ? 0 : t.lb || 1.5) +
-  1 +
-  (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
+  (w.lb || HIFI_FALLBACK_LB.woofer) +
+  (isCoax(w, t) ? 0 : t.lb || HIFI_FALLBACK_LB.tweeter) +
+  HIFI_FIXINGS_LB +
+  (pr ? radiatorsLb(pr) : 0);
 /**
  * The lowest crossover the tweeter may take on its waveguide: the higher of the tweeter's own minimum and the
  * waveguide's (its loading), with the part that sets it; null when neither sets one.

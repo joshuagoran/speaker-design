@@ -5,7 +5,8 @@ import assert from "node:assert";
 import type { GoldenConfig } from "./golden-configs";
 import type { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
-import { needsWaveguide } from "../src/lib/hifi/hifi";
+import { hifiBox, hifiGridTop, needsWaveguide } from "../src/lib/hifi/hifi";
+import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { hornResponse, midSystem, subSystem } from "../src/lib/pa/calc";
 import { paSearchDesign } from "../src/lib/pa/optimize";
 import { towerMidDims } from "../src/lib/pa/tower";
@@ -131,6 +132,7 @@ export function paDesign(c: GoldenConfig): PaPlannerDesign {
     panel: c.panel ?? panelNominalNear(cfg.wall),
     hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
     spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
+    hardware: savedHardware(c.hardware),
   };
 }
 
@@ -158,6 +160,14 @@ export const withNet = (
     chambers: spec.cabinet.chambers.map((c) => (c === chamber ? { ...c, netLiters } : c)),
   },
 });
+
+/** The Hi-fi speaker's spec on the Hi-fi engine's net air (hifiBox, with its 3% allowance for bracing and damping). */
+export function withHifiNet(spec: SpeakerSpec, state: HifiDesignState): SpeakerSpec {
+  const cfg = deriveHifiDesign(state).speakerConfig;
+  const box = hifiBox(state.woofer, cfg, hifiGridTop(cfg.xo));
+  assert.ok(box, spec.name);
+  return withNet(spec, spec.cabinet.chambers[0], box.net);
+}
 
 /** Today's PA models of a design: the sub, mid and horn as the planner runs them (the golden evaluation's configs). */
 export function paModels(cfg: PaPlannerDesign) {

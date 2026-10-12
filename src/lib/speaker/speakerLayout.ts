@@ -10,6 +10,7 @@ import type {
   Dims3,
   FacePoint,
   Horn,
+  HornPlacement,
   PaPortGeometry,
   PortStyle,
   SpeakerCabinet,
@@ -33,6 +34,7 @@ import {
   hornById,
 } from "../data";
 import { byId } from "../tables";
+import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
 import { baffleInsetIn, sharedWalls, TOUCH_IN } from "./chamberAir";
 import { RADIATOR_PANEL } from "../hifi/hifi";
@@ -226,6 +228,58 @@ export const onTop = (driver: Pick<SpeakerDriver, "horn">) =>
   driver.horn?.placement === HORN_PLACEMENT.top;
 
 /**
+ * Whether a catalog horn fits where it would sit on a chamber. In the baffle: its mouth's height inside the chamber's
+ * clear face, and its width too unless the tower's cutout trims it to the clear face (a rectangular horn, or one drawn
+ * from its mesh: lib/pa/tower towerHornCutout). On the top: no chamber standing on this one (a horn wider than the
+ * chamber stands over its edges, as on the PA mid box).
+ */
+export function hornFits(
+  horn: Pick<Horn, "id" | "size" | "rect">,
+  placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
+  placement: HornPlacement,
+): boolean {
+  if (placement === HORN_PLACEMENT.top) return !placed.walls.some((w) => w.shared && w.w >= w.h);
+  const trimmed = !!horn.rect || MESHED_HORN_IDS.has(horn.id);
+  return horn.size.h <= placed.clear.h && (trimmed || horn.size.w <= placed.clear.w);
+}
+
+/**
+ * The box a baffle horn's cutout is sized in (lib/pa/tower towerHornCutout): the chamber's clear face and a wall each
+ * side, so a chamber beside another cuts within its own clear face. The cutlist, the weights, the 3D view and the front
+ * drawing all size it here.
+ */
+export const hornCutoutBox = (placed: Pick<PlacedChamber, "clear">, t: number) => ({
+  w: placed.clear.w + 2 * t,
+});
+
+/**
+ * Whether a driver's horn fits where it is set (`hornFits`); a driver without a catalog horn always does. One that no
+ * longer fits (a chamber now stands on its top horn, or the horn is larger than the chamber) can't be built there: the
+ * views leave it out and the page says so.
+ */
+export const hornFitsWhereSet = (
+  placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
+  driver: Pick<SpeakerDriver, "horn">,
+) => {
+  const horn = driverHorn(driver);
+  return !horn || !driver.horn || hornFits(horn, placed, driver.horn.placement);
+};
+
+/**
+ * Where a newly picked horn sits on a chamber: the catalog's `rect` flag sets the first choice (a rectangular horn in
+ * the baffle, a round one freestanding on the top, as the Hi-fi page's waveguides), where it fits (`hornFits`); else the
+ * other place. The user can pick either place that fits.
+ */
+export function defaultHornPlacement(
+  horn: Pick<Horn, "id" | "size" | "rect">,
+  placed: Pick<PlacedChamber, "clear" | "dims" | "walls">,
+): HornPlacement {
+  const first = horn.rect ? HORN_PLACEMENT.baffle : HORN_PLACEMENT.top;
+  const other = horn.rect ? HORN_PLACEMENT.top : HORN_PLACEMENT.baffle;
+  return hornFits(horn, placed, first) || !hornFits(horn, placed, other) ? first : other;
+}
+
+/**
  * How wide one driver of an entry is on the baffle, in: a PA cone's nominal size, a Hi-fi woofer's or a coaxial's
  * frame, a tweeter's plate or the horn it drives; 0 for an id its table doesn't have.
  */
@@ -335,6 +389,26 @@ export function portRule(chamber: SpeakerChamber): PortRule | null {
           )
         : { rule: PORT_RULE.hifi, port };
   }
+}
+
+/**
+ * A Hi-fi slot's openings on its chamber's baffle: `n` alike stacked from the clear face's floor up, each under its
+ * own shelf a wall thick, each its own width where set (else the clear face's) and centered across the clear face. In
+ * the chamber's own coordinates: `x` from its center line, `y` (an opening's bottom) up from its bottom.
+ */
+export function slotOpeningsAt(
+  placed: Pick<PlacedChamber, "clear" | "cx" | "y0">,
+  port: Pick<SpeakerSlotPort, "n" | "h" | "w">,
+  t: number,
+): { x: number; y: number; w: number; h: number }[] {
+  const { clear } = placed;
+  const w = port.w ?? clear.w;
+  return Array.from({ length: Math.max(1, port.n) }, (_, k) => ({
+    x: clear.x + clear.w / 2 - placed.cx,
+    y: clear.y - placed.y0 + k * (port.h + t),
+    w,
+    h: port.h,
+  }));
 }
 
 /** How far a set position may be off before the layout counts it as moved, in. */
