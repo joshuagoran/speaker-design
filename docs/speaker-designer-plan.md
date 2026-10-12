@@ -388,7 +388,7 @@ Each PR stands alone. Lowest risk first.
       - **Options in the new model.**
         - (a) **Per speaker.** On the Speaker page. It varies the parts and sizes that the user leaves unlocked:
           drivers of the same kind and size range, chamber sizes, vents, crossovers, amps. Goals: cheaper, lighter,
-          smaller, lower, louder. Limits: budget, maximum weight, maximum size, the level at a set distance. One
+          smaller, lower, louder. Limits: budget, maximum weight, maximum size, the target level at 1 m. One
           search engine for every spec (through `speakerResponse`, `speakerLimits`, `speakerBuild`). The kind of
           each chamber (direct, horn) and the band count stay fixed.
         - (b) **Per stack.** On the Stack page. It runs (a) on each member and also varies the crossovers between
@@ -399,13 +399,16 @@ Each PR stands alone. Lowest risk first.
       - **Recommendation.** Build (a) first, with the PA and Hi-fi searches as its first rules, then (b) on top.
         Keep (c) for later. Show the result as cards, as today. Keep the PA and Hi-fi pages' optimizers until (a) and
         (b) cover the PA and Hi-fi presets. The weight limit is a limit of the search, not a page check.
-      - **Questions for the owner.**
-        1. Which page gets the optimizer first? Recommended: the Speaker page (one box), then the Stack page.
-        2. What may it change? Recommended: only unlocked parts and sizes; never the chamber kind or the band count.
-        3. How do you set the level goal without the room rule? Recommended: a level at a distance that you set, read
-           from the speaker's or the stack's maximum output.
-        4. Which limits does it take? Recommended: budget, maximum weight per box, maximum size per box, as today.
-        5. Do the PA and Hi-fi pages keep their optimizers until the new one covers their presets? Recommended: yes.
+      - **Owner decisions (Oct 2026).**
+        1. The Speaker page gets the optimizer first. The Stack page gets it next.
+        2. The optimizer changes only the parts and sizes that the user leaves unlocked. It never changes the chamber
+           kind or the band count (for now).
+        3. The level goal is one "Target level" that the user can edit, at a fixed 1 m. The optimizer compares it with
+           the maximum output of the speaker or the stack (both are at 1 m). There is no distance field and there are no
+           room sizes. The user allows for the distance. The Space page shows the real level in the room. The PA
+           optimizer's room rule of thumb (`ROOMS`) goes with the PA optimizer.
+        4. The limits are the budget, the maximum weight per box and the maximum size per box, as today.
+        5. The PA and Hi-fi pages keep their optimizers until the new optimizer covers their presets.
   - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
     reuses the PA and Hi-fi code.
     - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
