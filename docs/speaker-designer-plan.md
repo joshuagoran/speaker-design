@@ -278,8 +278,8 @@ Each PR stands alone. Lowest risk first.
   - **L3f Switch-over** (owner decisions, Oct 2026, #150). The PA page becomes a stack preset and the Hi-fi page
     goes away. Then `designer` merges into `main`.
     - **Parity rule** (owner, Oct 2026). `designer` does not merge into `main` until the Speaker, Stack and Space
-      pages do everything the PA page does (the parity table below). The PA page goes last, after parity. Every
-      feature with no home moves before the merge.
+      pages do everything the PA page and the Hi-fi page do (the two parity tables below). The PA page goes last,
+      after parity. Every feature with no home moves before the merge: each open row of both tables blocks it.
     - **Optimizer** (owner, Oct 2026): "maybe we need to rethink the optimizer overall". There is no "Optimize"
       button on the presets and no `origin` field for now. The PA and Hi-fi optimizers stay on their pages until the
       rethink (see "Optimizer rethink" below) gives them a new home.
@@ -313,7 +313,10 @@ Each PR stands alone. Lowest risk first.
       | Sub, mid, horn settings (driver, box, vent, highpass, amp)         | Speaker: chambers, drivers, bands                                                              | Done                                                                              |
       | Crossovers (sub to mid, mid to horn)                               | Speaker bands (in the box), Stack crossovers (between boxes)                                   | Done                                                                              |
       | Music balance (mid below sub, horn below mid)                      | Band Levels in the preset; Stack "Auto balance" later                                          | Preset in sub-PR 3; Auto balance to do                                            |
-      | Build: plywood, bracing, back joint, inset, top                    | Speaker "Construction" fold                                                                    | Done                                                                              |
+      | Build: bracing, back joint, inset, top                             | Speaker "Construction" fold                                                                    | Done                                                                              |
+      | Plywood size of the walls (the baffles stay 3/4 in)                | Speaker "Construction" fold (the spec has `cabinet.panel`)                                     | To do: no setting yet                                                             |
+      | Plywood size of the side ducts' dividers                           | Speaker chamber vent settings                                                                  | To do: no setting yet                                                             |
+      | Warning: the horn's throat and the driver's exit differ            | Speaker driver chips                                                                           | To do: the Speaker page has no such check                                         |
       | Handles, input dish, horn posts                                    | Speaker "Construction" fold (the spec has `cabinet.hardware`)                                  | Spec done; settings to do                                                         |
       | Look: finish, baffle color, horn color                             | Speaker "Look" fold                                                                            | Done                                                                              |
       | Horn mount (aluminum plate or ply)                                 | Speaker horn settings                                                                          | Partial: the spec keeps the mount; no setting yet                                 |
@@ -353,8 +356,8 @@ Each PR stands alone. Lowest risk first.
       | Feature (today)                                           | Home                                                    | Status                                            |
       | --------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------- |
       | Woofer, tweeter, waveguide, coaxial, box, vent, radiators | Speaker                                                 | Done                                              |
-      | Crossover, drive (active or passive), amps                | Speaker bands                                           | Done                                              |
-      | Roundover, tweeter offset, tilt                           | Speaker cabinet and driver positions                    | Done                                              |
+      | Crossover (frequency and order), amps                     | Speaker bands                                           | Done                                              |
+      | Roundover, tweeter offset                                 | Speaker cabinet and driver positions                    | Done                                              |
       | Sensitivity and maximum output charts                     | Speaker                                                 | Done                                              |
       | Baffle-step compensation (`bsc`, a shelf)                 | Speaker: a shelf filter on a band                       | To do (`speakerFromHifi` drops it)                |
       | Baffle diffraction ripple                                 | Speaker response (the model has no baffle step yet)     | To do                                             |
@@ -369,14 +372,16 @@ Each PR stands alone. Lowest risk first.
 
     - **Optimizer rethink** (owner, Oct 2026; planned).
       - **Today: the PA optimizer** (`lib/pa/optimize`, `optimizeExact`; `docs/optimizer-plan.md`).
-        - Inputs: the current PA design, goals in tap order (cheaper, lighter, lower, louder), a room size (500, 750,
-          1000 sq ft or outdoors) that sets the output target, a maximum weight per box, a budget, and locks (11 on/off
-          parts and settings, and each box size per axis: free, exact or a maximum).
+        - Inputs. It starts from the current PA design. The user taps goals in order: cheaper, lighter, lower,
+          louder. A room size (500, 750 or 1000 sq ft, or outdoors) sets the output target. The limits are a maximum
+          weight per box and a budget. Locks hold 11 parts and settings. Each box size has a lock per axis: free,
+          exact or a maximum.
         - Search: a quick search (screen sub, volume, tuning and highpass; build real boxes and vents; add mids,
           crossovers and horn pairs; check the finalists with the page's own code) and a full search over a stated
           grid ("Fully optimize").
-        - Outputs: up to three cards (the best for the first goal, and alternatives), each better than your design on
-          its label, with near-miss notes and a driver comparison. A card sets only the searched fields.
+        - Outputs. It shows up to three cards: the best for the first goal, and alternatives. Each card is better
+          than your design on its label. Near-miss notes say how close a design came. A driver comparison lists the
+          options for one part. A card sets only the fields the search changes.
         - Limits: it knows only the PA shape (one sub box, one mid box or a tower, one horn). It cannot search a
           template, a horn-loaded chamber, more bands, or the Stack and the Space. Its output target is a rule of
           thumb (`ROOMS`), not the Space model.
@@ -623,9 +628,9 @@ Each PR stands alone. Lowest risk first.
         listener. Saves go to `spaces` with copies of the stacks and speakers.
       - **Not yet.** The 3D view of a space; per-band level matching of the PA stack (its horn plays 11 dB over the PA
         page's music balance, so the stack's own levels, not the page's, set the space's balance).
-  - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
-    replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
-    they're working on; no automatic tower or layout rule sets it.
+  - **Weight limit per box** (owner, Oct 2026). There is no weight check on a page. The fixed 125 lb sub check in
+    `src/lib/pa/chips.ts` goes with the PA page. A maximum weight per box is only a limit of the optimizer (see
+    "Optimizer rethink" in L3f): the user sets it, and no tower or layout rule sets it.
 
 ## Branches
 
