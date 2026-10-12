@@ -2,7 +2,18 @@
 // decimal inches), then the purchased parts with a total. Not part of the .speaknow.json design file
 // (docs/import-export-spec.md). Pure.
 import type { CutPart, PurchasedPart } from "../types";
-import { PURCHASED_COLUMNS, PURCHASED_PART_NAMES } from "../constants/purchasedParts";
+import {
+  PURCHASED_COLUMNS,
+  PURCHASED_PARTIAL_NOTE,
+  PURCHASED_PART_NAMES,
+} from "../constants/purchasedParts";
+import { UI_TEXT } from "../constants/uiText";
+
+/** The CSV's media type: UTF-8, so a spreadsheet reads ″, ° and × right (with the byte order mark the text starts with). */
+export const CSV_TYPE = "text/csv;charset=utf-8";
+
+/** The UTF-8 byte order mark: Excel reads a CSV as UTF-8 only when the file starts with it. */
+export const CSV_BOM = "\uFEFF";
 
 /** The CSV's panel columns. */
 export const PANEL_CSV_COLUMNS = [
@@ -66,8 +77,9 @@ export const purchasedTotal = (rows: readonly PurchasedPart[], sets = 1) => ({
 });
 
 /**
- * The cutlist as CSV text: the panels, a blank line, then the purchased parts and their total. `sets` multiplies the
- * purchased counts as the panel quantities already are (one set per speaker).
+ * The cutlist as CSV text, after the UTF-8 byte order mark: the panels, a blank line, then the purchased parts and their
+ * total (marked, with a note row, when some part has no price). `sets` multiplies the purchased counts as the panel
+ * quantities already are (one set per speaker).
  */
 export function cutlistCsv(
   panels: readonly PanelCsvRow[],
@@ -104,11 +116,19 @@ export function cutlistCsv(
           r.count * sets,
           dollars(r.unit),
           dollars(r.unit === null ? null : r.unit * r.count * sets),
-          r.vendor,
+          r.source,
         ]),
       ),
-      line([CSV_TOTAL, null, null, null, dollars(total.dollars), null]),
+      line([
+        CSV_TOTAL,
+        null,
+        null,
+        null,
+        `${dollars(total.dollars)}${total.partial ? UI_TEXT.partialPriceMark : ""}`,
+        null,
+      ]),
+      ...(total.partial ? [line([PURCHASED_PARTIAL_NOTE])] : []),
     );
   }
-  return out.join("\r\n") + "\r\n";
+  return CSV_BOM + out.join("\r\n") + "\r\n";
 }

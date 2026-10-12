@@ -41,5 +41,8 @@ export const PURCHASED_COLUMNS = {
   count: "Count",
   unit: "Unit price",
   total: "Total",
-  vendor: "Vendor (US)",
+  source: "Source",
 } as const;
+
+/** Under the purchased parts' total, and as the CSV's row after it, when some part has no price. */
+export const PURCHASED_PARTIAL_NOTE = "Some parts have no price. The real total is higher.";

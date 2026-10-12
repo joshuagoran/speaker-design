@@ -55,12 +55,17 @@ import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import {
   CSV_SECTIONS,
   CSV_TOTAL,
+  CSV_TYPE,
   cutlistCsv,
   partLengthWidth,
   purchasedTotal,
 } from "../../lib/cutlistCsv";
 import { downloadText } from "../../lib/download";
-import { PURCHASED_COLUMNS, PURCHASED_PART_NAMES } from "../../constants/purchasedParts";
+import {
+  PURCHASED_COLUMNS,
+  PURCHASED_PARTIAL_NOTE,
+  PURCHASED_PART_NAMES,
+} from "../../constants/purchasedParts";
 import { UI_TEXT } from "../../constants/uiText";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { READING_WIDTH, RESULTS_TWO_COLUMN_PX, RESULT_MAX_WIDTH } from "../../styles/layout";
@@ -283,8 +288,8 @@ export function CutlistPage({
           {CSV_SECTIONS.purchased}
         </h3>
         <p className="text-sm text-stone-500 mb-2">
-          Counts for {plural(boxSetCount, proj.set)}. Prices in US dollars from US vendors. A dash
-          shows a part with no known price.
+          Counts for {plural(boxSetCount, proj.set)}. Prices in US dollars. Source shows where each
+          price comes from. A dash shows a part with no known price.
         </p>
         <div className="overflow-x-auto">
           <table className="text-sm w-full border-collapse tabular-nums">
@@ -297,7 +302,7 @@ export function CutlistPage({
                   {PURCHASED_COLUMNS.unit}
                 </th>
                 <th className={`${th} pr-3 text-right`}>{PURCHASED_COLUMNS.total}</th>
-                <th className={`${th}`}>{PURCHASED_COLUMNS.vendor}</th>
+                <th className={`${th}`}>{PURCHASED_COLUMNS.source}</th>
               </tr>
             </thead>
             <tbody>
@@ -312,7 +317,7 @@ export function CutlistPage({
                   <td className={`${td} pr-3 text-right whitespace-nowrap`}>
                     {r.unit === null ? "—" : cents(r.unit * r.count * boxSetCount)}
                   </td>
-                  <td className={`${td} whitespace-nowrap`}>{r.vendor ?? "—"}</td>
+                  <td className={`${td} min-w-[10rem]`}>{r.source ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -326,7 +331,7 @@ export function CutlistPage({
                   {total.partial ? UI_TEXT.partialPriceMark : ""}
                 </td>
                 <td className="py-1.5 text-stone-500 font-normal">
-                  {total.partial ? "Some parts have no price. The real total is higher." : ""}
+                  {total.partial ? PURCHASED_PARTIAL_NOTE : ""}
                 </td>
               </tr>
             </tfoot>
@@ -361,7 +366,7 @@ export function CutlistPage({
         purchased ?? [],
         boxSetCount,
       ),
-      "text/csv",
+      CSV_TYPE,
     );
 
   const panelList = (
@@ -577,7 +582,7 @@ export function CutlistPage({
             {panelList}
             {sheetLayout}
           </div>
-          {/* under both columns: the bought parts' names and vendors need the width */}
+          {/* under both columns: the bought parts' names and sources need the width */}
           {purchased?.length ? purchasedList(purchased) : null}
         </div>
       }

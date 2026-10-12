@@ -111,24 +111,16 @@ export function driverListing(
   }
 }
 
-/** What a price source that is an estimate (no vendor) shows as its vendor. */
-export const ESTIMATE_VENDOR = "Estimate";
-
 /**
- * The vendor in a catalog price source (free text): a link's site ("pvcfittingsonline.com"), an estimate's word, else
- * the text before its date or remark, without a part number ("Parts Express" from "Parts Express 260-705, Oct 2026").
+ * A catalog price source as the purchased parts table's Source column shows it: a link as its site
+ * ("pvcfittingsonline.com"), any other text as written. It is free text (a vendor, an estimate, a print service), not
+ * always a vendor.
  */
-export const vendorOf = (src: string): string => {
-  if (/^https?:\/\//.test(src)) {
-    try {
-      return new URL(src).hostname.replace(/^www\./, "");
-    } catch {
-      return src;
-    }
+export const sourceOf = (src: string): string => {
+  if (!/^https?:\/\//.test(src)) return src;
+  try {
+    return new URL(src).hostname.replace(/^www\./, "");
+  } catch {
+    return src;
   }
-  if (/^estimate/i.test(src)) return ESTIMATE_VENDOR;
-  return src
-    .split(/[,;:(]/)[0]
-    .replace(/\s+\d[\d-]*$/, "")
-    .trim();
 };

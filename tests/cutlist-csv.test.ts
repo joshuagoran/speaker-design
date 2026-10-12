@@ -2,6 +2,7 @@
 // (lib/cutlistCsv): length and width in their own columns, the bought parts with a total.
 import { assert, test } from "vite-plus/test";
 import {
+  CSV_BOM,
   CSV_SECTIONS,
   CSV_TOTAL,
   PANEL_CSV_COLUMNS,
@@ -9,11 +10,12 @@ import {
   partLengthWidth,
   purchasedTotal,
 } from "../src/lib/cutlistCsv";
-import { ESTIMATE_VENDOR, vendorOf } from "../src/lib/speaker/driverParts";
+import { sourceOf } from "../src/lib/speaker/driverParts";
 import { speakerPurchasedParts } from "../src/lib/speaker/speakerBuild";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { PURCHASED_PART } from "../src/constants/purchasedParts";
+import { PURCHASED_PARTIAL_NOTE, PURCHASED_PART } from "../src/constants/purchasedParts";
+import { UI_TEXT } from "../src/constants/uiText";
 import type { PurchasedPart } from "../src/types";
 
 test("cutlist CSV: L runs along a locked grain, else it is the long side", () => {
@@ -24,8 +26,8 @@ test("cutlist CSV: L runs along a locked grain, else it is the long side", () =>
 
 test("cutlist CSV: the panels with L and W in their own columns, then the purchased parts and their total", () => {
   const bought: PurchasedPart[] = [
-    { kind: PURCHASED_PART.driver, model: 'Maker "X", 12', count: 1, unit: 100, vendor: "A" },
-    { kind: PURCHASED_PART.portTube, model: "tube", count: 2, unit: null, vendor: null },
+    { kind: PURCHASED_PART.driver, model: 'Maker "X", 12', count: 1, unit: 100, source: "A" },
+    { kind: PURCHASED_PART.portTube, model: "tube", count: 2, unit: null, source: null },
   ];
   const csv = cutlistCsv(
     [
@@ -44,7 +46,9 @@ test("cutlist CSV: the panels with L and W in their own columns, then the purcha
     bought,
     2,
   );
-  const lines = csv.trimEnd().split("\r\n");
+  // the UTF-8 byte order mark first, so a spreadsheet reads ″, ° and × right
+  assert.ok(csv.startsWith(CSV_BOM));
+  const lines = csv.slice(CSV_BOM.length).trimEnd().split("\r\n");
   assert.equal(lines[0], CSV_SECTIONS.panels);
   assert.equal(lines[1], PANEL_CSV_COLUMNS.join(","));
   assert.equal(lines[2], "Shell,K1,Side,4,47.5,18,L along grain,0.709,a; b");
@@ -53,15 +57,25 @@ test("cutlist CSV: the panels with L and W in their own columns, then the purcha
   // a comma or a quote is quoted; counts and totals for both speakers
   assert.equal(lines[6], 'Driver,"Maker ""X"", 12",2,100.00,200.00,A');
   assert.equal(lines[7], "Port tube,tube,4,,,");
-  assert.equal(lines[8], `${CSV_TOTAL},,,,200.00,`);
+  // a part with no price: the total is marked, and a note row follows it
+  assert.equal(lines[8], `${CSV_TOTAL},,,,200.00${UI_TEXT.partialPriceMark},`);
+  assert.equal(lines[9], PURCHASED_PARTIAL_NOTE);
   assert.deepEqual(purchasedTotal(bought, 2), { dollars: 200, partial: true });
 });
 
-test("purchased parts: a vendor's name from the catalog's price source", () => {
-  assert.equal(vendorOf("Parts Express 260-705, Oct 2026"), "Parts Express");
-  assert.equal(vendorOf("usspeaker.com, Sep 2026"), "usspeaker.com");
-  assert.equal(vendorOf("https://www.pvcfittingsonline.com/products/x"), "pvcfittingsonline.com");
-  assert.equal(vendorOf("Estimate: same as the 460 mm horn ($80)"), ESTIMATE_VENDOR);
+test("cutlist CSV: every price known, the total has no mark and no note row", () => {
+  const csv = cutlistCsv(
+    [],
+    [{ kind: PURCHASED_PART.driver, model: "M", count: 1, unit: 10, source: "A" }],
+    1,
+  );
+  const lines = csv.slice(CSV_BOM.length).trimEnd().split("\r\n");
+  assert.equal(lines[lines.length - 1], `${CSV_TOTAL},,,,10.00,`);
+});
+
+test("purchased parts: the price source as the catalog writes it, a link as its site", () => {
+  assert.equal(sourceOf("Parts Express 260-705, Oct 2026"), "Parts Express 260-705, Oct 2026");
+  assert.equal(sourceOf("https://www.pvcfittingsonline.com/products/x"), "pvcfittingsonline.com");
 });
 
 test("purchased parts: the PA tower's drivers, horn and hardware, each with its count", () => {

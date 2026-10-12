@@ -2819,8 +2819,8 @@ export interface PurchasedPart {
   count: number;
   /** US dollars each; null where no US vendor price is known */
   unit: number | null;
-  /** the US vendor the price comes from; null where none is known */
-  vendor: string | null;
+  /** where the price comes from (the catalog's free-text source: a vendor, an estimate); null where none is known */
+  source: string | null;
 }
 
 /** What the cutlist needs for a sub and mid pair. */

@@ -110,7 +110,7 @@ import {
 } from "../data";
 import { byId } from "../tables";
 import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls } from "./chamberAir";
-import { driverListing, vendorOf } from "./driverParts";
+import { driverListing, sourceOf } from "./driverParts";
 import {
   PORT_RULE,
   driverAcrossIn,
@@ -1344,7 +1344,7 @@ export function speakerPurchasedParts(cabinet: SpeakerCabinet): PurchasedPart[] 
       model: listing.name,
       count,
       unit: listing.price,
-      vendor: listing.price === null ? null : vendorOf(listing.src),
+      source: listing.price === null ? null : sourceOf(listing.src),
     });
   const layout = speakerLayout(cabinet);
   const frames = chamberFrames(cabinet, layout);
@@ -1376,7 +1376,7 @@ export function speakerPurchasedParts(cabinet: SpeakerCabinet): PurchasedPart[] 
           model: purchasedPipeName(kit.pipe),
           count: kit.sticks,
           unit: kit.pipe.price,
-          vendor: vendorOf(kit.pipe.src),
+          source: sourceOf(kit.pipe.src),
         });
       if (kit.elbow && kit.elbows)
         add({
@@ -1384,7 +1384,7 @@ export function speakerPurchasedParts(cabinet: SpeakerCabinet): PurchasedPart[] 
           model: purchasedElbowName(kit.elbow.dia),
           count: tube.nt * kit.elbows,
           unit: kit.elbow.price,
-          vendor: kit.elbow.src === null ? null : vendorOf(kit.elbow.src),
+          source: kit.elbow.src === null ? null : sourceOf(kit.elbow.src),
         });
       continue;
     }
@@ -1395,7 +1395,7 @@ export function speakerPurchasedParts(cabinet: SpeakerCabinet): PurchasedPart[] 
       model: purchasedTubeName(port.dia, port.len),
       count: port.n,
       unit: null,
-      vendor: null,
+      source: null,
     });
   }
   for (const c of cabinetBuild(cabinet).chambers)
@@ -1405,7 +1405,7 @@ export function speakerPurchasedParts(cabinet: SpeakerCabinet): PurchasedPart[] 
         model: part.name,
         count: qty,
         unit: part.price,
-        vendor: vendorOf(part.src),
+        source: sourceOf(part.src),
       });
   return rows;
 }
