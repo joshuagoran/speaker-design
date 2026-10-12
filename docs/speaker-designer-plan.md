@@ -139,15 +139,15 @@ Each PR stands alone. Lowest risk first.
     `{chambers: [{at, dims, netLiters, vent, load, drivers: [{kind, driverId, count, position, bands, horn}]}], panel, tiltDeg}`,
     bands with their filters and drive, look. Each horn has its `placement` and `mount`. No template: a save
     keeps no role (owner, Oct 2026).
-  - A `SystemSpec`: sources `{speakerId, role, pose, mirror, filters, delayMs | "auto", levelDb, channels}`,
+  - A `SystemSpec` (split into `StackSpec` and `SpaceSpec` in L4a): sources `{speakerId, role, pose, mirror, filters, delayMs | "auto", levelDb, channels}`,
     amps, front end (analog or digital), venue.
   - **Crossovers.** A band's filters are the box's own: the crossover inside the box and its protection. A
-    crossover to another box (the sub) is on the system's source.
+    crossover to another box (the sub) is on the stack member (`StackMember.crossover`, L4a).
   - **Chambers.** Each chamber has a position in its cabinet, so chambers can sit side by side. Two chambers
     that touch share one wall: the lower (or left) chamber's.
   - **Old saves (owner policy).** Clean code comes first. Old saves can break. Read adapters map today's
-    in-memory designs (`systemFromPa`, `speakerFromHifi`, `systemFromHifi`, `speakerFromFill`,
-    `systemFromFill` in `src/lib/speaker/`). Do not add code only to keep old saves working: no shims for old
+    in-memory designs (`layersFromPa`, `speakerFromHifi`, `layersFromHifi`, `speakerFromFill`,
+    `layersFromFill` in `src/lib/speaker/`). Do not add code only to keep old saves working: no shims for old
     fields, no migration branches for old save formats, no compatibility layers.
   - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's throat chamber and
     segments (`HornDesign`, PR #128). The chamber's net air and vent are the horn's rear chamber.
@@ -157,7 +157,7 @@ Each PR stands alone. Lowest risk first.
     layout comes later. A back-loaded or tapped horn has its own drive; the engine does not take them yet. A
     catalog horn on a compression driver is a `HornAttachment` with its `placement` (baffle or top) and its
     `mount`.
-  - New `speakers` and `systems` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
+  - New `speakers` and `stacks` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
     `firestore.rules` already covers every collection there (`users/{uid}/{document=**}`); no rule change.
 - **L2 Speaker library.** Designer saves go to `speakers`. No import from old saves (owner policy above).
 - **L3 Designer page.** One page, "Designer" for now (`#designer`), designs any single speaker. The PA sub and
@@ -221,7 +221,7 @@ Each PR stands alone. Lowest risk first.
       current Hi-fi design, the PA design's sub and mid/high box, or its tower). A template builds a new spec from the
       catalog and the defaults (`src/pages/designer/designerTemplates.ts`). It sets only the first values. The spec
       keeps no template or role.
-      - PA sub, PA mid/high box: the PA page's starting design (`DEFAULT_PA`) through `systemFromPa`.
+      - PA sub, PA mid/high box: the PA page's starting design (`DEFAULT_PA`) through `layersFromPa`.
       - PA tower, horn in the baffle: the PA page's tower, with its arched top.
       - PA tower, horn on top (T1): the PA tower's sub and mid chamber, the horn on the mid chamber's lid, its mouth on
         the front plane, a flat top. The mid chamber starts at `TOWER_MID_HEIGHT_IN`; its height is the chamber's
@@ -311,6 +311,13 @@ Each PR stands alone. Lowest risk first.
       - A PA sub with a PA port keeps the PA rule's place for its bracing and hardware, even where its position is
         moved.
       - The Hi-fi page keeps its own 3% allowance.
+      - Bracing in horn-loaded chambers (owner, Oct 2026). Today the PA v2 sub bins get no braces: no frame fits past
+        the mouth, the flare and the throat cones. The fix:
+        - Count the flare walls as full braces. They tie the side walls together and split the panels into small
+          areas, as in many real horn bins.
+        - Allow ribs on the outer panels around the flare.
+        - Allow lightening cutouts in braces: holes in a flare wall or a frame where it carries no load.
+        - The bracing check and the cutlist follow these rules.
   - **L3d Inductance, limits and chips.**
     - **Voice-coil inductance.** Every T/S model reads the catalog's `Le`: the sealed, vented and passive-radiator
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
@@ -359,6 +366,10 @@ Each PR stands alone. Lowest risk first.
       lowpass, and the PA and the model do not.
   - **Later in L3.** The optimizer; the horn settings; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
+  - **Horn settings** (owner, Oct 2026; no fixed slot, start when it fits best). A "Horn" fold for each horn-loaded
+    chamber: a list of flare sections that the user can edit (profile conical or exponential, start area, end area,
+    length), the throat chamber, and the path (straight or folded). The model, the 3D view and the cutlist already read
+    these values, so this is mostly UI. Today the page says "its settings come in a later phase".
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
   the last two, in two phases. The name is "Stack", not "System".
   - **Data.** L1's `SystemSpec` splits in two:
@@ -371,6 +382,35 @@ Each PR stands alone. Lowest risk first.
     - **Sub highpass and subsonic.** When a sub highpass covers the box's subsonic, the box's subsonic is
       dropped; below 0.75 × Fb both stay. This rule comes with the crossovers between boxes.
     - The PA page becomes a stack preset.
+    - **Done (L4a).**
+      - **Types.** `StackSpec` (members, notes) and `StackMember` (speaker id, pose, mirror, crossover, level, delay or
+        `AUTO_DELAY`). A pose is across, up and back from the stack's origin, or from the member it stands on (`on`).
+        `SpaceSpec` holds the placements (a stack, or a speaker alone on its own input range), the amps, the front end
+        and the venue. `SystemSpec` and the source role are gone (no fixed roles).
+      - **Adapters.** `layersFromPa`, `layersFromHifi` and `layersFromFill` return the speakers, one stack and a space.
+        PA: the sub with the top on it (gap or spacer), the top on its stand beside the sub (satellite), or the tower;
+        the sub is `AUTO_DELAY`, the top sits `tilt` below it. Satellite's space places the speakers alone (one sub
+        midway). Hi-fi and fill: a stack of one, the sub highpass as its crossover.
+      - **Model** (`lib/speaker/stackResponse`, `stackLayout`). Each member runs through `speakerResponse` with its
+        crossover as its input range, then its level, delay and each band's path to a point
+        `STACK_LISTEN_DISTANCE_M` (4 m) out, level with the highest band; the levels are moved back to 1 m.
+      - **Auto delay.** It puts a member in phase with the member it crosses (one's lowpass and the other's highpass
+        within an octave), at their crossover and at the listening point. The rule is the coverage page's
+        (`autoSubDelayMs`): the crossovers' share wrapped to a turn, the crossing bands' own phases (the mid at the sub
+        crossover), and their paths. It solves for the relative delay. Where the auto member would have to play early,
+        the others wait instead, so no delay is below 0. On the PA goldens the sub waits 0.3–1.1 ms and is within 3°
+        of the mid at the crossover; the sum there holds or improves on no delay.
+      - **Limits.** `stackLimits` takes each member's `speakerLimits` with `stackCrossover` (the crossover is ahead of
+        the amps, so it lifts the amp and program ceilings in the sum) on one input.
+      - **Parity** (`tests/stack-response.test.ts`). A golden PA design's stack meets the PA page's system chart: the
+        sub within 0.06 dB, the mid and horn within 0.01 dB. Its sum is within 0.4 dB of the members summed with their
+        delays on one axis (the paths: the sub stands about 1 m below the horn's axis).
+      - **Page** (`#stack`). Members from the speaker library or the current PA design; pose, mirror, level, delay;
+        crossovers; the response (50–120 dB) and maximum output (80–140 dB) with each member's curve; a stacked front
+        drawing from `SpeakerFront`. Saves go to `stacks` with a copy of each member's speaker, so a stack opens as
+        saved.
+      - **Not yet.** The sub highpass and subsonic rule, a 3D view of the stack, and refreshing a member's speaker
+        from the library.
   - **L4b Space.** Stacks or speakers placed freely: the room, left and right pairs, and the coverage and level
     model.
     - The coverage map grows from `CoverageStack` to a list of placed stacks and speakers.

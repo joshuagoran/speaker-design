@@ -1,11 +1,12 @@
-// Read adapter: the Fills page's design (FillDesignState) as a speaker spec and a system spec. Pure; nothing is written.
+// Read adapter: the Fills page's design (FillDesignState) as a speaker spec, a stack of one and a space. Pure; nothing
+// is written.
 import type {
   AdapterBandId,
+  DesignLayers,
   FillDesignState,
   SpeakerBand,
   SpeakerSpec,
   SpecIdentity,
-  SystemWithSpeakers,
 } from "../../types";
 import { PANEL_STOCK } from "../../data/catalog/plywood";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
@@ -15,7 +16,7 @@ import {
   FILL_PANEL,
   FRONT_END_KIND,
   PORT_SHAPE,
-  SOURCE_ROLE,
+  SPACE_ITEM,
   SPEAKER_BAND,
   SPEAKER_BAND_NAMES,
   SPEAKER_PART,
@@ -29,6 +30,7 @@ import {
   channelCounter,
   lrFilter,
   speakerIdentity,
+  stackMember,
   stuffingPctOf,
 } from "./specParts";
 import { STUFFING_VOLUME_GAIN } from "../pa/calc";
@@ -98,32 +100,33 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
       tiltDeg: 0,
     },
     bands: [networkBand(SPEAKER_BAND.low, state), networkBand(SPEAKER_BAND.high, state)],
-    // the highpass to the subs is the system's (systemFromFill): the input range starts off
+    // the highpass to the subs is the stack's crossover (layersFromFill): the input range starts off
     input: NO_FILTERS,
     look: {},
   };
 }
 
 /**
- * The fill as a system: one source on one amp channel, the highpass to the subs as its filter in a DSP. The Fills page
- * places nothing, so the source stands at the origin.
+ * The fill read in: the speaker, a stack of one with the highpass to the subs as its crossover (in a DSP), and the space:
+ * one placement on one amp channel. The Fills page places nothing, so it stands at the origin.
  */
-export function systemFromFill(state: FillDesignState, system: SpecIdentity): SystemWithSpeakers {
-  const speaker = speakerFromFill(state, speakerIdentity(system, SPEAKER_PART.speaker));
+export function layersFromFill(state: FillDesignState, design: SpecIdentity): DesignLayers {
+  const speaker = speakerFromFill(state, speakerIdentity(design, SPEAKER_PART.speaker));
   const channel = channelCounter();
+  const crossover = { highpass: lrFilter(state.highpassHz, state.highpassOrder), lowpass: null };
   return {
     speakers: [speaker],
-    system: {
-      ...system,
-      sources: [
+    stack: { ...design, members: [stackMember(speaker.id, crossover)], notes: "" },
+    space: {
+      ...design,
+      placements: [
         {
-          speakerId: speaker.id,
-          role: SOURCE_ROLE.fill,
-          pose: { x: 0, y: 0, aim: 0, on: null, liftIn: 0 },
+          x: 0,
+          y: 0,
+          aim: 0,
+          item: { kind: SPACE_ITEM.stack, id: design.id },
+          liftIn: 0,
           mirror: false,
-          filters: { highpass: lrFilter(state.highpassHz, state.highpassOrder), lowpass: null },
-          delayMs: 0,
-          levelDb: 0,
           channels: [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low, SPEAKER_BAND.high])],
         },
       ],

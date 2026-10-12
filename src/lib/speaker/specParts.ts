@@ -4,12 +4,14 @@ import type {
   BandId,
   ChamberLoad,
   CrossoverOrder,
-  SourceChannel,
+  SpaceAmp,
+  SpaceChannel,
   SpeakerCabinet,
   SpeakerPart,
+  SpeakerSpec,
   SpecIdentity,
-  SystemAmp,
-  SystemSource,
+  StackMember,
+  StackPose,
 } from "../../types";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { GLUED_BACK } from "../../constants/bracing";
@@ -53,21 +55,31 @@ export const flushBracing = (
   braceTargetHz: PA_PANEL_TARGET_HZ,
 });
 
-/** A source's feed with no filters of the system's own. */
-export const NO_FILTERS: SystemSource["filters"] = { highpass: null, lowpass: null };
+/** A feed with no filters: the full range (no input range, no crossover between boxes). */
+export const NO_FILTERS: SpeakerSpec["input"] = { highpass: null, lowpass: null };
 
-/** A speaker's identity inside a system read from one design: the system's id and name, and the speaker's part. */
-export const speakerIdentity = (system: SpecIdentity, part: SpeakerPart): SpecIdentity => ({
-  id: `${system.id}/${part}`,
-  name: `${system.name} · ${SPEAKER_PART_NAMES[part]}`,
+/** A speaker's identity inside a design read in: the design's id and name, and the speaker's part. */
+export const speakerIdentity = (design: SpecIdentity, part: SpeakerPart): SpecIdentity => ({
+  id: `${design.id}/${part}`,
+  name: `${design.name} · ${SPEAKER_PART_NAMES[part]}`,
 });
 
-/** Hands out each amp's channels in order: the next free channel on `amp`, feeding `bands`. */
+/** Hands out each amp's channels in order: the next free channel on `amp`, feeding `bands` of stack member `member`. */
 export function channelCounter() {
-  const used = new Map<SystemAmp["id"], number>();
-  return (amp: SystemAmp["id"], bands: readonly BandId[]): SourceChannel => {
+  const used = new Map<SpaceAmp["id"], number>();
+  return (amp: SpaceAmp["id"], bands: readonly BandId[], member = 0): SpaceChannel => {
     const channel = used.get(amp) ?? 0;
     used.set(amp, channel + 1);
-    return { amp, channel, bands };
+    return { amp, channel, member, bands };
   };
 }
+
+/** A member's place on the stack's base, at its origin. */
+export const BASE_POSE: StackPose = { xIn: 0, yIn: 0, zIn: 0, on: null };
+
+/** A stack member at `pose` on `crossover`, with no level, delay or mirror of its own. */
+export const stackMember = (
+  speakerId: StackMember["speakerId"],
+  crossover: StackMember["crossover"],
+  pose: StackPose = BASE_POSE,
+): StackMember => ({ speakerId, pose, mirror: false, crossover, levelDb: 0, delayMs: 0 });
