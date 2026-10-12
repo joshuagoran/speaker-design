@@ -10,12 +10,15 @@ import {
   shownIn2,
   shownInOfCm,
   specSize,
+  stepCount,
   stepsIn,
   withSectionAdded,
   withSectionProfile,
   withSectionRemoved,
   withSectionSize,
+  withStepsSmoothed,
 } from "../src/pages/designer/hornSections";
+import { DESIGNER_TEXT } from "../src/constants/designer";
 import { hornText } from "../src/pages/designer/designerText";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
@@ -264,4 +267,42 @@ test("designer horn: a drive other than front-loaded is the engine's named gap",
   assert.deepEqual(responseOf(tapped).chambers[0].gaps, [HORN_ENGINE_GAP.tapped]);
   assert.ok(finiteResponse(tapped));
   assert.match(hornText(hornOf(BIN)), /^front-loaded horn, \d+ sections, [\d.]+ in, straight$/);
+});
+
+test("designer horn: smooth by default; Steps off snaps each start area back to the previous end", () => {
+  // the templates and a new section have no steps
+  for (const template of [
+    DESIGNER_TEMPLATE.paV2SubBinOne,
+    DESIGNER_TEMPLATE.paV2SubBinTwo,
+    DESIGNER_TEMPLATE.paV2MidBox,
+  ])
+    assert.equal(stepCount(hornOf(templateSpeaker(template)).segments), 0, template);
+  const segments = hornOf(BIN).segments;
+  assert.equal(stepCount(withSectionAdded(segments) ?? []), 0, "a new section starts smooth");
+  // two steps made with Steps on
+  const stepped = withSectionSize(withSectionSize(segments, 1, "s1", 100), 3, "s1", 900);
+  assert.equal(stepCount(stepped), 2);
+  assert.equal(DESIGNER_TEXT.hornSteps(stepCount(stepped)), "Steps: 2");
+  // Steps off: every start back to the previous end, the ends as they were
+  const smooth = withStepsSmoothed(stepped);
+  assert.equal(stepCount(smooth), 0);
+  assert.equal(DESIGNER_TEXT.hornSteps(stepCount(smooth)), "Steps: none");
+  smooth.forEach((s, i) => {
+    assert.equal(s.s2, stepped[i].s2);
+    if (i > 0) assert.equal(s.s1, smooth[i - 1].s2);
+  });
+  assert.equal(smooth[0].s1, segments[0].s1, "the throat stays");
+  assert.deepEqual(withStepsSmoothed(segments), segments, "a smooth horn stays as it is");
+  assert.deepEqual(responseOf(withSegments(BIN, () => smooth)).sum, responseOf(BIN).sum);
+});
+
+test("designer horn: a step shows a note that names the two sections", () => {
+  const stepped = withSectionSize(hornOf(BIN).segments, 1, "s1", 100);
+  const notes = stepped.flatMap((_, i) =>
+    stepsIn(stepped, i) ? [DESIGNER_TEXT.hornStep(i + 1)] : [],
+  );
+  assert.deepEqual(notes, [
+    "Section 2 starts at a different area than section 1 ends. This makes a step in the horn.",
+  ]);
+  assert.equal(stepsIn(withStepsSmoothed(stepped), 1), false, "no note once smooth");
 });

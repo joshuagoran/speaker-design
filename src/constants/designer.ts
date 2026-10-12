@@ -210,8 +210,17 @@ export const DESIGNER_TEXT = {
   hornDrive: "Drive",
   hornDriveNote:
     "Only a front-loaded horn runs in the horn engine today. A tapped or back-loaded horn is a gap in the model.",
-  hornStep:
-    "This section starts with a step: its start area is not the previous section's end area.",
+  /** the note under a section that starts with a step, by the section's number */
+  hornStep: (n: number) =>
+    `Section ${n} starts at a different area than section ${n - 1} ends. This makes a step in the horn.`,
+  hornAdvanced: "Advanced",
+  /** the Advanced fold's summary: the steps in the horn now */
+  hornSteps: (n: number) => `Steps: ${n === 0 ? "none" : n}`,
+  hornStepsSetting: "Steps",
+  hornStepsTip:
+    "Off: each section starts at the previous section's end area, so the horn is smooth. On: each section after the first shows its start area, so you can make a step. Off sets each start area back to the previous end area.",
+  hornStepsOff: "Off",
+  hornStepsOn: "On",
   addSection: "Add section",
   removeSection: "Remove section",
 } as const;

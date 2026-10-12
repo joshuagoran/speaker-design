@@ -112,6 +112,17 @@ export const stepsIn = (segments: readonly HornSegment[], i: number) => {
   return !!before && !!s && !sameArea(s.s1, before.s2);
 };
 
+/** How many sections start with a step (`stepsIn`). */
+export const stepCount = (segments: readonly HornSegment[]) =>
+  segments.filter((_, i) => stepsIn(segments, i)).length;
+
+/** The sections smooth: each start area after the first set to the previous section's end area, so no step is left. */
+export const withStepsSmoothed = (segments: readonly HornSegment[]): HornSegment[] =>
+  segments.map((s, i) => {
+    const before = segments[i - 1];
+    return before && s.s1 !== before.s2 ? { ...s, s1: before.s2 } : s;
+  });
+
 /** The horn's path length, in, as the summary shows it: every section's length together. */
 export const pathIn = (horn: Pick<SpeakerHorn, "segments">) =>
   shownInOfCm(horn.segments.reduce((sum, s) => sum + s.length, 0));
