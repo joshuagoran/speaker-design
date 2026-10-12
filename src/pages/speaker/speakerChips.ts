@@ -37,38 +37,41 @@ export function bandChips(
     const where = mechanical
       ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` Add a highpass to the band, or set the ${SPEAKER_TEXT.inputRange}, to protect the cone.`}`
       : "";
-    const chips: SpeakerChip[] = [
-      [
-        mechanical ? "warn" : "ok",
-        `Limited by ${DRIVER_LIMIT_NAMES[b.who]}`,
-        `Clean up to ${b.musicDb.toFixed(0)} dB at 1 m with one drive for the whole band${amp}.${where}`,
-        "speakerBandLimit",
-      ],
-    ];
+    const bandText = `Clean up to ${b.musicDb.toFixed(0)} dB at 1 m with one drive for the whole band${amp}.${where}`;
     // the band's first datasheet driver (a compression driver, a tweeter, a coaxial's HF section)
     const hf = limits.drivers.find((d) => d.band === b.id);
-    if (hf) {
+    const hfChip = ((): SpeakerChip | null => {
+      if (!hf) return null;
       const name = driverName(hf.driver);
       const derated =
         hf.derate < 1 && band?.highpass
           ? `, derated ${(-10 * Math.log10(hf.derate)).toFixed(1)} dB for the ${formatHz(band.highpass.hz)} highpass`
           : "";
-      chips.push(
-        hf.who === LIMIT_NAMES.amp
-          ? [
-              "ok",
-              "Amp-limited",
-              `The ${name} takes ${formatWatts(hf.watts)}${hf.imp === RATED_OHMS ? amp : ` into its ${hf.imp} Ω${amp} (rated into ${RATED_OHMS} Ω)`}, under its program rating${derated}.`,
-              "speakerHfPower",
-            ]
-          : [
-              "ok",
-              "Program-limited",
-              `The ${name} is capped at ${formatWatts(hf.watts)}: its program rating (2 × AES)${derated}.`,
-              "speakerHfPower",
-            ],
-      );
-    }
+      return hf.who === LIMIT_NAMES.amp
+        ? [
+            "ok",
+            "Amp-limited",
+            `The ${name} takes ${formatWatts(hf.watts)}${hf.imp === RATED_OHMS ? amp : ` into its ${hf.imp} Ω${amp} (rated into ${RATED_OHMS} Ω)`}, under its program rating${derated}.`,
+            "speakerHfPower",
+          ]
+        : [
+            "ok",
+            "Program-limited",
+            `The ${name} is capped at ${formatWatts(hf.watts)}: its program rating (2 × AES)${derated}.`,
+            "speakerHfPower",
+          ];
+    })();
+    // the driver's power check says the same as the band's limit (both the amp, or both the program rating): one chip
+    const same = hfChip !== null && hf?.who === b.who;
+    const chips: SpeakerChip[] = [
+      [
+        mechanical ? "warn" : "ok",
+        `Limited by ${DRIVER_LIMIT_NAMES[b.who]}`,
+        same ? `${bandText} ${hfChip[2]}` : bandText,
+        "speakerBandLimit",
+      ],
+      ...(hfChip && !same ? [hfChip] : []),
+    ];
     return { id: b.id, chips };
   });
 }

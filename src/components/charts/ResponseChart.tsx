@@ -24,6 +24,11 @@ interface Series {
   dash?: string;
   /** the line's width, px; absent: 2 (a sum drawn over its parts takes more) */
   width?: number;
+  /**
+   * leave the line out where it is below the chart's floor, so it does not run along the axis as if it were data;
+   * absent: drawn along the floor
+   */
+  clipAtFloor?: boolean;
 }
 
 /** A labeled vertical line at a frequency. */
@@ -86,9 +91,18 @@ export function ResponseChart({
     y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
   const paths = series.map((sr) => {
     const pts = sr.curve.filter((o) => o.f >= fmin && o.f <= fmax);
-    const d = pts
-      .map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1))
-      .join("");
+    // the runs of points the line draws: all of them, or (clipped at the floor) each run on or above the floor
+    const runs = sr.clipAtFloor
+      ? pts.reduce<FrequencyPoint[][]>((list, p, i) => {
+          if (p.spl < BOT) return list;
+          if (i > 0 && pts[i - 1].spl >= BOT) list[list.length - 1].push(p);
+          else list.push([p]);
+          return list;
+        }, [])
+      : [pts];
+    const runD = (run: readonly FrequencyPoint[]) =>
+      run.map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1)).join("");
+    const d = runs.map(runD).join("");
     // the band: along the high curve, back along the low one (none unless both have points on the chart)
     const inRange = (c: readonly FrequencyPoint[]) => c.filter((o) => o.f >= fmin && o.f <= fmax);
     const bandHi = sr.band ? inRange(sr.band.hi) : [],
@@ -103,9 +117,15 @@ export function ResponseChart({
       ...sr,
       d,
       bandD: band,
-      fill: pts.length
-        ? d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z`
-        : "",
+      // each run filled down to the floor
+      fill: runs
+        .filter((run) => run.length)
+        .map(
+          (run) =>
+            runD(run) +
+            `L${px(run[run.length - 1].f).toFixed(1)},${y1} L${px(run[0].f).toFixed(1)},${y1} Z`,
+        )
+        .join(""),
     };
   });
   const ticks = (

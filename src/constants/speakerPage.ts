@@ -134,15 +134,15 @@ export const SPEAKER_TEXT = {
   chambers: "Chambers",
   bands: "Bands",
   sum: "Sum",
-  yLabel: "dB SPL on axis, 2.83 V, 1 m",
+  yLabel: "dB SPL, 2.83 V, 1 m",
   modelNote:
-    "On axis at 1 m in half space, every band at 2.83 V; no baffle step, room or driver positions yet (the Space page will add them).",
+    "On axis at 1 m in half space. Every band gets 2.83 V. The model does not include the baffle step, the room or the driver positions yet. The Space page adds them.",
   noBands: "No band has a modeled driver yet: add a driver to a chamber and pick its band.",
   maxOutput: "Maximum output",
-  maxYLabel: "dB SPL on axis, 1 m, at the first limit",
+  maxYLabel: "max dB SPL, 1 m",
   speakerMax: "Speaker max",
   maxNote:
-    "Each band at its amp's full power, up to its first limit: cone travel, port air speed (each vent's own limit, set in its chamber), radiator travel, the driver's program rating (2 × AES) or the amp. A band's max is for music: one drive for the whole band. The sum takes one input for every band, and a band limits it only where the band carries signal.",
+    "On axis at 1 m. Each band gets its amp's full power, up to the first limit: cone travel, port air speed, radiator travel, the driver's program rating (2 × AES) or the amp. You set the port air speed limit in the chamber. A band's max is for music, with one drive for the whole band. The sum uses one input for all bands. A band limits the sum only where the band has signal.",
   chamber: "Chamber",
   noFilter: "None",
   /** a band the user adds, by its place among the bands */
