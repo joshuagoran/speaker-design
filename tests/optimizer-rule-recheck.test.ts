@@ -69,30 +69,36 @@ test("every card and the near miss's closest design show the rule's numbers", ()
 /** Light block with the sub, its vent and the box height locked: its wide boxes are where the estimate and the rule part. */
 const LOCKED: PaOptimizerInput["locks"] = { sub: true, vent: true, subDim: { h: "exact" } };
 
-test("with the sub, vent and height locked, every card both optimizers show passes by the rule", () => {
-  // light block's wide boxes: by the searches' brace estimate the loud and low ones sit just under the 125 lb limit, and
-  // by the rule several are over it (before the re-check, Fully optimize's Louder card was a 39 × 24 × 32 box at 129.5 lb,
-  // 117.7 lb by the estimate)
-  for (const goal of ["lower", "louder"] as const satisfies PaGoal[]) {
-    const run: PaOptimizerInput = {
-      ...input,
-      goals: [goal],
-      locks: LOCKED,
-    };
-    for (const [name, out] of [
-      ["Improve", optimizePaStack(run)],
-      ["Fully optimize", optimizePaStackExact(run)],
-    ] as const) {
-      assert.ok(out.cards.length, `${goal}, ${name}: cards`);
-      for (const k of out.cards)
-        assert.deepEqual(
-          designProblems(evaluateDesign(k.config), run),
-          [],
-          `${goal}, ${name}: ${k.label} (${k.metrics.heaviest.toFixed(1)} lb)`,
-        );
+// about 18 s alone (four runs, two of them Fully optimize); the full suite runs files in parallel, so it needs room past
+// the 30 s default, as the 110 lb test below
+test(
+  "with the sub, vent and height locked, every card both optimizers show passes by the rule",
+  { timeout: 60_000 },
+  () => {
+    // light block's wide boxes: by the searches' brace estimate the loud and low ones sit just under the 125 lb limit, and
+    // by the rule several are over it (before the re-check, Fully optimize's Louder card was a 39 × 24 × 32 box at 129.5 lb,
+    // 117.7 lb by the estimate)
+    for (const goal of ["lower", "louder"] as const satisfies PaGoal[]) {
+      const run: PaOptimizerInput = {
+        ...input,
+        goals: [goal],
+        locks: LOCKED,
+      };
+      for (const [name, out] of [
+        ["Improve", optimizePaStack(run)],
+        ["Fully optimize", optimizePaStackExact(run)],
+      ] as const) {
+        assert.ok(out.cards.length, `${goal}, ${name}: cards`);
+        for (const k of out.cards)
+          assert.deepEqual(
+            designProblems(evaluateDesign(k.config), run),
+            [],
+            `${goal}, ${name}: ${k.label} (${k.metrics.heaviest.toFixed(1)} lb)`,
+          );
+      }
     }
-  }
-});
+  },
+);
 
 test("Improve's further finalists: a Louder card the first batch by the estimate didn't hold", () => {
   // light block, locked: every Louder finalist by the estimate is over 125 lb by the rule; the next box pairs by the
