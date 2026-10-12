@@ -454,7 +454,8 @@ test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamb
   // the rear chamber's walls round the flare are braced to the target; the flare holds itself
   const braced = cabinetBuild(horn.cabinet).chambers[0].bracing;
   assert.equal(braced.targetHz, horn.cabinet.braceTargetHz);
-  assert.ok(braced.panels.length === 6);
+  // the keep-out tapers from the mouth to the throat, so braces fit round a small horn in a big box
+  assert.ok(braced.windowIn3 + braced.ribIn3 > 0, "braced round its flare");
 });
 
 test("speaker build: the back joint sets the bracing and the back's and partitions' notes", () => {

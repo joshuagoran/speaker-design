@@ -73,8 +73,8 @@ import {
 import { subDriverDepthIn, subTubeKit } from "../pa/tubes";
 import { towerHornCutout } from "../pa/tower";
 import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
-import { DRIVER_CLEARANCE_IN, NO_SUPPORTS } from "../pa/bracing";
-import { panelStock } from "../bracing";
+import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
+import { MIN_BAY_IN, panelStock } from "../bracing";
 import { panelLbPerSqFt } from "../panel";
 import { HIFI_FALLBACK_LB, HIFI_FIXINGS_LB, hifiPortElbows, radiatorsLb } from "../hifi/hifi";
 import {
@@ -378,10 +378,20 @@ function chamberDrivers(f: ChamberFrame, baffleT: number) {
   let hole: PlateHole | undefined;
   let heaviest: HardwareDriver | null = null;
   let ts: ConeBuild["ts"] | undefined;
-  if (!driversOnBaffle(placed.chamber)) return { regions, hole, ts, heaviest };
+  /** off the baffle (a horn's drivers at its throat): their figures for the pressure check, no room or hole there */
+  const onBaffle = driversOnBaffle(placed.chamber);
   for (const driver of placed.chamber.drivers) {
     if (onTop(driver)) continue;
     const cone = coneBuild(driver);
+    if (cone) {
+      const disp = (cone.ts.disp ?? 0) * driver.count;
+      ts = {
+        Sd: (ts?.Sd ?? 0) + cone.ts.Sd * driver.count,
+        Xmax: ts ? Math.min(ts.Xmax, cone.ts.Xmax) : cone.ts.Xmax,
+        disp: (ts?.disp ?? 0) + disp,
+      };
+    }
+    if (!onBaffle) continue;
     const room = cone ? null : datasheetRoom(driver);
     for (const spot of driverSpots(placed, driver)) {
       const c = insidePoint(f, spot);
@@ -392,14 +402,6 @@ function chamberDrivers(f: ChamberFrame, baffleT: number) {
         if (!heaviest || cone.lb > heaviest.lb)
           heaviest = { center: c, lb: cone.lb, depthIn: cone.depthIn };
       } else if (room) regions.push(roomAround(c, room.w, room.h, 0, room.d - baffleT));
-    }
-    if (cone) {
-      const disp = (cone.ts.disp ?? 0) * driver.count;
-      ts = {
-        Sd: (ts?.Sd ?? 0) + cone.ts.Sd * driver.count,
-        Xmax: ts ? Math.min(ts.Xmax, cone.ts.Xmax) : cone.ts.Xmax,
-        disp: (ts?.disp ?? 0) + disp,
-      };
     }
   }
   return { regions, hole, ts, heaviest };
@@ -451,22 +453,80 @@ function ventRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
   });
 }
 
+/** How many steps each flare segment's keep-out takes, its size tapering from one step to the next. */
+const FLARE_STEPS = 4;
+
 /**
  * The room a horn built into the chamber takes, which no brace or rib may enter: its flare from the mouth on the baffle
- * back along its path (drawn straight, at most the chamber's inside depth: speakerLayout `hornFlare`), as wide and tall
- * as the mouth, and its drivers' at the throat, a cone's depth further. The rear chamber's walls round it are braced; the
- * flare's own walls hold themselves. None for a chamber without a horn.
+ * back along its path (drawn straight, at most the chamber's inside depth: speakerLayout `hornFlare`), each segment
+ * tapering from its mouth to its throat in FLARE_STEPS steps (each step as large as its wider end), then its drivers at
+ * the throat, a cone's depth further, as large as the throat or the cone, whichever is larger. The rear chamber's walls
+ * round it are braced; the flare's own walls hold themselves. None for a chamber without a horn.
  */
+/**
+ * Where a horn's flare leaves each panel it runs along from the mouth (its keep-out reaches the panel there), back from
+ * the baffle: its wall, glued to the panel, holds the panel in a line across it there (PaBoxSupports `flareZ`). A flare
+ * that never meets a panel, or meets it to the back, gives that panel no line.
+ */
+function flareLines(f: ChamberFrame, regions: readonly BoxRegion[]): PaBoxSupports["flareZ"] {
+  const { iw, ih, inD } = f.inside;
+  /** the front run of regions that reach a panel, and where it ends */
+  const leaves = (reaches: (r: BoxRegion) => boolean): number[] => {
+    let z = 0;
+    for (const r of regions) {
+      if (!reaches(r) || r.z[0] > z + 1e-9) break;
+      z = r.z[1];
+    }
+    return z > 1e-9 && z < inD - MIN_BAY_IN ? [z] : [];
+  };
+  // the flare's own edge: its room less the drivers' clearance round it
+  const c = DRIVER_CLEARANCE_IN;
+  return {
+    sideL: leaves((r) => r.x[0] + c <= 1e-9),
+    sideR: leaves((r) => r.x[1] - c >= iw - 1e-9),
+    bottom: leaves((r) => r.y[0] + c <= 1e-9),
+    top: leaves((r) => r.y[1] - c >= ih - 1e-9),
+  };
+}
+
 function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
   const flare = hornFlare(cabinet, f.placed);
   if (!flare) return [];
-  const pathIn = flare.segments.reduce((sum, s) => sum + s.length, 0);
-  const coneIn = Math.max(0, ...f.placed.chamber.drivers.map((d) => coneBuild(d)?.depthIn ?? 0));
   const c = insidePoint(f, {
     xIn: flare.mouth.x + flare.mouth.w / 2,
     yIn: flare.mouth.y + flare.mouth.h / 2,
   });
-  return [roomAround(c, flare.mouth.w, flare.mouth.h, 0, Math.min(f.inside.inD, pathIn + coneIn))];
+  const { inD } = f.inside;
+  const out: BoxRegion[] = [];
+  let z = 0;
+  // from the mouth back: the last segment first, each from its mouth end to its throat end
+  for (const s of [...flare.segments].reverse()) {
+    for (let i = 0; i < FLARE_STEPS && z < inD; i++) {
+      const at = (k: number) => ({
+        w: s.mouth.w + ((s.throat.w - s.mouth.w) * k) / FLARE_STEPS,
+        h: s.mouth.h + ((s.throat.h - s.mouth.h) * k) / FLARE_STEPS,
+      });
+      const [a, b] = [at(i), at(i + 1)];
+      const z1 = Math.min(inD, z + s.length / FLARE_STEPS);
+      out.push(roomAround(c, Math.max(a.w, b.w), Math.max(a.h, b.h), z, z1));
+      z = z1;
+    }
+  }
+  const throat = flare.segments[0]?.throat ?? flare.mouth;
+  const cones = f.placed.chamber.drivers.flatMap((d) => coneBuild(d) ?? []);
+  const coneIn = Math.max(0, ...cones.map((k) => k.depthIn));
+  const coneW = Math.max(0, ...cones.map((k) => k.body.cutoutIn));
+  if (coneIn > 0 && z < inD)
+    out.push(
+      roomAround(
+        c,
+        Math.max(throat.w, coneW),
+        Math.max(throat.h, coneW),
+        z,
+        Math.min(inD, z + coneIn),
+      ),
+    );
+  return out;
 }
 
 /** The bracing rule's results on general chambers, by their inputs (the page asks again on every change). */
@@ -518,8 +578,11 @@ function chamberBracing(
     };
   }
   const drivers = chamberDrivers(f, baffleIn(cabinet));
+  const flare = flareRegions(cabinet, f);
+  /** a horn's flare walls, where they leave the panels, hold them in a line */
+  const flareSupports: PaBoxSupports = { ...NO_SUPPORTS, flareZ: flareLines(f, flare) };
   const keepOut = {
-    driver: [...drivers.regions, ...flareRegions(cabinet, f)],
+    driver: [...drivers.regions, ...flare],
     vent: ventRegions(cabinet, f),
   };
   const plan = (bracing: BoxBracing | null) =>
@@ -547,8 +610,8 @@ function chamberBracing(
       baffle: isFrame(cabinet) ? panelStock(BAFFLE_PLY_IN, cabinet.panel.material) : wall,
     },
     {
-      sup: NO_SUPPORTS,
-      stops: NO_SUPPORTS,
+      sup: flareSupports,
+      stops: flareSupports,
       keepOut: { ...keepOut, hardware: placed ? hardwareKeepOut(placed) : [] },
       style,
       back,

@@ -78,9 +78,16 @@ export interface PaBoxSupports {
    * floor rib there runs front to back from it, and none runs across the air leaving the duct.
    */
   bottomZ?: number[];
+  /**
+   * back from the baffle (z), by panel: where a horn's flare built into the box leaves the panel, its wall glued to it
+   * holds the panel in a line across it (a Designer chamber's horn; none in the PA boxes)
+   */
+  flareZ?: Partial<Record<FlarePanel, number[]>>;
   /** a bottom slot's fins' height where they run the whole depth: the `bottom` lines are those fins */
   finIn?: number;
 }
+/** The panels a horn's flare can meet along a line across them (PaBoxSupports `flareZ`). */
+export type FlarePanel = "sideL" | "sideR" | "top" | "bottom";
 export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], bottom: [] };
 
 /**
@@ -121,9 +128,9 @@ export function paBoxPanels(
       spanV: ih,
       stock: wall,
       ribs: true,
-      fixedU: sup.sideZ ?? [],
+      fixedU: [...(sup.sideZ ?? []), ...(sup.flareZ?.sideL ?? [])],
       fixedV: sup.sideL,
-      stopU: stops.sideZ ?? [],
+      stopU: [...(stops.sideZ ?? []), ...(stops.flareZ?.sideL ?? [])],
       stopV: stops.sideL,
       edges: sideEdges,
     },
@@ -136,9 +143,9 @@ export function paBoxPanels(
       spanV: ih,
       stock: wall,
       ribs: true,
-      fixedU: sup.sideZ ?? [],
+      fixedU: [...(sup.sideZ ?? []), ...(sup.flareZ?.sideR ?? [])],
       fixedV: sup.sideR,
-      stopU: stops.sideZ ?? [],
+      stopU: [...(stops.sideZ ?? []), ...(stops.flareZ?.sideR ?? [])],
       stopV: stops.sideR,
       edges: sideEdges,
     },
@@ -152,7 +159,9 @@ export function paBoxPanels(
       stock: wall,
       ribs: true,
       fixedU: sup.top,
+      fixedV: sup.flareZ?.top ?? [],
       stopU: stops.top,
+      stopV: stops.flareZ?.top ?? [],
       edges: {
         u0: held(wall, ih),
         u1: held(wall, ih),
@@ -170,8 +179,9 @@ export function paBoxPanels(
       stock: wall,
       ribs: true,
       fixedU: sup.bottom,
+      fixedV: sup.flareZ?.bottom ?? [],
       stopU: stops.bottom,
-      stopV: stops.bottomZ ?? [],
+      stopV: [...(stops.bottomZ ?? []), ...(stops.flareZ?.bottom ?? [])],
       ...(stops.bottomZ?.length ? { ribAcross: ["x"] as const } : {}),
       ...(sup.finIn ? { fins: { across: "x" as const, at: sup.bottom, height: sup.finIn } } : {}),
       edges: {

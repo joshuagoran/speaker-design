@@ -133,6 +133,9 @@ export const DESIGNER_TEXT = {
   buildNote: (target: string) =>
     `Each chamber is braced by the PA bracing rule, to the bracing target: every panel above ${target}. The panels that still miss it are listed above. Each chamber's net air counts the braces, the vent's walls, the baffle cleats and the hardware. The weight counts the panels, braces, drivers with their horns, radiators and hardware. The Cutlist tab lists every part.`,
   noBraces: "no braces",
+  /** a chamber whose braces can't bring every panel to the target (or a panel over its strength limit), by its place */
+  underTarget: (n: number, target: string) =>
+    `Chamber ${n} does not meet the ${target} bracing target: the rule cannot fit enough braces round its drivers, vent and horn. These panels still miss the target, or a strength limit:`,
   inputRange: "Input range",
   inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
   inputOff: "Off",

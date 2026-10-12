@@ -321,11 +321,17 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 </li>
               ))}
             </ul>
-            {build.chambers.flatMap((c, i) =>
-              braceNoteLines(`${DESIGNER_TEXT.chamber} ${i + 1}`, c.bracing).map((line) => (
-                <Notice key={line}>{line}</Notice>
-              )),
-            )}
+            {build.chambers.flatMap((c, i) => {
+              const lines = braceNoteLines(`${DESIGNER_TEXT.chamber} ${i + 1}`, c.bracing);
+              return lines.length
+                ? [
+                    <Notice key={`under${i}`}>
+                      {DESIGNER_TEXT.underTarget(i + 1, formatHz(braceTargetHz))}
+                    </Notice>,
+                    ...lines.map((line) => <Notice key={line}>{line}</Notice>),
+                  ]
+                : [];
+            })}
             <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
               {DESIGNER_TEXT.buildNote(formatHz(braceTargetHz))}
             </p>
