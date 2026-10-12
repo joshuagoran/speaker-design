@@ -180,6 +180,8 @@ export interface ChamberBuild {
   bracing: BoxBracing;
   /** its hardware (a shell's lowest chamber, when the cabinet has some); null for none */
   hardware: BoxHardwarePlan | null;
+  /** its PA sub and port with its box, where the PA sub box's rules apply (its duct-fit check reads them); else null */
+  paSub: (PaSub & { box: Dims3 }) | null;
   inside: ChamberInside;
   /** its clear volume, the vent's air in it, the wood inside it and the hardware's recesses, L */
   clearL: number;
@@ -218,7 +220,7 @@ const baffleIn = (cabinet: SpeakerCabinet) =>
   isFrame(cabinet) ? BAFFLE_PLY_IN : cabinet.panel.thicknessIn;
 
 /** A PA sub chamber: its sub and its port as the PA's rules take them (its style and vent sizes). */
-interface PaSub {
+export interface PaSub {
   sub: SubDriver;
   style: PortStyle;
   vent: VentSpec;
@@ -888,6 +890,7 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
       box: chamberCutBox(f.index),
       bracing,
       hardware,
+      paSub: f.paSub && { ...f.paSub, box: f.box },
       inside: f.inside,
       clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
       ventL: vent ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,

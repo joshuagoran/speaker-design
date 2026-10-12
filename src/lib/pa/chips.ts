@@ -5,6 +5,7 @@ import type {
   BoxHardwarePlan,
   Chip,
   ChipId,
+  ChipSeverity,
   Dims2,
   Dims3,
   FillChipsInput,
@@ -12,6 +13,7 @@ import type {
   MidChipsInput,
   PortStyle,
   SubChipsInput,
+  SubSize,
   VentSpec,
 } from "../../types";
 import {
@@ -184,6 +186,64 @@ export const subBaffleFits = (
   );
 };
 
+/** A check's severity, title and detail, without its id: a check two sections share (each with its own id). */
+export type ChipBody = [severity: ChipSeverity, title: string, detail: string];
+
+/**
+ * The duct-fit check of a PA sub box (ductFit): the duct longer than the layout holds, or in a gap between the lengths
+ * its ways hold. Null when it fits. The sub section and the Speaker page's chamber checks share it.
+ */
+export function ductFitChip(
+  subBox: Dims3,
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  PT: number,
+  inset: number,
+  sub: TubeDriver,
+): ChipBody | null {
+  const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, inset, sub);
+  if (cVent.len > fit)
+    return [
+      "bad",
+      DUCT_TOO_LONG,
+      `${cVent.len.toFixed(1)}″ does not fit. This layout holds ${fit.toFixed(1)}″` +
+        (portStyle === "slots"
+          ? ", folded up the back wall."
+          : isRoundPort(portStyle) && ways.length > 1
+            ? `, with ${ways.length === 2 ? "an elbow" : "two elbows"}.`
+            : "."),
+    ];
+  if (!ductFits(spans, cVent.len)) {
+    // in a gap: the longest way short of it and the shortest past it
+    const below = ways.filter(({ span }) => span[1] < cVent.len).at(-1),
+      above = ways.find(({ span }) => span[0] > cVent.len);
+    return [
+      "bad",
+      DUCT_TOO_LONG,
+      `${cVent.len.toFixed(1)}″ is past the ${(below?.span[1] ?? 0).toFixed(1)}″ ${below?.what ?? "the duct"} holds ` +
+        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs.`,
+    ];
+  }
+  return null;
+}
+
+/** The tube-layout check of a PA sub box: round tubes' flares that don't fit beside the driver. Null when they fit. */
+export function tubeFitChip(
+  subBox: Dims3,
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  PT: number,
+  subSize: SubSize,
+): ChipBody | null {
+  return isRoundPort(portStyle) && !tubeLayout(subBox, portStyle, cVent, PT, subSize).fits
+    ? [
+        "bad",
+        TUBES_WONT_FIT,
+        `${cVent.nt} × ${cVent.dia}″ flared tubes do not fit beside the driver. Use fewer or narrower tubes.`,
+      ]
+    : null;
+}
+
 /** How far a band may fall short of the band below at their crossover before its chip says it runs out first, dB. */
 export const KEEP_UP_SLACK_DB = 0.5;
 
@@ -223,38 +283,10 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       `Needs ${need.toFixed(1)}″ of clear baffle. The vents leave ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
-  const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, inset, sub);
-  if (cVent.len > fit)
-    F.push([
-      "bad",
-      DUCT_TOO_LONG,
-      `${cVent.len.toFixed(1)}″ does not fit. This layout holds ${fit.toFixed(1)}″` +
-        (portStyle === "slots"
-          ? ", folded up the back wall."
-          : isRoundPort(portStyle) && ways.length > 1
-            ? `, with ${ways.length === 2 ? "an elbow" : "two elbows"}.`
-            : "."),
-      "subDuctFit",
-    ]);
-  else if (!ductFits(spans, cVent.len)) {
-    // in a gap: the longest way short of it and the shortest past it
-    const below = ways.filter(({ span }) => span[1] < cVent.len).at(-1),
-      above = ways.find(({ span }) => span[0] > cVent.len);
-    F.push([
-      "bad",
-      DUCT_TOO_LONG,
-      `${cVent.len.toFixed(1)}″ is past the ${(below?.span[1] ?? 0).toFixed(1)}″ ${below?.what ?? "the duct"} holds ` +
-        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs.`,
-      "subDuctFit",
-    ]);
-  }
-  if (isRoundPort(portStyle) && !tubeLayout(subBox, portStyle, cVent, PT, subSize).fits)
-    F.push([
-      "bad",
-      TUBES_WONT_FIT,
-      `${cVent.nt} × ${cVent.dia}″ flared tubes do not fit beside the driver. Use fewer or narrower tubes.`,
-      "subTubeFit",
-    ]);
+  const duct = ductFitChip(subBox, portStyle, cVent, PT, inset, sub);
+  if (duct) F.push([...duct, "subDuctFit"]);
+  const tubes = tubeFitChip(subBox, portStyle, cVent, PT, subSize);
+  if (tubes) F.push([...tubes, "subTubeFit"]);
   F.push(
     subLbLoaded > 125
       ? [
@@ -590,8 +622,12 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
  * what it runs into (the braces and ribs, the driver, the vent, the panel's edges and joints, another part).
  */
 export function hardwareChip(plan: BoxHardwarePlan): Chip<ChipId<"hardware">> {
-  const box = PA_SETTINGS_TABS[plan.box];
   const id = plan.box === "sub" ? "subHardwareFit" : "midHardwareFit";
+  return [...hardwareFitChip(plan, PA_SETTINGS_TABS[plan.box]), id];
+}
+
+/** `hardwareChip` without its id, the box named `box` ("Sub", "Chamber 1"): the Speaker page's chamber checks share it. */
+export function hardwareFitChip(plan: BoxHardwarePlan, box: string): ChipBody {
   // the two handles mirror each other: one line for both when they hit the same things
   const lines: string[] = [];
   for (const p of plan.parts) {
@@ -613,6 +649,6 @@ export function hardwareChip(plan: BoxHardwarePlan): Chip<ChipId<"hardware">> {
     );
   }
   return lines.length
-    ? ["warn", `${box}: ${HARDWARE_FIT_TITLES.clash}`, lines.join(" "), id]
-    : ["ok", `${box}: ${HARDWARE_FIT_TITLES.fits}`, hardwareFitsLine(plan.liters.toFixed(2)), id];
+    ? ["warn", `${box}: ${HARDWARE_FIT_TITLES.clash}`, lines.join(" ")]
+    : ["ok", `${box}: ${HARDWARE_FIT_TITLES.fits}`, hardwareFitsLine(plan.liters.toFixed(2))];
 }

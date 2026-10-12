@@ -14,6 +14,10 @@ import { formatHz, formatWatts } from "../../lib/format";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./speakerParts";
+import { ductFitChip, hardwareFitChip, tubeFitChip } from "../../lib/pa/chips";
+import { baffleInsetIn } from "../../lib/speaker/chamberAir";
+import type { CabinetBuild } from "../../lib/speaker/speakerBuild";
+import type { SpeakerCabinet } from "../../types";
 
 /** A Speaker-page check. */
 type SpeakerChip = Chip<ChipId<"speaker">>;
@@ -73,6 +77,34 @@ export function bandChips(
       ...(hfChip && !same ? [hfChip] : []),
     ];
     return { id: b.id, chips };
+  });
+}
+
+/**
+ * Each chamber's fit checks, in the spec's order: a PA port's duct and tubes against the chamber, by the PA sub box's
+ * rules (lib/pa/chips), and its hardware against its braces, drivers, vent and edges (lib/pa/hardware). Empty for a
+ * chamber with neither.
+ */
+export function chamberFitChips(
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  build: CabinetBuild,
+): SpeakerChip[][] {
+  const t = cabinet.panel.thicknessIn;
+  return build.chambers.map((c, i) => {
+    const chips: SpeakerChip[] = [];
+    if (c.paSub) {
+      const { box, style, vent, sub } = c.paSub;
+      const duct = ductFitChip(box, style, vent, t, baffleInsetIn(cabinet), sub);
+      if (duct) chips.push([...duct, "speakerDuctFit"]);
+      const tubes = tubeFitChip(box, style, vent, t, sub.size);
+      if (tubes) chips.push([...tubes, "speakerTubeFit"]);
+    }
+    if (c.hardware)
+      chips.push([
+        ...hardwareFitChip(c.hardware, `${SPEAKER_TEXT.chamber} ${i + 1}`),
+        "speakerHardwareFit",
+      ]);
+    return chips;
   });
 }
 

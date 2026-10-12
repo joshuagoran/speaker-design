@@ -21,7 +21,8 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
-import { bandChips, chamberChips } from "../src/pages/speaker/speakerChips";
+import { bandChips, chamberChips, chamberFitChips } from "../src/pages/speaker/speakerChips";
+import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
 import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { keysOf } from "../src/lib/records";
@@ -170,6 +171,7 @@ const speakerLists = speakerSpecs.flatMap((spec) => {
   return [
     ...bandChips(spec, limits).map((b) => b.chips),
     ...limits.chambers.flatMap((c) => (c ? [chamberChips(c, c.band)] : [])),
+    ...chamberFitChips(spec.cabinet, cabinetBuild(spec.cabinet)),
   ];
 });
 

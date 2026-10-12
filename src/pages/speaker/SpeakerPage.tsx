@@ -102,7 +102,7 @@ import {
   BRACE_TARGET_RANGE_HZ,
   BRACE_STYLE_SUMMARY,
 } from "../../constants/bracing";
-import { bandChips, chamberChips } from "./speakerChips";
+import { bandChips, chamberChips, chamberFitChips } from "./speakerChips";
 import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
 import type { SpeakerPageState } from "./useSpeakerPage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -278,6 +278,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
           "lb",
         ])),
   ];
+  /** each chamber's duct and hardware fit checks */
+  const fitChips = chamberFitChips(spec.cabinet, build);
   const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   const cell = (place: string) => resultsCellClass(wide, place);
   const fbMarks = response.chambers.flatMap((c, i) =>
@@ -400,6 +402,21 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                       ]
                     : [];
                 })}
+              {fitChips.some((chips) => chips.length > 0) && (
+                <div className={`${READING_WIDTH} flex flex-col gap-3 my-3`}>
+                  {fitChips.map(
+                    (chips, i) =>
+                      chips.length > 0 && (
+                        <div key={i}>
+                          <h4 className="text-xs font-semibold text-stone-500 mb-1">
+                            {SPEAKER_TEXT.chamber} {i + 1}
+                          </h4>
+                          <WarningChips chips={chips} />
+                        </div>
+                      ),
+                  )}
+                </div>
+              )}
               <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
                 {SPEAKER_TEXT.priceNote}{" "}
                 {unbraced
