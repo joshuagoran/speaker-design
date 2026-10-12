@@ -27,6 +27,7 @@ import {
 } from "../../components/ui/FinishPickers";
 import { cabinetFinishName, paintName } from "../../lib/data";
 import { Card } from "../../components/ui/Card";
+import { CardHeading } from "../../components/ui/CardHeading";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
 import {
   drawsArchedTop,
@@ -525,7 +526,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             "bands",
             <>
               <Card className="mb-3">
-                <h4 className="font-semibold mb-1">{SPEAKER_TEXT.inputRange}</h4>
+                <CardHeading className="mb-1">{SPEAKER_TEXT.inputRange}</CardHeading>
                 <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.inputHint}</p>
                 <FilterFields
                   filters={spec.input}

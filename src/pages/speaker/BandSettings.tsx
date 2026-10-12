@@ -1,6 +1,7 @@
 import type { SpeakerBand } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { CardHeading } from "../../components/ui/CardHeading";
 import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { TextField } from "../../components/ui/TextField";
@@ -22,14 +23,18 @@ interface Props {
 export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
   return (
     <Card className="mb-3">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h4 className="font-semibold">{band.name}</h4>
-        {onRemove && (
-          <Button size="xs" onClick={onRemove}>
-            Remove band
-          </Button>
-        )}
-      </div>
+      <CardHeading
+        className="mb-3"
+        action={
+          onRemove && (
+            <Button size="xs" onClick={onRemove}>
+              Remove band
+            </Button>
+          )
+        }
+      >
+        {band.name}
+      </CardHeading>
       <TextField
         label="Name"
         value={band.name}

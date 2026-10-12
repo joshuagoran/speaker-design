@@ -49,7 +49,7 @@ export function NumberField({
             if (Number.isFinite(n)) onChange(n);
           }}
           onBlur={() => setRaw(String(value))}
-          className={`w-24 px-3 py-2 rounded border border-stone-300 bg-panel${disabled ? " text-stone-500 cursor-not-allowed" : ""}`}
+          className={`w-24 px-3 py-2 font-value rounded border border-stone-300 bg-panel${disabled ? " text-stone-500 cursor-not-allowed" : ""}`}
         />
         {unit}
       </div>

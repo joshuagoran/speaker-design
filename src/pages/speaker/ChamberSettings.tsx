@@ -14,6 +14,7 @@ import type {
 } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { CardHeading } from "../../components/ui/CardHeading";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
@@ -117,14 +118,18 @@ export function ChamberSettings({
   const room = hornRoom(cabinet, chamber, placed);
   return (
     <Card className="mb-3">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h4 className="font-semibold">Chamber {index + 1}</h4>
-        {onRemove && (
-          <Button size="xs" onClick={onRemove}>
-            Remove chamber
-          </Button>
-        )}
-      </div>
+      <CardHeading
+        className="mb-3"
+        action={
+          onRemove && (
+            <Button size="xs" onClick={onRemove}>
+              Remove chamber
+            </Button>
+          )
+        }
+      >
+        Chamber {index + 1}
+      </CardHeading>
       <div className={FIELD_ROW}>
         {(["w", "h", "d"] as const).map((k) => (
           <NumberField
@@ -137,7 +142,7 @@ export function ChamberSettings({
           />
         ))}
       </div>
-      <div className="text-sm text-stone-500 mb-1">Position</div>
+      <div className="text-sm font-label text-stone-500 mb-1">Position</div>
       <div className={FIELD_ROW}>
         {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
         <NumberField
@@ -306,7 +311,9 @@ export function ChamberSettings({
           )}
         </PlaceFields>
       )}
-      <h5 className="text-sm font-semibold mt-1 mb-2">Drivers</h5>
+      <CardHeading sub className="mt-1 mb-2">
+        Drivers
+      </CardHeading>
       {chamber.drivers.map((driver, i) => (
         <DriverFields
           key={i}

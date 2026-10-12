@@ -1,3 +1,4 @@
+import { CardHeading } from "../../components/ui/CardHeading";
 import { useRef, useState } from "react";
 import type { HornSegment, SpeakerHorn } from "../../types";
 import { AnimatedDetails } from "../../components/ui/AnimatedDetails";
@@ -75,19 +76,27 @@ export function HornSettings({ horn, onEdit }: Props) {
     });
   return (
     <section className="border-t border-stone-300 pt-3 mb-3">
-      <h5 className="text-sm font-semibold">{SPEAKER_TEXT.horn}</h5>
+      <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
       <p className="text-xs text-stone-500 mb-2">{hornText(horn)}</p>
-      <div className="text-sm text-stone-500 mb-1">{SPEAKER_TEXT.hornSections}</div>
+      <div className="text-sm font-label text-stone-500 mb-1">{SPEAKER_TEXT.hornSections}</div>
       {segments.map((s, i) => (
         <div key={i} className="rounded border border-stone-300 px-3 pt-2 mb-2">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-sm font-semibold">{SPEAKER_TEXT.hornSection(i + 1)}</span>
-            {segments.length > 1 && (
-              <Button size="xs" onClick={() => editSegments((list) => withSectionRemoved(list, i))}>
-                {SPEAKER_TEXT.removeSection}
-              </Button>
-            )}
-          </div>
+          <CardHeading
+            sub
+            className="mb-2"
+            action={
+              segments.length > 1 && (
+                <Button
+                  size="xs"
+                  onClick={() => editSegments((list) => withSectionRemoved(list, i))}
+                >
+                  {SPEAKER_TEXT.removeSection}
+                </Button>
+              )
+            }
+          >
+            {SPEAKER_TEXT.hornSection(i + 1)}
+          </CardHeading>
           <ToggleGroup
             label={SPEAKER_TEXT.hornProfile}
             className="mb-2"

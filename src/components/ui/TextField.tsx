@@ -35,7 +35,7 @@ export function TextField({
       maxLength={maxLength}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
-      className={`px-3 rounded border border-stone-300 bg-panel text-sm ${className}`}
+      className={`px-3 font-value rounded border border-stone-300 bg-panel text-sm ${className}`}
     />
   );
   return label === undefined ? (
