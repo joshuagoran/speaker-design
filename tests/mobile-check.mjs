@@ -16,7 +16,8 @@ import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverag
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
-import { SPEAKER_START_NAMES, SPEAKER_START_TEXT } from "../src/constants/speakerStarts.ts";
+import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
+import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
 import { SPEAKER_OPTIMIZER_TEXT } from "../src/constants/speakerOptimizerText.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
@@ -230,12 +231,12 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
   await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
   const closed = p.locator("aside button[aria-expanded=false]");
   for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
-  const start = p.getByLabel(SPEAKER_START_TEXT.startFrom);
+  const start = p.getByLabel(START_PICKER_TEXT.startFrom);
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => fallbackStart.test(o));
   if (many) {
     await start.selectOption({ label: many });
-    await p.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
+    await p.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
   }
   // the Keep list (a closed fold inside the Optimizer fold) open too: its long lines must wrap inside the pane
   const keep = p.locator("aside details:not([open]) > summary", {

@@ -1,6 +1,6 @@
 import { Button } from "./Button";
 import { SelectField, type SelectOption } from "./SelectField";
-import { SPEAKER_START_TEXT } from "../../constants/speakerStarts";
+import { START_PICKER_TEXT } from "../../constants/startPicker";
 
 interface Props<T extends SelectOption> {
   options: readonly T[];
@@ -32,7 +32,7 @@ export function StartPicker<T extends SelectOption>({
   return (
     <>
       <SelectField
-        label={SPEAKER_START_TEXT.startFrom}
+        label={START_PICKER_TEXT.startFrom}
         options={options}
         value={value}
         onChange={onChange}
@@ -40,7 +40,7 @@ export function StartPicker<T extends SelectOption>({
       />
       <div className="flex flex-wrap gap-2 mb-2">
         <Button variant="primary" onClick={onStart}>
-          {SPEAKER_START_TEXT.startOver}
+          {START_PICKER_TEXT.startOver}
         </Button>
         {secondary && <Button onClick={secondary.onClick}>{secondary.label}</Button>}
       </div>

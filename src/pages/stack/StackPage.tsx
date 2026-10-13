@@ -412,6 +412,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                     onChange={(o) => setPick(o.id)}
                   />
                   <Button
+                    variant="primary"
                     className="mb-2"
                     onClick={() => {
                       const speaker: SpeakerSpec = {

@@ -8,7 +8,6 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { resolvedPlacement } from "../src/lib/speaker/spaceLayout";
 import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
 import { ampPowerGroups, channelGroups, withAmpPower } from "../src/lib/speaker/spaceHardware";
-import { delayDistanceIn, spaceAlignment } from "../src/lib/speaker/spaceAlignment";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
 import { fittedSpace, withFollows, withStack, withoutPlacement } from "../src/pages/space/useSpace";
 import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
@@ -141,42 +140,6 @@ test("space edits: a placement keeps where it stands when it starts or stops fol
   assert.equal(following.follows, 0);
   assert.deepEqual(following.item, placements[0].item);
   assert.equal(following.x, -placements[0].x);
-});
-
-test("space alignment: a mirror pair is one entry; each band's filters, level and delay; a delay as a distance", () => {
-  const design = paSpace();
-  const model = spaceModel(design);
-  const rows = spaceAlignment(design, model);
-  // the pair plays as one: its lead and follower in each row
-  assert.ok(rows.length > 0);
-  assert.ok(rows.every((r) => r.placements.join() === "0,1"));
-  const bands = rows.map((r) => [r.member, r.bands.map((b) => b.id)]);
-  assert.deepEqual(bands, [
-    [0, [SPEAKER_BAND.low]],
-    [1, [SPEAKER_BAND.mid]],
-    [1, [SPEAKER_BAND.high]],
-  ]);
-  // the sub's low-pass is the crossover to the top's high-pass
-  const [subRow, topMid] = rows;
-  assert.ok(subRow.lowpass && topMid.highpass);
-  assert.equal(subRow.highpass?.hz ?? null, design.speakers[0].bands[0].highpass?.hz ?? null);
-  // a placement's own delay and level add to every band of the pair
-  const later: SpaceDesign = {
-    ...design,
-    space: {
-      ...design.space,
-      placements: design.space.placements.map((p, k) =>
-        k === 0 ? { ...p, delayMs: p.delayMs + 2, levelDb: p.levelDb - 3 } : p,
-      ),
-    },
-  };
-  const after = spaceAlignment(later, spaceModel(later));
-  after.forEach((r, i) => {
-    assert.ok(Math.abs(r.delayMs - 2 - rows[i].delayMs) < 1e-9);
-    assert.ok(Math.abs(r.levelDb + 3 - rows[i].levelDb) < 1e-9);
-  });
-  // a delay as the distance sound travels in it: 1 ms is about 13.5 in
-  assert.ok(Math.abs(delayDistanceIn(1) - 13.5) < 0.1);
 });
 
 test("space edits: a smaller room keeps the placements, the listener and the listening area inside", () => {

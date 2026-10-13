@@ -77,6 +77,9 @@ export const SPACE_LEVEL_REF_PLACE: Record<CoverageLevelRef, string> = {
   stacks: SPACE_ONE_METER,
 };
 
+/** A delay under this is no delay, ms. */
+export const NO_DELAY_MS = 0.05;
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
@@ -86,7 +89,6 @@ export const SPACE_TEXT = {
     "The placements seen from the side, to scale: each box at its lift and tilt, a line along each one's highest band. The cyan dot is the listener's ear; the band under the floor is the listening area.",
   response: "Response at the listener",
   levels: "Levels at the listening area",
-  hardware: "Hardware",
   noPlacements: "Nothing is placed yet. Pick a stack or speaker and press Place.",
   missing:
     "A placement names a stack or speaker that is not in this space. The model leaves it out.",
@@ -105,7 +107,9 @@ export const SPACE_TEXT = {
   /** the open stack or speaker in the Place list */
   openStack: (name: string) => `Stack: ${name}`,
   openSpeaker: (name: string) => `Speaker: ${name}`,
+  /** under the Place list: signed out, and signed in with nothing saved */
   noLibrary: "Sign in to place your saved stacks and speakers here too.",
+  noLibrarySaved: "Save a stack or speaker to place it here.",
   remove: "Remove",
   addPair: "Add the mirror pair",
   follows: "Mirror of",
@@ -156,6 +160,7 @@ export const SPACE_TEXT = {
   delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,
   offsetNote:
     "Some boxes need a time offset to line up at their crossovers (listed above). A delay, an all-pass filter or moving the box can give it.",
+  placementNote: "Some placements play later, to line up with other speakers in the room.",
   outdoors: "Outdoors",
   areaWidth: "Area width, ft",
   areaLength: "Area length, ft",

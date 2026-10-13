@@ -4,17 +4,14 @@ import { CardHeading } from "../../components/ui/CardHeading";
 import { NumberField } from "../../components/ui/NumberField";
 import { StatRowGrid } from "../../components/stats/StatRowGrid";
 import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
-import { delayDistanceIn, type AlignmentRow } from "../../lib/speaker/spaceAlignment";
+import { delayText, type AlignmentRow } from "../../lib/speaker/spaceAlignment";
 import { formatHz, formatSigned } from "../../lib/format";
 import { FILTER_TYPE_NAMES } from "../../constants/speakerPage";
-import { SPACE_TEXT } from "../../constants/space";
+import { NO_DELAY_MS, SPACE_TEXT } from "../../constants/space";
 import type { SpacePlanner } from "./useSpace";
 
 /** The new amp power's smallest step, W. */
 const AMP_POWER_STEP_W = 50;
-
-/** A delay under this is no delay, ms. */
-const NO_DELAY_MS = 0.05;
 
 /** A filter in words: its corner and slope. */
 const filterText = (f: NonNullable<AlignmentRow["highpass"]>) =>
@@ -28,12 +25,6 @@ const filtersText = (r: Pick<AlignmentRow, "highpass" | "lowpass">) =>
   ]
     .filter(Boolean)
     .join(", ") || SPACE_TEXT.fullRange;
-
-/** A delay in words: as a time and as the distance it equals; none under a twentieth of a millisecond. */
-export const delayText = (ms: number) =>
-  ms < NO_DELAY_MS
-    ? SPACE_TEXT.noDelay
-    : SPACE_TEXT.delayIs(ms.toFixed(1), String(Math.round(delayDistanceIn(ms))));
 
 interface Props {
   design: SpaceDesign;
@@ -93,8 +84,11 @@ export function HardwareSettings({ design, alignment, names, space }: Props) {
           />
         </Card>
       ))}
-      {alignment.some((r) => r.delayMs >= NO_DELAY_MS) && (
+      {alignment.some((r) => r.crossoverDelayMs >= NO_DELAY_MS) && (
         <p className="text-xs text-stone-500 mb-3">{SPACE_TEXT.offsetNote}</p>
+      )}
+      {alignment.some((r) => r.delayMs - r.crossoverDelayMs >= NO_DELAY_MS) && (
+        <p className="text-xs text-stone-500 mb-3">{SPACE_TEXT.placementNote}</p>
       )}
     </>
   );

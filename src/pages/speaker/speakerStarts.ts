@@ -14,7 +14,6 @@ import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import {
   SPEAKER_CURRENT_START,
   SPEAKER_START,
-  SPEAKER_START_GROUPS,
   SPEAKER_START_SPEAKER_NAMES,
   SPEAKER_TEMPLATE,
   type SpeakerCurrentStart,
@@ -22,6 +21,7 @@ import {
   type SpeakerTemplate,
 } from "../../constants/speakerStarts";
 import { SPEAKER_PART } from "../../constants/speakerSpec";
+import { START_PICKER_GROUPS } from "../../constants/startPicker";
 import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useSpeakerPage";
 import { SPEAKER_TEMPLATES, templateSpeaker } from "./speakerTemplates";
 
@@ -56,7 +56,7 @@ export const isTemplate = (start: SpeakerStart): start is SpeakerTemplate =>
 
 /** The picker's group a start is listed under. */
 export const startGroup = (start: SpeakerStart) =>
-  isTemplate(start) ? SPEAKER_START_GROUPS.templates : SPEAKER_START_GROUPS.current;
+  isTemplate(start) ? START_PICKER_GROUPS.templates : START_PICKER_GROUPS.current;
 
 /** The speaker a current-design start gives, as a draft under the start's name. */
 function currentSpeaker(start: SpeakerCurrentStart, sources: StartSources): SpeakerSpec {

@@ -36,7 +36,12 @@ import {
   SPACE_SETTINGS_SECTIONS,
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
-import { SPACE_LEVEL_REF_PLACE, SPACE_LEVEL_REFS, SPACE_TEXT } from "../../constants/space";
+import {
+  NO_DELAY_MS,
+  SPACE_LEVEL_REF_PLACE,
+  SPACE_LEVEL_REFS,
+  SPACE_TEXT,
+} from "../../constants/space";
 import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { stackFromSaved } from "../stack/stackSaves";
@@ -91,6 +96,8 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     const saved: unknown = Reflect.get(c, "speaker");
     return isSavedSpeaker(saved) ? [{ id: c.id, name: c.name, spec: saved }] : [];
   });
+  /** signed in: the libraries are the person's (the stores hold a database) */
+  const signedIn = Boolean(stack.store.db || speakerPage.store.db);
   const startOptions = STACK_STARTS.map((id) => ({
     id,
     name: STACK_START_NAMES[id],
@@ -150,7 +157,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   ];
   const alignment = spaceAlignment(design, model);
   const powers = ampPowerGroups(design).reduce((n, s) => n + s.groups.length, 0);
-  const delays = alignment.filter((r) => r.delayMs > 0).length;
+  const delays = alignment.filter((r) => r.delayMs >= NO_DELAY_MS).length;
   const summaries: Record<SpaceSettingsSection, string> = {
     space: `${name} · ${placements.length} placement${placements.length === 1 ? "" : "s"}`,
     room: `${venue.room.outdoors ? SPACE_TEXT.outdoors : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`} · ${venue.targetDb} dB target`,
@@ -430,11 +437,13 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 onChange={(o) => setPlacePick(o.id)}
                 group={(o) => o.group}
               />
-              <Button className="mb-3" onClick={() => space.place(picked.item())}>
+              <Button variant="primary" className="mb-3" onClick={() => space.place(picked.item())}>
                 {SPACE_TEXT.place}
               </Button>
               {stacks.length === 0 && speakers.length === 0 && (
-                <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.noLibrary}</p>
+                <p className="text-xs text-stone-500 mb-2">
+                  {signedIn ? SPACE_TEXT.noLibrarySaved : SPACE_TEXT.noLibrary}
+                </p>
               )}
             </>,
           )}
