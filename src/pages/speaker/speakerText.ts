@@ -1,13 +1,14 @@
 // The Speaker page's one-line summaries, built from the spec and the catalog.
 import type {
   BandFilter,
+  SpeakerNearMiss,
   BoxBracing,
   SpeakerBand,
   SpeakerChamber,
   SpeakerHorn,
   SpeakerSpec,
 } from "../../types";
-import { formatDims, formatHz, formatWatts } from "../../lib/format";
+import { formatDims, formatDollars, formatHz, formatWatts } from "../../lib/format";
 import {
   SPEAKER_TEXT,
   HORN_DRIVE_NAMES,
@@ -16,6 +17,8 @@ import {
   VENT_KIND_NAMES,
 } from "../../constants/speakerPage";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import { CARD_LABELS, NEAR_MISS_YOURS } from "../../constants/optimizerText";
+import { UI_TEXT } from "../../constants/uiText";
 import { driverName } from "./speakerParts";
 import { pathIn } from "./hornSections";
 
@@ -92,4 +95,35 @@ export function bracingText(bracing: Pick<BoxBracing, "windows" | "ribs">): stri
     ribs > 0 && countText(ribs, "rib", "ribs"),
   ].filter((p): p is string => !!p);
   return parts.length ? parts.join(", ") : SPEAKER_TEXT.noBraces;
+}
+
+/** The speaker's drivers in a few words, each part once with its total count: "2 × Name + 1 × Other". */
+export function driverSummary(cabinet: Pick<SpeakerSpec["cabinet"], "chambers">): string {
+  const counts = new Map<string, { name: string; n: number }>();
+  for (const d of cabinet.chambers.flatMap((c) => c.drivers)) {
+    const key = `${d.kind}:${d.driverId}`;
+    counts.set(key, { name: driverName(d), n: (counts.get(key)?.n ?? 0) + d.count });
+  }
+  return [...counts.values()].map(({ name, n }) => `${n} × ${name}`).join(" + ");
+}
+
+/**
+ * The near miss's closest design in a sentence: its drivers, weight, price and level at 1 m; your own design is named
+ * as such ("Closest: your design (...)."). Empty when there is none. Ends in a space.
+ */
+export function speakerNearMissText({
+  closest,
+  closestIsYours,
+}: Pick<SpeakerNearMiss, "closest" | "closestIsYours">): string {
+  if (!closest) return "";
+  const m = closest.metrics;
+  const facts = [
+    driverSummary(closest.spec.cabinet),
+    `${m.lb.toFixed(0)} lb`,
+    `${formatDollars(m.price)}${m.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
+    m.musicDb === null ? null : `${m.musicDb.toFixed(1)} dB at 1 m`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  return `${CARD_LABELS.nearMiss}: ${closestIsYours ? `${NEAR_MISS_YOURS} (${facts})` : facts}. `;
 }

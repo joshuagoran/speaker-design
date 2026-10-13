@@ -7,7 +7,7 @@
 // Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
 // checked here and on a desktop window. On Hi-fi (desktop) a tweeter that needs a taller box raises the Height slider
 // only while it is chosen: switching back brings the box back (the size the user set is kept).
-// On the Speaker page (360 px, a tablet, a desktop), every fold open: nothing past the settings pane's edge.
+// On the Speaker page (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
@@ -17,6 +17,11 @@ import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
 import { SPEAKER_START_NAMES, SPEAKER_START_TEXT } from "../src/constants/speakerStarts.ts";
+import {
+  SPEAKER_GOAL,
+  SPEAKER_GOAL_TEXT,
+  SPEAKER_OPTIMIZER_TEXT,
+} from "../src/constants/speakerOptimizer.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -242,6 +247,16 @@ for (const [width, phone, startName] of [
   if (many) {
     await start.selectOption({ label: many });
     await p.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
+  }
+  // the Optimizer fold: pick a goal, find designs, and wait for the cards (the results block shows its heading)
+  await p.getByRole("button", { name: SPEAKER_GOAL_TEXT[SPEAKER_GOAL.cheaper].short }).click();
+  await p.getByRole("button", { name: SPEAKER_OPTIMIZER_TEXT.run }).click();
+  try {
+    await p
+      .getByRole("heading", { name: SPEAKER_OPTIMIZER_TEXT.results, exact: true, level: 2 })
+      .waitFor({ timeout: 60000 });
+  } catch {
+    failures.push(`${name}: the optimizer showed no results`);
   }
   await p.waitForTimeout(600);
   const m = await p.evaluate(() => {

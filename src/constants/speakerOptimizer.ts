@@ -152,7 +152,6 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   keepHint:
     "A locked part stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
   run: "Find designs",
-  runNote: " · the cards are in the results",
   load: "Load",
   undoLoad: "Undo load",
   curveLabel: "Maximum output with one input, this design against yours",

@@ -18,6 +18,8 @@ import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { speakerSummary } from "./speakerText";
+import { speakerPrice } from "../../lib/speaker/speakerTotals";
+import { useSpeakerOptimizer } from "./useSpeakerOptimizer";
 import type {
   BandId,
   SavedConfig,
@@ -113,6 +115,14 @@ export function useSpeakerPage() {
   // each chamber's braces, hardware and weight (the response's net air reads the same build)
   const build = useMemo(() => cabinetBuild(cabinet), [cabinet]);
   const store = useConfigStore(SPEAKERS_COLLECTION);
+  // the optimizer reads and loads the whole spec; its locks start over when the chamber list is replaced
+  const price = useMemo(() => speakerPrice(spec.cabinet), [spec.cabinet]);
+  const optimizer = useSpeakerOptimizer({
+    spec,
+    loadSpec: setSpec,
+    round: chamberRound,
+    current: { musicDb: limits.musicDb, price: price.dollars, lb: build.lb },
+  });
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
     setSpec((s) => ({ ...s, cabinet: edit(s.cabinet) }));
   const editChambers = (edit: (chambers: readonly SpeakerChamber[]) => SpeakerChamber[]) =>
@@ -198,6 +208,8 @@ export function useSpeakerPage() {
         setSpec((s) => withSpeakerLevels(s, now.levels));
     },
     build,
+    price,
+    optimizer,
     store,
     snapshot,
     restore,

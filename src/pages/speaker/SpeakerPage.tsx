@@ -21,7 +21,7 @@ import { speakerDispersionMap } from "../../lib/speaker/stackDispersion";
 import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
-import { priceText, speakerPrice } from "../../lib/speaker/speakerTotals";
+import { priceText } from "../../lib/speaker/speakerTotals";
 import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
@@ -93,6 +93,8 @@ import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
 import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { FilterFields } from "./FilterFields";
+import { SpeakerOptimizerResults } from "./SpeakerOptimizerResults";
+import { SpeakerOptimizerSettings, optimizerSummary } from "./SpeakerOptimizerSettings";
 import { bandText, bracingText, chamberText, countText, inputText } from "./speakerText";
 import { braceNoteLines } from "../../lib/bracingNotes";
 import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
@@ -151,7 +153,7 @@ export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
  */
 export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
   const pal = usePalette();
-  const { spec, response, limits, build, store, snapshot, restore } = speakerPage;
+  const { spec, response, limits, build, price, optimizer, store, snapshot, restore } = speakerPage;
   const folds = useFolds("speaker.settingsFolds", keysOf(SPEAKER_SETTINGS_SECTIONS));
   const starts = speakerStarts(planner.layout);
   const startOptions = starts.map((id) => ({
@@ -232,6 +234,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
     ]
       .filter(Boolean)
       .join(" · "),
+    optimizer: optimizerSummary(optimizer),
   };
   const section = (id: SpeakerSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -272,7 +275,6 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
       ? [[SPEAKER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
       : []),
   ];
-  const price = useMemo(() => speakerPrice(spec.cabinet), [spec.cabinet]);
   const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
   const dispersion = useMemo(
     () => (response.bands.length ? speakerDispersionMap(spec, response, plane) : null),
@@ -308,6 +310,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             saveName={spec.name}
             manage
           />
+          <SpeakerOptimizerResults optimizer={optimizer} />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{SPEAKER_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
@@ -753,6 +756,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               )}
             </>,
           )}
+          {section("optimizer", <SpeakerOptimizerSettings optimizer={optimizer} />)}
         </SettingsColumn>
       }
     />
