@@ -2009,7 +2009,7 @@ export function ventGeometry(
         slotInnerEndCorrection(box, cVent, t, inset, folded),
       dh: (4 * (h * seg)) / (2 * (h + seg)),
       desc:
-        `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` +
+        `divided slot, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` +
         (folded ? ", folded up the back wall" : ""),
     };
   }

@@ -61,8 +61,15 @@ export const PORT_SHAPE_NAMES = {
 
 /** Each slot kind as the Speaker page names it (`SLOT_KIND`). */
 export const SLOT_KIND_NAMES = {
-  letterbox: "Letterbox",
-  plain: "Plain",
+  letterbox: "Divided slot",
+  plain: "Open slot",
+} as const satisfies Record<keyof typeof SLOT_KIND, string>;
+
+/** The tooltip of each slot kind (`SLOT_KIND`). */
+export const SLOT_KIND_TIPS = {
+  letterbox:
+    "A wide slot along the bottom of the front, split by dividers. Its opening is at the floor.",
+  plain: "A rectangular opening in the front or the back, with no dividers.",
 } as const satisfies Record<keyof typeof SLOT_KIND, string>;
 
 /** Each kind of round tube end as the Speaker page names it (`TUBE_ENDS`). */
@@ -287,10 +294,10 @@ export const SPEAKER_TEXT = {
   portLength: "Length, in",
   slotKind: "Slot type",
   slotKindTip:
-    "Letterbox: the slot of the PA sub. It runs along the floor from the frame front. Fins divide it. If it is too long to run straight, it folds up the back. It needs the frame construction. Plain: a plain slot, as on a hi-fi speaker. You can stack more than one.",
+    "Divided slot: the slot of the PA sub. It runs along the floor from the frame front. Fins divide it. If it is too long to run straight, it folds up the back. It needs the frame construction. Open slot: a rectangular opening with no dividers, as on a hi-fi speaker. You can stack more than one.",
   slotFins: "Fins",
   slotFinsTip:
-    "Fins divide the slot into equal openings. Each fin has the thickness of the walls. The fins hold the floor. The PA sub uses two. The most is set by the width and the slot height: each opening stays at least half the slot height wide.",
+    "Fins split a divided slot into equal openings. Each fin has the thickness of the walls. The fins hold the floor. The PA sub uses two. The most is set by the width and the slot height: each opening stays at least half the slot height wide.",
   slotKindResets:
     "Switching the type resets the other type's settings: fins, or count, long side and fold.",
   slotFolds: "The slot is too long to run straight. It folds up the back.",
