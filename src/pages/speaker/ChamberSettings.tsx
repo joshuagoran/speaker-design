@@ -76,7 +76,7 @@ import {
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./speakerPlaces";
 import { PlaceFields } from "./PlaceFields";
 import { HornSettings } from "./HornSettings";
-import { FIELD_ROW, shownIn, shownTenth } from "./speakerFields";
+import { FIELD_ROW, onFieldStep, shownIn, shownTenth } from "./speakerFields";
 import { hornRoom, startingHorn, withChamberLoad } from "./chamberLoad";
 import {
   defaultHornPlacement,
@@ -419,7 +419,7 @@ export function ChamberSettings({
  * (the PA sub's letterbox with its fins, or a plain slot: its opening's narrow side, its long side, Auto the chamber's
  * clear width, and whether it folds up the back) or side ducts. Everything a template sets on a port is set here too.
  */
-function PortFields({
+export function PortFields({
   port,
   walls,
   chamber,
@@ -461,9 +461,8 @@ function PortFields({
         <div className={FIELD_ROW}>
           <NumberField
             label="Throat, in"
-            value={shownIn(port.throat)}
+            {...onFieldStep(port.throat, SPEAKER_STEPS.portSizeIn)}
             min={0.25}
-            step={SPEAKER_STEPS.portSizeIn}
             onChange={(throat) => onChange({ ...port, throat })}
           />
           <PortLengthField port={port} onChange={(len) => onChange({ ...port, len })} />
@@ -491,9 +490,8 @@ function PortLengthField({
   return (
     <NumberField
       label={SPEAKER_TEXT.portLength}
-      value={shownIn(port.len)}
+      {...onFieldStep(port.len, SPEAKER_STEPS.portLenIn)}
       min={0.5}
-      step={SPEAKER_STEPS.portLenIn}
       onChange={onChange}
     />
   );
@@ -542,10 +540,12 @@ function SlotFields({
         <div className={FIELD_ROW}>
           <NumberField
             label={<Tooltip tip={SPEAKER_TEXT.slotFinsTip}>{SPEAKER_TEXT.slotFins}</Tooltip>}
-            value={slotFinsOf({ fins: port.fins, slotH: h }, clearW, t)}
+            {...onFieldStep(
+              slotFinsOf({ fins: port.fins, slotH: h }, clearW, t),
+              SPEAKER_STEPS.count,
+            )}
             min={0}
             max={maxSlotFins(clearW, t, h)}
-            step={1}
             onChange={(fins) =>
               onChange({
                 ...port,
@@ -555,9 +555,8 @@ function SlotFields({
           />
           <NumberField
             label={SPEAKER_TEXT.slotHeight}
-            value={shownIn(h)}
+            {...onFieldStep(h, SPEAKER_STEPS.slotHIn)}
             min={0.25}
-            step={SPEAKER_STEPS.slotHIn}
             onChange={(slotH) => onChange({ ...port, h: slotH })}
           />
           <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
@@ -576,16 +575,14 @@ function SlotFields({
       <div className={FIELD_ROW}>
         <NumberField
           label="Count"
-          value={port.n}
+          {...onFieldStep(port.n, SPEAKER_STEPS.count)}
           min={1}
-          step={1}
           onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
         />
         <NumberField
           label={SPEAKER_TEXT.slotNarrow}
-          value={shownIn(h)}
+          {...onFieldStep(h, SPEAKER_STEPS.slotHIn)}
           min={0.25}
-          step={SPEAKER_STEPS.slotHIn}
           onChange={(slotH) => onChange({ ...port, h: slotH })}
         />
         <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
@@ -603,10 +600,9 @@ function SlotFields({
       <NumberField
         label={SPEAKER_TEXT.slotLong}
         // Auto: the chamber's clear width, read-only
-        value={shownIn(port.w ?? clearW)}
+        {...onFieldStep(port.w ?? clearW, SPEAKER_STEPS.portSizeIn)}
         disabled={port.w === undefined}
         min={0.25}
-        step={SPEAKER_STEPS.portSizeIn}
         onChange={(w) => onChange({ ...port, w })}
         className="mb-3"
       />
@@ -648,16 +644,14 @@ function RoundFields({
       <div className={FIELD_ROW}>
         <NumberField
           label="Count"
-          value={n}
+          {...onFieldStep(n, SPEAKER_STEPS.count)}
           min={1}
-          step={1}
           onChange={(count) => onChange({ ...port, n: count })}
         />
         <NumberField
           label="Diameter, in"
-          value={shownIn(dia)}
+          {...onFieldStep(dia, SPEAKER_STEPS.portSizeIn)}
           min={0.5}
-          step={SPEAKER_STEPS.portSizeIn}
           onChange={(d) => onChange({ ...port, dia: d })}
         />
         <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />

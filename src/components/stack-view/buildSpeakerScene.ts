@@ -59,7 +59,8 @@ import {
 } from "../../lib/data";
 import { byId } from "../../lib/tables";
 import { DEFAULT_PA } from "../../lib/defaults";
-import { driverKeepOut } from "../../lib/pa/calc";
+import { driverKeepOut, slotFolds } from "../../lib/pa/calc";
+import { PORT_STYLE } from "../../constants/portStyles";
 import { subDriverDepthIn } from "../../lib/pa/tubes";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 import { hornBodyColor } from "../../lib/pa/hornColor";
@@ -173,10 +174,14 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
 /** A chamber's holes in a panel, drawn once its origin (center line, bottom) is known in the panel's coordinates. */
 type Holes = (x: number, y: number) => THREE.Path[];
 
-/** Where a chamber's baffle is, once its shell is built: the face at `zf`, the inside face at `innerZ`. */
+/**
+ * Where a chamber's baffle is, once its shell is built: the face at `zf`, the inside face at `innerZ`; `banded`, whether
+ * its lower edge starts above the chamber's slot band (`ChamberParts.slotBand`) rather than the band being cut in it.
+ */
 interface BaffleAt {
   zf: number;
   innerZ: number;
+  banded: boolean;
 }
 
 /** A chamber's openings in its shell's baffle and back, and its parts, built once the baffle's place is known. */
@@ -184,8 +189,9 @@ interface ChamberParts {
   baffle: Holes[];
   back: Holes[];
   /**
-   * a PA letterbox's band and its opening: a frame's baffle starts above the band where the chamber spans its shell's
-   * bottom (as the PA sub's does), else the opening is cut in the baffle
+   * a slot band and its openings, its height up from the chamber's clear face: the PA letterbox's, or a plain slot stack
+   * the clear face's width. A frame's baffle starts above the band where the chamber spans its shell's bottom (as the
+   * PA sub's does) or stands in a stepped shell, else the openings are cut in the baffle
    */
   slotBand: { h: number; hole: Holes } | null;
   build: (at: BaffleAt) => void;
@@ -245,15 +251,14 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       group.add(g);
       return { placed, g, parts: chamberParts({ ...ctx, group: g }, placed, cabinet, look) };
     });
-    const band =
-      frame && !shell.stepped
-        ? members.find(
-            ({ placed, parts }) =>
-              parts.slotBand &&
-              Math.abs(placed.y0 - shell.y0) < SAME_IN &&
-              Math.abs(placed.dims.w - dims.w) < SAME_IN,
-          )
-        : undefined;
+    const band = frame
+      ? members.find(
+          ({ placed, parts }) =>
+            parts.slotBand &&
+            Math.abs(placed.y0 - shell.y0) < SAME_IN &&
+            Math.abs(placed.dims.w - dims.w) < SAME_IN,
+        )
+      : undefined;
     const baffleBottom = band?.parts.slotBand?.h ?? 0;
     /** every chamber's holes in a panel whose origin is `y0` up from the shell's bottom, on its center line */
     const holes = (y0: number, panel: typeof PANEL.baffle | typeof PANEL.back) =>
@@ -271,6 +276,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
         placed,
         { baffle: holes(0, PANEL.baffle), back: holes(0, PANEL.back) },
         frame,
+        baffleBottom,
       );
     } else if (frame) {
       // the frame's baffle holes are centered on the baffle, its back's on the box
@@ -286,7 +292,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           baffleBottom,
         },
       ).baffleZ;
-      at = { zf, innerZ: zf - BAFFLE_THICKNESS_IN };
+      at = { zf, innerZ: zf - BAFFLE_THICKNESS_IN, banded: band !== undefined };
     } else {
       const built = buildHifiCabinet(
         { ...ctx, group },
@@ -300,7 +306,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           },
         },
       );
-      at = { zf: built.frontZ, innerZ: built.shellFrontZ };
+      at = { zf: built.frontZ, innerZ: built.shellFrontZ, banded: false };
     }
     for (const { parts } of members) parts.build(at);
     if (!layout.oneShell) continue;
@@ -328,13 +334,15 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
  * A chamber's own panels in a stepped shell (`ctx.group`: its center line at x = 0, its bottom at y = 0): the walls it
  * builds (lib/speaker/speakerLayout `PlacedChamber.walls`: a partition where another chamber stands on it or right of it,
  * none where another gives it one), each the chamber's depth; its back and its baffle over its clear face, the baffle set
- * back by the frame's inset, ¾″ in the PA's frame and a wall thick in the Hi-fi box. Returns where its baffle is.
+ * back by the frame's inset, ¾″ in the PA's frame and a wall thick in the Hi-fi box, its lower edge `bottom` above the
+ * clear face's (a slot band's). Returns where its baffle is.
  */
 function buildSteppedPanels(
   ctx: SceneContext,
   placed: PlacedChamber,
   holes: { baffle: THREE.Path[]; back: THREE.Path[] },
   frame: boolean,
+  bottom: number,
 ): BaffleAt {
   const T = ctx.wall;
   const { d } = placed.dims;
@@ -354,11 +362,17 @@ function buildSteppedPanels(
   }
   const { clear } = placed;
   const c = local(clear);
-  /** a panel over the clear face, `depth` thick from `z` back, with its holes */
-  const panel = (cut: THREE.Path[], depth: number, z: number, materials: THREE.Material[]) => {
+  /** a panel over the clear face above `lo`, `depth` thick from `z` back, with its holes */
+  const panel = (
+    cut: THREE.Path[],
+    depth: number,
+    z: number,
+    materials: THREE.Material[],
+    lo = 0,
+  ) => {
     const shape = new THREE.Shape([
-      new THREE.Vector2(c.x - clear.w / 2, c.y - clear.h / 2),
-      new THREE.Vector2(c.x + clear.w / 2, c.y - clear.h / 2),
+      new THREE.Vector2(c.x - clear.w / 2, c.y - clear.h / 2 + lo),
+      new THREE.Vector2(c.x + clear.w / 2, c.y - clear.h / 2 + lo),
       new THREE.Vector2(c.x + clear.w / 2, c.y + clear.h / 2),
       new THREE.Vector2(c.x - clear.w / 2, c.y + clear.h / 2),
     ]);
@@ -375,11 +389,14 @@ function buildSteppedPanels(
   const thick = frame ? BAFFLE_THICKNESS_IN : T;
   const zf = d / 2 - ctx.inset;
   // its faces painted, its cut edges bare ply (as the PA's baffle)
-  panel(holes.baffle, thick, zf, [
-    ctx.materials.baffle,
-    ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner,
-  ]);
-  return { zf, innerZ: zf - thick };
+  panel(
+    holes.baffle,
+    thick,
+    zf,
+    [ctx.materials.baffle, ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner],
+    bottom,
+  );
+  return { zf, innerZ: zf - thick, banded: bottom > 0 };
 }
 
 /**
@@ -640,16 +657,42 @@ function chamberParts(
     if (port.shape === PORT_SHAPE.slot) {
       // each of the stacked slots, under its own shelf
       const openings = slotOpeningsAt(placed, port, T);
-      baffle.push((ox, oy) =>
+      const cut: Holes = (ox, oy) =>
         openings.map((o) =>
           roundedRectPath(ox + o.x, oy + o.y + o.h / 2, o.w, o.h, SLOT_CORNER_IN),
-        ),
-      );
-      builds.push(({ innerZ }) =>
+        );
+      const top = openings[openings.length - 1];
+      const fullWidth = top.w >= placed.clear.w - SAME_IN;
+      // the frame's baffle sits between the walls, on the clear face, so a slot its full width can't be a hole in it:
+      // the baffle starts above the stack's top shelf, as it does above the letterbox's band
+      if (frame && fullWidth)
+        slotBand = { h: top.y + top.h + T - (placed.clear.y - placed.y0), hole: cut };
+      else baffle.push(cut);
+      // a folded slot too long to run straight: the PA slot's fold up the back wall, its one full-width slot (the
+      // length the fit check takes: lib/speaker/speakerBuild hifiSlotFits)
+      const fold =
+        port.folded &&
+        openings.length === 1 &&
+        fullWidth &&
+        slotFolds(dims, { slotH: port.h, len: port.len }, T);
+      builds.push(({ zf, innerZ, banded }) => {
+        if (fold) {
+          const plan = subVentPlan(
+            DEFAULT_PA.sub,
+            dims,
+            PORT_STYLE.slot,
+            { ductH: port.h, tubeLen: port.len, fins: 0 },
+            T,
+          );
+          buildSubSlotShelf(ctx, plan, { box: dims, plinth: 0, parent: ctx.group });
+          return;
+        }
+        // above a band, each shelf's front edge is the baffle between the slots: from the baffle's face
+        const front = banded ? zf : innerZ;
         openings.forEach((opening) =>
-          addSlotShelf(ctx, { opening, len: port.len, shellFrontZ: innerZ }),
-        ),
-      );
+          addSlotShelf(ctx, { opening, len: port.len + front - innerZ, shellFrontZ: front }),
+        );
+      });
     } else {
       // on the baffle, or on the back: there the tubes run in from the back's outer face (a group turned to face back,
       // so across is mirrored)
