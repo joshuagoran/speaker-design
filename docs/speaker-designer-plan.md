@@ -481,6 +481,11 @@ Each PR stands alone. Lowest risk first.
           | Band levels                            | Each band keeps its passband level, so the balance stays (a passive band never above 0 dB)                                                                                                           |
           | Plywood, construction, bracing, look   | Never                                                                                                                                                                                                |
 
+        - **Owner decisions** (Oct 2026, #166).
+          - A changed driver moves its band's Level. The band keeps its passband level. The card lists "band levels".
+          - The search does not change the plywood or the box type (sealed, vented, radiators). Later option: search plywood and box type.
+          - In "cheaper", weight breaks a price tie, as on the PA page.
+          - A free box side ranges from 0.7 to 1.5 times the current size.
         - **Search method.** It screens with cheap runs of the same model, then checks the finalists in full.
           1. Read your design in full: `speakerResponse`, `speakerLimits`, `cabinetBuild`, `speakerPrice`,
              `speakerBounds`, the fit checks. Calibrate the weight estimate (wood per area) on it.
