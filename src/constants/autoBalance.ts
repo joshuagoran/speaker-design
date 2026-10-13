@@ -43,10 +43,10 @@ export const AUTO_BALANCE_TEXT = {
   oneBand: "Auto balance needs two or more bands that play.",
   /** the bands that stop it: bands a driver feeds that the model cannot calculate */
   unmodeled: (names: readonly string[]) =>
-    `Auto balance did not change the levels. The model cannot calculate: ${names.join(", ")}.`,
+    `Auto balance did not change the levels. The app cannot calculate: ${names.join(", ")}.`,
   /** a crossover outside the model's frequency range (the frequency charts' axis), Hz */
   outOfRange: (minHz: number, maxHz: number) =>
-    `Auto balance did not change the levels. A crossover is out of the range of the model: ${minHz} Hz to ${maxHz} Hz.`,
+    `Auto balance did not change the levels. A crossover is outside the range the app calculates: ${minHz} Hz to ${maxHz} Hz.`,
   /**
    * boxes that use the same speaker with different crossovers, numbered from 1: auto balance takes the first
    * box's crossover (lib/speaker/autoBalance `sharedCrossovers`)

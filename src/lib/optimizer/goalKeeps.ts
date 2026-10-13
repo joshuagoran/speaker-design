@@ -51,7 +51,7 @@ export interface KeepWords {
 export const HIFI_KEEP_WORDS: KeepWords = {
   level: (db) => `your level drops at most ${db}`,
   note: "Level: clean, at the seat. F3: in the room.",
-  unmodeled: "Cannot model your design, so cards need only pass the checks and fit the budget.",
+  unmodeled: "Cannot calculate your design, so cards need only pass the checks and fit the budget.",
 };
 
 /** The Speaker optimizer's words: the target is the level at 1 m the page sets (it starts at your design's). */
@@ -68,7 +68,7 @@ export const PA_UNMODELED_F3_HZ = 40;
 export const PA_KEEP_WORDS: KeepWords = {
   level: (db) => `output stays at most ${db} under the target`,
   note: "The target is your output or the room's need, whichever is higher.",
-  unmodeled: `Cannot model your design: the goals use the room's need and a ${PA_UNMODELED_F3_HZ} Hz F3.`,
+  unmodeled: `Cannot calculate your design: the goals use the room's need and a ${PA_UNMODELED_F3_HZ} Hz F3.`,
 };
 
 /** One goal's line from its keep: what it may give up, e.g. "Cheaper: your level drops at most 0.5 dB, your F3 rises at most 2 Hz." */

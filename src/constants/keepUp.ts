@@ -11,6 +11,6 @@ export const KEEP_UP_TEXT = {
   okTitle: (lower: string) => `Keeps up with ${lower}`,
   okDetail: (gap: string, hz: string, lower: string) =>
     `${gap} dB to spare at ${hz} when ${lower} is at its music limit.`,
-  /** the chip's title tooltip: what the check means, and why the Stack page can show more room than the PA page */
-  tip: "This check shows if the upper part plays as loud as the part under it at their crossover, when the lower part is at its music limit. In an active system, the DSP filters each band before its amp, so each amp sends power only to its own band. The Stack page models this, so it can show more room than the PA page.",
+  /** the chip's title tooltip: what the check means */
+  tip: "This check shows if the upper part plays as loud as the part under it at their crossover, when the lower part is at its music limit. In an active system, the DSP filters each band before its amp, so each amp sends power only to its own band. The Stack page includes this.",
 } as const;
