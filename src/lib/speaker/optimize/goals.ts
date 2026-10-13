@@ -11,9 +11,6 @@ import {
   SPEAKER_GOAL_THAN,
 } from "../../../constants/speakerOptimizer";
 
-/** The near miss loosens the weight, the budget (and the stack's height) by this share, and the target by TARGET_STEP_DB. */
-export const LOOSEN = 0.1;
-export const TARGET_STEP_DB = 1;
 /** A target within this of your design's level is your level, dB: the first card's heading says "Same level". */
 export const SAME_LEVEL_DB = 0.05;
 /** Alternatives stay within this of the target level, dB (as the PA optimizer's). */

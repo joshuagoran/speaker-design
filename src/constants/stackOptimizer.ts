@@ -2,7 +2,12 @@
 // Stack optimizer"). The goals, the alternatives, the fixes and the "nothing beats" notices are the Speaker optimizer's
 // (constants/speakerOptimizer); these are the words that name a stack, its boxes or its height. Code compares the ids,
 // never the words.
-import { SPEAKER_GOAL_TEXT, SPEAKER_NEAR_MISS_TEXT, SPEAKER_PROBLEM } from "./speakerOptimizer";
+import {
+  LOOSEN_PERCENT,
+  SPEAKER_GOAL_TEXT,
+  SPEAKER_NEAR_MISS_TEXT,
+  SPEAKER_PROBLEM,
+} from "./speakerOptimizer";
 import { SPEAKER_OPTIMIZER_TEXT } from "./speakerOptimizerText";
 
 /** Each goal's words for the first card, where the stack's differ from a speaker's (a lighter stack, smaller boxes). */
@@ -36,8 +41,10 @@ export const STACK_PROBLEM_TEXT = {
 /** The near miss's options: a limit loosened so a card fits (the weight limit is per box); and its closest stack's words. */
 export const STACK_NEAR_MISS_TEXT = {
   ...SPEAKER_NEAR_MISS_TEXT,
-  weight: (lb: number) => `Allow ${lb} lb a box`,
-  height: (inches: number) => `Allow ${inches} in`,
+  weight: `Raise box limit by ${LOOSEN_PERCENT}%`,
+  weightTip: (lb: number) => `New limit: ${lb} lb a box`,
+  height: `Raise height limit by ${LOOSEN_PERCENT}%`,
+  heightTip: (inches: number) => `New limit: ${inches} in`,
   /** the closest stack's weight where the weight limit blocks it: its heaviest box's */
   heaviest: (lb: string) => `heaviest box ${lb} lb`,
   short: (db: string, target: string) =>

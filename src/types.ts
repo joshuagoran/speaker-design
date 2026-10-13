@@ -2629,6 +2629,8 @@ export interface SpeakerOptimizerCard {
 /** A change to the limits that lets the search find a card. */
 export interface SpeakerNearMissOption {
   text: string;
+  /** the new value, for the button's tooltip */
+  tip: string;
   set: Partial<SpeakerOptimizerLimits>;
 }
 
@@ -2745,6 +2747,8 @@ export interface StackOptimizerCard extends Pick<
 /** A change to the limits that lets the search find a card. */
 export interface StackNearMissOption {
   text: string;
+  /** the new value, for the button's tooltip */
+  tip: string;
   set: Partial<StackOptimizerLimits>;
 }
 

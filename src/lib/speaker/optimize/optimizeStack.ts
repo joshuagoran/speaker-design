@@ -38,11 +38,13 @@ import { throttledProgress } from "../../optimizer/progress";
 import { keysOf } from "../../records";
 import { CARD_LABELS, CARD_WHY, CHANGE_NAMES } from "../../../constants/optimizerText";
 import {
+  LOOSEN,
   SPEAKER_ALT_TEXT,
   SPEAKER_FIX_WHY,
   SPEAKER_GOAL,
   SPEAKER_NO_GOAL,
   SPEAKER_REACH_WORDS,
+  TARGET_STEP_DB,
 } from "../../../constants/speakerOptimizer";
 import {
   STACK_GOAL_TEXT,
@@ -82,11 +84,9 @@ import { THIN_FACTORS } from "./screen";
 import {
   ALT_LEVEL_DB,
   BEATS,
-  LOOSEN,
   OBJECTIVE,
   SAME_LEVEL_DB,
   SAME_VOLUME,
-  TARGET_STEP_DB,
   altAxesOf,
   checkCards,
   firstCardRole,
@@ -703,11 +703,17 @@ export function optimizeStack(
   });
 
   const curMetric = metricOf(start, 0);
-  const looser: { text: string; set: Partial<StackOptimizerLimits>; L: StackOptimizerLimits }[] = [
+  const looser: {
+    text: string;
+    tip: string;
+    set: Partial<StackOptimizerLimits>;
+    L: StackOptimizerLimits;
+  }[] = [
     ...(limits.maxLb !== null
       ? [
           {
-            text: STACK_NEAR_MISS_TEXT.weight(Math.ceil(limits.maxLb * (1 + LOOSEN))),
+            text: STACK_NEAR_MISS_TEXT.weight,
+            tip: STACK_NEAR_MISS_TEXT.weightTip(Math.ceil(limits.maxLb * (1 + LOOSEN))),
             set: { maxLb: Math.ceil(limits.maxLb * (1 + LOOSEN)) },
           },
         ]
@@ -715,7 +721,8 @@ export function optimizeStack(
     ...(limits.budget !== null
       ? [
           {
-            text: STACK_NEAR_MISS_TEXT.budget(Math.ceil(limits.budget * LOOSEN)),
+            text: STACK_NEAR_MISS_TEXT.budget,
+            tip: STACK_NEAR_MISS_TEXT.budgetTip(limits.budget + Math.ceil(limits.budget * LOOSEN)),
             set: { budget: limits.budget + Math.ceil(limits.budget * LOOSEN) },
           },
         ]
@@ -723,14 +730,16 @@ export function optimizeStack(
     ...(limits.maxHeightIn !== null
       ? [
           {
-            text: STACK_NEAR_MISS_TEXT.height(Math.ceil(limits.maxHeightIn * (1 + LOOSEN))),
+            text: STACK_NEAR_MISS_TEXT.height,
+            tip: STACK_NEAR_MISS_TEXT.heightTip(Math.ceil(limits.maxHeightIn * (1 + LOOSEN))),
             set: { maxHeightIn: Math.ceil(limits.maxHeightIn * (1 + LOOSEN)) },
           },
         ]
       : []),
     {
       // a whole dB, at least TARGET_STEP_DB under the target (which may be your stack's level, unrounded)
-      text: STACK_NEAR_MISS_TEXT.target(Math.floor(target - TARGET_STEP_DB + 1e-9)),
+      text: STACK_NEAR_MISS_TEXT.target,
+      tip: STACK_NEAR_MISS_TEXT.targetTip(Math.floor(target - TARGET_STEP_DB + 1e-9)),
       set: { targetDb: Math.floor(target - TARGET_STEP_DB + 1e-9) },
     },
   ].map((o) => ({ ...o, L: { ...limits, ...o.set } }));
@@ -965,7 +974,7 @@ export function optimizeStack(
     )[0];
     const blocking = problemText(nearest.ev, limits);
     nearMiss = {
-      options: worked.map(({ text, set }) => ({ text, set })),
+      options: worked.map(({ text, tip, set }) => ({ text, tip, set })),
       closest: cardOf({
         p: nearest,
         label: CARD_LABELS.nearMiss,

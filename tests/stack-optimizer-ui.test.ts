@@ -39,7 +39,7 @@ import {
 } from "../src/pages/stack/stackKeeps";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
-import { SPEAKER_GOAL } from "../src/constants/speakerOptimizer";
+import { LOOSEN, SPEAKER_GOAL } from "../src/constants/speakerOptimizer";
 import {
   STACK_NEAR_MISS_TEXT,
   STACK_OPTIMIZER_TEXT,
@@ -410,7 +410,8 @@ test("the fold's words: the limits, the keep hint and the summary name a stack",
 });
 
 test("the near miss's weight is per box: the option, and the heaviest box where the weight limit blocks", () => {
-  assert.equal(STACK_NEAR_MISS_TEXT.weight(90), "Allow 90 lb a box");
+  assert.equal(STACK_NEAR_MISS_TEXT.weight, `Raise box limit by ${Math.round(LOOSEN * 100)}%`);
+  assert.equal(STACK_NEAR_MISS_TEXT.weightTip(90), "New limit: 90 lb a box");
   const closest = cards[0];
   assert.ok(closest, "a card");
   const heaviest = Math.max(...closest.metrics.boxes.map((b) => b?.lb ?? 0));
