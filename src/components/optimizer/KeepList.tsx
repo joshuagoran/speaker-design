@@ -1,3 +1,5 @@
+import { Tooltip } from "../ui/Tooltip";
+
 /** One line of a Keep list: what it names, and the lock button (or dimension lock) that keeps it. */
 export interface KeepRow {
   key: string;
@@ -8,6 +10,8 @@ export interface KeepRow {
 /** A titled run of Keep rows. */
 export interface KeepGroup {
   title: string;
+  /** explains the group in a tooltip on its title */
+  tip?: string;
   rows: readonly KeepRow[];
 }
 
@@ -26,7 +30,9 @@ export function KeepList({ groups }: Props) {
         .filter((g) => g.rows.length > 0)
         .map((g) => (
           <div key={g.title}>
-            <h4 className="text-xs font-semibold text-stone-500 mb-1">{g.title}</h4>
+            <h4 className="text-xs font-semibold text-stone-500 mb-1">
+              {g.tip ? <Tooltip tip={g.tip}>{g.title}</Tooltip> : g.title}
+            </h4>
             <ul>
               {g.rows.map((r) => (
                 <li

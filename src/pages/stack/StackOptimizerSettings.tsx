@@ -77,6 +77,7 @@ export function StackOptimizerSettings({ optimizer: o, names }: Props) {
   }));
   const members: KeepGroup = {
     title: T.members,
+    tip: T.membersTip,
     rows: names.flatMap((name, k) =>
       MEMBER_LOCKS.map((kind): KeepRow => ({
         key: `${kind}:${k}`,

@@ -66,6 +66,8 @@ export const STACK_OPTIMIZER_TEXT = {
   boxAxis: { w: "Box width", h: "Box height", d: "Box depth" },
   /** the Keep list's group of the members' own settings, and each lock in it */
   members: "Members",
+  membersTip:
+    "These locks stay on their members. When you add or remove a member, the app clears a lock if it cannot find its member.",
   memberLock: { crossovers: "crossover", levels: "level", delays: "delay" },
   /** the card's line of box sizes */
   boxes: "Boxes",
