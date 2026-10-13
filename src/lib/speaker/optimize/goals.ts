@@ -7,6 +7,7 @@ import { keysOf } from "../../records";
 import {
   SPEAKER_GOAL,
   SPEAKER_GOAL_ALSO,
+  SPEAKER_GOAL_MISSING,
   SPEAKER_GOAL_THAN,
 } from "../../../constants/speakerOptimizer";
 
@@ -107,6 +108,12 @@ export function firstCardRole(
     : words[goal].why;
   return { label, why };
 }
+
+/** The notice when nothing beats your design on the goals and yours keeps them. */
+export const nothingBeatsText = (goals: readonly SpeakerGoal[]): string =>
+  goals.length > 1
+    ? `Nothing ${goals.map((g) => SPEAKER_GOAL_THAN[g]).join(" and ")} than your design passes the checks.`
+    : SPEAKER_GOAL_MISSING[goals[0]];
 
 /** What the last check reads. */
 interface CardChecks<P> {

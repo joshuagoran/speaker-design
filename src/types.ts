@@ -2667,6 +2667,109 @@ export interface SpeakerOptimizerResult {
   };
 }
 
+// ---- Stack optimizer (lib/speaker/optimize/optimizeStack) ----
+
+/**
+ * The Stack optimizer's limits: the target against the stack's level (`StackLimits.musicDb`, dB at 1 m), the budget on
+ * every member's purchased parts, the weight of each box, and the stack's height.
+ */
+export interface StackOptimizerLimits extends SpeakerOptimizerLimits {
+  /** the most the stack may stand (`stackTotals` heightIn), in; null: no limit */
+  maxHeightIn: number | null;
+}
+
+/** What stays as it is in a stack. Absent or empty: nothing of that kind is locked. */
+export interface StackOptimizerLocks {
+  /** each speaker's own locks (its parts, vents, band filters, amps and box size), by speaker id */
+  speakers?: Readonly<Record<SpeakerSpec["id"], SpeakerOptimizerLocks>>;
+  /** speakers, by id, that stay exactly as they are */
+  keep?: readonly SpeakerSpec["id"][];
+  /** members, by index, whose crossover stays (a crossover between two members moves only when both sides are free) */
+  crossovers?: readonly number[];
+  /** members, by index, whose level stays */
+  levels?: readonly number[];
+  /** members, by index, whose delay stays */
+  delays?: readonly number[];
+}
+
+/** What the Stack page posts to the Stack optimizer's worker. */
+export interface StackOptimizerInput {
+  design: StackDesign;
+  /** in tap order; the first ranks the designs */
+  goals: readonly SpeakerGoal[];
+  limits: StackOptimizerLimits;
+  locks?: StackOptimizerLocks;
+  /** absent: the app catalog */
+  catalog?: SpeakerOptimizerCatalog;
+}
+
+/** One member's box: its weight and outer size (with the horns on its top). */
+export type StackBoxMetrics = Pick<SpeakerOptimizerMetrics, "lb" | "sizeIn" | "volumeL">;
+
+/**
+ * A stack's numbers, all from the page's own code on the design as a card loads it: the members' price and weight in
+ * total, the boxes' outer volumes in total, the stack's height, its level (`StackLimits.musicDb`) and the F3 of its
+ * lowest band.
+ */
+export interface StackOptimizerMetrics extends Pick<
+  SpeakerOptimizerMetrics,
+  "price" | "pricePartial" | "lb" | "volumeL" | "musicDb" | "f3"
+> {
+  heightIn: number;
+  /** the member and the band that set the level */
+  member: StackLimits["member"];
+  band: StackLimits["band"];
+  /** each member's box; null where its speaker is missing */
+  boxes: (StackBoxMetrics | null)[];
+}
+
+/** A card's change from your stack (null where either side has no number). */
+export interface StackOptimizerDelta extends SpeakerOptimizerDelta {
+  heightIn: number;
+}
+
+export interface StackOptimizerCard extends Pick<
+  SpeakerOptimizerCard,
+  "label" | "why" | "slot" | "changed" | "warnings"
+> {
+  /** the whole stack and its speakers, as the page loads them: only the searched fields differ from yours */
+  design: StackDesign;
+  metrics: StackOptimizerMetrics;
+  delta: StackOptimizerDelta | null;
+  /** what differs in each speaker that changed, by speaker id */
+  speakers: { id: SpeakerSpec["id"]; changed: ChangeName[] }[];
+  /** the stack's maximum output with one input, [Hz, dB at 1 m] points (`StackLimits.sum`) */
+  maxCurve: [number, number][];
+}
+
+/** A change to the limits that lets the search find a card. */
+export interface StackNearMissOption {
+  text: string;
+  set: Partial<StackOptimizerLimits>;
+}
+
+/** No card fits, or only the closest: the closest stack, why it fails, and what loosening would help. */
+export interface StackNearMiss extends Pick<SpeakerNearMiss, "blocking"> {
+  options: StackNearMissOption[];
+  closest: StackOptimizerCard | null;
+  /** the closest design is your stack as it is */
+  closestIsYours: boolean;
+}
+
+export interface StackOptimizerResult extends Pick<
+  SpeakerOptimizerResult,
+  "goals" | "target" | "goalMissing" | "stats"
+> {
+  /** your stack: its numbers, what it fails and its maximum output; null when it can't be modeled */
+  current: {
+    metrics: StackOptimizerMetrics;
+    problems: string[];
+    maxCurve: [number, number][];
+  } | null;
+  cards: StackOptimizerCard[];
+  nearMiss: StackNearMiss | null;
+}
+
 // ---- Bracing ----
 
 /** A horn mount's id (`HORN_MOUNT_NAMES` holds the name it shows). */

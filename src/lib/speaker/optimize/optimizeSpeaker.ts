@@ -40,6 +40,7 @@ import {
   altAxesOf,
   checkCards,
   firstCardRole,
+  nothingBeatsText,
   type Metric,
 } from "./goals";
 import { CARD_LABELS, CARD_WHY } from "../../../constants/optimizerText";
@@ -47,9 +48,7 @@ import {
   SPEAKER_ALT_TEXT,
   SPEAKER_FIX_WHY,
   SPEAKER_GOAL,
-  SPEAKER_GOAL_MISSING,
   SPEAKER_GOAL_TEXT,
-  SPEAKER_GOAL_THAN,
   SPEAKER_NEAR_MISS_TEXT,
   SPEAKER_NO_GOAL,
   SPEAKER_PROBLEM_TEXT,
@@ -62,7 +61,7 @@ import {
   problemsOf,
   withAmps,
   SIZE_SLACK_IN,
-  type SizeCaps,
+  capsOf,
   type SpeakerEval,
 } from "./evaluate";
 import {
@@ -97,7 +96,7 @@ const CLOSEST_PER_UNIT = 2;
 /** The combine step's most combinations; past it each unit keeps fewer options. */
 const COMBO_CAP = 40_000;
 /** How much the full trim leaves under the level the top power reaches, dB (the trim's step). */
-const FULL_TRIM_DB = 0.05;
+export const FULL_TRIM_DB = 0.05;
 /** A built design in the pool: its full evaluation, what it changes, and its key. */
 interface PoolEntry {
   ev: SpeakerEval;
@@ -132,15 +131,18 @@ const metricOf = (
   ampW,
 });
 
-const totalAmpW = (spec: SpeakerSpec) => spec.bands.reduce((sum, b) => sum + b.ampW, 0);
+/** The bands' amp power in total, W. */
+export const totalAmpW = (spec: Pick<SpeakerSpec, "bands">) =>
+  spec.bands.reduce((sum, b) => sum + b.ampW, 0);
 
-const partsKey = (spec: SpeakerSpec) =>
+/** A design's parts (each driver and its horn), to tell designs apart. */
+export const partsKey = (spec: SpeakerSpec) =>
   spec.cabinet.chambers
     .map((c) => c.drivers.map((d) => `${d.driverId}/${d.horn?.hornId ?? ""}`).join(","))
     .join(";");
 
 /** A design's identity: what the search may change in it. */
-const specKey = (spec: SpeakerSpec) =>
+export const specKey = (spec: SpeakerSpec) =>
   JSON.stringify([
     spec.cabinet.chambers.map((c) => [
       c.at,
@@ -174,19 +176,6 @@ function emptyResult(
     stats: { screened: 0, evaluated: start ? 1 : 0, pool: 0, dropped: 0, ms: Date.now() - t0 },
   };
 }
-
-/** The box's size caps from the size locks: your size, as a most on a "max" axis and exactly on an "exact" one. */
-const capsOf = (
-  outer: SpeakerOptimizerMetrics["sizeIn"],
-  size: SpeakerOptimizerLocks["size"] = {},
-): SizeCaps =>
-  Object.fromEntries(
-    (["w", "h", "d"] as const).flatMap((k) =>
-      size[k] === "max" || size[k] === "exact"
-        ? [[k, { in: outer[k], exact: size[k] === "exact" }]]
-        : [],
-    ),
-  );
 
 /**
  * What the search leaves besides its result: your design's run, every design it built and ran in full (on the field
@@ -731,9 +720,7 @@ export function searchSpeaker(
           SPEAKER_REACH_WORDS,
         )
       : nothingBeats
-        ? also.length
-          ? `Nothing ${goals.map((g) => SPEAKER_GOAL_THAN[g]).join(" and ")} than your design passes the checks.`
-          : SPEAKER_GOAL_MISSING[goal]
+        ? nothingBeatsText(goals)
         : null;
   report(total, total, true);
   const result: SpeakerOptimizerResult = {

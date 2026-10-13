@@ -110,7 +110,7 @@ export interface CrossoverPair {
 }
 
 /** The crossover factors the search tries: ×0.71 to ×1.41 of yours, about a third of an octave apart. */
-const CROSSOVER_FACTORS = [0.71, 0.8, 0.89, 1, 1.12, 1.26, 1.41];
+export const CROSSOVER_FACTORS = [0.71, 0.8, 0.89, 1, 1.12, 1.26, 1.41];
 /** The lowest corner a searched crossover takes, Hz. */
 const CROSSOVER_MIN_HZ = 20;
 
