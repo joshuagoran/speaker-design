@@ -413,10 +413,12 @@ export function optimizeStack(
   /** the levels hold a balance only between two members or more: a member alone keeps its level */
   const balanced = rooms.length > 1;
   /** member k's level with a speaker whose passband is `passDb`: the balance kept, on the level step */
-  const levelFor = (k: number, passDb: number) =>
-    lockedLevels.has(k) || !balanced
+  const levelFor = (k: number, passDb: number) => {
+    const moved = passStart[k] - passDb;
+    return lockedLevels.has(k) || !balanced || !Number.isFinite(moved)
       ? levelNow[k]
-      : levelNow[k] + onStep(passStart[k] - passDb, STACK_STEPS.levelDb);
+      : levelNow[k] + onStep(moved, STACK_STEPS.levelDb);
+  };
   /** the level a member's speaker needs for the stack to reach `t`, dB at 1 m */
   const needOf = (ev: SpeakerEval, k: number, t = target) => {
     const pass = passbandDb(ev.response.sum);
@@ -532,7 +534,8 @@ export function optimizeStack(
       lb += e.ev.metrics.lb;
       volumeL += e.ev.metrics.volumeL;
       boxLb = Math.max(boxLb, e.ev.metrics.lb);
-      minRoom = Math.min(minRoom, e.room - levelFor(k, e.passDb));
+      // a speaker the model can't run sets no limit (as in stackLimits)
+      if (Number.isFinite(e.room)) minRoom = Math.min(minRoom, e.room - levelFor(k, e.passDb));
       if (e.low && (!low || e.low.hz < low.hz)) low = e.low;
     }
     for (const e of picks) ch += e.ch;

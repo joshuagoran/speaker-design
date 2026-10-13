@@ -618,11 +618,32 @@ Each PR stands alone. Lowest risk first.
         - **Rounding.** Every value is on its field's step before the full run. Nothing changes a design after it is
           chosen (#75).
         - **Runtime.** A Web Worker; a few seconds. The Speaker search is about 0.3 to 1.4 s per speaker; each full
-          stack run is about 6 ms. Deterministic.
+          stack run is about 6 ms. Measured in Node: 1 to 1.6 s for the PA stack, pole and satellites, about 1 s for
+          the PA tower, about 0.4 s for the Hi-fi pair. Deterministic.
         - **Tests** (`tests/stack-optimize.test.ts`): locks, limits on the final design, labels against your stack,
           near miss, determinism, a runtime bound, and parity with the PA optimizer on the PA presets at the room
           rule's target (1000 sq ft: about 113 dB at 1 m). The snapshot (`tests/stack-optimizer-snapshot.test.ts`,
           `vp run stack-optimizer-snapshot`) holds the cards for a few presets.
+          - Parity at 112.9 dB (`tests/stack-optimizer-parity.ts`: each side's best card inside this search's space
+            that keeps the goal, scored by the stack model). Stack, pole and satellites have the same speakers, so the
+            same numbers:
+
+            | Preset                  | Goal    | Your stack | Stack optimizer | PA optimizer (in the space) |
+            | ----------------------- | ------- | ---------- | --------------- | --------------------------- |
+            | Stack, pole, satellites | Cheaper | $1120      | $662            | $1025                       |
+            | Stack, pole, satellites | Lighter | 123.0 lb   | 91.9 lb         | 107.9 lb                    |
+            | Stack, pole, satellites | Lower   | 38.0 Hz    | 29.8 Hz         | none                        |
+            | Stack, pole, satellites | Louder  | 123.2 dB   | 125.7 dB        | 123.7 dB                    |
+            | Tower                   | Cheaper | $1085      | $721            | no card                     |
+            | Tower                   | Lighter | 155.6 lb   | 135.9 lb        | no card                     |
+            | Tower                   | Lower   | 38.0 Hz    | 33.2 Hz         | no card                     |
+            | Tower                   | Louder  | 123.2 dB   | 125.8 dB        | no card                     |
+
+          - Outside the space, the PA optimizer's cards change the vent style or size a box past ×1.5 (owner
+            decisions in #166). Its cheaper card ($781) is still dearer. Its lower card (F3 25.3 Hz, a vent style
+            change and a sub box past ×1.5) and its louder card (128.2 dB, a sub box past ×1.5) go further than this
+            search can.
+          - The PA tower: the PA optimizer finds no card (its mid chamber is fixed and fails its Qtc check).
   - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
     reuses the PA and Hi-fi code.
     - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
