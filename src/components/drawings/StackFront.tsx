@@ -55,7 +55,7 @@ export function StackFront({ stack, speakers, listenHeightIn }: Props) {
       viewBox={`0 0 ${maxX - minX} ${maxY - minY}`}
       className="w-full h-full"
       role="img"
-      aria-label={`Front view of the stack, ${boxes.length} member${boxes.length === 1 ? "" : "s"}`}
+      aria-label={`Front view of the stack, ${boxes.length} box${boxes.length === 1 ? "" : "es"}`}
     >
       <line x1={0} x2={maxX - minX} y1={Y(0)} y2={Y(0)} stroke={pal.ink} strokeWidth={line * 2} />
       <line

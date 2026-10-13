@@ -22,7 +22,7 @@ export const CUTLIST_PROJECTS = {
     set: "stack",
     setsLabel: "Stacks",
     sets: [1, 2, 4],
-    source: "the members on the Stack page",
+    source: "the boxes on the Stack page",
   },
 } as const satisfies Record<Exclude<ProjectId, "space">, CutlistProject>;
 

@@ -137,7 +137,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
     stack.setDesign({ stack: started, speakers });
   };
   const summaries: Record<StackSettingsSection, string> = {
-    stack: `${name} · ${members.length} member${members.length === 1 ? "" : "s"}`,
+    stack: `${name} · ${members.length} box${members.length === 1 ? "" : "es"}`,
     members: names.join(" · ") || STACK_TEXT.noMembers,
     crossovers:
       members

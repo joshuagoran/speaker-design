@@ -350,6 +350,8 @@ export function optimizeStack(
   const { members } = design.stack;
 
   // the speakers the search changes, each on its first member's crossover
+  // By design, not a bug: a speaker that two boxes share is searched once, with the first box's crossover. The full
+  // stack run (./stackEvaluate) then checks every box, with its own crossover, before a design can become a card.
   const kept = new Set(locks.keep ?? []);
   const units: Unit[] = [];
   /** each member's unit, by index (−1: its speaker is missing) */

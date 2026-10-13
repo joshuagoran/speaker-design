@@ -319,7 +319,7 @@ test("auto balance: a speaker two members share takes the first member's crossov
   assert.deepStrictEqual(sharedCrossovers(twice.stack.members), [[2, 3]]);
   assert.equal(
     AUTO_BALANCE_TEXT.sharedCrossover([2, 3]),
-    "Members 2 and 3 use the same speaker with different crossovers. Auto balance uses the crossover of member 2.",
+    "Boxes 2 and 3 use the same speaker with different crossovers. Auto balance uses the crossover of box 2.",
   );
   // the balance is the one without the second member: the first member's crossover counts
   const once = autoBalanceStack(layers, stackResponse(layers.stack, layers.speakers));

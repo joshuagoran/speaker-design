@@ -18,12 +18,12 @@ export const STACK_GOAL_TEXT = {
   },
 } as const;
 
-/** What a stack fails, by id: what a member's speaker fails, and the stack's height. */
+/** What a stack fails, by id: what a box's speaker fails, and the stack's height. */
 export const STACK_PROBLEM = { ...SPEAKER_PROBLEM, height: "height" } as const;
 
 /** Each problem in words, as the near miss lists them. */
 export const STACK_PROBLEM_TEXT = {
-  unmodeled: "the model can't run a member, chamber or band your stack runs",
+  unmodeled: "the model can't run a box, chamber or band your stack runs",
   driverFit: "a driver or horn no longer fits its chamber",
   ventFit: "a port doesn't fit its chamber",
   fitChip: "a duct, tube or hardware fit check fails",
@@ -41,8 +41,8 @@ export const STACK_NEAR_MISS_TEXT = {
     `the closest stack plays ${db} dB at 1 m, short of the ${target} dB target`,
 } as const;
 
-/** The notice when your stack has no member the model runs: there is nothing to score. */
-export const STACK_UNMODELED = "Cannot model your stack: it has no member to score.";
+/** The notice when your stack has no box the model runs: there is nothing to score. */
+export const STACK_UNMODELED = "Cannot model your stack: it has no box to score.";
 
 /**
  * The Stack page's optimizer fold and result cards: the Speaker page's words (`SPEAKER_OPTIMIZER_TEXT`), with those
@@ -64,10 +64,10 @@ export const STACK_OPTIMIZER_TEXT = {
   /** a speaker's lock on the whole speaker, and the label of a lock on a box axis */
   keepWhole: "Keep the whole speaker",
   boxAxis: { w: "Box width", h: "Box height", d: "Box depth" },
-  /** the Keep list's group of the members' own settings, and each lock in it */
-  members: "Members",
+  /** the Keep list's group of the boxes' own settings, and each lock in it */
+  members: "Boxes",
   membersTip:
-    "These locks stay on their members. When you add or remove a member, the app clears a lock if it cannot find its member.",
+    "These locks stay on their boxes. When you add or remove a box, the app clears a lock if it cannot find its box.",
   memberLock: { crossovers: "crossover", levels: "level", delays: "delay" },
   /** the card's line of box sizes */
   boxes: "Boxes",
