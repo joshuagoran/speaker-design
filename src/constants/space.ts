@@ -68,9 +68,10 @@ export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
 
 /**
  * How much later than the mains a fill arrives at the listener, ms, so the sound still seems to come from the mains (the
- * precedence effect: a few ms is the usual setting).
+ * precedence effect): the "Delay after the mains" field's starting value and its range (5 to 15 ms are usual).
  */
 export const FILL_PRECEDENCE_MS = 5;
+export const FILL_PRECEDENCE_MAX_MS = 20;
 
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
 const SPACE_ONE_METER = "1 m from the speakers";
@@ -138,6 +139,9 @@ export const SPACE_TEXT = {
   alignToTip:
     "For a fill: the placement it plays after. Align sets the delay and level of this placement and its mirror pair for the listener. The sound arrives just after the placement you pick and its mirror pair, at their level in the mid band. Move the listener to the area the fill covers first.",
   align: "Align",
+  alignAfter: "Delay after the mains, ms",
+  alignAfterTip:
+    "How much later the fill plays than the placement it is aligned to, at the listener. People hear the sound as coming from the mains when the fill plays a few milliseconds later (the precedence effect). Common values are 5 to 15 ms. The alignment is exact at the listener. Across the room, it changes.",
   /** a mirror pair in the "Align to" list: its placements' names */
   pairName: (names: readonly string[]) => names.join(" + "),
   alignFillNone:

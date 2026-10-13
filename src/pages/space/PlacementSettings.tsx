@@ -9,6 +9,8 @@ import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { byId } from "../../lib/tables";
 import {
+  FILL_PRECEDENCE_MAX_MS,
+  FILL_PRECEDENCE_MS,
   SPACE_LIFT_MAX_IN,
   SPACE_PITCH_DEG,
   SPACE_TEXT,
@@ -31,10 +33,10 @@ interface Props {
   /** the space's placement groups (one on its own, or a mirror pair), by their leads (lib/speaker/fillAlign) */
   groups: readonly (readonly number[])[];
   /**
-   * sets its delay and level (and its mirror partners') to play with placement `to` and its partners at the listener;
-   * false when there is nothing to align to
+   * sets its delay and level (and its mirror partners') to play with placement `to` and its partners at the listener,
+   * `afterMs` after them; false when there is nothing to align to
    */
-  onAlign: (to: number) => boolean;
+  onAlign: (to: number, afterMs: number) => boolean;
 }
 
 /** The picker's id for a placement on its own (a placement's index for one it follows). */
@@ -66,6 +68,8 @@ export function PlacementSettings({
   const [alignFailed, setAlignFailed] = useState(false);
   /** the group picked to align to, by its lead's index; null: the first one listed */
   const [alignPick, setAlignPick] = useState<string | null>(null);
+  /** how much later than the group it aligns to it arrives at the listener, ms (a setting of the Align button, not saved) */
+  const [afterMs, setAfterMs] = useState(FILL_PRECEDENCE_MS);
   // it aligns to any group but its own: each listed by its lead, named by its placements
   const targets: SelectOption[] = groups
     .filter((g) => !g.includes(index))
@@ -167,17 +171,26 @@ export function PlacementSettings({
       </div>
       {alignTo && (
         <div className="mb-3">
-          <SelectField
-            label={<Tooltip tip={SPACE_TEXT.alignToTip}>{SPACE_TEXT.alignTo}</Tooltip>}
-            className="mb-2"
-            options={targets}
-            value={alignTo}
-            onChange={(o) => {
-              setAlignPick(o.id);
-              setAlignFailed(false);
-            }}
-          />
-          <Button size="xs" onClick={() => setAlignFailed(!onAlign(Number(alignTo.id)))}>
+          <div className={FIELD_ROW}>
+            <SelectField
+              label={<Tooltip tip={SPACE_TEXT.alignToTip}>{SPACE_TEXT.alignTo}</Tooltip>}
+              options={targets}
+              value={alignTo}
+              onChange={(o) => {
+                setAlignPick(o.id);
+                setAlignFailed(false);
+              }}
+            />
+            <NumberField
+              label={<Tooltip tip={SPACE_TEXT.alignAfterTip}>{SPACE_TEXT.alignAfter}</Tooltip>}
+              value={afterMs}
+              min={0}
+              max={FILL_PRECEDENCE_MAX_MS}
+              step={1}
+              onChange={(v) => setAfterMs(clamp(v, 0, FILL_PRECEDENCE_MAX_MS))}
+            />
+          </div>
+          <Button size="xs" onClick={() => setAlignFailed(!onAlign(Number(alignTo.id), afterMs))}>
             {SPACE_TEXT.align}
           </Button>
           {alignFailed && (

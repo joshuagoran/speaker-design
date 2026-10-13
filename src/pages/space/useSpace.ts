@@ -529,10 +529,10 @@ export function useSpace() {
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /**
      * sets the delay and level of placement `k` and its mirror partners to play with placement `to` and its partners at
-     * the listener (lib/speaker/fillAlign); false when there is nothing to align to
+     * the listener, `afterMs` after them (lib/speaker/fillAlign); false when there is nothing to align to
      */
-    alignTo: (k: number, to: number) => {
-      const aligned = fillAlignment(model, venue, space.placements, k, to);
+    alignTo: (k: number, to: number, afterMs: number) => {
+      const aligned = fillAlignment(model, venue, space.placements, k, to, afterMs);
       if (aligned)
         editPlacements((list) =>
           list.map((p, i) => {

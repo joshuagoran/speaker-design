@@ -76,6 +76,7 @@ import {
   type SpeakerSettingsSection,
 } from "../../constants/settingsSections";
 import { ARCH_BLOCK_TEXT, SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
+import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import {
   CABINET_CONSTRUCTION,
   CABINET_CONSTRUCTION_NAMES,
@@ -470,7 +471,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   {bandChips(spec, limits, response).map(({ id, chips }) => (
                     <div key={id}>
                       <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
-                      <WarningChips chips={chips} />
+                      <WarningChips chips={chips} tips={{ speakerKeepsUp: KEEP_UP_TEXT.tip }} />
                     </div>
                   ))}
                   {limits.chambers.map(

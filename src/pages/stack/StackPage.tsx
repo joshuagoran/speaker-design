@@ -45,6 +45,7 @@ import {
   type StackSettingsSection,
 } from "../../constants/settingsSections";
 import { OLD_SAVE_GROUP_NAMES, STACK_TEXT } from "../../constants/stack";
+import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
@@ -306,7 +307,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   {keepUps.map(({ heading, chips }) => (
                     <div key={heading}>
                       <h4 className="text-xs font-semibold text-stone-500 mb-1">{heading}</h4>
-                      <WarningChips chips={chips} />
+                      <WarningChips chips={chips} tips={{ stackKeepsUp: KEEP_UP_TEXT.tip }} />
                     </div>
                   ))}
                 </div>
