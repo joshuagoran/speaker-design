@@ -21,6 +21,8 @@ export const SPEAKER_OPTIMIZER_TEXT = {
     "A locked part stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
   run: "Find designs",
   load: "Load",
+  /** the notice over cards searched for a design edited since (their Load is off) */
+  stale: "The design changed after this search. Run it again.",
   undoLoad: "Undo load",
   curveLabel: "Maximum output with one input, this design against yours",
   failing: (problems: string) => `Your design fails: ${problems}. Fixes may cost or weigh more.`,

@@ -9,12 +9,16 @@ import { evaluateSpeaker } from "../src/lib/speaker/optimize/evaluate";
 import { driverRef } from "../src/lib/speaker/optimize/space";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import {
+  loadedSpec,
+  speakerOptimizerView,
   useSpeakerOptimizer,
   type SpeakerOptimizer,
 } from "../src/pages/speaker/useSpeakerOptimizer";
 import {
   allKept,
   countKept,
+  driverLayout,
+  heldLocks,
   isKept,
   keepItems,
   pruneKept,
@@ -26,19 +30,20 @@ import type { SpeakerSpec } from "../src/types";
 
 const spec = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
 const yours = evaluateSpeaker(spec).metrics;
-const { cards } = optimizeSpeaker(
+const searched = optimizeSpeaker(
   spec,
   [SPEAKER_GOAL.cheaper],
   { targetDb: yours.musicDb ?? 0, budget: null, maxLb: null },
   {},
 );
+const { cards } = searched;
 
 /**
  * Runs the optimizer hook on a spec the steps change, a step a render: each step's state updates render the hook again
  * for the next one. Returns the spec as the steps leave it, and how many times it was set.
  */
-function runSteps(steps: ((hook: SpeakerOptimizer) => void)[]) {
-  let current: SpeakerSpec = spec,
+function runSteps(steps: ((hook: SpeakerOptimizer) => void)[], from: SpeakerSpec = spec) {
+  let current: SpeakerSpec = from,
     sets = 0,
     done = 0;
   function Probe() {
@@ -133,4 +138,87 @@ test("Keep list: toggling, locking all, counting and pruning", () => {
   const stale = { drivers: [driverRef(9, 9)], vents: [7], amps: ["gone"] };
   assert.equal(countKept(pruneKept(stale, items)), 0);
   assert.equal(countKept(pruneKept(all, items)), items.length + 3);
+});
+
+test("Load keeps your spec's id and name; clearing the results (the spec replaced) ends Undo", () => {
+  const [card] = cards;
+  assert.ok(card, "a card to load");
+  const mine = { ...spec, id: "saved-1", name: "My speaker" };
+  const after = runSteps(
+    [
+      (h) => h.load(card),
+      (h) => {
+        assert.ok(h.canUndo, "Undo is offered");
+        h.clearResults();
+      },
+      (h) => assert.equal(h.canUndo, false, "no Undo after the spec is replaced"),
+    ],
+    mine,
+  );
+  assert.equal(after.current.id, "saved-1");
+  assert.equal(after.current.name, "My speaker");
+  assert.equal(after.current.cabinet, card.spec.cabinet, "the card's design");
+});
+
+test("stale cards: a design edit after the search; Undo ends with a design edit after a load", () => {
+  const ran = { from: spec, result: searched };
+  const edited = (s: SpeakerSpec): SpeakerSpec => ({
+    ...s,
+    bands: s.bands.map((b, i) => (i ? b : { ...b, levelDb: b.levelDb - 1 })),
+  });
+  const renamed = (s: SpeakerSpec): SpeakerSpec => ({ ...s, name: `${s.name} 2` });
+  const view = speakerOptimizerView;
+  assert.deepEqual(view(null, null, spec), { result: null, stale: false, canUndo: false });
+  assert.equal(view(ran, null, spec).result, searched, "the result shows");
+  assert.equal(view(ran, null, spec).stale, false, "on the design searched");
+  assert.equal(view(ran, null, renamed(spec)).stale, false, "a new name changes no design");
+  assert.equal(view(ran, null, edited(spec)).stale, true, "an edit after the search");
+  // a card loaded: Undo and the cards hold until the design is edited
+  const loaded = loadedSpec(cards[0], spec);
+  const undo = { before: spec, loaded };
+  assert.deepEqual(view(ran, undo, loaded), { result: searched, stale: false, canUndo: true });
+  assert.equal(view(ran, undo, renamed(loaded)).canUndo, true, "a rename keeps Undo");
+  assert.deepEqual(view(ran, undo, edited(loaded)), {
+    result: searched,
+    stale: true,
+    canUndo: false,
+  });
+});
+
+test("driver locks hold their driver: a driver added or removed drops them, never moves them", () => {
+  // a chamber with two driver entries (the second a copy of the first)
+  const two: SpeakerSpec = {
+    ...spec,
+    cabinet: {
+      ...spec.cabinet,
+      chambers: spec.cabinet.chambers.map((c, k) =>
+        k ? c : { ...c, drivers: [c.drivers[0], ...c.drivers] },
+      ),
+    },
+  };
+  const items = keepItems(two);
+  const second = items.find((i) => i.kind === "drivers" && i.ref === driverRef(0, 1));
+  assert.ok(second, "the second driver's item");
+  const vent = items.find((i) => i.kind === "vents" || i.kind === "amps");
+  assert.ok(vent, "an item that isn't a driver");
+  const held = {
+    round: 0,
+    layout: driverLayout(two),
+    locks: toggleKeep(toggleKeep({}, second), vent),
+  };
+  // the same layout: the lock holds
+  assert.ok(isKept(heldLocks(held, { round: 0, layout: driverLayout(two) }, items), second));
+  // the first entry removed: the second moves to 0.0, its lock doesn't follow onto another driver
+  const one: SpeakerSpec = {
+    ...two,
+    cabinet: {
+      ...two.cabinet,
+      chambers: two.cabinet.chambers.map((c, k) => (k ? c : { ...c, drivers: c.drivers.slice(1) })),
+    },
+  };
+  const now = heldLocks(held, { round: 0, layout: driverLayout(one) }, keepItems(one));
+  assert.equal(now.drivers, undefined, "no driver lock");
+  assert.ok(isKept(now, vent), "the other locks stay");
+  // the chamber list replaced: every lock goes
+  assert.equal(countKept(heldLocks(held, { round: 1, layout: driverLayout(two) }, items)), 0);
 });

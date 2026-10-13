@@ -49,6 +49,7 @@ import {
   maxCurveOf,
   problemsOf,
   withAmps,
+  SIZE_SLACK_IN,
   type SizeCaps,
   type SpeakerEval,
 } from "./evaluate";
@@ -80,6 +81,8 @@ const BATCHES = 2;
 /** The near miss loosens the weight and the budget by this share, and the target by TARGET_STEP_DB. */
 const LOOSEN = 0.1;
 const TARGET_STEP_DB = 1;
+/** A target within this of your design's level is your level, dB: the first card's heading says "Same level". */
+const SAME_LEVEL_DB = 0.05;
 /** Alternatives stay within this of the target level, dB (as the PA optimizer's). */
 const ALT_LEVEL_DB = 1.5;
 /** Two designs whose volumes differ less than this share are the same box, unless a part differs. */
@@ -226,14 +229,16 @@ function emptyResult(
   };
 }
 
-/** The box's size caps from the size locks: no larger than yours on a "max" or "exact" axis. */
+/** The box's size caps from the size locks: your size, as a most on a "max" axis and exactly on an "exact" one. */
 const capsOf = (
   outer: SpeakerOptimizerMetrics["sizeIn"],
   size: SpeakerOptimizerLocks["size"] = {},
 ): SizeCaps =>
   Object.fromEntries(
     (["w", "h", "d"] as const).flatMap((k) =>
-      size[k] === "max" || size[k] === "exact" ? [[k, outer[k]]] : [],
+      size[k] === "max" || size[k] === "exact"
+        ? [[k, { in: outer[k], exact: size[k] === "exact" }]]
+        : [],
     ),
   );
 
@@ -413,8 +418,10 @@ export function optimizeSpeaker(
       const shape = shapeFor(spec, model, v, sx, sz);
       if (!shape) return [];
       const est = shapeEstimate(spec, model, shape);
+      // the estimate only bounds the size from above (a part swap can still move an exact axis): the built design's
+      // check (problemsOf) holds an exact axis
       const inside = (["w", "h", "d"] as const).every(
-        (k) => est.outer[k] <= (caps[k] ?? Infinity) + 0.01,
+        (k) => est.outer[k] <= (caps[k]?.in ?? Infinity) + SIZE_SLACK_IN,
       );
       return inside ? [{ shape, outer: est.outer, ratio: est.surfaceRatio }] : [];
     });
@@ -506,8 +513,9 @@ export function optimizeSpeaker(
         ]
       : []),
     {
-      text: SPEAKER_NEAR_MISS_TEXT.target(target - TARGET_STEP_DB),
-      set: { targetDb: target - TARGET_STEP_DB },
+      // a whole dB, at least TARGET_STEP_DB under the target (which may be your design's level, unrounded)
+      text: SPEAKER_NEAR_MISS_TEXT.target(Math.floor(target - TARGET_STEP_DB + 1e-9)),
+      set: { targetDb: Math.floor(target - TARGET_STEP_DB + 1e-9) },
     },
   ].map((o) => ({ ...o, L: { ...limits, ...o.set } }));
 
@@ -613,9 +621,13 @@ export function optimizeSpeaker(
   const startFails = (L: SpeakerOptimizerLimits) => problemsOf(start, start, L, caps).length > 0;
   const passes = (p: PoolEntry, L: SpeakerOptimizerLimits) =>
     problemsOf(p.ev, start, L, caps).length === 0;
+  // "Same level, ..." only when the target is your level; else the heading names the target
+  const sameLevel = Math.abs(target - start.metrics.musicDb) <= SAME_LEVEL_DB;
   const goalLabel = also.length
     ? goals.map((g, i) => (i ? SPEAKER_GOAL_THAN[g] : SPEAKER_GOAL_TEXT[g].short)).join(" + ")
-    : SPEAKER_GOAL_TEXT[goal].name;
+    : sameLevel
+      ? SPEAKER_GOAL_TEXT[goal].name
+      : SPEAKER_GOAL_TEXT[goal].atTarget;
   const goalWhy = also.length
     ? `${SPEAKER_GOAL_TEXT[goal].why.replace(/\.$/, "")}, and ${also.map((g) => SPEAKER_GOAL_ALSO[g]).join(" and ")} than your design.`
     : SPEAKER_GOAL_TEXT[goal].why;

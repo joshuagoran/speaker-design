@@ -12,15 +12,16 @@ import { speakerNearMissText } from "./speakerText";
 import type { SpeakerOptimizer } from "./useSpeakerOptimizer";
 
 interface Props {
-  optimizer: Pick<SpeakerOptimizer, "result" | "isOptimizing" | "search" | "load">;
+  optimizer: Pick<SpeakerOptimizer, "result" | "stale" | "isOptimizing" | "search" | "load">;
 }
 
 /**
  * The optimizer's results, at the top of the results pane: your design's failures, the cards, the notice when nothing
- * beats your design, and the near miss with the limits that would help. Nothing while a search runs or before one has.
+ * beats your design, and the near miss with the limits that would help. Nothing while a search runs or before one has;
+ * a notice, and Load off, once the design changed after the search.
  */
 export function SpeakerOptimizerResults({ optimizer }: Props) {
-  const { result, isOptimizing, search, load } = optimizer;
+  const { result, stale, isOptimizing, search, load } = optimizer;
   const top = useRef<HTMLElement>(null);
   // on a phone the settings (and the Find button) are below the results: bring the new cards into view
   useEffect(() => {
@@ -32,6 +33,7 @@ export function SpeakerOptimizerResults({ optimizer }: Props) {
   return (
     <section ref={top} className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
       <SectionHeading className="mb-3">{SPEAKER_OPTIMIZER_TEXT.results}</SectionHeading>
+      {stale && <Notice>{SPEAKER_OPTIMIZER_TEXT.stale}</Notice>}
       {current && current.problems.length > 0 && (
         <Notice>{SPEAKER_OPTIMIZER_TEXT.failing(current.problems.join("; "))}</Notice>
       )}
@@ -44,7 +46,7 @@ export function SpeakerOptimizerResults({ optimizer }: Props) {
             index={i}
             total={cards.length}
             current={current}
-            onLoad={() => load(card)}
+            onLoad={stale ? null : () => load(card)}
           />
         )}
       />

@@ -123,3 +123,29 @@ export function pruneKept(
     { size: locks.size },
   );
 }
+
+/** Where the driver entries are: how many each chamber has. Driver and horn locks name an entry by its place. */
+export const driverLayout = (spec: Pick<SpeakerSpec, "cabinet">): string =>
+  spec.cabinet.chambers.map((c) => c.drivers.length).join(",");
+
+/** Locks as they were set: on which chamber list (the page's round) and driver layout. */
+export interface HeldLocks {
+  round: number;
+  layout: string;
+  locks: SpeakerOptimizerLocks;
+}
+
+/**
+ * The locks that hold on the spec as it is now: none once the chamber list was replaced; without the driver and horn
+ * locks once a driver entry was added or removed (the entries after it moved place, so a lock would move to another
+ * driver); and only the parts the spec still has.
+ */
+export function heldLocks(
+  held: HeldLocks,
+  now: Pick<HeldLocks, "round" | "layout">,
+  items: readonly KeepItem[],
+): SpeakerOptimizerLocks {
+  if (held.round !== now.round) return {};
+  const { drivers: _drivers, horns: _horns, ...rest } = held.locks;
+  return pruneKept(held.layout === now.layout ? held.locks : rest, items);
+}

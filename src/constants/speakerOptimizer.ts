@@ -12,31 +12,39 @@ export const SPEAKER_GOAL = {
   louder: "louder",
 } as const;
 
-/** Each goal's button word, its long name (the first card's heading when it is the only goal) and the card's sentence. */
+/**
+ * Each goal's button word, its long name (the first card's heading when it is the only goal and the target is your
+ * design's level), the heading for a target you typed in (`atTarget`) and the card's sentence.
+ */
 export const SPEAKER_GOAL_TEXT = {
   cheaper: {
     short: GOAL_SHORT_NAMES.cheaper,
     name: "Same level, cheaper",
+    atTarget: "At the target, cheaper",
     why: "Cheapest parts that still reach the target level.",
   },
   lighter: {
     short: GOAL_SHORT_NAMES.lighter,
     name: "Same level, lighter",
+    atTarget: "At the target, lighter",
     why: "Lightest box that still reaches the target level.",
   },
   smaller: {
     short: "Smaller",
     name: "Same level, smaller",
+    atTarget: "At the target, smaller",
     why: "Smallest box that still reaches the target level.",
   },
   lower: {
     short: GOAL_SHORT_NAMES.lower,
     name: SHARED_GOAL_NAMES.lower,
+    atTarget: SHARED_GOAL_NAMES.lower,
     why: "Lowest F3 that keeps the target level.",
   },
   louder: {
     short: GOAL_SHORT_NAMES.louder,
     name: SHARED_GOAL_NAMES.louder,
+    atTarget: SHARED_GOAL_NAMES.louder,
     why: "Most level inside your limits.",
   },
 } as const;

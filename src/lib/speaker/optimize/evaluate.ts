@@ -47,8 +47,8 @@ const STOCK_PARTS: ReadonlySet<string> = new Set([
 
 /** How far a fit may miss and still count, in (rounding). */
 const FIT_SLACK_IN = 1e-6;
-/** The size a box may grow past its cap on an axis and still count as inside it, in (rounding). */
-const SIZE_SLACK_IN = 0.01;
+/** How far a box may miss its size lock on an axis (past a "max", either way on an "exact") and still hold it, in (rounding). */
+export const SIZE_SLACK_IN = 0.01;
 /** The maximum-output curve a card carries: every this many points of the response's grid. */
 const CURVE_EVERY = 4;
 /** A level, dB, below the passband that sets the F3. */
@@ -225,8 +225,20 @@ export function withAmps(ev: SpeakerEval, spec: SpeakerSpec): SpeakerEval {
   };
 }
 
-/** The most the box may measure on each axis, in; absent: no cap on that axis. */
-export type SizeCaps = Partial<Dims3>;
+/**
+ * The size locks as the checks take them, per axis: the size, in, and whether the box must measure exactly that (an
+ * "exact" axis) or at most that (a "max" axis); absent: the axis is free.
+ */
+export type SizeCaps = Partial<Record<keyof Dims3, { in: number; exact: boolean }>>;
+
+/** Whether an outer size holds the size locks: within SIZE_SLACK_IN of an exact axis, no larger than a max one. */
+export const holdsSizeCaps = (sizeIn: Dims3, caps: SizeCaps): boolean =>
+  (["w", "h", "d"] as const).every((k) => {
+    const cap = caps[k];
+    if (!cap) return true;
+    const off = sizeIn[k] - cap.in;
+    return cap.exact ? Math.abs(off) <= SIZE_SLACK_IN : off <= SIZE_SLACK_IN;
+  });
 
 /** A fact your design has that this design lost: true when `now` is false where `then` is true. */
 const lost = (then: readonly boolean[], now: readonly boolean[]) =>
@@ -255,8 +267,7 @@ export function problemsOf(
   const m = ev.metrics;
   if (limits.budget !== null && m.price > limits.budget + 1e-9) out.push(SPEAKER_PROBLEM.budget);
   if (limits.maxLb !== null && m.lb > limits.maxLb + 1e-9) out.push(SPEAKER_PROBLEM.weight);
-  if ((["w", "h", "d"] as const).some((k) => m.sizeIn[k] > (caps[k] ?? Infinity) + SIZE_SLACK_IN))
-    out.push(SPEAKER_PROBLEM.size);
+  if (!holdsSizeCaps(m.sizeIn, caps)) out.push(SPEAKER_PROBLEM.size);
   return out;
 }
 

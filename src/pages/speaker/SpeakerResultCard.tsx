@@ -24,7 +24,8 @@ interface Props {
   total: number;
   /** your design's maximum output, drawn dashed beside the card's; null when it can't be modeled */
   current: SpeakerOptimizerResult["current"];
-  onLoad: () => void;
+  /** loads the card; null: Load is off (the cards are stale) */
+  onLoad: (() => void) | null;
 }
 
 /** One suggested design: what it is, its maximum output against yours, its numbers with their change, and Load. */
@@ -100,7 +101,12 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
         </div>
       )}
       <div className="flex gap-1.5 mt-auto">
-        <Button variant="primary" onClick={onLoad} className="flex-1">
+        <Button
+          variant="primary"
+          onClick={onLoad ?? undefined}
+          disabled={!onLoad}
+          className="flex-1"
+        >
           {SPEAKER_OPTIMIZER_TEXT.load}
         </Button>
       </div>

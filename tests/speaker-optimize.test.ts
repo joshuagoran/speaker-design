@@ -11,6 +11,7 @@ import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speakerStarts";
 import { SPEAKER_STEPS } from "../src/constants/speakerSteps";
 import { VENT_KIND } from "../src/constants/speakerSpec";
+import { SPEAKER_GOAL_TEXT } from "../src/constants/speakerOptimizer";
 import { hifiParity, paTowerParity } from "./speaker-optimizer-parity";
 import type {
   SpeakerGoal,
@@ -129,9 +130,13 @@ function checkedRun(
     // the limits hold on the final design
     if (L.budget !== null) assert.ok(ev.metrics.price <= L.budget + 1e-9, `${name}: over budget`);
     if (L.maxLb !== null) assert.ok(ev.metrics.lb <= L.maxLb + 1e-9, `${name}: over weight`);
-    for (const axis of ["w", "h", "d"] as const)
-      if (caps[axis] === "max" || caps[axis] === "exact")
-        assert.ok(ev.metrics.sizeIn[axis] <= m.sizeIn[axis] + 0.01, `${name}: larger on ${axis}`);
+    // the size locks hold on the outer size: no larger on a "max" axis, the same on an "exact" one
+    for (const axis of ["w", "h", "d"] as const) {
+      const off = ev.metrics.sizeIn[axis] - m.sizeIn[axis];
+      if (caps[axis] === "max") assert.ok(off <= 0.01, `${name}: larger on ${axis}`);
+      if (caps[axis] === "exact")
+        assert.ok(Math.abs(off) <= 0.01, `${name}: ${axis} moved ${off.toFixed(2)} in`);
+    }
     assertSteps(card.spec, spec, name);
     // the structure stays: the chamber kinds and the band count
     assert.equal(card.spec.bands.length, spec.bands.length);
@@ -212,6 +217,24 @@ test("locks hold: a locked driver, horn, vent, filter, amp and size stay as they
   };
   const { r } = checkedRun(SPEAKER_TEMPLATE.hifiTwoWay, ["cheaper"], undefined, all);
   assert.equal(r.cards.length, 0);
+});
+
+test("an exact size lock holds the outer size, not only the chambers' (a part swap moves it)", () => {
+  // a smaller horn narrowed the mid/high box and shortened the tower before the exact lock held the outer size
+  for (const g of ["cheaper", "smaller", "lighter"] as const) {
+    checkedRun(SPEAKER_TEMPLATE.paMidHighBox, [g], undefined, { size: { w: "exact" } });
+    checkedRun(SPEAKER_TEMPLATE.paTowerTopHorn, [g], undefined, { size: { h: "exact" } });
+  }
+});
+
+test("the first card says Same level only when the target is your level", () => {
+  const { spec, m } = start(SPEAKER_TEMPLATE.hifiTwoWay);
+  const at = (targetDb: number) =>
+    optimizeSpeaker(spec, ["cheaper"], { ...keepLevel(m), targetDb }).cards.find(
+      (c) => c.slot.kind === "first",
+    );
+  assert.equal(at(m.musicDb ?? 0)?.label, SPEAKER_GOAL_TEXT.cheaper.name);
+  assert.equal(at(Math.floor((m.musicDb ?? 0) - 1))?.label, SPEAKER_GOAL_TEXT.cheaper.atTarget);
 });
 
 test("near miss: with no design inside the limits, the closest design and what fails", () => {
