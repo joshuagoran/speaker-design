@@ -8,6 +8,7 @@ import { hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
 import {
   ductDividerIn,
   sideDuctEndCorrection,
+  slotFinsOf,
   slotFolds,
   slotInnerEndCorrection,
 } from "../pa/calc";
@@ -132,7 +133,7 @@ export function chamberVentModel(
         // the PA letterbox (lib/pa/calc ventGeometry): its fins take their thickness off the width; its mouth on the
         // floor (which mirrors it), its inner end as the PA slot's, folded up the back wall when too long to run
         // straight (as the PA rule, the cutlist and the 3D view fold it)
-        const open = w - port.fins * t;
+        const open = w - slotFinsOf({ fins: port.fins, slotH: port.h }, w, t) * t;
         const slot = { slotH: port.h, len: port.len };
         return {
           areaIn2: port.h * open,

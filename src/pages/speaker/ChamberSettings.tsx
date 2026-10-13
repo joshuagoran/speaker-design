@@ -96,7 +96,7 @@ import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { ductDividerOf, withDuctDivider } from "../../lib/speaker/cabinetPanels";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
-import { slotFolds } from "../../lib/pa/calc";
+import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
 import { ELBOW_COUNTS, elbowCountOf } from "../../lib/tubeFold";
 
 /** The driver types as the type picker lists them: one woofer type, then the other kinds. */
@@ -521,7 +521,7 @@ function SlotFields({
   const kind = (
     <ToggleGroup
       label={<Tooltip tip={SPEAKER_TEXT.slotKindTip}>{SPEAKER_TEXT.slotKind}</Tooltip>}
-      className="mb-3"
+      className="mb-1"
       value={letterbox ? SLOT_KIND.letterbox : SLOT_KIND.plain}
       onChange={(k) =>
         onChange(
@@ -533,17 +533,25 @@ function SlotFields({
       options={entriesOf(SLOT_KIND_NAMES)}
     />
   );
+  const resets = <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.slotKindResets}</p>;
   if (letterbox)
     return (
       <>
         {kind}
+        {resets}
         <div className={FIELD_ROW}>
           <NumberField
             label={<Tooltip tip={SPEAKER_TEXT.slotFinsTip}>{SPEAKER_TEXT.slotFins}</Tooltip>}
-            value={port.fins ?? PA_SLOT_FINS}
+            value={slotFinsOf({ fins: port.fins, slotH: h }, clearW, t)}
             min={0}
+            max={maxSlotFins(clearW, t, h)}
             step={1}
-            onChange={(fins) => onChange({ ...port, fins: Math.max(0, Math.round(fins)) })}
+            onChange={(fins) =>
+              onChange({
+                ...port,
+                fins: Math.min(maxSlotFins(clearW, t, h), Math.max(0, Math.round(fins))),
+              })
+            }
           />
           <NumberField
             label={SPEAKER_TEXT.slotHeight}
@@ -564,6 +572,7 @@ function SlotFields({
   return (
     <>
       {kind}
+      {resets}
       <div className={FIELD_ROW}>
         <NumberField
           label="Count"

@@ -9,7 +9,7 @@ import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { chamberVentModel } from "../src/lib/speaker/chamberAir";
 import { speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { portRule, PORT_RULE, speakerLayout } from "../src/lib/speaker/speakerLayout";
-import { cutParts, slotFinLayout, subGeometry } from "../src/lib/pa/calc";
+import { cutParts, maxSlotFins, slotFinLayout, slotFinsOf, subGeometry } from "../src/lib/pa/calc";
 import { buildSpeakerScene } from "../src/components/stack-view/buildSpeakerScene";
 import { buildSubSlotShelf, subVentPlan } from "../src/components/stack-view/buildSubwoofer";
 import { createSceneContext } from "../src/components/stack-view/sceneContext";
@@ -169,4 +169,27 @@ test("a letterbox's fin count reaches the cutlist, the model and the views", () 
     const layout = slotFinLayout(iw, t, fins);
     assert.ok(Math.abs((fins + 1) * layout.open + fins * t - iw) < 1e-9);
   }
+});
+
+test("a high fin count is held to what the width takes: the area stays positive, the end correction finite", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
+  const { chamber, vent: chamberVent, port } = letterboxOf(spec);
+  const t = spec.cabinet.panel.thicknessIn;
+  const iw = chamber.dims.w - 2 * t;
+  const most = maxSlotFins(iw, t, port.h);
+  assert.ok(most >= PA_SLOT_FINS, "the PA page's two fit the default box");
+  // each opening at least the ply and half the slot's height
+  assert.ok(slotFinLayout(iw, t, most).open >= Math.max(t, port.h / 2) - 1e-9);
+  assert.ok(slotFinLayout(iw, t, most + 1).open < Math.max(t, port.h / 2));
+  const fins = 40;
+  assert.equal(slotFinsOf({ fins, slotH: port.h }, iw, t), most);
+  assert.equal(slotFinsOf({ slotH: port.h }, iw, t), PA_SLOT_FINS);
+  const c: SpeakerChamber = { ...chamber, vent: { ...chamberVent, port: { ...port, fins } } };
+  const s: SpeakerSpec = { ...spec, cabinet: { ...spec.cabinet, chambers: [c] } };
+  const vent = chamberVentModel(s.cabinet, c);
+  assert.ok(vent && vent.areaIn2 > 0 && Number.isFinite(vent.endCorrectionIn));
+  assert.ok(Math.abs(vent.areaIn2 - port.h * (iw - most * t)) < 1e-9);
+  const row = speakerCutParts(s.cabinet, "butt").parts.find((p) => p.part === "ductFin");
+  assert.equal(row?.qty, most);
+  assert.equal(finsIn(buildSpeakerScene({ spec: s, cutaway: true }), t, port.h), most);
 });

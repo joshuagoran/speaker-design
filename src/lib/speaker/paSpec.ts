@@ -101,7 +101,7 @@ const PA_PORTS: Record<PortStyle, (cfg: PaPlannerDesign, sub: SubDriver) => Spea
     n: 1,
     h: cfg.cVent.slotH,
     len: cfg.cVent.len,
-    fins: slotFinsOf(cfg.cVent),
+    fins: slotFinsOf(cfg.cVent, cfg.cDim.w - 2 * cfg.wall, cfg.wall),
   }),
   vslots: (cfg) => sideDucts(cfg, 2),
   vslot1: (cfg) => sideDucts(cfg, 1),

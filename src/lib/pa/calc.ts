@@ -155,8 +155,20 @@ export const foldedShelfIn = (box: Pick<Dims3, "d">, slotH: number, t: number) =
  * (with the air), so the floor is held whatever the slot's length, and the back's and top's ribs line up on them.
  */
 export const slotFinIn = (box: Pick<Dims3, "d">, t: number) => box.d - t;
-/** How many fins split a bottom slot: the vent's own count (the Speaker page's), else the PA page's two. */
-export const slotFinsOf = (v: Pick<VentSpec, "fins">) => v.fins ?? PA_SLOT_FINS;
+/**
+ * The most fins a bottom slot of height `slotH` takes across the inside width `iw` in wall ply `t`: each opening stays at
+ * least as wide as the ply and half the slot's height, so the slot keeps an area and a finite end correction.
+ */
+export const maxSlotFins = (iw: number, t: number, slotH: number) => {
+  const least = Math.max(t, slotH / 2);
+  return Math.max(0, Math.floor((iw - least) / (t + least)));
+};
+/**
+ * How many fins split a bottom slot: the vent's own count (the Speaker page's), held to `maxSlotFins`, else the PA
+ * page's two (left as is, so the PA page's results do not change).
+ */
+export const slotFinsOf = (v: Pick<VentSpec, "fins" | "slotH">, iw: number, t: number) =>
+  v.fins === undefined ? PA_SLOT_FINS : Math.min(v.fins, maxSlotFins(iw, t, v.slotH));
 /**
  * A bottom slot's fins of wall ply `t` across the inside width `iw`, splitting it into equal openings: each opening's
  * width (`open`), each fin's center (`centers`) and each opening's center (`openings`), across from the inside's center
@@ -170,19 +182,6 @@ export function slotFinLayout(iw: number, t: number, fins: number) {
     openings: Array.from({ length: fins + 1 }, (_, j) => (j - fins / 2) * (open + t)),
   };
 }
-/** How a cutlist note says the openings `fins` fins split a slot into: "three" for the PA page's two. */
-const slotSplitWords = (fins: number) => SPLIT_WORDS[fins + 1] ?? String(fins + 1);
-const SPLIT_WORDS: Readonly<Record<number, string>> = {
-  2: "two",
-  3: "three",
-  4: "four",
-  5: "five",
-  6: "six",
-  7: "seven",
-  8: "eight",
-  9: "nine",
-  10: "ten",
-};
 // The least the rear channel's wall rises from the floor leg's roof's underside, so the folded duct has a mouth to open
 // into.
 const FOLD_MIN_WALL_IN = 1;
@@ -671,7 +670,7 @@ export function subVentLines(
   if (style === "slots") {
     const shelf = v.slotH + t / 2;
     // the fins' centers, in from the left side (the 3D view's)
-    const bottom = slotFinLayout(iw, t, slotFinsOf(v)).centers.map((c) => iw / 2 + c);
+    const bottom = slotFinLayout(iw, t, slotFinsOf(v, iw, t)).centers.map((c) => iw / 2 + c);
     return { sideL: [shelf], sideR: [shelf], top: [], bottom };
   }
   if (style === "vslots" || style === "vslot1") {
@@ -1004,7 +1003,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${targetHz}|${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${slotFinsOf(v)}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
+  const key = `${targetHz}|${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${slotFinsOf(v, box.w - 2 * t, t)}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -1371,9 +1370,9 @@ export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceV
       { lb: ply(iw, len, t), y: t + v.slotH + t / 2, z: len / 2 },
       // a straight slot's fins run on to the back
       folded
-        ? { lb: slotFinsOf(v) * ply(v.slotH, len, t), y: t + v.slotH / 2, z: len / 2 }
+        ? { lb: slotFinsOf(v, iw, t) * ply(v.slotH, len, t), y: t + v.slotH / 2, z: len / 2 }
         : {
-            lb: slotFinsOf(v) * ply(v.slotH, slotFinIn(box, t), t),
+            lb: slotFinsOf(v, iw, t) * ply(v.slotH, slotFinIn(box, t), t),
             y: t + v.slotH / 2,
             z: slotFinIn(box, t) / 2,
           },
@@ -1706,8 +1705,8 @@ export function subVentParts(
     const parts: CutPart[] = [
       { box, part: "ductShelf", qty: 1, a: iw, b: len, t, note: "roof of the bottom slot" },
     ];
-    const fins = slotFinsOf(cVent);
-    const split = `splits the slot in ${slotSplitWords(fins)}`;
+    const fins = slotFinsOf(cVent, iw, t);
+    const split = `splits the slot into ${fins + 1} openings`;
     if (fins > 0)
       parts.push({
         box,
@@ -1995,7 +1994,7 @@ export function ventGeometry(
   if (portStyle === "slots") {
     // one letterbox split by its fins (wall ply; the PA page's two); the fins run the full length but the mouths
     // sit together, so it is treated as a single opening on the floor (see slotInnerEndCorrection)
-    const fins = slotFinsOf(cVent);
+    const fins = slotFinsOf(cVent, iw, t);
     const h = cVent.slotH,
       area = h * (iw - fins * t),
       seg = slotFinLayout(iw, t, fins).open;

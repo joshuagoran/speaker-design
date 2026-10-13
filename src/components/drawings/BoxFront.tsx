@@ -80,7 +80,8 @@ export function BoxFront({ g, cur }: Props) {
   const vent: React.ReactElement[] = [];
   if (g.portStyle === "slots") {
     // the letterbox's openings between its fins, as the 3D view cuts them (lib/pa/calc slotFinLayout)
-    const fins = slotFinLayout(g.sub.w - 2 * g.wall, g.wall, slotFinsOf(v));
+    const iw = g.sub.w - 2 * g.wall;
+    const fins = slotFinLayout(iw, g.wall, slotFinsOf(v, iw, g.wall));
     fins.openings.forEach((x, i) =>
       vent.push(
         <rect

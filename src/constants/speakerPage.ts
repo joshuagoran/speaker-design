@@ -290,7 +290,9 @@ export const SPEAKER_TEXT = {
     "Letterbox: the slot of the PA sub. It runs along the floor from the frame front. Fins divide it. If it is too long to run straight, it folds up the back. It needs the frame construction. Plain: the slot of the Hi-fi page. You can stack more than one.",
   slotFins: "Fins",
   slotFinsTip:
-    "Fins divide the slot into equal openings. Each fin has the thickness of the walls. The fins hold the floor. The PA page uses two.",
+    "Fins divide the slot into equal openings. Each fin has the thickness of the walls. The fins hold the floor. The PA page uses two. The most is set by the width and the slot height: each opening stays at least half the slot height wide.",
+  slotKindResets:
+    "Switching the type resets the other type's settings: fins, or count, long side and fold.",
   slotFolds: "The slot is too long to run straight. It folds up the back.",
   slotStraight: "The slot runs straight along the floor.",
   slotFold: "Fold",

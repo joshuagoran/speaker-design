@@ -54,7 +54,7 @@ export function subVentPlan(
   const ductH = pg.ductH != null ? pg.ductH : 3,
     innerW = s.w - 2 * T;
   // the bottom slot's fins and the openings between them (the PA page's two fins: three openings)
-  const fins = slotFinLayout(innerW, T, slotFinsOf(pg));
+  const fins = slotFinLayout(innerW, T, slotFinsOf({ fins: pg.fins, slotH: ductH }, innerW, T));
   const round = isRoundPort(portStyle); // round-tube ports only
   const corners = portStyle === "round4";
   const nPorts = pg.nPorts != null ? pg.nPorts : portStyle === "round1" ? 1 : corners ? 4 : 2;
