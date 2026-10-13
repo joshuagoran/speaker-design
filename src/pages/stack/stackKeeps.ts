@@ -142,12 +142,31 @@ export function heldKey(
 const startsThe = (held: readonly string[], now: readonly string[]) =>
   held.every((id, i) => now[i] === id);
 
+/** How many ways the members now can be the held ones with some removed (a subsequence of them; capped at 2). */
+function waysLeft(held: readonly string[], now: readonly string[]): number {
+  // ways[j]: the ways the first j members now are picked from the held ones read so far
+  const ways = [1, ...now.map(() => 0)];
+  for (const id of held)
+    for (let j = now.length; j > 0; j--)
+      if (now[j - 1] === id) ways[j] = Math.min(2, ways[j] + ways[j - 1]);
+  return ways[now.length];
+}
+
+/**
+ * Whether each member lock still names its member: the members are the held ones with more added after them, or the
+ * first of them (the last ones removed) where no other removal leaves the same members (two boxes on one speaker: which
+ * one went can't be told).
+ */
+const membersHold = (held: readonly string[], now: readonly string[]) =>
+  startsThe(held, now) || (startsThe(now, held) && waysLeft(held, now) === 1);
+
 /**
  * The locks that hold on the stack as it is now:
  * - none once the stack was replaced (another opened, a start);
  * - a speaker's locks as the Speaker optimizer holds them (`heldLocks`: without the driver and horn locks once a driver
  *   entry was added or removed, and only the parts it still has), and only for a speaker a member still names;
- * - the member locks only while the members are the ones they were set on, or those with more added after them (a
+ * - the member locks only while the members are the ones they were set on, those with more added after them, or the
+ *   first of them when the last ones were removed and no other removal leaves the same members (`membersHold`: a
  *   removed member moves the later ones, so a lock would move to another member), and only for members that exist.
  */
 export function heldStackLocks(
@@ -176,7 +195,7 @@ export function heldStackLocks(
   }
   const keep = (held.locks.keep ?? []).filter((id) => ids.has(id));
   if (keep.length) out = { ...out, keep };
-  if (startsThe(held.members, now.members))
+  if (membersHold(held.members, now.members))
     for (const kind of MEMBER_LOCKS) {
       const list = (held.locks[kind] ?? []).filter((k) => k < now.members.length);
       if (list.length) out = { ...out, [kind]: list };

@@ -1,5 +1,9 @@
 import { DesignOptimizerResults } from "../../components/optimizer/DesignOptimizerResults";
-import { STACK_OPTIMIZER_TEXT } from "../../constants/stackOptimizer";
+import {
+  STACK_NEAR_MISS_TEXT,
+  STACK_OPTIMIZER_TEXT,
+  STACK_PROBLEM_TEXT,
+} from "../../constants/stackOptimizer";
 import { nearMissFacts, nearMissSentence } from "../speaker/speakerText";
 import { StackResultCard } from "./StackResultCard";
 import type { StackOptimizer } from "./useStackOptimizer";
@@ -10,16 +14,21 @@ interface Props {
 }
 
 /**
- * The near miss's closest stack in a sentence: its weight, price, level at 1 m and height. Empty when there is none.
- * Ends in a space.
+ * The near miss's closest stack in a sentence: its weight (its heaviest box's where the weight limit, which is per box,
+ * blocks it), price, level at 1 m and height. Empty when there is none. Ends in a space.
  */
 export function stackNearMissText({
   closest,
   closestIsYours,
-}: Pick<StackNearMiss, "closest" | "closestIsYours">): string {
+  blocking,
+}: Pick<StackNearMiss, "closest" | "closestIsYours" | "blocking">): string {
   if (!closest) return "";
+  const m = closest.metrics;
+  const weight = blocking.includes(STACK_PROBLEM_TEXT.weight)
+    ? STACK_NEAR_MISS_TEXT.heaviest(Math.max(0, ...m.boxes.map((b) => b?.lb ?? 0)).toFixed(0))
+    : undefined;
   return nearMissSentence(
-    [...nearMissFacts(closest.metrics), `${closest.metrics.heightIn.toFixed(0)} in tall`],
+    [...nearMissFacts(m, weight), `${m.heightIn.toFixed(0)} in tall`],
     closestIsYours,
   );
 }

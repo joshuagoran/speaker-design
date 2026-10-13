@@ -108,11 +108,15 @@ export function driverSummary(cabinet: Pick<SpeakerSpec["cabinet"], "chambers">)
   return [...counts.values()].map(({ name, n }) => `${n} × ${name}`).join(" + ");
 }
 
-/** The facts the near miss names of its closest design: the weight, the price and the level at 1 m (none for a level that isn't modeled). */
+/**
+ * The facts the near miss names of its closest design: the weight (`weight`, default its total), the price and the
+ * level at 1 m (none for a level that isn't modeled).
+ */
 export const nearMissFacts = (
   m: Pick<SpeakerOptimizerMetrics, "lb" | "price" | "pricePartial" | "musicDb">,
+  weight = `${m.lb.toFixed(0)} lb`,
 ): string[] => [
-  `${m.lb.toFixed(0)} lb`,
+  weight,
   `${formatDollars(m.price)}${m.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
   ...(m.musicDb === null ? [] : [`${m.musicDb.toFixed(1)} dB at 1 m`]),
 ];

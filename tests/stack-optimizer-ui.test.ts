@@ -40,7 +40,12 @@ import {
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { SPEAKER_GOAL } from "../src/constants/speakerOptimizer";
-import { STACK_OPTIMIZER_TEXT } from "../src/constants/stackOptimizer";
+import {
+  STACK_NEAR_MISS_TEXT,
+  STACK_OPTIMIZER_TEXT,
+  STACK_PROBLEM_TEXT,
+} from "../src/constants/stackOptimizer";
+import { stackNearMissText } from "../src/pages/stack/StackOptimizerResults";
 import type { StackDesign } from "../src/types";
 
 const read = startLayers(
@@ -303,6 +308,32 @@ test("member locks hold their member: a member removed drops them, never moves t
   assert.equal(countStackKept(reconcileHeldStack(held, satellites, 1).locks), 0);
 });
 
+test("the last member removed: the locks stay on the members left, unless which one went can't be told", () => {
+  // three members on three speakers (the PA stack with a second top under its own id)
+  const top2 = { ...design.speakers[1], id: `${design.speakers[1].id}-2` };
+  const three: StackDesign = {
+    stack: {
+      ...design.stack,
+      members: [...design.stack.members, { ...design.stack.members[1], speakerId: top2.id }],
+    },
+    speakers: [...design.speakers, top2],
+  };
+  const locks = toggleMemberKept(
+    toggleMemberKept(toggleMemberKept({}, "crossovers", 1), "levels", 0),
+    "delays",
+    2,
+  );
+  const last: StackDesign = {
+    ...three,
+    stack: { ...three.stack, members: withoutMember(three.stack.members, 2) },
+  };
+  const kept = reconcileHeldStack(heldOn(three, locks), last, 0).locks;
+  assert.ok(isMemberKept(kept, "crossovers", 1), "the lock on the second member stays");
+  assert.ok(isMemberKept(kept, "levels", 0), "the lock on the first member stays");
+  assert.ok(!isMemberKept(kept, "delays", 2), "the removed member's lock goes");
+  // two members on one speaker (the satellites): the test above, where no lock stays
+});
+
 test("a dropped member lock stays dropped when the same members come back", () => {
   const locks = toggleMemberKept({}, "delays", 0);
   const held = heldOn(satellites, locks);
@@ -376,4 +407,21 @@ test("the fold's words: the limits, the keep hint and the summary name a stack",
   assert.equal(T.summaryWeight(null), "no weight limit");
   assert.equal(T.summaryWeight(60), "up to 60 lb a box");
   assert.match(T.targetYours("113"), /stack/);
+});
+
+test("the near miss's weight is per box: the option, and the heaviest box where the weight limit blocks", () => {
+  assert.equal(STACK_NEAR_MISS_TEXT.weight(90), "Allow 90 lb a box");
+  const closest = cards[0];
+  assert.ok(closest, "a card");
+  const heaviest = Math.max(...closest.metrics.boxes.map((b) => b?.lb ?? 0));
+  assert.ok(heaviest < closest.metrics.lb, "the boxes weigh less than the stack");
+  const blocked = stackNearMissText({
+    closest,
+    closestIsYours: false,
+    blocking: [STACK_PROBLEM_TEXT.weight],
+  });
+  assert.ok(blocked.includes(STACK_NEAR_MISS_TEXT.heaviest(heaviest.toFixed(0))), blocked);
+  assert.ok(!blocked.includes(`${closest.metrics.lb.toFixed(0)} lb`), blocked);
+  const short = stackNearMissText({ closest, closestIsYours: false, blocking: [] });
+  assert.ok(short.includes(`${closest.metrics.lb.toFixed(0)} lb`), short);
 });

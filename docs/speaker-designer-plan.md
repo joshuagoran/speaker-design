@@ -590,6 +590,9 @@ Each PR stands alone. Lowest risk first.
           | Member delay                            | Auto stays auto. A set delay goes to the aligned value (`stackResponse`), on 0.1 ms steps  |
           | Boxes, chamber kinds, band count, poses | Never                                                                                      |
 
+          A crossover between boxes moves only when each side has that one crossover. A sub that feeds two tops keeps
+          its crossover.
+
         - **Numbers.** As the Speaker optimizer's goals and margins (`OBJECTIVE`, `BEATS`, `GOAL_KEEPS`), on the
           whole stack: the price is the members' total, the weight is the members' total, the size is the sum of the
           boxes' outer volumes, the F3 is the lowest band's of any member, the level is `stackLimits` `musicDb`.
@@ -633,9 +636,10 @@ Each PR stands alone. Lowest risk first.
           - The cards go stale when the members or the speakers change after the search. Load is off then, and the
             notice says so. A search that comes back for an older stack is dropped. Undo ends at the next edit.
             Opening another stack or a start drops the cards, Undo and the locks.
-          - A lock never moves. A member lock stays only while the members are the ones it was set on, or those with
-            more after them. A speaker's driver and horn locks go when its driver entries change. A lock that went
-            stays gone.
+          - A lock never moves. A member lock stays only while the members are the ones it was set on, those with
+            more after them, or the first of them (the last box removed). When the removed box has the same speaker as
+            another box and the app cannot tell which one went, the member locks go. A speaker's driver and horn locks
+            go when its driver entries change. A lock that went stays gone.
           - Shared with the Speaker page: `useDesignOptimizer` (hook), and `DesignOptimizerSettings` and
             `DesignOptimizerResults` (`components/optimizer`).
           - UI tests: `tests/stack-optimizer-ui.test.ts`. The phone check (`tests/mobile-check.mjs`) runs the Stack

@@ -73,16 +73,16 @@ function assertSameMetrics(a: StackOptimizerMetrics, b: StackOptimizerMetrics, w
  * that the last check dropped nothing (#75).
  */
 function checkedRun(
-  p: StackPreset,
+  p: StackPreset | { name: string; design: StackDesign },
   goals: SpeakerGoal[],
   limits?: Partial<StackOptimizerLimits>,
   locks?: StackOptimizerLocks,
 ): { r: StackOptimizerResult; design: StackDesign; m: StackOptimizerMetrics } {
-  const design = preset(p);
+  const design = typeof p === "string" ? preset(p) : p.design;
   const m = evaluateStack(design).metrics;
   const L = { ...keepLevel(m), ...limits };
   const r = optimizeStack(design, goals, L, locks);
-  const what = `${p} ${goals.join("+")}`;
+  const what = `${typeof p === "string" ? p : p.name} ${goals.join("+")}`;
   assert.equal(r.stats.dropped, 0, `${what}: the last check dropped a card`);
   for (const card of r.cards) {
     const name = `${what} [${card.label}]`;
@@ -239,6 +239,33 @@ test("near miss: a weight no box can make, and a target out of reach", () => {
   assert.ok(r.nearMiss.blocking.length > 0, "what blocks it");
   const far = checkedRun(STACK_PRESET.paStack, ["cheaper"], { targetDb: 140 });
   assert.ok(far.r.nearMiss, "a near miss for a target out of reach");
+}, 60_000);
+
+test("two boxes share a speaker on different crossovers: each box's level follows its own passband", () => {
+  // the PA stack plus a second top, mirrored, on its own highpass at 500 Hz and no lowpass
+  const base = preset(STACK_PRESET.paStack);
+  const [sub, top] = base.stack.members;
+  assert.ok(top.crossover.highpass, "the top's highpass");
+  const third = {
+    ...top,
+    mirror: !top.mirror,
+    crossover: { highpass: { ...top.crossover.highpass, hz: 500 }, lowpass: null },
+  };
+  const design: StackDesign = { ...base, stack: { ...base.stack, members: [sub, top, third] } };
+  const { r, m } = checkedRun({ name: "paStack + a 500 Hz top", design }, ["cheaper"]);
+  const smallest = r.cards.find((c) => c.slot.kind === "smallest");
+  assert.ok(smallest, "a smallest change");
+  // it changes the top only (its mid driver and amps), so no box's balance moved: every box keeps its level
+  assert.deepStrictEqual(
+    smallest.speakers.map((s) => s.id),
+    [top.speakerId],
+  );
+  assert.deepStrictEqual(
+    smallest.design.stack.members.map((mb) => mb.levelDb),
+    design.stack.members.map((mb) => mb.levelDb),
+  );
+  assert.ok(!smallest.changed.includes(CHANGE_NAMES.boxLevels), "no box levels");
+  assert.ok((smallest.metrics.musicDb ?? 0) >= (m.musicDb ?? 0), "the stack's level holds");
 }, 60_000);
 
 test("the same input gives the same cards", () => {

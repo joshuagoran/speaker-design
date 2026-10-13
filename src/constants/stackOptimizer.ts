@@ -33,10 +33,13 @@ export const STACK_PROBLEM_TEXT = {
   height: "the stack is taller than the height limit",
 } as const satisfies Record<keyof typeof STACK_PROBLEM, string>;
 
-/** The near miss's options: a limit loosened so a card fits. */
+/** The near miss's options: a limit loosened so a card fits (the weight limit is per box); and its closest stack's words. */
 export const STACK_NEAR_MISS_TEXT = {
   ...SPEAKER_NEAR_MISS_TEXT,
+  weight: (lb: number) => `Allow ${lb} lb a box`,
   height: (inches: number) => `Allow ${inches} in`,
+  /** the closest stack's weight where the weight limit blocks it: its heaviest box's */
+  heaviest: (lb: string) => `heaviest box ${lb} lb`,
   short: (db: string, target: string) =>
     `the closest stack plays ${db} dB at 1 m, short of the ${target} dB target`,
 } as const;

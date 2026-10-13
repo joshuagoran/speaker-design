@@ -29,7 +29,7 @@ import type {
   StackOptimizerResult,
 } from "../../../types";
 import { crossingPairs, memberSpeaker, stackResponse } from "../stackResponse";
-import { passbandCenterHz, passbandDb } from "../speakerResponse";
+import { passbandCenterHz, passbandDb, speakerResponse } from "../speakerResponse";
 import { stackHeightIn } from "../speakerTotals";
 import { selectCards, type SelectedCard } from "../../optimizer/selectCards";
 import { keepsFrom, SPEAKER_GOAL_KEEPS } from "../../optimizer/goalKeeps";
@@ -351,7 +351,8 @@ export function optimizeStack(
 
   // the speakers the search changes, each on its first member's crossover
   // By design, not a bug: a speaker that two boxes share is searched once, with the first box's crossover. The full
-  // stack run (./stackEvaluate) then checks every box, with its own crossover, before a design can become a card.
+  // stack run (./stackEvaluate) then checks every box, with its own crossover, before a design can become a card. Each
+  // box's level follows its own passband, on its own crossover (`passOf` below).
   const kept = new Set(locks.keep ?? []);
   const units: Unit[] = [];
   /** each member's unit, by index (−1: its speaker is missing) */
@@ -414,7 +415,10 @@ export function optimizeStack(
   const lockedLevels = new Set(locks.levels ?? []);
   /** the levels hold a balance only between two members or more: a member alone keeps its level */
   const balanced = rooms.length > 1;
-  /** member k's level with a speaker whose passband is `passDb`: the balance kept, on the level step */
+  /**
+   * member k's level with a speaker whose passband on k's own crossover is `passDb`: the balance kept, on the level step
+   * (each member against its own passband now, so a member whose passband did not move keeps its level)
+   */
   const levelFor = (k: number, passDb: number) => {
     const moved = passStart[k] - passDb;
     return lockedLevels.has(k) || !balanced || !Number.isFinite(moved)
@@ -489,8 +493,34 @@ export function optimizeStack(
     return unique([own, ...s.pool.map((ev) => entryOf(u, ev, false))]);
   });
 
+  /**
+   * member k's passband on setting `si` with entry `e`, dB: the entry's own where k's crossover is the one it ran on,
+   * else the speaker's response on k's crossover (a speaker two members share, on different crossovers; cached)
+   */
+  const memberPass = new Map<string, number>();
+  const passOf = (si: number, k: number, e: Entry) => {
+    const crossover = settings[si].crossovers[k];
+    if (sameJson(e.ev.spec.input, crossover)) return e.passDb;
+    if (e.own && sameJson(members[k].crossover, crossover)) return passStart[k];
+    const key = `${e.key}|${JSON.stringify(crossover)}`;
+    let db = memberPass.get(key);
+    if (db === undefined) {
+      db = passbandDb(speakerResponse(e.ev.spec, { feed: crossover }).sum);
+      memberPass.set(key, db);
+    }
+    return db;
+  };
+  /** member k's level on setting `si` with entry `e` (`levelFor` on its own passband) */
+  const memberLevel = (si: number, k: number, e: Entry) => levelFor(k, passOf(si, k, e));
+
   /** the combination's numbers by the estimate: price, weight and size summed, the level from each member's headroom */
   const heights = new Map<string, number>();
+  const speakersOf = (picks: readonly Entry[]) =>
+    design.speakers.map((s) => {
+      const ui = units.findIndex((u) => u.id === s.id);
+      const e = ui >= 0 ? picks[ui] : null;
+      return !e || e.own ? s : { ...e.ev.spec, input: s.input };
+    });
   const designOf = (si: number, picks: readonly Entry[]): StackDesign => ({
     stack: {
       ...design.stack,
@@ -499,23 +529,18 @@ export function optimizeStack(
         return {
           ...m,
           crossover: settings[si].crossovers[k],
-          levelDb: e ? levelFor(k, e.passDb) : m.levelDb,
+          levelDb: e ? memberLevel(si, k, e) : m.levelDb,
         };
       }),
     },
-    speakers: design.speakers.map((s) => {
-      const ui = units.findIndex((u) => u.id === s.id);
-      const e = ui >= 0 ? picks[ui] : null;
-      return !e || e.own ? s : { ...e.ev.spec, input: s.input };
-    }),
+    speakers: speakersOf(picks),
   });
   /** the stack's height with these speakers, in (exact; only the boxes set it) */
   const heightOf = (picks: readonly Entry[]) => {
     const key = picks.map((e) => e.boxKey).join("#");
     let h = heights.get(key);
     if (h === undefined) {
-      const d = designOf(0, picks);
-      h = stackHeightIn(d.stack, d.speakers);
+      h = stackHeightIn(design.stack, speakersOf(picks));
       heights.set(key, h);
     }
     return h;
@@ -537,7 +562,7 @@ export function optimizeStack(
       volumeL += e.ev.metrics.volumeL;
       boxLb = Math.max(boxLb, e.ev.metrics.lb);
       // a speaker the model can't run sets no limit (as in stackLimits)
-      if (Number.isFinite(e.room)) minRoom = Math.min(minRoom, e.room - levelFor(k, e.passDb));
+      if (Number.isFinite(e.room)) minRoom = Math.min(minRoom, e.room - memberLevel(si, k, e));
       if (e.low && (!low || e.low.hz < low.hz)) low = e.low;
     }
     for (const e of picks) ch += e.ch;
