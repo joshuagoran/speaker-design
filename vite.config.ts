@@ -56,7 +56,7 @@ export default defineConfig({
     testTimeout: 30_000,
   },
   fmt: {
-    // golden.json, optimizer-dump.json, optimizer-snapshot.json, the slot inner-end table, the PA presets' band Levels
+    // golden.json, optimizer-dump.json, the optimizer snapshots, the slot inner-end table, the PA presets' band Levels
     // and the meshes are generated
     ignorePatterns: [
       "dist/**",
@@ -70,6 +70,7 @@ export default defineConfig({
       "tests/optimizer-dump.json",
       "tests/optimizer-snapshot.json",
       "tests/speaker-optimizer-snapshot.json",
+      "tests/stack-optimizer-snapshot.json",
     ],
   },
   lint: {
