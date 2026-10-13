@@ -92,6 +92,12 @@ export const SPEAKER_GOAL_MISSING = {
   louder: "Nothing louder than your design passes the checks.",
 } as const;
 
+/** The notice when your design has no band the model runs: there is nothing to score. */
+export const SPEAKER_UNMODELED = "Cannot model your design: it has no band to score.";
+
+/** The notice when no goal is picked: the search waits for one. */
+export const SPEAKER_NO_GOAL = "Pick a goal to search.";
+
 /** How the notice names the level, the F3 and the pair when the first card only comes closest. */
 export const SPEAKER_REACH_WORDS = { level: "at 1 m", f3: "an F3", both: "level and bass" };
 
