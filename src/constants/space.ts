@@ -34,24 +34,6 @@ export const DRIVER_PART = {
   hf: "hf",
 } as const;
 
-/** The front end picker's id for none. */
-export const NO_FRONT_END = "none";
-
-/** The front end choices' names: none, an analog crossover, or a DSP (`FRONT_END_KIND`). */
-export const FRONT_END_NAMES = {
-  [NO_FRONT_END]: "None",
-  analog: "Analog crossover",
-  digital: "DSP",
-} as const;
-
-/** What each front end choice is, in one sentence (its tooltip). */
-export const FRONT_END_TIPS = {
-  [NO_FRONT_END]: "The amps feed the speakers directly. Only passive speakers work this way.",
-  analog: "A box with fixed crossover filters. It cannot delay the signal.",
-  digital:
-    "A digital signal processor (DSP). It sets the crossover filters, level and delay of each output.",
-} as const satisfies Record<keyof typeof FRONT_END_NAMES, string>;
-
 /** A seat's listening area, ft: a sofa's width, a little deep. */
 export const SPACE_SEAT_AREA = { widthFt: 6, lengthFt: 4 } as const;
 
@@ -67,9 +49,6 @@ export const SPACE_PITCH_DEG = 30;
 
 /** The highest lift under a placement, in (a tall stand, a fly bar). */
 export const SPACE_LIFT_MAX_IN = 240;
-
-/** An amp by its number in the space (1 up). */
-const ampName = (n: number) => `Amp ${n}`;
 
 /** The band a fill's level is matched to the mains in (lib/speaker/fillAlign): the voice range a fill is there for. */
 export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
@@ -158,28 +137,25 @@ export const SPACE_TEXT = {
   pairName: (names: readonly string[]) => names.join(" + "),
   alignFillNone:
     "Cannot align: this placement and the one you pick must each hold a modeled stack or speaker.",
-  feedTip:
-    "The front end's level and delay on this placement's feed (a fill under, and after, the mains).",
-  amps: "Amps",
-  addAmp: "Add amp",
-  ampModel: "Model",
-  customAmp: "Other amp",
-  watts: "Watts per channel",
-  frontEnd: "Signal processing",
-  dsp: "DSP unit",
-  noDsp: "Other DSP",
-  /** an amp by its number in the space (1 up) */
-  amp: ampName,
-  channel: (amp: number, ch: number) => `${ampName(amp)} ch ${ch}`,
-  unassigned: "No channel",
-  channelsOver: (amp: number, used: number, has: number) =>
-    `${ampName(amp)} has ${has} channels; this space uses ${used}.`,
-  noChannel:
-    "A band has no amp channel: the model drives it at its own amp power (set on the Speaker page).",
-  analogDelay:
-    "An analog crossover cannot delay the signal. This space uses a delay (to line up the boxes in a stack, or to time a fill speaker), so it needs a DSP.",
-  noFrontEnd:
-    "The amps feed the speakers directly, so only passive speakers fit. The model still applies each stack's crossover filters.",
+  feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
+  ampPower: "Amp power",
+  ampPowerHint:
+    "The power of the amp for each band, in watts into 8 Ω. The model finds each speaker's limit from it. A mirror pair, and a speaker placed twice, share one figure.",
+  /** a band's amp power field: the band (or a passive network's bands) it is for */
+  ampPowerFor: (bands: string) => `${bands}: amp power, W`,
+  alignment: "Alignment",
+  alignmentHint: "The settings for each box and band, at the level and delay the space asks of it.",
+  /** a band's filters, as a row's value: its corner and slope */
+  highpass: (filter: string) => `High-pass ${filter}`,
+  lowpass: (filter: string) => `Low-pass ${filter}`,
+  fullRange: "Full range",
+  /** a band's level, dB (already formatted) */
+  levelIs: (db: string) => `Level ${db} dB`,
+  noDelay: "No delay",
+  /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (in) */
+  delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,
+  offsetNote:
+    "Some boxes need a time offset to line up at their crossovers (listed above). A delay, an all-pass filter or moving the box can give it.",
   outdoors: "Outdoors",
   areaWidth: "Area width, ft",
   areaLength: "Area length, ft",

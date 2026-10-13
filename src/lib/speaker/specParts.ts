@@ -1,12 +1,9 @@
 // Small parts the read adapters share (lib/speaker paSpec, hifiSpec, fillSpec).
 import type {
   BandFilter,
-  BandId,
   ChamberLoad,
   CrossoverOrder,
   FloorPoint,
-  SpaceAmp,
-  SpaceChannel,
   SpaceAim,
   SpacePlacement,
   SpaceVenue,
@@ -74,16 +71,6 @@ export const speakerIdentity = (design: SpecIdentity, part: SpeakerPart): SpecId
   name: `${design.name} · ${SPEAKER_PART_NAMES[part]}`,
 });
 
-/** Hands out each amp's channels in order: the next free channel on `amp`, feeding `bands` of stack member `member`. */
-export function channelCounter() {
-  const used = new Map<SpaceAmp["id"], number>();
-  return (amp: SpaceAmp["id"], bands: readonly BandId[], member = 0): SpaceChannel => {
-    const channel = used.get(amp) ?? 0;
-    used.set(amp, channel + 1);
-    return { amp, channel, member, bands };
-  };
-}
-
 /** A member's place on the stack's base, at its origin. */
 export const BASE_POSE: StackPose = { xIn: 0, yIn: 0, zIn: 0, on: null, pitchDeg: 0 };
 
@@ -102,7 +89,6 @@ export const spacePlacement = (
   spot: FloorPoint,
   item: SpacePlacement["item"],
   liftIn: SpacePlacement["liftIn"],
-  channels: SpacePlacement["channels"],
   {
     yawDeg = 0,
     mirror = false,
@@ -118,7 +104,6 @@ export const spacePlacement = (
   follows,
   levelDb: 0,
   delayMs: 0,
-  channels,
 });
 
 /**

@@ -47,7 +47,6 @@ import {
   CABINET_TOP,
   CHAMBER_LOAD,
   DRIVER_KIND,
-  FRONT_END_KIND,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   HORN_PATH,
@@ -69,7 +68,6 @@ import type {
   PaLayout,
   PaPlannerDesign,
   PortStyle,
-  SpaceChannel,
   SpeakerChamber,
   SpeakerPart,
   SpeakerPort,
@@ -113,11 +111,6 @@ function speakerOf({ stack, speakers }: DesignLayers, part: SpeakerPart) {
   assert.ok(found, `no ${part} speaker`);
   return found;
 }
-/** Each placement's channels as [amp, channel, member, bands]. */
-const channelsOf = ({ space }: DesignLayers) =>
-  space.placements.map((p) =>
-    p.channels.map((c: SpaceChannel) => [c.amp, c.channel, c.member, c.bands]),
-  );
 
 /** The port shape each PA port style reads as. */
 const PA_PORT_SHAPE: Record<PortStyle, SpeakerPort["shape"]> = {
@@ -231,15 +224,19 @@ test("speaker spec: every golden PA design reads into a stack with its boxes, dr
       c.name,
     );
 
-    // the stacks (and satellite's sub) stand on the plinth; the amps as the design powers each band; the mains rack's DSP
+    // the stacks (and satellite's sub) stand on the plinth; the amp power as the design powers each band
     for (const p of space.placements)
       if (p.item.kind === SPACE_ITEM.stack || p.item.id === subBox.id)
         assert.equal(p.liftIn, PLINTH_HEIGHT_IN, c.name);
     assert.deepEqual(
-      space.amps.map((a) => a.watts),
+      [
+        bandOf(subBox, SPEAKER_BAND.low).ampW,
+        bandOf(topBox, SPEAKER_BAND.mid).ampW,
+        bandOf(topBox, SPEAKER_BAND.high).ampW,
+      ],
       [cfg.ampW, cfg.mAmpW, cfg.hfAmpW],
+      c.name,
     );
-    assert.equal(space.frontEnd?.kind, FRONT_END_KIND.digital, c.name);
     assert.equal(subBox.cabinet.panel.thicknessIn, cfg.wall, c.name);
 
     // the PA's frame and inset baffle on every box; the tower's top arched where its horn arches it, else flat; the
@@ -321,20 +318,6 @@ test("speaker spec: each PA layout stands the tops where the planner draws them,
       [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, PA_FLOOR.stacks[1].x, true],
     ],
   );
-  // each amp's channels in order: the left stack's sub, then its top; the right stack's
-  const { low, mid, high } = SPEAKER_BAND;
-  assert.deepEqual(channelsOf(stack), [
-    [
-      [low, 0, 0, [low]],
-      [mid, 0, 1, [mid]],
-      [high, 0, 1, [high]],
-    ],
-    [
-      [low, 1, 0, [low]],
-      [mid, 1, 1, [mid]],
-      [high, 1, 1, [high]],
-    ],
-  ]);
   const pole = topOf(read("pole", 18));
   assert.ok(pole.pose.yIn === 18 && pole.pose.on !== null);
   // satellite: the top on its stand beside the sub in the stack; in the space, the tops alone on their stands
@@ -372,7 +355,7 @@ test("speaker spec: every golden fill reads in as a coaxial in its box, the high
   for (const c of fillConfigs) {
     const state = fillState(c);
     const read = layersFromFill(state, { id: "fill", name: c.name });
-    const { stack, space, speakers } = read;
+    const { stack, speakers } = read;
     const [spec] = speakers;
     const [chamber] = spec.cabinet.chambers;
     assert.deepEqual(chamber.dims, state.boxDims, c.name);
@@ -392,10 +375,10 @@ test("speaker spec: every golden fill reads in as a coaxial in its box, the high
       hz: state.highpassHz,
       type: crossoverSlopeName(state.highpassOrder),
     });
-    assert.deepEqual(channelsOf(read), [
-      [[SPEAKER_BAND.low, 0, 0, [SPEAKER_BAND.low, SPEAKER_BAND.high]]],
-    ]);
-    assert.equal(space.amps[0].watts, state.ampWatts);
+    assert.ok(
+      spec.bands.every((b) => b.ampW === state.ampWatts),
+      c.name,
+    );
   }
 });
 
@@ -542,21 +525,10 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
           : null,
         name,
       );
-    const { low, high } = SPEAKER_BAND;
+    // a passive pair shares the woofer's amp; an active one has a tweeter amp
     assert.deepEqual(
-      channelsOf(read),
-      passive
-        ? [[[low, 0, 0, [low, high]]], [[low, 1, 0, [low, high]]]]
-        : [
-            [
-              [low, 0, 0, [low]],
-              [high, 0, 0, [high]],
-            ],
-            [
-              [low, 1, 0, [low]],
-              [high, 1, 0, [high]],
-            ],
-          ],
+      read.speakers[0].bands.map((b) => b.ampW),
+      [state.wooferAmpWatts, passive ? state.wooferAmpWatts : state.tweeterAmpWatts],
       name,
     );
     // the seat: the listening distance in front of the speakers, across as set

@@ -29,7 +29,7 @@ import type {
   StackSpec,
   SubDriver,
 } from "../../types";
-import { HORN_OPTIONS, SUB_OPTIONS, mainsDsp } from "../data";
+import { HORN_OPTIONS, SUB_OPTIONS } from "../data";
 import { byIdOrThrow } from "../tables";
 import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter, ventSpeedLimit } from "../pa/calc";
 import { modelTubeElbows } from "../pa/tubes";
@@ -49,7 +49,6 @@ import {
   CABINET_CONSTRUCTION,
   CABINET_TOP,
   DRIVER_KIND,
-  FRONT_END_KIND,
   HORN_PLACEMENT,
   PA_SLOT_FINS,
   PORT_SHAPE,
@@ -63,7 +62,6 @@ import {
   BASE_POSE,
   DIRECT_LOAD,
   NO_FILTERS,
-  channelCounter,
   lrFilter,
   spacePlacement,
   speakerIdentity,
@@ -444,43 +442,27 @@ export function paVenue(floor: PaFloor): SpaceVenue {
  * The PA design read in: its speakers, its stack (`paStack`) and its space on the coverage page's floor: the stacks at
  * its spots (`stacks`, left then right; the right one a mirror image, following the left where the page mirrors them)
  * on their plinths. Satellite places no stack: one sub on its plinth midway, and the tops on their stands at the spots,
- * each on its own input range, `tilt` under the sub as in the stack. Each band has an amp, as the design powers it; the
- * DSP is the mains rack's; the venue is the page's room and listener (`paVenue`).
+ * each on its own input range, `tilt` under the sub as in the stack. Each band's amp power is the design's; the venue
+ * is the page's room and listener (`paVenue`).
  */
 export function layersFromPa(
   cfg: PaPlannerDesign,
   design: SpecIdentity,
   floor: PaFloor,
 ): DesignLayers {
-  const channel = channelCounter();
   const stack = paStack(cfg, design);
   const tower = cfg.layout === "tower";
   const speakers = tower
     ? [towerSpeaker(cfg, design)]
     : [subSpeaker(cfg, design), topSpeaker(cfg, design)];
   const [subId, topId] = speakers.map((s) => s.id);
-  const subChannels = (member = 0) => [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low], member)];
-  const topChannels = (member = 0) => [
-    channel(SPEAKER_BAND.mid, [SPEAKER_BAND.mid], member),
-    channel(SPEAKER_BAND.high, [SPEAKER_BAND.high], member),
-  ];
-  /** the stack's channels: the sub's then the top's, or the tower's three */
-  const stackChannels = () =>
-    tower
-      ? [SPEAKER_BAND.low, SPEAKER_BAND.mid, SPEAKER_BAND.high].map((band) => channel(band, [band]))
-      : [...subChannels(0), ...topChannels(1)];
   const [left, right] = floor.stacks;
   const stackItem = { kind: SPACE_ITEM.stack, id: stack.id } as const;
   const speakerItem = (id: SpeakerSpec["id"]) => ({ kind: SPACE_ITEM.speaker, id }) as const;
   /** the left and right spots' placements of `item`, the right one following the left (index `leftAt`) when mirrored */
-  const pair = (
-    item: SpacePlacement["item"],
-    liftIn: number,
-    channels: () => SpacePlacement["channels"],
-    leftAt: number,
-  ) => [
-    spacePlacement(left, item, liftIn, channels(), { yawDeg: left.aim }),
-    spacePlacement(right, item, liftIn, channels(), {
+  const pair = (item: SpacePlacement["item"], liftIn: number, leftAt: number) => [
+    spacePlacement(left, item, liftIn, { yawDeg: left.aim }),
+    spacePlacement(right, item, liftIn, {
       yawDeg: right.aim,
       mirror: true,
       follows: floor.mirror ? leftAt : null,
@@ -493,26 +475,19 @@ export function layersFromPa(
             { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 },
             speakerItem(subId),
             PLINTH_HEIGHT_IN,
-            subChannels(),
           ),
-          ...pair(speakerItem(topId), SATELLITE_COLUMN_H_IN, () => topChannels(), 1).map((p) => ({
+          ...pair(speakerItem(topId), SATELLITE_COLUMN_H_IN, 1).map((p) => ({
             ...p,
             levelDb: -cfg.tilt,
           })),
         ]
-      : pair(stackItem, PLINTH_HEIGHT_IN, stackChannels, 0);
+      : pair(stackItem, PLINTH_HEIGHT_IN, 0);
   return {
     speakers,
     stack,
     space: {
       ...design,
       placements,
-      amps: [
-        { id: SPEAKER_BAND.low, model: null, watts: cfg.ampW },
-        { id: SPEAKER_BAND.mid, model: null, watts: cfg.mAmpW },
-        { id: SPEAKER_BAND.high, model: null, watts: cfg.hfAmpW },
-      ],
-      frontEnd: { kind: FRONT_END_KIND.digital, dspId: mainsDsp().id },
       venue: paVenue(floor),
     },
   };

@@ -1,20 +1,11 @@
-// The hardware a space assigns (docs/speaker-designer-plan.md, L4b): which amp channel feeds each member's bands, and
-// what that asks of the amps and the front end. Pure.
-import type {
-  BandId,
-  SpaceAmp,
-  SpaceChannel,
-  SpaceDesign,
-  SpacePlacement,
-  SpeakerSpec,
-} from "../../types";
-import { ampById } from "../data";
+// The amp power a space's speakers have (docs/speaker-designer-plan.md, L4b): one figure per band, or per passive network,
+// kept in the space's own copy of each speaker (`SpeakerBand.ampW`), which the model reads. Pure.
+import type { BandId, SpaceDesign, SpeakerSpec } from "../../types";
+import { placementStack } from "./spaceLayout";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
-import { AUTO_DELAY, FRONT_END_KIND } from "../../constants/speakerSpec";
-import { placementStack, resolvedPlacement } from "./spaceLayout";
 
 /**
- * The channels a speaker's bands need: each active band one of its own, and its passive bands one between them (their
+ * The amp power figures a speaker has: each active band one of its own, and its passive bands one between them (their
  * network in the box splits it).
  */
 export function channelGroups(speaker: Pick<SpeakerSpec, "bands">): BandId[][] {
@@ -23,50 +14,43 @@ export function channelGroups(speaker: Pick<SpeakerSpec, "bands">): BandId[][] {
   return passive.length ? [...active, passive] : active;
 }
 
-/** Each placement's channels numbered on their amps, in order through the space: the first free channel of each. */
-export function numberChannels(placements: readonly SpacePlacement[]): SpacePlacement[] {
-  const used = new Map<SpaceAmp["id"], number>();
-  return placements.map((p) => ({
-    ...p,
-    channels: p.channels.map((c) => {
-      const channel = used.get(c.amp) ?? 0;
-      used.set(c.amp, channel + 1);
-      return { ...c, channel };
-    }),
-  }));
+/** The speaker with every band in `bands` on an amp of `watts` W per channel. */
+export const withAmpPower = (
+  speaker: SpeakerSpec,
+  bands: readonly BandId[],
+  watts: number,
+): SpeakerSpec => ({
+  ...speaker,
+  bands: speaker.bands.map((b) => (bands.includes(b.id) ? { ...b, ampW: watts } : b)),
+});
+
+/** One placed speaker's amp power figures: its bands (or a passive network's bands) and their power, W. */
+export interface AmpPowerGroup {
+  speaker: SpeakerSpec;
+  groups: { bands: readonly BandId[]; watts: number }[];
 }
 
 /**
- * A placement's channels with one band group (`bands`, of member `member`) on `amp`, or on none: its old channel for
- * that group goes. Numbered afterwards (`numberChannels`).
+ * The amp power figures to set, for each speaker the space places (a stack's members, or a speaker alone), in the order
+ * the placements first use them. A mirror pair and a speaker placed twice share the speaker, so share its figures.
  */
-export function assignChannel(
-  channels: readonly SpaceChannel[],
-  member: number,
-  bands: readonly BandId[],
-  amp: SpaceAmp["id"] | null,
-): SpaceChannel[] {
-  const rest = channels.filter(
-    (c) => !(c.member === member && c.bands.some((b) => bands.includes(b))),
-  );
-  return amp === null ? rest : [...rest, { amp, channel: 0, member, bands }];
-}
-
-/** What a space's hardware falls short of: amps with more channels used than they have, and delays an analog front end can't make. */
-export function hardwareGaps(design: SpaceDesign) {
-  const { amps, placements, frontEnd } = design.space;
-  const over = amps.flatMap((amp, i) => {
-    const used = placements.reduce(
-      (sum, p) => sum + p.channels.filter((c) => c.amp === amp.id).length,
-      0,
-    );
-    const has = amp.model ? ampById(amp.model).model.channels : null;
-    return has !== null && used > has ? [{ amp: i, used, has }] : [];
+export function ampPowerGroups(design: Pick<SpaceDesign, "space" | "stacks" | "speakers">) {
+  const seen = new Set<SpeakerSpec["id"]>();
+  return design.space.placements.flatMap((p) => {
+    const placed = placementStack(design, p.item);
+    return (placed?.stack.members ?? []).flatMap((m): AmpPowerGroup[] => {
+      const speaker = placed?.speakers.find((s) => s.id === m.speakerId);
+      if (!speaker || seen.has(speaker.id)) return [];
+      seen.add(speaker.id);
+      return [
+        {
+          speaker,
+          groups: channelGroups(speaker).map((bands) => ({
+            bands,
+            watts: speaker.bands.find((b) => b.id === bands[0])?.ampW ?? 0,
+          })),
+        },
+      ];
+    });
   });
-  const delays = placements.some((p, k) => {
-    if (p.delayMs) return true;
-    const stack = placementStack(design, resolvedPlacement(placements, k).item);
-    return !!stack && stack.stack.members.some((m) => m.delayMs === AUTO_DELAY || m.delayMs > 0);
-  });
-  return { over, analogDelay: frontEnd?.kind === FRONT_END_KIND.analog && delays };
 }

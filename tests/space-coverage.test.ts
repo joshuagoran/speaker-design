@@ -241,7 +241,7 @@ test("space model: the PA design's space maps the floor as the coverage page doe
   const layout = FLOORS.indoors;
   const design = paSpace(layout);
   const model = spaceModel(design);
-  assert.ok(!model.missing && !model.unassigned);
+  assert.ok(!model.missing);
   const gaps = bandGapsDb(layout, model);
   assert.ok(Math.abs(gaps.sub ?? Infinity) < SUB_GAP_DB, `sub ${gaps.sub} dB`);
   const spaceGrid = (band: CoverageBand) =>

@@ -22,7 +22,6 @@ import type {
   CABINET_TOP,
   CHAMBER_LOAD,
   FIRST_ORDER_FILTER,
-  FRONT_END_KIND,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   HORN_PATH,
@@ -2138,14 +2137,14 @@ export interface SpeakerBand {
   levelDb: number;
   /**
    * active: its filters run in the front end and it has an amp channel of its own; passive: a network in the box, on
-   * a channel it shares (`SpaceChannel.bands`), as a super tweeter on the HF channel through a capacitor
+   * a channel it shares, as a super tweeter on the HF channel through a capacitor
    */
   drive: HifiDrive;
   /**
    * the power of the amp channel that drives it, W into 8 Ω: its own channel's when active; when passive, the channel
    * it shares (the same figure as the band it shares it with). The limits read it (lib/speaker/speakerLimits).
    */
-  ampW: SpaceAmp["watts"];
+  ampW: number;
 }
 
 /** Any single box: its cabinet, drivers, bands and look. */
@@ -2218,22 +2217,6 @@ export interface StackSpec {
   notes: string;
 }
 
-/** An amplifier in a space: its catalog model where one is picked, and its power per channel, W. */
-export interface SpaceAmp {
-  id: string;
-  model: AmpId | null;
-  watts: number;
-}
-
-/** One amp channel a placement takes: the member it feeds (0 for a speaker alone) and that member's bands. */
-export interface SpaceChannel {
-  amp: SpaceAmp["id"];
-  channel: number;
-  member: number;
-  /** the bands it feeds: one active band, or every band of a passive network */
-  bands: readonly BandId[];
-}
-
 /** What a space places, by id (`SPACE_ITEM`): a stack, or a speaker alone on its own input range. */
 export type SpaceItemKind = (typeof SPACE_ITEM)[keyof typeof SPACE_ITEM];
 
@@ -2249,7 +2232,7 @@ export interface SpaceAim {
 
 /**
  * A stack or a speaker placed in a space: its spot on the floor (its base's front center, ft), the lift under it (a
- * plinth, a stand), its aim, a mirror image, what the front end does to its feed, and the amp channels it takes.
+ * plinth, a stand), its aim, a mirror image, and what is done to its feed (a level and a delay).
  */
 export interface SpacePlacement extends FloorPoint {
   item:
@@ -2269,17 +2252,6 @@ export interface SpacePlacement extends FloorPoint {
   levelDb: number;
   /** the front end's delay on its feed, ms (a fill waiting for the mains) */
   delayMs: number;
-  channels: readonly SpaceChannel[];
-}
-
-/** How a front end processes, by id (`FRONT_END_KIND`): fixed analog cards, or a DSP. */
-export type FrontEndKind = (typeof FRONT_END_KIND)[keyof typeof FRONT_END_KIND];
-
-/** The processing ahead of the amps: the stacks' crossovers, delays and levels run in it, analog or digital. */
-export interface SpaceFrontEnd {
-  kind: FrontEndKind;
-  /** the DSP unit (`DSP_UNITS`), where a digital front end names one */
-  dspId: DspUnit["id"] | null;
 }
 
 /** Which part of a driver entry radiates, by id (`DRIVER_PART`): its cone or its HF section. */
@@ -2320,9 +2292,6 @@ export interface SpaceSpec {
   id: string;
   name: string;
   placements: readonly SpacePlacement[];
-  amps: readonly SpaceAmp[];
-  /** null: none (passive speakers straight off the amps) */
-  frontEnd: SpaceFrontEnd | null;
   venue: SpaceVenue;
 }
 

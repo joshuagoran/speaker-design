@@ -49,8 +49,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const tenth = (v: number) => Math.round(v * 10) / 10;
 
 /**
- * One placement's settings: whom it mirrors, where it stands, its lift and aim, a mirror image, and the front end's
- * level and delay on its feed. A placement that follows another shows only its own feed.
+ * One placement's settings: whom it mirrors, where it stands, its lift and aim, a mirror image, and its level and
+ * delay on its feed. A placement that follows another shows only its own feed.
  */
 export function PlacementSettings({
   index,

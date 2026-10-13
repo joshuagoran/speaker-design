@@ -11,6 +11,7 @@ import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField } from "../../components/ui/SelectField";
+import { StartPicker } from "../../components/ui/StartPicker";
 import { Slider } from "../../components/ui/Slider";
 import { Notice } from "../../components/ui/Notice";
 import { CoverageBandPicker } from "../../components/ui/CoverageBandPicker";
@@ -35,13 +36,7 @@ import {
   SPACE_SETTINGS_SECTIONS,
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
-import {
-  FRONT_END_NAMES,
-  NO_FRONT_END,
-  SPACE_LEVEL_REF_PLACE,
-  SPACE_LEVEL_REFS,
-  SPACE_TEXT,
-} from "../../constants/space";
+import { SPACE_LEVEL_REF_PLACE, SPACE_LEVEL_REFS, SPACE_TEXT } from "../../constants/space";
 import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { stackFromSaved } from "../stack/stackSaves";
@@ -55,9 +50,10 @@ import { spaceFromStart, type SpacePlanner } from "./useSpace";
 import { placeOptions } from "./placeOptions";
 import { STACK_STARTS, startGroup } from "../stack/stackPresets";
 import { STACK_START, STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
-import { SPEAKER_START_TEXT } from "../../constants/speakerStarts";
 import { byId } from "../../lib/tables";
 import { placementGroups } from "../../lib/speaker/fillAlign";
+import { spaceAlignment } from "../../lib/speaker/spaceAlignment";
+import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
 
 interface Props {
   space: SpacePlanner;
@@ -77,7 +73,7 @@ const relClass = (rel: number) =>
 
 /**
  * The Space page (docs/speaker-designer-plan.md, L4b): stacks and speakers placed in a room, each at its spot, lift and
- * aim, a mirror pair following its partner; the hardware that drives them; the coverage across the floor on the fixed
+ * aim, a mirror pair following its partner; their amp power and alignment; the coverage across the floor on the fixed
  * scale, the levels at the listening area, a side view of the heights and tilts, and the response at the listener.
  */
 export function SpacePage({ space, stack, speakerPage, planner }: Props) {
@@ -152,14 +148,16 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
         ] satisfies StatTileItem[])
       : []),
   ];
+  const alignment = spaceAlignment(design, model);
+  const powers = ampPowerGroups(design).reduce((n, s) => n + s.groups.length, 0);
+  const delays = alignment.filter((r) => r.delayMs > 0).length;
   const summaries: Record<SpaceSettingsSection, string> = {
     space: `${name} · ${placements.length} placement${placements.length === 1 ? "" : "s"}`,
     room: `${venue.room.outdoors ? SPACE_TEXT.outdoors : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`} · ${venue.targetDb} dB target`,
     placements: names.join(" · ") || SPACE_TEXT.noPlacements,
     hardware:
-      `${design.space.amps.length} amp${design.space.amps.length === 1 ? "" : "s"} · ` +
-      `${placements.reduce((n, p) => n + p.channels.length, 0)} channels · ` +
-      `${SPACE_TEXT.frontEnd}: ${FRONT_END_NAMES[design.space.frontEnd?.kind ?? NO_FRONT_END]}`,
+      `${powers} amp power${powers === 1 ? "" : "s"} · ` +
+      `${delays} delay${delays === 1 ? "" : "s"}`,
   };
   const section = (id: SpaceSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -212,7 +210,6 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
             )}
             {space.error && <Notice>Map failed: {space.error}</Notice>}
             {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
-            {model.unassigned && <Notice>{SPACE_TEXT.noChannel}</Notice>}
             <div className="mt-3">
               <CoverageBandPicker
                 band={space.band}
@@ -326,22 +323,18 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
             "space",
             <>
               <TextField label="Name" value={name} maxLength={60} onChange={space.setName} />
-              <SelectField
-                label={SPEAKER_START_TEXT.startFrom}
+              <StartPicker
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(o.id)}
                 group={(o) => o.group}
+                onStart={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
+                secondary={{
+                  label: SPACE_TEXT.clear,
+                  onClick: () => space.setDesign(emptySpace()),
+                }}
+                hint={SPACE_TEXT.startHint}
               />
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Button
-                  onClick={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
-                >
-                  {SPEAKER_START_TEXT.startOver}
-                </Button>
-                <Button onClick={() => space.setDesign(emptySpace())}>{SPACE_TEXT.clear}</Button>
-              </div>
-              <p className="text-xs text-stone-500 mb-3">{SPACE_TEXT.startHint}</p>
             </>,
           )}
           {section(
@@ -445,7 +438,10 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
               )}
             </>,
           )}
-          {section("hardware", <HardwareSettings design={design} names={names} space={space} />)}
+          {section(
+            "hardware",
+            <HardwareSettings design={design} alignment={alignment} names={names} space={space} />,
+          )}
         </SettingsColumn>
       }
     />

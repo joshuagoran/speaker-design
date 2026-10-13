@@ -43,8 +43,8 @@ function withFills(
   const placements: SpacePlacement[] = [...read.space.placements];
   for (const f of fills) {
     const at = placements.length;
-    placements.push(spacePlacement(f, item, 60, []));
-    if (f.pair) placements.push(spacePlacement(f, item, 60, [], { follows: at }));
+    placements.push(spacePlacement(f, item, 60));
+    if (f.pair) placements.push(spacePlacement(f, item, 60, { follows: at }));
   }
   return {
     stacks: [read.stack],

@@ -24,7 +24,7 @@ import {
   type SpaceGridRequest,
 } from "../../lib/speaker/spaceCoverage";
 import { resolvedPlacement } from "../../lib/speaker/spaceLayout";
-import { numberChannels } from "../../lib/speaker/spaceHardware";
+import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { startLayers } from "../stack/stackPresets";
 import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
@@ -40,6 +40,7 @@ import { SPACE_YAW_DEG } from "../../constants/space";
 import type { PlaceItem } from "./placeOptions";
 import { DRAFT_SPACE_ID, emptySpace, spaceFromSaved, spaceSnapshot } from "./spaceSaves";
 import type {
+  BandId,
   CoverageBand,
   CoverageGrid,
   CoverageGridView,
@@ -47,7 +48,6 @@ import type {
   ListeningArea,
   PaPlannerDesign,
   SavedConfig,
-  SpaceAmp,
   SpaceDesign,
   SpacePlacement,
   SpaceSpec,
@@ -112,7 +112,7 @@ export function fittedSpace(space: SpaceSpec): SpaceSpec {
 /**
  * The placements with placement `k` set to follow placement `follows` (an earlier one), or to stand on its own (null).
  * Either way it keeps where it stands as it stands: on its own, where its lead put it; following, its lead's item, spot,
- * lift and aim mirrored, its channels dropped when its item changes (they fed the old item's bands).
+ * lift and aim mirrored.
  */
 export function withFollows(
   placements: readonly SpacePlacement[],
@@ -123,10 +123,7 @@ export function withFollows(
   const set = placements.map((p, i) => (i === k ? { ...p, follows } : p));
   // on its own it stays as it stood; following, it stands as its lead puts it
   const after = follows === null ? before : resolvedPlacement(set, k);
-  const sameItem = JSON.stringify(after.item) === JSON.stringify(before.item);
-  return set.map((p, i) =>
-    i === k ? { ...after, follows, channels: sameItem ? after.channels : [] } : p,
-  );
+  return set.map((p, i) => (i === k ? { ...after, follows } : p));
 }
 
 /**
@@ -212,12 +209,12 @@ function oneMeterAverage(req: Omit<SpaceGridRequest, "cols">, spots: readonly Fl
 const systemGain = (target: number, atLimit: number | null) =>
   atLimit !== null ? Math.min(0, target - atLimit) : 0;
 
-/** The space with an item placed at the new spot, with no channels yet. */
+/** The space with an item placed at the new spot. */
 const withPlaced = (d: SpaceDesign, item: SpacePlacement["item"]): SpaceDesign => ({
   ...d,
   space: {
     ...d.space,
-    placements: [...d.space.placements, spacePlacement(NEW_SPOT, item, 0, [])],
+    placements: [...d.space.placements, spacePlacement(NEW_SPOT, item, 0)],
   },
 });
 
@@ -256,21 +253,20 @@ export function useSpace() {
   const [freqHz, setFreqHz] = useState(63);
   const { space } = design;
   const { venue } = space;
-  // the model reads the placements, the amps, the room, the stacks and the speakers, a step behind the typing
+  // the model reads the placements, the room, the stacks and the speakers, a step behind the typing
   const placements = useDeferredValue(space.placements);
-  const amps = useDeferredValue(space.amps);
   const room = useDeferredValue(venue.room);
   const stacks = useDeferredValue(design.stacks);
   const speakers = useDeferredValue(design.speakers);
   const model = useMemo(
     () =>
       spaceModel({
-        space: { ...space, placements, amps, venue: { ...venue, room } },
+        space: { ...space, placements, venue: { ...venue, room } },
         stacks,
         speakers,
       }),
     // the model reads only these (the name, the listener, the area and the target don't move it)
-    [placements, amps, room, stacks, speakers],
+    [placements, room, stacks, speakers],
   );
   const req = useMemo<Omit<SpaceGridRequest, "cols">>(
     () => spaceGridRequest(model, { room, earFt: venue.earFt }, band, freqHz, COVERAGE_GRID_COLS),
@@ -442,12 +438,9 @@ export function useSpace() {
   );
   const store = useConfigStore(SPACES_COLLECTION);
 
-  /** every edit to the space: the channels renumbered after it */
+  /** every edit to the space */
   const editSpace = (edit: (s: SpaceSpec) => SpaceSpec) =>
-    setDesign((d) => {
-      const next = edit(d.space);
-      return { ...d, space: { ...next, placements: numberChannels(next.placements) } };
-    });
+    setDesign((d) => ({ ...d, space: edit(d.space) }));
   const editPlacements = (edit: (list: readonly SpacePlacement[]) => SpacePlacement[]) =>
     editSpace((s) => ({ ...s, placements: edit(s.placements) }));
   const editPlacement = (k: number, edit: (p: SpacePlacement) => SpacePlacement) =>
@@ -486,7 +479,7 @@ export function useSpace() {
     targetCurve,
     store,
     snapshot: () => spaceSnapshot(design),
-    /** opens a saved space: the document's id and name, its placements, hardware, venue, stacks and speakers */
+    /** opens a saved space: the document's id and name, its placements, venue, stacks and speakers */
     restore: (c: SavedConfig) => {
       const saved = spaceFromSaved(c);
       if (saved) setDesign(saved);
@@ -498,11 +491,9 @@ export function useSpace() {
     isFollower,
     /** places a Place choice's item at the new spot, its speakers copied into the space */
     place: (item: PlaceItem) => setDesign((d) => withItemPlaced(d, item)),
-    /** adds placement `k`'s mirror image across the center line, following it, on channels of its own (none yet) */
+    /** adds placement `k`'s mirror image across the center line, following it */
     addMirrorPair: (k: number) =>
-      editPlacements((list) =>
-        withFollows([...list, { ...list[k], channels: [] }], list.length, k),
-      ),
+      editPlacements((list) => withFollows([...list, list[k]], list.length, k)),
     /** sets placement `k` to follow placement `follows`, or to stand on its own (null), where it stands */
     setFollows: (k: number, follows: SpacePlacement["follows"]) =>
       editPlacements((list) => withFollows(list, k, follows)),
@@ -557,28 +548,12 @@ export function useSpace() {
       setCrowd: (crowd) => editVenue((v) => ({ ...v, room: { ...v.room, crowd } })),
       setOutdoors: (outdoors) => editVenue((v) => ({ ...v, room: { ...v.room, outdoors } })),
     } satisfies RoomActions,
-    addAmp: (amp: Omit<SpaceAmp, "id">) =>
-      editSpace((s) => {
-        let n = s.amps.length + 1;
-        while (s.amps.some((a) => a.id === `amp${n}`)) n++;
-        return { ...s, amps: [...s.amps, { ...amp, id: `amp${n}` }] };
-      }),
-    editAmp: (i: number, edit: (a: SpaceAmp) => SpaceAmp) =>
-      editSpace((s) => ({ ...s, amps: s.amps.map((a, j) => (j === i ? edit(a) : a)) })),
-    /** removes an amp, and the channels it gave */
-    removeAmp: (i: number) =>
-      editSpace((s) => {
-        const gone = s.amps[i]?.id;
-        return {
-          ...s,
-          amps: s.amps.filter((_, j) => j !== i),
-          placements: s.placements.map((p) => ({
-            ...p,
-            channels: p.channels.filter((c) => c.amp !== gone),
-          })),
-        };
-      }),
-    setFrontEnd: (frontEnd: SpaceSpec["frontEnd"]) => editSpace((s) => ({ ...s, frontEnd })),
+    /** sets the amp power of `bands` of the space's speaker `speakerId`, W (every placement of it shares it) */
+    setAmpPower: (speakerId: SpeakerSpec["id"], bands: readonly BandId[], watts: number) =>
+      setDesign((d) => ({
+        ...d,
+        speakers: d.speakers.map((s) => (s.id === speakerId ? withAmpPower(s, bands, watts) : s)),
+      })),
   };
 }
 

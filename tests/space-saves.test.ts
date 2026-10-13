@@ -7,11 +7,10 @@ import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { resolvedPlacement } from "../src/lib/speaker/spaceLayout";
 import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
-import { assignChannel, channelGroups, numberChannels } from "../src/lib/speaker/spaceHardware";
+import { ampPowerGroups, channelGroups, withAmpPower } from "../src/lib/speaker/spaceHardware";
+import { delayDistanceIn, spaceAlignment } from "../src/lib/speaker/spaceAlignment";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
 import { fittedSpace, withFollows, withStack, withoutPlacement } from "../src/pages/space/useSpace";
-import { hardwareGaps } from "../src/lib/speaker/spaceHardware";
-import { FRONT_END_KIND } from "../src/constants/speakerSpec";
 import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import type { SavedConfig, SpaceDesign } from "../src/types";
 
@@ -86,22 +85,28 @@ test("space edits: a mirror pair follows its lead; removing the lead leaves it w
   assert.deepEqual([alone.x, alone.aim], [right.x, right.aim]);
 });
 
-test("space hardware: band groups, channel numbers in order, a library stack copied in", () => {
+test("space hardware: band groups, amp power per speaker, a library stack copied in", () => {
   const design = paSpace();
   const [sub, top] = design.speakers;
   // the PA boxes are active: a channel per band
   assert.deepEqual(channelGroups(top), [[SPEAKER_BAND.mid], [SPEAKER_BAND.high]]);
   assert.deepEqual(channelGroups(sub), [[SPEAKER_BAND.low]]);
-  // moving the left sub to the mid amp renumbers the channels through the space
-  const moved = numberChannels(
-    design.space.placements.map((p, k) =>
-      k === 0 ? { ...p, channels: assignChannel(p.channels, 0, [SPEAKER_BAND.low], "mid") } : p,
-    ),
+  // a mirror pair shares its speakers: each speaker's figures once, a figure per group
+  const power = ampPowerGroups(design);
+  assert.deepEqual(
+    power.map((s) => [s.speaker.id, s.groups.map((g) => g.bands)]),
+    [
+      [sub.id, [[SPEAKER_BAND.low]]],
+      [top.id, [[SPEAKER_BAND.mid], [SPEAKER_BAND.high]]],
+    ],
   );
-  const onMid = moved.flatMap((p) =>
-    p.channels.filter((c) => c.amp === "mid").map((c) => c.channel),
-  );
-  assert.deepEqual(onMid, [0, 1, 2]);
+  // a band's power set in the space's copy of the speaker: the model reads it
+  const weak = withAmpPower(sub, [SPEAKER_BAND.low], 10);
+  assert.equal(weak.bands[0].ampW, 10);
+  assert.deepEqual(withAmpPower(sub, [], 10), sub);
+  const headroom = (speakers: typeof design.speakers) =>
+    spaceModel({ ...design, speakers }).headroomDb;
+  assert.ok(headroom([weak, top]) < headroom([sub, top]));
   // a stack from the library, held already under its id but changed: a numbered copy beside it
   const changed = {
     stack: { ...design.stacks[0], notes: "changed" },
@@ -114,7 +119,7 @@ test("space hardware: band groups, channel numbers in order, a library stack cop
   assert.equal(design.space.placements[0].item.kind, SPACE_ITEM.stack);
 });
 
-test("space edits: a placement keeps where it stands when it starts or stops following; a new item drops its channels", () => {
+test("space edits: a placement keeps where it stands when it starts or stops following", () => {
   const design = paSpace();
   const { placements } = design.space;
   const right = resolvedPlacement(placements, 1);
@@ -125,8 +130,7 @@ test("space edits: a placement keeps where it stands when it starts or stops fol
     [alone.x, alone.y, alone.liftIn, alone.aim, alone.mirror, alone.item],
     [right.x, right.y, right.liftIn, right.aim, right.mirror, right.item],
   );
-  assert.deepEqual(alone.channels, placements[1].channels);
-  // a speaker alone, set to follow the stack: it takes the stack, and its channels (the speaker's bands) go
+  // a speaker alone, set to follow the stack: it takes the stack
   const speakerAlone = {
     ...alone,
     item: { kind: SPACE_ITEM.speaker, id: design.speakers[1].id },
@@ -136,47 +140,43 @@ test("space edits: a placement keeps where it stands when it starts or stops fol
   const [, following] = withFollows(list, 1, 0);
   assert.equal(following.follows, 0);
   assert.deepEqual(following.item, placements[0].item);
-  assert.deepEqual(following.channels, []);
   assert.equal(following.x, -placements[0].x);
-  // the hardware reads the stack it follows: its auto sub delay needs a DSP's
-  const analog = {
+});
+
+test("space alignment: a mirror pair is one entry; each band's filters, level and delay; a delay as a distance", () => {
+  const design = paSpace();
+  const model = spaceModel(design);
+  const rows = spaceAlignment(design, model);
+  // the pair plays as one: its lead and follower in each row
+  assert.ok(rows.length > 0);
+  assert.ok(rows.every((r) => r.placements.join() === "0,1"));
+  const bands = rows.map((r) => [r.member, r.bands.map((b) => b.id)]);
+  assert.deepEqual(bands, [
+    [0, [SPEAKER_BAND.low]],
+    [1, [SPEAKER_BAND.mid]],
+    [1, [SPEAKER_BAND.high]],
+  ]);
+  // the sub's low-pass is the crossover to the top's high-pass
+  const [subRow, topMid] = rows;
+  assert.ok(subRow.lowpass && topMid.highpass);
+  assert.equal(subRow.highpass?.hz ?? null, design.speakers[0].bands[0].highpass?.hz ?? null);
+  // a placement's own delay and level add to every band of the pair
+  const later: SpaceDesign = {
     ...design,
     space: {
       ...design.space,
-      frontEnd: { kind: FRONT_END_KIND.analog, dspId: null },
-      placements: list,
+      placements: design.space.placements.map((p, k) =>
+        k === 0 ? { ...p, delayMs: p.delayMs + 2, levelDb: p.levelDb - 3 } : p,
+      ),
     },
   };
-  const speakerLead = {
-    ...analog,
-    space: {
-      ...analog.space,
-      placements: [
-        { ...placements[0], item: speakerAlone.item, delayMs: 0 },
-        { ...speakerAlone, follows: 0 },
-      ],
-    },
-  };
-  assert.equal(
-    hardwareGaps(speakerLead).analogDelay,
-    false,
-    "the lead is a speaker alone: no delay",
-  );
-  const lead = {
-    ...analog,
-    space: {
-      ...analog.space,
-      placements: [
-        { ...placements[0], delayMs: 0 },
-        { ...speakerAlone, follows: 0 },
-      ],
-    },
-  };
-  assert.equal(
-    hardwareGaps(lead).analogDelay,
-    true,
-    "the follower plays the lead's stack, with its auto delay",
-  );
+  const after = spaceAlignment(later, spaceModel(later));
+  after.forEach((r, i) => {
+    assert.ok(Math.abs(r.delayMs - 2 - rows[i].delayMs) < 1e-9);
+    assert.ok(Math.abs(r.levelDb + 3 - rows[i].levelDb) < 1e-9);
+  });
+  // a delay as the distance sound travels in it: 1 ms is about 13.5 in
+  assert.ok(Math.abs(delayDistanceIn(1) - 13.5) < 0.1);
 });
 
 test("space edits: a smaller room keeps the placements, the listener and the listening area inside", () => {

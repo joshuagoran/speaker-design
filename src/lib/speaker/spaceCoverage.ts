@@ -1,7 +1,7 @@
 // The space model: every placement's stack in the room, summed across the floor on the PA coverage page's engine
 // (lib/pa/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes).
 // Each placement plays its stack's response (lib/speaker/stackResponse: each member's speaker through its crossover,
-// level and delay), with the amp power its channels assign; each driver spot radiates its band's share with its own
+// level and delay), with each band's amp power from its speaker; each driver spot radiates its band's share with its own
 // coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step (the speaker
 // model is half-space; the floor image puts the floor back, as on the PA page). Pure.
 //
@@ -14,14 +14,10 @@ import type {
   CoverageGrid,
   FloorPoint,
   FrequencyPoint,
-  SpaceAmp,
   SpaceDesign,
-  SpacePlacement,
   SpaceVenue,
-  SpeakerSpec,
   StackLimits,
   StackResponse,
-  StackSpec,
 } from "../../types";
 import {
   coverageFrequencies,
@@ -102,54 +98,6 @@ export function driverPattern(d: Pick<PlacedDriver, "driver" | "part" | "mouth">
   return piston(tweeter ? tweeter.domeIn : COAX_HF_EXIT_IN);
 }
 
-/**
- * The stack a placement plays, with the amp power its channels assign: a member's band on a channel takes that amp's
- * watts (the limits read it). A member with a channel gets its own copy of its speaker, so two members of one speaker
- * can sit on different amps.
- */
-export function withAmps(
-  stack: Pick<StackSpec, "members">,
-  speakers: readonly SpeakerSpec[],
-  placement: Pick<SpacePlacement, "channels">,
-  amps: readonly SpaceAmp[],
-): { stack: Pick<StackSpec, "members">; speakers: SpeakerSpec[] } {
-  const copies: SpeakerSpec[] = [];
-  const members = stack.members.map((member, k) => {
-    const watts = new Map<string, number>();
-    for (const c of placement.channels) {
-      const amp = amps.find((a) => a.id === c.amp);
-      if (c.member === k && amp) for (const band of c.bands) watts.set(band, amp.watts);
-    }
-    const speaker = speakers.find((s) => s.id === member.speakerId);
-    if (!speaker || !watts.size) return member;
-    const id = `${speaker.id}#${k}`;
-    copies.push({
-      ...speaker,
-      id,
-      bands: speaker.bands.map((b) => ({ ...b, ampW: watts.get(b.id) ?? b.ampW })),
-    });
-    return { ...member, speakerId: id };
-  });
-  return { stack: { members }, speakers: [...speakers, ...copies] };
-}
-
-/** Whether every band of every member a placement plays has an amp channel. */
-export function allBandsOnChannels(
-  stack: Pick<StackSpec, "members">,
-  speakers: readonly SpeakerSpec[],
-  placement: Pick<SpacePlacement, "channels">,
-) {
-  return stack.members.every((member, k) => {
-    const speaker = speakers.find((s) => s.id === member.speakerId);
-    return (
-      !speaker ||
-      speaker.bands.every((b) =>
-        placement.channels.some((c) => c.member === k && c.bands.includes(b.id)),
-      )
-    );
-  });
-}
-
 /** One placement in the model: laid out, its stack's response and limits, and its headroom. */
 export interface SpacePlacementModel {
   item: PlacedItem;
@@ -184,8 +132,6 @@ export interface SpaceModel {
   headroomDb: number;
   /** a placement names a stack or speaker the design lacks */
   missing: boolean;
-  /** a band has no amp channel */
-  unassigned: boolean;
 }
 
 /** Milliseconds in a second. */
@@ -219,7 +165,7 @@ export function pressureAt(ps: readonly Complex[], f: number): Complex {
   return { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
 }
 
-/** A placement's stack at its amps: its response and limits (null when the design lacks what it places). */
+/** A placement's stack at its speakers' amp powers: its response and limits (null when the design lacks what it places). */
 function placementModel(
   design: Pick<SpaceDesign, "space">,
   item: PlacedItem,
@@ -227,20 +173,13 @@ function placementModel(
 ): SpacePlacementModel {
   if (!item.stack) return { item, response: null, limits: null, headroomDb: null };
   const { placement } = item;
-  // what moves the model: the item, and the watts each channel gives its member's bands (not which channel it is)
-  const key = JSON.stringify([
-    placement.item,
-    placement.channels.map((c) => [
-      c.member,
-      c.bands,
-      design.space.amps.find((a) => a.id === c.amp)?.watts,
-    ]),
-  ]);
+  // what moves the model: the item (a mirror pair's placements share it)
+  const key = JSON.stringify(placement.item);
   let run = cache.get(key);
   if (!run) {
-    const fed = withAmps(item.stack.stack, item.stack.speakers, placement, design.space.amps);
-    const response = stackResponse(fed.stack, fed.speakers);
-    run = { response, limits: stackLimits(fed.stack, response) };
+    const { stack, speakers } = item.stack;
+    const response = stackResponse(stack, speakers);
+    run = { response, limits: stackLimits(stack, response) };
     cache.set(key, run);
   }
   const { response, limits } = run;
@@ -311,11 +250,6 @@ export function spaceModel(design: SpaceDesign): SpaceModel {
     feeds: list,
     headroomDb: rooms.length ? Math.min(...rooms) : 0,
     missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
-    unassigned: placements.some(
-      ({ item }) =>
-        item.stack !== null &&
-        !allBandsOnChannels(item.stack.stack, item.stack.speakers, item.placement),
-    ),
   };
 }
 

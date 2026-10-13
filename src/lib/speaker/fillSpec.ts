@@ -14,7 +14,6 @@ import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
   FILL_PANEL,
-  FRONT_END_KIND,
   PORT_SHAPE,
   SPACE_ITEM,
   SPEAKER_BAND,
@@ -27,7 +26,6 @@ import {
   FLUSH_BOX,
   flushBracing,
   NO_FILTERS,
-  channelCounter,
   homeVenue,
   lrFilter,
   spacePlacement,
@@ -111,24 +109,17 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
 
 /**
  * The fill read in: the speaker, a stack of one with the highpass to the subs as its crossover (in a DSP), and the space:
- * one placement on one amp channel. The Fills page places nothing, so it stands at the origin.
+ * one placement. The Fills page places nothing, so it stands at the origin.
  */
 export function layersFromFill(state: FillDesignState, design: SpecIdentity): DesignLayers {
   const speaker = speakerFromFill(state, speakerIdentity(design, SPEAKER_PART.speaker));
-  const channel = channelCounter();
   const crossover = { highpass: lrFilter(state.highpassHz, state.highpassOrder), lowpass: null };
   return {
     speakers: [speaker],
     stack: { ...design, members: [stackMember(speaker.id, crossover)], notes: "" },
     space: {
       ...design,
-      placements: [
-        spacePlacement({ x: 0, y: 0 }, { kind: SPACE_ITEM.stack, id: design.id }, 0, [
-          channel(SPEAKER_BAND.low, [SPEAKER_BAND.low, SPEAKER_BAND.high]),
-        ]),
-      ],
-      amps: [{ id: SPEAKER_BAND.low, model: null, watts: state.ampWatts }],
-      frontEnd: { kind: FRONT_END_KIND.digital, dspId: null },
+      placements: [spacePlacement({ x: 0, y: 0 }, { kind: SPACE_ITEM.stack, id: design.id }, 0)],
       // a seated listener in a living room, in front of it
       venue: homeVenue(0, { x: 0, y: SPACE_HOME_ROOM.lengthFt / 2 }, SEATED_EAR_FT),
     },
