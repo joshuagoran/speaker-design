@@ -10,6 +10,7 @@ import { byId } from "../../lib/tables";
 import { entriesOf } from "../../lib/records";
 import { SET_BY, SET_BY_NAMES } from "../../constants/speakerPage";
 import { AUTO_DELAY } from "../../constants/speakerSpec";
+import { STACK_STEPS } from "../../constants/speakerSteps";
 import { STACK_TEXT } from "../../constants/stack";
 import { SPACE_PITCH_DEG } from "../../constants/space";
 import { FIELD_ROW, shownIn } from "../speaker/speakerFields";
@@ -89,7 +90,7 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
       <NumberField
         label={STACK_TEXT.level}
         value={Math.round(member.levelDb * 10) / 10}
-        step={0.5}
+        step={STACK_STEPS.levelDb}
         unit="dB"
         onChange={(levelDb) => onEdit((m) => ({ ...m, levelDb }))}
       />
@@ -115,7 +116,7 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
           label={STACK_TEXT.delay}
           value={member.delayMs === AUTO_DELAY ? 0 : member.delayMs}
           min={0}
-          step={0.1}
+          step={STACK_STEPS.delayMs}
           unit="ms"
           onChange={(ms) => onEdit((m) => ({ ...m, delayMs: ms }))}
         />

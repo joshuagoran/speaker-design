@@ -149,3 +149,21 @@ export function heldLocks(
   const { drivers: _drivers, horns: _horns, ...rest } = held.locks;
   return pruneKept(held.layout === now.layout ? held.locks : rest, items);
 }
+
+/**
+ * The held locks as they stand on the spec now: the same object while nothing changed, else new ones with the locks that
+ * still hold (`heldLocks`). The page keeps the result, so a lock that stopped holding stays dropped: a driver added back
+ * later must not bring it back onto another driver.
+ */
+export function reconcileHeld(
+  held: HeldLocks,
+  now: Pick<HeldLocks, "round" | "layout">,
+  items: readonly KeepItem[],
+): HeldLocks {
+  const locks = heldLocks(held, now, items);
+  return held.round === now.round &&
+    held.layout === now.layout &&
+    JSON.stringify(held.locks) === JSON.stringify(locks)
+    ? held
+    : { ...now, locks };
+}

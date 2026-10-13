@@ -3,6 +3,8 @@ import { ToggleButton } from "../ui/ToggleButton";
 /** A near miss's option: what the button says, and the limits it changes. */
 interface Option<S> {
   text: string;
+  /** the new value, in the button's title (none: no title) */
+  tip?: string;
   set: S;
 }
 
@@ -20,7 +22,7 @@ export function LooseLimits<S>({ options, onPick, lead }: Props<S>) {
     <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs text-stone-500">
       {lead}
       {options.map((o) => (
-        <ToggleButton key={o.text} on={false} onClick={() => onPick(o.set)}>
+        <ToggleButton key={o.text} on={false} title={o.tip} onClick={() => onPick(o.set)}>
           {o.text}
         </ToggleButton>
       ))}

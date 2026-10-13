@@ -94,6 +94,9 @@ export const CHANGE_NAMES = {
   coaxial: "coaxial",
   horn: "horn",
   bandLevels: "band levels",
+  boxCrossovers: "box crossovers",
+  boxLevels: "box levels",
+  delays: "delays",
 } as const;
 
 /** How the notice starts when the first card only comes closest and misses a level or F3 the goals keep. */

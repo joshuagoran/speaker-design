@@ -131,7 +131,7 @@ export const SPACE_TEXT = {
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
   pitch: "Pitch, °",
   pitchTip:
-    "Its tilt, + up. A stack member's tilt and a box's kick-back add to it (set those on the Stack and Speaker pages).",
+    "Its tilt, + up. A box's tilt in the stack and its cabinet's kick-back add to it (set those on the Stack and Speaker pages).",
   mirror: "Mirror image",
   level: "Level, dB",
   delay: "Delay, ms",
@@ -206,5 +206,5 @@ export const SPACE_TEXT = {
     `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
   listenerVs: "The listener against the target:",
   modelNote:
-    "Each placement plays its stack's response (each member's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
+    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
 } as const;

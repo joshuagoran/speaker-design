@@ -29,20 +29,31 @@ import { keepsFrom, SPEAKER_GOAL_KEEPS } from "../../optimizer/goalKeeps";
 import { keepGap, outOfReachNotice, type Keep } from "../../optimizer/shortfall";
 import { throttledProgress } from "../../optimizer/progress";
 import { keysOf } from "../../records";
+import {
+  ALT_LEVEL_DB,
+  BEATS,
+  OBJECTIVE,
+  SAME_LEVEL_DB,
+  SAME_VOLUME,
+  altAxesOf,
+  checkCards,
+  firstCardRole,
+  nothingBeatsText,
+  type Metric,
+} from "./goals";
 import { CARD_LABELS, CARD_WHY } from "../../../constants/optimizerText";
 import {
   SPEAKER_ALT_TEXT,
   SPEAKER_FIX_WHY,
   SPEAKER_GOAL,
-  SPEAKER_GOAL_ALSO,
-  SPEAKER_GOAL_MISSING,
+  LOOSEN,
   SPEAKER_GOAL_TEXT,
-  SPEAKER_GOAL_THAN,
   SPEAKER_NEAR_MISS_TEXT,
   SPEAKER_NO_GOAL,
   SPEAKER_PROBLEM_TEXT,
   SPEAKER_REACH_WORDS,
   SPEAKER_UNMODELED,
+  TARGET_STEP_DB,
 } from "../../../constants/speakerOptimizer";
 import {
   evaluateSpeaker,
@@ -50,7 +61,7 @@ import {
   problemsOf,
   withAmps,
   SIZE_SLACK_IN,
-  type SizeCaps,
+  capsOf,
   type SpeakerEval,
 } from "./evaluate";
 import {
@@ -78,15 +89,6 @@ const FINALISTS = { cards: 8, outside: 2, looser: 3, closest: 5, single: 1, cap:
 /** While no first card is found, this many more designs by the estimate are built, up to BATCHES times. */
 const BATCH = 12;
 const BATCHES = 2;
-/** The near miss loosens the weight and the budget by this share, and the target by TARGET_STEP_DB. */
-const LOOSEN = 0.1;
-const TARGET_STEP_DB = 1;
-/** A target within this of your design's level is your level, dB: the first card's heading says "Same level". */
-const SAME_LEVEL_DB = 0.05;
-/** Alternatives stay within this of the target level, dB (as the PA optimizer's). */
-const ALT_LEVEL_DB = 1.5;
-/** Two designs whose volumes differ less than this share are the same box, unless a part differs. */
-const SAME_VOLUME = 0.15;
 /** How far an option's estimate may miss a goal's keep and still be kept for the combine step (the screen's error). */
 const SCREEN_SLACK = 0.3;
 /** The options closest to every goal each unit keeps besides (for the near miss). */
@@ -94,64 +96,7 @@ const CLOSEST_PER_UNIT = 2;
 /** The combine step's most combinations; past it each unit keeps fewer options. */
 const COMBO_CAP = 40_000;
 /** How much the full trim leaves under the level the top power reaches, dB (the trim's step). */
-const FULL_TRIM_DB = 0.05;
-/** The share a smaller box must save, and the weight a lighter one must: 5% of yours, 1 to 3 lb. */
-const SMALLER_SHARE = 0.05;
-const LIGHTER_LB = { share: 0.05, min: 1, max: 3 };
-
-/** A design's numbers as the goals compare them: no level is −∞, no F3 +∞. */
-interface Metric {
-  price: number;
-  /** the parts with no price (`SpeakerEval.unpriced`): two prices compare only when these are the same */
-  unpriced: string;
-  lb: number;
-  volumeL: number;
-  musicDb: number;
-  f3: number;
-  /** what it changes (parts, box size, vents), its warnings, its amps' total power */
-  ch: number;
-  w: number;
-  ampW: number;
-}
-
-/** Each goal's objective: lower is better; warnings and changes nudge, as on the PA page. */
-const OBJECTIVE: Record<SpeakerGoal, (x: Metric) => number> = {
-  cheaper: (x) => 1e6 * x.w + x.price + 1e-6 * x.lb + 1e-8 * x.ch,
-  lighter: (x) => x.lb + 0.5 * x.ch + 2 * x.w,
-  smaller: (x) => x.volumeL * (1 + 0.005 * x.ch + 0.02 * x.w),
-  lower: (x) => x.f3 + 0.1 * x.ch + 0.7 * x.w,
-  louder: (x) => -x.musicDb + 0.05 * x.ch + 0.5 * x.w,
-};
-
-/** Design `a` beats `b` on a goal by a margin that matters (a price with a missing part can't be compared). */
-const BEATS: Record<SpeakerGoal, (a: Metric, b: Metric) => boolean> = {
-  cheaper: (a, b) => a.price < b.price && unpricedWithin(a.unpriced, b.unpriced),
-  lighter: (a, b) =>
-    a.lb <= b.lb - Math.min(LIGHTER_LB.max, Math.max(LIGHTER_LB.min, LIGHTER_LB.share * b.lb)),
-  smaller: (a, b) => a.volumeL <= b.volumeL * (1 - SMALLER_SHARE),
-  lower: (a, b) => a.f3 <= b.f3 - 2,
-  louder: (a, b) => a.musicDb >= b.musicDb + 1,
-};
-
-/**
- * Whether design `a`'s unpriced parts are all `b`'s too: then `a`'s known total under `b`'s means it is cheaper (each
- * total leaves out only its unpriced parts, and `b` leaves out at least as much).
- */
-function unpricedWithin(a: string, b: string): boolean {
-  if (!a) return true;
-  const of = new Set(b.split("|"));
-  return a.split("|").every((m) => of.has(m));
-}
-
-/** The alternatives' order after the first goal (then every goal), as the PA optimizer's. */
-const ALT_ORDER: Record<SpeakerGoal, SpeakerGoal[]> = {
-  cheaper: ["lighter", "smaller", "louder"],
-  lighter: ["cheaper", "smaller", "louder"],
-  smaller: ["lighter", "cheaper", "louder"],
-  lower: ["louder", "cheaper"],
-  louder: ["cheaper", "lighter"],
-};
-
+export const FULL_TRIM_DB = 0.05;
 /** A built design in the pool: its full evaluation, what it changes, and its key. */
 interface PoolEntry {
   ev: SpeakerEval;
@@ -186,15 +131,18 @@ const metricOf = (
   ampW,
 });
 
-const totalAmpW = (spec: SpeakerSpec) => spec.bands.reduce((sum, b) => sum + b.ampW, 0);
+/** The bands' amp power in total, W. */
+export const totalAmpW = (spec: Pick<SpeakerSpec, "bands">) =>
+  spec.bands.reduce((sum, b) => sum + b.ampW, 0);
 
-const partsKey = (spec: SpeakerSpec) =>
+/** A design's parts (each driver and its horn), to tell designs apart. */
+export const partsKey = (spec: SpeakerSpec) =>
   spec.cabinet.chambers
     .map((c) => c.drivers.map((d) => `${d.driverId}/${d.horn?.hornId ?? ""}`).join(","))
     .join(";");
 
 /** A design's identity: what the search may change in it. */
-const specKey = (spec: SpeakerSpec) =>
+export const specKey = (spec: SpeakerSpec) =>
   JSON.stringify([
     spec.cabinet.chambers.map((c) => [
       c.at,
@@ -229,31 +177,40 @@ function emptyResult(
   };
 }
 
-/** The box's size caps from the size locks: your size, as a most on a "max" axis and exactly on an "exact" one. */
-const capsOf = (
-  outer: SpeakerOptimizerMetrics["sizeIn"],
-  size: SpeakerOptimizerLocks["size"] = {},
-): SizeCaps =>
-  Object.fromEntries(
-    (["w", "h", "d"] as const).flatMap((k) =>
-      size[k] === "max" || size[k] === "exact"
-        ? [[k, { in: outer[k], exact: size[k] === "exact" }]]
-        : [],
-    ),
-  );
+/**
+ * What the search leaves besides its result: your design's run, every design it built and ran in full (on the field
+ * steps), each band's top amp power and the amp groups it trims. The Stack optimizer combines these.
+ */
+export interface SpeakerSearch {
+  result: SpeakerOptimizerResult;
+  start: SpeakerEval;
+  pool: SpeakerEval[];
+  amps: ReadonlyMap<BandId, number>;
+  groups: readonly BandId[][];
+}
 
 /**
  * The search. `catalog` names the candidate parts (default: the app catalog); `onProgress` hears how far it has got
  * (screen runs, then the finalists' builds).
  */
-export function optimizeSpeaker(
+export const optimizeSpeaker = (
+  spec: SpeakerSpec,
+  goals: readonly SpeakerGoal[],
+  limits: SpeakerOptimizerLimits,
+  locks: SpeakerOptimizerLocks = {},
+  catalog: SpeakerOptimizerCatalog = SPEAKER_OPTIMIZER_CATALOG,
+  onProgress?: OptimizerProgressCallback,
+): SpeakerOptimizerResult => searchSpeaker(spec, goals, limits, locks, catalog, onProgress).result;
+
+/** The search, with what it leaves besides its result (`SpeakerSearch`). */
+export function searchSpeaker(
   spec: SpeakerSpec,
   goalsIn: readonly SpeakerGoal[],
   limits: SpeakerOptimizerLimits,
   locks: SpeakerOptimizerLocks = {},
   catalog: SpeakerOptimizerCatalog = SPEAKER_OPTIMIZER_CATALOG,
   onProgress?: OptimizerProgressCallback,
-): SpeakerOptimizerResult {
+): SpeakerSearch {
   const t0 = Date.now();
   const goals = goalsIn.filter((g, i, a) => keysOf(SPEAKER_GOAL).includes(g) && a.indexOf(g) === i);
   const start = evaluateSpeaker(spec);
@@ -262,9 +219,15 @@ export function optimizeSpeaker(
   const problemText = (ev: SpeakerEval, L: Pick<SpeakerOptimizerLimits, "budget" | "maxLb">) =>
     problemsOf(ev, start, L, caps).map((p) => SPEAKER_PROBLEM_TEXT[p]);
   const curProblems = problemText(start, limits);
-  if (!goals.length) return emptyResult(goals, limits, start, curProblems, SPEAKER_NO_GOAL, t0);
-  if (start.metrics.musicDb === null)
-    return emptyResult(goals, limits, start, curProblems, SPEAKER_UNMODELED, t0);
+  const empty = (goalMissing: string): SpeakerSearch => ({
+    result: emptyResult(goals, limits, start, curProblems, goalMissing, t0),
+    start,
+    pool: [],
+    amps: new Map(),
+    groups: [],
+  });
+  if (!goals.length) return empty(SPEAKER_NO_GOAL);
+  if (start.metrics.musicDb === null) return empty(SPEAKER_UNMODELED);
   const goal = goals[0],
     also = goals.slice(1);
   const target = limits.targetDb;
@@ -493,13 +456,15 @@ export function optimizeSpeaker(
     (L.maxLb === null || m.lb <= L.maxLb + 1e-9);
   const looser: {
     text: string;
+    tip: string;
     set: Partial<SpeakerOptimizerLimits>;
     L: SpeakerOptimizerLimits;
   }[] = [
     ...(limits.maxLb !== null
       ? [
           {
-            text: SPEAKER_NEAR_MISS_TEXT.weight(Math.ceil(limits.maxLb * (1 + LOOSEN))),
+            text: SPEAKER_NEAR_MISS_TEXT.weight,
+            tip: SPEAKER_NEAR_MISS_TEXT.weightTip(Math.ceil(limits.maxLb * (1 + LOOSEN))),
             set: { maxLb: Math.ceil(limits.maxLb * (1 + LOOSEN)) },
           },
         ]
@@ -507,14 +472,18 @@ export function optimizeSpeaker(
     ...(limits.budget !== null
       ? [
           {
-            text: SPEAKER_NEAR_MISS_TEXT.budget(Math.ceil(limits.budget * LOOSEN)),
+            text: SPEAKER_NEAR_MISS_TEXT.budget,
+            tip: SPEAKER_NEAR_MISS_TEXT.budgetTip(
+              limits.budget + Math.ceil(limits.budget * LOOSEN),
+            ),
             set: { budget: limits.budget + Math.ceil(limits.budget * LOOSEN) },
           },
         ]
       : []),
     {
       // a whole dB, at least TARGET_STEP_DB under the target (which may be your design's level, unrounded)
-      text: SPEAKER_NEAR_MISS_TEXT.target(Math.floor(target - TARGET_STEP_DB + 1e-9)),
+      text: SPEAKER_NEAR_MISS_TEXT.target,
+      tip: SPEAKER_NEAR_MISS_TEXT.targetTip(Math.floor(target - TARGET_STEP_DB + 1e-9)),
       set: { targetDb: Math.floor(target - TARGET_STEP_DB + 1e-9) },
     },
   ].map((o) => ({ ...o, L: { ...limits, ...o.set } }));
@@ -623,19 +592,8 @@ export function optimizeSpeaker(
     problemsOf(p.ev, start, L, caps).length === 0;
   // "Same level, ..." only when the target is your level; else the heading names the target
   const sameLevel = Math.abs(target - start.metrics.musicDb) <= SAME_LEVEL_DB;
-  const goalLabel = also.length
-    ? goals.map((g, i) => (i ? SPEAKER_GOAL_THAN[g] : SPEAKER_GOAL_TEXT[g].short)).join(" + ")
-    : sameLevel
-      ? SPEAKER_GOAL_TEXT[goal].name
-      : SPEAKER_GOAL_TEXT[goal].atTarget;
-  const goalWhy = also.length
-    ? `${SPEAKER_GOAL_TEXT[goal].why.replace(/\.$/, "")}, and ${also.map((g) => SPEAKER_GOAL_ALSO[g]).join(" and ")} than your design.`
-    : SPEAKER_GOAL_TEXT[goal].why;
-  const altAxes = [
-    ...(also.length ? goals : []),
-    ...ALT_ORDER[goal],
-    ...keysOf(SPEAKER_GOAL),
-  ].filter((a, i, arr) => arr.indexOf(a) === i && (also.length > 0 || a !== goal));
+  const first = firstCardRole(goals, sameLevel, SPEAKER_GOAL_TEXT);
+  const altAxes = altAxesOf(goals);
   const volumeOf = (p: PoolEntry) => p.ev.metrics.volumeL;
   const differs = (p: PoolEntry, chosen: readonly PoolEntry[]) =>
     chosen.every(
@@ -662,7 +620,7 @@ export function optimizeSpeaker(
       altAxes,
       altFilter: (_g, p) => metric(p).musicDb >= L.targetDb - ALT_LEVEL_DB,
       labels: {
-        first: { label: goalLabel, why: goalWhy },
+        first,
         fix: { label: CARD_LABELS.fix, why: SPEAKER_FIX_WHY[goal] },
         closest: { label: CARD_LABELS.closest, why: CARD_WHY.closest },
         alt: (g) => SPEAKER_ALT_TEXT[g],
@@ -750,7 +708,7 @@ export function optimizeSpeaker(
           ]
       : [SPEAKER_NEAR_MISS_TEXT.none];
     nearMiss = {
-      options: worked.map(({ text, set }) => ({ text, set })),
+      options: worked.map(({ text, tip, set }) => ({ text, tip, set })),
       closest: nearest
         ? cardOf({ p: nearest, label: CARD_LABELS.nearMiss, why: "", slot: { kind: "closest" } })
         : null,
@@ -768,12 +726,10 @@ export function optimizeSpeaker(
           SPEAKER_REACH_WORDS,
         )
       : nothingBeats
-        ? also.length
-          ? `Nothing ${goals.map((g) => SPEAKER_GOAL_THAN[g]).join(" and ")} than your design passes the checks.`
-          : SPEAKER_GOAL_MISSING[goal]
+        ? nothingBeatsText(goals)
         : null;
   report(total, total, true);
-  return {
+  const result: SpeakerOptimizerResult = {
     goals,
     target,
     current: { metrics: start.metrics, problems: curProblems, maxCurve: maxCurveOf(start.limits) },
@@ -788,6 +744,7 @@ export function optimizeSpeaker(
       ms: Date.now() - t0,
     },
   };
+  return { result, start, pool: pool.map((p) => p.ev), amps, groups };
 }
 
 /** A choice's identity: each unit's option and the shape. */
@@ -816,43 +773,6 @@ function deltaOf(m: SpeakerOptimizerMetrics, cur: SpeakerOptimizerMetrics) {
     musicDb: m.musicDb !== null && cur.musicDb !== null ? m.musicDb - cur.musicDb : null,
     f3: m.f3 !== null && cur.f3 !== null ? m.f3 - cur.f3 : null,
   };
-}
-
-/** What the last check reads. */
-interface CardChecks<P> {
-  meets: (p: P) => boolean;
-  beatsCurrent: (g: SpeakerGoal, p: P) => boolean;
-  beats: (g: SpeakerGoal, a: P, b: P) => boolean;
-  passes: (p: P) => boolean;
-  goals: readonly SpeakerGoal[];
-}
-
-/**
- * The cards that keep their slot's promises on their own design: every card passes the checks and the limits; the
- * first keeps the goals and beats your design on each; the smallest change does too; an alternative beats your design
- * and the first card on its goal. The ones that don't are dropped and counted.
- */
-export function checkCards<P>(
-  cards: readonly SelectedCard<P, SpeakerGoal>[],
-  c: CardChecks<P>,
-): { kept: SelectedCard<P, SpeakerGoal>[]; dropped: number } {
-  const first = cards.find((k) => k.slot.kind === "first");
-  const kept = cards.filter((k) => {
-    if (!c.passes(k.p)) return false;
-    const beatsAll = c.goals.every((g) => c.beatsCurrent(g, k.p));
-    switch (k.slot.kind) {
-      case "first":
-      case "smallest":
-        return c.meets(k.p) && beatsAll;
-      case "fix":
-        return c.meets(k.p);
-      case "closest":
-        return true;
-      case "alt":
-        return c.beatsCurrent(k.slot.axis, k.p) && (!first || c.beats(k.slot.axis, k.p, first.p));
-    }
-  });
-  return { kept, dropped: cards.length - kept.length };
 }
 
 /** The search on the worker's input: what the page posts (`SpeakerOptimizerInput`). */

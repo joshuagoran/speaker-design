@@ -7,6 +7,7 @@ import type {
   FrequencyPoint,
   SpeakerLimits,
   SpeakerOptimizerLimits,
+  SpeakerOptimizerLocks,
   SpeakerOptimizerMetrics,
   SpeakerResponse,
   SpeakerSpec,
@@ -231,6 +232,19 @@ export function withAmps(ev: SpeakerEval, spec: SpeakerSpec): SpeakerEval {
  */
 export type SizeCaps = Partial<Record<keyof Dims3, { in: number; exact: boolean }>>;
 
+/** The box's size caps from the size locks: your size, as a most on a "max" axis and exactly on an "exact" one. */
+export const capsOf = (
+  outer: SpeakerOptimizerMetrics["sizeIn"],
+  size: SpeakerOptimizerLocks["size"] = {},
+): SizeCaps =>
+  Object.fromEntries(
+    (["w", "h", "d"] as const).flatMap((k) =>
+      size[k] === "max" || size[k] === "exact"
+        ? [[k, { in: outer[k], exact: size[k] === "exact" }]]
+        : [],
+    ),
+  );
+
 /** Whether an outer size holds the size locks: within SIZE_SLACK_IN of an exact axis, no larger than a max one. */
 export const holdsSizeCaps = (sizeIn: Dims3, caps: SizeCaps): boolean =>
   (["w", "h", "d"] as const).every((k) => {
@@ -271,8 +285,11 @@ export function problemsOf(
   return out;
 }
 
-/** The maximum output with one input as a card's chart takes it: [Hz, dB] points, every CURVE_EVERY of the grid. */
-export const maxCurveOf = (limits: SpeakerLimits): [number, number][] =>
+/**
+ * The maximum output with one input as a card's chart takes it (a speaker's or a stack's): [Hz, dB] points, every
+ * CURVE_EVERY of the grid.
+ */
+export const maxCurveOf = (limits: { sum: readonly FrequencyPoint[] }): [number, number][] =>
   limits.sum
     .filter((_, i) => i % CURVE_EVERY === 0)
     .map((o): [number, number] => [Math.round(o.f), Math.round(o.spl * 10) / 10]);

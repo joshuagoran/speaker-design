@@ -131,11 +131,23 @@ export const SPEAKER_PROBLEM_TEXT = {
   size: "the box is larger than the size limit",
 } as const;
 
-/** The near miss's options: a limit loosened so a card fits. */
+/** The near miss loosens the weight, the budget (and the stack's height) by this share, and the target by TARGET_STEP_DB. */
+export const LOOSEN = 0.1;
+export const TARGET_STEP_DB = 1;
+/** LOOSEN as the buttons say it, in percent. */
+export const LOOSEN_PERCENT = Math.round(LOOSEN * 100);
+
+/**
+ * The near miss's options: a limit loosened so a card fits. Each button says the change; its tip (`*Tip`) says the new
+ * value.
+ */
 export const SPEAKER_NEAR_MISS_TEXT = {
-  weight: (lb: number) => `Allow ${lb} lb`,
-  budget: (dollars: number) => `Budget +$${dollars}`,
-  target: (db: number) => `Target ${db} dB`,
+  weight: `Raise weight limit by ${LOOSEN_PERCENT}%`,
+  weightTip: (lb: number) => `New limit: ${lb} lb`,
+  budget: `Raise budget by ${LOOSEN_PERCENT}%`,
+  budgetTip: (dollars: number) => `New budget: $${dollars}`,
+  target: `Lower target by ${TARGET_STEP_DB} dB`,
+  targetTip: (db: number) => `New target: ${db} dB`,
   short: (db: string, target: string) =>
     `the closest design plays ${db} dB at 1 m, short of the ${target} dB target`,
   none: "no design fits these limits and locks",

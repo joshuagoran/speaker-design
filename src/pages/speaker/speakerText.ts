@@ -2,6 +2,7 @@
 import type {
   BandFilter,
   SpeakerNearMiss,
+  SpeakerOptimizerMetrics,
   BoxBracing,
   SpeakerBand,
   SpeakerChamber,
@@ -108,22 +109,38 @@ export function driverSummary(cabinet: Pick<SpeakerSpec["cabinet"], "chambers">)
 }
 
 /**
- * The near miss's closest design in a sentence: its drivers, weight, price and level at 1 m; your own design is named
- * as such ("Closest: your design (...)."). Empty when there is none. Ends in a space.
+ * The facts the near miss names of its closest design: the weight (`weight`, default its total), the price and the
+ * level at 1 m (none for a level that isn't modeled).
+ */
+export const nearMissFacts = (
+  m: Pick<SpeakerOptimizerMetrics, "lb" | "price" | "pricePartial" | "musicDb">,
+  weight = `${m.lb.toFixed(0)} lb`,
+): string[] => [
+  weight,
+  `${formatDollars(m.price)}${m.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
+  ...(m.musicDb === null ? [] : [`${m.musicDb.toFixed(1)} dB at 1 m`]),
+];
+
+/**
+ * The near miss's closest design in a sentence, from its facts; your own design is named as such ("Closest: your design
+ * (...)."). Ends in a space.
+ */
+export const nearMissSentence = (facts: readonly string[], closestIsYours: boolean): string => {
+  const text = facts.join(", ");
+  return `${CARD_LABELS.nearMiss}: ${closestIsYours ? `${NEAR_MISS_YOURS} (${text})` : text}. `;
+};
+
+/**
+ * The Speaker near miss's closest design in a sentence: its drivers, weight, price and level at 1 m. Empty when there is
+ * none.
  */
 export function speakerNearMissText({
   closest,
   closestIsYours,
 }: Pick<SpeakerNearMiss, "closest" | "closestIsYours">): string {
   if (!closest) return "";
-  const m = closest.metrics;
-  const facts = [
-    driverSummary(closest.spec.cabinet),
-    `${m.lb.toFixed(0)} lb`,
-    `${formatDollars(m.price)}${m.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
-    m.musicDb === null ? null : `${m.musicDb.toFixed(1)} dB at 1 m`,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  return `${CARD_LABELS.nearMiss}: ${closestIsYours ? `${NEAR_MISS_YOURS} (${facts})` : facts}. `;
+  return nearMissSentence(
+    [driverSummary(closest.spec.cabinet), ...nearMissFacts(closest.metrics)],
+    closestIsYours,
+  );
 }

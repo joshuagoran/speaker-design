@@ -54,6 +54,8 @@ import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
 import { stackKeepUpChips } from "./stackChips";
 import { stackSummary } from "./stackSummary";
+import { StackOptimizerResults } from "./StackOptimizerResults";
+import { StackOptimizerSettings, stackOptimizerSummary } from "./StackOptimizerSettings";
 import { SummaryStrip } from "../../components/ui/SummaryStrip";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
@@ -93,7 +95,7 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  */
 export function StackPage({ stack, speakerPage, planner }: Props) {
   const pal = usePalette();
-  const { design, response, limits, totals, store, snapshot, restore } = stack;
+  const { design, response, limits, totals, optimizer, store, snapshot, restore } = stack;
   const { members, name, notes } = design.stack;
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   /** the library's speakers, as the picker lists them */
@@ -135,12 +137,13 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
     stack.setDesign({ stack: started, speakers });
   };
   const summaries: Record<StackSettingsSection, string> = {
-    stack: `${name} · ${members.length} member${members.length === 1 ? "" : "s"}`,
+    stack: `${name} · ${members.length} box${members.length === 1 ? "" : "es"}`,
     members: names.join(" · ") || STACK_TEXT.noMembers,
     crossovers:
       members
         .map((m, k) => `${k + 1}. ${inputText(m.crossover) ?? STACK_TEXT.fullRange}`)
         .join(" · ") || STACK_TEXT.noMembers,
+    optimizer: stackOptimizerSummary(optimizer),
   };
   const section = (id: StackSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -197,6 +200,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             manage
           />
           {summary && <SummaryStrip items={summary} />}
+          <StackOptimizerResults optimizer={optimizer} />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{STACK_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
@@ -449,6 +453,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
               )}
             </>,
           )}
+          {section("optimizer", <StackOptimizerSettings optimizer={optimizer} names={names} />)}
         </SettingsColumn>
       }
     />

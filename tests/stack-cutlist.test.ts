@@ -73,6 +73,6 @@ describe("Stack cutlist: the PA presets cut as the PA page cuts them", () => {
         // each member's boxes named and tagged apart
         const boxes = [...new Set(ours.map((p) => p.box))];
         expect(new Set(boxes.map(cutBoxTag)).size).toBe(boxes.length);
-        expect(boxes.map(cutBoxName)).toEqual(boxes.map((_, k) => `Member ${k + 1}, chamber 1`));
+        expect(boxes.map(cutBoxName)).toEqual(boxes.map((_, k) => `Box ${k + 1}, chamber 1`));
       });
 });

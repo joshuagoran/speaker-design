@@ -39,7 +39,7 @@ export const AUTO_BALANCE_TEXT = {
   paMusicTip: (subStepDb: number, stepDb: number, subMaxHz: number) =>
     `Sets the band levels for PA music. At each crossover, the higher band goes below the lower band: ${subStepDb} dB at ${subMaxHz} Hz or less, ${stepDb} dB above. The highest level is 0 dB.`,
   /** what the Stack page's tooltip adds */
-  stackTip: "Each member level goes to 0 dB.",
+  stackTip: "Each box level goes to 0 dB.",
   oneBand: "Auto balance needs two or more bands that play.",
   /** the bands that stop it: bands a driver feeds that the model cannot calculate */
   unmodeled: (names: readonly string[]) =>
@@ -48,11 +48,11 @@ export const AUTO_BALANCE_TEXT = {
   outOfRange: (minHz: number, maxHz: number) =>
     `Auto balance did not change the levels. A crossover is out of the range of the model: ${minHz} Hz to ${maxHz} Hz.`,
   /**
-   * members that use the same speaker with different crossovers, numbered from 1: auto balance takes the first
-   * member's crossover (lib/speaker/autoBalance `sharedCrossovers`)
+   * boxes that use the same speaker with different crossovers, numbered from 1: auto balance takes the first
+   * box's crossover (lib/speaker/autoBalance `sharedCrossovers`)
    */
-  sharedCrossover: (members: readonly number[]) =>
-    `Members ${members.slice(0, -1).join(", ")} and ${members[members.length - 1]} use the same speaker with different crossovers. Auto balance uses the crossover of member ${members[0]}.`,
-  /** a band of a stack member's speaker, as the notice names it */
+  sharedCrossover: (boxes: readonly number[]) =>
+    `Boxes ${boxes.slice(0, -1).join(", ")} and ${boxes[boxes.length - 1]} use the same speaker with different crossovers. Auto balance uses the crossover of box ${boxes[0]}.`,
+  /** a band of a stack box's speaker, as the notice names it */
   memberBand: (speaker: string, band: string) => `${speaker} (${band})`,
 } as const;

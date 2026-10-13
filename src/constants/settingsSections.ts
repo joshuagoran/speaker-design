@@ -45,8 +45,9 @@ export type SpeakerSettingsSection = keyof typeof SPEAKER_SETTINGS_SECTIONS;
 /** The Stack settings column's fold sections, by id, and the name each shows. */
 export const STACK_SETTINGS_SECTIONS = {
   stack: "Stack",
-  members: "Members",
+  members: "Boxes",
   crossovers: "Crossovers",
+  optimizer: "Optimizer",
 } as const;
 export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;
 

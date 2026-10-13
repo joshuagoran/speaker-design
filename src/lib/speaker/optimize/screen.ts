@@ -114,7 +114,7 @@ function xoCombos(
 }
 
 /** The crossover factors a unit tries when its full pass would run past UNIT_RUNS. */
-const THIN_FACTORS: readonly number[] = [0.8, 1, 1.26];
+export const THIN_FACTORS: readonly number[] = [0.8, 1, 1.26];
 /** The tunings a unit tries when its full pass would still run past UNIT_RUNS. */
 const THIN_FB_FACTORS = [0.93, 1, 1.08];
 /** About the most runs a unit's full pass takes: past it, fewer crossovers, then fewer volumes, then fewer tunings. */

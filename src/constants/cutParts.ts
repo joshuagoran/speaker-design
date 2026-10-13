@@ -108,12 +108,12 @@ function memberOf(box: MemberCutBoxId): { n: number; box: SpeakerCutBoxId } {
   };
 }
 
-/** The name the cutlist shows for a box: a named box's, "Chamber 2", or a member's ("Member 2, chamber 1"). */
+/** The name the cutlist shows for a box: a named box's, "Chamber 2", or a stack box's ("Box 2, chamber 1"). */
 export function cutBoxName(box: CutBoxId): string {
   if (isNamedBox(box)) return CUT_BOX_NAMES[box];
   if (isChamberBox(box)) return `Chamber ${chamberIndexOf(box) + 1}`;
   const member = memberOf(box);
-  return `Member ${member.n}, ${cutBoxName(member.box).toLowerCase()}`;
+  return `Box ${member.n}, ${cutBoxName(member.box).toLowerCase()}`;
 }
 /** A box's heading over its rows in the cutlist: a named box's, "Chamber 2", or a member's. */
 export const cutBoxHeading = (box: CutBoxId): string =>

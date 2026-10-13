@@ -25,6 +25,10 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   stale: "The design changed after this search. Run it again.",
   undoLoad: "Undo load",
   curveLabel: "Maximum output with one input, this design against yours",
+  /** a result card's tiles, and the line of what it changes */
+  tile: { weight: "Weight", level: "Level at 1 m", f3: "F3", volume: "Volume" },
+  changes: "Changes",
+  changesNone: "none",
   failing: (problems: string) => `Your design fails: ${problems}. Fixes may cost or weigh more.`,
   groups: {
     drivers: "Drivers",
