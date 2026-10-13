@@ -425,7 +425,7 @@ Each PR stands alone. Lowest risk first.
         5. The PA and Hi-fi pages keep their optimizers until the new optimizers cover their presets.
         6. The goals are cheaper, lighter, smaller, lower and louder, in tap order. The results are cards.
       - **Design: the Speaker optimizer** (option (a); branch `speaker-optimizer`). The engine comes first, with no UI.
-        The UI comes in the next PR.
+        The UI is the Optimizer fold of the Speaker page (below).
         - **Code.** `lib/speaker/optimize/`: pure functions and a worker entry. The page calls
           `runSpeakerOptimizer` (`makeOptimizerRunner`, as the PA and Hi-fi pages do). The engine is
           `optimizeSpeaker(spec, goals, limits, locks, catalog)`; it returns `{ cards, nearMiss }` and the current
@@ -537,6 +537,20 @@ Each PR stands alone. Lowest risk first.
           the PA vent sizes move to `lib/optimizer/searchSpace`. The fit chips move from the Speaker page to
           `lib/speaker/fitChips`; the Hi-fi slot and tube fit is `hifiVentFits` in `speakerBuild`. `speakerResponse`
           takes a point count (the screen's coarse grid). The Speaker page's field steps are `SPEAKER_STEPS`.
+        - **UI** (Speaker page, "Optimizer" fold).
+          - The fold holds the goals (tap order), the target level at 1 m, the budget and weight limits, the Keep list
+            and Find designs with its progress and Cancel. The cards are at the top of the results pane.
+          - The target starts at your design's level (rounded). "Use yours" sets it back.
+          - A limit is "No limit" or a number. Turned on, it starts at your design's price or weight.
+          - Keep: one lock per driver entry, horn, vent, band filter and band amp, and a free / up to (≤) / exact (=)
+            lock per box axis. The locks start over when the chamber list is replaced.
+          - Each card shows the front view, its maximum output against yours (fixed axes), its numbers with the change
+            from your design, its warnings and what changed. Load replaces the spec as one edit. Undo load goes back to
+            the design from before the first load in a row.
+          - The near miss shows its option buttons. A button sets the limit and runs the search again.
+          - Shared with the PA and Hi-fi pages (`components/optimizer`): `GoalPicker`, `KeepDetails`, `RunRow`,
+            `ResultCards`, `Delta`, `LockBarButtons`, `CardFrame`, `CardTile`, `LooseLimits`, `NoFitNotice`. New:
+            `KeepList`, and `LimitField` in `components/ui`.
         - **Tests** (`tests/speaker-optimize.test.ts`): each card beats your design on its label; locks hold; the
           limits hold on the final design; a near miss when nothing passes; the same input gives the same cards;
           a runtime bound. Parity: on the PA tower and Hi-fi 2-way templates, the cards are at least as good as the

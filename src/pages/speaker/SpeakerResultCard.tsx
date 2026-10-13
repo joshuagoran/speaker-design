@@ -12,7 +12,7 @@ import { priceText } from "../../lib/speaker/speakerTotals";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
-import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizer";
+import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { UI_TEXT } from "../../constants/uiText";
 import { bandText, driverSummary } from "./speakerText";
 import type { SpeakerOptimizerCard, SpeakerOptimizerResult } from "../../types";

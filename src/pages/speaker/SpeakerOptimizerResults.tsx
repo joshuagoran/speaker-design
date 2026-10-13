@@ -5,7 +5,7 @@ import { LooseLimits } from "../../components/optimizer/LooseLimits";
 import { NoFitNotice } from "../../components/optimizer/NoFitNotice";
 import { ResultCards } from "../../components/optimizer/ResultCards";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
-import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizer";
+import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { MD_UP, RESULT_MAX_WIDTH } from "../../styles/layout";
 import { SpeakerResultCard } from "./SpeakerResultCard";
 import { speakerNearMissText } from "./speakerText";

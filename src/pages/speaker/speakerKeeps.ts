@@ -5,7 +5,7 @@ import { driverRef } from "../../lib/speaker/optimize/space";
 import { hornById } from "../../lib/data";
 import { toggled } from "../../lib/lists";
 import { VENT_KIND } from "../../constants/speakerSpec";
-import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizer";
+import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { VENT_KIND_NAMES } from "../../constants/speakerPage";
 import { driverName } from "./speakerParts";
 import { filterText } from "./speakerText";

@@ -15,7 +15,8 @@ import {
   SPEAKER_GOAL_KEEPS,
   keepLinesFrom,
 } from "../../lib/optimizer/goalKeeps";
-import { SPEAKER_GOAL_TEXT, SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizer";
+import { SPEAKER_GOAL_TEXT } from "../../constants/speakerOptimizer";
+import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { keysOf } from "../../lib/records";
 import { SIZE_AXES } from "./speakerKeeps";

@@ -10,18 +10,14 @@
 // On the Speaker page (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
+import { GOAL_SHORT_NAMES, PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
 import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds.ts";
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
 import { SPEAKER_START_NAMES, SPEAKER_START_TEXT } from "../src/constants/speakerStarts.ts";
-import {
-  SPEAKER_GOAL,
-  SPEAKER_GOAL_TEXT,
-  SPEAKER_OPTIMIZER_TEXT,
-} from "../src/constants/speakerOptimizer.ts";
+import { SPEAKER_OPTIMIZER_TEXT } from "../src/constants/speakerOptimizerText.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -249,7 +245,7 @@ for (const [width, phone, startName] of [
     await p.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
   }
   // the Optimizer fold: pick a goal, find designs, and wait for the cards (the results block shows its heading)
-  await p.getByRole("button", { name: SPEAKER_GOAL_TEXT[SPEAKER_GOAL.cheaper].short }).click();
+  await p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper }).click();
   await p.getByRole("button", { name: SPEAKER_OPTIMIZER_TEXT.run }).click();
   try {
     await p
