@@ -10,6 +10,7 @@ import { entriesOf } from "../../lib/records";
 import { SPEAKER_TEXT, DRIVE_NAMES } from "../../constants/speakerPage";
 import { FilterFields } from "./FilterFields";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
+import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 
 interface Props {
   band: SpeakerBand;
@@ -52,7 +53,7 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Level</Tooltip>}
         // shown to 0.1 dB (the Hi-fi level match is exact)
         value={Math.round(band.levelDb * 10) / 10}
-        step={0.5}
+        step={SPEAKER_STEPS.levelDb}
         unit="dB"
         onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
         className="mb-4"
@@ -73,7 +74,7 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         }
         value={band.ampW}
         min={1}
-        step={10}
+        step={SPEAKER_STEPS.ampW}
         unit="W"
         onChange={(ampW) => onEdit((b) => ({ ...b, ampW }))}
       />

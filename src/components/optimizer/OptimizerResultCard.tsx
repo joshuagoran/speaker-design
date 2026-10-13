@@ -5,6 +5,8 @@ import { BoxFront } from "../drawings/BoxFront";
 import { formatDollars } from "../../lib/format";
 import { formatThickness } from "../../lib/pa/calc";
 import { Delta } from "./Delta";
+import { CardFrame } from "./CardFrame";
+import { CardTile, CardTiles } from "./CardTile";
 import { STATS } from "./StatRow";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
@@ -12,7 +14,6 @@ import { UI_TEXT } from "../../constants/uiText";
 import { Ellipsis } from "../ui/Ellipsis";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
-import { FONT } from "../../styles/fonts";
 
 interface Props {
   result: PaOptimizerCard;
@@ -44,11 +45,7 @@ export function OptimizerResultCard({
     metrics = result.metrics,
     deltas: Partial<PaMetricsDelta> = result.delta || {};
   const tile = (label: string, v: React.ReactNode, delta: React.ReactNode) => (
-    <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
-      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
-      <div className="tabular-nums">{v}</div>
-      {delta}
-    </div>
+    <CardTile label={label} value={v} delta={delta} />
   );
   const { build } = result,
     { stacks } = build.cutlist;
@@ -68,15 +65,13 @@ export function OptimizerResultCard({
     </span>
   );
   return (
-    <div
-      className={`bg-panel border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}
+    <CardFrame
+      label={result.label}
+      index={index}
+      total={total}
+      previewing={previewing}
+      title={`${result.names.sub} · ${config.cDim.w} × ${config.cDim.h} × ${config.cDim.d}″`}
     >
-      <div className="text-xs uppercase tracking-wider font-bold text-stone-500">
-        {result.label} · {index + 1} of {total}
-      </div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: FONT, fontWeight: 700 }}>
-        {result.names.sub} · {config.cDim.w} × {config.cDim.h} × {config.cDim.d}″
-      </h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         {result.geom && <BoxFront g={result.geom} cur={currentDesign && currentDesign.geom} />}
         {result.curve && (
@@ -87,7 +82,7 @@ export function OptimizerResultCard({
         Mid {result.names.mid} · {result.names.cd} on {result.names.horn} · amps {config.ampW} /{" "}
         {config.mAmpW} / {config.hfAmpW} W
       </div>
-      <div className="grid grid-cols-2 gap-1.5 [&>*:last-child:nth-child(odd)]:col-span-2">
+      <CardTiles>
         {tile(
           "Drivers",
           formatDollars(metrics.price),
@@ -113,7 +108,7 @@ export function OptimizerResultCard({
           `${metrics.f3.toFixed(0)} Hz`,
           <Delta v={deltas.f3} unit=" Hz" lowerIsBetter />,
         )}
-      </div>
+      </CardTiles>
       <div className="text-xs leading-snug">
         <b className="font-semibold">{OPTIMIZER_PANEL_TEXT.limitedBy}</b> {result.limitedBy}
       </div>
@@ -158,6 +153,6 @@ export function OptimizerResultCard({
           Save
         </Button>
       </div>
-    </div>
+    </CardFrame>
   );
 }

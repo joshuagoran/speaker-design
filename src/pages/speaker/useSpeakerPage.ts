@@ -18,6 +18,8 @@ import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { speakerSummary } from "./speakerText";
+import { speakerPrice } from "../../lib/speaker/speakerTotals";
+import { useSpeakerOptimizer } from "./useSpeakerOptimizer";
 import type {
   BandId,
   SavedConfig,
@@ -83,10 +85,12 @@ export function useSpeakerPage() {
    * settings take it with their index as their key, so no settings state carries over to another chamber
    */
   const [chamberRound, setChamberRound] = useState(0);
-  /** the whole spec replaced: every chamber's settings start again */
+  /** the whole spec replaced: every chamber's settings start again, and the optimizer's cards and Undo are dropped */
   const replaceSpec = (next: SpeakerSpec) => {
     setSpec(next);
     setChamberRound((n) => n + 1);
+    // called from an event, after `optimizer` below is set
+    optimizer.clearResults();
   };
   // the model reads only the cabinet, the bands and the input range (a name edit doesn't run it), a step behind the
   // typing: a horn chamber takes tens of ms, so the settings stay responsive
@@ -113,6 +117,15 @@ export function useSpeakerPage() {
   // each chamber's braces, hardware and weight (the response's net air reads the same build)
   const build = useMemo(() => cabinetBuild(cabinet), [cabinet]);
   const store = useConfigStore(SPEAKERS_COLLECTION);
+  // the optimizer reads and loads the whole spec (a card keeps the id and name); its locks start over when the chamber
+  // list is replaced, its cards and Undo when the whole spec is (replaceSpec)
+  const price = useMemo(() => speakerPrice(spec.cabinet), [spec.cabinet]);
+  const optimizer = useSpeakerOptimizer({
+    spec,
+    loadSpec: setSpec,
+    round: chamberRound,
+    current: { musicDb: limits.musicDb, price: price.dollars, lb: build.lb },
+  });
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
     setSpec((s) => ({ ...s, cabinet: edit(s.cabinet) }));
   const editChambers = (edit: (chambers: readonly SpeakerChamber[]) => SpeakerChamber[]) =>
@@ -198,6 +211,8 @@ export function useSpeakerPage() {
         setSpec((s) => withSpeakerLevels(s, now.levels));
     },
     build,
+    price,
+    optimizer,
     store,
     snapshot,
     restore,

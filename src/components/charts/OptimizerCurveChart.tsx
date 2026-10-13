@@ -18,6 +18,8 @@ interface Props {
   /** fixed dB axis: defaults to the maximum-output scale (the PA cards'); the Hi-fi cards pass HIFI_TOP / HIFI_BOT */
   top?: number;
   bot?: number;
+  /** what the chart shows, for screen readers */
+  label?: string;
 }
 
 /** The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded. */
@@ -29,6 +31,7 @@ export function OptimizerCurveChart({
   band = [40, 90],
   top = MAX_OUTPUT_TOP,
   bot = MAX_OUTPUT_BOT,
+  label = "Clean sub output from 20 to 200 Hz, this design against yours",
 }: Props) {
   const pal = usePalette();
   const [hover, setHover] = useState<number | null>(null);
@@ -63,7 +66,7 @@ export function OptimizerCurveChart({
       onPointerMove={move}
       onPointerLeave={() => setHover(null)}
       role="img"
-      aria-label="Clean sub output from 20 to 200 Hz, this design against yours"
+      aria-label={label}
     >
       {band && (
         <rect

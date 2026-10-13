@@ -54,13 +54,11 @@ import {
   KEEP_UP_SLACK_DB,
 } from "./chips";
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
-import { PORT_TUBES } from "../../data/catalog/port-tubes";
 import type {
   ChangeName,
   CutlistSettings,
   Dims3,
   SliderSpec,
-  DimensionLockMode,
   HornChipsInput,
   HornHf,
   MidDriver,
@@ -96,6 +94,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
+import { highpassOptions, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
 import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
@@ -196,13 +195,6 @@ export const MID_BOX_RANGE: Record<keyof Dims3, [number, number]> = {
   h: [PA_SLIDERS.midH.min, PA_SLIDERS.midH.max],
   d: [PA_SLIDERS.midD.min, PA_SLIDERS.midD.max],
 };
-export const rangeOf = (
-  mode: DimensionLockMode | undefined,
-  cur: number,
-  [lo, hi]: [number, number],
-): [number, number] =>
-  mode === "exact" ? [cur, cur] : mode === "max" ? [lo, Math.min(hi, cur)] : [lo, hi];
-
 // Clean music-limit SPL per stack at 1 m (45 Hz) for ~105 dB at the listener: distance, two stacks (+6 dB),
 // room gain. A rule of thumb, shown to the user as such.
 export const ROOMS: Record<PaRoom, { d: number; gain: number; name: string; short: string }> = {
@@ -250,28 +242,6 @@ const ALT_ORDER: Record<PaGoal, PaGoal[]> = {
   louder: ["cheaper", "lighter"],
 };
 
-// Vent sizes per style, smallest area first: the round styles from the port-tube catalog (stock pipe), the rectangular
-// ones (ply ducts, cut to any size) from the search's own grid of slot heights and duct throats.
-// "round1" and "round4" are the one-tube and four-corner-tube layouts (the geometry treats every round style alike, from `nt` and
-// `dia`), so they take the tubes of that count; "round2" tries every tube count, as it always has.
-const tubesOf = (count?: number) =>
-  PORT_TUBES.filter(({ nt }) => count === undefined || nt === count).map(({ nt, dia }) => ({
-    nt,
-    dia,
-  }));
-const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
-  round1: tubesOf(1),
-  round2: tubesOf(),
-  round4: tubesOf(4),
-  slots: [2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map((slotH) => ({ slotH })),
-  vslots: [1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((throat) => ({ throat })),
-  // one side duct: from a 1″ throat, as the pair's, since a narrow throat is what tunes a short box low
-  vslot1: [1, 1.25, 1.5, 2, 2.5, 3, 3.5, 4, 5].map((throat) => ({ throat })),
-};
-/** The vent sizes the search tries for a style, smallest area first. */
-export const ventSizesFor = (style: PortStyle) => VENT_SIZES[style];
-/** Every vent style. */
-export const VENT_STYLES = keysOf(VENT_SIZES);
 /**
  * The vent styles an unlocked vent tries in the quick search: the bottom slots, the side ducts (a pair, and one) and
  * the round tubes of every count ("round2"). The exact search tries every style (VENT_STYLES).
@@ -667,12 +637,6 @@ export const paBraceStyle = (
 /** The bracing style the searches design with: yours, else the default for their plywood (PA_OPTIMIZER_PANEL). */
 export const paSearchBraceStyle = (cur: Pick<PaDesignConfig, "braceStyle">) =>
   savedStackBraceStyle(cur) ?? defaultBraceStyle(PA_OPTIMIZER_PANEL);
-/** The highpasses the search tries for a tuning when the highpass isn't locked: 0.85× and 1× the tuning, 20 Hz at least. */
-export const highpassOptions = (fb: number) => [
-  Math.max(20, Math.round(fb * 0.85)),
-  Math.max(20, Math.round(fb)),
-];
-
 /** Your design as the search reads it. */
 export function paSearchDesign(input: Pick<PaOptimizerInput, "cur">): PaDesignConfig {
   // older saved configs can lack some fields; they fall back to the planner's starting design

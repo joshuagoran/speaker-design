@@ -5,6 +5,8 @@ import { NumberField } from "../ui/NumberField";
 import { Notice } from "../ui/Notice";
 import { nearMissClosestText } from "../../lib/pa/nearMiss";
 import { toggled } from "../../lib/lists";
+import { LooseLimits } from "./LooseLimits";
+import { NoFitNotice } from "./NoFitNotice";
 import { OptimizerResultCard } from "./OptimizerResultCard";
 import { GoalPicker } from "./GoalPicker";
 import { KeepDetails } from "./KeepDetails";
@@ -219,34 +221,19 @@ export function OptimizerPanel({
           res.cards.length > 0 &&
           res.nearMiss &&
           res.nearMiss.options.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs text-stone-500">
-              Reaches the goal with a looser limit:
-              {res.nearMiss.options.map((o) => (
-                <ToggleButton key={o.text} on={false} onClick={() => retry(o.set)}>
-                  {o.text}
-                </ToggleButton>
-              ))}
-            </div>
+            <LooseLimits
+              lead={OPTIMIZER_PANEL_TEXT.looserLimit}
+              options={res.nearMiss.options}
+              onPick={retry}
+            />
           )}
         {res && !busy && !res.cards.length && res.nearMiss && (
-          <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
-            <h3 className="text-base" style={{ fontFamily: FONT, fontWeight: 700 }}>
-              {OPTIMIZER_PANEL_TEXT.noFit}
-            </h3>
-            <div className="text-xs text-orange-900 mt-1">
-              {nearMissClosestText(res.nearMiss)}
-              Blocked by: {res.nearMiss.blocking.join("; ")}.
-            </div>
-            {res.nearMiss.options.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {res.nearMiss.options.map((o) => (
-                  <ToggleButton key={o.text} on={false} onClick={() => retry(o.set)}>
-                    {o.text}
-                  </ToggleButton>
-                ))}
-              </div>
-            )}
-          </div>
+          <NoFitNotice
+            closest={nearMissClosestText(res.nearMiss)}
+            blocking={res.nearMiss.blocking}
+            options={res.nearMiss.options}
+            onPick={retry}
+          />
         )}
         <DriverCompare rows={compareRows} onUse={onSwapDriver} />
       </Card>

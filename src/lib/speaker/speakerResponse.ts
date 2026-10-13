@@ -54,8 +54,28 @@ export const SPEAKER_RESPONSE_FREQUENCIES = logSpacedFrequencies(
   POINTS,
 );
 
-/** The box models' grid options for the same frequencies (their grid is the same log spacing). */
-const GRID = { fmin: FREQ_AXIS_MIN_HZ, fmax: FREQ_AXIS_MAX_HZ, N: POINTS };
+/** A grid of `N` log-spaced points over the charts' axis: its frequencies, and the box models' options for them. */
+interface ResponseGrid {
+  freqs: readonly number[];
+  box: { fmin: number; fmax: number; N: number };
+}
+
+/** The grid of `points` points (the box models' grid is the same log spacing), each worked out once. */
+const GRIDS = new Map<number, ResponseGrid>();
+function gridOf(points: number): ResponseGrid {
+  let grid = GRIDS.get(points);
+  if (!grid) {
+    grid = {
+      freqs:
+        points === POINTS
+          ? SPEAKER_RESPONSE_FREQUENCIES
+          : logSpacedFrequencies(FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ, points),
+      box: { fmin: FREQ_AXIS_MIN_HZ, fmax: FREQ_AXIS_MAX_HZ, N: points },
+    };
+    GRIDS.set(points, grid);
+  }
+  return grid;
+}
 
 /** A band's level, dB: the mean of its curve where it is within this much of its highest point. */
 const PASSBAND_DB = 3;
@@ -114,7 +134,9 @@ function modelChamber(
   cabinet: SpeakerCabinet,
   chamber: SpeakerChamber,
   volts: number,
+  grid: ResponseGrid,
 ): ChamberCones {
+  const GRID = grid.box;
   const cones = chamberCones(chamber);
   const parts = cones && coneParts(cones.first);
   const displacementL = parts && cones ? parts.dispL * cones.count : 0;
@@ -147,7 +169,7 @@ function modelChamber(
   if (chamber.load.kind === CHAMBER_LOAD.horn) {
     const read = hornDesignOf(chamber, { count: 1, angle: 2 });
     if (!read.ok) return empty([read.gap]);
-    const model = hornModel(read.design, SPEAKER_RESPONSE_FREQUENCIES, volts);
+    const model = hornModel(read.design, grid.freqs, volts);
     if (!model) return empty([SPEAKER_MODEL_GAP.noModel]);
     return {
       pressure: model.curve.map((o) => pressureOf(o.spl, o.phase)),
@@ -283,19 +305,29 @@ export interface SpeakerResponseOptions {
 }
 
 /**
+ * How many points the response works out over the charts' axis: the page's `POINTS` by default; fewer only for the
+ * Speaker optimizer's screen (lib/speaker/optimize), which ranks with a coarse grid and checks its finalists on the
+ * full one.
+ */
+export interface SpeakerGridOptions {
+  points?: number;
+}
+
+/**
  * The speaker's response on axis at 1 m in half space at `SPEAKER_RESPONSE_VOLTS` on every band: each chamber's cones
  * through its box model, each datasheet driver's level, each band through its filters (and the feed's) and level, and
  * the bands summed with their phase. A coaxial's cone feeds its first band and its HF section its second.
  */
 export function speakerResponse(
   spec: Pick<SpeakerSpec, "cabinet" | "bands">,
-  { feed = NO_FILTERS }: SpeakerResponseOptions = {},
+  { feed = NO_FILTERS, points = POINTS }: SpeakerResponseOptions & SpeakerGridOptions = {},
 ): SpeakerResponse {
   const volts = SPEAKER_RESPONSE_VOLTS;
-  const freqs = SPEAKER_RESPONSE_FREQUENCIES;
+  const grid = gridOf(points);
+  const { freqs } = grid;
   const sums = new Map<BandId, Complex[]>();
   const chambers = spec.cabinet.chambers.map((chamber) => {
-    const { pressure, result } = modelChamber(spec.cabinet, chamber, volts);
+    const { pressure, result } = modelChamber(spec.cabinet, chamber, volts, grid);
     const cones = chamberCones(chamber);
     if (pressure && cones) addTo(sums, cones.first.bands[0], pressure);
     const gaps = [...result.gaps];

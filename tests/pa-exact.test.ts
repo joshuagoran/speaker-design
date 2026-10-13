@@ -6,14 +6,12 @@ import {
   designProblems,
   paSearchDesign,
   paSearchBraceStyle,
-  rangeOf,
   roomRequiredSpl,
   bandOutputDb,
-  ventSizesFor,
   SUB_BAND_HZ,
   SUB_BOX_RANGE,
-  VENT_STYLES,
 } from "../src/lib/pa/optimize";
+import { rangeOf, ventSizesFor, VENT_STYLES } from "../src/lib/optimizer/searchSpace";
 import {
   optimizePaStackExact,
   paExactScore,

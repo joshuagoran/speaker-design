@@ -69,6 +69,7 @@ export default defineConfig({
       "tests/golden.json",
       "tests/optimizer-dump.json",
       "tests/optimizer-snapshot.json",
+      "tests/speaker-optimizer-snapshot.json",
     ],
   },
   lint: {

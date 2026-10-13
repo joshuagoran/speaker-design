@@ -10,8 +10,8 @@ import {
   roomRequiredSpl,
   PA_OUTPUT_NAME,
   sameOptimizedFields,
-  ventSizesFor,
 } from "../src/lib/pa/optimize";
+import { ventSizesFor } from "../src/lib/optimizer/searchSpace";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { nearMissClosestText } from "../src/lib/pa/nearMiss";
 import { CARD_LABELS, NEAR_MISS_YOURS } from "../src/constants/optimizerText";
