@@ -155,10 +155,10 @@ export const HORN_DRIVE_NAMES = {
   back: "Back-loaded",
 } as const satisfies Record<HornDrive["kind"], string>;
 
-/** Each band drive as the Speaker page names it. */
+/** Each band's crossover as the Speaker page names it (the ids are the saved drive values: active, passive). */
 export const DRIVE_NAMES = {
-  active: "Active",
-  passive: "Passive",
+  active: "External",
+  passive: "Internal",
 } as const satisfies Record<HifiDrive, string>;
 
 /** Why an arched top stays flat, by `ARCH_BLOCK` id: the condition the cabinet misses, in words. */
@@ -360,9 +360,9 @@ export const SPEAKER_TEXT = {
   levelTip:
     "Sets the level of this band against the other bands, in dB. A negative value makes the band quieter. The default is 0 dB: no change, so each driver plays at its own sensitivity.",
   driveTip:
-    "Active: the band has its own amp channel, and its filters are in the front end (DSP). Passive: a crossover network in the box, on an amp channel that the band shares.",
+    "External: a crossover or DSP splits the signal before the amps. Each band has its own amp channel. Internal: a passive crossover in the box splits the signal after the amp. One amp channel drives these bands.",
   ampTip:
-    "The power of the amp channel for this band, in W into 8 Ω. The maximum output uses it. For a passive band, use the power of the shared channel.",
+    "The power of the amp channel for this band, in W into 8 Ω. The maximum output uses it. For a band with an internal crossover, use the power of the shared channel.",
   cornerTip:
     "The corner frequency of the filter. A highpass cuts below it, and a lowpass cuts above it.",
   netAirTip:

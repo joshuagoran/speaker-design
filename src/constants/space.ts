@@ -167,7 +167,7 @@ export const SPACE_TEXT = {
   analogDelay:
     "An analog front end has fixed cards with no delay: a stack's alignment or a placement's delay needs a DSP.",
   noFrontEnd:
-    "No front end: only passive speakers straight off the amps. The space still uses each stack's filters.",
+    "No front end: only speakers with an internal crossover straight off the amps. The space still uses each stack's filters.",
   outdoors: "Outdoors",
   areaWidth: "Area width, ft",
   areaLength: "Area length, ft",

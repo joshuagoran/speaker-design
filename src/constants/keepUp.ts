@@ -12,5 +12,5 @@ export const KEEP_UP_TEXT = {
   okDetail: (gap: string, hz: string, lower: string) =>
     `${gap} dB to spare at ${hz} when ${lower} is at its music limit.`,
   /** the chip's title tooltip: what the check means */
-  tip: "This check shows if the upper part plays as loud as the part under it at their crossover, when the lower part is at its music limit. In an active system, the DSP filters each band before its amp, so each amp sends power only to its own band. The Stack page includes this.",
+  tip: "This check shows if the upper part plays as loud as the part under it at their crossover, when the lower part is at its music limit. With an external crossover, the filters split each band before its amp, so each amp sends power only to its own band. The Stack page includes this.",
 } as const;
