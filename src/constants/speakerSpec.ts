@@ -123,6 +123,27 @@ export const PORT_SHAPE = {
 /** The fins across the PA sub's letterbox slot (lib/pa/calc ventGeometry splits it in three). */
 export const PA_SLOT_FINS = 2;
 
+/**
+ * A slot's kind, by id: the PA sub's letterbox (a slot with `fins`: on the floor from the frame front, folded up the back
+ * when too long) or a plain slot (the Hi-fi slot rule).
+ */
+export const SLOT_KIND = {
+  letterbox: "letterbox",
+  plain: "plain",
+} as const;
+
+/** A round port's tube ends, by id: flared (the PA tube rule, `flared`) or plain (the Hi-fi round port rule). */
+export const TUBE_ENDS = {
+  flared: "flared",
+  plain: "plain",
+} as const;
+
+/** Where flared tubes sit, by id: in a row along the bottom, or in the baffle's corners round the driver (`corners`). */
+export const TUBE_LAYOUT = {
+  row: "row",
+  corners: "corners",
+} as const;
+
 /** How a chamber's drivers meet the air, by id: straight (a direct radiator), or through a horn in the box. */
 export const CHAMBER_LOAD = {
   direct: "direct",

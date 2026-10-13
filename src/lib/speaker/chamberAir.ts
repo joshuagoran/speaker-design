@@ -5,10 +5,15 @@
 // Symbols kept short are the established ones: t is the wall's thickness, in (as lib/pa/calc and lib/hifi name it).
 import type { Dims2, PortStyle, SpeakerCabinet, SpeakerChamber } from "../../types";
 import { hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
-import { ductDividerIn, sideDuctEndCorrection, slotInnerEndCorrection } from "../pa/calc";
+import {
+  ductDividerIn,
+  sideDuctEndCorrection,
+  slotFolds,
+  slotInnerEndCorrection,
+} from "../pa/calc";
 import { rectangleEndCorrection } from "../acoustics/radiation";
 import { subTubeEndCorrection, type TubeDriver } from "../pa/tubes";
-import { ELBOW_COUNTS, type ElbowCount } from "../tubeFold";
+import { elbowCountOf } from "../tubeFold";
 import { SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
 import {
@@ -88,10 +93,6 @@ function tubeDriverOf(chamber: SpeakerChamber): TubeDriver | null {
   return (driver && byId(SUB_OPTIONS, driver.driverId)) ?? null;
 }
 
-/** A stored elbow count as the tube rule takes it: the nearest it knows. */
-const elbowCountOf = (elbows: number): ElbowCount =>
-  ELBOW_COUNTS.reduce((best, e) => (Math.abs(e - elbows) < Math.abs(best - elbows) ? e : best));
-
 /** The parts of a cabinet the air and vent rules read. */
 type CabinetAir = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
 
@@ -129,21 +130,17 @@ export function chamberVentModel(
       const w = port.w ?? face.w;
       if (port.fins !== undefined) {
         // the PA letterbox (lib/pa/calc ventGeometry): its fins take their thickness off the width; its mouth on the
-        // floor (which mirrors it), its inner end as the PA slot's, straight or folded
+        // floor (which mirrors it), its inner end as the PA slot's, folded up the back wall when too long to run
+        // straight (as the PA rule, the cutlist and the 3D view fold it)
         const open = w - port.fins * t;
+        const slot = { slotH: port.h, len: port.len };
         return {
           areaIn2: port.h * open,
           lenIn: port.len,
           openings: 1,
           endCorrectionIn:
             rectangleEndCorrection(2 * port.h, open) +
-            slotInnerEndCorrection(
-              dims,
-              { slotH: port.h, len: port.len },
-              t,
-              baffleInsetIn(cabinet),
-              !!port.folded,
-            ),
+            slotInnerEndCorrection(dims, slot, t, baffleInsetIn(cabinet), slotFolds(dims, slot, t)),
         };
       }
       // the Hi-fi page's slot is one (n 1); the Speaker page's can be more, alike

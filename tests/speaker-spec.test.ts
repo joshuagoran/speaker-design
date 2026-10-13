@@ -13,7 +13,7 @@ import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { paSearchDesign } from "../src/lib/pa/optimize";
 import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
-import { boxInternalLiters, midGrossLiters, slotFolds } from "../src/lib/pa/calc";
+import { boxInternalLiters, midGrossLiters } from "../src/lib/pa/calc";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { panelNominalNear } from "../src/lib/panel";
 import { savedHardware } from "../src/lib/pa/hardware";
@@ -168,11 +168,12 @@ test("speaker spec: every golden PA design reads into a stack with its boxes, dr
     const port = subChamber.vent.port;
     assert.equal(port.shape, PA_PORT_SHAPE[cfg.portStyle], c.name);
     assert.equal(port.len, cfg.cVent.len, c.name);
-    // the PA's port details: the letterbox's fins and fold, the tubes' flares and layout
+    // the PA's port details: the letterbox's fins (its fold is the PA rule's, from its length), the tubes' flares and
+    // layout
     if (port.shape === PORT_SHAPE.slot)
       assert.deepEqual(
         [port.h, port.fins, port.folded],
-        [cfg.cVent.slotH, PA_SLOT_FINS, slotFolds(cfg.cDim, cfg.cVent, cfg.wall)],
+        [cfg.cVent.slotH, PA_SLOT_FINS, undefined],
         c.name,
       );
     else if (port.shape === PORT_SHAPE.duct) assert.equal(port.throat, cfg.cVent.throat, c.name);

@@ -13,6 +13,8 @@ import type {
   SpeakerDriver,
   SpeakerPanel,
   SpeakerPort,
+  SpeakerRoundPort,
+  SpeakerSlotPort,
 } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -37,6 +39,11 @@ import {
   PORT_SHAPE_NAMES,
   SET_BY,
   SET_BY_NAMES,
+  SLOT_KIND_NAMES,
+  SLOT_FOLD_NAMES,
+  TUBE_ENDS_NAMES,
+  TUBE_LAYOUT_NAMES,
+  ELBOW_COUNT_NAMES,
   VENT_KIND_NAMES,
   VENT_PANEL_NAMES,
 } from "../../constants/speakerPage";
@@ -44,7 +51,11 @@ import {
   CHAMBER_LOAD,
   DRIVER_KIND,
   HORN_PLACEMENT,
+  PA_SLOT_FINS,
   PORT_SHAPE,
+  SLOT_KIND,
+  TUBE_ENDS,
+  TUBE_LAYOUT,
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import {
@@ -85,6 +96,8 @@ import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { ductDividerOf, withDuctDivider } from "../../lib/speaker/cabinetPanels";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
+import { slotFolds } from "../../lib/pa/calc";
+import { ELBOW_COUNTS, elbowCountOf } from "../../lib/tubeFold";
 
 /** The driver types as the type picker lists them: one woofer type, then the other kinds. */
 const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_TYPE_NAMES).map(([id, name]) => ({
@@ -278,7 +291,13 @@ export function ChamberSettings({
             }
             options={entriesOf(PORT_SHAPE_NAMES)}
           />
-          <PortFields port={vent.port} walls={cabinet.panel} onChange={setPort} />
+          <PortFields
+            port={vent.port}
+            walls={cabinet.panel}
+            chamber={chamber}
+            clearW={placed?.clear.w ?? chamber.dims.w - 2 * cabinet.panel.thicknessIn}
+            onChange={setPort}
+          />
           {!vents && <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
             label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
@@ -396,53 +415,35 @@ export function ChamberSettings({
 }
 
 /**
- * A port's size: round tubes, a slot (its opening's narrow side, and its long side where it sets one: else the chamber's
- * clear width) or side ducts.
+ * A port's settings: round tubes (plain, or the PA sub's flared tubes in a row or the corners, and their elbows), a slot
+ * (the PA sub's letterbox with its fins, or a plain slot: its opening's narrow side, its long side, Auto the chamber's
+ * clear width, and whether it folds up the back) or side ducts. Everything a template sets on a port is set here too.
  */
 function PortFields({
   port,
   walls,
+  chamber,
+  clearW,
   onChange,
 }: {
   port: SpeakerPort;
-  /** the walls: side-duct dividers of their size take their thickness */
+  /** the walls: side-duct dividers of their size take their thickness, and a letterbox's fins */
   walls: Pick<SpeakerPanel, "nominal" | "thicknessIn">;
+  /** the chamber: its size folds a letterbox, its drivers take flared tubes */
+  chamber: Pick<SpeakerChamber, "dims" | "drivers">;
+  /** the chamber's clear width, in: a plain slot's long side when Auto */
+  clearW: number;
   onChange: (p: SpeakerPort) => void;
 }) {
   if (port.shape === PORT_SHAPE.slot)
     return (
-      <div className={FIELD_ROW}>
-        <NumberField
-          label="Count"
-          value={port.n}
-          min={1}
-          step={1}
-          onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
-        />
-        <NumberField
-          label={SPEAKER_TEXT.slotNarrow}
-          value={shownIn(port.h)}
-          min={0.25}
-          step={SPEAKER_STEPS.slotHIn}
-          onChange={(h) => onChange({ ...port, h })}
-        />
-        {port.w !== undefined && (
-          <NumberField
-            label={SPEAKER_TEXT.slotLong}
-            value={shownIn(port.w)}
-            min={0.25}
-            step={SPEAKER_STEPS.portSizeIn}
-            onChange={(w) => onChange({ ...port, w })}
-          />
-        )}
-        <NumberField
-          label={SPEAKER_TEXT.portLength}
-          value={shownIn(port.len)}
-          min={0.5}
-          step={SPEAKER_STEPS.portLenIn}
-          onChange={(len) => onChange({ ...port, len })}
-        />
-      </div>
+      <SlotFields
+        port={port}
+        t={walls.thicknessIn}
+        chamber={chamber}
+        clearW={clearW}
+        onChange={onChange}
+      />
     );
   if (port.shape === PORT_SHAPE.duct)
     return (
@@ -465,13 +466,7 @@ function PortFields({
             step={SPEAKER_STEPS.portSizeIn}
             onChange={(throat) => onChange({ ...port, throat })}
           />
-          <NumberField
-            label={SPEAKER_TEXT.portLength}
-            value={shownIn(port.len)}
-            min={0.5}
-            step={SPEAKER_STEPS.portLenIn}
-            onChange={(len) => onChange({ ...port, len })}
-          />
+          <PortLengthField port={port} onChange={(len) => onChange({ ...port, len })} />
         </div>
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
@@ -482,30 +477,213 @@ function PortFields({
         />
       </>
     );
+  return <RoundFields port={port} chamber={chamber} onChange={onChange} />;
+}
+
+/** A port's length, in: the path the air takes (a folded port's whole path). */
+function PortLengthField({
+  port,
+  onChange,
+}: {
+  port: Pick<SpeakerPort, "len">;
+  onChange: (len: number) => void;
+}) {
   return (
-    <div className={FIELD_ROW}>
-      <NumberField
-        label="Count"
-        value={port.n}
-        min={1}
-        step={1}
-        onChange={(n) => onChange({ ...port, n })}
+    <NumberField
+      label={SPEAKER_TEXT.portLength}
+      value={shownIn(port.len)}
+      min={0.5}
+      step={SPEAKER_STEPS.portLenIn}
+      onChange={onChange}
+    />
+  );
+}
+
+/**
+ * A slot: the PA sub's letterbox (its fins, its height and length; it folds up the back by the PA rule when too long to
+ * run straight) or a plain slot (stacked, its sides, and whether it may fold up the back).
+ */
+function SlotFields({
+  port,
+  t,
+  chamber,
+  clearW,
+  onChange,
+}: {
+  port: SpeakerSlotPort;
+  t: SpeakerPanel["thicknessIn"];
+  chamber: Pick<SpeakerChamber, "dims">;
+  clearW: number;
+  onChange: (p: SpeakerPort) => void;
+}) {
+  const letterbox = port.fins !== undefined;
+  const { h, len } = port;
+  const kind = (
+    <ToggleGroup
+      label={<Tooltip tip={SPEAKER_TEXT.slotKindTip}>{SPEAKER_TEXT.slotKind}</Tooltip>}
+      className="mb-3"
+      value={letterbox ? SLOT_KIND.letterbox : SLOT_KIND.plain}
+      onChange={(k) =>
+        onChange(
+          k === SLOT_KIND.letterbox
+            ? { shape: PORT_SHAPE.slot, n: 1, h, len, fins: port.fins ?? PA_SLOT_FINS }
+            : { shape: PORT_SHAPE.slot, n: 1, h, len },
+        )
+      }
+      options={entriesOf(SLOT_KIND_NAMES)}
+    />
+  );
+  if (letterbox)
+    return (
+      <>
+        {kind}
+        <div className={FIELD_ROW}>
+          <NumberField
+            label={<Tooltip tip={SPEAKER_TEXT.slotFinsTip}>{SPEAKER_TEXT.slotFins}</Tooltip>}
+            value={port.fins ?? PA_SLOT_FINS}
+            min={0}
+            step={1}
+            onChange={(fins) => onChange({ ...port, fins: Math.max(0, Math.round(fins)) })}
+          />
+          <NumberField
+            label={SPEAKER_TEXT.slotHeight}
+            value={shownIn(h)}
+            min={0.25}
+            step={SPEAKER_STEPS.slotHIn}
+            onChange={(slotH) => onChange({ ...port, h: slotH })}
+          />
+          <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
+        </div>
+        <p className="text-xs text-stone-500 mb-3">
+          {slotFolds(chamber.dims, { slotH: h, len }, t)
+            ? SPEAKER_TEXT.slotFolds
+            : SPEAKER_TEXT.slotStraight}
+        </p>
+      </>
+    );
+  return (
+    <>
+      {kind}
+      <div className={FIELD_ROW}>
+        <NumberField
+          label="Count"
+          value={port.n}
+          min={1}
+          step={1}
+          onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
+        />
+        <NumberField
+          label={SPEAKER_TEXT.slotNarrow}
+          value={shownIn(h)}
+          min={0.25}
+          step={SPEAKER_STEPS.slotHIn}
+          onChange={(slotH) => onChange({ ...port, h: slotH })}
+        />
+        <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
+      </div>
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.slotLongSetByTip}>{SPEAKER_TEXT.slotLongSetBy}</Tooltip>}
+        className="mb-2"
+        value={port.w === undefined ? SET_BY.auto : SET_BY.custom}
+        onChange={(v) => {
+          const { w: _w, ...rest } = port;
+          onChange(v === SET_BY.auto ? rest : { ...rest, w: shownIn(clearW) });
+        }}
+        options={entriesOf(SET_BY_NAMES)}
       />
       <NumberField
-        label="Diameter, in"
-        value={shownIn(port.dia)}
-        min={0.5}
+        label={SPEAKER_TEXT.slotLong}
+        // Auto: the chamber's clear width, read-only
+        value={shownIn(port.w ?? clearW)}
+        disabled={port.w === undefined}
+        min={0.25}
         step={SPEAKER_STEPS.portSizeIn}
-        onChange={(dia) => onChange({ ...port, dia })}
+        onChange={(w) => onChange({ ...port, w })}
+        className="mb-3"
       />
-      <NumberField
-        label={SPEAKER_TEXT.portLength}
-        value={shownIn(port.len)}
-        min={0.5}
-        step={SPEAKER_STEPS.portLenIn}
-        onChange={(len) => onChange({ ...port, len })}
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.slotFoldTip}>{SPEAKER_TEXT.slotFold}</Tooltip>}
+        className="mb-3"
+        value={!!port.folded}
+        onChange={(folded) => {
+          const { folded: _f, ...rest } = port;
+          onChange(folded ? { ...rest, folded } : rest);
+        }}
+        options={[
+          [false, SLOT_FOLD_NAMES.straight],
+          [true, SLOT_FOLD_NAMES.folded],
+        ]}
       />
-    </div>
+    </>
+  );
+}
+
+/**
+ * Round tubes: their count and size, their ends (plain, or the PA sub's flared tubes, in a row at the bottom or in the
+ * corners round the driver) and the elbows each takes.
+ */
+function RoundFields({
+  port,
+  chamber,
+  onChange,
+}: {
+  port: SpeakerRoundPort;
+  chamber: Pick<SpeakerChamber, "drivers">;
+  onChange: (p: SpeakerPort) => void;
+}) {
+  const { n, dia, len, elbows } = port;
+  const base = { shape: PORT_SHAPE.round, n, dia, len, elbows };
+  const hasSub = chamber.drivers.some((d) => d.kind === DRIVER_KIND.sub);
+  return (
+    <>
+      <div className={FIELD_ROW}>
+        <NumberField
+          label="Count"
+          value={n}
+          min={1}
+          step={1}
+          onChange={(count) => onChange({ ...port, n: count })}
+        />
+        <NumberField
+          label="Diameter, in"
+          value={shownIn(dia)}
+          min={0.5}
+          step={SPEAKER_STEPS.portSizeIn}
+          onChange={(d) => onChange({ ...port, dia: d })}
+        />
+        <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
+      </div>
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.tubeEndsTip}>{SPEAKER_TEXT.tubeEnds}</Tooltip>}
+        className="mb-3"
+        value={port.flared ? TUBE_ENDS.flared : TUBE_ENDS.plain}
+        onChange={(ends) =>
+          onChange(ends === TUBE_ENDS.flared ? { ...base, flared: true, corners: false } : base)
+        }
+        options={entriesOf(TUBE_ENDS_NAMES)}
+      />
+      {port.flared && !hasSub && (
+        <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.tubeEndsNoSub}</p>
+      )}
+      {port.flared && (
+        <ToggleGroup
+          label={SPEAKER_TEXT.tubeLayout}
+          className="mb-3"
+          value={port.corners ? TUBE_LAYOUT.corners : TUBE_LAYOUT.row}
+          onChange={(at) =>
+            onChange({ ...base, flared: true, corners: at === TUBE_LAYOUT.corners })
+          }
+          options={entriesOf(TUBE_LAYOUT_NAMES)}
+        />
+      )}
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.elbowsTip}>{SPEAKER_TEXT.elbows}</Tooltip>}
+        className="mb-3"
+        value={elbowCountOf(elbows ?? 0)}
+        onChange={(e) => onChange({ ...port, elbows: e })}
+        options={ELBOW_COUNTS.map((e) => [e, ELBOW_COUNT_NAMES[e]] as const)}
+      />
+    </>
   );
 }
 

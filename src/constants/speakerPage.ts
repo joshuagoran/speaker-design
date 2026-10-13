@@ -1,8 +1,10 @@
 // The Speaker page's names and choices (src/pages/speaker): the spec's ids as the page shows them.
+import type { SLOT_KIND, TUBE_ENDS, TUBE_LAYOUT } from "./speakerSpec";
 import type {
   ArchBlock,
   ChamberLoad,
   DriverKind,
+  ElbowCount,
   FilterType,
   HifiBoxKind,
   HifiDrive,
@@ -56,6 +58,37 @@ export const PORT_SHAPE_NAMES = {
   slot: "Slot",
   duct: "Side ducts",
 } as const satisfies Record<NonNullable<SpeakerPort["shape"]>, string>;
+
+/** Each slot kind as the Speaker page names it (`SLOT_KIND`). */
+export const SLOT_KIND_NAMES = {
+  letterbox: "Letterbox",
+  plain: "Plain",
+} as const satisfies Record<keyof typeof SLOT_KIND, string>;
+
+/** Each kind of round tube end as the Speaker page names it (`TUBE_ENDS`). */
+export const TUBE_ENDS_NAMES = {
+  flared: "Flared",
+  plain: "Plain",
+} as const satisfies Record<keyof typeof TUBE_ENDS, string>;
+
+/** Each layout of flared tubes as the Speaker page names it (`TUBE_LAYOUT`). */
+export const TUBE_LAYOUT_NAMES = {
+  row: "Row at the bottom",
+  corners: "Corners",
+} as const satisfies Record<keyof typeof TUBE_LAYOUT, string>;
+
+/** The elbows a round tube can have, as the Speaker page names each count (lib/tubeFold `ELBOW_COUNTS`). */
+export const ELBOW_COUNT_NAMES = {
+  0: "None",
+  1: "One",
+  2: "Two",
+} as const satisfies Record<ElbowCount, string>;
+
+/** Whether a plain slot can fold up the back, as the Speaker page names each choice. */
+export const SLOT_FOLD_NAMES = {
+  straight: "No",
+  folded: "Up the back",
+} as const;
 
 /** The filter types a band offers, in the order the picker lists them, and the name each shows. */
 export const FILTER_TYPE_NAMES = {
@@ -247,7 +280,31 @@ export const SPEAKER_TEXT = {
   panel: "Panel",
   slotNarrow: "Opening, narrow side, in",
   slotLong: "Opening, long side, in",
+  slotLongSetBy: "Long side",
+  slotLongSetByTip:
+    "Auto: the slot has the full clear width of the chamber. Custom: you type the width. The slot stays centered.",
+  slotHeight: "Slot height, in",
   portLength: "Length, in",
+  slotKind: "Slot type",
+  slotKindTip:
+    "Letterbox: the slot of the PA sub. It runs along the floor from the frame front. Fins divide it. If it is too long to run straight, it folds up the back. It needs the frame construction. Plain: the slot of the Hi-fi page. You can stack more than one.",
+  slotFins: "Fins",
+  slotFinsTip:
+    "Fins divide the slot into equal openings. Each fin has the thickness of the walls. The fins hold the floor. The PA page uses two.",
+  slotFolds: "The slot is too long to run straight. It folds up the back.",
+  slotStraight: "The slot runs straight along the floor.",
+  slotFold: "Fold",
+  slotFoldTip:
+    "Up the back: if the slot is too long to run straight, it folds up the back wall. No: the slot must fit straight.",
+  tubeEnds: "Tube ends",
+  tubeEndsTip:
+    "Flared: the tubes of the PA sub, with flared ends. They need a PA sub driver in this chamber. Plain: the round port of the Hi-fi page.",
+  tubeEndsNoSub:
+    "Flared tubes need a PA sub driver in this chamber. Until then, the model uses plain tubes.",
+  tubeLayout: "Tube position",
+  elbows: "Elbows",
+  elbowsTip:
+    "The bends in each tube. Each bend adds a little to the length that the air sees, so the port tunes lower.",
   /** the side ducts' dividers' tooltip: the shared tip, and which thickness each size takes */
   ductDividersTip: `${UI_TEXT.ductDividersTip} Dividers of the wall size have the thickness of the walls. You can measure it on the Cutlist page. Dividers of a different size have the default thickness.`,
   ventFixed: "The shape of this port sets its position (the PA port rule or the slot rule).",

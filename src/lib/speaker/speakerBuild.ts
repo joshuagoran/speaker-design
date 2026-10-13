@@ -234,7 +234,7 @@ function paVentOf(port: SpeakerPort): VentSpec {
     case PORT_SHAPE.duct:
       return { ...none, throat: port.throat, div: port.div };
     case PORT_SHAPE.slot:
-      return { ...none, slotH: port.h };
+      return { ...none, slotH: port.h, fins: port.fins };
     default:
       return { ...none, nt: port.n, dia: port.dia };
   }

@@ -376,7 +376,7 @@ export function portRule(chamber: SpeakerChamber): PortRule | null {
       });
     case PORT_SHAPE.slot:
       return port.fins !== undefined
-        ? pa(PORT_STYLE.slot, { ductH: port.h, tubeLen: port.len })
+        ? pa(PORT_STYLE.slot, { ductH: port.h, tubeLen: port.len, fins: port.fins })
         : { rule: PORT_RULE.hifi, port };
     default:
       return port.flared && sub

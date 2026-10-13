@@ -1289,7 +1289,8 @@ export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, Pane
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
  * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them. `div` is the side ducts'
  * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/panel); absent,
- * as in saves from before the choice, they are ½″ (`ductDividerIn`).
+ * as in saves from before the choice, they are ½″ (`ductDividerIn`). `fins` is how many fins split the bottom slot;
+ * absent, as the PA page always leaves it, its two (`PA_SLOT_FINS`, lib/pa/calc `slotFinsOf`); the Speaker page sets it.
  */
 export interface VentSpec {
   slotH: number;
@@ -1298,6 +1299,7 @@ export interface VentSpec {
   throat: number;
   len: number;
   div?: number;
+  fins?: number;
 }
 
 /** A set of round port tubes from stock pipe: how many, and each one's inside diameter in inches. */
@@ -1641,8 +1643,8 @@ export interface VentGeometry {
   desc: string;
 }
 
-/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches). */
-export interface PaPortGeometry {
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches), and the bottom slot's fins (absent: the PA page's two). */
+export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
   ductH: number;
   nPorts: number;
   portR: number;
@@ -1961,9 +1963,10 @@ export type SpeakerRoundPort = RoundPort &
   );
 
 /**
- * A slot, with the PA sub's letterbox details where it is one: `fins` dividers of the wall's thickness across it, its
- * mouth on the floor, running from the frame front, `folded` up the back wall when too long to run straight (the PA
- * slot rule: lib/pa/calc ventGeometry). Without `fins`, the Hi-fi slot rule.
+ * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (the PA page's two), its
+ * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
+ * (the PA slot rule: lib/pa/calc ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
+ * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
  */
 export interface SpeakerSlotPort extends SlotPort {
   fins?: number;

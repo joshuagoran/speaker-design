@@ -613,9 +613,17 @@ function chamberParts(
     if (plan.bandH > 0)
       slotBand = {
         h: plan.bandH,
-        hole: (ox, oy) => [
-          roundedRectPath(ox, oy + T + plan.ductH / 2, plan.innerW, plan.ductH, SLOT_CORNER_IN),
-        ],
+        // each opening between the fins
+        hole: (ox, oy) =>
+          plan.fins.openings.map((x) =>
+            roundedRectPath(
+              ox + x,
+              oy + T + plan.ductH / 2,
+              plan.fins.open,
+              plan.ductH,
+              SLOT_CORNER_IN,
+            ),
+          ),
       };
     builds.push(({ zf }) => {
       buildSubVent(ctx, plan, {

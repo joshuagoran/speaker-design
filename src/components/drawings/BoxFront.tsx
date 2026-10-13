@@ -1,6 +1,6 @@
 import type { PaBoxGeometry } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
-import { isRoundPort } from "../../lib/pa/calc";
+import { isRoundPort, slotFinLayout, slotFinsOf } from "../../lib/pa/calc";
 import { tubeLayout, type BafflePoint } from "../../lib/pa/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 
@@ -78,18 +78,22 @@ export function BoxFront({ g, cur }: Props) {
     t = g.wall * k,
     v = g.cVent;
   const vent: React.ReactElement[] = [];
-  if (g.portStyle === "slots")
-    vent.push(
-      <rect
-        key="v"
-        x={a.sb.x + t}
-        y={a.sb.y + a.sb.h - t - v.slotH * k}
-        width={a.sb.w - 2 * t}
-        height={v.slotH * k}
-        fill={pal.ink}
-      />,
+  if (g.portStyle === "slots") {
+    // the letterbox's openings between its fins, as the 3D view cuts them (lib/pa/calc slotFinLayout)
+    const fins = slotFinLayout(g.sub.w - 2 * g.wall, g.wall, slotFinsOf(v));
+    fins.openings.forEach((x, i) =>
+      vent.push(
+        <rect
+          key={`v${i}`}
+          x={cx + (x - fins.open / 2) * k}
+          y={a.sb.y + a.sb.h - t - v.slotH * k}
+          width={fins.open * k}
+          height={v.slotH * k}
+          fill={pal.ink}
+        />,
+      ),
     );
-  else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
+  } else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
     vent.push(
       <rect
         key="l"

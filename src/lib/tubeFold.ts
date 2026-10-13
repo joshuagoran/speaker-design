@@ -27,6 +27,9 @@ export interface TubeRoom {
 export const MAX_ELBOWS = 2;
 /** Every elbow count a tube can take, fewest first. */
 export const ELBOW_COUNTS = [0, 1, 2] as const satisfies readonly ElbowCount[];
+/** A stored elbow count as the tube rules take it: the nearest they know. */
+export const elbowCountOf = (elbows: number): ElbowCount =>
+  ELBOW_COUNTS.reduce((best, e) => (Math.abs(e - elbows) < Math.abs(best - elbows) ? e : best));
 
 /**
  * The legs a tube's centerline takes, inches: `run` straight back from the baffle front, `rise` up past the first

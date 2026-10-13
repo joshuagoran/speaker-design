@@ -143,7 +143,7 @@ export function SpeakerFront({ spec }: Props) {
       );
     }
     // the PA's, as the 3D view cuts them (stack-view/buildSubwoofer): the tubes' or the side ducts' openings, and the
-    // letterbox's mouth under its shelf
+    // letterbox's mouths under its shelf, between its fins
     const plan = subVentPlan(rule.sub, dims, rule.portStyle, rule.portGeom, t);
     const holes = subVentHoles(plan, dims, t, { x: cx, plinth: y0, baffleCy: 0 }).map((h, j) => (
       <path
@@ -155,9 +155,21 @@ export function SpeakerFront({ spec }: Props) {
         {...opening}
       />
     ));
-    return plan.bandH > 0
-      ? [...holes, rect(`v${i}`, cx, y0 + t + plan.ductH / 2, plan.innerW, plan.ductH, opening)]
-      : holes;
+    // the letterbox's openings between its fins (lib/pa/calc slotFinLayout)
+    const band =
+      plan.bandH > 0
+        ? plan.fins.openings.map((x, j) =>
+            rect(
+              `v${i}.s${j}`,
+              cx + x,
+              y0 + t + plan.ductH / 2,
+              plan.fins.open,
+              plan.ductH,
+              opening,
+            ),
+          )
+        : [];
+    return [...holes, ...band];
   };
 
   /** one driver at (x, y): on the baffle, or its horn standing on the top */
