@@ -1,6 +1,4 @@
 import { useState } from "react";
-import type { SpeakerSpec, SubPlacement } from "../../types";
-import { SUB_PLACEMENT, SUB_PLACEMENT_OPTIONS } from "../../constants/subPlacement";
 import { alpha, TARGET_DASH } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
@@ -54,6 +52,7 @@ import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
 import { emptySpace, itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
+import { placeOptions } from "./placeOptions";
 import { STACK_STARTS, startGroup } from "../stack/stackPresets";
 import { STACK_START, STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
 import { SPEAKER_START_TEXT } from "../../constants/speakerStarts";
@@ -63,9 +62,9 @@ import { placementGroups } from "../../lib/speaker/fillAlign";
 interface Props {
   space: SpacePlanner;
   /** the stack library: the Stack page's store */
-  stack: Pick<StackPlanner, "store">;
+  stack: Pick<StackPlanner, "store" | "design">;
   /** the speaker library: the Speaker page's store */
-  speakerPage: Pick<SpeakerPageState, "store">;
+  speakerPage: Pick<SpeakerPageState, "store" | "spec">;
   planner: PaPlanner;
 }
 
@@ -87,10 +86,10 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   const { venue, placements, name } = design.space;
   const folds = useFolds("space.settingsFolds", keysOf(SPACE_SETTINGS_SECTIONS));
   const maxHeight = useMapMaxHeight();
-  /** the libraries, as the pickers list them */
+  /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
     const saved = stackFromSaved(c);
-    return saved ? [{ id: c.id, name: c.name, saved }] : [];
+    return saved ? [{ id: c.id, name: c.name, design: saved }] : [];
   });
   const speakers = (speakerPage.store.saved ?? []).flatMap((c) => {
     const saved: unknown = Reflect.get(c, "speaker");
@@ -102,12 +101,14 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     group: startGroup(id),
   }));
   const [start, setStart] = useState<StackStart>(STACK_START.paStack);
-  /** where a PA start puts its subs */
-  const [subs, setSubs] = useState<SubPlacement>(SUB_PLACEMENT.stacks);
-  const [stackPick, setStackPick] = useState("");
-  const [speakerPick, setSpeakerPick] = useState("");
-  const pickedStack = stacks.find((o) => o.id === stackPick) ?? stacks[0];
-  const pickedSpeaker = speakers.find((o) => o.id === speakerPick) ?? speakers[0];
+  const placeList = placeOptions({
+    openStack: stack.design,
+    openSpeaker: speakerPage.spec,
+    savedStacks: stacks,
+    savedSpeakers: speakers,
+  });
+  const [placePick, setPlacePick] = useState("");
+  const picked = byId(placeList, placePick) ?? placeList[0];
   /** each placement's name: its number and what it places */
   const names = placements.map((p, k) => `${k + 1}. ${itemName(design, p.item)}`);
   const groups = placementGroups(placements);
@@ -334,22 +335,13 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
               />
               <div className="flex flex-wrap gap-2 mb-2">
                 <Button
-                  onClick={() =>
-                    space.setDesign(spaceFromStart(start, paPlannerDesign(planner), subs))
-                  }
+                  onClick={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
                 >
                   {SPEAKER_START_TEXT.startOver}
                 </Button>
                 <Button onClick={() => space.setDesign(emptySpace())}>{SPACE_TEXT.clear}</Button>
               </div>
-              <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.startHint}</p>
-              <ToggleGroup
-                label={<Tooltip tip={SPACE_TEXT.subsHint}>{SPACE_TEXT.subs}</Tooltip>}
-                className="mb-3"
-                value={subs}
-                onChange={setSubs}
-                options={SUB_PLACEMENT_OPTIONS}
-              />
+              <p className="text-xs text-stone-500 mb-3">{SPACE_TEXT.startHint}</p>
             </>,
           )}
           {section(
@@ -438,51 +430,17 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                   onAlign={(to, afterMs) => space.alignTo(k, to, afterMs)}
                 />
               ))}
-              {pickedStack && (
-                <>
-                  <SelectField
-                    label={SPACE_TEXT.savedStack}
-                    options={stacks}
-                    value={pickedStack}
-                    onChange={(o) => setStackPick(o.id)}
-                  />
-                  <Button
-                    className="mb-3"
-                    onClick={() =>
-                      space.addStack({
-                        ...pickedStack.saved,
-                        stack: { ...pickedStack.saved.stack, id: pickedStack.id },
-                      })
-                    }
-                  >
-                    {SPACE_TEXT.addStack}
-                  </Button>
-                </>
-              )}
-              {pickedSpeaker && (
-                <>
-                  <SelectField
-                    label={SPACE_TEXT.savedSpeaker}
-                    options={speakers}
-                    value={pickedSpeaker}
-                    onChange={(o) => setSpeakerPick(o.id)}
-                  />
-                  <Button
-                    className="mb-3"
-                    onClick={() => {
-                      const speaker: SpeakerSpec = {
-                        ...pickedSpeaker.spec,
-                        id: pickedSpeaker.id,
-                        name: pickedSpeaker.name,
-                      };
-                      space.addSpeaker(speaker);
-                    }}
-                  >
-                    {SPACE_TEXT.addSpeaker}
-                  </Button>
-                </>
-              )}
-              {!pickedStack && !pickedSpeaker && (
+              <SelectField
+                label={SPACE_TEXT.place}
+                options={placeList}
+                value={picked}
+                onChange={(o) => setPlacePick(o.id)}
+                group={(o) => o.group}
+              />
+              <Button className="mb-3" onClick={() => space.place(picked.item())}>
+                {SPACE_TEXT.place}
+              </Button>
+              {stacks.length === 0 && speakers.length === 0 && (
                 <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.noLibrary}</p>
               )}
             </>,

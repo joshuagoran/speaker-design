@@ -37,12 +37,20 @@ export const DRIVER_PART = {
 /** The front end picker's id for none. */
 export const NO_FRONT_END = "none";
 
-/** The front end choices' names: none, fixed analog cards, or a DSP (`FRONT_END_KIND`). */
+/** The front end choices' names: none, an analog crossover, or a DSP (`FRONT_END_KIND`). */
 export const FRONT_END_NAMES = {
   [NO_FRONT_END]: "None",
-  analog: "Analog",
+  analog: "Analog crossover",
   digital: "DSP",
 } as const;
+
+/** What each front end choice is, in one sentence (its tooltip). */
+export const FRONT_END_TIPS = {
+  [NO_FRONT_END]: "The amps feed the speakers directly. Only passive speakers work this way.",
+  analog: "A box with fixed crossover filters. It cannot delay the signal.",
+  digital:
+    "A digital signal processor (DSP). It sets the crossover filters, level and delay of each output.",
+} as const satisfies Record<keyof typeof FRONT_END_NAMES, string>;
 
 /** A seat's listening area, ft: a sofa's width, a little deep. */
 export const SPACE_SEAT_AREA = { widthFt: 6, lengthFt: 4 } as const;
@@ -100,21 +108,25 @@ export const SPACE_TEXT = {
   response: "Response at the listener",
   levels: "Levels at the listening area",
   hardware: "Hardware",
-  noPlacements: "Place a saved stack or speaker, or start from a preset.",
+  noPlacements: "Nothing is placed yet. Pick a stack or speaker and press Place.",
   missing:
     "A placement names a stack or speaker that is not in this space. The model leaves it out.",
   startHint:
     "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on the Coverage page's floor, and the Hi-fi pair in its room. A PA start sets each band's level to the PA page's music balance. Open a saved space from the library above.",
   clear: "Start empty",
-  subs: "Subs",
-  subsHint:
-    "Where a PA start puts its subs. In a center pair or one center sub, the subs stand at the middle of the front and the tops stay at their height, on stands. A tower or satellite start keeps its own layout.",
-  savedStack: "Saved stack",
-  savedSpeaker: "Saved speaker",
-  addStack: "Place stack",
-  addSpeaker: "Place speaker",
-  noLibrary:
-    "Save stacks on the Stack page, or speakers on the Speaker page, to place them here (sign in first).",
+  place: "Place",
+  /** the Place list's groups */
+  placeGroups: {
+    stackPresets: "Stack presets",
+    speakerTemplates: "Speaker templates",
+    open: "Open now",
+    savedStacks: "Saved stacks",
+    savedSpeakers: "Saved speakers",
+  },
+  /** the open stack or speaker in the Place list */
+  openStack: (name: string) => `Stack: ${name}`,
+  openSpeaker: (name: string) => `Speaker: ${name}`,
+  noLibrary: "Sign in to place your saved stacks and speakers here too.",
   remove: "Remove",
   addPair: "Add the mirror pair",
   follows: "Mirror of",
@@ -153,7 +165,7 @@ export const SPACE_TEXT = {
   ampModel: "Model",
   customAmp: "Other amp",
   watts: "Watts per channel",
-  frontEnd: "Front end",
+  frontEnd: "Signal processing",
   dsp: "DSP unit",
   noDsp: "Other DSP",
   /** an amp by its number in the space (1 up) */
@@ -165,9 +177,9 @@ export const SPACE_TEXT = {
   noChannel:
     "A band has no amp channel: the model drives it at its own amp power (set on the Speaker page).",
   analogDelay:
-    "An analog front end has fixed cards with no delay: a stack's alignment or a placement's delay needs a DSP.",
+    "An analog crossover cannot delay the signal. This space uses a delay (to line up the boxes in a stack, or to time a fill speaker), so it needs a DSP.",
   noFrontEnd:
-    "No front end: only passive speakers straight off the amps. The model still uses each stack's filters.",
+    "The amps feed the speakers directly, so only passive speakers fit. The model still applies each stack's crossover filters.",
   outdoors: "Outdoors",
   areaWidth: "Area width, ft",
   areaLength: "Area length, ft",

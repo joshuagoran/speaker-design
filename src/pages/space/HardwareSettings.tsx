@@ -11,7 +11,7 @@ import { byId } from "../../lib/tables";
 import { assignChannel, channelGroups, hardwareGaps } from "../../lib/speaker/spaceHardware";
 import { placementStack, resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { FRONT_END_KIND } from "../../constants/speakerSpec";
-import { FRONT_END_NAMES, NO_FRONT_END, SPACE_TEXT } from "../../constants/space";
+import { FRONT_END_NAMES, FRONT_END_TIPS, NO_FRONT_END, SPACE_TEXT } from "../../constants/space";
 import type { SpacePlanner } from "./useSpace";
 import { spaceAmpPower } from "../../lib/speaker/spaceAmpPower";
 import { AmpPowerRows } from "../../components/stats/AmpPowerRows";
@@ -42,11 +42,11 @@ const DSP_OPTIONS: readonly SelectOption[] = [
 /** A new amp's power before a model is picked, W per channel. */
 const NEW_AMP_W = 500;
 
-/** The front end's choices: none, fixed analog cards, or a DSP. */
+/** The front end's choices: none, an analog crossover, or a DSP. */
 const FRONT_ENDS = [
-  [NO_FRONT_END, FRONT_END_NAMES[NO_FRONT_END]],
-  [FRONT_END_KIND.analog, FRONT_END_NAMES.analog],
-  [FRONT_END_KIND.digital, FRONT_END_NAMES.digital],
+  [NO_FRONT_END, FRONT_END_NAMES[NO_FRONT_END], FRONT_END_TIPS[NO_FRONT_END]],
+  [FRONT_END_KIND.analog, FRONT_END_NAMES.analog, FRONT_END_TIPS.analog],
+  [FRONT_END_KIND.digital, FRONT_END_NAMES.digital, FRONT_END_TIPS.digital],
 ] as const;
 
 interface Props {

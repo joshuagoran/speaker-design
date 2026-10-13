@@ -29,9 +29,7 @@ import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { startLayers } from "../stack/stackPresets";
 import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
-import { withSubPlacement } from "../../lib/speaker/subPlacement";
 import { fillAlignment, placementLead } from "../../lib/speaker/fillAlign";
-import { SUB_PLACEMENT } from "../../constants/subPlacement";
 import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
 import { fromStored, type StoredCoverageLayout } from "../coverage/useCoverageLayout";
@@ -39,6 +37,7 @@ import { COVERAGE_LAYOUT_KEY } from "../../constants/coverageTestIds";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
 import { SPACE_YAW_DEG } from "../../constants/space";
+import type { PlaceItem } from "./placeOptions";
 import { DRAFT_SPACE_ID, emptySpace, spaceFromSaved, spaceSnapshot } from "./spaceSaves";
 import type {
   CoverageBand,
@@ -56,7 +55,6 @@ import type {
   SpeakerSpec,
   StackDesign,
   StackSpec,
-  SubPlacement,
 } from "../../types";
 
 /** What the library's row says when a document holds no space. */
@@ -182,21 +180,12 @@ export function withStack(
  * the current PA design on the Coverage page's floor (as that page last left it). A PA design takes its music balance
  * in its band Levels.
  */
-export function spaceFromStart(
-  start: StackStart,
-  pa: PaPlannerDesign,
-  subs: SubPlacement = SUB_PLACEMENT.stacks,
-): SpaceDesign {
+export function spaceFromStart(start: StackStart, pa: PaPlannerDesign): SpaceDesign {
   const floor = fromStored(readStoredJson<StoredCoverageLayout>(COVERAGE_LAYOUT_KEY, {}));
-  // the subs where the preset puts them (lib/speaker/subPlacement), at the coverage floor's cluster spot
-  const read = withSubPlacement(
-    startLayers(
-      start,
-      { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] },
-      { pa, floor },
-    ),
-    subs,
-    floor.cluster,
+  const read = startLayers(
+    start,
+    { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] },
+    { pa, floor },
   );
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
@@ -222,6 +211,40 @@ function oneMeterAverage(req: Omit<SpaceGridRequest, "cols">, spots: readonly Fl
  */
 const systemGain = (target: number, atLimit: number | null) =>
   atLimit !== null ? Math.min(0, target - atLimit) : 0;
+
+/** The space with an item placed at the new spot, with no channels yet. */
+const withPlaced = (d: SpaceDesign, item: SpacePlacement["item"]): SpaceDesign => ({
+  ...d,
+  space: {
+    ...d.space,
+    placements: [...d.space.placements, spacePlacement(NEW_SPOT, item, 0, [])],
+  },
+});
+
+/** The space with a stack placed: its copy in the space (`withStack`), at the new spot. */
+export function withStackPlaced(d: SpaceDesign, saved: StackDesign): SpaceDesign {
+  const copy = withStack(d, saved);
+  return withPlaced(
+    { ...d, stacks: copy.stacks, speakers: copy.speakers },
+    { kind: SPACE_ITEM.stack, id: copy.stack.id },
+  );
+}
+
+/** The space with a speaker placed alone: its copy in the space (`withSpeaker`), at the new spot. */
+export function withSpeakerPlaced(d: SpaceDesign, speaker: SpeakerSpec): SpaceDesign {
+  const copy = withSpeaker(d.speakers, speaker);
+  const held = d.speakers.some((s) => s.id === copy.id);
+  return withPlaced(
+    { ...d, speakers: held ? d.speakers : [...d.speakers, copy] },
+    { kind: SPACE_ITEM.speaker, id: copy.id },
+  );
+}
+
+/** The space with a Place choice's item placed (a stack with its speakers, or a speaker alone). */
+export const withItemPlaced = (d: SpaceDesign, item: PlaceItem): SpaceDesign =>
+  item.kind === SPACE_ITEM.stack
+    ? withStackPlaced(d, item.design)
+    : withSpeakerPlaced(d, item.speaker);
 
 /**
  * The Space page's state: the space and the stacks and speakers it places, its model and floor map, the edits the
@@ -434,15 +457,6 @@ export function useSpace() {
   const isFollower = (k: number) => leadOf(k) !== k;
   const editVenue = (edit: (v: SpaceVenue) => SpaceVenue) =>
     editSpace((s) => ({ ...s, venue: edit(s.venue) }));
-  /** places an item at the new spot, with no channels yet */
-  const place = (d: SpaceDesign, item: SpacePlacement["item"]): SpaceDesign => ({
-    ...d,
-    space: {
-      ...d.space,
-      placements: [...d.space.placements, spacePlacement(NEW_SPOT, item, 0, [])],
-    },
-  });
-
   return {
     design,
     setDesign,
@@ -482,23 +496,8 @@ export function useSpace() {
     editVenue,
     editPlacement,
     isFollower,
-    addStack: (saved: StackDesign) =>
-      setDesign((d) => {
-        const copy = withStack(d, saved);
-        return place(
-          { ...d, stacks: copy.stacks, speakers: copy.speakers },
-          { kind: SPACE_ITEM.stack, id: copy.stack.id },
-        );
-      }),
-    addSpeaker: (speaker: SpeakerSpec) =>
-      setDesign((d) => {
-        const copy = withSpeaker(d.speakers, speaker);
-        const held = d.speakers.some((s) => s.id === copy.id);
-        return place(
-          { ...d, speakers: held ? d.speakers : [...d.speakers, copy] },
-          { kind: SPACE_ITEM.speaker, id: copy.id },
-        );
-      }),
+    /** places a Place choice's item at the new spot, its speakers copied into the space */
+    place: (item: PlaceItem) => setDesign((d) => withItemPlaced(d, item)),
     /** adds placement `k`'s mirror image across the center line, following it, on channels of its own (none yet) */
     addMirrorPair: (k: number) =>
       editPlacements((list) =>
