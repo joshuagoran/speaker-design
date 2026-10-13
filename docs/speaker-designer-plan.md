@@ -562,6 +562,67 @@ Each PR stands alone. Lowest risk first.
             A snapshot
             (`tests/speaker-optimizer-snapshot.test.ts`, `vp run speaker-optimizer-snapshot`) holds the cards for a
             few fixed specs.
+      - **Design: the Stack optimizer** (option (b), #167; branch `stack-optimizer`). The issue holds the owner
+        decisions. The engine comes first; the UI is the Stack page's Optimizer fold, as on the Speaker page.
+        - **Code.** `lib/speaker/optimize/optimizeStack.ts` (the search), `stackEvaluate.ts` (the full stack run),
+          `optimizeStack.worker.ts` and `runStackOptimizer.ts`. The engine is
+          `optimizeStack(design, goals, limits, locks, catalog)`. It returns `{ cards, nearMiss }` and your stack's
+          numbers, as the Speaker optimizer does.
+        - **Inputs.**
+
+          | Input        | What it is                                                                                   |
+          | ------------ | -------------------------------------------------------------------------------------------- |
+          | Design       | The stack and its speakers, as the Stack page holds them                                     |
+          | Goals        | Cheaper, lighter, smaller, lower, louder, in tap order                                       |
+          | Target level | dB at 1 m, compared with `stackLimits` `musicDb`                                             |
+          | Budget       | The most all members' purchased parts may cost (`stackTotals` dollars); none: no limit       |
+          | Weight       | The most each box may weigh, lb; none: no limit                                              |
+          | Size         | Each speaker's lock per axis (free, exact, no larger), as on the Speaker page                |
+          | Height       | The most the stack may stand, in (`stackTotals` height); none: no limit                      |
+          | Locks        | Each speaker's Speaker locks, or the whole speaker; each member's crossover, level and delay |
+
+        - **Search space.** Each speaker: the Speaker optimizer's space, under its own locks. Between the boxes:
+
+          | Item                                    | Candidates                                                                                 |
+          | --------------------------------------- | ------------------------------------------------------------------------------------------ |
+          | Crossover between boxes                 | Both sides move together: ×0.71 to ×1.41 of yours, on 10 Hz steps; the type and order stay |
+          | Member level                            | It keeps the member's passband level (the balance), on 0.5 dB steps                        |
+          | Member delay                            | Auto stays auto. A set delay goes to the aligned value (`stackResponse`), on 0.1 ms steps  |
+          | Boxes, chamber kinds, band count, poses | Never                                                                                      |
+
+        - **Numbers.** As the Speaker optimizer's goals and margins (`OBJECTIVE`, `BEATS`, `GOAL_KEEPS`), on the
+          whole stack: the price is the members' total, the weight is the members' total, the size is the sum of the
+          boxes' outer volumes, the F3 is the lowest band's of any member, the level is `stackLimits` `musicDb`.
+        - **Search method.**
+          1. Read your stack in full (`evaluateStack`): `stackResponse`, `stackLimits`, `stackTotals`, each member's
+             speaker on its crossover (`evaluateSpeaker`), the keep-ups in each box and between the boxes.
+          2. Each speaker's own target: the target less the sum's passband, plus the speaker's passband and its
+             member's level. Each speaker that reaches its target keeps the stack at the target (the balance stays).
+          3. Each speaker: the Speaker search on its crossover now (`searchSpeaker`), with the stack's goals, its
+             target, its locks, the weight per box and its size locks. Its pool is every built design it checks, on
+             the field steps. A speaker that two members share is searched on its first member's crossover.
+          4. Each other crossover setting: each pool's best designs (per goal, the closest, and yours; at most 8) run
+             again on the moved crossover. Their amps go to the top, then are trimmed two ways.
+          5. Combine: for each setting, the speakers' designs. The price, weight, size and F3 are exact; the level is
+             estimated (each band's headroom, the passband calibrated on your stack). The height is exact.
+          6. Finalists: for each goal the best inside the limits, a few just outside, a few inside the near miss's
+             limits, the closest, and the single-box changes. At most 64. Each is built (levels and delays on their
+             steps) and run in full. Up to two more batches of 12 when no first card is found.
+          7. The cards come from `selectCards`; `checkCards` re-reads them on their final designs.
+        - **Checks.** Each member fails nothing new against yours (`problemsOf`: the model, the fits, the vents, the
+          fit chips, the weight per box, the size locks). The stack keeps every member modeled, the budget and the
+          height. A keep-up in a box or between boxes is a warning.
+        - **Cards and near miss.** As the Speaker optimizer's. A card holds the whole stack design, its numbers, the
+          change from yours, what changed (in total and per speaker), its warnings and its maximum-output curve. The
+          near miss offers weight +10%, budget +10%, height +10% and target −1 dB.
+        - **Rounding.** Every value is on its field's step before the full run. Nothing changes a design after it is
+          chosen (#75).
+        - **Runtime.** A Web Worker; a few seconds. The Speaker search is about 0.3 to 1.4 s per speaker; each full
+          stack run is about 6 ms. Deterministic.
+        - **Tests** (`tests/stack-optimize.test.ts`): locks, limits on the final design, labels against your stack,
+          near miss, determinism, a runtime bound, and parity with the PA optimizer on the PA presets at the room
+          rule's target (1000 sq ft: about 113 dB at 1 m). The snapshot (`tests/stack-optimizer-snapshot.test.ts`,
+          `vp run stack-optimizer-snapshot`) holds the cards for a few presets.
   - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
     reuses the PA and Hi-fi code.
     - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
