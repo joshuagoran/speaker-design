@@ -39,13 +39,7 @@ import { byId } from "../tables";
 import { coneParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
-import {
-  SPEAKER_RESPONSE_FREQUENCIES,
-  chamberCones,
-  hfBandOf,
-  passbandDb,
-  type SpeakerResponseOptions,
-} from "./speakerResponse";
+import { chamberCones, hfBandOf, passbandDb, type SpeakerResponseOptions } from "./speakerResponse";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { DRIVER_KIND, SPEAKER_RESPONSE_VOLTS, VENT_KIND } from "../../constants/speakerSpec";
 import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
@@ -137,7 +131,8 @@ export function speakerLimits(
   response: SpeakerResponse,
   { feed = NO_FILTERS, stackCrossover = false }: SpeakerLimitsOptions = {},
 ): SpeakerLimits {
-  const freqs = SPEAKER_RESPONSE_FREQUENCIES;
+  // the response's own frequencies (the page's grid, or the optimizer's coarse screen)
+  const freqs = response.sum.map((o) => o.f);
   const volts = SPEAKER_RESPONSE_VOLTS;
   const modeled = new Set(response.bands.map((b) => b.id));
   /** the modeled bands with a drive, by id */

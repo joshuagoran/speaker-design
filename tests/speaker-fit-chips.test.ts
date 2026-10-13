@@ -1,4 +1,4 @@
-// The Speaker page's chamber fit checks (src/pages/speaker/speakerChips chamberFitChips) against the PA page's: on every
+// The Speaker page's chamber fit checks (src/lib/speaker/fitChips chamberFitChips) against the PA page's: on every
 // golden PA design, the sub chamber's duct and tube checks are the sub section's, and each box's hardware check reads
 // as the PA page's (the same severity; the Speaker page names the chamber, the PA page the box).
 import { test } from "vite-plus/test";
@@ -10,7 +10,7 @@ import { towerMidDims } from "../src/lib/pa/tower";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
-import { chamberFitChips } from "../src/pages/speaker/speakerChips";
+import { chamberFitChips } from "../src/lib/speaker/fitChips";
 import { SPEAKER_PART } from "../src/constants/speakerSpec";
 import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign, speakerAndFeed } from "./speaker-cases";

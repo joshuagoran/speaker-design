@@ -36,6 +36,7 @@ import type {
   SpeakerChamber,
   SpeakerDriver,
   SpeakerPort,
+  SpeakerSlotPort,
   SubDriver,
   ThieleSmall,
   VentPanel,
@@ -825,6 +826,30 @@ function countShell(cabinet: SpeakerCabinet, f: ChamberFrame, bracing: BoxBracin
 /** The chamber's inside on the bracing's axes. */
 const insideAxes = (f: ChamberFrame) => ({ x: f.inside.iw, y: f.inside.ih, z: f.inside.inD });
 
+/** Whether a Hi-fi rule slot fits its chamber: a folded slot up the back (the PA slot's fold), a straight one along the floor. */
+const hifiSlotFits = (dims: Dims3, port: SpeakerSlotPort, t: number) =>
+  port.folded
+    ? port.len <= maxFoldedSlotIn(dims, port.h, t)
+    : port.len <= slotMaxLength(dims, t, port);
+
+/**
+ * Whether a chamber's vent fits it by the Hi-fi rule (lib/speaker/speakerLayout `portRule`): a slot by its length, round
+ * tubes by the elbows they need (lib/hifi hifiPortElbows). A PA port's fit is its fit chips' (lib/speaker/fitChips), so
+ * it, and a chamber with no vent, count as fitting here.
+ */
+export function hifiVentFits(
+  cabinet: Pick<SpeakerCabinet, "panel">,
+  chamber: SpeakerChamber,
+): boolean {
+  const rule = portRule(chamber);
+  if (!rule || rule.rule === PORT_RULE.pa) return true;
+  const t = cabinet.panel.thicknessIn;
+  const { port } = rule;
+  return port.shape === PORT_SHAPE.slot
+    ? hifiSlotFits(chamber.dims, port, t)
+    : hifiPortElbows(chamber.dims, t, port) !== null;
+}
+
 /**
  * The chamber's vent as cutlist rows and bought parts: a PA port's parts (a slot's shelf and fins, side ducts' walls and
  * dividers; flared tubes bought, with their stock pipe: lib/pa/calc subVentParts), a Hi-fi slot's shelf, a Hi-fi
@@ -845,10 +870,7 @@ function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]
   }
   const { port } = rule;
   if (port.shape === PORT_SHAPE.slot) {
-    // a folded slot runs up the back (the PA slot's fold), a straight one along the floor (the Hi-fi rule)
-    const fits = port.folded
-      ? port.len <= maxFoldedSlotIn(chamber.dims, port.h, t)
-      : port.len <= slotMaxLength(chamber.dims, t, port);
+    const fits = hifiSlotFits(chamber.dims, port, t);
     return {
       parts: [
         slotShelfPart(

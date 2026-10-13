@@ -9,11 +9,11 @@ import {
   roomRequiredSpl,
   SUB_BAND_HZ,
   AMP_WATTS_MAX,
-  ventSizesFor,
   PA_REACH_WORDS,
   paOptimizerWalls,
   paSearchDesign,
 } from "../src/lib/pa/optimize";
+import { ventSizesFor } from "../src/lib/optimizer/searchSpace";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { panelIn } from "../src/lib/panel";

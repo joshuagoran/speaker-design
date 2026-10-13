@@ -89,6 +89,9 @@ export const CHANGE_NAMES = {
   port: "port",
   radiator: "radiator",
   crossover: "crossover",
+  coaxial: "coaxial",
+  horn: "horn",
+  bandLevels: "band levels",
 } as const;
 
 /** How the notice starts when the first card only comes closest and misses a level or F3 the goals keep. */

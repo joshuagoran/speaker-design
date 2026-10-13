@@ -38,6 +38,7 @@ import type { DRIVER_PART } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
+import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { AMP_SERIES } from "./data/catalog/amps";
 import type { DSP_UNITS } from "./data/catalog/dsp-units";
@@ -2528,6 +2529,142 @@ export interface StackLimits {
   /** the member and the band that set it */
   member: number | null;
   band: BandId | null;
+}
+
+// ---- Speaker optimizer (lib/speaker/optimize) ----
+
+/** A goal, by id (`SPEAKER_GOAL`): cheaper, lighter, smaller, lower, louder. */
+export type SpeakerGoal = (typeof SPEAKER_GOAL)[keyof typeof SPEAKER_GOAL];
+
+/** The search's limits. The size limit is a lock per axis (`SpeakerOptimizerLocks.size`), as on the PA page. */
+export interface SpeakerOptimizerLimits {
+  /** the level the speaker has to reach for music, dB at 1 m, against `SpeakerLimits.musicDb` */
+  targetDb: number;
+  /** the most the purchased parts may cost (`speakerPrice`), US dollars; null: no limit */
+  budget: number | null;
+  /** the most the box may weigh (`cabinetBuild`), lb; null: no limit */
+  maxLb: number | null;
+}
+
+/** A driver entry of a spec, by place: its chamber's index and its index in the chamber, "k.j" (`driverRef`). */
+export type DriverRef = `${number}.${number}`;
+
+/** What stays as it is. Absent or empty: nothing of that kind is locked. */
+export interface SpeakerOptimizerLocks {
+  /** driver entries whose part stays (and, for a chamber's cones, every cone of the chamber with it) */
+  drivers?: readonly DriverRef[];
+  /** driver entries whose horn stays */
+  horns?: readonly DriverRef[];
+  /** chambers, by index, whose vent stays */
+  vents?: readonly number[];
+  /** bands whose highpass stays, and whose lowpass stays (a crossover in the box moves only when both its sides are free) */
+  highpass?: readonly BandId[];
+  lowpass?: readonly BandId[];
+  /** bands whose amp power stays */
+  amps?: readonly BandId[];
+  /** each axis of the box: free, exact, or no larger than now */
+  size?: Partial<Record<keyof Dims3, DimensionLockMode>>;
+}
+
+/** The candidate parts: each driver kind's table, and the horns. The model reads every part by id from the app tables. */
+export type SpeakerOptimizerCatalog = { [K in DriverKind]: readonly SpeakerDriverParts[K][] } & {
+  horns: readonly Horn[];
+};
+
+/** What the page posts to the Speaker optimizer's worker. */
+export interface SpeakerOptimizerInput {
+  spec: SpeakerSpec;
+  /** in tap order; the first ranks the designs */
+  goals: readonly SpeakerGoal[];
+  limits: SpeakerOptimizerLimits;
+  locks?: SpeakerOptimizerLocks;
+  /** absent: the app catalog */
+  catalog?: SpeakerOptimizerCatalog;
+}
+
+/** A design's numbers, all from the page's own code on the design as a card loads it. */
+export interface SpeakerOptimizerMetrics {
+  /** the purchased parts with a price, US dollars, and whether some part has none (`speakerPrice`) */
+  price: number;
+  pricePartial: boolean;
+  lb: number;
+  /** the box's outer size with the horns on its top, in (`speakerBounds`), and its volume, L */
+  sizeIn: Dims3;
+  volumeL: number;
+  /** the level for music, dB at 1 m (`SpeakerLimits.musicDb`); null when no band is modeled */
+  musicDb: number | null;
+  /** the band and the limit that set it */
+  band: BandId | null;
+  who: LimitId | null;
+  /** the lowest frequency where the summed response reaches its passband −3 dB, Hz; null with no response */
+  f3: number | null;
+}
+
+/** A card's change from your design (null where either side has no number). */
+export interface SpeakerOptimizerDelta {
+  price: number;
+  lb: number;
+  volumeL: number;
+  musicDb: number | null;
+  f3: number | null;
+}
+
+export interface SpeakerOptimizerCard {
+  label: string;
+  why: string;
+  /** which card it is: code reads this, never the label */
+  slot: CardSlot<SpeakerGoal>;
+  /** the whole design, as the page loads it: only the searched fields differ from yours */
+  spec: SpeakerSpec;
+  metrics: SpeakerOptimizerMetrics;
+  delta: SpeakerOptimizerDelta | null;
+  /** what differs from your design, in the cards' words */
+  changed: ChangeName[];
+  /** the warnings it passes with (a band that limits first) */
+  warnings: string[];
+  /** its maximum output with one input, [Hz, dB at 1 m] points (`SpeakerLimits.sum`) */
+  maxCurve: [number, number][];
+}
+
+/** A change to the limits that lets the search find a card. */
+export interface SpeakerNearMissOption {
+  text: string;
+  set: Partial<SpeakerOptimizerLimits>;
+}
+
+/** No card fits, or only the closest: the closest design, why it fails, and what loosening would help. */
+export interface SpeakerNearMiss {
+  options: SpeakerNearMissOption[];
+  closest: SpeakerOptimizerCard | null;
+  /** the closest design is your design as it is */
+  closestIsYours: boolean;
+  blocking: string[];
+}
+
+export interface SpeakerOptimizerResult {
+  goals: SpeakerGoal[];
+  /** the target level, dB at 1 m */
+  target: number;
+  /** your design: its numbers, what it fails and its maximum output; null when it can't be modeled */
+  current: {
+    metrics: SpeakerOptimizerMetrics;
+    problems: string[];
+    maxCurve: [number, number][];
+  } | null;
+  cards: SpeakerOptimizerCard[];
+  /** why there is no card that beats your design, or the closest card's notice; null otherwise */
+  goalMissing: string | null;
+  nearMiss: SpeakerNearMiss | null;
+  stats: {
+    /** the screen's runs (the coarse model, one unit each) */
+    screened: number;
+    /** the full runs (`speakerResponse`, `speakerLimits`, `cabinetBuild`) */
+    evaluated: number;
+    pool: number;
+    /** cards the last check dropped (always 0: the pool holds only final designs) */
+    dropped: number;
+    ms: number;
+  };
 }
 
 // ---- Bracing ----

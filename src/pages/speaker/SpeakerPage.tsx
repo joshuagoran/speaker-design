@@ -107,7 +107,8 @@ import {
   BRACE_TARGET_RANGE_HZ,
   BRACE_STYLE_SUMMARY,
 } from "../../constants/bracing";
-import { bandChips, chamberChips, chamberFitChips } from "./speakerChips";
+import { bandChips, chamberChips } from "./speakerChips";
+import { chamberFitChips } from "../../lib/speaker/fitChips";
 import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
 import type { SpeakerPageState } from "./useSpeakerPage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";

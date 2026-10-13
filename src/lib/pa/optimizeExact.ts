@@ -34,21 +34,18 @@ import {
   SUB_BAND_HZ,
   SAME_VOLUME,
   SUB_BOX_RANGE,
-  VENT_STYLES,
   XO_HI_OPTIONS,
   XO_LO_OPTIONS,
   paOptimizerWalls,
   paSearchBraceStyle,
-  highpassOptions,
   designProblems,
   evaluateDesign,
   hornOwnWarnings,
   optimizePaStack,
   paSearchAmps,
   paSearchDesign,
-  rangeOf,
-  ventSizesFor,
 } from "./optimize";
+import { VENT_STYLES, highpassOptions, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
 import {
   boxInternalLiters,
   hornResponse,

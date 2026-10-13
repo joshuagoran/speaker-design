@@ -1,6 +1,6 @@
 // What each optimizer goal keeps from your design, for both optimizers: the level it may give up and the F3 it may
 // add. The PA and Hi-fi keep tables are built from it, and the panels' Details line says it in words.
-import type { HifiGoal, PaGoal } from "../../types";
+import type { HifiGoal, PaGoal, SpeakerGoal } from "../../types";
 import type { Keep } from "./shortfall";
 import { keysOf } from "../records";
 
@@ -15,12 +15,26 @@ export const GOAL_KEEPS: Record<KeepGoal, { db: number; hz: number }> = {
   louder: { db: Infinity, hz: 3 },
 };
 
+/** The Speaker optimizer's keeps: the shared goals' own, and smaller keeps what lighter keeps. */
+export const SPEAKER_GOAL_KEEPS: Record<SpeakerGoal, { db: number; hz: number }> = {
+  ...GOAL_KEEPS,
+  smaller: GOAL_KEEPS.lighter,
+};
+
+/** Each goal's keep in `table` from a level to hold (dB) and your design's F3 (Hz). */
+export const keepsFrom = <G extends string>(
+  table: Record<G, { db: number; hz: number }>,
+  db: number,
+  f3: number,
+): Record<G, Keep> =>
+  // boundary cast: Object.fromEntries types its result as an index signature; the keys are exactly the table's own
+  Object.fromEntries(
+    keysOf(table).map((g) => [g, { db: db - table[g].db, f3: f3 + table[g].hz }]),
+  ) as Record<G, Keep>;
+
 /** Each goal's keep from a level to hold (dB) and your design's F3 (Hz). */
 export const goalKeeps = (db: number, f3: number): Record<KeepGoal, Keep> =>
-  // boundary cast: Object.fromEntries types its result as an index signature; the keys are exactly GOAL_KEEPS' own
-  Object.fromEntries(
-    keysOf(GOAL_KEEPS).map((g) => [g, { db: db - GOAL_KEEPS[g].db, f3: f3 + GOAL_KEEPS[g].hz }]),
-  ) as Record<KeepGoal, Keep>;
+  keepsFrom(GOAL_KEEPS, db, f3);
 
 /**
  * How an optimizer words the level a goal may give up, given the allowance ("0.5 dB"), plus an optional footnote, and
