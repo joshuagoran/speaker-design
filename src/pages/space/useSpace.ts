@@ -7,13 +7,7 @@ import {
   COVERAGE_BANDS,
   COVERAGE_GRID_COLS,
 } from "../../lib/pa/coverage";
-import {
-  oneMeterSpots,
-  spaceCrossoversHz,
-  spaceTargetAt,
-  venueBalance,
-  venueLevelRef,
-} from "../../lib/speaker/spaceBalance";
+import { oneMeterSpots, spaceCrossoversHz, spaceTargetAt } from "../../lib/speaker/spaceBalance";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { keysOf } from "../../lib/records";
 import {
@@ -311,8 +305,7 @@ export function useSpace() {
   }, [req, placed]);
 
   // where the target is measured, and the music balance it follows across the bands (lib/speaker/spaceBalance)
-  const levelRef = venueLevelRef(venue);
-  const balance = venueBalance(venue);
+  const { levelRef, balance } = venue;
   const crossovers = useMemo(
     () => spaceCrossoversHz({ space: { ...space, placements }, stacks, speakers }),
     // the crossovers read only these

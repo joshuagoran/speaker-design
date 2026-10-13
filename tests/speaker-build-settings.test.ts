@@ -9,7 +9,6 @@ import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import {
-  ductDividerOf,
   withDuctDivider,
   withMeasuredWalls,
   withWallPanel,
@@ -17,7 +16,7 @@ import {
 import { stackFromOldSave } from "../src/pages/stack/oldSaves";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { panelIn } from "../src/lib/panel";
-import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
+import { PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
 import {
   DRIVER_KIND,
   HORN_PLACEMENT,
@@ -121,10 +120,6 @@ test("build settings: a PA design's side ducts carry its divider size, as the Sp
     "tunes lower",
   );
   assert.deepStrictEqual(cabinetBuild(set.cabinet), cabinetBuild(thick.cabinet));
-  // a spec saved before the size: the size nearest the thickness, ½″ where it has none
-  const { divider: _d, ...old } = ductsOf(thick);
-  assert.equal(ductDividerOf(old), "3/4");
-  assert.equal(ductDividerOf({}), DUCT_DIVIDER_DEFAULT);
 });
 
 test("build settings: dividers of the walls' size share the walls' measured thickness, as on the PA page", () => {

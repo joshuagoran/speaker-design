@@ -87,6 +87,7 @@ function paDesign(c: GoldenConfig): PaPlannerDesign {
     hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
     spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
     hardware: savedHardware(c.hardware),
+    divider: c.divider ?? DEFAULT_PA.divider,
   };
 }
 
@@ -713,7 +714,7 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
     "a slot whose width the box sets",
   );
   assert.equal(
-    gapOf(vented({ shape: PORT_SHAPE.duct, n: 2, throat: 2, len: 10 })),
+    gapOf(vented({ shape: PORT_SHAPE.duct, n: 2, throat: 2, len: 10, div: 0.5, divider: "1/2" })),
     HORN_ENGINE_GAP.vent,
   );
   // today's PA boxes: the box models work out their net air; the mid/high box holds two kinds of driver

@@ -3,8 +3,7 @@
 // measured thickness per size between its walls and dividers (usePaDesign `panelExactIn`); here dividers of the walls'
 // size follow the walls' thickness, and dividers of another size keep their default (only the walls are measured). Pure.
 import type { PanelNominal, SideDuctPort, SpeakerCabinet, SpeakerPanel } from "../../types";
-import { defaultPanelIn, panelNominalNear } from "../panel";
-import { ductDividerIn } from "../pa/calc";
+import { defaultPanelIn } from "../panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 
@@ -19,13 +18,6 @@ export const withWallPanel = (panel: SpeakerPanel, nominal: PanelNominal): Speak
     : { ...panel, nominal, thicknessIn: defaultPanelIn(nominal, panel.material) };
 
 /**
- * The side ducts' dividers' nominal size: the one the port names, else (a spec saved before the size) the size nearest
- * their thickness, ½″ where it has none (`DUCT_DIVIDER_DEFAULT`).
- */
-export const ductDividerOf = (port: Pick<SideDuctPort, "divider" | "div">): PanelNominal =>
-  port.divider ?? panelNominalNear(ductDividerIn(port));
-
-/**
  * The side ducts with their dividers at another nominal size. The walls' size takes the walls' current thickness
  * (measured or default); another size is plywood, as the PA page's dividers, at its default thickness. The same size
  * keeps its thickness.
@@ -35,7 +27,7 @@ export const withDuctDivider = (
   divider: PanelNominal,
   walls: Pick<SpeakerPanel, "nominal" | "thicknessIn">,
 ): SideDuctPort =>
-  divider === ductDividerOf(port)
+  divider === port.divider
     ? { ...port, divider }
     : {
         ...port,
@@ -59,7 +51,7 @@ export function withMeasuredWalls(
     chambers: cabinet.chambers.map((c) =>
       c.vent.kind === VENT_KIND.vented &&
       c.vent.port.shape === PORT_SHAPE.duct &&
-      ductDividerOf(c.vent.port) === nominal
+      c.vent.port.divider === nominal
         ? {
             ...c,
             vent: { ...c.vent, port: { ...c.vent.port, divider: nominal, div: thicknessIn } },

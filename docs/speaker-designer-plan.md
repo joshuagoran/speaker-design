@@ -17,8 +17,8 @@ gets there in small PRs: near-term phases on today's Hi-fi engine first, then th
     fill, monitor.
 - **Stack page.** It joins saved speakers in a fixed relationship: relative positions, crossovers between boxes,
   delays and levels.
-- **Space page.** It places stacks and speakers freely: the room, left and right pairs, amps and channels, DSP,
-  and the coverage and level model.
+- **Space page.** It places stacks and speakers freely: the room, left and right pairs, the amp power of each
+  band, the alignment to set, and the coverage and level model.
 - **Today's PA page bundles all three.** It eventually becomes a stack preset.
 
 ## Current state
@@ -342,7 +342,7 @@ Each PR stands alone. Lowest risk first.
       | Sub delay to the mids                                              | Stack auto delay                                                                               | Done                                                 |
       | Listener response with the music-balance target curve              | Space listener response, with the target curve                                                 | Done: the target curve ("Music balance")             |
       | "Turned down to balance" (each band's pad)                         | Space levels (each band's level at the listening area)                                         | Done: each band's level and target                   |
-      | Amp power table (power each channel needs)                         | Space "Hardware" fold                                                                          | Done: in the Hardware fold (`tests/space-amp-power`) |
+      | Amp power table (power each channel needs)                         | Space "Amp power and alignment" fold: one amp power per band, no table                         | Done: one amp power per band (`tests/space-saves`)   |
       | Assumptions list                                                   | Space, below the map                                                                           | Done: under the map                                  |
       | Cutlist of one box                                                 | Speaker Cutlist tab                                                                            | Done                                                 |
       | Cutlist of the whole stack (both boxes on the same sheets)         | Stack: a Cutlist tab that packs every member's parts                                           | Done: the Stack Cutlist tab (`tests/stack-cutlist`)  |
@@ -847,8 +847,9 @@ Each PR stands alone. Lowest risk first.
     - **Done (L4a).**
       - **Types.** `StackSpec` (members, notes) and `StackMember` (speaker id, pose, mirror, crossover, level, delay or
         `AUTO_DELAY`). A pose is across, up and back from the stack's origin, or from the member it stands on (`on`).
-        `SpaceSpec` holds the placements (a stack, or a speaker alone on its own input range), the amps, the front end
-        and the venue. `SystemSpec` and the source role are gone (no fixed roles).
+        `SpaceSpec` holds the placements (a stack, or a speaker alone on its own input range), the venue. (Amps, amp channels and the front end
+        are gone: a band's amp power is `SpeakerBand.ampW` in the space's copy of its speaker, and the alignment is read from
+        the model, `lib/speaker/spaceAlignment`.) `SystemSpec` and the source role are gone (no fixed roles).
       - **Adapters.** `layersFromPa`, `layersFromHifi` and `layersFromFill` return the speakers, one stack and a space.
         PA: the sub with the top on it (gap or spacer), the top on its stand beside the sub (satellite), or the tower;
         the sub is `AUTO_DELAY`, the top sits `tilt` below it. Satellite's space places the speakers alone (one sub
@@ -877,13 +878,13 @@ Each PR stands alone. Lowest risk first.
     model.
     - The coverage map grows from `CoverageStack` to a list of placed stacks and speakers.
     - The baffle step, the room and the positions of the drivers come in here.
-    - It assigns the hardware that does what each stack needs: the front end and the amp channels. One rack
-      can drive several stacks.
+    - It sets the amp power of each band and lists what each box and band needs ahead of its amp: its filters, level and
+      delay (a delay as a time and as the distance it equals).
     - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
     - **Done (L4b).**
       - **Types.** A `SpacePlacement` has a spot (its base's front center), a lift, an aim (`SpaceAim`: yaw and pitch), a
         mirror image, `follows` (a mirror pair: it takes an earlier placement's item, spot, lift and aim, x and yaw turned
-        over), the front end's level and delay on its feed, and its amp channels. `StackPose.pitchDeg` tilts a member in
+        over), and its level and delay on its feed. `StackPose.pitchDeg` tilts a member in
         its stack. The venue is the room (`CoverageRoom`), the listener, the ear height, a listening area and the target.
       - **One aim model** (`lib/speaker/spaceLayout`). A member tilts about its bottom front edge by its cabinet's kick-back
         and its tilt in the stack; the placement tilts the whole stack about its base's front center, lifts it, turns it
@@ -891,7 +892,7 @@ Each PR stands alone. Lowest risk first.
         stands on a tilted member doesn't follow its tilt. The 3D view doesn't draw the aim yet.
       - **Model** (`lib/speaker/spaceCoverage`). The coverage engine (`lib/pa/coverage`) now sums voices (a pattern each:
         a piston or a horn's coverage) and drivers with yaw and pitch; the PA page builds its scene from them, unchanged.
-        A space plays each placement's stack response at the amp power its channels assign, each driver spot with its
+        A space plays each placement's stack response at each band's amp power, each driver spot with its
         band's share, its own coverage and, for a cone band, its baffle step. The whole space plays from one input at its
         music limit; the page turns it down until the listening area's average gets the target.
       - **Parity** (`tests/space-coverage.test.ts`). The PA design's space on the coverage page's floor: the sub plays
@@ -899,8 +900,8 @@ Each PR stands alone. Lowest risk first.
         90th percentile in every band. With the page's band levels moved to the space's, the same engine: within 0.15 dB
         mean and 0.3 dB at the 90th percentile, indoors and outdoors. Tilting a lifted stack down moves its hot spot closer;
         lifting it above the ears makes it quieter close in.
-      - **Page** (`#space`). Placements from the stack and speaker libraries or the current PA design; the room, the
-        listening area and the target; the front end and the amp channels; the coverage map on its fixed scale (with the
+      - **Page** (`#space`). One Place list: every stack preset and speaker template, the stack and speaker open now,
+        and the saved ones; the room, the listening area and the target; the amp power of each band and the alignment; the coverage map on its fixed scale (with the
         listening area), the levels at the listening area, a side view of the heights and tilts, and the response at the
         listener. Saves go to `spaces` with copies of the stacks and speakers.
       - **Not yet.** The 3D view of a space.
@@ -981,8 +982,8 @@ Each PR stands alone. Lowest risk first.
   - **Stack:** speakers in a fixed relationship: relative positions, crossovers between boxes, delays, levels.
     For example a sub, a mid-bass box and a horn.
   - **Space:** stacks or speakers placed freely: the room, left and right pairs, the coverage and level model.
-- The Stack says what each box needs (filters, delays, levels). The Space assigns the hardware that does it
-  (front end, amp channels), because one rack can drive several stacks.
+- The Stack says what each box needs (filters, delays, levels). The Space sets each band's amp power and lists the
+  alignment to set.
 - A speaker's input range comes from its stack's crossover. Alone on the Speaker page, the user sets it.
 - Monitor drive: the user can select passive or active.
 - No target level for each use. Show the maximum level at a distance that you set.

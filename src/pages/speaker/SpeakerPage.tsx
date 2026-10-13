@@ -143,6 +143,7 @@ export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
   hornMount: planner.hornMount,
   spacerH: planner.spacerHeightIn,
   hardware: planner.hardware,
+  divider: planner.ductDividerPanel,
 });
 
 /**

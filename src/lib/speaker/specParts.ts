@@ -1,4 +1,6 @@
 // Small parts the read adapters share (lib/speaker paSpec, hifiSpec, fillSpec).
+import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
+import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import type {
   BandFilter,
   ChamberLoad,
@@ -109,7 +111,7 @@ export const spacePlacement = (
 /**
  * A living room for a design that names none (the Hi-fi pair, a fill): SPACE_HOME_ROOM, grown to hold the boxes'
  * spread and the seat with SPACE_HOME_MARGIN_FT to spare; the listener at the seat, a seat-sized listening area round
- * them, and the room's target.
+ * them, and the room's target (flat, over the listening area).
  */
 export function homeVenue(
   spreadFt: number,
@@ -127,5 +129,8 @@ export function homeVenue(
     earFt,
     area: { ...listener, ...SPACE_SEAT_AREA },
     targetDb: SPACE_HOME_TARGET_DB,
+    // measured over the listening area, the same target in every band
+    levelRef: COVERAGE_LEVEL_REF.audience,
+    balance: AUTO_BALANCE_MODE.flat,
   };
 }

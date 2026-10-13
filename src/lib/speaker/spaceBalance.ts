@@ -11,17 +11,7 @@ import { oneMeterSpot } from "../pa/coverage";
 import { AUTO_BALANCE_TILT, tiltAt } from "./autoBalance";
 import { placementStack, resolvedPlacement } from "./spaceLayout";
 import { stackCrossoversHz } from "./stackResponse";
-import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
-import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
-import type { CoverageLevelRef } from "../../types";
-
-/** Where a venue's target is measured: its own, or the listening area for a save from before the setting. */
-export const venueLevelRef = (v: Pick<SpaceVenue, "levelRef">): CoverageLevelRef =>
-  v.levelRef ?? COVERAGE_LEVEL_REF.audience;
-
-/** The music balance a venue's target follows: its own, or flat for a save from before the setting. */
-export const venueBalance = (v: Pick<SpaceVenue, "balance">): AutoBalanceMode =>
-  v.balance ?? AUTO_BALANCE_MODE.flat;
+import type { AutoBalanceMode } from "../../constants/autoBalance";
 
 /**
  * Every crossover the space plays, Hz, low to high, once each: of its stacks' members and their speakers' bands, and

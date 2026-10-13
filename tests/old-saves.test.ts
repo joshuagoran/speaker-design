@@ -150,6 +150,7 @@ const pageDesign = (h: PaDesign): PaPlannerDesign => ({
   hornMount: h.hornMount,
   spacerH: h.spacerHeightIn,
   hardware: h.hardware,
+  divider: h.ductDividerPanel,
 });
 
 /** A design's speakers and stack, read in under one name. */

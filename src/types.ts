@@ -1936,11 +1936,10 @@ export type SpeakerDriver = {
 
 /**
  * Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each, and
- * their dividers' nominal size (`divider`) and exact thickness (`div`). A spec saved before the size has no `divider`:
- * it is the size nearest `div` (lib/speaker/cabinetPanels `ductDividerOf`).
+ * their dividers' nominal size (`divider`) and exact thickness (`div`).
  */
 export interface SideDuctPort
-  extends Pick<VentSpec, "throat" | "len" | "div">, Pick<PaDesignConfig, "divider"> {
+  extends Pick<VentSpec, "throat" | "len" | "div">, Required<Pick<PaDesignConfig, "divider">> {
   shape: (typeof PORT_SHAPE)["duct"];
   n: 1 | 2;
 }
@@ -2170,7 +2169,7 @@ export type SpeakerPart = (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART];
 
 /** The PA design as the planner holds it: every field set (a save can lack the later ones). */
 export type PaPlannerDesign = PaDesignConfig &
-  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH" | "hardware">>;
+  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH" | "hardware" | "divider">>;
 
 /**
  * Where a member stands in its stack, in: from the stack's origin (the middle of its base, at its front), or from the
@@ -2277,14 +2276,14 @@ export interface SpaceVenue {
   targetDb: CoverageLayout["targetDb"];
   /**
    * where the target is measured: the listening area's average, the listener, or 1 m in front of each placement
-   * (averaged). Absent in saves from before it: the listening area (`venueLevelRef`).
+   * (averaged).
    */
-  levelRef?: CoverageLevelRef;
+  levelRef: CoverageLevelRef;
   /**
    * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
-   * or the PA music tilt (lib/speaker/autoBalance). Absent in saves from before it: flat (`venueBalance`).
+   * or the PA music tilt (lib/speaker/autoBalance).
    */
-  balance?: AutoBalanceMode;
+  balance: AutoBalanceMode;
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
