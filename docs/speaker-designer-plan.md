@@ -428,6 +428,8 @@ Each PR stands alone. Lowest risk first.
         4. The limits are the budget, the maximum weight per box and the maximum size per box, as today.
         5. The PA and Hi-fi pages keep their optimizers until the new optimizer covers their presets.
         6. The goals are cheaper, lighter, smaller, lower and louder, in tap order. The results are cards.
+        7. The Speaker and Stack optimizers never add or remove boxes or bands. A suggestion to add a box (for example a
+           second sub to go lower) belongs to the Space optimizer (option (c)), later.
       - **Design: the Speaker optimizer** (option (a); branch `speaker-optimizer`). The engine comes first, with no UI.
         The UI comes in the next PR.
         - **Code.** `lib/speaker/optimize/`: pure functions and a worker entry. The page calls
