@@ -40,6 +40,7 @@ import {
   SET_BY,
   SET_BY_NAMES,
   SLOT_KIND_NAMES,
+  SLOT_KIND_TIPS,
   SLOT_FOLD_NAMES,
   TUBE_ENDS_NAMES,
   TUBE_LAYOUT_NAMES,
@@ -528,7 +529,7 @@ function SlotFields({
             : { shape: PORT_SHAPE.slot, n: 1, h, len },
         )
       }
-      options={entriesOf(SLOT_KIND_NAMES)}
+      options={entriesOf(SLOT_KIND_NAMES).map(([k, name]) => [k, name, SLOT_KIND_TIPS[k]] as const)}
     />
   );
   const resets = <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.slotKindResets}</p>;

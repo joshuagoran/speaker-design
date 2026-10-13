@@ -28,7 +28,7 @@ export const STACK_PROBLEM = { ...SPEAKER_PROBLEM, height: "height" } as const;
 
 /** Each problem in words, as the near miss lists them. */
 export const STACK_PROBLEM_TEXT = {
-  unmodeled: "the model can't run a box, chamber or band your stack runs",
+  unmodeled: "the app cannot calculate a box, chamber or band in your stack",
   driverFit: "a driver or horn no longer fits its chamber",
   ventFit: "a port doesn't fit its chamber",
   fitChip: "a duct, tube or hardware fit check fails",
@@ -52,7 +52,7 @@ export const STACK_NEAR_MISS_TEXT = {
 } as const;
 
 /** The notice when your stack has no box the model runs: there is nothing to score. */
-export const STACK_UNMODELED = "Cannot model your stack: it has no box to score.";
+export const STACK_UNMODELED = "Cannot calculate your stack: it has no box that plays.";
 
 /**
  * The Stack page's optimizer fold and result cards: the Speaker page's words (`SPEAKER_OPTIMIZER_TEXT`), with those

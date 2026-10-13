@@ -76,7 +76,7 @@ export const FILL_PRECEDENCE_MAX_MS = 20;
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
 const SPACE_ONE_METER = "1 m from the speakers";
 const SPACE_ONE_METER_TIP =
-  "The mean level at ear height, 1 m in front of each placed stack or speaker that has a model, on its aim.";
+  "The mean level at ear height, 1 m in front of each placed stack or speaker that plays, on its aim.";
 
 /** The Space page's "Measured at" choices: the PA's, with its own 1 m reference. */
 export const SPACE_LEVEL_REFS: readonly ToggleOption<CoverageLevelRef>[] = COVERAGE_LEVEL_REFS.map(
@@ -102,9 +102,9 @@ export const SPACE_TEXT = {
   hardware: "Hardware",
   noPlacements: "Place a saved stack or speaker, or start from a preset.",
   missing:
-    "A placement names a stack or speaker that is not in this space. The model leaves it out.",
+    "A placement names a stack or speaker that is not in this space. The space leaves it out.",
   startHint:
-    "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on the Coverage page's floor, and the Hi-fi pair in its room. A PA start sets each band's level to the PA page's music balance. Open a saved space from the library above.",
+    "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on its own floor, and the Hi-fi pair in its room. A PA start sets each band's level for PA music. Open a saved space from the library above.",
   clear: "Start empty",
   subs: "Subs",
   subsHint:
@@ -163,11 +163,11 @@ export const SPACE_TEXT = {
   channelsOver: (amp: number, used: number, has: number) =>
     `${ampName(amp)} has ${has} channels; this space uses ${used}.`,
   noChannel:
-    "A band has no amp channel: the model drives it at its own amp power (set on the Speaker page).",
+    "A band has no amp channel: the space drives it at its own amp power (set on the Speaker page).",
   analogDelay:
     "An analog front end has fixed cards with no delay: a stack's alignment or a placement's delay needs a DSP.",
   noFrontEnd:
-    "No front end: only passive speakers straight off the amps. The model still uses each stack's filters.",
+    "No front end: only speakers with an internal crossover straight off the amps. The space still uses each stack's filters.",
   outdoors: "Outdoors",
   areaWidth: "Area width, ft",
   areaLength: "Area length, ft",
@@ -180,7 +180,7 @@ export const SPACE_TEXT = {
     `${band}, ${target} dB target at ${place}. The dashed box is the listening area.`,
   balance: "Music balance",
   balanceTip:
-    "The target in each band. Flat: the same target in every band. PA music tilt: as the PA page, each band above a crossover is lower (the auto balance steps).",
+    "The target in each band. Flat: the same target in every band. PA music tilt: each band above a crossover is lower (the auto balance steps).",
   /** the band levels' heading: each band at the middle of the listening area */
   bandLevels: "Each band at the middle of the listening area, at this level:",
   /** one band's level and target there, dB (already formatted) */
@@ -206,5 +206,5 @@ export const SPACE_TEXT = {
     `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
   listenerVs: "The listener against the target:",
   modelNote:
-    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
+    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
 } as const;

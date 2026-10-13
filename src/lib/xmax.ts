@@ -193,7 +193,7 @@ export function xmaxRows(
       "Xmax (comparable)",
       `${est ? "≈" : ""}${ts.Xmax.toFixed(1)} mm`,
       how,
-      `One scale for all drivers: (Hvc − Hg)/2 + Hg/4, as B&C, Lavoce and Ciare publish. The models use it.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
+      `One scale for all drivers: (Hvc − Hg)/2 + Hg/4, as B&C, Lavoce and Ciare publish. The app uses it.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
     ],
     [
       "Xmax (maker)",

@@ -59,7 +59,7 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         className="mb-4"
       />
       <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Drive</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Crossover</Tooltip>}
         value={band.drive}
         onChange={(drive) => onEdit((b) => ({ ...b, drive }))}
         options={entriesOf(DRIVE_NAMES)}
