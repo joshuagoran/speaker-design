@@ -1,23 +1,9 @@
-import { Button } from "../../components/ui/Button";
-import { LimitField } from "../../components/ui/LimitField";
-import { Notice } from "../../components/ui/Notice";
-import { NumberField } from "../../components/ui/NumberField";
-import { SettingsFold } from "../../components/ui/SettingsFold";
 import { LockButton } from "../../components/lock/LockButton";
 import { DimensionLock } from "../../components/lock/DimensionLock";
-import { GoalPicker } from "../../components/optimizer/GoalPicker";
-import { KeepDetails } from "../../components/optimizer/KeepDetails";
-import { KeepList, type KeepGroup } from "../../components/optimizer/KeepList";
-import { LockBarButtons } from "../../components/optimizer/LockBarButtons";
-import { RunRow } from "../../components/optimizer/RunRow";
-import {
-  SPEAKER_KEEP_WORDS,
-  SPEAKER_GOAL_KEEPS,
-  keepLinesFrom,
-} from "../../lib/optimizer/goalKeeps";
+import type { KeepGroup } from "../../components/optimizer/KeepList";
+import { DesignOptimizerSettings } from "../../components/optimizer/DesignOptimizerSettings";
 import { SPEAKER_GOAL_TEXT } from "../../constants/speakerOptimizer";
 import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
-import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { keysOf } from "../../lib/records";
 import { SIZE_AXES } from "./speakerKeeps";
 import type { SpeakerOptimizer } from "./useSpeakerOptimizer";
@@ -44,11 +30,11 @@ export function optimizerSummary(
 }
 
 /**
- * The Speaker page's Optimizer fold: goals in tap order, the target level at 1 m, the budget and weight limits, the
- * Keep list (a lock per part and per box axis), and Find designs with its progress and Cancel.
+ * The Speaker page's Optimizer fold (`DesignOptimizerSettings`): the budget and weight limits, and a lock per part and
+ * per box axis in the Keep list.
  */
 export function SpeakerOptimizerSettings({ optimizer: o }: Props) {
-  const keep: KeepGroup[] = keysOf(T.groups).map((group) => ({
+  const groups: KeepGroup[] = keysOf(T.groups).map((group) => ({
     title: T.groups[group],
     rows:
       group === "size"
@@ -77,84 +63,36 @@ export function SpeakerOptimizerSettings({ optimizer: o }: Props) {
               ),
             })),
   }));
-  const modeled = o.yoursDb !== null;
   return (
-    <>
-      <GoalPicker defs={SPEAKER_GOAL_TEXT} selected={o.goals} onTap={o.tapGoal} />
-      <KeepDetails
-        lines={keepLinesFrom(
-          SPEAKER_GOAL_KEEPS,
-          o.goals,
-          SPEAKER_GOAL_TEXT,
-          SPEAKER_KEEP_WORDS,
-          modeled,
-        )}
-      />
-      <NumberField
-        label={T.target}
-        value={o.targetDb}
-        step={1}
-        unit={T.targetUnit}
-        onChange={o.setTarget}
-        className="mt-3 mb-1"
-      />
-      {modeled && (
-        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-stone-500">
-          {T.targetYours(Math.round(o.yoursDb ?? 0).toString())}
-          {!o.targetIsYours && (
-            <Button size="xs" onClick={o.useYoursForTarget}>
-              {T.targetUseYours}
-            </Button>
-          )}
-        </div>
-      )}
-      <LimitField
-        label={T.budget}
-        value={o.budget}
-        onChange={o.setBudget}
-        startAt={o.budgetStart}
-        min={0}
-        step={25}
-        unit="$"
-        words={{ none: T.noLimit, limit: T.limit, field: T.budgetField }}
-      />
-      <LimitField
-        label={T.weight}
-        value={o.maxLb}
-        onChange={o.setMaxLb}
-        startAt={o.weightStart}
-        min={1}
-        step={5}
-        unit="lb"
-        words={{ none: T.noLimit, limit: T.limit, field: T.weightField }}
-      />
-      <SettingsFold
-        title={T.keep}
-        summary={o.lockBar.nLocks ? T.summaryKeeps(o.lockBar.nLocks) : undefined}
-      >
-        <p className="text-xs text-stone-500 mb-2">{T.keepHint}</p>
-        <div className="flex items-center gap-2 mb-3">
-          <LockBarButtons {...o.lockBar} />
-        </div>
-        <KeepList groups={keep} />
-      </SettingsFold>
-      <RunRow
-        busy={o.isOptimizing}
-        hasGoal={o.goals.length > 0}
-        onRun={() => o.search()}
-        runLabel={T.run}
-        onCancel={o.cancel}
-        progress={o.progress}
-        stats={o.result && o.result.stats}
-        note={o.result && o.result.cards.length ? OPTIMIZER_PANEL_TEXT.cardsPass : ""}
-      >
-        {o.canUndo && (
-          <Button size="md" onClick={o.undoLoad}>
-            {T.undoLoad}
-          </Button>
-        )}
-      </RunRow>
-      {o.error && !o.isOptimizing && <Notice>{o.error}</Notice>}
-    </>
+    <DesignOptimizerSettings
+      optimizer={o}
+      goalDefs={SPEAKER_GOAL_TEXT}
+      text={T}
+      limits={[
+        {
+          key: "budget",
+          label: T.budget,
+          field: T.budgetField,
+          value: o.budget,
+          onChange: o.setBudget,
+          startAt: o.budgetStart,
+          min: 0,
+          step: 25,
+          unit: "$",
+        },
+        {
+          key: "weight",
+          label: T.weight,
+          field: T.weightField,
+          value: o.maxLb,
+          onChange: o.setMaxLb,
+          startAt: o.weightStart,
+          min: 1,
+          step: 5,
+          unit: "lb",
+        },
+      ]}
+      keep={{ groups, lockBar: o.lockBar }}
+    />
   );
 }

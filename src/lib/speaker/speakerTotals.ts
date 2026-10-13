@@ -50,23 +50,27 @@ export function stackHeightIn(
 }
 
 /**
- * A stack's totals: the members' purchased parts (`dollars`, `partial` when some part has no price), their weight, lb,
- * and its height (`stackHeightIn`), in. A member whose speaker is missing adds nothing.
+ * A stack's totals: the members' purchased parts (`dollars`, `partial` when some part has no price), their weight, lb
+ * (`lb`, and the heaviest box's, `maxBoxLb`), and its height (`stackHeightIn`), in. A member whose speaker is missing
+ * adds nothing.
  */
 export function stackTotals(
   stack: Pick<StackSpec, "members">,
   speakers: readonly SpeakerSpec[],
-): PriceTotal & { lb: number; heightIn: number } {
+): PriceTotal & { lb: number; maxBoxLb: number; heightIn: number } {
   let dollars = 0,
     partial = false,
-    lb = 0;
+    lb = 0,
+    maxBoxLb = 0;
   for (const member of stack.members) {
     const speaker = speakers.find((s) => s.id === member.speakerId);
     if (!speaker) continue;
     const price = speakerPrice(speaker.cabinet);
     dollars += price.dollars;
     partial ||= price.partial;
-    lb += cabinetBuild(speaker.cabinet).lb;
+    const boxLb = cabinetBuild(speaker.cabinet).lb;
+    lb += boxLb;
+    maxBoxLb = Math.max(maxBoxLb, boxLb);
   }
-  return { dollars, partial, lb, heightIn: stackHeightIn(stack, speakers) };
+  return { dollars, partial, lb, maxBoxLb, heightIn: stackHeightIn(stack, speakers) };
 }
