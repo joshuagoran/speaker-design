@@ -48,6 +48,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Never push straight to `main` (it deploys via GitHub Actions). Every change goes through a PR; don't ask.
 - Feature branches: merge `main` into a feature branch with a merge commit pushed straight to that branch, with no
   PR. Only changes to `main` go through a PR.
+- Every setting a template or preset can set is also a setting on its page. No design is reachable only from a template.
 
 ## Commits and PRs
 
