@@ -16,6 +16,7 @@ import { savedPanelExactIn } from "../../lib/panel";
 const STORE_KEYS = {
   hifi: "hifi.cutlist",
   speaker: "speaker.cutlist",
+  stack: "stack.cutlist",
 } as const satisfies Record<StoredCutlistProject, string>;
 
 /** What this browser keeps: the cutlist's settings and the measured thickness of each nominal panel size. */

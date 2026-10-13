@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { BandId, PaPlannerDesign } from "../../types";
+import type { BandId, DispersionPlane, PaPlannerDesign } from "../../types";
 import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
@@ -10,11 +10,15 @@ import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
 import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { HandleFields } from "../../components/ui/HandleFields";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
+import { DispersionBlock } from "../../components/charts/DispersionBlock";
+import { speakerDispersionMap } from "../../lib/speaker/stackDispersion";
+import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
 import { priceText, speakerPrice } from "../../lib/speaker/speakerTotals";
@@ -47,6 +51,9 @@ import { PANEL_NOMINAL_OPTIONS, formatThickness } from "../../lib/panel";
 import { withWallPanel } from "../../lib/speaker/cabinetPanels";
 import { BAFFLE_PLY_IN } from "../../lib/pa/calc";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
+import { handlePart } from "../../lib/pa/hardware";
+import { HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
+import { HARDWARE_PRESET_WORDS, NO_HANDLES_LABEL, hardwareNote } from "../../constants/hardware";
 import {
   RESULT_MAX_WIDTH,
   READING_WIDTH,
@@ -62,12 +69,14 @@ import {
   FREQ_AXIS_MIN_HZ,
   MAX_OUTPUT_BOT,
   MAX_OUTPUT_TOP,
+  DISPERSION_DISTANCE_M,
 } from "../../constants/chartScales";
 import {
   SPEAKER_SETTINGS_SECTIONS,
   type SpeakerSettingsSection,
 } from "../../constants/settingsSections";
 import { ARCH_BLOCK_TEXT, SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
+import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import {
   CABINET_CONSTRUCTION,
   CABINET_CONSTRUCTION_NAMES,
@@ -98,7 +107,7 @@ import {
   BRACE_TARGET_RANGE_HZ,
   BRACE_STYLE_SUMMARY,
 } from "../../constants/bracing";
-import { bandChips, chamberChips } from "./speakerChips";
+import { bandChips, chamberChips, chamberFitChips } from "./speakerChips";
 import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
 import type { SpeakerPageState } from "./useSpeakerPage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -118,6 +127,12 @@ const SUM_LINE_PX = 4;
 
 /** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
+
+/** The hardware setting's choices: none, or the PA boxes' handles, input dish and horn posts. */
+const HARDWARE_OPTIONS = [
+  [false, SPEAKER_TEXT.hardwareNone],
+  [true, SPEAKER_TEXT.hardwareOn],
+] as const;
 
 /** The PA design as the planner holds it, every field set. */
 export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
@@ -161,8 +176,17 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
     );
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
-  const { chambers, construction, top, insetIn, braceStyle, braceTargetHz, backJoint, panel } =
-    spec.cabinet;
+  const {
+    chambers,
+    construction,
+    top,
+    insetIn,
+    braceStyle,
+    braceTargetHz,
+    backJoint,
+    panel,
+    hardware,
+  } = spec.cabinet;
   const framed = construction === CABINET_CONSTRUCTION.frameInset;
   /** no bracing: the panels are left unbraced */
   const unbraced = braceStyle === NO_BRACING;
@@ -185,6 +209,11 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
         ? SPEAKER_TEXT.notBracedSummary
         : `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
       BACK_JOINT_SUMMARY[backJoint],
+      hardware
+        ? SPEAKER_TEXT.hardwareSummary(
+            handlePart(hardware.model)?.name ?? NO_HANDLES_LABEL.toLowerCase(),
+          )
+        : SPEAKER_TEXT.noHardwareSummary,
     ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
     bands: [
@@ -243,6 +272,11 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
       : []),
   ];
   const price = useMemo(() => speakerPrice(spec.cabinet), [spec.cabinet]);
+  const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
+  const dispersion = useMemo(
+    () => (response.bands.length ? speakerDispersionMap(spec, response, plane) : null),
+    [spec, response, plane],
+  );
   const buildTiles: StatTileItem[] = [
     [STATS.partsPrice, priceText(price), ""],
     [SPEAKER_TEXT.weight, build.lb.toFixed(0), "lb"],
@@ -254,6 +288,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
           "lb",
         ])),
   ];
+  /** each chamber's duct and hardware fit checks */
+  const fitChips = chamberFitChips(spec.cabinet, build);
   const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   const cell = (place: string) => resultsCellClass(wide, place);
   const fbMarks = response.chambers.flatMap((c, i) =>
@@ -376,6 +412,21 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                       ]
                     : [];
                 })}
+              {fitChips.some((chips) => chips.length > 0) && (
+                <div className={`${READING_WIDTH} flex flex-col gap-3 my-3`}>
+                  {fitChips.map(
+                    (chips, i) =>
+                      chips.length > 0 && (
+                        <div key={i}>
+                          <h4 className="text-xs font-semibold text-stone-500 mb-1">
+                            {SPEAKER_TEXT.chamber} {i + 1}
+                          </h4>
+                          <WarningChips chips={chips} />
+                        </div>
+                      ),
+                  )}
+                </div>
+              )}
               <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
                 {SPEAKER_TEXT.priceNote}{" "}
                 {unbraced
@@ -417,10 +468,10 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 />
                 <StatTileGrid tiles={maxTiles} className="mt-5 mb-3" />
                 <div className={`${READING_WIDTH} flex flex-col gap-3 mb-3`}>
-                  {bandChips(spec, limits).map(({ id, chips }) => (
+                  {bandChips(spec, limits, response).map(({ id, chips }) => (
                     <div key={id}>
                       <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
-                      <WarningChips chips={chips} />
+                      <WarningChips chips={chips} tips={{ speakerKeepsUp: KEEP_UP_TEXT.tip }} />
                     </div>
                   ))}
                   {limits.chambers.map(
@@ -439,6 +490,18 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               </section>
             )}
           </div>
+          {dispersion && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+              <SectionHeading className="mb-3">{DISPERSION_HEADING}</SectionHeading>
+              <DispersionBlock
+                map={dispersion}
+                plane={plane}
+                onPlane={setPlane}
+                distM={DISPERSION_DISTANCE_M}
+                axis="listening"
+              />
+            </section>
+          )}
         </>
       }
       settings={
@@ -554,6 +617,48 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   }
                   className="mb-3"
                 />
+              )}
+              <ToggleGroup
+                label={<Tooltip tip={SPEAKER_TEXT.hardwareTip}>{SPEAKER_TEXT.hardware}</Tooltip>}
+                className="mb-3"
+                value={hardware !== null}
+                onChange={(on) =>
+                  speakerPage.editCabinet((c) => ({
+                    ...c,
+                    // on: the PA sub box's preset handles
+                    hardware: on ? (c.hardware ?? DEFAULT_PA.hardware.sub) : null,
+                  }))
+                }
+                options={HARDWARE_OPTIONS}
+              />
+              {hardware && (
+                <>
+                  <HandleFields
+                    label={SPEAKER_TEXT.handles}
+                    handles={hardware}
+                    onChange={(change) =>
+                      speakerPage.editCabinet((c) => ({
+                        ...c,
+                        hardware: c.hardware && { ...c.hardware, ...change },
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-stone-500 mb-3">
+                    {hardwareNote(
+                      {
+                        box: SPEAKER_TEXT.hardwareDishBox,
+                        name: INPUT_PLATE.name,
+                        jack: INPUT_JACK.name,
+                        place: HARDWARE_PRESET_WORDS.plate,
+                      },
+                      {
+                        box: SPEAKER_TEXT.hardwarePostsBox,
+                        name: HORN_POSTS.name,
+                        place: HARDWARE_PRESET_WORDS.posts,
+                      },
+                    )}
+                  </p>
+                </>
               )}
             </>,
           )}

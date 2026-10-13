@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { SpeakerSpec } from "../../types";
-import { alpha } from "../../styles/palette";
+import type { SpeakerSpec, SubPlacement } from "../../types";
+import { SUB_PLACEMENT, SUB_PLACEMENT_OPTIONS } from "../../constants/subPlacement";
+import { alpha, TARGET_DASH } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
 import { useFolds } from "../../hooks/useFolds";
@@ -24,16 +25,25 @@ import { SpaceSide } from "../../components/drawings/SpaceSide";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
-import { keysOf } from "../../lib/records";
+import { entriesOf, keysOf } from "../../lib/records";
 import { formatHz, formatSigned } from "../../lib/format";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
+import { AUTO_BALANCE_MODE_LABEL } from "../../constants/autoBalance";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { Tooltip } from "../../components/ui/Tooltip";
 import {
   SPACE_SETTINGS_SECTIONS,
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
-import { FRONT_END_NAMES, NO_FRONT_END, SPACE_TEXT } from "../../constants/space";
+import {
+  FRONT_END_NAMES,
+  NO_FRONT_END,
+  SPACE_LEVEL_REF_PLACE,
+  SPACE_LEVEL_REFS,
+  SPACE_TEXT,
+} from "../../constants/space";
 import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { stackFromSaved } from "../stack/stackSaves";
@@ -41,12 +51,14 @@ import type { StackPlanner } from "../stack/useStack";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { PlacementSettings } from "./PlacementSettings";
 import { HardwareSettings } from "./HardwareSettings";
+import { SpaceAssumptions } from "./SpaceAssumptions";
 import { emptySpace, itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
 import { STACK_STARTS, startGroup } from "../stack/stackPresets";
 import { STACK_START, STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
 import { SPEAKER_START_TEXT } from "../../constants/speakerStarts";
 import { byId } from "../../lib/tables";
+import { placementGroups } from "../../lib/speaker/fillAlign";
 
 interface Props {
   space: SpacePlanner;
@@ -90,12 +102,15 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     group: startGroup(id),
   }));
   const [start, setStart] = useState<StackStart>(STACK_START.paStack);
+  /** where a PA start puts its subs */
+  const [subs, setSubs] = useState<SubPlacement>(SUB_PLACEMENT.stacks);
   const [stackPick, setStackPick] = useState("");
   const [speakerPick, setSpeakerPick] = useState("");
   const pickedStack = stacks.find((o) => o.id === stackPick) ?? stacks[0];
   const pickedSpeaker = speakers.find((o) => o.id === speakerPick) ?? speakers[0];
   /** each placement's name: its number and what it places */
   const names = placements.map((p, k) => `${k + 1}. ${itemName(design, p.item)}`);
+  const groups = placementGroups(placements);
   const boxes: MapBox[] = model.placements.map(({ item }, k) => {
     const sizes = item.boxes.map((b) => speakerLayout(b.speaker.cabinet).size);
     const horn = item.drivers.map(driverPattern).find((p) => p.horn)?.horn;
@@ -116,15 +131,14 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     space.band === "one"
       ? `${formatHz(space.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[space.band].name} band, ${formatHz(COVERAGE_BANDS[space.band].lo)}–${formatHz(COVERAGE_BANDS[space.band].hi)}`;
-  const listenerRel =
-    space.listenerDb !== null && view ? space.listenerDb - view.target - view.gain : null;
-  const areaDb = view && view.atLimit !== null ? view.atLimit + view.gain : null;
+  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.refTarget : null;
+  const { areaDb, areaAtLimit } = space;
   const tiles: StatTileItem[] = [
     ...(areaDb !== null
       ? [[SPACE_TEXT.areaAverage, areaDb.toFixed(1), "dB"] satisfies StatTileItem]
       : []),
-    ...(view && view.atLimit !== null
-      ? [[SPACE_TEXT.areaMax, view.atLimit.toFixed(1), "dB"] satisfies StatTileItem]
+    ...(areaAtLimit !== null
+      ? [[SPACE_TEXT.areaMax, areaAtLimit.toFixed(1), "dB"] satisfies StatTileItem]
       : []),
     ...(space.listenerDb !== null
       ? [[SPACE_TEXT.listener, space.listenerDb.toFixed(1), "dB"] satisfies StatTileItem]
@@ -157,6 +171,8 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     </SettingsSection>
   );
   const { area } = venue;
+  /** where the target is measured, in a sentence */
+  const refPlace = SPACE_LEVEL_REF_PLACE[space.levelRef];
   return (
     <SettingsLayout
       results={
@@ -172,7 +188,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-1">{SPACE_TEXT.coverage}</SectionHeading>
             <p className="text-sm text-stone-500 mb-3">
-              {bandName}, {venue.targetDb} dB target at the listening area (dashed).{" "}
+              {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}{" "}
               {SPACE_TEXT.mapHint}
             </p>
             {placements.length === 0 ? (
@@ -205,6 +221,14 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 oneNote={SPACE_TEXT.oneNote(SINGLE_FREQ_RANGE[1])}
               />
             </div>
+            <div className={`${READING_WIDTH} mt-3`}>
+              <SpaceAssumptions
+                venue={venue}
+                levelRef={space.levelRef}
+                balance={space.balance}
+                target={space.target}
+              />
+            </div>
           </section>
           {placements.length > 0 && (
             <>
@@ -213,9 +237,9 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 {tiles.length > 0 && <StatTileGrid tiles={tiles} className="mb-2" />}
                 {view && (
                   <p className="text-sm text-stone-500 tabular-nums">
-                    {view.atLimit !== null && view.atLimit < venue.targetDb - 0.05
-                      ? SPACE_TEXT.cannotReach(venue.targetDb, view.atLimit)
-                      : SPACE_TEXT.turnedDown(-view.gain, venue.targetDb)}
+                    {view.atLimit !== null && view.atLimit < view.target + view.gain - 0.05
+                      ? SPACE_TEXT.cannotReach(refPlace, view.target + view.gain, view.atLimit)
+                      : SPACE_TEXT.turnedDown(-view.gain, refPlace, view.target + view.gain)}
                     {listenerRel !== null && (
                       <>
                         {" "}
@@ -226,6 +250,21 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                         .
                       </>
                     )}
+                  </p>
+                )}
+                {space.bandLevels.length > 0 && (
+                  <p className="text-sm text-stone-500 tabular-nums mt-2">
+                    {SPACE_TEXT.bandLevels}{" "}
+                    {space.bandLevels.map((b, k) => (
+                      <span key={b.band} className={relClass(b.db - b.target)}>
+                        {SPACE_TEXT.bandLevel(
+                          COVERAGE_BANDS[b.band].name,
+                          b.db.toFixed(1),
+                          b.target.toFixed(0),
+                        )}
+                        {k < space.bandLevels.length - 1 ? ", " : "."}
+                      </span>
+                    ))}
                   </p>
                 )}
               </section>
@@ -258,6 +297,13 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                     stroke: pal.ink,
                     tint: alpha(pal.ink, 0.05),
                   },
+                  {
+                    curve: space.targetCurve,
+                    label: SPACE_TEXT.targetCurve,
+                    stroke: pal.ink,
+                    tint: alpha(pal.ink, 0),
+                    dash: TARGET_DASH,
+                  },
                 ]}
                 span={
                   space.band === "one"
@@ -288,13 +334,22 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
               />
               <div className="flex flex-wrap gap-2 mb-2">
                 <Button
-                  onClick={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
+                  onClick={() =>
+                    space.setDesign(spaceFromStart(start, paPlannerDesign(planner), subs))
+                  }
                 >
                   {SPEAKER_START_TEXT.startOver}
                 </Button>
                 <Button onClick={() => space.setDesign(emptySpace())}>{SPACE_TEXT.clear}</Button>
               </div>
               <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.startHint}</p>
+              <ToggleGroup
+                label={<Tooltip tip={SPACE_TEXT.subsHint}>{SPACE_TEXT.subs}</Tooltip>}
+                className="mb-3"
+                value={subs}
+                onChange={setSubs}
+                options={SUB_PLACEMENT_OPTIONS}
+              />
             </>,
           )}
           {section(
@@ -309,6 +364,20 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 step={1}
                 unit=" dB SPL"
                 onChange={(targetDb) => space.editVenue((v) => ({ ...v, targetDb }))}
+              />
+              <ToggleGroup
+                label={SPACE_TEXT.measuredAt}
+                className="mb-3"
+                value={space.levelRef}
+                onChange={(levelRef) => space.editVenue((v) => ({ ...v, levelRef }))}
+                options={SPACE_LEVEL_REFS}
+              />
+              <ToggleGroup
+                label={<Tooltip tip={SPACE_TEXT.balanceTip}>{SPACE_TEXT.balance}</Tooltip>}
+                className="mb-3"
+                value={space.balance}
+                onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}
+                options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
               />
               <div className="flex flex-wrap gap-x-3 gap-y-3 mb-3">
                 <NumberField
@@ -365,6 +434,8 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                   onFollows={(follows) => space.setFollows(k, follows)}
                   onRemove={() => space.removePlacement(k)}
                   onMirrorPair={() => space.addMirrorPair(k)}
+                  groups={groups}
+                  onAlign={(to, afterMs) => space.alignTo(k, to, afterMs)}
                 />
               ))}
               {pickedStack && (

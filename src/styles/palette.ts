@@ -85,6 +85,9 @@ export const PALETTES: Record<ThemeName, Palette> = { light: LIGHT, dark: DARK }
 /** The dash pattern that tells two neighboring bands of one color apart on a chart. */
 const BAND_DASH = "6 4";
 
+/** The dash pattern of a target curve drawn in ink beside a measured curve in ink (the Space page's response chart). */
+export const TARGET_DASH = BAND_DASH;
+
 /**
  * A band's line on a chart, by its place among `count` bands, low to high: the lowest in the lighter gray (a sub, a
  * woofer alone), the highest in cyan (horn and tweeter), the ones between in magenta (mid-bass and woofer), every second

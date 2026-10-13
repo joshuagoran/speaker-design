@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { SpeakerSpec } from "../../types";
+import { useMemo, useState } from "react";
+import type { DispersionPlane, SpeakerSpec } from "../../types";
 import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
@@ -14,6 +14,9 @@ import { Notice } from "../../components/ui/Notice";
 import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
+import { DispersionBlock } from "../../components/charts/DispersionBlock";
+import { stackDispersionMap } from "../../lib/speaker/stackDispersion";
+import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
 import { priceText } from "../../lib/speaker/speakerTotals";
@@ -21,6 +24,8 @@ import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { StackFront } from "../../components/drawings/StackFront";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { MembersView3D } from "../../components/stack-view/MembersView3D";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { formatHz } from "../../lib/format";
@@ -33,18 +38,24 @@ import {
   HIFI_TOP,
   MAX_OUTPUT_BOT,
   MAX_OUTPUT_TOP,
+  DISPERSION_DISTANCE_M,
 } from "../../constants/chartScales";
 import {
   STACK_SETTINGS_SECTIONS,
   type StackSettingsSection,
 } from "../../constants/settingsSections";
 import { OLD_SAVE_GROUP_NAMES, STACK_TEXT } from "../../constants/stack";
+import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
 import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
+import { stackKeepUpChips } from "./stackChips";
+import { stackSummary } from "./stackSummary";
+import { SummaryStrip } from "../../components/ui/SummaryStrip";
+import { WarningChips } from "../../components/chips/WarningChips";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
 import { STACK_STARTS, startGroup, startLayers } from "./stackPresets";
 import {
@@ -163,6 +174,16 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
     [STATS.stackHeight, totals.heightIn.toFixed(0), "in"],
   ];
   const gaps = modeled.some(({ m }) => m.response.gaps.length > 0);
+  const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
+  const dispersion = useMemo(
+    () =>
+      modeled.length ? stackDispersionMap(design.stack, design.speakers, response, plane) : null,
+    [design, response, plane, modeled.length],
+  );
+  /** the phone strip's headline figures */
+  const summary = stackSummary(response, limits, totals.lb);
+  /** keep-up at each crossover between members */
+  const keepUps = stackKeepUpChips(design.stack, response, limits, names);
   return (
     <SettingsLayout
       results={
@@ -175,18 +196,30 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             saveName={name}
             manage
           />
+          {summary && <SummaryStrip items={summary} />}
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{STACK_TEXT.views}</SectionHeading>
-            <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
-              <div className="flex-1 min-h-0">
-                <StackFront
-                  stack={design.stack}
-                  speakers={design.speakers}
-                  listenHeightIn={response.listenHeightIn}
-                />
-              </div>
-              <p className="text-xs text-stone-500 mt-2">{STACK_TEXT.front}</p>
-            </Card>
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
+              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
+                {(cutaway) => (
+                  <MembersView3D
+                    stack={design.stack}
+                    speakers={design.speakers}
+                    cutaway={cutaway}
+                  />
+                )}
+              </Viewer3DCard>
+              <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
+                <div className="flex-1 min-h-0">
+                  <StackFront
+                    stack={design.stack}
+                    speakers={design.speakers}
+                    listenHeightIn={response.listenHeightIn}
+                  />
+                </div>
+                <p className="text-xs text-stone-500 mt-2">{STACK_TEXT.front}</p>
+              </Card>
+            </div>
             {members.length > 0 && (
               <>
                 <StatTileGrid tiles={totalTiles} className="mt-5 mb-3" />
@@ -269,7 +302,29 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 ]}
                 marks={marks}
               />
+              {keepUps.length > 0 && (
+                <div className={`${READING_WIDTH} flex flex-col gap-3 mt-3`}>
+                  {keepUps.map(({ heading, chips }) => (
+                    <div key={heading}>
+                      <h4 className="text-xs font-semibold text-stone-500 mb-1">{heading}</h4>
+                      <WarningChips chips={chips} tips={{ stackKeepsUp: KEEP_UP_TEXT.tip }} />
+                    </div>
+                  ))}
+                </div>
+              )}
               <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>{STACK_TEXT.maxNote}</p>
+            </section>
+          )}
+          {dispersion && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+              <SectionHeading className="mb-3">{DISPERSION_HEADING}</SectionHeading>
+              <DispersionBlock
+                map={dispersion}
+                plane={plane}
+                onPlane={setPlane}
+                distM={DISPERSION_DISTANCE_M}
+                axis="listening"
+              />
             </section>
           )}
         </>

@@ -48,7 +48,9 @@ const views = [
   "#speaker",
   "#speaker-cutlist",
   "#stack",
+  "#stack-cutlist",
   "#space",
+  "#space-notes",
 ];
 const failures = [];
 

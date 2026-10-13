@@ -84,7 +84,7 @@ export function placementStack(
 }
 
 /** A placement's frame: a point in its stack (in) to the room (ft), and its yaw and pitch, radians. */
-export function placementFrame(p: SpacePlacement) {
+export function placementFrame(p: Pick<SpacePlacement, "x" | "y" | "liftIn" | "aim" | "mirror">) {
   const yaw = p.aim.yawDeg * RAD,
     pitch = p.aim.pitchDeg * RAD;
   const cy = Math.cos(yaw),
@@ -159,44 +159,55 @@ export function spaceLayout(
     const placement = resolvedPlacement(placements, k);
     const stack = placementStack(design, placement.item);
     if (!stack) return { placement, stack, boxes: [], drivers: [] };
-    const frame = placementFrame(placement);
-    const placed = stackLayout(stack.stack, stack.speakers);
-    const boxes: PlacedBox[] = [];
-    const drivers: PlacedDriver[] = [];
-    placed.forEach((m, k2) => {
-      const { speaker } = m;
-      if (!speaker) return;
-      const member: StackMember = stack.stack.members[k2];
-      const memberTilt = memberPitch(speaker, member);
-      const inStack = memberPoint(m, member.mirror, memberTilt);
-      /** a point of the member (in: across its center line, up from its bottom, back from its front) in the room */
-      const inRoom = (q: StackPoint) => frame.toRoom(inStack(q));
-      const pitch = frame.pitch + memberTilt;
-      boxes.push({
-        member: k2,
-        speaker,
-        pitch,
-        corners: boxCorners(ORIGIN, m.size).map(inRoom),
-      });
-      for (const spot of driverSpotsIn(speaker))
-        for (const part of [DRIVER_PART.cone, DRIVER_PART.hf]) {
-          const band = bandOf(spot.chamber, spot.driver, part);
-          if (band === null) continue;
-          for (const q of spot.points)
-            drivers.push({
-              member: k2,
-              speaker,
-              chamber: spot.chamber,
-              driver: spot.driver,
-              part,
-              band,
-              mouth: spot.mouth,
-              at: inRoom({ x: q.x, y: q.y, z: 0 }),
-              yaw: frame.yaw,
-              pitch,
-            });
-        }
-    });
-    return { placement, stack, boxes, drivers };
+    return { placement, stack, ...layStack(stack, placementFrame(placement), bandOf) };
   });
+}
+
+/**
+ * A stack's boxes and driver spots in the room, through a placement's frame (`placementFrame`): each member laid out
+ * (lib/speaker/stackLayout), tilted by the aim model. `bandOf` names the band each driver part feeds.
+ */
+export function layStack(
+  stack: NonNullable<ReturnType<typeof placementStack>>,
+  frame: ReturnType<typeof placementFrame>,
+  bandOf: BandOfPart,
+): Pick<PlacedItem, "boxes" | "drivers"> {
+  const placed = stackLayout(stack.stack, stack.speakers);
+  const boxes: PlacedBox[] = [];
+  const drivers: PlacedDriver[] = [];
+  placed.forEach((m, k2) => {
+    const { speaker } = m;
+    if (!speaker) return;
+    const member: StackMember = stack.stack.members[k2];
+    const memberTilt = memberPitch(speaker, member);
+    const inStack = memberPoint(m, member.mirror, memberTilt);
+    /** a point of the member (in: across its center line, up from its bottom, back from its front) in the room */
+    const inRoom = (q: StackPoint) => frame.toRoom(inStack(q));
+    const pitch = frame.pitch + memberTilt;
+    boxes.push({
+      member: k2,
+      speaker,
+      pitch,
+      corners: boxCorners(ORIGIN, m.size).map(inRoom),
+    });
+    for (const spot of driverSpotsIn(speaker))
+      for (const part of [DRIVER_PART.cone, DRIVER_PART.hf]) {
+        const band = bandOf(spot.chamber, spot.driver, part);
+        if (band === null) continue;
+        for (const q of spot.points)
+          drivers.push({
+            member: k2,
+            speaker,
+            chamber: spot.chamber,
+            driver: spot.driver,
+            part,
+            band,
+            mouth: spot.mouth,
+            at: inRoom({ x: q.x, y: q.y, z: 0 }),
+            yaw: frame.yaw,
+            pitch,
+          });
+      }
+  });
+  return { boxes, drivers };
 }

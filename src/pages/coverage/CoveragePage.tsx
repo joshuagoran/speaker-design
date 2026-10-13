@@ -16,7 +16,7 @@ import { RoomFields } from "../../components/ui/RoomFields";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
-import type { SubPlacement } from "../../types";
+import { SUB_PLACEMENT, SUB_PLACEMENT_OPTIONS } from "../../constants/subPlacement";
 import { useCoverageLayout } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { AmpPowerTable } from "./AmpPowerTable";
@@ -46,11 +46,6 @@ const TABS: [CoverageTab, string][] = [
   ["band", "Band"],
   ["room", "Room"],
   ["stacks", "Stacks"],
-];
-const SUB_PLACEMENTS: [SubPlacement, string][] = [
-  ["stacks", "Subs in the stacks"],
-  ["center", "Center pair"],
-  ["single", "One center sub"],
 ];
 
 interface Props {
@@ -310,11 +305,15 @@ export function CoveragePage({ planner }: Props) {
               label="Stacks"
               value={map.subs}
               onChange={state.setSubs}
-              options={SUB_PLACEMENTS}
+              options={SUB_PLACEMENT_OPTIONS}
               disabled={
                 map.levels?.sub
                   ? undefined
-                  : { values: SUB_PLACEMENTS.map(([s]) => s).filter((s) => s !== "stacks") }
+                  : {
+                      values: SUB_PLACEMENT_OPTIONS.map(([s]) => s).filter(
+                        (s) => s !== SUB_PLACEMENT.stacks,
+                      ),
+                    }
               }
               className="mb-3"
             />

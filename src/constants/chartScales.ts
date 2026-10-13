@@ -46,6 +46,9 @@ export const DISPERSION_FREQ_MIN_HZ = 50;
 /** High end of every dispersion map's frequency axis, Hz (the PA stack's). */
 export const DISPERSION_FREQ_MAX_HZ = 20000;
 
+/** How far out a stack's or speaker's dispersion map is worked out, m (the PA page's, the Speaker and Stack pages'). */
+export const DISPERSION_DISTANCE_M = 10;
+
 /** How many log-spaced frequencies a dispersion map samples between its axis ends (about 9 per octave). */
 export const DISPERSION_FREQ_POINTS = 78;
 

@@ -18,6 +18,7 @@ import type {
   ListenerGeometry,
   PaStackGeometry,
 } from "../../types";
+import type { CoveragePattern } from "./coverage";
 
 const C = 343,
   IN = 0.0254;
@@ -73,9 +74,17 @@ export function stackSourceDirectivity(
   th: number,
   tv: number,
 ): number {
-  return o.horn
-    ? waveguideDirectivity(f, s.horn.covH, s.horn.covV, s.horn.wIn, s.horn.hIn, th, tv)
-    : pistonDirectivity(f, o.a, Math.acos(Math.cos(th) * Math.cos(tv)));
+  return patternDirectivity(o.horn ? { horn: s.horn } : { a: o.a }, f, th, tv);
+}
+
+/**
+ * A source's directivity (pressure, 1 on axis) at `th` radians off its horizontal axis and `tv` above it: a horn as a
+ * waveguide, a piston by its total off-axis angle. The PA stack's sources and the Speaker and Stack pages' share it.
+ */
+export function patternDirectivity(p: CoveragePattern, f: number, th: number, tv: number): number {
+  return p.horn
+    ? waveguideDirectivity(f, p.horn.covH, p.horn.covV, p.horn.wIn, p.horn.hIn, th, tv)
+    : pistonDirectivity(f, p.a, Math.acos(Math.cos(th) * Math.cos(tv)));
 }
 
 // s: { sub: { zIn, Sd }, mid: { zIn, Sd }, horn: { zIn, covH, covV, wIn, hIn }, xoLo, xoHi, orderLo, orderHi }

@@ -6,6 +6,7 @@ import { FillsPage } from "./pages/fills/FillsPage";
 import { PaCutlistPage } from "./pages/cutlist/PaCutlistPage";
 import { HifiCutlistPage } from "./pages/cutlist/HifiCutlistPage";
 import { SpeakerCutlistPage } from "./pages/cutlist/SpeakerCutlistPage";
+import { StackCutlistPage } from "./pages/cutlist/StackCutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
 import { CoveragePage } from "./pages/coverage/CoveragePage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
@@ -115,7 +116,8 @@ export function App() {
         key={view}
         className="md:flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable]"
       >
-        {view === "notes" ? (
+        {/* the PA project's Notes and the Space project's are one static page (the PA page goes at L3f) */}
+        {view === "notes" || view === "spaceNotes" ? (
           <NotesPage />
         ) : view === "fills" ? (
           <FillsPage fills={fills} />
@@ -131,6 +133,8 @@ export function App() {
           <SpeakerCutlistPage speakerPage={speakerPage} />
         ) : view === "stack" ? (
           <StackPage stack={stack} speakerPage={speakerPage} planner={planner} />
+        ) : view === "stackCutlist" ? (
+          <StackCutlistPage stack={stack} />
         ) : view === "space" ? (
           <SpacePage space={space} stack={stack} speakerPage={speakerPage} planner={planner} />
         ) : view === "coverage" ? (

@@ -195,7 +195,7 @@ const MS_PER_S = 1000;
 const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 
 /** A pressure on the speaker model's frequencies read at `f`: its level and phase between grid points on log frequency. */
-function pressureAt(ps: readonly Complex[], f: number): Complex {
+export function pressureAt(ps: readonly Complex[], f: number): Complex {
   const freqs = SPEAKER_RESPONSE_FREQUENCIES;
   const n = freqs.length;
   if (f <= freqs[0]) return ps[0];

@@ -107,7 +107,10 @@ test("past the limit only once the peak headroom reads below 0.0 dB", () => {
 });
 
 test("every limit has its own flag", () => {
-  assert.equal(new Set(Object.values(PAST_LIMIT_ON_PEAKS)).size, 4);
+  assert.equal(
+    new Set(Object.values(PAST_LIMIT_ON_PEAKS)).size,
+    Object.keys(PAST_LIMIT_ON_PEAKS).length,
+  );
 });
 
 test("the horn: its model's power and the amp's power into its impedance", () => {

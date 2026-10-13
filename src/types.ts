@@ -46,6 +46,7 @@ import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
+import type { AutoBalanceMode } from "./constants/autoBalance";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
@@ -2297,10 +2298,20 @@ export interface SpaceVenue {
   earFt: CoverageLayout["earFt"];
   area: ListeningArea;
   /**
-   * the level the listening area's average should get, dB SPL, the same in every band: the space is turned down to it,
-   * never past its limit
+   * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
+   * (`balance`) less: the space is turned down to it, never past its limit
    */
   targetDb: CoverageLayout["targetDb"];
+  /**
+   * where the target is measured: the listening area's average, the listener, or 1 m in front of each placement
+   * (averaged). Absent in saves from before it: the listening area (`venueLevelRef`).
+   */
+  levelRef?: CoverageLevelRef;
+  /**
+   * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
+   * or the PA music tilt (lib/speaker/autoBalance). Absent in saves from before it: flat (`venueBalance`).
+   */
+  balance?: AutoBalanceMode;
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
@@ -2438,6 +2449,8 @@ export interface SpeakerDriverPower {
   who: Extract<LimitId, "amp" | "thermal">;
   /** the program rating's derating at the band's highpass (1 = none) */
   derate: number;
+  /** its program rating (2 × AES), derated, W into `imp` */
+  programW: number;
 }
 
 /** A speaker at its limits (lib/speaker/speakerLimits `speakerLimits`). */
@@ -2792,8 +2805,17 @@ export type CutPartId = keyof typeof CUT_PART_NAMES;
 export type NamedCutBoxId = keyof typeof CUT_BOX_NAMES;
 /** A Speaker-page chamber's cutlist box, by its place in the cabinet (`chamberCutBox`: "chamber1", "chamber2" …). */
 export type ChamberCutBoxId = `chamber${number}`;
-/** The box a cutlist part belongs to: a named one, or a Speaker-page chamber (`cutBoxName` gives the name it shows). */
-export type CutBoxId = NamedCutBoxId | ChamberCutBoxId;
+/** A box of one speaker: a named one (a Speaker-page shell) or a Speaker-page chamber. */
+export type SpeakerCutBoxId = NamedCutBoxId | ChamberCutBoxId;
+/**
+ * A Stack-page member's box, by the member's number and its speaker's box (`memberCutBox`: "m2.chamber1", "m1.shell").
+ */
+export type MemberCutBoxId = `m${number}.${SpeakerCutBoxId}`;
+/**
+ * The box a cutlist part belongs to: a named one, a Speaker-page chamber, or a Stack-page member's box (`cutBoxName`
+ * gives the name it shows).
+ */
+export type CutBoxId = SpeakerCutBoxId | MemberCutBoxId;
 
 /** Which of a part's dimensions runs along the grain (the sheet's length): `a`, `b`, or either. */
 export type GrainDir = "a" | "b" | "any";

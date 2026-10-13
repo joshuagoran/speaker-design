@@ -1,4 +1,5 @@
-import type { Chip } from "../../types";
+import type { Chip, ChipId } from "../../types";
+import { Tooltip } from "../ui/Tooltip";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /** Background and border classes for each warning-chip status: a light tint of the status color with a matching border. */
@@ -11,10 +12,12 @@ export const CHIP_BACKGROUND_CLASSES = {
 interface Props {
   chips: readonly Chip[];
   className?: string;
+  /** a tooltip on the title of each chip with one of these ids */
+  tips?: Partial<Record<ChipId, string>>;
 }
 
 /** Stack of warning chips, each `[status, heading, text, id]` as returned by subChips, midChips, hornChips, fillChips and hifiChips. */
-export function WarningChips({ chips, className = "" }: Props) {
+export function WarningChips({ chips, className = "", tips }: Props) {
   return (
     <div className={`${RESULT_MAX_WIDTH} flex flex-col gap-1.5 ${className}`.trim()}>
       {chips.map(([kind, head, body, id]) => (
@@ -25,7 +28,7 @@ export function WarningChips({ chips, className = "" }: Props) {
           <b
             className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}
           >
-            {head}
+            {tips?.[id] ? <Tooltip tip={tips[id]}>{head}</Tooltip> : head}
           </b>
           <span className="text-stone-500">{body}</span>
         </div>

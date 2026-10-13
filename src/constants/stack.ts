@@ -4,7 +4,7 @@ import { STACK_LISTEN_DISTANCE_M, type OldSaveKind } from "./speakerSpec";
 export const STACK_TEXT = {
   /** the name a new stack starts with */
   newName: "New stack",
-  views: "Front view",
+  views: "Views",
   front:
     "The members as the stack places them, to scale. A mirrored member is drawn flipped. The dashed line is the listening axis.",
   response: "Response at the listening point",
@@ -21,6 +21,8 @@ export const STACK_TEXT = {
   maxNote:
     "One input drives the whole stack. At each frequency, the member with the least headroom sets the level, and every member plays at that input. The crossovers are in the front end, ahead of the amps.",
   noMembers: "Add a saved speaker, or start from a preset.",
+  /** a crossover between two members: the lower and the upper member by name */
+  crossing: (lower: string, upper: string) => `${lower} to ${upper}`,
   missing: "A member's speaker is missing from this stack, so the model leaves it out.",
   gaps: "The model leaves out part of a member's speaker. Open that speaker on the Speaker page to see which part.",
   fullRange: "full range",

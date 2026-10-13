@@ -1,3 +1,4 @@
+import { DISPERSION_DISTANCE_M } from "../../constants/chartScales";
 import {
   subSystem,
   ventSpeedLimit,
@@ -486,7 +487,7 @@ export function derivePaDesign({
     // driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center
     midCenter: midCenterHeightIn,
   } = heights;
-  const dispersionMapDistanceM = 10;
+  const dispersionMapDistanceM = DISPERSION_DISTANCE_M;
   const stackGeometry: PaStackGeometry | null =
     midDriver.ts && hornSpec.covH && hornOption.size
       ? {

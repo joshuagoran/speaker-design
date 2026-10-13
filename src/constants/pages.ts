@@ -13,7 +13,9 @@ export const PAGE_HASHES = {
   speakerCutlist: "#speaker-cutlist",
   speaker: "#speaker",
   stack: "#stack",
+  stackCutlist: "#stack-cutlist",
   space: "#space",
+  spaceNotes: "#space-notes",
 } as const;
 export type AppPage = keyof typeof PAGE_HASHES;
 
@@ -56,6 +58,12 @@ export const PROJECT_PAGES = {
     ["speaker", "Design"],
     ["speakerCutlist", "Cutlist"],
   ],
-  stack: [["stack", "Design"]],
-  space: [["space", "Design"]],
+  stack: [
+    ["stack", "Design"],
+    ["stackCutlist", "Cutlist"],
+  ],
+  space: [
+    ["space", "Design"],
+    ["spaceNotes", "Notes"],
+  ],
 } as const satisfies Record<ProjectId, readonly (readonly [AppPage, string])[]>;

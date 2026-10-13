@@ -8,7 +8,7 @@ export interface CutlistProject {
   source: string;
 }
 
-/** What the Cutlist page says for each project that has one (the Stack and the Space have none yet). */
+/** What the Cutlist page says for each project that has one (the Space has none). */
 export const CUTLIST_PROJECTS = {
   pa: { set: "stack", setsLabel: "Stacks", sets: [1, 2, 4], source: "the Design page's boxes" },
   hifi: { set: "speaker", setsLabel: "Speakers", sets: [1, 2, 4], source: "the Hi-fi page's box" },
@@ -18,7 +18,13 @@ export const CUTLIST_PROJECTS = {
     sets: [1, 2, 4],
     source: "the speaker on the Speaker page",
   },
-} as const satisfies Record<Exclude<ProjectId, "stack" | "space">, CutlistProject>;
+  stack: {
+    set: "stack",
+    setsLabel: "Stacks",
+    sets: [1, 2, 4],
+    source: "the members on the Stack page",
+  },
+} as const satisfies Record<Exclude<ProjectId, "space">, CutlistProject>;
 
 /** A project with a Cutlist page. */
 export type CutlistProjectId = keyof typeof CUTLIST_PROJECTS;
@@ -27,5 +33,6 @@ export type CutlistProjectId = keyof typeof CUTLIST_PROJECTS;
 export const CUTLIST_PROJECT = {
   hifi: "hifi",
   speaker: "speaker",
+  stack: "stack",
 } as const satisfies Record<string, CutlistProjectId>;
 export type StoredCutlistProject = (typeof CUTLIST_PROJECT)[keyof typeof CUTLIST_PROJECT];

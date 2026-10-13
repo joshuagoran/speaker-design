@@ -1,5 +1,7 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
-import type { CoverageRoom } from "../types";
+import type { CoverageBand, CoverageLevelRef, CoverageRoom } from "../types";
+import type { ToggleOption } from "../components/ui/ToggleGroup";
+import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 16 × 22 ft, a 9 ft ceiling, drywall all
@@ -61,6 +63,33 @@ export const SPACE_LIFT_MAX_IN = 240;
 /** An amp by its number in the space (1 up). */
 const ampName = (n: number) => `Amp ${n}`;
 
+/** The band a fill's level is matched to the mains in (lib/speaker/fillAlign): the voice range a fill is there for. */
+export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
+
+/**
+ * How much later than the mains a fill arrives at the listener, ms, so the sound still seems to come from the mains (the
+ * precedence effect): the "Delay after the mains" field's starting value and its range (5 to 15 ms are usual).
+ */
+export const FILL_PRECEDENCE_MS = 5;
+export const FILL_PRECEDENCE_MAX_MS = 20;
+
+/** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
+const SPACE_ONE_METER = "1 m from the speakers";
+const SPACE_ONE_METER_TIP =
+  "The mean level at ear height, 1 m in front of each placed stack or speaker that has a model, on its aim.";
+
+/** The Space page's "Measured at" choices: the PA's, with its own 1 m reference. */
+export const SPACE_LEVEL_REFS: readonly ToggleOption<CoverageLevelRef>[] = COVERAGE_LEVEL_REFS.map(
+  ([id, label]) =>
+    id === COVERAGE_LEVEL_REF.stacks ? [id, SPACE_ONE_METER, SPACE_ONE_METER_TIP] : [id, label],
+);
+
+/** Each Space reference as a sentence names it ("the target at …"). */
+export const SPACE_LEVEL_REF_PLACE: Record<CoverageLevelRef, string> = {
+  ...COVERAGE_LEVEL_REF_PLACE,
+  stacks: SPACE_ONE_METER,
+};
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
@@ -77,6 +106,9 @@ export const SPACE_TEXT = {
   startHint:
     "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on the Coverage page's floor, and the Hi-fi pair in its room. A PA start sets each band's level to the PA page's music balance. Open a saved space from the library above.",
   clear: "Start empty",
+  subs: "Subs",
+  subsHint:
+    "Where a PA start puts its subs. In a center pair or one center sub, the subs stand at the middle of the front and the tops stay at their height, on stands. A tower or satellite start keeps its own layout.",
   savedStack: "Saved stack",
   savedSpeaker: "Saved speaker",
   addStack: "Place stack",
@@ -103,6 +135,17 @@ export const SPACE_TEXT = {
   mirror: "Mirror image",
   level: "Level, dB",
   delay: "Delay, ms",
+  alignTo: "Align to",
+  alignToTip:
+    "For a fill: the placement it plays after. Align sets the delay and level of this placement and its mirror pair for the listener. The sound arrives just after the placement you pick and its mirror pair, at their level in the mid band. Move the listener to the area the fill covers first.",
+  align: "Align",
+  alignAfter: "Delay after the mains, ms",
+  alignAfterTip:
+    "How much later the fill plays than the placement it is aligned to, at the listener. People hear the sound as coming from the mains when the fill plays a few milliseconds later (the precedence effect). Common values are 5 to 15 ms. The alignment is exact at the listener. Across the room, it changes.",
+  /** a mirror pair in the "Align to" list: its placements' names */
+  pairName: (names: readonly string[]) => names.join(" + "),
+  alignFillNone:
+    "Cannot align: this placement and the one you pick must each hold a modeled stack or speaker.",
   feedTip:
     "The front end's level and delay on this placement's feed (a fill under, and after, the mains).",
   amps: "Amps",
@@ -130,7 +173,19 @@ export const SPACE_TEXT = {
   areaLength: "Area length, ft",
   areaCenter: "Area center from the front wall, ft",
   ear: "Ear height, ft",
-  target: "Target at the listening area",
+  target: "Target level, lowest band",
+  measuredAt: "Measured at",
+  /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
+  mapCaption: (band: string, target: string, place: string) =>
+    `${band}, ${target} dB target at ${place}. The dashed box is the listening area.`,
+  balance: "Music balance",
+  balanceTip:
+    "The target in each band. Flat: the same target in every band. PA music tilt: as the PA page, each band above a crossover is lower (the auto balance steps).",
+  /** the band levels' heading: each band at the middle of the listening area */
+  bandLevels: "Each band at the middle of the listening area, at this level:",
+  /** one band's level and target there, dB (already formatted) */
+  bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
+  targetCurve: "Target, music balance",
   listenerHint:
     "The dashed box on the map is the listening area. Tap the map, or drag the cyan dot, to move the listener.",
   mapHint:
@@ -144,11 +199,12 @@ export const SPACE_TEXT = {
   areaAtLeast: (db: string) => `Area ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
-  cannotReach: (target: number, atLimit: number) =>
-    `It cannot reach ${target} dB at the listening area in this band: ${atLimit.toFixed(1)} dB at its limit.`,
-  turnedDown: (db: number, target: number) =>
-    `Turned down ${db.toFixed(1)} dB so the listening area gets ${target} dB in this band.`,
+  /** the reference can't get the band's target: where it is measured (`COVERAGE_LEVEL_REF_PLACE`), dB */
+  cannotReach: (place: string, target: number, atLimit: number) =>
+    `It cannot reach ${target.toFixed(0)} dB at ${place} in this band: ${atLimit.toFixed(1)} dB at its limit.`,
+  turnedDown: (db: number, place: string, target: number) =>
+    `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
   listenerVs: "The listener against the target:",
   modelNote:
-    "Each placement plays its stack's response (each member's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the listening area's average gets the target.",
+    "Each placement plays its stack's response (each member's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
 } as const;

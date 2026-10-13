@@ -8,12 +8,20 @@ import type {
   LimitPeak,
   SpeakerChamberLimits,
   SpeakerLimits,
+  SpeakerResponse,
   SpeakerSpec,
 } from "../../types";
 import { formatHz, formatWatts } from "../../lib/format";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./speakerParts";
+import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
+import { ductFitChip, hardwareFitChip, hfHeadroomChip, tubeFitChip } from "../../lib/pa/chips";
+import { hfLimitWatts } from "../../lib/pa/calc";
+import { HIFI_DRIVE } from "../../constants/hifiEngine";
+import { baffleInsetIn } from "../../lib/speaker/chamberAir";
+import type { CabinetBuild } from "../../lib/speaker/speakerBuild";
+import type { SpeakerCabinet } from "../../types";
 
 /** A Speaker-page check. */
 type SpeakerChip = Chip<ChipId<"speaker">>;
@@ -24,11 +32,20 @@ const RATED_OHMS = 8;
 /** A peak against its limit: its share, %, rounded. */
 const pctOf = (p: LimitPeak) => Math.round((100 * p.peak) / p.limit);
 
-/** Each band's checks, in the spec's order: what sets its level, and a datasheet driver's power. */
+/**
+ * Each band's checks, in the spec's order: what sets its level, a datasheet driver's power and, with the response, its
+ * keep-up against the band under it at their crossover in the box (lib/speaker/keepUp).
+ */
 export function bandChips(
   spec: Pick<SpeakerSpec, "bands" | "input">,
   limits: SpeakerLimits,
+  response?: Pick<SpeakerResponse, "bands">,
 ): { id: BandId; chips: SpeakerChip[] }[] {
+  const keepUps = response ? speakerKeepUps(spec.bands, response, limits) : [];
+  const nameOf = (k: number) => {
+    const id = response?.bands[k]?.id;
+    return spec.bands.find((b) => b.id === id)?.name ?? id ?? "";
+  };
   return limits.bands.map((b) => {
     const band = spec.bands.find((s) => s.id === b.id);
     const amp = band ? ` from the ${formatWatts(band.ampW)} amp` : "";
@@ -61,6 +78,16 @@ export function bandChips(
             "speakerHfPower",
           ];
     })();
+    // a passive band's HF section behind a pad (its Level below 0) on the amp it shares: where it reaches its rating,
+    // as the Fills page's check; no chip without a pad
+    const pad = Math.max(0, -(band?.levelDb ?? 0));
+    const padChip: SpeakerChip | null =
+      hf && band?.drive === HIFI_DRIVE.passive && pad > 0
+        ? [
+            ...hfHeadroomChip(pad, hf.programW, hfLimitWatts(hf.programW, hf.imp, pad), band.ampW),
+            "speakerHfPad",
+          ]
+        : null;
     // the driver's power check says the same as the band's limit (both the amp, or both the program rating): one chip
     const same = hfChip !== null && hf?.who === b.who;
     const chips: SpeakerChip[] = [
@@ -71,8 +98,43 @@ export function bandChips(
         "speakerBandLimit",
       ],
       ...(hfChip && !same ? [hfChip] : []),
+      ...(padChip ? [padChip] : []),
+      ...keepUps
+        .filter((k) => response?.bands[k.upper]?.id === b.id)
+        .map((k): SpeakerChip => [
+          ...keepUpChip(k, nameOf(k.lower), nameOf(k.upper)),
+          "speakerKeepsUp",
+        ]),
     ];
     return { id: b.id, chips };
+  });
+}
+
+/**
+ * Each chamber's fit checks, in the spec's order: a PA port's duct and tubes against the chamber, by the PA sub box's
+ * rules (lib/pa/chips), and its hardware against its braces, drivers, vent and edges (lib/pa/hardware). Empty for a
+ * chamber with neither.
+ */
+export function chamberFitChips(
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  build: CabinetBuild,
+): SpeakerChip[][] {
+  const t = cabinet.panel.thicknessIn;
+  return build.chambers.map((c, i) => {
+    const chips: SpeakerChip[] = [];
+    if (c.paSub) {
+      const { box, style, vent, sub } = c.paSub;
+      const duct = ductFitChip(box, style, vent, t, baffleInsetIn(cabinet), sub);
+      if (duct) chips.push([...duct, "speakerDuctFit"]);
+      const tubes = tubeFitChip(box, style, vent, t, sub.size);
+      if (tubes) chips.push([...tubes, "speakerTubeFit"]);
+    }
+    if (c.hardware)
+      chips.push([
+        ...hardwareFitChip(c.hardware, `${SPEAKER_TEXT.chamber} ${i + 1}`),
+        "speakerHardwareFit",
+      ]);
+    return chips;
   });
 }
 

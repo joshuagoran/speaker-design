@@ -13,6 +13,10 @@ import { placementStack, resolvedPlacement } from "../../lib/speaker/spaceLayout
 import { FRONT_END_KIND } from "../../constants/speakerSpec";
 import { FRONT_END_NAMES, NO_FRONT_END, SPACE_TEXT } from "../../constants/space";
 import type { SpacePlanner } from "./useSpace";
+import { spaceAmpPower } from "../../lib/speaker/spaceAmpPower";
+import { AmpPowerRows } from "../../components/stats/AmpPowerRows";
+import { CardHeading } from "../../components/ui/CardHeading";
+import { AMP_POWER_TEXT } from "../../constants/ampPower";
 
 /** The amp picker's choices: every catalog model, its brand, channels and 8 Ω power. */
 const AMP_OPTIONS: readonly (SelectOption & { amp: AmpId; watts: number })[] = AMP_SERIES.flatMap(
@@ -49,7 +53,10 @@ interface Props {
   design: SpaceDesign;
   /** each placement's name, in the space's order */
   names: readonly string[];
-  space: Pick<SpacePlanner, "setFrontEnd" | "addAmp" | "editAmp" | "removeAmp" | "editPlacement">;
+  space: Pick<
+    SpacePlanner,
+    "setFrontEnd" | "addAmp" | "editAmp" | "removeAmp" | "editPlacement" | "model" | "gain"
+  >;
 }
 
 /**
@@ -58,6 +65,8 @@ interface Props {
  */
 export function HardwareSettings({ design, names, space }: Props) {
   const { amps, frontEnd, placements } = design.space;
+  /** each channel's power at the space's level */
+  const power = spaceAmpPower(space.model, amps, space.gain);
   const gaps = hardwareGaps(design);
   const ampName = (a: SpaceAmp, i: number) =>
     `${SPACE_TEXT.amp(i + 1)}${a.model ? ` · ${byId(AMP_OPTIONS, a.model)?.name ?? a.model}` : ` · ${a.watts} W`}`;
@@ -177,6 +186,30 @@ export function HardwareSettings({ design, names, space }: Props) {
           </Card>
         );
       })}
+      {power.length > 0 && (
+        <div className="mb-3">
+          <CardHeading className="mb-1">{AMP_POWER_TEXT.heading}</CardHeading>
+          <AmpPowerRows
+            firstColumn={AMP_POWER_TEXT.channel}
+            rows={power.map((r) => {
+              const speaker =
+                space.model.placements[r.placement]?.response?.members[r.member]?.speaker;
+              const band = speaker?.bands.find((b) => b.id === r.band)?.name ?? r.band;
+              return {
+                key: r.power.channel,
+                name: `${r.placement + 1}. ${band} · ${SPACE_TEXT.channel(
+                  amps.findIndex((a) => a.id === r.amp) + 1,
+                  r.channel + 1,
+                )}`,
+                power: r.power,
+              };
+            })}
+          />
+          <p className="text-xs text-stone-500 mt-1">
+            {AMP_POWER_TEXT.spaceNote} {AMP_POWER_TEXT.crestNote}
+          </p>
+        </div>
+      )}
     </>
   );
 }

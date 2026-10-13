@@ -47,20 +47,10 @@ import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 import { HardwareSettings } from "./HardwareSettings";
 import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
 import { NO_HANDLES_LABEL } from "../../../constants/hardware";
-import {
-  CLAMPED_BRACKET_NAME,
-  HORN_MOUNT_DEFAULT,
-  HORN_MOUNT_LABEL,
-  HORN_MOUNT_NAMES,
-  HORN_MOUNT_PLATE,
-  HORN_MOUNT_PLATE_FALLBACK,
-  HORN_MOUNT_PLY,
-  HORN_MOUNT_PLY_UNAVAILABLE,
-  HORN_MOUNT_TIPS,
-} from "../../../constants/hornMount";
+import { HORN_MOUNT_LABEL } from "../../../constants/hornMount";
 import { takesHornMount } from "../../../lib/pa/hornMount";
-import { plyMountFit } from "../../../components/stack-view/buildPlyMount";
-import { plateFit } from "../../../components/stack-view/buildPlate";
+import { hornMountChoice } from "../../../components/stack-view/hornMountChoice";
+import { HornMountField } from "../../../components/ui/HornMountField";
 import { towerMidDims } from "../../../lib/pa/tower";
 
 interface Props {
@@ -266,19 +256,10 @@ export function SettingsPanel({ planner }: Props) {
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
     ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
   ];
-  // the horn mount, for a driver bolted straight to its horn on a lid: the plywood mount only when the driver's bolts
-  // fit it, else the aluminum plate; the plate, when no bolt can pass through it, gives way to the clamped L-bracket.
-  // The 3D view draws the same, so the setting and the summary show what it draws.
-  const hornMountShown = takesHornMount(hornOption, layout);
-  const plyMountFits =
-    hornMountShown && plyMountFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
-  const plateFits =
-    hornMountShown && plateFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
-  const shownHornMount = plyMountFits ? hornMount : HORN_MOUNT_DEFAULT;
-  const hornMountTips = {
-    ...HORN_MOUNT_TIPS,
-    ...(plateFits ? {} : { plate: HORN_MOUNT_PLATE_FALLBACK }),
-  };
+  // the horn mount, for a driver bolted straight to its horn on a lid (hornMountChoice: what the 3D view draws)
+  const mountChoice = takesHornMount(hornOption, layout)
+    ? hornMountChoice(hornOption, compressionDriver, effectiveMidBoxDims.w, hornMount)
+    : null;
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
@@ -304,11 +285,7 @@ export function SettingsPanel({ planner }: Props) {
           (b) =>
             `${PA_SETTINGS_TABS[b]}: ${handlePart(hardware[b].model)?.name ?? NO_HANDLES_LABEL.toLowerCase()}`,
         ),
-      ...(hornMountShown
-        ? [
-            `${HORN_MOUNT_LABEL}: ${shownHornMount === HORN_MOUNT_PLATE && !plateFits ? CLAMPED_BRACKET_NAME : HORN_MOUNT_NAMES[shownHornMount]}`,
-          ]
-        : []),
+      ...(mountChoice ? [`${HORN_MOUNT_LABEL}: ${mountChoice.name}`] : []),
     ].join(", "),
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
@@ -793,21 +770,8 @@ export function SettingsPanel({ planner }: Props) {
                 onChange={setBaffleInsetIn}
               />
             </div>
-            {hornMountShown && (
-              <ToggleGroup
-                label={HORN_MOUNT_LABEL}
-                value={shownHornMount}
-                onChange={setHornMount}
-                disabled={
-                  plyMountFits
-                    ? undefined
-                    : { values: [HORN_MOUNT_PLY], why: HORN_MOUNT_PLY_UNAVAILABLE }
-                }
-                options={keysOf(HORN_MOUNT_NAMES).map(
-                  (id) => [id, HORN_MOUNT_NAMES[id], hornMountTips[id]] as const,
-                )}
-                className="mt-3"
-              />
+            {mountChoice && (
+              <HornMountField choice={mountChoice} onChange={setHornMount} className="mt-3" />
             )}
             <HardwareSettings planner={planner} />
           </div>
