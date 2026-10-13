@@ -14,24 +14,23 @@ import {
   SPEAKER_KEEP_WORDS,
 } from "../../lib/optimizer/goalKeeps";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
-import type { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import type { OptimizerProgress, SpeakerGoal } from "../../types";
 
 /** The words the fold takes from a page's optimizer text. */
-export type OptimizerFoldText = Pick<
-  typeof SPEAKER_OPTIMIZER_TEXT,
-  | "target"
-  | "targetUnit"
-  | "targetYours"
-  | "targetUseYours"
-  | "noLimit"
-  | "limit"
-  | "keep"
-  | "keepHint"
-  | "run"
-  | "undoLoad"
-  | "summaryKeeps"
->;
+export interface OptimizerFoldText {
+  target: string;
+  targetUnit: string;
+  /** says what your design plays, in whole dB */
+  targetYours: (db: string) => string;
+  targetUseYours: string;
+  noLimit: string;
+  limit: string;
+  keep: string;
+  keepHint: string;
+  run: string;
+  undoLoad: string;
+  summaryKeeps: (n: number) => string;
+}
 
 /** What the fold reads of a page's optimizer (`useDesignOptimizer`, with the page's locks beside it). */
 export interface OptimizerFoldState {

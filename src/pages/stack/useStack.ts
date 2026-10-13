@@ -16,6 +16,7 @@ import {
 } from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { emptyStack, stackFromSaved, stackSnapshot } from "./stackSaves";
+import { useStackOptimizer } from "./useStackOptimizer";
 import { STACK_TEXT } from "../../constants/stack";
 import type { SavedConfig, SpeakerSpec, StackDesign, StackMember, StackSpec } from "../../types";
 
@@ -67,6 +68,15 @@ export function withSpeaker(speakers: readonly SpeakerSpec[], speaker: SpeakerSp
  */
 export function useStack() {
   const [design, setDesign] = useState<StackDesign>(emptyStack);
+  // how many times the whole stack was replaced (a start, a saved stack opened): the optimizer's locks start over with it
+  const [round, setRound] = useState(0);
+  /** the whole stack replaced: the optimizer's cards, locks and Undo are dropped */
+  const replaceDesign = (next: StackDesign) => {
+    setDesign(next);
+    setRound((n) => n + 1);
+    // called from an event, after `optimizer` below is set
+    optimizer.clearResults();
+  };
   // the model reads only the members and the speakers (a name edit doesn't run it), a step behind the typing
   const members = useDeferredValue(design.stack.members);
   const speakers = useDeferredValue(design.speakers);
@@ -85,13 +95,28 @@ export function useStack() {
   // the members that share a speaker with different crossovers: auto balance takes the first one's
   const shared = useMemo(() => sharedCrossovers(members), [members]);
   const store = useConfigStore(STACKS_COLLECTION);
+  // the optimizer reads and loads the whole design (a card keeps the stack's id, name and notes); its cards, locks and
+  // Undo start over when the whole stack is replaced (replaceDesign)
+  const optimizer = useStackOptimizer({
+    design,
+    loadDesign: setDesign,
+    round,
+    current: {
+      musicDb: limits.musicDb,
+      price: totals.dollars,
+      maxBoxLb: totals.maxBoxLb,
+      heightIn: totals.heightIn,
+    },
+  });
   const editStack = (edit: (stack: StackSpec) => StackSpec) =>
     setDesign((d) => ({ ...d, stack: edit(d.stack) }));
   const editMembers = (edit: (members: readonly StackMember[]) => StackMember[]) =>
     editStack((s) => ({ ...s, members: edit(s.members) }));
   return {
     design,
-    setDesign,
+    /** replaces the whole stack (a start, a saved stack opened): the optimizer starts over */
+    setDesign: replaceDesign,
+    optimizer,
     response,
     limits,
     totals,
@@ -121,7 +146,7 @@ export function useStack() {
     restore: (c: SavedConfig) => {
       const saved = stackFromSaved(c);
       // a document without a stack (written elsewhere): left closed, with a word on the library's row
-      if (saved) setDesign(saved);
+      if (saved) replaceDesign(saved);
       else store.flash(MISSING_STACK_TEXT);
     },
     setName: (name: string) => editStack((s) => ({ ...s, name })),

@@ -247,6 +247,18 @@ const pathM = (p: StackPoint, listenHeightIn: number) => {
   return Math.hypot(p.x, p.y - listenHeightIn, d + p.z) * METERS_PER_INCH;
 };
 
+/** The listening point's height above the stack's base, in: the highest band's center (0 with none). */
+const listenHeightOf = (placed: ReturnType<typeof stackLayout>) => {
+  const centers = placed.flatMap((m) => m.bands.map((b) => b.center.y));
+  return centers.length ? Math.max(...centers) : 0;
+};
+
+/** The listening point's height above the stack's base, in (`StackResponse.listenHeightIn`), without running the model. */
+export const stackListenHeightIn = (
+  stack: Pick<StackSpec, "members">,
+  speakers: readonly SpeakerSpec[],
+): number => listenHeightOf(stackLayout(stack, speakers));
+
 /**
  * The stack at its listening point, moved to 1 m: each member's speaker through its crossover, level, delay and its
  * bands' paths, summed with their phase. A member whose speaker isn't in `speakers` is left out (null).
@@ -257,8 +269,7 @@ export function stackResponse(
 ): StackResponse {
   const freqs = SPEAKER_RESPONSE_FREQUENCIES;
   const placed = stackLayout(stack, speakers);
-  const centers = placed.flatMap((m) => m.bands.map((b) => b.center.y));
-  const listenHeightIn = centers.length ? Math.max(...centers) : 0;
+  const listenHeightIn = listenHeightOf(placed);
   const models = placed.map((m, k) => {
     if (!m.speaker) return null;
     const speaker = memberSpeaker(stack.members[k], m.speaker);

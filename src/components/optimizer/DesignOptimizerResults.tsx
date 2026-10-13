@@ -5,14 +5,17 @@ import { LooseLimits } from "./LooseLimits";
 import { NoFitNotice } from "./NoFitNotice";
 import { ResultCards } from "./ResultCards";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
-import type { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { MD_UP, RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /** The words the results block takes from a page's optimizer text. */
-export type OptimizerResultsText = Pick<
-  typeof SPEAKER_OPTIMIZER_TEXT,
-  "results" | "stale" | "failing"
->;
+export interface OptimizerResultsText {
+  /** the block's heading */
+  results: string;
+  /** the notice over cards searched for a design edited since */
+  stale: string;
+  /** the notice when your design fails: the problems, joined */
+  failing: (problems: string) => string;
+}
 
 /** The near miss as the block reads it: the limits that would help (each a button) and what blocks the closest design. */
 interface NearMissView<Limits> {

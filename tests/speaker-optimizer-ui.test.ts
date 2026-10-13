@@ -22,6 +22,7 @@ import {
   isKept,
   keepItems,
   pruneKept,
+  reconcileHeld,
   toggleKeep,
 } from "../src/pages/speaker/speakerKeeps";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
@@ -221,4 +222,27 @@ test("driver locks hold their driver: a driver added or removed drops them, neve
   assert.ok(isKept(now, vent), "the other locks stay");
   // the chamber list replaced: every lock goes
   assert.equal(countKept(heldLocks(held, { round: 1, layout: driverLayout(two) }, items)), 0);
+});
+
+test("a driver lock that stopped holding stays dropped when the driver comes back", () => {
+  const items = keepItems(spec);
+  const first = items.find((i) => i.kind === "drivers");
+  assert.ok(first, "a driver item");
+  const held = { round: 0, layout: driverLayout(spec), locks: toggleKeep({}, first) };
+  assert.equal(reconcileHeld(held, { round: 0, layout: driverLayout(spec) }, items), held);
+  // a driver entry added to the first chamber: the lock is dropped from the held locks, not only hidden
+  const grown: SpeakerSpec = {
+    ...spec,
+    cabinet: {
+      ...spec.cabinet,
+      chambers: spec.cabinet.chambers.map((c, k) =>
+        k ? c : { ...c, drivers: [c.drivers[0], ...c.drivers] },
+      ),
+    },
+  };
+  const now = reconcileHeld(held, { round: 0, layout: driverLayout(grown) }, keepItems(grown));
+  assert.equal(now.locks.drivers, undefined, "dropped");
+  // the entry removed again: the layout is yours again, and nothing comes back
+  const back = reconcileHeld(now, { round: 0, layout: driverLayout(spec) }, items);
+  assert.equal(countKept(back.locks), 0, "it stays dropped");
 });

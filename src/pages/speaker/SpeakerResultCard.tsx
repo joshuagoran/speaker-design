@@ -17,6 +17,8 @@ import { UI_TEXT } from "../../constants/uiText";
 import { bandText, driverSummary } from "./speakerText";
 import type { SpeakerOptimizerCard, SpeakerOptimizerResult } from "../../types";
 
+const T = SPEAKER_OPTIMIZER_TEXT;
+
 interface Props {
   card: SpeakerOptimizerCard;
   /** its place among the cards, and how many there are */
@@ -51,7 +53,7 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
           fmin={FREQ_AXIS_MIN_HZ}
           fmax={FREQ_AXIS_MAX_HZ}
           band={null}
-          label={SPEAKER_OPTIMIZER_TEXT.curveLabel}
+          label={T.curveLabel}
         />
       </div>
       <div className="text-xs text-stone-500">{card.spec.bands.map(bandText).join(" · ")}</div>
@@ -62,22 +64,22 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
           delta={<Delta v={d?.price} unit="$" lowerIsBetter />}
         />
         <CardTile
-          label="Weight"
+          label={T.tile.weight}
           value={`${m.lb.toFixed(0)} lb`}
           delta={<Delta v={d?.lb} unit=" lb" lowerIsBetter digits={1} />}
         />
         <CardTile
-          label="Level at 1 m"
+          label={T.tile.level}
           value={m.musicDb === null ? "—" : `${m.musicDb.toFixed(1)} dB`}
           delta={<Delta v={d?.musicDb} unit=" dB" digits={1} />}
         />
         <CardTile
-          label="F3"
+          label={T.tile.f3}
           value={m.f3 === null ? "—" : `${m.f3.toFixed(0)} Hz`}
           delta={<Delta v={d?.f3} unit=" Hz" lowerIsBetter />}
         />
         <CardTile
-          label="Volume"
+          label={T.tile.volume}
           value={`${m.volumeL.toFixed(0)} L`}
           delta={<Delta v={d?.volumeL} unit=" L" lowerIsBetter />}
         />
@@ -93,7 +95,7 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
         <Notice key={w}>{w}</Notice>
       ))}
       <div className="text-xs text-stone-500">
-        Changes: {card.changed.length ? card.changed.join(", ") : "none"}
+        {T.changes}: {card.changed.length ? card.changed.join(", ") : T.changesNone}
       </div>
       {m.pricePartial && (
         <div className="text-xs text-stone-500">
@@ -107,7 +109,7 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
           disabled={!onLoad}
           className="flex-1"
         >
-          {SPEAKER_OPTIMIZER_TEXT.load}
+          {T.load}
         </Button>
       </div>
     </CardFrame>

@@ -40,6 +40,17 @@ export interface LoadUndo<Design> {
 }
 
 /**
+ * A search that came back, as the page keeps it; null when the design changed while it ran (its cards would load over
+ * the edits, so the result is dropped).
+ */
+export const searchedIfCurrent = <Design, Result>(
+  from: Design,
+  now: Design,
+  result: Result,
+  sameDesign: (a: Design, b: Design) => boolean,
+): Searched<Design, Result> | null => (sameDesign(now, from) ? { from, result } : null);
+
+/**
  * The optimizer's results and Undo against the design as it is now. Undo holds while the design is the one the last
  * load set (any design edit since ends it). The cards are stale once the design changed after the search: it is neither
  * the design searched from nor a card loaded since (Load is off then, the page asks for a new search).
@@ -123,8 +134,7 @@ export function useDesignOptimizer<
     const from = design;
     await run.runOptimizerSearch(async (options) => {
       const result = await runSearch(goals, set, options);
-      // the design changed while it ran: its cards would load over the edits, so it is dropped
-      return sameDesign(latest.current, from) ? { from, result } : null;
+      return searchedIfCurrent(from, latest.current, result, sameDesign);
     });
   };
   /** loads the card (not on stale cards); Undo goes back to the design from before the first load in a row */

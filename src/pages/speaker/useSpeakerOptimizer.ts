@@ -13,7 +13,7 @@ import {
   allKept,
   countKept,
   driverLayout,
-  heldLocks,
+  reconcileHeld,
   isKept,
   keepItems,
   toggleKeep,
@@ -71,10 +71,6 @@ export const loadedSpec = (card: Pick<SpeakerOptimizerCard, "spec">, spec: Speak
   name: spec.name,
 });
 
-/** Whether two lock sets hold the same locks. */
-const sameLocks = (a: SpeakerOptimizerLocks, b: SpeakerOptimizerLocks) =>
-  JSON.stringify(a) === JSON.stringify(b);
-
 /**
  * The Speaker optimizer: goals in tap order, the target level and limits, the locks, the search, and loading a card
  * (one edit, with Undo; `useDesignOptimizer`). The two limits are remembered per viewer; the goals, the target and the
@@ -85,10 +81,10 @@ export function useSpeakerOptimizer({ spec, loadSpec, round, current }: Props) {
   const layout = driverLayout(spec);
   const [held, setHeld] = useState<HeldLocks>({ round, layout, locks: {} });
   const items = useMemo(() => keepItems(spec), [spec]);
-  const locks = heldLocks(held, { round, layout }, items);
   // a lock that no longer holds is dropped for good, not only hidden: a driver added back must not bring it back
-  if (held.round !== round || held.layout !== layout || !sameLocks(held.locks, locks))
-    setHeld({ round, layout, locks });
+  const now = reconcileHeld(held, { round, layout }, items);
+  if (now !== held) setHeld(now);
+  const { locks } = now;
   const setLocks = (next: SpeakerOptimizerLocks) => setHeld({ round, layout, locks: next });
   const { limits, setLimit, ...shared } = useDesignOptimizer({
     design: spec,
