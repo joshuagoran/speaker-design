@@ -409,27 +409,21 @@ Each PR stands alone. Lowest risk first.
           smaller, lower, louder. Limits: budget, maximum weight, maximum size, the target level at 1 m. One
           search engine for every spec (through `speakerResponse`, `speakerLimits`, `speakerBuild`). The kind of
           each chamber (direct, horn) and the band count stay fixed.
-        - (b) **Per stack.** On the Stack page. It runs (a) on each member and also varies the crossovers between
-          boxes and the levels, with the stack's sum as the score. Goals and limits as in (a), for the stack.
-        - (c) **Per space.** On the Space page. The goal is the target level and coverage at the listening area, with
-          the fewest or cheapest speakers and amps. It varies the stacks' members and the amp channels. This is the
-          biggest and slowest search.
-      - **Recommendation.** Build (a) first, with the PA and Hi-fi searches as its first rules, then (b) on top.
-        Keep (c) for later. Show the result as cards, as today. Keep the PA and Hi-fi pages' optimizers until (a) and
-        (b) cover the PA and Hi-fi presets. The weight limit is a limit of the search, not a page check.
+        - (b) **Per stack.** See issue #167.
+        - (c) **Per space.** See issue #168.
+      - **Recommendation.** Build (a) first, with the PA and Hi-fi searches as its first rules. Show the result as
+        cards, as today. The weight limit is a limit of the search, not a page check.
       - **Owner decisions (Oct 2026).**
-        1. The Speaker page gets the optimizer first. The Stack page gets it next.
+        1. The Speaker page gets the optimizer first.
         2. The optimizer changes only the parts and sizes that the user leaves unlocked. It never changes the chamber
            kind or the band count (for now).
         3. The level goal is one "Target level" that the user can edit, at a fixed 1 m. The optimizer compares it with
-           the maximum output of the speaker or the stack (both are at 1 m). There is no distance field and there are no
+           the speaker's maximum output (at 1 m). There is no distance field and there are no
            room sizes. The user allows for the distance. The Space page shows the real level in the room. The PA
            optimizer's room rule of thumb (`ROOMS`) goes with the PA optimizer.
         4. The limits are the budget, the maximum weight per box and the maximum size per box, as today.
-        5. The PA and Hi-fi pages keep their optimizers until the new optimizer covers their presets.
+        5. The PA and Hi-fi pages keep their optimizers until the new optimizers cover their presets.
         6. The goals are cheaper, lighter, smaller, lower and louder, in tap order. The results are cards.
-        7. The Speaker and Stack optimizers never add or remove boxes or bands. A suggestion to add a box (for example a
-           second sub to go lower) belongs to the Space optimizer (option (c)), later.
       - **Design: the Speaker optimizer** (option (a); branch `speaker-optimizer`). The engine comes first, with no UI.
         The UI comes in the next PR.
         - **Code.** `lib/speaker/optimize/`: pure functions and a worker entry. The page calls
