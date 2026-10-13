@@ -84,6 +84,7 @@ import { formatInches } from "../../lib/format";
 import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { ductDividerOf, withDuctDivider } from "../../lib/speaker/cabinetPanels";
+import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 
 /** The driver types as the type picker lists them: one woofer type, then the other kinds. */
 const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_TYPE_NAMES).map(([id, name]) => ({
@@ -168,7 +169,7 @@ export function ChamberSettings({
             label={`${{ w: "Width", h: "Height", d: "Depth" }[k]}, in`}
             value={shownIn(chamber.dims[k])}
             min={1}
-            step={0.25}
+            step={SPEAKER_STEPS.sizeIn}
             onChange={(v) => setDim(k, v)}
           />
         ))}
@@ -183,13 +184,13 @@ export function ChamberSettings({
           <NumberField
             label={SPEAKER_TEXT.fromLeft}
             value={shownIn(chamber.at.xIn)}
-            step={0.25}
+            step={SPEAKER_STEPS.sizeIn}
             onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
           />
           <NumberField
             label={SPEAKER_TEXT.fromBottom}
             value={shownIn(chamber.at.yIn)}
-            step={0.25}
+            step={SPEAKER_STEPS.sizeIn}
             onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
           />
         </div>
@@ -212,7 +213,7 @@ export function ChamberSettings({
         value={chamber.netLiters ?? shownTenth(result?.netLiters ?? 0)}
         disabled={chamber.netLiters === null}
         min={0.5}
-        step={0.5}
+        step={SPEAKER_STEPS.netL}
         onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
         className="mb-3"
       />
@@ -310,7 +311,7 @@ export function ChamberSettings({
               label={<Tooltip tip={SPEAKER_TEXT.radiatorMassTip}>Added mass, g</Tooltip>}
               value={vent.radiators.addG}
               min={0}
-              step={5}
+              step={SPEAKER_STEPS.addG}
               onChange={(addG) => setVent({ ...vent, radiators: { ...vent.radiators, addG } })}
             />
           </div>
@@ -422,7 +423,7 @@ function PortFields({
           label={SPEAKER_TEXT.slotNarrow}
           value={shownIn(port.h)}
           min={0.25}
-          step={0.125}
+          step={SPEAKER_STEPS.slotHIn}
           onChange={(h) => onChange({ ...port, h })}
         />
         {port.w !== undefined && (
@@ -430,7 +431,7 @@ function PortFields({
             label={SPEAKER_TEXT.slotLong}
             value={shownIn(port.w)}
             min={0.25}
-            step={0.25}
+            step={SPEAKER_STEPS.portSizeIn}
             onChange={(w) => onChange({ ...port, w })}
           />
         )}
@@ -438,7 +439,7 @@ function PortFields({
           label={SPEAKER_TEXT.portLength}
           value={shownIn(port.len)}
           min={0.5}
-          step={0.5}
+          step={SPEAKER_STEPS.portLenIn}
           onChange={(len) => onChange({ ...port, len })}
         />
       </div>
@@ -461,14 +462,14 @@ function PortFields({
             label="Throat, in"
             value={shownIn(port.throat)}
             min={0.25}
-            step={0.25}
+            step={SPEAKER_STEPS.portSizeIn}
             onChange={(throat) => onChange({ ...port, throat })}
           />
           <NumberField
             label={SPEAKER_TEXT.portLength}
             value={shownIn(port.len)}
             min={0.5}
-            step={0.5}
+            step={SPEAKER_STEPS.portLenIn}
             onChange={(len) => onChange({ ...port, len })}
           />
         </div>
@@ -494,14 +495,14 @@ function PortFields({
         label="Diameter, in"
         value={shownIn(port.dia)}
         min={0.5}
-        step={0.25}
+        step={SPEAKER_STEPS.portSizeIn}
         onChange={(dia) => onChange({ ...port, dia })}
       />
       <NumberField
         label={SPEAKER_TEXT.portLength}
         value={shownIn(port.len)}
         min={0.5}
-        step={0.5}
+        step={SPEAKER_STEPS.portLenIn}
         onChange={(len) => onChange({ ...port, len })}
       />
     </div>
@@ -631,7 +632,7 @@ function DriverFields({
         <NumberField
           label={SPEAKER_TEXT.fromLeft}
           value={shownIn(driver.position.xIn + widthIn / 2)}
-          step={0.25}
+          step={SPEAKER_STEPS.sizeIn}
           onChange={(v) =>
             onEdit((d) => ({ ...d, position: { ...d.position, xIn: v - widthIn / 2 } }))
           }
@@ -640,7 +641,7 @@ function DriverFields({
           // a horn on the top: back from the baffle's front
           label={onTop(driver) ? SPEAKER_TEXT.backFromFront : SPEAKER_TEXT.fromBottom}
           value={shownIn(driver.position.yIn)}
-          step={0.25}
+          step={SPEAKER_STEPS.sizeIn}
           onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
         />
       </div>
