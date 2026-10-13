@@ -10,6 +10,7 @@
     "optimizer-dump:pa": "vp test --run --config tests/optimizer-dump.config.ts --project \"pa-*\"",
     "optimizer-dump:hifi": "vp test --run --config tests/optimizer-dump.config.ts --project \"hifi-*\"",
     "optimizer-snapshot": "vp test --run --config tests/optimizer-snapshot.config.ts",
+    "speaker-optimizer-snapshot": "vp test --run --config tests/speaker-optimizer-snapshot.config.ts",
     "slot-inner-end": "vp test --run --config tests/update-slot-inner-end.config.ts",
     "preset-levels": "vp test --run --config tests/update-preset-levels.config.ts",
     "handle-mesh": "node build/handle-mesh.mjs",
