@@ -620,6 +620,26 @@ Each PR stands alone. Lowest risk first.
         - **Runtime.** A Web Worker; a few seconds. The Speaker search is about 0.3 to 1.4 s per speaker; each full
           stack run is about 6 ms. Measured in Node: 1 to 1.6 s for the PA stack, pole and satellites, about 1 s for
           the PA tower, about 0.4 s for the Hi-fi pair. Deterministic.
+        - **UI** (Stack page, "Optimizer" fold, as on the Speaker page).
+          - The fold holds the goals (tap order), the target level at 1 m with "Use yours", the budget, the weight
+            per box and the stack height (each "No limit" or a number), the Keep list, and Find designs with its
+            progress and Cancel. The cards are at the top of the results pane.
+          - Keep: for each speaker, a lock on the whole speaker, one on each of its parts, and one per box axis. For
+            each member, a lock on its crossover, level and delay.
+          - Each card shows the stack's front view, its maximum output against yours (fixed axes), its price, weight,
+            height, level, F3 and volume with the change from your stack, its box sizes, its warnings, and what changed
+            (in total and in each speaker). Load replaces the stack as one edit and keeps its id, name and notes.
+            Undo load goes back to the stack from before the first load in a row.
+          - The cards go stale when the members or the speakers change after the search. Load is off then, and the
+            notice says so. A search that comes back for an older stack is dropped. Undo ends at the next edit.
+            Opening another stack or a start drops the cards, Undo and the locks.
+          - A lock never moves. A member lock stays only while the members are the ones it was set on, or those with
+            more after them. A speaker's driver and horn locks go when its driver entries change. A lock that went
+            stays gone.
+          - Shared with the Speaker page: `useDesignOptimizer` (hook), and `DesignOptimizerSettings` and
+            `DesignOptimizerResults` (`components/optimizer`).
+          - UI tests: `tests/stack-optimizer-ui.test.ts`. The phone check (`tests/mobile-check.mjs`) runs the Stack
+            page with the cards showing.
         - **Tests** (`tests/stack-optimize.test.ts`): locks, limits on the final design, labels against your stack,
           near miss, determinism, a runtime bound, and parity with the PA optimizer on the PA presets at the room
           rule's target (1000 sq ft: about 113 dB at 1 m). The snapshot (`tests/stack-optimizer-snapshot.test.ts`,

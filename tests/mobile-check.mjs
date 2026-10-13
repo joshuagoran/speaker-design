@@ -7,7 +7,7 @@
 // Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
 // checked here and on a desktop window. On Hi-fi (desktop) a tweeter that needs a taller box raises the Height slider
 // only while it is chosen: switching back brings the box back (the size the user set is kept).
-// On the Speaker page (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
+// On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { GOAL_SHORT_NAMES, PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
@@ -214,17 +214,10 @@ for (const width of [1024, 1600]) {
   await ctx.close();
 }
 
-// The Speaker page started from the PA design's mid/high box (or tower), and from the PA v2 sub bin (its Horn settings),
-// every fold open: nothing past the settings pane's edge and no sideways page scroll, on a 360 px phone, a tablet (the
-// two panes from md up) and a desktop.
-for (const [width, phone, startName] of [
-  [360, true, null],
-  [768, true, null],
-  [1024, false, null],
-  [360, true, SPEAKER_START_NAMES.paV2SubBinTwo],
-  [1024, false, SPEAKER_START_NAMES.paV2SubBinTwo],
-]) {
-  const name = `speaker ${width}${startName ? ` (${startName})` : ""}`;
+// An optimizer page (Speaker, Stack) started from one of its starts, every fold open and the Keep list open: pick a goal,
+// find designs, wait for the cards (the results block shows its heading). Nothing past the settings pane's edge and no
+// sideways page scroll, on a 360 px phone, a tablet (the two panes from md up) and a desktop.
+async function optimizerPageCheck({ name, hash, width, phone, startName, fallbackStart }) {
   const ctx = await browser.newContext({
     viewport: { width, height: 900 },
     isMobile: phone,
@@ -233,18 +226,23 @@ for (const [width, phone, startName] of [
   const p = await ctx.newPage();
   const errs = [];
   p.on("pageerror", (e) => errs.push(e.message));
-  await p.goto(page + "#speaker");
+  await p.goto(page + hash);
   await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
   const closed = p.locator("aside button[aria-expanded=false]");
   for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
   const start = p.getByLabel(SPEAKER_START_TEXT.startFrom);
   const options = await start.locator("option").allTextContents();
-  const many = startName ?? options.find((o) => /tower|mid\/high/i.test(o));
+  const many = startName ?? options.find((o) => fallbackStart.test(o));
   if (many) {
     await start.selectOption({ label: many });
     await p.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
   }
-  // the Optimizer fold: pick a goal, find designs, and wait for the cards (the results block shows its heading)
+  // the Keep list (a closed fold inside the Optimizer fold) open too: its long lines must wrap inside the pane
+  const keep = p.locator("aside details:not([open]) > summary", {
+    hasText: SPEAKER_OPTIMIZER_TEXT.keep,
+  });
+  if (await keep.count()) await keep.first().click();
+  // the Optimizer fold: pick a goal, find designs, and wait for the cards
   await p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper }).click();
   await p.getByRole("button", { name: SPEAKER_OPTIMIZER_TEXT.run }).click();
   try {
@@ -277,6 +275,40 @@ for (const [width, phone, startName] of [
   for (const e of errs) failures.push(`${name}: page error: ${e}`);
   await ctx.close();
 }
+
+// The Speaker page started from the PA design's mid/high box (or tower), and from the PA v2 sub bin (its Horn settings).
+for (const [width, phone, startName] of [
+  [360, true, null],
+  [768, true, null],
+  [1024, false, null],
+  [360, true, SPEAKER_START_NAMES.paV2SubBinTwo],
+  [1024, false, SPEAKER_START_NAMES.paV2SubBinTwo],
+])
+  await optimizerPageCheck({
+    name: `speaker ${width}${startName ? ` (${startName})` : ""}`,
+    hash: "#speaker",
+    width,
+    phone,
+    startName,
+    fallbackStart: /tower|mid\/high/i,
+  });
+
+// The Stack page started from the PA stack (sub and top) and from the PA tower (one speaker).
+for (const [width, phone, start] of [
+  [360, true, /^PA stack/],
+  [768, true, /^PA stack/],
+  [1024, false, /^PA stack/],
+  [360, true, /PA tower/],
+  [1024, false, /PA tower/],
+])
+  await optimizerPageCheck({
+    name: `stack ${width} (${start.source})`,
+    hash: "#stack",
+    width,
+    phone,
+    startName: null,
+    fallbackStart: start,
+  });
 
 // Coverage map, desktop, mid band: dragging a toe-in handle updates the map while dragging and after release, at one
 // resolution throughout, and nothing above the map moves meanwhile.
