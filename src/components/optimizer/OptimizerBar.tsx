@@ -1,6 +1,5 @@
 import { ToggleButton } from "../ui/ToggleButton";
-import { Button } from "../ui/Button";
-import { LockIcon } from "../lock/LockIcon";
+import { LockBarButtons } from "./LockBarButtons";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 interface Props {
@@ -36,30 +35,7 @@ export function OptimizerBar({
         Optimizer: {on ? "on" : "off"}
       </ToggleButton>
       {on && (
-        <>
-          <Button
-            onClick={onLockAll}
-            disabled={nLocks >= lockMax}
-            aria-label="Lock everything"
-            title="Lock all, then unlock what the optimizer can change"
-            className="inline-flex items-center gap-1"
-          >
-            <LockIcon locked={true} />
-            <span className="text-xs">All</span>
-          </Button>
-          <Button
-            onClick={onClear}
-            disabled={!nLocks}
-            aria-label={
-              nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"
-            }
-            title={nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"}
-            className="inline-flex items-center gap-1"
-          >
-            <LockIcon locked={false} />
-            {nLocks ? <span className="text-xs">{nLocks}</span> : null}
-          </Button>
-        </>
+        <LockBarButtons nLocks={nLocks} lockMax={lockMax} onLockAll={onLockAll} onClear={onClear} />
       )}
       {!on && <span className="text-xs text-stone-500">{hint}</span>}
       {children}
