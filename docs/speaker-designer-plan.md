@@ -427,6 +427,106 @@ Each PR stands alone. Lowest risk first.
            optimizer's room rule of thumb (`ROOMS`) goes with the PA optimizer.
         4. The limits are the budget, the maximum weight per box and the maximum size per box, as today.
         5. The PA and Hi-fi pages keep their optimizers until the new optimizer covers their presets.
+        6. The goals are cheaper, lighter, smaller, lower and louder, in tap order. The results are cards.
+      - **Design: the Speaker optimizer** (option (a); branch `speaker-optimizer`). The engine comes first, with no UI.
+        The UI comes in the next PR.
+        - **Code.** `lib/speaker/optimize/`: pure functions and a worker entry. The page calls
+          `runSpeakerOptimizer` (`makeOptimizerRunner`, as the PA and Hi-fi pages do). The engine is
+          `optimizeSpeaker(spec, goals, limits, locks, catalog)`; it returns `{ cards, nearMiss }` and the current
+          design's numbers.
+        - **Inputs.**
+
+          | Input        | What it is                                                                                                         |
+          | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+          | Spec         | The speaker as the page has it: any template, any chamber count, any band count                                    |
+          | Goals        | Cheaper, lighter, smaller, lower, louder, in tap order; the first ranks the designs                                |
+          | Target level | dB at 1 m. The UI starts it at your design's level. It is compared with `limits.musicDb`                           |
+          | Budget       | The most the purchased parts may cost (`speakerPrice`: drivers, horns, radiators, tubes, hardware); none: no limit |
+          | Weight       | The most the box may weigh, lb (`cabinetBuild`); none: no limit                                                    |
+          | Size         | A lock per axis of the box (width, height, depth): free, exact, or no larger than now, as today                    |
+          | Locks        | Each driver entry, each horn, each vent, each band filter, each band amp                                           |
+          | Catalog      | The candidate parts (default: the app catalog). The model reads each part by id from the app tables                |
+
+        - **Numbers the search scores.** All come from the page's own code on the final design.
+
+          | Goal    | Number                                                                        | Beats another design by |
+          | ------- | ----------------------------------------------------------------------------- | ----------------------- |
+          | Cheaper | `speakerPrice` dollars                                                        | any saving              |
+          | Lighter | `cabinetBuild` lb                                                             | 3 lb                    |
+          | Smaller | the box's outer volume, L (`speakerBounds`: the box and the horns on its top) | 5%                      |
+          | Lower   | F3: the lowest frequency where the summed response reaches its passband −3 dB | 2 Hz                    |
+          | Louder  | `speakerLimits` `musicDb`: the speaker's level for music at 1 m               | 1 dB                    |
+          - Each goal keeps the level and the F3 as the PA and Hi-fi goals do (`GOAL_KEEPS`). Smaller keeps what
+            lighter keeps: at most 0.5 dB under the target and 2 Hz over your F3.
+          - "Beats your design on its label" uses the same margins.
+
+        - **Search space per part.** A locked part stays as it is.
+
+          | Part                                   | Candidates                                                                                                                |
+          | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+          | Cone driver (sub, mid, woofer)         | Same kind and same nominal size, with a US price (or your part). All the cones of a chamber change together               |
+          | Coaxial                                | Same kind and same nominal size, with a US price                                                                          |
+          | Compression driver and its horn        | Compression drivers with a price; horns with a price whose throat matches the exit (the PA rule). The placement stays     |
+          | Tweeter                                | Same type (dome, ribbon, AMT ...). On a waveguide: the same exit. The waveguide stays                                     |
+          | Driver count, chamber kind, band count | Never                                                                                                                     |
+          | Direct chamber size                    | Width and depth scale for the whole box; each row of chambers with cones takes its own height. The chambers keep touching |
+          | Horn-loaded chamber                    | Its size, flare and air stay (its drivers, filters and amps can change)                                                   |
+          | Chamber with set net air               | Its net air scales with its volume                                                                                        |
+          | Vented chamber                         | Same port shape and count. Size from a ladder (PA tubes and duct sizes, else ×0.75–1.5); length solved for the tuning     |
+          | Radiators                              | Same radiator and count; the added mass sets the tuning                                                                   |
+          | Sealed chamber                         | Its stuffing stays                                                                                                        |
+          | Crossover in the box                   | ×0.71 to ×1.41 of yours, on 10 Hz steps; the type and order stay                                                          |
+          | Band highpass that is not a crossover  | 0.85× and 1× the chamber's tuning (the PA rule), on a vented chamber                                                      |
+          | Input range                            | Never (it is the crossover to another box)                                                                                |
+          | Amps                                   | Searched at the top (your power, or the drivers' program rating if more), then trimmed                                    |
+          | Band levels                            | Each band keeps its passband level, so the balance stays (a passive band never above 0 dB)                                |
+          | Plywood, construction, bracing, look   | Never                                                                                                                     |
+
+        - **Search method.** It screens with cheap runs of the same model, then checks the finalists in full.
+          1. Read your design in full: `speakerResponse`, `speakerLimits`, `cabinetBuild`, `speakerPrice`,
+             `speakerBounds`, the fit checks. Calibrate the weight estimate (wood per area) on it.
+          2. Units. Each chamber's cones are one unit (a coaxial feeds two bands). Each datasheet driver entry
+             (compression driver, tweeter) is one unit. A band fed by two units stays as it is.
+          3. Screen each unit alone: a spec with its chamber and its bands only, the net air set, on a coarse grid
+             (60 points). For a cone unit: driver × volume (8 steps) × tuning (7 steps) × the band's highpass options.
+             The vent is the smallest size that does not set the limit and fits. Each option gives each band's
+             music headroom, the F3, the price and the weight. Keep the best options per unit (a Pareto set, at most
+             10).
+          4. Combine: each crossover option × the units' options. Estimate the level (your passband plus the least
+             band headroom), the price, the weight, the size and the F3. Choose the box shape (width and depth
+             scales, row heights) that holds each chamber's volume inside the size locks, lightest first.
+          5. Finalists: for each goal, the best combinations inside the limits, a few just outside, a few inside the
+             near miss's loosened limits, and the closest. At most 48.
+          6. Build each finalist on the UI's steps (sizes 1/4 in, port lengths 1/2 in, slot heights 1/8 in,
+             crossovers 10 Hz, amps 10 W). Solve the port length on the real net air. Run the full model. Trim the
+             amps two ways: to the least power that keeps the full level, and to the least that keeps the target.
+             Both go in the pool.
+          7. Choose the cards from the pool (`selectCards`, shared with the PA and Hi-fi optimizers).
+        - **Checks** (a design that fails one is no card): the model runs every chamber and band your design runs;
+          every driver and horn that fits now still fits; the vent fits (the duct, tube and slot fit rules of
+          `speakerBuild` and the fit chips); the limits hold. A band that limits first (keep-up) is a warning. A
+          warning counts against a design in each goal's ranking, as on the PA page.
+        - **Cards.** Up to three, as today: the first goal's best that beats your design on every goal (or a fix,
+          or the closest), the smallest change, then one alternative per goal. Each card has the whole spec, the
+          numbers, the change from your design, the parts that changed, its warnings and its maximum-output curve.
+        - **Near miss.** When no card fits, or only the closest: the closest design, why it fails, and which change
+          finds a card (weight +10%, budget +10%, target −1 dB).
+        - **Rounding and the #75 bug.** The pool holds only designs on the UI's steps. The search builds and rounds a
+          design before it scores it. Nothing changes a design after the selection. So a card's label, slot and
+          notes come from the final design. A last check re-reads each card against its slot; the tests require that
+          it drops nothing.
+        - **Runtime.** It runs in a Web Worker. Target: a few seconds on a laptop. The screen has a cap on its runs,
+          and the finalists a cap of 48. The search reports progress. It is deterministic: no random numbers, stable
+          sorts, the catalog's order on ties.
+        - **Reuse.** `selectCards`, `goalKeeps`, `keepGap`, `outOfReachNotice`, `throttledProgress`, the lock ranges
+          (`rangeOf`), the subsonic options (`highpassOptions`) and the PA vent sizes move to `lib/optimizer` where
+          they are PA-only today. The fit chips move from the Speaker page to `lib/speaker`.
+        - **Tests** (`tests/speaker-optimize.test.ts`): each card beats your design on its label; locks hold; the
+          limits hold on the final design; a near miss when nothing passes; the same input gives the same cards;
+          a runtime bound. Parity: on the PA tower and Hi-fi 2-way templates, the cards are at least as good as the
+          PA and Hi-fi optimizers' cards, or the test names the difference. A snapshot
+          (`tests/speaker-optimizer-snapshot.test.ts`, `vp run speaker-optimizer-snapshot`) holds the cards for a
+          few fixed specs.
   - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
     reuses the PA and Hi-fi code.
     - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
