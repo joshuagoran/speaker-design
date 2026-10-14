@@ -31,6 +31,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - No blocks of text on a page. A line on the page is one short sentence. Longer explanations go in a Tooltip on the nearest label, or in the page's Details fold as short bullets.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
 - Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent. When a second page needs a control, first move it into `src/components/ui`, then use it on both pages.
+- Layouts own the spacing: containers space their children with one gap rule; shared controls carry no outer margin (`tests/no-control-margins.test.ts`).
 - A page with settings uses `SettingsLayout`: from md up the page doesn't scroll; the results and the `SettingsColumn` are two panes, each with its own scrollbar. Long settings (PA, Hi-fi) split into `SettingsSection` folds with a one-line summary each, built from the state and the catalog. Page width and gutters come from `PAGE_WIDTH` (`src/styles/layout.ts`): the full window width, never capped; on very wide screens a single result block (chart, stat tiles, detail list, notices) (also the saved configurations, optimizer, Details and dispersion blocks) stops at `RESULT_MAX_WIDTH` and prose at `READING_WIDTH`. The PA and Hi-fi Design results take two columns from `RESULTS_TWO_COLUMN_PX` (`resultsGridClass` / `resultsCellClass`), using the full pane.
 
 ## TypeScript
