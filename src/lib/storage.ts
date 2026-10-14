@@ -14,3 +14,10 @@ export const writeStoredJson = (key: string, value: unknown) => {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
 };
+
+/** Removes a key from local storage; does nothing when storage is unavailable. */
+export const removeStored = (key: string) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+};

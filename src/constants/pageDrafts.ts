@@ -10,3 +10,6 @@ export const PAGE_DRAFT_KEYS = {
 
 /** How long after the last change a page's draft is written, ms. */
 export const DRAFT_WRITE_MS = 300;
+
+/** What the page says after a restored draft broke it and was dropped. */
+export const DRAFT_FAILED_TEXT = "Your last design could not open. The page starts new.";

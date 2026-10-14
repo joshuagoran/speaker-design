@@ -1,3 +1,5 @@
+import { PAGE_DRAFT_KEYS } from "../constants/pageDrafts";
+import { removeStored } from "./storage";
 import type { SavedConfig } from "../types";
 
 /**
@@ -16,3 +18,8 @@ export function asDraftDocument(raw: unknown): SavedConfig | null {
   const name: unknown = Reflect.get(raw, "name");
   return typeof id === "string" && typeof name === "string" ? { ...raw, id, name } : null;
 }
+
+/** Drops every page's draft from the browser, so the next start is each page's default design. */
+export const clearPageDrafts = () => {
+  for (const key of Object.values(PAGE_DRAFT_KEYS)) removeStored(key);
+};

@@ -20,6 +20,8 @@ import { useSpace } from "./pages/space/useSpace";
 import { useEffect, useState, type MouseEvent } from "react";
 import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
+import { Notice } from "./components/ui/Notice";
+import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
 import { ThemeSwitch } from "./components/ui/ThemeSwitch";
 import { PageTabs } from "./components/ui/PageTabs";
 import { entriesOf } from "./lib/records";
@@ -42,7 +44,7 @@ const projectOf = (v: AppPage): ProjectId =>
   entriesOf(PROJECT_PAGES).find(([, pages]) => pages.some(([p]) => p === v))?.[0] ?? "pa";
 
 /** The page shell: hash routing, the header navigation, and the design state of every page (held here so it survives switching tabs). */
-export function App() {
+export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   const [view, setView] = useState(viewOf);
   useEffect(() => {
     const on = () => setView(viewOf());
@@ -116,6 +118,11 @@ export function App() {
         key={view}
         className="md:flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable]"
       >
+        {draftFailed && (
+          <div className={PAGE_WIDTH}>
+            <Notice>{DRAFT_FAILED_TEXT}</Notice>
+          </div>
+        )}
         {/* the PA project's Notes and the Space project's are one static page (the PA page goes at L3f) */}
         {view === "notes" || view === "spaceNotes" ? (
           <NotesPage />

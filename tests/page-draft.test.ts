@@ -9,6 +9,7 @@ import { runSteps } from "./render-steps";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { readDraft, usePageDraft, type PageDraft } from "../src/hooks/usePageDraft";
 import { PAGE_DRAFT_KEYS } from "../src/constants/pageDrafts";
+import { clearPageDrafts } from "../src/lib/savedDraft";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { speakerDraft, useSpeakerPage } from "../src/pages/speaker/useSpeakerPage";
@@ -146,4 +147,28 @@ test("the Space page's changed design is read back", () => {
     },
   ]);
   assert.deepEqual(read, throughJson(changed));
+});
+
+test("clearing the drafts brings back each page's default design, and storage that throws is no matter", () => {
+  const items: Record<string, string> = {};
+  useStorage(items);
+  const { stack, speakers } = paLayers();
+  items[PAGE_DRAFT_KEYS.stack] = JSON.stringify(stackDraft.toDraft({ stack, speakers }));
+  items[PAGE_DRAFT_KEYS.speaker] = JSON.stringify({ id: "x", name: "y", speaker: {} });
+  assert.equal(readDraft(stackDraft).stack.members.length, stack.members.length);
+  const removing = { ...items };
+  Object.defineProperty(globalThis, "localStorage", {
+    value: {
+      getItem: (k: string) => items[k] ?? null,
+      removeItem: (k: string) => Reflect.deleteProperty(items, k),
+    },
+    configurable: true,
+  });
+  clearPageDrafts();
+  assert.deepEqual(items, {});
+  assert.ok(Object.keys(removing).length > 0);
+  assert.deepEqual(readDraft(stackDraft), stackDraft.empty());
+  assert.deepEqual(readDraft(speakerDraft), speakerDraft.empty());
+  useStorage({}, true);
+  clearPageDrafts();
 });
