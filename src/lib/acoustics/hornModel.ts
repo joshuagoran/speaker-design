@@ -2,10 +2,10 @@
 //
 // The driver is the box models' acoustic circuit (lib/acoustics/driverCircuit, shared with lib/pa/calc boxModel and
 // closedBox): a pressure source Pg behind the driver's own impedance, with the voice coil's inductance when the driver
-// lists one (Re + jωLe, as Hornresp). Its front drives a throat chamber and the horn's segments into the mouth's
-// radiation impedance; its rear drives a sealed or vented chamber. The vent is a straight duct ended in its exit's
-// radiation impedance, as in Hornresp. With no segments, no throat chamber, no radiation load and no inductance it is
-// exactly those box models, lumped vent included (tests/horn-engine.test.ts checks this).
+// lists one (Re + jωLe, as Hornresp and the box models). Its front drives a throat chamber and the horn's segments into
+// the mouth's radiation impedance; its rear drives a sealed or vented chamber. The vent is a straight duct ended in its
+// exit's radiation impedance, as in Hornresp. With no segments, no throat chamber and no radiation load it is exactly
+// those box models, lumped vent and inductance included (tests/horn-engine.test.ts checks this).
 //
 // Words used below:
 // - "flow" is volume velocity, m³/s: air speed times area.
@@ -33,15 +33,21 @@ import {
   scale,
   subtract,
 } from "./complex";
-import { driverCircuit, ventResistances } from "./driverCircuit";
+import { coilFactor, coilImpedance, driverCircuit, ventResistances } from "./driverCircuit";
 import { FLANGED_CIRCLE_END_RATIO, mouthImpedance, rectangleEndCorrection } from "./radiation";
-import { chainMatrix, inputImpedance, outputFlowRatio, segmentMatrix } from "./hornSegments";
+import {
+  chainMatrix,
+  inputImpedance,
+  isSizedSegment,
+  outputFlowRatio,
+  segmentMatrix,
+} from "./hornSegments";
 
 /** ρc²: an air volume V has compliance V/(ρc²). */
 const AIR_STIFFNESS = AIR_DENSITY * SPEED_OF_SOUND * SPEED_OF_SOUND;
 /** The reference pressure for SPL, Pa (0 dB SPL). */
 const SPL_REFERENCE_PA = 2e-5;
-/** Millimeters per meter, milliseconds per second, and millihenries per henry. */
+/** Millimeters per meter, and milliseconds per second. */
 const MILLI = 1000;
 /** The vent's tuning search (duct vent): from this frequency, Hz, up in steps of this ratio, to the ceiling. */
 const TUNING_SEARCH = { from: 1, step: 1.01, ceiling: 20000 } as const;
@@ -220,7 +226,10 @@ function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: num
 const powerScale = (resistance: number, omega: number, solidAngle: number, count: number) =>
   Math.sqrt((SPEED_OF_SOUND * solidAngle * resistance) / (AIR_DENSITY * count)) / omega;
 
-/** Whether every size the model divides by is positive: the driver, the chambers, the vent and every segment. */
+/**
+ * Whether every size the model divides by is positive and finite: the driver, the chambers, the vent and every segment
+ * (each segment's length too: a zero-length segment is a gap, not a skipped one).
+ */
 function isModelable(design: HornDesign, freqs: readonly number[]) {
   const { driver, rear, segments } = design;
   const positive = (...values: number[]) => values.every((v) => Number.isFinite(v) && v > 0);
@@ -230,11 +239,12 @@ function isModelable(design: HornDesign, freqs: readonly number[]) {
     positive(rear.liters, design.count) &&
     Number.isInteger(design.drivers) &&
     design.drivers >= 1 &&
+    Number.isFinite(design.throatChamber) &&
     design.throatChamber >= 0 &&
     (!rear.port ||
       (positive(rear.port.area, rear.port.length) &&
         (!rear.port.slot || positive(rear.port.slot.width, rear.port.slot.height)))) &&
-    segments.every((s) => positive(s.s1, s.s2) && s.length >= 0) &&
+    segments.every(isSizedSegment) &&
     freqs.every((f) => positive(f))
   );
 }
@@ -264,8 +274,6 @@ export function hornModel(
     Mas = cone.Mas / drivers,
     Cas = cone.Cas * drivers,
     Ras = cone.Ras / drivers;
-  /** the voice coil's inductance, H (Le, given in mH); 0 when the driver lists none */
-  const coilInductance = (driver.Le ?? 0) / MILLI;
   /** Bl/Sd for one cone, N/(m²·A): turns the coil's current into pressure on the cone */
   const forcePerArea = driver.Bl / cone.Sd;
   /** the throat's area, m²: the first segment's start, or the cone with no segments */
@@ -292,14 +300,13 @@ export function hornModel(
     const omega = 2 * Math.PI * f,
       k = omega / SPEED_OF_SOUND;
     // The voice coil's blocked impedance, Re + jωLe (Hornresp's plain inductance). The motor is a source
-    // volts·(Bl/Sd)/coil behind the electrical damping (Bl/Sd)²/coil (the box models' Pg and Rae, which are real with no
-    // inductance); the bank's damping divides by the number of cones.
-    const coil = complex(driver.Re, omega * coilInductance);
-    const source = divide(complex(volts * forcePerArea), coil);
-    const electricalDamping = scale(
-      divide(complex(forcePerArea * forcePerArea), coil),
-      1 / drivers,
-    );
+    // volts·(Bl/Sd)/coil behind the electrical damping (Bl/Sd)²/coil: one cone's Pg and Rae times the coil's factor
+    // Re/coil, as the box models take it (lib/acoustics/driverCircuit coilFactor); the bank's damping divides by the
+    // number of cones.
+    const coil = coilImpedance(driver, omega);
+    const motor = coilFactor(driver, omega);
+    const source = scale(motor, cone.Pg);
+    const electricalDamping = scale(motor, cone.Rae / drivers);
     // the driver's own impedance: its losses and electrical damping, plus its mass against its suspension
     const driverImpedance = add(complex(Ras, omega * Mas - 1 / (omega * Cas)), electricalDamping);
     /** the load in front of the cone (see frontLoad) */

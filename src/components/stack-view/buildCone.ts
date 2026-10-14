@@ -4,6 +4,12 @@ import type { SceneContext } from "./sceneContext";
 /** How far a cone's membrane sits behind the baffle face, inches: what a part in its center (a coaxial's HF) stands on. */
 export const CONE_FACE_BACK_IN = 0.3;
 
+/** How far inside a PA driver's nominal radius its baffle cutout and cone stop, inches (its frame's rim). */
+const PA_CONE_RIM_IN = 0.9;
+
+/** A PA driver's (a sub's or a mid's) baffle cutout and cone radius, from its nominal size, inches. */
+export const paConeRadius = (size: number) => size / 2 - PA_CONE_RIM_IN;
+
 /**
  * A driver cone of radius `r` centered at (x, y) just behind the baffle face at `z`; nothing in the cutaway. `cap: false`
  * leaves out the dust cap, for a part that takes its place (a coaxial's HF).

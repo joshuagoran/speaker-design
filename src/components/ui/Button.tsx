@@ -1,4 +1,4 @@
-import { BUTTON_SIZE_CLASSES, BUTTON_VARIANT_CLASSES } from "./buttonStyles";
+import { BUTTON_SIZE_CLASSES, BUTTON_VARIANT_CLASSES, HOVER_TRANSITION } from "./buttonStyles";
 import type { ButtonSize, ButtonVariant } from "./buttonStyles";
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,7 +12,7 @@ export function Button({ variant = "secondary", size = "md", className = "", ...
     <button
       type="button"
       {...p}
-      className={`rounded border ${BUTTON_SIZE_CLASSES[size]} ${BUTTON_VARIANT_CLASSES[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed ${className}`}
+      className={`rounded border ${HOVER_TRANSITION} ${BUTTON_SIZE_CLASSES[size]} ${BUTTON_VARIANT_CLASSES[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed ${className}`}
     />
   );
 }

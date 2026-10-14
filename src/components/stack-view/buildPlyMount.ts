@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { HORN_LIFT_IN, ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
+import { ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
+import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { MM_IN } from "./geometry";
 import { BRACKET, addBoltHead } from "./buildBracket";
 import {

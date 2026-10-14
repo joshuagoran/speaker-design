@@ -11,7 +11,7 @@ import {
   TWEETER_GROUP_LABELS,
   TWEETER_KIND_LABELS,
   HIFI_TWEETERS_BY_TYPE,
-} from "./hifiDriverLists";
+} from "../../lib/hifi/hifiDriverLists";
 import { HifiResultCard } from "./HifiResultCard";
 import { hifiSceneProps } from "./hifiSceneProps";
 import { ToggleButton } from "../../components/ui/ToggleButton";
@@ -40,7 +40,14 @@ import { KeepDetails } from "../../components/optimizer/KeepDetails";
 import { RunRow } from "../../components/optimizer/RunRow";
 import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
-import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
+import {
+  FREQ_AXIS_MAX_HZ,
+  FREQ_AXIS_MIN_HZ,
+  HIFI_BOT,
+  HIFI_TOP,
+  MAX_OUTPUT_BOT,
+  MAX_OUTPUT_TOP,
+} from "../../constants/chartScales";
 import { cabinetFinishName, passiveRadiatorMassMax } from "../../lib/data";
 import {
   SPEAKER_PLACEMENTS as HIFI_PLACES,
@@ -449,8 +456,8 @@ export function HifiPage({ hifi }: Props) {
               <section className={cell("col-start-1 row-start-2")}>
                 <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.response}</SectionHeading>
                 <ResponseChart
-                  fmin={15}
-                  fmax={20000}
+                  fmin={FREQ_AXIS_MIN_HZ}
+                  fmax={FREQ_AXIS_MAX_HZ}
                   top={HIFI_TOP}
                   bot={HIFI_BOT}
                   step={10}
@@ -479,10 +486,10 @@ export function HifiPage({ hifi }: Props) {
               <section className={cell("col-start-2 row-start-2")}>
                 <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.maxOutput}</SectionHeading>
                 <ResponseChart
-                  fmin={15}
-                  fmax={20000}
-                  top={HIFI_TOP}
-                  bot={HIFI_BOT}
+                  fmin={FREQ_AXIS_MIN_HZ}
+                  fmax={FREQ_AXIS_MAX_HZ}
+                  top={MAX_OUTPUT_TOP}
+                  bot={MAX_OUTPUT_BOT}
                   step={10}
                   series={[
                     {

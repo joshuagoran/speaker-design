@@ -51,6 +51,8 @@ export const OPTIMIZER_PANEL_TEXT = {
   cardsPass: " · all pass the checks (warnings on each card)",
   /** the notice when no design fits */
   noFit: "No design fits your limits",
+  /** before the near miss's option buttons, when there are cards */
+  looserLimit: "Reaches the goal with a looser limit:",
 } as const;
 
 /** The driver comparison's part buttons, by part. */
@@ -89,6 +91,12 @@ export const CHANGE_NAMES = {
   port: "port",
   radiator: "radiator",
   crossover: "crossover",
+  coaxial: "coaxial",
+  horn: "horn",
+  bandLevels: "band levels",
+  boxCrossovers: "box crossovers",
+  boxLevels: "box levels",
+  delays: "delays",
 } as const;
 
 /** How the notice starts when the first card only comes closest and misses a level or F3 the goals keep. */

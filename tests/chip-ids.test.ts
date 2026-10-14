@@ -16,7 +16,18 @@ import {
   MID_OPTIONS,
   SUB_OPTIONS,
 } from "../src/lib/data";
-import { DEFAULT_PA } from "../src/lib/defaults";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
+import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
+import { layersFromPa } from "../src/lib/speaker/paSpec";
+import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { bandChips, chamberChips } from "../src/pages/speaker/speakerChips";
+import { chamberFitChips } from "../src/lib/speaker/fitChips";
+import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
+import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
+import { stackKeepUpChips } from "../src/pages/stack/stackChips";
+import { configs } from "./golden-configs";
+import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { keysOf } from "../src/lib/records";
 import type {
   Chip,
@@ -149,6 +160,33 @@ const hardwareLists = paDesigns.slice(0, 10).flatMap((c) => {
   return [[hardwareChip(s), ...(m ? [hardwareChip(m)] : [])]];
 });
 
+// the Speaker page's lists, one per band and one per chamber: the Hi-fi boxes of each kind and the golden PA towers and tops
+const speakerSpecs = [
+  ...(["sealed", "vented", "radiator"] as const).map((boxType) =>
+    speakerFromHifi({ ...DEFAULT_HIFI, boxType }, DEFAULT_HIFI_LOOK, { id: "hifi", name: boxType }),
+  ),
+  ...configs.flatMap(
+    (c) => layersFromPa(paDesign(c), { id: "pa", name: c.name }, PA_FLOOR).speakers,
+  ),
+];
+const speakerLists = speakerSpecs.flatMap((spec) => {
+  const response = speakerResponse(spec);
+  const limits = speakerLimits(spec, response);
+  return [
+    ...bandChips(spec, limits, response).map((b) => b.chips),
+    ...limits.chambers.flatMap((c) => (c ? [chamberChips(c, c.band)] : [])),
+    ...chamberFitChips(spec.cabinet, cabinetBuild(spec.cabinet)),
+  ];
+});
+
+// the Stack page's lists, one per crossing between members: the golden PA stacks
+const stackLists = configs.flatMap((c) => {
+  const read = layersFromPa(paDesign(c), { id: "pa", name: c.name }, PA_FLOOR);
+  const response = stackResponse(read.stack, read.speakers);
+  const limits = stackLimits(read.stack, response);
+  return stackKeepUpChips(read.stack, response, limits, ["1", "2", "3"]).map((k) => k.chips);
+});
+
 const lists: [ChipSection, Chip[][]][] = [
   ["sub", paEvals.map((m) => m.chips.sub)],
   ["mid", paEvals.map((m) => m.chips.mid)],
@@ -156,6 +194,8 @@ const lists: [ChipSection, Chip[][]][] = [
   ["fill", fillLists],
   ["hifi", hifiLists],
   ["hardware", hardwareLists],
+  ["speaker", speakerLists],
+  ["stack", stackLists],
 ];
 
 test("every chip carries an id of its own section, and a list has one chip per check", () => {

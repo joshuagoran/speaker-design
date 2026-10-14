@@ -2,7 +2,10 @@
 import { createRoot } from "react-dom/client";
 import "./styles/app.css";
 import { App } from "./App";
+import { DraftBoundary } from "./components/ui/DraftBoundary";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("index.html has no #root");
-createRoot(root).render(<App />);
+createRoot(root).render(
+  <DraftBoundary>{(draftFailed) => <App draftFailed={draftFailed} />}</DraftBoundary>,
+);

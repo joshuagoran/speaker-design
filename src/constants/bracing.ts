@@ -18,6 +18,24 @@ export const BRACE_STYLE_TIPS = {
   both: "Frames and ribs, whichever adds more stiffness per wood.",
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 
+/**
+ * A Speaker cabinet's choice to leave its panels unbraced (to brace it later, or from the outside): no braces or ribs in
+ * the cutlist, the weight or the net air. The PA stack has no such choice.
+ */
+export const NO_BRACING = "none";
+
+/** The Speaker page's bracing choices: the styles, then no bracing. */
+export const SPEAKER_BRACE_STYLE_NAMES = {
+  ...BRACE_STYLE_NAMES,
+  [NO_BRACING]: "None",
+} as const;
+
+/** What each Speaker bracing choice does, for its button's tooltip. */
+export const SPEAKER_BRACE_STYLE_TIPS = {
+  ...BRACE_STYLE_TIPS,
+  [NO_BRACING]: "No braces or ribs. Use this to brace the box later, or from the outside.",
+} as const satisfies Record<keyof typeof SPEAKER_BRACE_STYLE_NAMES, string>;
+
 /** Each style in a folded settings section's summary line ("braced with …"). */
 export const BRACE_STYLE_SUMMARY = {
   ribs: "ribs",
@@ -72,11 +90,13 @@ export const BACK_JOINT_NAMES = {
 /** What each choice does, for its button's tooltip. */
 export const BACK_JOINT_TIPS = {
   screwed:
-    "Removable back: screwed into the rabbet and the window braces' rails; its edges count as hinged.",
+    "Removable back: screwed on (into the rabbet on a frame) and to the window braces' rails; its edges count as hinged.",
   glued: "Glued like the other panels: the joints hold its edges.",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** The back joint a design takes when none is chosen: screwed, the safe side. */
 export const DEFAULT_BACK_JOINT = "screwed" satisfies keyof typeof BACK_JOINT_NAMES;
+/** The range a Speaker-page cabinet's bracing target takes, Hz (`SpeakerCabinet.braceTargetHz`). */
+export const BRACE_TARGET_RANGE_HZ = { min: 50, max: 1000 } as const;
 /** A glued back: its joints hold its edges (a screwed back's don't); the window braces hold either. */
 export const GLUED_BACK = "glued" satisfies keyof typeof BACK_JOINT_NAMES;
 /** Each choice in the Build fold's summary line. */
@@ -88,6 +108,11 @@ export const BACK_JOINT_SUMMARY = {
 export const BACK_JOINT_CUT_NOTES = {
   screwed: "screwed into the rear rabbet, no glue (it comes off): seal it with foam tape",
   glued: "glued into the rear rabbet",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** A flush box's back panel, by its joint: over the rear edges or in their rabbets, glued, or screwed to come off. */
+export const BACK_JOINT_FLUSH_NOTES = {
+  screwed: "screwed on, no glue (it comes off): seal it with foam tape",
+  glued: "glued on",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /**
  * A screwed back's screws into each window brace's rear rail: their spacing along the rail (in) and their diameter

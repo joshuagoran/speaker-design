@@ -1,9 +1,11 @@
 // Turns a `vp build` output directory into one self-contained HTML file: the single JS chunk and the stylesheet go
-// inline (fonts and the optimizer worker are already inlined by the build). Usage: node build/inline.mjs <buildDir> <out.html>
+// inline (fonts and the optimizer worker are already inlined by the build). Usage:
+//   node build/inline.mjs <buildDir> <out.html> [<also.html>]
+// A third path gets a copy of the page (and of the files it loads on demand) at that place too.
 import fs from "node:fs";
 import path from "node:path";
 
-const [dir, out] = process.argv.slice(2);
+const [dir, out, also] = process.argv.slice(2);
 if (!dir || !out) throw new Error("usage: node build/inline.mjs <buildDir> <out.html>");
 let html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
 const fail = (msg) => {
@@ -33,17 +35,20 @@ if (styles.length) html = html.replace(styles[0][0], () => `<style>${css}</style
 const external = html.match(/<(script|link)\b[^>]*\b(src|href)="(?!data:)[^"]*"/gi);
 if (external) fail(`external resources remain: ${external.join(", ")}`);
 if (!html.includes('name="viewport"')) fail("viewport meta missing");
-fs.mkdirSync(path.dirname(out), { recursive: true });
-fs.writeFileSync(out, html);
 // chunks loaded on demand (the Pages build's Firebase) stay as files beside the page
 const entry = path.normalize(scripts[0][1].replace(/^\.?\//, ""));
 const extra = fs
   .readdirSync(dir, { recursive: true })
   .map(String)
   .filter((f) => f.endsWith(".js") && path.normalize(f) !== entry);
-for (const f of extra) {
-  fs.mkdirSync(path.dirname(path.join(path.dirname(out), f)), { recursive: true });
-  fs.copyFileSync(path.join(dir, f), path.join(path.dirname(out), f));
+// the page at `file`, with the on-demand chunks at the same relative paths beside it
+for (const file of [out, also].filter(Boolean)) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, html);
+  for (const f of extra) {
+    fs.mkdirSync(path.dirname(path.join(path.dirname(file), f)), { recursive: true });
+    fs.copyFileSync(path.join(dir, f), path.join(path.dirname(file), f));
+  }
 }
 const kb = (n) => `${(n / 1024).toFixed(0)} kB`;
 console.log(

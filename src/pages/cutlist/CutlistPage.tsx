@@ -11,8 +11,9 @@ import type {
   OffcutShape,
   PanelMaterial,
   PanelNominal,
+  PurchasedPart,
 } from "../../types";
-import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CutlistOptions } from "./useCutlistOptions";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
@@ -51,15 +52,31 @@ import {
   noteLines,
 } from "../../lib/pa/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
+import {
+  CSV_SECTIONS,
+  CSV_TOTAL,
+  CSV_TYPE,
+  cutlistCsv,
+  partLengthWidth,
+  purchasedTotal,
+} from "../../lib/cutlistCsv";
+import { downloadText } from "../../lib/download";
+import {
+  PURCHASED_COLUMNS,
+  PURCHASED_PARTIAL_NOTE,
+  PURCHASED_PART_NAMES,
+} from "../../constants/purchasedParts";
+import { UI_TEXT } from "../../constants/uiText";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { READING_WIDTH, RESULTS_TWO_COLUMN_PX, RESULT_MAX_WIDTH } from "../../styles/layout";
 import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
 import {
-  CUT_BOX_NAMES,
-  CUT_BOX_TAGS,
-  CUT_BOX_TINTS,
+  cutBoxHeading,
+  cutBoxName,
+  cutBoxTag,
+  cutBoxTint,
   CUT_PART_NAMES,
   GRAIN_LOOK_NAMES,
   PANEL_MATERIAL_NAMES,
@@ -69,18 +86,21 @@ import {
   CUTLIST_SETTINGS_SECTIONS,
   type CutlistSettingsSection,
 } from "../../constants/settingsSections";
-import { CUTLIST_PROJECTS } from "../../constants/cutlistProjects";
-import type { ProjectId } from "../../constants/pages";
+import { CUTLIST_PROJECTS, type CutlistProjectId } from "../../constants/cutlistProjects";
 
 interface Props {
   /** whose boxes these are: the page's words and set choices follow it */
-  project: ProjectId;
+  project: CutlistProjectId;
   /** this project's cutlist choices */
   options: CutlistOptions;
   /** one set's parts (one stack, one speaker) */
   parts: CutPart[];
-  /** bought parts and other lines that aren't cut, shown under the list */
+  /** bought parts and other lines that are not cut, shown under the list (under the purchased parts, when given) */
   also: string[];
+  /** the parts bought, as a table under the panels; absent: the `also` lines alone */
+  purchased?: readonly PurchasedPart[];
+  /** the CSV export's file name */
+  csvName?: string;
   /** the walls' exact thickness (inches), nominal size and material */
   wall: number;
   panel: PanelNominal;
@@ -118,25 +138,32 @@ const GRAIN_ROWS = GRAIN_LOOKS.map(
 const plural = (n: number, what: string) => `${n} ${what}${n === 1 ? "" : "s"}`;
 /** A part as the notes under a layout name it: its box, then the part, e.g. "Sub Baffle". */
 const partName = (p: Pick<CutPart, "box" | "part">) =>
-  `${CUT_BOX_NAMES[p.box]} ${CUT_PART_NAMES[p.part]}`;
+  `${cutBoxName(p.box)} ${CUT_PART_NAMES[p.part]}`;
 
-/** A part's size: along the grain first when it is locked, otherwise short side first. */
+/** A part's length and width as the table shows them: L along the grain when it is locked, else the long side. */
 const sizeOf = (p: CutPart): [string, string] => {
-  const [first, second] =
-    p.grain === "b"
-      ? [p.b, p.a]
-      : p.grain === "a"
-        ? [p.a, p.b]
-        : [Math.min(p.a, p.b), Math.max(p.a, p.b)];
-  return [formatInches(first), formatInches(second)];
+  const [l, w] = partLengthWidth(p);
+  return [formatInches(l), formatInches(w)];
 };
+/** US dollars to the cent, as the purchased parts table shows a price. */
+const cents = (v: number) => `$${v.toFixed(2)}`;
 const trimName = (v: number) => (v ? `${formatInches(v)}″` : "None");
 
 /**
  * Cutlist page, for either project: the settings beside the panels of each box and how they pack onto sheets. The
  * project's own page (`PaCutlistPage`, `HifiCutlistPage`) works out its parts and passes its choices.
  */
-export function CutlistPage({ project, options, parts, also, wall, panel, material }: Props) {
+export function CutlistPage({
+  project,
+  options,
+  parts,
+  also,
+  purchased,
+  csvName = "cutlist.csv",
+  wall,
+  panel,
+  material,
+}: Props) {
   const pal = usePalette();
   const {
     cornerJoint,
@@ -210,15 +237,16 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
   // each row's tag (S1, S2 … M1 … H1 …); its pieces on the sheets carry the same tag
   const allRows = cutRows(cut.parts);
   const { tags, byBox } = cutRowTags(allRows);
-  const tagOf = (p: CutPart) => tags.get(cutRowKey(p)) ?? CUT_BOX_TAGS[p.box];
+  const tagOf = (p: CutPart) => tags.get(cutRowKey(p)) ?? cutBoxTag(p.box);
   // the highlighted row, while it is still in the list (a settings change can take it away)
   const hotRow = hot != null && tags.has(hot) ? hot : null;
-  const boxes = entriesOf(CUT_BOX_NAMES).flatMap(([box, name]) => {
-    const rows = byBox.get(box);
-    return rows
-      ? [{ box, name, rows, pieces: rows.reduce((a, p) => a + p.qty, 0) * boxSetCount }]
-      : [];
-  });
+  // each box's rows, in the order the parts list them
+  const boxes = [...byBox].map(([box, rows]) => ({
+    box,
+    name: cutBoxHeading(box),
+    rows,
+    pieces: rows.reduce((a, p) => a + p.qty, 0) * boxSetCount,
+  }));
   const drawn = new Set(
     cut.groups.flatMap((g) => g.sheets.flatMap((s) => s.items.map((it) => cutRowKey(it)))),
   );
@@ -227,7 +255,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
   const totalSheets = cut.groups.reduce((a, g) => a + g.sheets.length, 0);
   const rips = cut.groups.reduce((a, g) => a + g.cuts.rips, 0);
   const crosscuts = cut.groups.reduce((a, g) => a + g.cuts.crosscuts, 0);
-  const boxColor = (box: CutBoxId) => pal[CUT_BOX_TINTS[box]];
+  const boxColor = (box: CutBoxId) => pal[cutBoxTint(box)];
 
   const summaries: Record<CutlistSettingsSection, string> = {
     boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, proj.set)}`,
@@ -251,17 +279,107 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
   const th = "py-1 font-normal text-stone-500";
   const td = "py-1.5 align-top";
 
+  /** the bought parts as a table in the panel table's look, with a total row; the `also` lines under it */
+  const purchasedList = (rows: readonly PurchasedPart[]) => {
+    const total = purchasedTotal(rows, boxSetCount);
+    return (
+      <section className={READING_WIDTH} aria-labelledby="cutlist-purchased">
+        <h3 id="cutlist-purchased" className="text-lg font-bold mb-1">
+          {CSV_SECTIONS.purchased}
+        </h3>
+        <p className="text-sm text-stone-500 mb-2">
+          Counts for {plural(boxSetCount, proj.set)}. Prices in US dollars. Source shows where each
+          price comes from. A dash shows a part with no known price.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="text-sm w-full border-collapse tabular-nums">
+            <thead>
+              <tr className="text-left border-b border-stone-900">
+                <th className={`${th} pr-3`}>{PURCHASED_COLUMNS.part}</th>
+                <th className={`${th} pr-3`}>{PURCHASED_COLUMNS.model}</th>
+                <th className={`${th} pr-3 text-right`}>{PURCHASED_COLUMNS.count}</th>
+                <th className={`${th} pr-3 text-right whitespace-nowrap`}>
+                  {PURCHASED_COLUMNS.unit}
+                </th>
+                <th className={`${th} pr-3 text-right`}>{PURCHASED_COLUMNS.total}</th>
+                <th className={`${th}`}>{PURCHASED_COLUMNS.source}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={`${r.kind}|${r.model}|${r.unit}`} className="border-b border-stone-300">
+                  <td className={`${td} pr-3 whitespace-nowrap`}>{PURCHASED_PART_NAMES[r.kind]}</td>
+                  <td className={`${td} pr-3`}>{r.model}</td>
+                  <td className={`${td} pr-3 text-right`}>{r.count * boxSetCount}</td>
+                  <td className={`${td} pr-3 text-right whitespace-nowrap`}>
+                    {r.unit === null ? "—" : cents(r.unit)}
+                  </td>
+                  <td className={`${td} pr-3 text-right whitespace-nowrap`}>
+                    {r.unit === null ? "—" : cents(r.unit * r.count * boxSetCount)}
+                  </td>
+                  <td className={`${td} min-w-[10rem]`}>{r.source ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-stone-900 font-bold">
+                <td className="py-1.5" colSpan={4}>
+                  {CSV_TOTAL}
+                </td>
+                <td className="py-1.5 pr-3 text-right whitespace-nowrap">
+                  {cents(total.dollars)}
+                  {total.partial ? UI_TEXT.partialPriceMark : ""}
+                </td>
+                <td className="py-1.5 text-stone-500 font-normal">
+                  {total.partial ? PURCHASED_PARTIAL_NOTE : ""}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {also.length > 0 && (
+          <p className="text-sm text-stone-500 mt-3">Notes: {also.join("; ")}.</p>
+        )}
+      </section>
+    );
+  };
+
+  /** saves the panels and the purchased parts as one CSV file */
+  const exportCsv = () =>
+    downloadText(
+      csvName,
+      cutlistCsv(
+        allRows.map((p) => {
+          const [l, w] = partLengthWidth(p);
+          return {
+            box: cutBoxName(p.box),
+            tag: tagOf(p),
+            part: CUT_PART_NAMES[p.part],
+            qty: p.qty * boxSetCount,
+            l,
+            w,
+            grainLocked: !!p.grain,
+            t: p.t,
+            notes: [...(FROM_OFFCUT.has(p.part) ? [FROM_OFFCUT_NOTE] : []), ...noteLines(p.note)],
+          };
+        }),
+        purchased ?? [],
+        boxSetCount,
+      ),
+      CSV_TYPE,
+    );
+
   const panelList = (
     <section aria-labelledby="cutlist-panels">
       <h3 id="cutlist-panels" className="text-lg font-bold mb-1">
         Panels
       </h3>
       <p className="text-sm text-stone-500 mb-2">
-        Finished sizes in inches,{" "}
+        Finished sizes in inches. L is the length and W the width.{" "}
         {grainless
-          ? `short side first (${mat.word} has no grain)`
-          : "along the grain first (↕) for grain-locked parts"}
-        . Quantities for {plural(boxSetCount, proj.set)}. Hover or focus a row to find its pieces on
+          ? `L is the long side (${mat.word} has no grain).`
+          : "L runs along the grain (↕) on a grain-locked part, else L is the long side."}{" "}
+        Quantities for {plural(boxSetCount, proj.set)}. Hover or focus a row to find its pieces on
         the sheets.
       </p>
       <div className="overflow-x-auto">
@@ -271,9 +389,8 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
               <th className={`${th} pr-2`}>Tag</th>
               <th className={`${th} pr-3`}>Part</th>
               <th className={`${th} pr-3 text-right`}>Qty</th>
-              <th className={`${th} text-center`} colSpan={3}>
-                Size, in
-              </th>
+              <th className={`${th} pr-3 text-right`}>L, in</th>
+              <th className={`${th} text-right`}>W, in</th>
               <th className={`${th} px-2 text-center`} title="Grain direction">
                 Grain
               </th>
@@ -284,12 +401,12 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
             <tbody key={box}>
               <tr>
                 <th
-                  colSpan={8}
+                  colSpan={7}
                   scope="rowgroup"
                   className="pt-4 pb-1 text-left border-b border-stone-300"
                 >
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className="text-base font-bold">{name} box</span>
+                    <span className="text-base font-bold">{name}</span>
                     <span className="text-xs font-normal text-stone-500">
                       {plural(rows.length, "part")} · {plural(pieces, "piece")}
                     </span>
@@ -336,12 +453,11 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                       )}
                     </td>
                     <td className={`${td} pr-3 text-right`}>{p.qty * boxSetCount}</td>
-                    <td className={`${td} text-right whitespace-nowrap`}>{first}</td>
-                    <td className={`${td} px-1 text-center text-stone-500`}>×</td>
-                    <td className={`${td} text-left whitespace-nowrap`}>{second}</td>
+                    <td className={`${td} pr-3 text-right whitespace-nowrap`}>{first}</td>
+                    <td className={`${td} text-right whitespace-nowrap`}>{second}</td>
                     <td
                       className={`${td} px-2 text-center`}
-                      title={p.grain ? "first size runs along the grain" : "either way"}
+                      title={p.grain ? "L runs along the grain" : "either way"}
                     >
                       {p.grain ? "↕" : "·"}
                     </td>
@@ -357,14 +473,16 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 Total
               </td>
               <td className="py-1.5 pr-3 text-right">{totalPieces}</td>
-              <td className="py-1.5 text-stone-500 font-normal" colSpan={5}>
+              <td className="py-1.5 text-stone-500 font-normal" colSpan={4}>
                 {plural(allRows.length, "part")}, {plural(totalSheets, "sheet")}
               </td>
             </tr>
           </tfoot>
         </table>
       </div>
-      {also.length > 0 && <p className="text-sm text-stone-500 mt-3">Also: {also.join("; ")}.</p>}
+      {!purchased?.length && also.length > 0 && (
+        <p className="text-sm text-stone-500 mt-3">Also: {also.join("; ")}.</p>
+      )}
     </section>
   );
 
@@ -433,7 +551,12 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
       results={
         <div className="min-w-0 flex flex-col gap-5">
           <div>
-            <SectionHeading className="mb-1">Cutlist</SectionHeading>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+              <SectionHeading>Cutlist</SectionHeading>
+              <Button variant="primary" size="xs" onClick={exportCsv}>
+                Export CSV
+              </Button>
+            </div>
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>
               The {mat.word} parts of {proj.source}, {wallName} walls, for{" "}
               {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
@@ -459,6 +582,8 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
             {panelList}
             {sheetLayout}
           </div>
+          {/* under both columns: the bought parts' names and sources need the width */}
+          {purchased?.length ? purchasedList(purchased) : null}
         </div>
       }
       settings={

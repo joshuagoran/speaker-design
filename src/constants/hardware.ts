@@ -2,6 +2,16 @@
  * Cabinet hardware ids and the words the pages use for them (lib/pa/hardware places the parts; their names come from
  * data/catalog/cabinet-hardware). Code decides on the ids, the pages look the words up here.
  */
+import type { HardwareBoxId } from "../types";
+
+/**
+ * The hardware presets by box (lib/pa/hardware planBoxHardware): the sub box's (two handles, the input dish and its
+ * jacks), and the mid box's, which adds the horn's binding posts on its top.
+ */
+export const HARDWARE_BOX = { sub: "sub", mid: "mid" } as const satisfies Record<
+  string,
+  HardwareBoxId
+>;
 
 /** A box's handle setting when it takes none. */
 export const NO_HANDLES = "none";
@@ -14,6 +24,18 @@ export const HARDWARE_KIND_NAMES = {
   plate: "input dish",
   posts: "horn binding posts",
 } as const;
+
+/**
+ * The line under the hardware settings (the PA's Build section and the Speaker page): the box the input dish goes on
+ * and the dish, its jacks and where; then, when a horn takes them, where its binding posts go, what they are and where.
+ * Parts by their catalog names (data/catalog/cabinet-hardware).
+ */
+export const hardwareNote = (
+  dish: { box: string; name: string; jack: string; place: string },
+  posts: { box: string; name: string; place: string } | null,
+) =>
+  `${dish.box}: ${dish.name} ${HARDWARE_KIND_NAMES.plate} with 2 × ${dish.jack} (in, link), ${dish.place}.` +
+  (posts ? ` ${posts.box}: ${posts.name}, ${posts.place}.` : "");
 
 /** Each panel a part goes on, in a sentence ("left side"). */
 export const HARDWARE_PANEL_WORDS = {

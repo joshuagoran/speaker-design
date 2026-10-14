@@ -1,15 +1,16 @@
 import { DEFAULT_PA } from "../../../lib/defaults";
 import type { Dims3, MidBox, MidDriver, MidSize, Setter } from "../../../types";
+import type { PaDesignInputs } from "../../../lib/pa/paDesign";
 import { useState } from "react";
 
-export interface MidDesign {
-  midDriver: MidDriver;
+export interface MidDesign extends Pick<
+  PaDesignInputs,
+  "midDriver" | "midBoxDims" | "midAmpWatts"
+> {
   setMidDriver: Setter<MidDriver>;
   midBoxPreset: MidBox;
   setMidBoxPreset: Setter<MidBox>;
-  midBoxDims: Dims3;
   setMidBoxDims: Setter<Dims3>;
-  midAmpWatts: number;
   setMidAmpWatts: Setter<number>;
   midBelowSubDb: number;
   setMidBelowSubDb: Setter<number>;

@@ -66,6 +66,23 @@ export const CHIP_IDS = {
     "hifiWooferLimit",
   ],
   hardware: ["subHardwareFit", "midHardwareFit"],
+  /** the Speaker page's limits: one list per band, one per chamber (src/pages/speaker/speakerChips.ts) */
+  speaker: [
+    "speakerBandLimit",
+    "speakerHfPower",
+    "speakerExcursion",
+    "speakerPortSpeed",
+    "speakerThroatSpeed",
+    "speakerRadiatorTravel",
+    "speakerPower",
+    "speakerDuctFit",
+    "speakerTubeFit",
+    "speakerHardwareFit",
+    "speakerKeepsUp",
+    "speakerHfPad",
+  ],
+  /** the Stack page's checks between its members (src/pages/stack/stackChips.ts) */
+  stack: ["stackKeepsUp"],
 } as const;
 
 /** The checks that name what sets a section's level; a result card says that in its "Limited by" line instead. */

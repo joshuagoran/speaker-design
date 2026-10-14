@@ -1,10 +1,17 @@
-import { passiveRadiatorOf } from "./hifiDriverLists";
+import { passiveRadiatorOf } from "../../lib/hifi/hifiDriverLists";
 import { Button } from "../../components/ui/Button";
 import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart";
 import { HifiFront } from "../../components/drawings/HifiFront";
 import { formatDollars } from "../../lib/format";
 import { Delta } from "../../components/optimizer/Delta";
-import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
+import { CardFrame } from "../../components/optimizer/CardFrame";
+import { CardTile, CardTiles } from "../../components/optimizer/CardTile";
+import {
+  FREQ_AXIS_MAX_HZ,
+  FREQ_AXIS_MIN_HZ,
+  HIFI_BOT,
+  HIFI_TOP,
+} from "../../constants/chartScales";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
@@ -12,7 +19,6 @@ import { STATS } from "../../components/optimizer/StatRow";
 import { hifiDriverByIdOrThrow, ownGuideCfg } from "../../lib/data";
 import { formatThickness } from "../../lib/panel";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
-import { FONT } from "../../styles/fonts";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { UI_TEXT } from "../../constants/uiText";
 
@@ -49,23 +55,17 @@ export function HifiResultCard({
     tweeter = hifiDriverByIdOrThrow("tweeter", result.tweeter);
   const radiator = passiveRadiatorOf(config); // null unless the box is a radiator box with its radiator
   const tile = (label: string, v: string, delta: React.ReactNode) => (
-    <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
-      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
-      <div className="tabular-nums">{v}</div>
-      {delta}
-    </div>
+    <CardTile label={label} value={v} delta={delta} />
   );
   const limitedBy = WOOFER_LIMITED_BY[result.whoW];
   return (
-    <div
-      className={`bg-panel border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}
+    <CardFrame
+      label={result.label}
+      index={index}
+      total={total}
+      previewing={previewing}
+      title={`${woofer.size}″ ${result.names.woofer} · ${config.dim.w} × ${config.dim.h} × ${config.dim.d}″`}
     >
-      <div className="text-xs uppercase tracking-wider font-bold text-stone-500">
-        {result.label} · {index + 1} of {total}
-      </div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: FONT, fontWeight: 700 }}>
-        {woofer.size}″ {result.names.woofer} · {config.dim.w} × {config.dim.h} × {config.dim.d}″
-      </h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront
           dim={config.dim}
@@ -82,8 +82,8 @@ export function HifiResultCard({
         <OptimizerCurveChart
           curve={result.curve}
           cur={currentCurve}
-          fmin={15}
-          fmax={20000}
+          fmin={FREQ_AXIS_MIN_HZ}
+          fmax={FREQ_AXIS_MAX_HZ}
           band={null}
           top={HIFI_TOP}
           bot={HIFI_BOT}
@@ -101,7 +101,7 @@ export function HifiResultCard({
         · {formatThickness(config.wall)} · XO {config.xo} Hz · amps {config.wAmpW} / {config.tAmpW}{" "}
         W
       </div>
-      <div className="grid grid-cols-2 gap-1.5">
+      <CardTiles>
         {tile(
           "Drivers, pair",
           `${formatDollars(metrics.price)}${result.priceKnown ? "" : UI_TEXT.partialPriceMark}`,
@@ -122,7 +122,7 @@ export function HifiResultCard({
           `${metrics.f3.toFixed(0)} Hz`,
           <Delta v={deltas.f3} unit=" Hz" lowerIsBetter />,
         )}
-      </div>
+      </CardTiles>
       <div className="text-xs leading-snug">
         <b className="font-semibold">{OPTIMIZER_PANEL_TEXT.limitedBy}</b> {limitedBy}
       </div>
@@ -155,6 +155,6 @@ export function HifiResultCard({
           Load
         </Button>
       </div>
-    </div>
+    </CardFrame>
   );
 }

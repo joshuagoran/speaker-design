@@ -2,35 +2,43 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
+import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
 import type {
   BACK_JOINT_NAMES,
   BOX_AXIS_NAMES,
   BRACE_PANEL_NAMES,
   BRACE_STYLE_NAMES,
+  SPEAKER_BRACE_STYLE_NAMES,
   STRENGTH_LOAD_NAMES,
 } from "./constants/bracing";
-import type { LIMIT_NAMES } from "./constants/limits";
+import type { INPUT_RANGE_LIMIT, LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { HORN_PROFILE } from "./constants/hornEngine";
 import type {
   AUTO_DELAY,
+  CABINET_CONSTRUCTION,
+  ARCH_BLOCK,
+  CABINET_TOP,
   CHAMBER_LOAD,
   FIRST_ORDER_FILTER,
-  FRONT_END_KIND,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
-  SOURCE_ROLE,
+  SLOT_PLACE,
+  SPACE_ITEM,
   SPEAKER_BAND,
+  SPEAKER_MODEL_GAP,
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
+import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
+import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { AMP_SERIES } from "./data/catalog/amps";
 import type { DSP_UNITS } from "./data/catalog/dsp-units";
@@ -39,6 +47,7 @@ import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
+import type { AutoBalanceMode } from "./constants/autoBalance";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
@@ -132,7 +141,10 @@ export interface ThieleSmall {
   Hvc?: number;
   Hg?: number;
   Re: number;
-  /** voice-coil inductance, mH, where the maker publishes it; only the horn engine reads it (none when absent) */
+  /**
+   * voice-coil inductance, mH, where the maker publishes it: every T/S model reads it (lib/acoustics/driverCircuit
+   * `coilFactor`), so the top rolls off; none when absent, and the models take the coil as Re alone
+   */
   Le?: number;
   Bl: number;
   Mms: number;
@@ -151,10 +163,14 @@ export type RawTS<T extends ThieleSmall> = Omit<T, "Xmax" | "xmax">;
 /** A driver as its table holds it. */
 export type RawDriver<D extends { ts: ThieleSmall }> = Omit<D, "ts"> & { ts: RawTS<D["ts"]> };
 
-/** The Thiele-Small fields the box models read (`boxModel`, `closedBox`, `passiveRadiatorBox`); `closedBox` and `passiveRadiatorBox` leave `Xmax` alone. */
-export type BoxModelTS = Pick<ThieleSmall, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
-/** The Thiele-Small fields the horn engine reads (lib/acoustics/hornModel): the box models' and the voice coil's inductance. */
-export type HornDriverTS = BoxModelTS & Pick<ThieleSmall, "Le">;
+/**
+ * The Thiele-Small fields the box models (`boxModel`, `closedBox`, `passiveRadiatorBox`) and the horn engine read, the
+ * voice coil's inductance where listed; `closedBox` and `passiveRadiatorBox` leave `Xmax` alone.
+ */
+export type BoxModelTS = Pick<
+  ThieleSmall,
+  "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms" | "Le"
+>;
 
 /** Subs always list a displacement. */
 export interface SubTS extends ThieleSmall {
@@ -163,8 +179,8 @@ export interface SubTS extends ThieleSmall {
 
 /**
  * Hi-fi woofers also list 2.83 V sensitivity and nominal impedance (informational; no model reads them), and their
- * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) has no inductance or LF impedance in its table,
- * so those two are absent there.
+ * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) takes its inductance from the fill table where
+ * the maker publishes it, but that table has no LF impedance, so `imp` is absent there.
  */
 export interface HifiWooferTS extends ThieleSmall {
   sens: number;
@@ -190,6 +206,13 @@ export interface SubDriver {
   sens?: number;
   /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
   depthIn?: number;
+  /** the surround's width, in, from the maker's dimension drawing; absent where it gives none (the front chamber estimates it) */
+  surroundIn?: number;
+  /**
+   * the cone's depth, in: its dish, from the mounting plane to the dust cap, from the maker's dimension drawing; absent
+   * where it gives none (the front chamber estimates it)
+   */
+  dishDepthIn?: number;
   note: string;
 }
 
@@ -205,6 +228,8 @@ export interface MidDriver {
   ts: ThieleSmall;
   /** mounting depth in inches, from the maker's datasheet; absent where not entered (MID_DEPTH_FALLBACK_IN stands in) */
   depthIn?: number;
+  surroundIn?: SubDriver["surroundIn"];
+  dishDepthIn?: SubDriver["dishDepthIn"];
   note: string;
 }
 
@@ -793,7 +818,7 @@ export interface DriverLayout {
 
 /** What stops a level, by id (`LIMIT_NAMES` holds the word a chart label shows for it). */
 export type LimitId = keyof typeof LIMIT_NAMES;
-/** What limits the woofer's output at a frequency: any limit, a radiator's travel included. */
+/** What limits a woofer's output at a frequency: any limit (a radiator's travel, and a horn throat's air speed). */
 export type WooferLimit = LimitId;
 
 /** The woofer's response at one frequency, with the baffle step, placement, EQ and low-pass applied. */
@@ -1273,7 +1298,8 @@ export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, Pane
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
  * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them. `div` is the side ducts'
  * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/panel); absent,
- * as in saves from before the choice, they are ½″ (`ductDividerIn`).
+ * as in saves from before the choice, they are ½″ (`ductDividerIn`). `fins` is how many fins split the bottom slot;
+ * absent, as the PA page always leaves it, its two (`PA_SLOT_FINS`, lib/pa/calc `slotFinsOf`); the Speaker page sets it.
  */
 export interface VentSpec {
   slotH: number;
@@ -1282,6 +1308,7 @@ export interface VentSpec {
   throat: number;
   len: number;
   div?: number;
+  fins?: number;
 }
 
 /** A set of round port tubes from stock pipe: how many, and each one's inside diameter in inches. */
@@ -1338,7 +1365,10 @@ export interface PaDesignConfig {
   wall: number;
   /** the walls' nominal size; absent in designs saved before the sizes (their `wall` names it) */
   panel?: PanelNominal;
-  /** the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: ½″ */
+  /**
+   * the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: the size
+   * nearest `cVent.div`, ½″ where it has none
+   */
   divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
@@ -1481,7 +1511,7 @@ export interface Complex {
  */
 export type Matrix2 = readonly [Complex, Complex, Complex, Complex];
 
-/** A horn segment's flare law: "con" conical, "exp" exponential (constants/hornEngine HORN_PROFILE). */
+/** A horn segment's flare law: "con" conical, "exp" exponential, "par" parabolic (constants/hornEngine HORN_PROFILE). */
 export type HornProfile = (typeof HORN_PROFILE)[keyof typeof HORN_PROFILE];
 
 /** The solid angle a horn mouth radiates into, in units of π (constants/hornEngine RADIATION_ANGLE_NAMES). */
@@ -1531,8 +1561,8 @@ export interface HornRearChamber {
  * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
  */
 export interface HornDesign {
-  /** one driver's Thiele/Small parameters, as the box models take them, and its voice coil's inductance */
-  driver: HornDriverTS;
+  /** one driver's Thiele/Small parameters, as the box models take them (its voice coil's inductance with them) */
+  driver: BoxModelTS;
   /**
    * how many of that driver share the throat, wired in parallel, each on the full voltage (Hornresp's Nd); 1 for one.
    * Each cone keeps its own air load.
@@ -1573,7 +1603,7 @@ export interface HornPoint {
   portSpeed: number;
   /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
   throatSpeed: number;
-  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel; no voice-coil inductance, as the box models */
+  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel, its coil's inductance included */
   ze: number;
 }
 
@@ -1585,8 +1615,8 @@ export interface HornModel {
   fb: number | null;
 }
 
-/** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator). */
-export type SubLimitWho = Exclude<LimitId, "radiator">;
+/** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator, no horn throat). */
+export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
 
 /** The sub's music limit: the drive level (volts and watts into 8 ohm) where the first of port, cone, driver and amp gives out. */
 export interface SubLimits {
@@ -1622,8 +1652,8 @@ export interface VentGeometry {
   desc: string;
 }
 
-/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches). */
-export interface PaPortGeometry {
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches), and the bottom slot's fins (absent: the PA page's two). */
+export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
   ductH: number;
   nPorts: number;
   portR: number;
@@ -1838,9 +1868,10 @@ export interface FillSystemSealed extends FillSystemBase {
 /** `fillSystem`'s result: check `boxType`, or `vM` or `sM`, and the other model's type follows. */
 export type FillSystem = FillSystemVented | FillSystemSealed;
 
-// ---- Speaker designer spec (lib/speaker) ----
+// ---- Speaker spec (lib/speaker) ----
 //
-// One model for any box (`SpeakerSpec`) and for a system of boxes (`SystemSpec`): docs/speaker-designer-plan.md, L1.
+// One model for any box (`SpeakerSpec`), for boxes in a fixed relationship (`StackSpec`) and for a placed space
+// (`SpaceSpec`): docs/speaker-designer-plan.md, L1 and L4.
 // Sizes are in inches, as the design pages have them, except a horn's segments, which keep the horn engine's
 // (Hornresp's) cm and cm².
 
@@ -1858,8 +1889,14 @@ export interface SpeakerDriverParts {
 /** A driver's kind, by id (`DRIVER_KIND`): the catalog table its id is in. */
 export type DriverKind = keyof SpeakerDriverParts;
 
-/** A speaker's band, by id (`SPEAKER_BAND`). */
-export type BandId = (typeof SPEAKER_BAND)[keyof typeof SPEAKER_BAND];
+/**
+ * A speaker's band, by id: any number of bands, each with its own name (`SpeakerBand.name`). The read adapters use
+ * `SPEAKER_BAND`'s ids; the Speaker page gives a new band a generated one. Drivers name their bands by id.
+ */
+export type BandId = string;
+
+/** A band the read adapters give, by id (`SPEAKER_BAND`, its name in `SPEAKER_BAND_NAMES`). */
+export type AdapterBandId = keyof typeof SPEAKER_BAND;
 
 /** Where a horn sits, by id (`HORN_PLACEMENT`): in the baffle, or freestanding on the box top. */
 export type HornPlacement = (typeof HORN_PLACEMENT)[keyof typeof HORN_PLACEMENT];
@@ -1876,6 +1913,18 @@ export interface HornAttachment {
 export interface FacePoint {
   xIn: number;
   yIn: number;
+}
+
+/** A panel a vent can be cut into (`PANEL`): the baffle, or the back. */
+export type VentPanel = Extract<RadiatorPanel, "baffle" | "back">;
+
+/**
+ * Where a vent sits on its chamber, as a driver entry's position: its panel, and its group's center, `xIn` across from
+ * the chamber's center line (+ toward the inside of a pair, seen from the front on the back panel too) and `yIn` up
+ * from the chamber's bottom.
+ */
+export interface VentPosition extends FacePoint {
+  panel: VentPanel;
 }
 
 /** What every driver entry has, whatever its kind. */
@@ -1897,23 +1946,74 @@ export type SpeakerDriver = {
   [K in DriverKind]: SpeakerDriverBase & { kind: K; driverId: SpeakerDriverParts[K]["id"] };
 }[DriverKind];
 
-/** Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each. */
-export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
+/**
+ * Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each, and
+ * their dividers' nominal size (`divider`) and exact thickness (`div`).
+ */
+export interface SideDuctPort
+  extends Pick<VentSpec, "throat" | "len" | "div">, Required<Pick<PaDesignConfig, "divider">> {
   shape: (typeof PORT_SHAPE)["duct"];
   n: 1 | 2;
 }
 
 /**
- * A vented chamber's port: round tubes or slots (the Hi-fi kinds), or side ducts. `len` is the path length: a folded
- * port is its path. A slot's `w` is its width; absent, the box sets it (the Hi-fi slot runs the full width).
+ * Round tubes, with the PA sub's details where they are its tubes: `flared` ends (the PA tube rule: the flares, the
+ * neighboring mouths, a wall facing the inner mouth, the sub driver's depth as the stop; lib/pa/tubes
+ * subTubeEndCorrection), in the baffle's `corners` round a centered driver (`round4`) or in a row along the bottom.
+ * Without `flared`, the Hi-fi round port rule: the tubes can then take a `position`, where the row sits (its center),
+ * on the baffle or the back; absent, the Hi-fi rule's place, centered along the baffle's bottom (lib/hifi/boxLayout
+ * roundPortSpots). Flared tubes keep the PA layout: their place is part of the PA tube rule.
  */
-export type SpeakerPort = HifiPort | SideDuctPort;
+export type SpeakerRoundPort = RoundPort &
+  (
+    | { flared?: false; corners?: never; position?: VentPosition }
+    | { flared: true; corners?: boolean; position?: never }
+  );
 
-/** A chamber's vent, by its kind (`VENT_KIND`). */
+/** Where a Hi-fi rule slot's openings are on the baffle (`SLOT_PLACE`). */
+export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
+
+/**
+ * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (the PA page's two), its
+ * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
+ * (the PA slot rule: lib/pa/calc ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
+ * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
+ * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
+ * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width and its long side `w` its height.
+ */
+export interface SpeakerSlotPort extends SlotPort {
+  fins?: number;
+  folded?: boolean;
+  place?: SlotPlace;
+}
+
+/**
+ * A vented chamber's port: round tubes or slots (the Hi-fi kinds, with the PA's details where set), or side ducts.
+ * `len` is the path length: a folded port is its path. A slot's `w` is its width; absent, the box sets it (the slot
+ * runs the full width).
+ */
+export type SpeakerPort = SpeakerRoundPort | SpeakerSlotPort | SideDuctPort;
+
+/**
+ * A chamber's vent, by its kind (`VENT_KIND`). A vented chamber's `maxSpeedMs` is the most air speed its vent takes,
+ * m/s (sine peak): the PA design's setting (more for flared tubes, as the PA takes them), the Hi-fi's or the fill's.
+ */
 export type ChamberVent =
   | { kind: Extract<HifiBoxKind, "sealed"> }
-  | { kind: Extract<HifiBoxKind, "vented">; port: SpeakerPort }
-  | { kind: Extract<HifiBoxKind, "radiator">; radiators: RadiatorSelection };
+  | {
+      kind: Extract<HifiBoxKind, "vented">;
+      port: SpeakerPort;
+      maxSpeedMs: PaDesignConfig["portMax"];
+    }
+  | {
+      kind: Extract<HifiBoxKind, "radiator">;
+      radiators: RadiatorSelection;
+      /**
+       * where the radiators sit (the stack's center), on the baffle or the back; absent: the Hi-fi rule's place,
+       * stacked up the back from its bottom (lib/hifi/boxLayout radiatorSpots on `RADIATOR_PANEL`)
+       */
+      position?: VentPosition;
+    };
 
 /**
  * How a horn's drivers drive its path (`HORN_DRIVE`).
@@ -1934,12 +2034,20 @@ export type HornDrive =
 export type HornPath = (typeof HORN_PATH)[keyof typeof HORN_PATH];
 
 /**
- * A horn built into the box: the horn engine's throat chamber, segments and vent offset (`HornDesign`). The chamber's
- * own net air and vent are the horn's rear chamber.
+ * A horn built into the box: the horn engine's segments and vent offset (`HornDesign`). The chamber's own net air and
+ * vent are the horn's rear chamber. Its front chamber is not a setting: it comes from the walls over the cones
+ * (lib/speaker/hornThroat); an older save's `throatChamber` is not read. The first segment's start area is the throat,
+ * which the compression ratio shows.
  */
-export interface SpeakerHorn extends Pick<HornDesign, "throatChamber" | "segments" | "portOffset"> {
+export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset"> {
   drive: HornDrive;
   path: HornPath;
+  /**
+   * the mouth's center on the baffle, `xIn` across from the chamber's center line and `yIn` up from its bottom, as a
+   * driver's position: a back-loaded horn's mouth is apart from the drivers on the baffle, and a folded path can end
+   * anywhere on it. Absent: centered on the chamber's clear face.
+   */
+  mouthPosition?: FacePoint;
 }
 
 /** How a chamber's drivers meet the air (`CHAMBER_LOAD`): straight, or through a horn built into the box. */
@@ -1962,6 +2070,12 @@ export interface SpeakerChamber {
    * null: the models work it out from `dims`
    */
   netLiters: number | null;
+  /**
+   * how much more air the stuffing makes the box act like, %: the Hi-fi engine stuffs a sealed box 10%, the PA its
+   * mids and the Fills page its sealed boxes 15%; 0 for none. The model applies it to every chamber alike (a horn's
+   * rear chamber too).
+   */
+  stuffingPct: number;
   vent: ChamberVent;
   load: ChamberLoad;
   drivers: readonly SpeakerDriver[];
@@ -1974,16 +2088,47 @@ export interface SpeakerPanel {
   thicknessIn: PaDesignConfig["wall"];
 }
 
-/** A cabinet: its chambers, panels and shape. Bracing and back joint as the PA boxes take them (absent: the defaults). */
-export interface SpeakerCabinet extends Pick<PaDesignConfig, "braceStyle" | "backJoint"> {
+/** How a cabinet's shell is built, by id (`CABINET_CONSTRUCTION`, its name in `CABINET_CONSTRUCTION_NAMES`). */
+export type CabinetConstruction = (typeof CABINET_CONSTRUCTION)[keyof typeof CABINET_CONSTRUCTION];
+
+/** A cabinet's top shape, by id (`CABINET_TOP`). */
+export type CabinetTop = (typeof CABINET_TOP)[keyof typeof CABINET_TOP];
+
+/** Why an arched top is drawn and cut flat, by id (`ARCH_BLOCK`). */
+export type ArchBlock = (typeof ARCH_BLOCK)[keyof typeof ARCH_BLOCK];
+
+/**
+ * A cabinet: its chambers, panels and shape, and its bracing as the PA boxes take it: the style (ribs, window braces or
+ * both), how the back is fixed (glued or screwed), and the target every panel's first mode should clear.
+ */
+export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "backJoint">> {
+  /** the bracing style, or none: the panels unbraced */
+  braceStyle: SpeakerBraceStyle;
   chambers: readonly SpeakerChamber[];
   panel: SpeakerPanel;
-  /** how far the baffle sits behind the frame's front, in; 0 flush */
+  /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ by default (lib/pa/bracing) */
+  braceTargetHz: number;
+  /**
+   * how the shell is built: the PA's frame, its baffle set back by `insetIn`, or the Hi-fi's flush box, its baffle over
+   * the whole front
+   */
+  construction: CabinetConstruction;
+  /**
+   * the top's shape: flat, or arched, a semicircle the full width of the cabinet over its top chamber (the PA tower's,
+   * lib/pa/tower `towerSpec`)
+   */
+  top: CabinetTop;
+  /** how far the frame's baffle sits behind its front, in; 0 flush. A flush box has none (`baffleInsetIn`). */
   insetIn: PaDesignConfig["inset"];
   /** the baffle edges' roundover radius, in; 0 sharp */
   roundoverIn: HifiDesignState["roundoverIn"];
   /** the kick-back: the baffle tilted back so the axis points this far up, degrees */
   tiltDeg: NonNullable<HifiConfig["tiltDeg"]>;
+  /**
+   * the PA boxes' hardware (lib/pa/hardware): these handles, the input dish with its two jacks, and the horn's binding
+   * posts on a chamber whose horn stands on its top; in each shell's lowest chamber. Null: none (the Hi-fi box).
+   */
+  hardware: BoxHandles | null;
 }
 
 /** A filter's alignment and slope: Butterworth or Linkwitz-Riley at 24 or 48 dB/oct, or first order (a capacitor). */
@@ -1997,19 +2142,29 @@ export interface BandFilter {
 
 /**
  * A band of a speaker. Its filters are the box's own: the crossover inside the box and its protection (a subsonic).
- * A crossover to another box (the sub) is the system's, on the source (`SystemSource.filters`).
+ * A crossover to another box (the sub) is the stack's (`StackMember.crossover`).
  */
 export interface SpeakerBand {
   id: BandId;
+  /** what the user calls it: "Sub", "Low mid", "Horn" */
+  name: string;
   highpass: BandFilter | null;
   lowpass: BandFilter | null;
-  /** against the speaker's other bands, dB, 0 or less */
+  /**
+   * against the speaker's other bands, dB: a pad (0 or less), or a DSP's gain where the Hi-fi level match lifts a tweeter
+   * quieter than its woofer
+   */
   levelDb: number;
   /**
    * active: its filters run in the front end and it has an amp channel of its own; passive: a network in the box, on
-   * a channel it shares (`SourceChannel.bands`), as a super tweeter on the HF channel through a capacitor
+   * a channel it shares, as a super tweeter on the HF channel through a capacitor
    */
   drive: HifiDrive;
+  /**
+   * the power of the amp channel that drives it, W into 8 Ω: its own channel's when active; when passive, the channel
+   * it shares (the same figure as the band it shares it with). The limits read it (lib/speaker/speakerLimits).
+   */
+  ampW: number;
 }
 
 /** Any single box: its cabinet, drivers, bands and look. */
@@ -2018,96 +2173,160 @@ export interface SpeakerSpec {
   name: string;
   cabinet: SpeakerCabinet;
   bands: readonly SpeakerBand[];
+  /**
+   * the input range: the filters the front end puts ahead of the box on every band (the crossover to a sub). Not part
+   * of the box; the Speaker page models the speaker with it (`speakerResponse`'s and `speakerLimits`' feed). In a stack,
+   * the member's crossover takes its place (`StackMember.crossover`).
+   */
+  input: Pick<SpeakerBand, "highpass" | "lowpass">;
   look: Pick<PaDesignConfig, "cabFinish" | "baffleColor" | "hornColor">;
 }
 
 /** A spec's identity, as a read adapter takes it. */
 export type SpecIdentity = Pick<SpeakerSpec, "id" | "name">;
 
-/** A speaker of a system read from one design, by id (`SPEAKER_PART`): it names the speaker's id and name. */
+/** A speaker read from one design, by id (`SPEAKER_PART`): it names the speaker's id and name. */
 export type SpeakerPart = (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART];
 
 /** The PA design as the planner holds it: every field set (a save can lack the later ones). */
 export type PaPlannerDesign = PaDesignConfig &
-  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH">>;
-
-/** What a source does in a system, by id (`SOURCE_ROLE`). */
-export type SourceRole = (typeof SOURCE_ROLE)[keyof typeof SOURCE_ROLE];
+  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH" | "hardware" | "divider">>;
 
 /**
- * Where a source stands: its spot and aim on the floor, and what it stands on. Sources stack in chains (sub bins, mid
- * boxes, an HF horn on top), each on the one below it.
+ * Where a member stands in its stack, in: from the stack's origin (the middle of its base, at its front), or from the
+ * member it stands on (an earlier one: its center line, its top and its front).
  */
-export interface SourcePose extends FloorPlacement {
-  /** the source it stands on, as an index into the system's sources; null: the floor */
+export interface StackPose {
+  /** across: its center line from the origin's (or the one under it), + to the right seen from the front */
+  xIn: number;
+  /** up: its bottom above the stack's base, or above the top of the member it stands on (a gap, a spacer, a stand) */
+  yIn: number;
+  /** back: its front behind the stack's front (or the front of the one under it) */
+  zIn: number;
+  /** the member it stands on, as an index into the stack's members (an earlier one); null: the stack's base */
   on: number | null;
-  /** the gap under it, in: a plinth, a spacer, a stand, or 0 */
-  liftIn: number;
+  /**
+   * its tilt in the stack, degrees, + up: turned about its bottom front edge (a top angled down on its sub), added to
+   * its cabinet's kick-back (`SpeakerCabinet.tiltDeg`). What stands on it doesn't follow it.
+   */
+  pitchDeg: number;
 }
 
-/** An amplifier in a system: its catalog model where one is picked, and its power per channel, W. */
-export interface SystemAmp {
-  id: string;
-  model: AmpId | null;
-  watts: number;
-}
-
-/** One amp channel a source takes, and the speaker's bands it feeds (passive bands share it). */
-export interface SourceChannel {
-  amp: SystemAmp["id"];
-  channel: number;
-  bands: readonly BandId[];
-}
-
-/** One placed speaker in a system. */
-export interface SystemSource {
+/** One speaker in a stack: where it stands, and what the front end does to its feed. */
+export interface StackMember {
   speakerId: SpeakerSpec["id"];
-  role: SourceRole;
-  pose: SourcePose;
+  pose: StackPose;
   /** a mirror image of the speaker (a tweeter offset to the other side) */
   mirror: boolean;
-  /** the front end's filters on this source's feed: the crossovers between boxes (to the sub) */
-  filters: Pick<SpeakerBand, "highpass" | "lowpass">;
-  /** the front end's delay, ms, or its own alignment */
-  delayMs: number | typeof AUTO_DELAY;
-  /** the front end's level, against the system's other sources, dB */
+  /** the crossover between boxes on its feed (to the sub, to the tops): the speaker's input range in the stack */
+  crossover: SpeakerSpec["input"];
+  /** the front end's level, against the stack's other members, dB */
   levelDb: number;
-  channels: readonly SourceChannel[];
+  /** the front end's delay, ms, or the stack's own alignment (lib/speaker/stackResponse) */
+  delayMs: number | typeof AUTO_DELAY;
 }
 
-/** How a front end processes, by id (`FRONT_END_KIND`): fixed analog cards, or a DSP. */
-export type FrontEndKind = (typeof FRONT_END_KIND)[keyof typeof FRONT_END_KIND];
-
-/** The processing ahead of the amps: the sources' filters, delays and levels run in it, analog or digital. */
-export interface SystemFrontEnd {
-  kind: FrontEndKind;
-  /** the DSP unit (`DSP_UNITS`), where a digital front end names one */
-  dspId: DspUnit["id"] | null;
-}
-
-/** Where a system plays: the boxes' boundary (their distance to it is in their poses) and the listener. */
-export interface SystemVenue {
-  placement: HifiPlacement;
-  listener: FloorPoint;
-  earIn: HifiDesignState["earHeightIn"];
-}
-
-/** Saved speakers composed: sources, amps, front end and venue. */
-export interface SystemSpec {
+/**
+ * Speakers in a fixed relationship (a sub, a mid-bass box and a horn): their places, the crossovers between them, their
+ * delays and levels. It says what each box needs; the Space assigns the hardware that does it.
+ */
+export interface StackSpec {
   id: string;
   name: string;
-  sources: readonly SystemSource[];
-  amps: readonly SystemAmp[];
-  /** null: none (passive speakers straight off the amps) */
-  frontEnd: SystemFrontEnd | null;
-  /** null where the design sets none (the PA page's room is the coverage page's) */
-  venue: SystemVenue | null;
+  members: readonly StackMember[];
+  notes: string;
 }
 
-/** A system and the speakers its sources name, as a read adapter returns them. */
-export interface SystemWithSpeakers {
-  system: SystemSpec;
+/** What a space places, by id (`SPACE_ITEM`): a stack, or a speaker alone on its own input range. */
+export type SpaceItemKind = (typeof SPACE_ITEM)[keyof typeof SPACE_ITEM];
+
+/**
+ * Where a placed stack or speaker points, degrees: its yaw on the floor from straight down the room (+ turns toward +x,
+ * a toe-in or pan) and its pitch (+ up). The one aim model: a member's tilt in its stack (`StackPose.pitchDeg`) and its
+ * cabinet's kick-back (`SpeakerCabinet.tiltDeg`) add to the pitch (lib/speaker/spaceLayout).
+ */
+export interface SpaceAim {
+  yawDeg: number;
+  pitchDeg: number;
+}
+
+/**
+ * A stack or a speaker placed in a space: its spot on the floor (its base's front center, ft), the lift under it (a
+ * plinth, a stand), its aim, a mirror image, and what is done to its feed (a level and a delay).
+ */
+export interface SpacePlacement extends FloorPoint {
+  item:
+    | { kind: typeof SPACE_ITEM.stack; id: StackSpec["id"] }
+    | { kind: typeof SPACE_ITEM.speaker; id: SpeakerSpec["id"] };
+  /** the gap under it, in: a plinth, a stand, or 0 */
+  liftIn: number;
+  aim: SpaceAim;
+  mirror: boolean;
+  /**
+   * a left and right pair: the placement stands twice, as set and as its mirror image across the room's center line
+   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level and delay
+   * (`expandPlacements`)
+   */
+  mirrored: boolean;
+  /** the front end's level on its feed, against the space's other placements, dB (a fill under the mains) */
+  levelDb: number;
+  /** the front end's delay on its feed, ms (a fill waiting for the mains) */
+  delayMs: number;
+}
+
+/** Which side of the center line a box of a mirrored pair stands on, seen from the listener, by id (`PAIR_SIDE`). */
+export type PairSide = (typeof PAIR_SIDE)[keyof typeof PAIR_SIDE];
+
+/**
+ * One box the model places: a placement as it stands (`expandPlacements`). `source` is the placement's index in the
+ * space; `image` is set for the mirror image of a mirrored pair; `side` is the box's side of the center line in a
+ * pair, null for a placement on its own.
+ */
+export interface PlacedSource extends SpacePlacement {
+  source: number;
+  image: boolean;
+  side: PairSide | null;
+}
+
+/** Which part of a driver entry radiates, by id (`DRIVER_PART`): its cone or its HF section. */
+export type DriverPart = (typeof DRIVER_PART)[keyof typeof DRIVER_PART];
+
+/** Where a space plays: the room, the listener (a probe) and the level it should get. */
+export interface SpaceVenue {
+  room: CoverageRoom;
+  listener: FloorPoint;
+  /** the ear's height above the floor, ft: the map and the levels are worked out there */
+  earFt: CoverageLayout["earFt"];
+  /**
+   * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
+   * (`balance`) less: the space is turned down to it, never past its limit
+   */
+  targetDb: CoverageLayout["targetDb"];
+  /**
+   * where the target is measured, as on the coverage page: the audience's average (the floor but the space in front of
+   * each box), the listener, or 1 m in front of each placement (averaged).
+   */
+  levelRef: CoverageLevelRef;
+  /**
+   * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
+   * or the PA music tilt (lib/speaker/autoBalance).
+   */
+  balance: AutoBalanceMode;
+}
+
+/** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
+export interface SpaceSpec {
+  id: string;
+  name: string;
+  placements: readonly SpacePlacement[];
+  venue: SpaceVenue;
+}
+
+/** One design read in all three layers (lib/speaker read adapters): its speakers, its stack, and its space. */
+export interface DesignLayers {
   speakers: readonly SpeakerSpec[];
+  stack: StackSpec;
+  space: SpaceSpec;
 }
 
 /** Why a chamber has no horn-engine design yet, by id (`HORN_ENGINE_GAP`). */
@@ -2116,12 +2335,456 @@ export type HornEngineGap = (typeof HORN_ENGINE_GAP)[keyof typeof HORN_ENGINE_GA
 /** A chamber as the horn engine takes it, or why it can't yet. */
 export type HornDesignResult = { ok: true; design: HornDesign } | { ok: false; gap: HornEngineGap };
 
+/** Why the speaker model leaves out a chamber or a driver (`SPEAKER_MODEL_GAP`, or the horn engine's gap). */
+export type SpeakerModelGap =
+  | (typeof SPEAKER_MODEL_GAP)[keyof typeof SPEAKER_MODEL_GAP]
+  | HornEngineGap;
+
+/** The filters ahead of a speaker on every band: its input range (in a stack, its member's crossover). */
+export type SpeakerFeed = SpeakerSpec["input"];
+
+/** One band of a speaker as the speaker model works it out: its drivers through its filters and level. */
+export interface SpeakerBandResponse {
+  id: BandId;
+  curve: FrequencyPoint[];
+  /** its pressure at each of the curve's frequencies, with its phase (a stack sums its members' bands with it) */
+  pressure: Complex[];
+  /** its passband level, dB: the mean of its curve where it is within 3 dB of its highest point */
+  passbandDb: number;
+}
+
+/** One chamber as the speaker model works it out. */
+export interface SpeakerChamberResponse {
+  /** the air the box model takes, L: `SpeakerChamber.netLiters`, or worked out from the size */
+  netLiters: number;
+  /** the vent's or radiators' tuning, Hz; null when sealed or not modeled */
+  fb: number | null;
+  /** a sealed chamber's Qtc (its stuffing counted); null otherwise */
+  qtc: number | null;
+  /** what the model leaves out in this chamber, if anything */
+  gaps: readonly SpeakerModelGap[];
+  /**
+   * its cones' drive at each of the response's frequencies, at `SPEAKER_RESPONSE_VOLTS` and before the band's filters;
+   * null when its cones aren't modeled (or it has none). The limits scale it (lib/speaker/speakerLimits).
+   */
+  drive: ChamberDrivePoint[] | null;
+}
+
+/**
+ * A chamber's cones at one frequency (sine peaks): each cone's excursion, mm, the vent's air speed, m/s, the
+ * radiators' travel, mm, and the air speed at a horn's throat, m/s, where the box has a vent, radiators or a horn.
+ */
+export type ChamberDrivePoint = Pick<WooferPoint, "xmm"> & {
+  vel?: number;
+  prx?: number;
+  /** the air speed at a horn's throat, m/s, peak; absent without a horn */
+  throat?: number;
+};
+
+/**
+ * A speaker's response (lib/speaker/speakerResponse `speakerResponse`): on axis at 1 m in half space, at
+ * `SPEAKER_RESPONSE_VOLTS` on every band, the bands summed with their phase.
+ */
+export interface SpeakerResponse {
+  sum: FrequencyPoint[];
+  /** the bands a modeled driver feeds, in the spec's order */
+  bands: SpeakerBandResponse[];
+  /** one per chamber, in the spec's order */
+  chambers: SpeakerChamberResponse[];
+  /** what the model leaves out across the bands: a band (or the feed) whose filter corner isn't a positive frequency */
+  gaps: readonly SpeakerModelGap[];
+}
+
+/** One frequency of a speaker at its limit: the level where the first limit gives out, dB at 1 m, and which limit. */
+export type SpeakerMaxPoint = FrequencyPoint & { who: LimitId };
+
+/**
+ * One band at its limits (lib/speaker/speakerLimits): its drivers at the amp's full power, through the band's filters,
+ * up to the first of cone travel, port air speed, radiator travel, the program rating (thermal) and the amp.
+ */
+export interface SpeakerBandLimits {
+  id: BandId;
+  /** the drivers' voltage with the amp at full power, V RMS: the amp's, through a passive band's pad */
+  driveVolts: number;
+  /** the band alone, a sine at each of the response's frequencies, at its first limit */
+  max: SpeakerMaxPoint[];
+  /**
+   * the band's level for music, dB at 1 m: one drive for the whole band, set where the band first meets a limit
+   * (`who`, at `whoHz`), on its passband level
+   */
+  musicDb: number;
+  who: LimitId;
+  whoHz: number;
+}
+
+/** A level against a limit at the amp's full power, before any limit acts: the peak and its frequency, and the limit. */
+export interface LimitPeak {
+  peak: number;
+  hz: number;
+  limit: number;
+}
+
+/**
+ * One chamber's cones at the amp's full power through their band's filters (lib/speaker/speakerLimits): the cone's
+ * excursion against Xmax, mm; the vent's air speed against its limit, m/s; the radiators' travel against theirs, mm;
+ * and the drive's power against the cones' program rating, W.
+ */
+export interface SpeakerChamberLimits {
+  band: BandId;
+  excursion: LimitPeak;
+  /** null without a vent */
+  port: LimitPeak | null;
+  /** null without radiators */
+  radiator: LimitPeak | null;
+  /** the air speed at a horn's throat against the box's air speed limit; null without a horn */
+  throat: LimitPeak | null;
+  /** the drive's power into 8 Ω, W, and the cones' program rating (2 × AES), W */
+  driveW: number;
+  programW: number;
+}
+
+/** A datasheet driver (a compression driver, a tweeter, a coaxial's HF) at its power limit. */
+export interface SpeakerDriverPower {
+  band: BandId;
+  driver: SpeakerDriver;
+  /** the power it takes, W, into its impedance `imp`, Ω: the amp's or its program rating (`who`), derated below its rating's frequency */
+  watts: number;
+  imp: number;
+  who: Extract<LimitId, "amp" | "thermal">;
+  /** the program rating's derating at the band's highpass (1 = none) */
+  derate: number;
+  /** its program rating (2 × AES), derated, W into `imp` */
+  programW: number;
+}
+
+/** A speaker at its limits (lib/speaker/speakerLimits `speakerLimits`). */
+export interface SpeakerLimits {
+  /** the bands the response models, in its order */
+  bands: SpeakerBandLimits[];
+  /** one per chamber, in the spec's order; null where its cones aren't modeled */
+  chambers: (SpeakerChamberLimits | null)[];
+  /** each datasheet driver with a published HF section, in the spec's order */
+  drivers: SpeakerDriverPower[];
+  /**
+   * the speaker with one input for every band, at each frequency where the first band meets its first limit, and which
+   * band; empty with no modeled band
+   */
+  sum: (Omit<SpeakerMaxPoint, "who"> & {
+    /** the first limit; outside the input range (the feed below −6 dB), the input range itself when a ceiling on the whole drive sets it */
+    who: LimitId | typeof INPUT_RANGE_LIMIT;
+    band: BandId;
+  })[];
+  /** the speaker's level for music, dB at 1 m: its passband level where the first band reaches its music limit */
+  musicDb: number | null;
+  /** the band that sets it */
+  band: BandId | null;
+}
+
+/**
+ * One member of a stack as the stack model works it out (lib/speaker/stackResponse): its speaker fed through the
+ * member's crossover, and the member in the stack at the listening point.
+ */
+export interface StackMemberResponse {
+  /** the speaker as the stack feeds it: its input range is the member's crossover */
+  speaker: SpeakerSpec;
+  /** the speaker alone, on its own axis at 1 m, through its crossover */
+  response: SpeakerResponse;
+  /**
+   * the member in the stack: with its level and delay, and its bands' paths to the listening point, moved to 1 m (the
+   * level at the listening distance plus the spreading loss to it)
+   */
+  curve: FrequencyPoint[];
+  pressure: Complex[];
+  /**
+   * the delay it plays with, ms: its own, or the stack's alignment worked out; all moved up together where an auto
+   * member has to play early
+   */
+  delayMs: number;
+}
+
+/** A stack's response at its listening point, moved to 1 m (lib/speaker/stackResponse `stackResponse`). */
+export interface StackResponse {
+  sum: FrequencyPoint[];
+  /** one per member, in the stack's order; null where the speakers given lack its speaker */
+  members: (StackMemberResponse | null)[];
+  /** the listening point's height above the stack's base, in: level with the highest band's center */
+  listenHeightIn: number;
+}
+
+/** A stack at its limits with one input (lib/speaker/stackResponse `stackLimits`). */
+export interface StackLimits {
+  /**
+   * the stack at each frequency where the first member meets its first limit, moved to 1 m as the response; which
+   * member, which of its bands and which limit; empty with no modeled member
+   */
+  sum: (FrequencyPoint & {
+    who: SpeakerLimits["sum"][number]["who"];
+    member: number;
+    band: BandId;
+  })[];
+  /**
+   * one per member: its limits on its crossover, worked out with the crossover ahead of its amps (`stackCrossover`),
+   * and the member at the stack's limit
+   */
+  members: ({ limits: SpeakerLimits; atLimit: FrequencyPoint[] } | null)[];
+  /** the stack's level for music, dB at 1 m: its passband level where the first band of a member reaches its music limit */
+  musicDb: number | null;
+  /** the member and the band that set it */
+  member: number | null;
+  band: BandId | null;
+}
+
+// ---- Speaker optimizer (lib/speaker/optimize) ----
+
+/** A goal, by id (`SPEAKER_GOAL`): cheaper, lighter, smaller, lower, louder. */
+export type SpeakerGoal = (typeof SPEAKER_GOAL)[keyof typeof SPEAKER_GOAL];
+
+/** The search's limits. The size limit is a lock per axis (`SpeakerOptimizerLocks.size`), as on the PA page. */
+export interface SpeakerOptimizerLimits {
+  /** the level the speaker has to reach for music, dB at 1 m, against `SpeakerLimits.musicDb` */
+  targetDb: number;
+  /** the most the purchased parts may cost (`speakerPrice`), US dollars; null: no limit */
+  budget: number | null;
+  /** the most the box may weigh (`cabinetBuild`), lb; null: no limit */
+  maxLb: number | null;
+}
+
+/** A driver entry of a spec, by place: its chamber's index and its index in the chamber, "k.j" (`driverRef`). */
+export type DriverRef = `${number}.${number}`;
+
+/** What stays as it is. Absent or empty: nothing of that kind is locked. */
+export interface SpeakerOptimizerLocks {
+  /** driver entries whose part stays (and, for a chamber's cones, every cone of the chamber with it) */
+  drivers?: readonly DriverRef[];
+  /** driver entries whose horn stays */
+  horns?: readonly DriverRef[];
+  /** chambers, by index, whose vent stays */
+  vents?: readonly number[];
+  /** bands whose highpass stays, and whose lowpass stays (a crossover in the box moves only when both its sides are free) */
+  highpass?: readonly BandId[];
+  lowpass?: readonly BandId[];
+  /** bands whose amp power stays */
+  amps?: readonly BandId[];
+  /** each axis of the box: free, exact, or no larger than now */
+  size?: Partial<Record<keyof Dims3, DimensionLockMode>>;
+}
+
+/** The candidate parts: each driver kind's table, and the horns. The model reads every part by id from the app tables. */
+export type SpeakerOptimizerCatalog = { [K in DriverKind]: readonly SpeakerDriverParts[K][] } & {
+  horns: readonly Horn[];
+};
+
+/** What the page posts to the Speaker optimizer's worker. */
+export interface SpeakerOptimizerInput {
+  spec: SpeakerSpec;
+  /** in tap order; the first ranks the designs */
+  goals: readonly SpeakerGoal[];
+  limits: SpeakerOptimizerLimits;
+  locks?: SpeakerOptimizerLocks;
+  /** absent: the app catalog */
+  catalog?: SpeakerOptimizerCatalog;
+}
+
+/** A design's numbers, all from the page's own code on the design as a card loads it. */
+export interface SpeakerOptimizerMetrics {
+  /** the purchased parts with a price, US dollars, and whether some part has none (`speakerPrice`) */
+  price: number;
+  pricePartial: boolean;
+  lb: number;
+  /** the box's outer size with the horns on its top, in (`speakerBounds`), and its volume, L */
+  sizeIn: Dims3;
+  volumeL: number;
+  /** the level for music, dB at 1 m (`SpeakerLimits.musicDb`); null when no band is modeled */
+  musicDb: number | null;
+  /** the band and the limit that set it */
+  band: BandId | null;
+  who: LimitId | null;
+  /** the lowest frequency where the summed response reaches its passband −3 dB, Hz; null with no response */
+  f3: number | null;
+}
+
+/** A card's change from your design (null where either side has no number). */
+export interface SpeakerOptimizerDelta {
+  price: number;
+  lb: number;
+  volumeL: number;
+  musicDb: number | null;
+  f3: number | null;
+}
+
+export interface SpeakerOptimizerCard {
+  label: string;
+  why: string;
+  /** which card it is: code reads this, never the label */
+  slot: CardSlot<SpeakerGoal>;
+  /** the whole design, as the page loads it: only the searched fields differ from yours */
+  spec: SpeakerSpec;
+  metrics: SpeakerOptimizerMetrics;
+  delta: SpeakerOptimizerDelta | null;
+  /** what differs from your design, in the cards' words */
+  changed: ChangeName[];
+  /** the warnings it passes with (a band that limits first) */
+  warnings: string[];
+  /** its maximum output with one input, [Hz, dB at 1 m] points (`SpeakerLimits.sum`) */
+  maxCurve: [number, number][];
+}
+
+/** A change to the limits that lets the search find a card. */
+export interface SpeakerNearMissOption {
+  text: string;
+  /** the new value, for the button's tooltip */
+  tip: string;
+  set: Partial<SpeakerOptimizerLimits>;
+}
+
+/** No card fits, or only the closest: the closest design, why it fails, and what loosening would help. */
+export interface SpeakerNearMiss {
+  options: SpeakerNearMissOption[];
+  closest: SpeakerOptimizerCard | null;
+  /** the closest design is your design as it is */
+  closestIsYours: boolean;
+  blocking: string[];
+}
+
+export interface SpeakerOptimizerResult {
+  goals: SpeakerGoal[];
+  /** the target level, dB at 1 m */
+  target: number;
+  /** your design: its numbers, what it fails and its maximum output; null when it can't be modeled */
+  current: {
+    metrics: SpeakerOptimizerMetrics;
+    problems: string[];
+    maxCurve: [number, number][];
+  } | null;
+  cards: SpeakerOptimizerCard[];
+  /** why there is no card that beats your design, or the closest card's notice; null otherwise */
+  goalMissing: string | null;
+  nearMiss: SpeakerNearMiss | null;
+  stats: {
+    /** the screen's runs (the coarse model, one unit each) */
+    screened: number;
+    /** the full runs (`speakerResponse`, `speakerLimits`, `cabinetBuild`) */
+    evaluated: number;
+    pool: number;
+    /** cards the last check dropped (always 0: the pool holds only final designs) */
+    dropped: number;
+    ms: number;
+  };
+}
+
+// ---- Stack optimizer (lib/speaker/optimize/optimizeStack) ----
+
+/**
+ * The Stack optimizer's limits: the target against the stack's level (`StackLimits.musicDb`, dB at 1 m), the budget on
+ * every member's purchased parts, the weight of each box, and the stack's height.
+ */
+export interface StackOptimizerLimits extends SpeakerOptimizerLimits {
+  /** the most the stack may stand (`stackTotals` heightIn), in; null: no limit */
+  maxHeightIn: number | null;
+}
+
+/** What stays as it is in a stack. Absent or empty: nothing of that kind is locked. */
+export interface StackOptimizerLocks {
+  /** each speaker's own locks (its parts, vents, band filters, amps and box size), by speaker id */
+  speakers?: Readonly<Record<SpeakerSpec["id"], SpeakerOptimizerLocks>>;
+  /** speakers, by id, that stay exactly as they are */
+  keep?: readonly SpeakerSpec["id"][];
+  /** members, by index, whose crossover stays (a crossover between two members moves only when both sides are free) */
+  crossovers?: readonly number[];
+  /** members, by index, whose level stays */
+  levels?: readonly number[];
+  /** members, by index, whose delay stays */
+  delays?: readonly number[];
+}
+
+/** What the Stack page posts to the Stack optimizer's worker. */
+export interface StackOptimizerInput {
+  design: StackDesign;
+  /** in tap order; the first ranks the designs */
+  goals: readonly SpeakerGoal[];
+  limits: StackOptimizerLimits;
+  locks?: StackOptimizerLocks;
+  /** absent: the app catalog */
+  catalog?: SpeakerOptimizerCatalog;
+}
+
+/** One member's box: its weight and outer size (with the horns on its top). */
+export type StackBoxMetrics = Pick<SpeakerOptimizerMetrics, "lb" | "sizeIn" | "volumeL">;
+
+/**
+ * A stack's numbers, all from the page's own code on the design as a card loads it: the members' price and weight in
+ * total, the boxes' outer volumes in total, the stack's height, its level (`StackLimits.musicDb`) and the F3 of its
+ * lowest band.
+ */
+export interface StackOptimizerMetrics extends Pick<
+  SpeakerOptimizerMetrics,
+  "price" | "pricePartial" | "lb" | "volumeL" | "musicDb" | "f3"
+> {
+  heightIn: number;
+  /** the member and the band that set the level */
+  member: StackLimits["member"];
+  band: StackLimits["band"];
+  /** each member's box; null where its speaker is missing */
+  boxes: (StackBoxMetrics | null)[];
+}
+
+/** A card's change from your stack (null where either side has no number). */
+export interface StackOptimizerDelta extends SpeakerOptimizerDelta {
+  heightIn: number;
+}
+
+export interface StackOptimizerCard extends Pick<
+  SpeakerOptimizerCard,
+  "label" | "why" | "slot" | "changed" | "warnings"
+> {
+  /** the whole stack and its speakers, as the page loads them: only the searched fields differ from yours */
+  design: StackDesign;
+  metrics: StackOptimizerMetrics;
+  delta: StackOptimizerDelta | null;
+  /** what differs in each speaker that changed, by speaker id */
+  speakers: { id: SpeakerSpec["id"]; changed: ChangeName[] }[];
+  /** the stack's maximum output with one input, [Hz, dB at 1 m] points (`StackLimits.sum`) */
+  maxCurve: [number, number][];
+}
+
+/** A change to the limits that lets the search find a card. */
+export interface StackNearMissOption {
+  text: string;
+  /** the new value, for the button's tooltip */
+  tip: string;
+  set: Partial<StackOptimizerLimits>;
+}
+
+/** No card fits, or only the closest: the closest stack, why it fails, and what loosening would help. */
+export interface StackNearMiss extends Pick<SpeakerNearMiss, "blocking"> {
+  options: StackNearMissOption[];
+  closest: StackOptimizerCard | null;
+  /** the closest design is your stack as it is */
+  closestIsYours: boolean;
+}
+
+export interface StackOptimizerResult extends Pick<
+  SpeakerOptimizerResult,
+  "goals" | "target" | "goalMissing" | "stats"
+> {
+  /** your stack: its numbers, what it fails and its maximum output; null when it can't be modeled */
+  current: {
+    metrics: StackOptimizerMetrics;
+    problems: string[];
+    maxCurve: [number, number][];
+  } | null;
+  cards: StackOptimizerCard[];
+  nearMiss: StackNearMiss | null;
+}
+
 // ---- Bracing ----
 
 /** A horn mount's id (`HORN_MOUNT_NAMES` holds the name it shows). */
 export type HornMountId = keyof typeof HORN_MOUNT_NAMES;
 /** A bracing style's id (`BRACE_STYLE_NAMES` holds the name it shows). */
 export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
+/** A Speaker cabinet's bracing: a style, or none (`NO_BRACING`). */
+export type SpeakerBraceStyle = keyof typeof SPEAKER_BRACE_STYLE_NAMES;
 /** A box panel the bracing rule reads, by id (`BRACE_PANEL_NAMES` holds the name it shows). */
 export type BracePanelId = keyof typeof BRACE_PANEL_NAMES;
 /** A box axis, from the inside corner: x across, y up, z back from the baffle. */
@@ -2328,7 +2991,7 @@ export type HandleId = (typeof HANDLES)[number]["id"];
 /** What a box's handle setting holds: a handle model, or none. */
 export type HandleChoice = HandleId | typeof NO_HANDLES;
 /** The boxes that take hardware: the sub and the mid (top) box. */
-export type HardwareBoxId = Extract<CutBoxId, "sub" | "mid">;
+export type HardwareBoxId = Extract<NamedCutBoxId, "sub" | "mid">;
 /**
  * A box's handles: the model (two, one each side) and how far they sit from the preset, the box's center of gravity:
  * up (in) and back toward the rear (in).
@@ -2385,8 +3048,21 @@ export interface BoxHardwarePlan {
 
 /** A cutlist part's stable id (`CUT_PART_NAMES` holds the name it shows). */
 export type CutPartId = keyof typeof CUT_PART_NAMES;
-/** The box a cutlist part belongs to, by id (`CUT_BOX_NAMES` holds the name it shows). */
-export type CutBoxId = keyof typeof CUT_BOX_NAMES;
+/** A named box a cutlist part belongs to, by id (`CUT_BOX_NAMES` holds the name it shows). */
+export type NamedCutBoxId = keyof typeof CUT_BOX_NAMES;
+/** A Speaker-page chamber's cutlist box, by its place in the cabinet (`chamberCutBox`: "chamber1", "chamber2" …). */
+export type ChamberCutBoxId = `chamber${number}`;
+/** A box of one speaker: a named one (a Speaker-page shell) or a Speaker-page chamber. */
+export type SpeakerCutBoxId = NamedCutBoxId | ChamberCutBoxId;
+/**
+ * A Stack-page member's box, by the member's number and its speaker's box (`memberCutBox`: "m2.chamber1", "m1.shell").
+ */
+export type MemberCutBoxId = `m${number}.${SpeakerCutBoxId}`;
+/**
+ * The box a cutlist part belongs to: a named one, a Speaker-page chamber, or a Stack-page member's box (`cutBoxName`
+ * gives the name it shows).
+ */
+export type CutBoxId = SpeakerCutBoxId | MemberCutBoxId;
 
 /** Which of a part's dimensions runs along the grain (the sheet's length): `a`, `b`, or either. */
 export type GrainDir = "a" | "b" | "any";
@@ -2414,6 +3090,21 @@ export interface CutPart {
   grain?: GrainDir;
   /** a waterfall strip: the panels' lengths along `b`, in cut order */
   pieces?: number[];
+}
+
+/** What a bought part is, by id (`PURCHASED_PART_NAMES` holds the name the cutlist shows). */
+export type PurchasedPartKind = keyof typeof PURCHASED_PART_NAMES;
+
+/** A part bought for a speaker, as the Cutlist page's purchased parts table and its CSV list it. */
+export interface PurchasedPart {
+  kind: PurchasedPartKind;
+  /** the maker and model, as the catalog names it */
+  model: string;
+  count: number;
+  /** US dollars each; null where no US vendor price is known */
+  unit: number | null;
+  /** where the price comes from (the catalog's free-text source: a vendor, an estimate); null where none is known */
+  source: string | null;
 }
 
 /** What the cutlist needs for a sub and mid pair. */
@@ -2554,7 +3245,7 @@ export interface CutlistLayout {
 // ---- Warning chips (lib/pa/chips) ----
 
 export type ChipSeverity = "ok" | "warn" | "bad";
-/** The sections that carry checks: the PA stack's sub, mid and horn, the fills and the Hi-fi speaker. */
+/** The sections that carry checks: the PA stack's sub, mid and horn, the fills, the Hi-fi speaker and the Speaker page. */
 export type ChipSection = keyof typeof CHIP_IDS;
 /** A check's stable id (`CHIP_IDS`), of one section or of any. */
 export type ChipId<S extends ChipSection = ChipSection> = (typeof CHIP_IDS)[S][number];
@@ -3317,6 +4008,41 @@ export type OptimizerMessage<R = PaOptimizerResult> =
 /** What a page hands to `save`: its snapshot of the design, with a one-line `summary` of it; the store adds `name` and `savedAt`. */
 export interface SavedConfigData {
   summary?: string;
+}
+
+/**
+ * A speaker as the library saves it (users/{uid}/speakers): the spec without its id and name, which are the document's
+ * id and the save's name.
+ */
+export interface SavedSpeakerData extends SavedConfigData {
+  speaker: Omit<SpeakerSpec, "id" | "name">;
+}
+
+/** A stack and the speakers its members name, as the Stack page holds them. */
+export type StackDesign = Pick<DesignLayers, "stack" | "speakers">;
+
+/** A space and the stacks and speakers it places, as the Space page holds them. */
+export interface SpaceDesign extends Pick<DesignLayers, "space" | "speakers"> {
+  stacks: readonly StackSpec[];
+}
+
+/**
+ * A saved space: the space without its id and name (the document's), and a copy of each stack and speaker it places (by
+ * id), so it opens as it was saved.
+ */
+export interface SavedSpaceData extends SavedConfigData {
+  space: Omit<SpaceSpec, "id" | "name">;
+  stacks: readonly StackSpec[];
+  speakers: readonly SpeakerSpec[];
+}
+
+/**
+ * A saved stack: the stack without its id and name (the document's), and a copy of each speaker its members name (by
+ * the speaker's id), so it opens as it was saved.
+ */
+export interface SavedStackData extends SavedConfigData {
+  stack: Omit<StackSpec, "id" | "name">;
+  speakers: readonly SpeakerSpec[];
 }
 
 /** A saved configuration as read back: the stored fields plus the document's id. */

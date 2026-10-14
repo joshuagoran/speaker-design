@@ -6,14 +6,12 @@ import {
   designProblems,
   paSearchDesign,
   paSearchBraceStyle,
-  rangeOf,
   roomRequiredSpl,
   bandOutputDb,
-  ventSizesFor,
   SUB_BAND_HZ,
   SUB_BOX_RANGE,
-  VENT_STYLES,
 } from "../src/lib/pa/optimize";
+import { rangeOf, ventSizesFor, VENT_STYLES } from "../src/lib/optimizer/searchSpace";
 import {
   optimizePaStackExact,
   paExactScore,
@@ -480,9 +478,16 @@ test("exact PA search: no design on its grid beats the first card, checked one b
   const target = Math.max(curM.out, roomRequiredSpl(1000));
   const keep = goalKeeps(target, curM.f3);
   for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
-    const ok = designs.filter(
-      ({ m }) => m.out >= keep[goal].db && m.f3 <= keep[goal].f3 && beats[goal](m, curM),
-    );
+    const keeps = (m: PaEvaluation) =>
+      m.out >= keep[goal].db && m.f3 <= keep[goal].f3 && beats[goal](m, curM);
+    // a card is checked on the bracing rule's numbers (lib/pa/optimizeExact, step 4), so a design the rule rules out
+    // can't be one: with datasheet Le, a design on the cheaper grid keeps your F3 by the estimate (43.3 Hz) but not by
+    // the rule (43.6 Hz)
+    const ok = designs.filter(({ c, m }) => {
+      if (!keeps(m)) return false;
+      const ruled = evaluateDesign(c);
+      return ruled !== null && designProblems(ruled, input).length === 0 && keeps(ruled);
+    });
     const out = optimizePaStackExact({ ...input, goals: [goal] }, undefined, { grid: smallGrid });
     if (!ok.length) {
       assert.ok(out.goalMissing, `${goal}: nothing beats your design, and the page says so`);

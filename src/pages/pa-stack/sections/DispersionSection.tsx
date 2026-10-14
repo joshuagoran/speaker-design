@@ -1,6 +1,4 @@
-import { DispersionPlaneToggle } from "../../../components/ui/DispersionPlaneToggle";
-import { dispersionPlaneName } from "../../../constants/dispersionPlanes";
-import { DispersionMap } from "../../../components/charts/DispersionMap";
+import { DispersionBlock } from "../../../components/charts/DispersionBlock";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { READING_WIDTH, RESULT_MAX_WIDTH } from "../../../styles/layout";
@@ -35,14 +33,12 @@ export function DispersionSection({ planner }: Props) {
   if (!hornModel || !paDispersion) return null;
   return (
     <section className={`${RESULT_MAX_WIDTH} min-w-0`} style={{ fontFamily: FONT }}>
-      <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
-      <DispersionMap
+      <DispersionBlock
         map={paDispersion}
-        title={
-          dispersionPlane === "v"
-            ? `${dispersionPlaneName("v")} dispersion at ${dispersionMapDistanceM} m: below (−) to above (+) the horn axis`
-            : `${dispersionPlaneName("h")} dispersion at ${dispersionMapDistanceM} m, at horn height (0° is on axis)`
-        }
+        plane={dispersionPlane}
+        onPlane={setDispersionPlane}
+        distM={dispersionMapDistanceM}
+        axis="horn"
       />
       <div className={`${READING_WIDTH} text-xs text-stone-500 mt-1`}>
         Mid and horn centers {midHornGapIn.toFixed(1)}″ apart:{" "}

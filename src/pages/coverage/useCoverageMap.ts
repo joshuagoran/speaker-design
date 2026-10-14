@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { highpassPhase, subMusicThroughLowpass } from "../../lib/pa/calc";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
+import {
+  balancedLevelsOf,
+  coverageGeometry,
+  musicBalanceOf,
+  type PaBalanceInputs,
+} from "../../lib/pa/musicBalance";
 import {
   audienceAverage,
   autoSubDelayMs,
-  balanceLevels,
   balancedTarget,
   bandTarget,
   coverageBoxes,
@@ -14,7 +18,6 @@ import {
   coverageStats,
   COVERAGE_GRID_COLS,
   oneMeterSpot,
-  withOwnPhase,
 } from "../../lib/pa/coverage";
 import { runCoverageGrid } from "../../lib/pa/runCoverage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -40,24 +43,10 @@ interface CoverageJob {
   balance: MusicBalance;
 }
 
-/** The planner fields the map reads. */
+/** The planner fields the map reads: what the balanced levels read, and the crossovers' orders. */
 export type CoverageInputs = Pick<
   PaPlanner,
-  | "stackGeometry"
-  | "subBox"
-  | "effectiveMidBoxDims"
-  | "subModeled"
-  | "subAmpVoltage"
-  | "subMidCrossoverHz"
-  | "subMidCrossoverOrder"
-  | "subHighpassHz"
-  | "subHighpassType"
-  | "midHornCrossoverOrder"
-  | "midModeled"
-  | "hornModel"
-  | "midHornCrossoverHz"
-  | "midBelowSubDb"
-  | "hornBelowMidDb"
+  keyof PaBalanceInputs | "subMidCrossoverOrder" | "midHornCrossoverOrder"
 >;
 
 /** The map's results: the floor grid (null until the first one arrives), the boxes, the listener's level and response. */
@@ -140,52 +129,17 @@ export function useCoverageMap(planner: CoverageInputs, layout: CoverageLayout):
     hornBelowMidDb,
   } = planner;
   const balance = useMemo(
-    () => ({
-      xoLo: subMidCrossoverHz,
-      xoHi: midHornCrossoverHz,
-      tilt: midBelowSubDb,
-      hfTilt: hornBelowMidDb,
-    }),
+    () => musicBalanceOf(planner),
+    // the balance reads only these
     [subMidCrossoverHz, midHornCrossoverHz, midBelowSubDb, hornBelowMidDb],
   );
-  const geometry = useMemo<Omit<CoverageStack, "subDelayMs"> | null>(
-    () =>
-      stackGeometry
-        ? {
-            ...stackGeometry,
-            footprint: { w: subBox.w, d: subBox.d },
-            midW: effectiveMidBoxDims.w,
-          }
-        : null,
+  const geometry = useMemo(
+    () => coverageGeometry({ stackGeometry, subBox, effectiveMidBoxDims }),
     [stackGeometry, subBox.w, subBox.d, effectiveMidBoxDims.w],
   );
-  // each band at the planner's own limit (the sub at its music limit through its lowpass, the mid and horn as the
-  // system chart draws them), with the sub's and mid's own phase, then balanced: the weakest band sets the level
-  const balanced = useMemo<BalancedLevels | null>(
-    () =>
-      midModeled && geometry
-        ? balanceLevels(
-            {
-              sub: subModeled
-                ? withOwnPhase(
-                    subMusicThroughLowpass(
-                      subModeled.mdl,
-                      subModeled.lim,
-                      subAmpVoltage,
-                      subMidCrossoverHz,
-                      geometry.orderLo,
-                    ),
-                    subModeled.mdl.curve,
-                    (f) => highpassPhase(f, subHighpassHz, subHighpassType),
-                  )
-                : null,
-              mid: withOwnPhase(midModeled.max, midModeled.mdl.curve),
-              horn: hornModel ? hornModel.curve : [],
-            },
-            balance,
-            geometry,
-          )
-        : null,
+  const balanced = useMemo(
+    () => balancedLevelsOf(planner, geometry, balance),
+    // the levels read only these
     [
       subModeled,
       subAmpVoltage,

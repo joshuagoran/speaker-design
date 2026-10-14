@@ -1,5 +1,6 @@
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { TextField } from "../ui/TextField";
 import { useState } from "react";
 import type { ConfigStore } from "./useConfigStore";
 import type { SavedConfig, SavedConfigData } from "../../types";
@@ -15,17 +16,51 @@ interface Props {
   extra?: React.ReactNode;
   /** a plain div instead of the page-width section */
   bare?: boolean;
+  /** the name a save takes, where the page names its design itself (the Speaker page): then no name box shows */
+  saveName?: string;
+  /** the library's actions on the picked one too: save over it, rename, duplicate (the Speaker page's speakers) */
+  manage?: boolean;
 }
 
+/** The name a duplicate takes. */
+const copyName = (name: string) => `${name} (copy)`;
+
 /** Name-and-save row plus a menu of saved setups. snapshot() returns what to store (may include a `summary` line); restore(c) loads one. */
-export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: Props) {
+export function SavedConfigs({
+  store,
+  snapshot,
+  restore,
+  extra,
+  bare = false,
+  saveName,
+  manage = false,
+}: Props) {
   const { db, saved, fb, fbUser, cfgMsg, signIn, signOut, save, remove } = store;
   const [name, setName] = useState("");
   const [sel, setSel] = useState("");
+  /** the new name typed while renaming the picked one; null when not renaming */
+  const [newName, setNewName] = useState<string | null>(null);
+  /** whether the row asks to confirm Save over (an inline step: a browser dialog can be blocked in the artifact host) */
+  const [confirming, setConfirming] = useState(false);
   if (saved === null) return null;
   const cur = saved.find((c) => c.id === sel);
+  const nameToSave = (saveName ?? name).trim();
   const doSave = async () => {
-    if (await save(name.trim(), snapshot())) setName("");
+    if (manage) {
+      // the library: the new one is picked, so its own actions (save over, rename) act on it
+      const id = await store.create(nameToSave, snapshot());
+      if (id) setSel(id);
+      setNewName(null);
+      setConfirming(false);
+    } else if (await save(nameToSave, snapshot())) setName("");
+  };
+  /** the picked one's data replaced by the current design, its name kept (after the row's confirm step) */
+  const doSaveOver = (target: SavedConfig) => {
+    setConfirming(false);
+    void store.overwrite(target.id, target.name, snapshot()); // `overwrite` shows its own failure message
+  };
+  const doRename = async () => {
+    if (cur && newName?.trim() && (await store.rename(cur, newName.trim()))) setNewName(null);
   };
   const Wrap = bare ? "div" : "section";
   const namePrompt = "Name this setup";
@@ -39,19 +74,21 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
           <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
           {db ? (
             <>
-              <input
-                aria-label={namePrompt}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void doSave(); // `save` shows its own failure message
-                }}
-                placeholder={namePrompt}
-                maxLength={60}
-                className="px-3 py-1.5 rounded border border-stone-300 bg-panel text-sm w-56"
-              />
-              <Button variant="dark" onClick={doSave} disabled={!name.trim()}>
-                Save current
+              {saveName === undefined && (
+                <TextField
+                  ariaLabel={namePrompt}
+                  value={name}
+                  onChange={setName}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void doSave(); // `save` shows its own failure message
+                  }}
+                  placeholder={namePrompt}
+                  maxLength={60}
+                  className="py-1.5 w-56"
+                />
+              )}
+              <Button variant="primary" onClick={doSave} disabled={!nameToSave}>
+                {saveName === undefined ? "Save current" : "Save as new"}
               </Button>
               {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
               {fbUser && (
@@ -66,7 +103,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
           ) : fb ? (
             <>
               <Button
-                variant="dark"
+                variant="primary"
                 onClick={signIn}
                 // start fetching Firebase as soon as the pointer or focus heads here: the sign-in popup must open soon
                 // after the click or browsers block it
@@ -92,6 +129,8 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
               onChange={(e) => {
                 const c = saved.find((x) => x.id === e.target.value);
                 setSel(e.target.value);
+                setNewName(null);
+                setConfirming(false);
                 if (c) restore(c);
               }}
               className="px-2 py-1.5 rounded border border-stone-300 bg-panel text-sm min-w-0 max-w-full flex-1"
@@ -108,11 +147,62 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
                 </option>
               ))}
             </select>
+            {cur && manage && newName === null && confirming && (
+              <>
+                <span className="text-sm">Replace “{cur.name}” with this design?</span>
+                <Button size="xs" variant="primary" onClick={() => doSaveOver(cur)}>
+                  Yes
+                </Button>
+                <Button size="xs" onClick={() => setConfirming(false)}>
+                  Cancel
+                </Button>
+              </>
+            )}
+            {cur && manage && newName === null && !confirming && (
+              <>
+                <Button
+                  size="xs"
+                  onClick={() => setConfirming(true)}
+                  aria-label={`Save over ${cur.name}`}
+                >
+                  Save over
+                </Button>
+                <Button size="xs" onClick={() => setNewName(cur.name)}>
+                  Rename
+                </Button>
+                <Button size="xs" onClick={() => void store.duplicate(cur, copyName(cur.name))}>
+                  Duplicate
+                </Button>
+              </>
+            )}
+            {cur && manage && newName !== null && (
+              <>
+                <TextField
+                  ariaLabel={`New name for ${cur.name}`}
+                  value={newName}
+                  onChange={setNewName}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void doRename(); // `rename` shows its own failure message
+                    if (e.key === "Escape") setNewName(null);
+                  }}
+                  maxLength={60}
+                  className="py-1 w-48 max-w-full"
+                />
+                <Button size="xs" variant="primary" onClick={doRename} disabled={!newName.trim()}>
+                  Rename
+                </Button>
+                <Button size="xs" onClick={() => setNewName(null)}>
+                  Cancel
+                </Button>
+              </>
+            )}
             {cur && (
               <button
                 onClick={() => {
                   void remove(cur.id); // `remove` shows its own failure message
                   setSel("");
+                  setNewName(null);
+                  setConfirming(false);
                 }}
                 aria-label={`Delete ${cur.name}`}
                 className="text-xs text-stone-500 hover:text-red-700 px-1"

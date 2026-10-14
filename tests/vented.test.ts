@@ -6,6 +6,8 @@ import type { BoxModelTS } from "../src/types";
 import { tsModel, massLineSPL, helmholtz, near, close, rel, LR24_ORDERS } from "./helpers";
 
 const fh500 = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
+// without its coil inductance, for the mass-line check (a Le-free closed form; voice-coil.test.ts covers Le)
+const { Le: _listed, ...fh500Bare } = fh500;
 
 test("boxModel: Fb is the Helmholtz frequency (single port)", (t) => {
   const r = boxModel(fh500, 150, 60, 12, 20, 2.83)!;
@@ -17,7 +19,7 @@ test("boxModel: n round tubes get the end correction of each tube, not of one bi
   rel(t, r.Fb, helmholtz(250, area, 14, 2), 1e-6);
 });
 test("boxModel: midband level is the mass-controlled line (reference efficiency)", (t) => {
-  const r = boxModel(fh500, 150, 60, 12, 5, 2.83)!;
+  const r = boxModel(fh500Bare, 150, 60, 12, 5, 2.83)!;
   close(t, near(r.curve, 250).spl, massLineSPL(fh500, 2.83), 0.3, "250 Hz");
   const m = tsModel(fh500); // same thing through eta0: 112.07 + 10 log(eta0 * V^2 / Re) with V^2/Re = 1 W
   close(

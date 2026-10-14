@@ -8,7 +8,7 @@ import "../../src/styles/app.css";
 import { Viewer3DCard } from "../../src/components/stack-view/Viewer3DCard";
 import { HifiView3D } from "../../src/components/stack-view/HifiView3D";
 import { hifiSceneProps } from "../../src/pages/hifi/hifiSceneProps";
-import { deriveHifiDesign } from "../../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../../src/lib/defaults";
 import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES } from "../../src/lib/data";
 import { THEME_ATTR, THEME_DARK, THEME_LIGHT } from "../../src/constants/themes";

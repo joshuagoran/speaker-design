@@ -2,7 +2,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { COVERAGE_GRID_COLS, computeCoverageGrid } from "../src/lib/pa/coverage";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/pages/coverage/useCoverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { logSpacedFrequencies } from "../src/lib/hifi/hifi";
 import { paStackSources } from "../src/lib/pa/dispersion";
 import type { CoverageBand, CoverageLayout, CoverageLevels, CoverageStack } from "../src/types";

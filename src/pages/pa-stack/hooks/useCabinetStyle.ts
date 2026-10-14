@@ -11,28 +11,31 @@ import type {
   PanelNominal,
   Setter,
 } from "../../../types";
+import type { PaDesignInputs } from "../../../lib/pa/paDesign";
 import { useState } from "react";
 import { PLINTH_HEIGHT_IN } from "../../../constants/paLayouts";
 import { defaultBraceStyle } from "../../../lib/bracing";
 
-export interface CabinetStyle {
-  plinthHeightIn: number;
+export interface CabinetStyle extends Pick<
+  PaDesignInputs,
+  | "plinthHeightIn"
+  | "layout"
+  | "baffleInsetIn"
+  | "spacerHeightIn"
+  | "braceStyle"
+  | "backJoint"
+  | "hardware"
+> {
   cabinet: Cabinet;
-  layout: PaLayout;
   setLayout: Setter<PaLayout>;
   format: Format;
   /** the walls' nominal size (the exact thickness is the Cutlist page's, `PaDesign.wallThicknessIn`) */
   wallPanel: PanelNominal;
   setWallPanel: Setter<PanelNominal>;
-  /** the boxes' bracing style as chosen (one for the stack); absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle: BraceStyleId | undefined;
   setBraceStyle: Setter<BraceStyleId | undefined>;
   /** the style both boxes are braced with: the one chosen, else the nominal plywood size's default */
   effectiveBraceStyle: BraceStyleId;
-  /** how both boxes' backs are fixed (glued, or screwed on) */
-  backJoint: BackJointId;
   setBackJoint: Setter<BackJointId>;
-  baffleInsetIn: number;
   setBaffleInsetIn: Setter<number>;
   baffleColor: string;
   setBaffleColor: Setter<string>;
@@ -45,10 +48,7 @@ export interface CabinetStyle {
   /** a `FinishId` or a paint color (hex) */
   cabinetFinish: string;
   setCabinetFinish: Setter<string>;
-  spacerHeightIn: number;
   setSpacerHeightIn: Setter<number>;
-  /** each box's handles and their offsets (lib/pa/hardware) */
-  hardware: PaHardware;
   setHardware: Setter<PaHardware>;
 }
 

@@ -10,6 +10,8 @@
 // ts (the maker's Thiele-Small figures): Fs Hz, Vas L, Sd cm², Re Ω, Bl T·m, Mms g, aes W (AES rating), disp L
 // (null where unpublished), Hvc / Hg (coil and gap heights) mm, and `pub` = every excursion figure the maker
 // publishes, one-way mm, with its formula and source URL. Do not add Xmax / xmax: src/lib/xmax derives them.
+// Optional: surroundIn and dishDepthIn (the surround width and the cone's depth, in), from the maker's dimension
+// drawing only, with the drawing cited beside them.
 import type { MidDriver, RawDriver } from "../../types";
 
 /** The 12 in mid the planner starts on. */
@@ -1395,6 +1397,9 @@ export const MID_RAW: readonly RawDriver<MidDriver>[] = [
       aes: 450,
       disp: null,
     },
+    // surroundIn, dishDepthIn: not given. The maker's datasheet drawing (page 1 of
+    // https://www.eighteensound.it/en/products/lf-driver/10-0/8/10MB600.pdf, read Oct 2026) gives only 260 mm across,
+    // 230 mm cutout, 126 mm overall depth and a 4.5 mm flange.
     note: "[usspeaker.com; Mms from the 18Sound datasheet] Ferrite, 450 W AES, 98 dB. Displacement not published; 2.5 L assumed.",
   },
   {

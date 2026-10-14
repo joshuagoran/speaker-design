@@ -1,63 +1,26 @@
 // A speaker spec's chamber as the horn engine (lib/acoustics/hornModel) takes it: a front-loaded horn, or a direct
-// radiator (no segments), with the chamber's own net air and vent as the rear chamber. Pure.
+// radiator (no segments), with the chamber's own net air and vent as the rear chamber. A horn's front chamber comes
+// from its walls (lib/speaker/hornThroat). Pure.
 import type {
-  HornDriverTS,
   ChamberVent,
   HornDesign,
   HornDesignResult,
   HornEngineGap,
   HornPort,
   SpeakerChamber,
-  SpeakerDriver,
 } from "../../types";
-import { FILL_OPTIONS, MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
-import { byId } from "../tables";
+import { frontChamber, throatCones } from "./hornThroat";
+import { stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
-import { CM_PER_M, METERS_PER_INCH } from "../../constants/units";
+import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import {
   CHAMBER_LOAD,
-  DRIVER_KIND,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   PORT_SHAPE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-
-/** Centimeters in one inch: the spec's ports are in inches, the engine's in Hornresp's cm. */
-const CM_PER_IN = METERS_PER_INCH * CM_PER_M;
-
-/** A driver's Thiele/Small parameters from its catalog table; null for a kind with none (compression, tweeter). */
-function driverTs(driver: SpeakerDriver): HornDriverTS | null {
-  switch (driver.kind) {
-    case DRIVER_KIND.sub:
-      return byId(SUB_OPTIONS, driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.mid:
-      return byId(MID_OPTIONS, driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.woofer:
-      return hifiDriverById("woofer", driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.coaxial:
-      return byId(FILL_OPTIONS, driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.compression:
-    case DRIVER_KIND.tweeter:
-      return null;
-  }
-}
-
-/**
- * The chamber's drivers as the engine takes them: one driver's Thiele/Small parameters and how many share the throat
- * (Hornresp's Nd; the engine wires them in parallel, each on the full voltage, as the PA plans wire two 8 Ω subs to
- * one 4 Ω channel). Null: no driver, drivers of more than one kind or id, or no Thiele/Small parameters.
- */
-function throatDrivers(
-  drivers: readonly SpeakerDriver[],
-): Pick<HornDesign, "driver" | "drivers"> | null {
-  if (drivers.length === 0) return null;
-  const [first] = drivers;
-  if (drivers.some((d) => d.kind !== first.kind || d.driverId !== first.driverId)) return null;
-  const ts = driverTs(first);
-  return ts && { driver: ts, drivers: drivers.reduce((sum, d) => sum + d.count, 0) };
-}
 
 /** A free (inner) end's correction over a flanged (outer) one's: 0.61 r over 0.85 r. */
 const INNER_END_RATIO = BOTH_ENDS_CORRECTION_RATIO - 1;
@@ -77,7 +40,7 @@ function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
     if (port.w === undefined) return null;
     return {
       port: {
-        area: port.n * port.h * port.w * CM_PER_IN * CM_PER_IN,
+        area: port.n * port.h * port.w * CM2_PER_IN2,
         length: (port.len + INNER_END_RATIO * rectangleEndCorrection(port.h, port.w)) * CM_PER_IN,
         // the exit's end correction is the opening's rectangle's
         slot: { width: port.w * CM_PER_IN, height: port.h * CM_PER_IN },
@@ -86,7 +49,7 @@ function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
   }
   return {
     port: {
-      area: portArea(port) * CM_PER_IN * CM_PER_IN,
+      area: portArea(port) * CM2_PER_IN2,
       // both ends and the elbows, less the flanged outer end (1.46 r / BOTH_ENDS_CORRECTION_RATIO = 0.85 r); absent
       // elbows: a straight tube (the read adapters store the elbows their models work out)
       length:
@@ -104,8 +67,8 @@ const gap = (why: HornEngineGap): HornDesignResult => ({ ok: false, gap: why });
 /**
  * The chamber as a horn design, `at.count` boxes side by side radiating into `at.angle`, or the first gap that stops
  * it: a tapped or back-loaded horn; drivers of more than one kind, or none with Thiele/Small parameters; no net air
- * set; a vent the engine doesn't take. Several alike drivers share the throat (`throatDrivers`). A direct chamber is
- * a design with no segments.
+ * set; a vent the engine doesn't take. Several alike drivers share the throat (`throatCones`), and the front chamber is
+ * their air under the walls' back edges (`frontChamber`). A direct chamber is a design with no segments.
  */
 export function hornDesignOf(
   chamber: SpeakerChamber,
@@ -114,8 +77,11 @@ export function hornDesignOf(
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
   if (horn?.drive.kind === HORN_DRIVE.tapped) return gap(HORN_ENGINE_GAP.tapped);
   if (horn?.drive.kind === HORN_DRIVE.back) return gap(HORN_ENGINE_GAP.backLoaded);
-  /** the drivers on the throat */
-  const throat = throatDrivers(chamber.drivers);
+  /**
+   * the drivers on the throat: one driver's Thiele/Small parameters and how many share it (Hornresp's Nd; the engine
+   * wires them in parallel, each on the full voltage, as the PA plans wire two 8 Ω subs to one 4 Ω channel)
+   */
+  const throat = throatCones(chamber.drivers);
   if (!throat) return gap(HORN_ENGINE_GAP.driver);
   const { netLiters } = chamber;
   if (netLiters === null) return gap(HORN_ENGINE_GAP.netLiters);
@@ -125,11 +91,14 @@ export function hornDesignOf(
   return {
     ok: true,
     design: {
-      ...throat,
+      driver: throat.parts.ts,
+      drivers: throat.count,
       count: at.count,
-      throatChamber: horn?.throatChamber ?? 0,
+      // the air between the cones and the walls' back edges; a direct radiator has none
+      throatChamber: horn ? frontChamber(throat.cone, throat.count).liters : 0,
       segments: horn?.segments ?? [],
-      rear: { liters: netLiters, port: rear.port },
+      // the rear chamber's air with its stuffing, as a direct chamber's
+      rear: { liters: stuffedLiters(chamber, netLiters), port: rear.port },
       angle: at.angle,
       portOffset: horn?.portOffset ?? 0,
     },

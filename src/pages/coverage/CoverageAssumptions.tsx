@@ -1,24 +1,9 @@
-import { DetailsDropdown } from "../../components/ui/DetailsDropdown";
+import { AssumptionsList } from "../../components/ui/AssumptionsList";
 import { crossoverSlopesText } from "../../constants/crossovers";
-import {
-  ALIGN_DISTANCE_M,
-  BAND_POINTS,
-  BOX_SHADOW_HZ,
-  COHERENT_BELOW_HZ,
-  COVERAGE_BANDS,
-  STATS_CLEARANCE_FT,
-} from "../../lib/pa/coverage";
-import { SPEED_OF_SOUND } from "../../constants/acoustics";
-import {
-  CROWD_BOUNCE,
-  FLOOR_REFLECTION,
-  MODAL_FADE_OCT,
-  MODAL_HZ,
-  modalCrossoverHz,
-  roomAbsorption,
-} from "../../lib/pa/roomAcoustics";
+import { ALIGN_DISTANCE_M, BOX_SHADOW_HZ } from "../../lib/pa/coverage";
 import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
 import { COVERAGE_LEVEL_REF_PLACE } from "../../constants/coverageLevel";
+import { sharedAssumptionGroups, type AssumptionGroup } from "./assumptionGroups";
 import type { CoverageLayout, CoverageRoom } from "../../types";
 import type { CoverageInputs } from "./useCoverageMap";
 
@@ -35,22 +20,13 @@ interface Props {
   level: Pick<CoverageLayout, "targetDb" | "levelRef">;
 }
 
-/** One group of assumptions: a heading and its lines. */
-type Group = [heading: string, lines: string[]];
-
 /**
  * How the map is modeled: everything the calculation takes as given, read from the model's own constants and the
  * design so the list stays in step with them. Folded away until opened.
  */
 export function CoverageAssumptions({ room, planner, target, level }: Props) {
-  const crossover = room.outdoors ? null : modalCrossoverHz(room);
-  const t60 = room.outdoors ? null : roomAbsorption(room, 1000).t60;
-  const hz = (f: number) => (f >= 1000 ? `${f / 1000}k` : `${f}`);
-  const bands = Object.values(COVERAGE_BANDS)
-    .map((b) => `${b.name} ${hz(b.lo)}–${hz(b.hi)}`)
-    .join(", ");
   const slopes = crossoverSlopesText(planner.subMidCrossoverOrder, planner.midHornCrossoverOrder);
-  const groups: Group[] = [
+  const groups: AssumptionGroup[] = [
     [
       "Levels",
       [
@@ -65,55 +41,13 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
       "Stacks",
       [
         `Drivers at each box's center and real height, time-aligned ${ALIGN_DISTANCE_M} m out at horn height.`,
-        `Linkwitz-Riley crossovers (${slopes}) with phase, plus each band's own: vented sub and highpass, sealed mid (no voice-coil inductance), first-order baffle-step shelf.`,
+        `Linkwitz-Riley crossovers (${slopes}) with phase, plus each band's own: vented sub and highpass, sealed mid (with its voice-coil inductance where listed), first-order baffle-step shelf.`,
         "Sub delay: in phase with the mid at the crossover on axis, one for all subs.",
         `Sub and mid: rigid pistons, behind the box −3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB/octave above.`,
         "Horn: rated coverage (−6 dB at the edges) above its control frequency, wider below, at most 40 dB down.",
       ],
     ],
-    [
-      "Floor, air and crowd",
-      [
-        `Floor reflection: ${FLOOR_REFLECTION.indoors} of the pressure indoors (hard floor), ${FLOOR_REFLECTION.outdoors} outdoors (ground).`,
-        `A full floor keeps the bounce below ${CROWD_BOUNCE.loHz} Hz, ${CROWD_BOUNCE.hi} of it from ${CROWD_BOUNCE.hiHz / 1000} kHz. Absorption: the seated-audience row.`,
-        `Air absorption on every path: ISO 9613-1, 20 °C, 50 % humidity. Speed of sound ${SPEED_OF_SOUND} m/s.`,
-      ],
-    ],
-    [
-      "Room",
-      [
-        "A rectangular box. Each side and the ceiling has its own absorption (Everest & Pohlmann, 125 Hz–4 kHz).",
-        `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `; here ${Math.round(crossover)} Hz` : ""}) the room modes sum, blended over ${MODAL_FADE_OCT} octave; Sabine decay, solid sides (rough if a side is open).`,
-        `Above: one reflection per wall and ceiling, each with a floor bounce, then a reverberant field (Hopkins–Stryker; Molloy horn directivity).${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
-      ],
-    ],
-    [
-      "Summing and readouts",
-      [
-        `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase (the stacks interfere); above, band averages add by power.`,
-        `Bands, Hz: ${bands}; each averaged over ${BAND_POINTS} frequencies.`,
-        `The floor stats leave out ${STATS_CLEARANCE_FT} ft around every box.`,
-      ],
-    ],
-    [
-      "Not modeled",
-      [
-        "Non-rectangular rooms, balconies, pillars, diffraction, crowd shadowing, measured driver directivity.",
-      ],
-    ],
+    ...sharedAssumptionGroups(room),
   ];
-  return (
-    <DetailsDropdown summary="Assumptions">
-      {groups.map(([heading, lines]) => (
-        <div key={heading}>
-          <div className="text-stone-900 mb-0.5">{heading}</div>
-          <ul className="list-disc pl-5 flex flex-col gap-1">
-            {lines.map((l) => (
-              <li key={l}>{l}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </DetailsDropdown>
-  );
+  return <AssumptionsList groups={groups} />;
 }

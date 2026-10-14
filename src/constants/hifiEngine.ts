@@ -5,8 +5,8 @@ import type { HighpassType, TweeterType } from "../types";
  * amp channel and a passive network (lib/hifi tweeterAmpWatts). A design that names none is active.
  */
 export const HIFI_DRIVE_NAMES = {
-  active: "Active, two amp channels",
-  passive: "Passive, one amp channel",
+  active: "External, two amp channels",
+  passive: "Internal, one amp channel",
 } as const;
 
 /** The drive ids, for code that decides on one. */

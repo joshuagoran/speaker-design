@@ -1,9 +1,10 @@
 import { HIFI_WAVEGUIDES, hifiDriverById, hifiDriverByIdOrThrow } from "../../lib/data";
+import { OLD_SAVE_COLLECTIONS } from "../../constants/speakerSpec";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { isCoax, portAfterToggle } from "../../lib/hifi/hifi";
 import { byId } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
-import { deriveHifiDesign } from "./hifiDesign";
+import { deriveHifiDesign } from "../../lib/hifi/hifiDesign";
 import { useHifiOptimizer } from "./useHifiOptimizer";
 import type { HifiOptimizer } from "./useHifiOptimizer";
 import type {
@@ -28,8 +29,9 @@ import type {
   Setter,
 } from "../../types";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useHifiCutlistOptions } from "../cutlist/useHifiCutlistOptions";
-import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import { useStoredCutlistOptions } from "../cutlist/useStoredCutlistOptions";
+import { CUTLIST_PROJECT } from "../../constants/cutlistProjects";
+import type { CutlistOptions } from "../cutlist/useCutlistOptions";
 import type { CabinetStyle } from "../pa-stack/hooks/useCabinetStyle";
 import { panelFor, panelIn, restoredPanel } from "../../lib/panel";
 
@@ -92,7 +94,7 @@ export function useHifiPlanner(): HifiPlanner {
   const [boxDims, setBoxDims] = useState<Dims3>(DEFAULT_HIFI.boxDims);
   const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_HIFI.wallPanel);
   const [panelMaterial, setPanelMaterial] = useState<PanelMaterial>(DEFAULT_HIFI.panelMaterial);
-  const cutlist = useHifiCutlistOptions();
+  const cutlist = useStoredCutlistOptions(CUTLIST_PROJECT.hifi);
   const { panelExactIn } = cutlist;
   // the walls' exact thickness: the nominal size at the Cutlist page's measured thickness (lib/panel)
   const wallThicknessIn = panelIn(wallPanel, panelMaterial, panelExactIn);
@@ -133,7 +135,7 @@ export function useHifiPlanner(): HifiPlanner {
   // the 3D view's look (PA's pickers and finishes, this design's own choice); outside the model, so it isn't derived
   const [cabinetFinish, setCabinetFinish] = useState<string>(DEFAULT_HIFI_LOOK.cabFinish);
   const [baffleColor, setBaffleColor] = useState<string>(DEFAULT_HIFI_LOOK.baffleColor);
-  const store = useConfigStore("hifiConfigs");
+  const store = useConfigStore(OLD_SAVE_COLLECTIONS.hifi);
   const snapshot = (): HifiCardConfig => ({
     woofer: woofer.id,
     tweeter: tweeter.id,

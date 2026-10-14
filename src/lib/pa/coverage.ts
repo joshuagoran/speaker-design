@@ -21,7 +21,7 @@ import {
 import { abs } from "../acoustics/complex";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
-import { paStackSources, type StackBand, type StackSource } from "./dispersion";
+import { paStackSources, type StackSource } from "./dispersion";
 import {
   airDbPerM,
   floorReflection,
@@ -111,46 +111,81 @@ const NEPER_PER_DB = Math.LN10 / 20;
 const reflIndex = (surface: number, floor: boolean) => 2 * surface + (floor ? 1 : 0);
 const REFL_KINDS = 2 * (ROOM_SURFACES.length + 1);
 
-/** One radiator in the sum: a box's driver, or its image in the floor, a side or the ceiling. Meters and radians. */
-interface SceneSource {
-  /** the path it belongs to: one box, or one image of it */
-  path: number;
+/** A horn's coverage, as the map radiates it: its −6 dB angles, degrees, and its mouth, inches. */
+export type HornCoverage = Omit<PaStackGeometry["horn"], "zIn">;
+
+/** How a radiator spreads its sound: a piston of radius `a`, m (a cone), or a horn of its coverage. */
+export type CoveragePattern =
+  | { a: number; horn?: undefined }
+  | { horn: HornCoverage; a?: undefined };
+
+/**
+ * What radiates in a scene, by id: one kind of driver of one box (the PA stack's sub, mid or horn; a band of a placed
+ * stack member), its pattern; its output at each frequency comes with the slots (`sceneSlots`).
+ */
+export interface CoverageVoice {
+  id: string;
+  pattern: CoveragePattern;
+}
+
+/** A driver as a scene places it: its voice, where it is (m: x across from the center line, y down the room, z up), its aim. */
+export interface SceneDriver {
+  voice: CoverageVoice["id"];
   x: number;
   y: number;
   z: number;
-  aim: number;
-  /** the reflections along this path (see reflIndex): the slot has what they keep at its frequency */
-  refl: number;
-  src: StackSource;
+  /** its axis: yaw from straight down the room (+ toward +x) and pitch (+ up), radians */
+  yaw: number;
+  pitch: number;
   /**
-   * how much farther it is than the box's reference driver from the box's alignment point, m: the DSP delays the
-   * box's other drivers by this against it, so the sum takes it off this driver's path
+   * how much farther it is than its box's reference driver from the box's alignment point, m: the DSP delays the box's
+   * other drivers by this against it, so the sum takes it off this driver's path (0 where its feed carries its delay)
    */
   alignM: number;
 }
 
+/** One radiator in the sum: a box's driver, or its image in the floor, a side or the ceiling. Meters and radians. */
+interface SceneSource extends Pick<SceneDriver, "voice" | "x" | "y" | "z" | "alignM"> {
+  /** the path it belongs to: one box, or one image of it */
+  path: number;
+  /** its axis's yaw and pitch, as cosines and sines */
+  cy: number;
+  sy: number;
+  cp: number;
+  sp: number;
+  /** a horn (its voice's pattern), not a piston */
+  horn: boolean;
+  /** the reflections along this path (see reflIndex): the slot has what they keep at its frequency */
+  refl: number;
+}
+
 /** Everything that radiates, ready to sum at any point. */
 export interface CoverageScene {
-  stack: CoverageStack;
   room: CoverageRoom;
+  voices: CoverageVoice[];
   sources: SceneSource[];
   paths: number;
   /** indoors: the room's modes, the drivers as the modal sum sees them, and where it hands over to the images, Hz */
   modal: { modes: RoomModes; sources: ModalSource[]; crossoverHz: number } | null;
 }
 
+/** The PA coverage page's scene: the stack it places, too (its bands' outputs come from its levels). */
+export interface PaCoverageScene extends CoverageScene {
+  stack: CoverageStack;
+}
+
 /**
- * One frequency of a sum: each band's complex output at 1 m, whether the paths add with phase, what the directivity
- * needs at this frequency (each piston's ka, the horn's half angles, the box's rear shadow), and the room there: what
+ * One frequency of a sum: each voice's complex output at 1 m, whether the paths add with phase, what the directivity
+ * needs at this frequency (each piston's ka, each horn's half angles, the box's rear shadow), and the room there: what
  * each reflection keeps, the air's absorption, the diffuse field and the modal sum.
  */
 export interface CoverageSlot {
   f: number;
   k: number;
   coherent: boolean;
-  out: Partial<Record<StackBand, Complex>>;
-  ka: Partial<Record<StackBand, number>>;
-  hornHalf: [h: number, v: number];
+  out: Partial<Record<CoverageVoice["id"], Complex>>;
+  ka: Partial<Record<CoverageVoice["id"], number>>;
+  hornHalf: Partial<Record<CoverageVoice["id"], [h: number, v: number]>>;
   shadow: number;
   /** pressure each kind of path keeps after its reflections, by SceneSource.refl */
   refl: Float64Array;
@@ -183,18 +218,18 @@ export function coverageBoxes(
 }
 
 /**
- * The sources to sum: each box's drivers, plus their images in the floor and in every reflecting side and the
- * ceiling; indoors, also the room's modes and the drivers as the modal sum sees them.
+ * The sources to sum from boxes of drivers: each box's drivers, plus their images in the floor and in every reflecting
+ * side and the ceiling (a path each); indoors, also the room's modes and the drivers as the modal sum sees them.
  */
-export function coverageScene(
-  stack: CoverageStack,
-  layout: Pick<CoverageLayout, "room" | "stacks" | "subs" | "cluster">,
+export function sceneOf(
+  room: CoverageRoom,
+  voices: CoverageVoice[],
+  boxes: readonly (readonly SceneDriver[])[],
 ): CoverageScene {
-  const { room } = layout;
-  const all = paStackSources(stack);
+  const all = boxes.flat();
   const [W, L, ceiling] = roomSizeM(room);
   // a ceiling lower than the tallest driver can't be: it sits just over it
-  const H = Math.max(ceiling, Math.max(...all.map((o) => o.z * IN)) + 0.3);
+  const H = Math.max(ceiling, Math.max(0, ...all.map((o) => o.z)) + 0.3);
   const indoors = !room.outdoors;
   const crossoverHz = indoors ? modalCrossoverHz(room) : 0;
   const modes = indoors
@@ -202,73 +237,118 @@ export function coverageScene(
     : null;
   const modalSources: ModalSource[] = [];
   const reflects = (i: number) => indoors && room.materials[ROOM_SURFACES[i]] !== "open";
+  const horns = new Set(voices.filter((v) => v.pattern.horn).map((v) => v.id));
   const sources: SceneSource[] = [];
+  const source = (
+    d: SceneDriver,
+    path: number,
+    at: Pick<SceneDriver, "x" | "y" | "z" | "yaw" | "pitch">,
+    refl: number,
+  ): SceneSource => ({
+    voice: d.voice,
+    x: at.x,
+    y: at.y,
+    z: at.z,
+    alignM: d.alignM,
+    path,
+    cy: Math.cos(at.yaw),
+    sy: Math.sin(at.yaw),
+    cp: Math.cos(at.pitch),
+    sp: Math.sin(at.pitch),
+    horn: horns.has(d.voice),
+    refl,
+  });
   let paths = 0;
-  for (const box of coverageBoxes(layout, stack)) {
-    const drivers = all.filter((o) =>
-      box.kind === "sub" ? o.band === "sub" : layout.subs === "stacks" || o.band !== "sub",
-    );
+  for (const drivers of boxes) {
     if (!drivers.length) continue;
-    const refZ = (drivers.find((o) => o.horn) ?? drivers[0]).z * IN;
-    const alignM = (z: number) => Math.hypot(ALIGN_DISTANCE_M, refZ - z) - ALIGN_DISTANCE_M;
-    const x = box.x * FT,
-      y = box.y * FT,
-      aim = (box.aim * Math.PI) / 180;
     // the box, and its image in each reflecting side: front, back, left, right as in ROOM_SURFACES
-    const images = [
-      { x, y, aim, surface: 0 },
-      { x, y: -y, aim: Math.PI - aim, surface: 1 },
-      { x, y: 2 * L - y, aim: Math.PI - aim, surface: 2 },
-      { x: -W - x, y, aim: -aim, surface: 3 },
-      { x: W - x, y, aim: -aim, surface: 4 },
-    ].filter((im) => !im.surface || reflects(im.surface - 1));
+    const sides: { surface: number; at: (d: SceneDriver) => SceneDriver }[] = [
+      { surface: 0, at: (d) => d },
+      { surface: 1, at: (d) => ({ ...d, y: -d.y, yaw: Math.PI - d.yaw }) },
+      { surface: 2, at: (d) => ({ ...d, y: 2 * L - d.y, yaw: Math.PI - d.yaw }) },
+      { surface: 3, at: (d) => ({ ...d, x: -W - d.x, yaw: -d.yaw }) },
+      { surface: 4, at: (d) => ({ ...d, x: W - d.x, yaw: -d.yaw }) },
+    ];
+    const images = sides.filter((im) => !im.surface || reflects(im.surface - 1));
     // the floor is a half-space: the box and each side's image has its mirror below the floor
     for (const im of images)
-      for (const [zs, floor] of [
-        [1, false],
-        [-1, true],
-      ] as const) {
-        for (const src of drivers)
-          sources.push({
-            path: paths,
-            x: im.x,
-            y: im.y,
-            z: zs * src.z * IN,
-            aim: im.aim,
-            refl: reflIndex(im.surface, floor),
-            src,
-            alignM: alignM(src.z * IN),
-          });
+      for (const floor of [false, true]) {
+        for (const d of drivers) {
+          const at = im.at(d);
+          sources.push(
+            source(
+              d,
+              paths,
+              floor ? { ...at, z: -at.z, pitch: -at.pitch } : at,
+              reflIndex(im.surface, floor),
+            ),
+          );
+        }
         paths++;
       }
     // the ceiling's image, first order only
     if (reflects(4)) {
-      for (const src of drivers)
-        sources.push({
-          path: paths,
-          x,
-          y,
-          z: 2 * H - src.z * IN,
-          aim,
-          refl: reflIndex(5, false),
-          src,
-          alignM: alignM(src.z * IN),
-        });
+      for (const d of drivers)
+        sources.push(
+          source(d, paths, { ...d, z: 2 * H - d.z, pitch: -d.pitch }, reflIndex(5, false)),
+        );
       paths++;
     }
     if (modes)
-      for (const src of drivers)
-        modalSources.push(
-          modalSource(modes, src.band, alignM(src.z * IN), x + W / 2, y, src.z * IN),
-        );
+      for (const d of drivers)
+        modalSources.push(modalSource(modes, d.voice, d.alignM, d.x + W / 2, d.y, d.z));
   }
   return {
-    stack,
     room,
+    voices,
     sources,
     paths,
     modal: modes ? { modes, sources: modalSources, crossoverHz } : null,
   };
+}
+
+/** The PA stack's voices: its sub, mid and horn as the dispersion model radiates them. */
+const paVoices = (stack: PaStackGeometry): CoverageVoice[] =>
+  paStackSources(stack).map((o) => ({
+    id: o.band,
+    pattern: o.horn
+      ? {
+          horn: {
+            covH: stack.horn.covH,
+            covV: stack.horn.covV,
+            wIn: stack.horn.wIn,
+            hIn: stack.horn.hIn,
+          },
+        }
+      : { a: o.a },
+  }));
+
+/**
+ * The PA coverage page's sources: each box's drivers (a stack's, or a center sub's), on one vertical line at its spot
+ * and aim, time-aligned on its horn's axis at ALIGN_DISTANCE_M; then their images (`sceneOf`).
+ */
+export function coverageScene(
+  stack: CoverageStack,
+  layout: Pick<CoverageLayout, "room" | "stacks" | "subs" | "cluster">,
+): PaCoverageScene {
+  const all = paStackSources(stack);
+  const boxes = coverageBoxes(layout, stack).map((box) => {
+    const drivers = all.filter((o) =>
+      box.kind === "sub" ? o.band === "sub" : layout.subs === "stacks" || o.band !== "sub",
+    );
+    if (!drivers.length) return [];
+    const refZ = (drivers.find((o) => o.horn) ?? drivers[0]).z * IN;
+    return drivers.map((o): SceneDriver => ({
+      voice: o.band,
+      x: box.x * FT,
+      y: box.y * FT,
+      z: o.z * IN,
+      yaw: (box.aim * Math.PI) / 180,
+      pitch: 0,
+      alignM: Math.hypot(ALIGN_DISTANCE_M, refZ - o.z * IN) - ALIGN_DISTANCE_M,
+    }));
+  });
+  return { ...sceneOf(layout.room, paVoices(stack), boxes), stack };
 }
 
 /** The points either side of `f` in a curve that spans it, and how far `f` lies between them on log frequency. */
@@ -359,8 +439,8 @@ function curveLevelPhaseAt(
 /** Each band's crossover magnitude against frequency: what carries its curve on past its ends. */
 export function bandSkirts(
   stack: PaStackGeometry,
-): Partial<Record<StackBand, (f: number) => number>> {
-  const out: Partial<Record<StackBand, (f: number) => number>> = {};
+): Partial<Record<StackSource["band"], (f: number) => number>> {
+  const out: Partial<Record<StackSource["band"], (f: number) => number>> = {};
   for (const o of paStackSources(stack))
     out[o.band] = (f) => {
       const h = o.filt(f);
@@ -410,11 +490,13 @@ export function balanceLevels(
 export const balancedTarget = (target: number, f: number, b: MusicBalance) =>
   f < b.xoLo ? target : f < b.xoHi ? target - b.tilt : target - b.tilt - b.hfTilt;
 
+/** A band's center, Hz, where its target is read (the one frequency for "one"). */
+export const bandCenterHz = (band: CoverageBand, freqHz: number) =>
+  band === "one" ? freqHz : Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi);
+
 /** A band's target: the balanced target at the band's center (or at the one frequency). */
-export function bandTarget(target: number, band: CoverageBand, freqHz: number, b: MusicBalance) {
-  const f = band === "one" ? freqHz : Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi);
-  return balancedTarget(target, f, b);
-}
+export const bandTarget = (target: number, band: CoverageBand, freqHz: number, b: MusicBalance) =>
+  balancedTarget(target, bandCenterHz(band, freqHz), b);
 
 /**
  * A piston's directivity factor Q (on-axis intensity over the mean over all directions) as levelAtPoint radiates it:
@@ -527,31 +609,48 @@ export function autoSubDelayMs(
 
 /** Each band's output at each frequency (see bandOutputs), and the scene's room at that frequency. */
 export function coverageSlots(
-  scene: CoverageScene,
+  scene: PaCoverageScene,
   levels: CoverageLevels,
   freqs: readonly number[],
   allCoherent: boolean,
 ): CoverageSlot[] {
-  const { stack, room, modal } = scene;
+  const { stack } = scene;
   const srcs = paStackSources(stack);
-  const { horn } = stack;
   const skirts = bandSkirts(stack);
-  // how many of each band's drivers play: the boxes' own (not their images), for the reverberant field
-  const count: Partial<Record<StackBand, number>> = {};
-  for (const s of scene.sources) if (s.refl === 0) count[s.src.band] = (count[s.src.band] ?? 0) + 1;
-  return freqs.map((f) => {
+  return sceneSlots(scene, freqs, allCoherent, (f) => bandOutputs(stack, levels, srcs, skirts, f));
+}
+
+/**
+ * Each voice's output at each frequency (`outputs`, from the frequency and its index in `freqs`), and the scene's room
+ * at that frequency.
+ */
+export function sceneSlots(
+  scene: CoverageScene,
+  freqs: readonly number[],
+  allCoherent: boolean,
+  outputs: (f: number, i: number) => CoverageSlot["out"],
+): CoverageSlot[] {
+  const { room, modal, voices } = scene;
+  // how many of each voice's drivers play: the boxes' own (not their images), for the reverberant field
+  const count: Partial<Record<CoverageVoice["id"], number>> = {};
+  for (const s of scene.sources) if (s.refl === 0) count[s.voice] = (count[s.voice] ?? 0) + 1;
+  return freqs.map((f, i) => {
     const k = (2 * Math.PI * f) / C;
-    const out = bandOutputs(stack, levels, srcs, skirts, f),
-      ka: CoverageSlot["ka"] = {};
-    for (const o of srcs) if (!o.horn) ka[o.band] = k * o.a;
-    // a band more than SILENT_DB under the loudest adds nothing the map can show: leave it out of the sums
-    const loudest = Math.max(...Object.values(out).map((v) => Math.hypot(v.re, v.im)));
-    for (const o of srcs) {
-      const v = out[o.band];
-      if (v && Math.hypot(v.re, v.im) < loudest * SILENT) delete out[o.band];
+    const out = { ...outputs(f, i) },
+      ka: CoverageSlot["ka"] = {},
+      hornHalf: CoverageSlot["hornHalf"] = {};
+    for (const { id, pattern } of voices)
+      if (pattern.horn) {
+        const { covH, covV, wIn, hIn } = pattern.horn;
+        hornHalf[id] = waveguideHalfAngles(f, covH, covV, wIn, hIn);
+      } else ka[id] = k * pattern.a;
+    // a voice more than SILENT_DB under the loudest adds nothing the map can show: leave it out of the sums
+    const loudest = Math.max(0, ...Object.values(out).map((v) => (v ? Math.hypot(v.re, v.im) : 0)));
+    for (const { id } of voices) {
+      const v = out[id];
+      if (v && Math.hypot(v.re, v.im) < loudest * SILENT) delete out[id];
     }
-    const hornHalf = waveguideHalfAngles(f, horn.covH, horn.covV, horn.wIn, horn.hIn),
-      shadow = 1 / Math.hypot(1, f / BOX_SHADOW_HZ);
+    const shadow = 1 / Math.hypot(1, f / BOX_SHADOW_HZ);
     // what each kind of path keeps: its side or ceiling's reflection, times the floor's when it bounces off it too
     const floor = floorReflection(room, f),
       refl = new Float64Array(REFL_KINDS);
@@ -575,28 +674,25 @@ export function coverageSlots(
       // factor (1 − ᾱ): p² = 16π·p²(1 m)·(1 − ᾱ)² / (Q·A). (The floor-and-side images are second order, counted twice;
       // they are a small part of it.) ρc cancels: levels here are in the curves' own units.
       if (weight < 1)
-        for (const { band } of srcs) {
-          const v = out[band];
+        for (const { id } of voices) {
+          const v = out[id],
+            half = hornHalf[id];
           if (!v) continue;
-          const q = band === "horn" ? hornQ(hornHalf) : pistonQ(ka[band] ?? 0, shadow);
+          const q = half ? hornQ(half) : pistonQ(ka[id] ?? 0, shadow);
           diffuse +=
-            ((count[band] ?? 0) *
-              16 *
-              Math.PI *
-              (v.re * v.re + v.im * v.im) *
-              (1 - abs.alpha) ** 2) /
+            ((count[id] ?? 0) * 16 * Math.PI * (v.re * v.re + v.im * v.im) * (1 - abs.alpha) ** 2) /
             (q * abs.area);
         }
       if (weight > 0) {
         // each driver's jωρQ: 4π × its free-field pressure at 1 m, its alignment delay taken off (see levelAtPoint)
         const u = new Float64Array(2 * modal.sources.length);
-        for (const [i, s] of modal.sources.entries()) {
-          const v = out[s.band];
+        for (const [j, s] of modal.sources.entries()) {
+          const v = out[s.voice];
           if (!v) continue;
           const c = Math.cos(k * s.alignM),
             sn = Math.sin(k * s.alignM);
-          u[2 * i] = 4 * Math.PI * (v.re * c - v.im * sn);
-          u[2 * i + 1] = 4 * Math.PI * (v.re * sn + v.im * c);
+          u[2 * j] = 4 * Math.PI * (v.re * c - v.im * sn);
+          u[2 * j + 1] = 4 * Math.PI * (v.re * sn + v.im * c);
         }
         // what each surface reflects, as the image sources have it (MODAL_SURFACES: the five sides, then the floor)
         const reflection = [...ROOM_SURFACES.map((_, s) => refl[reflIndex(s + 1, false)]), floor];
@@ -664,23 +760,27 @@ export function levelAtPoint(
     if (w >= 1) continue;
     if (!geoReady) {
       // distance, angles off the source's axis (horizontal, vertical), sine of the total angle (a piston's pattern
-      // stops at 90°), and whether the point is behind the box
+      // stops at 90°), and whether the point is behind the box. The point in the source's own frame: forward along its
+      // axis (its yaw, then its pitch), right, and up.
       for (let i = 0; i < n; i++) {
         const s = sources[i],
           dx = px - s.x,
           dy = py - s.y,
           dz = pz - s.z,
-          rh = Math.hypot(dx, dy),
-          a = Math.atan2(dx, dy) - s.aim,
-          th = Math.atan2(Math.sin(a), Math.cos(a)),
-          tv = Math.atan2(dz, rh),
-          c = Math.cos(th) * Math.cos(tv),
+          ahead = dx * s.sy + dy * s.cy,
+          fwd = ahead * s.cp + dz * s.sp,
+          right = dx * s.cy - dy * s.sy,
+          up = dz * s.cp - ahead * s.sp,
+          r = Math.hypot(dx, dy, dz),
+          th = Math.atan2(right, fwd),
+          tv = Math.atan2(up, Math.hypot(fwd, right)),
+          c = r > 0 ? fwd / r : 1,
           g = GEO * i;
-        geo[g] = Math.max(0.3, Math.hypot(rh, dz));
+        geo[g] = Math.max(0.3, r);
         geo[g + 1] = th;
         geo[g + 2] = tv;
-        geo[g + 3] = c <= 0 ? 1 : Math.sqrt(1 - c * c);
-        geo[g + 4] = Math.abs(th) > Math.PI / 2 ? 1 : 0;
+        geo[g + 3] = c <= 0 ? 1 : Math.sqrt(Math.max(0, 1 - c * c));
+        geo[g + 4] = fwd < 0 ? 1 : 0;
       }
       geoReady = true;
     }
@@ -688,15 +788,16 @@ export function levelAtPoint(
     pim.fill(0, 0, paths);
     for (let i = 0; i < n; i++) {
       const s = sources[i],
-        v = sl.out[s.src.band],
+        v = sl.out[s.voice],
         gain = sl.refl[s.refl];
       if (!v || !gain) continue;
       const g = GEO * i,
-        r = geo[g];
+        r = geo[g],
+        half = s.horn ? sl.hornHalf[s.voice] : undefined;
       let d: number;
-      if (s.src.horn) d = waveguideGain(geo[g + 1], geo[g + 2], sl.hornHalf);
+      if (half) d = waveguideGain(geo[g + 1], geo[g + 2], half);
       else {
-        d = pistonPattern((sl.ka[s.src.band] ?? 0) * geo[g + 3]);
+        d = pistonPattern((sl.ka[s.voice] ?? 0) * geo[g + 3]);
         if (geo[g + 4]) d *= sl.shadow;
       }
       const mag = (d * gain * Math.exp(-sl.air * r)) / r,
@@ -786,17 +887,25 @@ export function coverageLevelAt(
 }
 
 /** The response at a spot on the floor (feet), each frequency summed as a band average would sum it. */
-export function coverageResponse(
-  scene: CoverageScene,
+export const coverageResponse = (
+  scene: PaCoverageScene,
   levels: CoverageLevels,
   at: FloorPoint,
   earFt: number,
-): FrequencyPoint[] {
-  return coverageSlots(scene, levels, RESPONSE_FREQS, false).map((sl) => ({
+): FrequencyPoint[] =>
+  slotResponse(scene, coverageSlots(scene, levels, RESPONSE_FREQS, false), at, earFt);
+
+/** The response at a spot on the floor (feet): the level of each slot alone (slots at RESPONSE_FREQS, as a band sums). */
+export const slotResponse = (
+  scene: CoverageScene,
+  slots: readonly CoverageSlot[],
+  at: FloorPoint,
+  earFt: number,
+): FrequencyPoint[] =>
+  slots.map((sl) => ({
     f: sl.f,
     spl: levelAtPoint(scene, [sl], at.x * FT, at.y * FT, earFt * FT),
   }));
-}
 
 /** The grid's level at a spot (feet), interpolated between cell centers. */
 export function gridLevelAt(

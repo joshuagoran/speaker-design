@@ -1,7 +1,13 @@
 import * as THREE from "three";
 import { roundedRectPath, circlePath, partMeshSilhouette, polygonPath } from "./geometry";
+import { paConeRadius } from "./buildCone";
 import { HORN_MESHES } from "../../data/meshes";
-import { towerHornCutout, towerSpec, TOWER_HORN_WALL_GAP_IN } from "../../lib/pa/tower";
+import {
+  HORN_CUTOUT_SHAPE,
+  towerHornCutout,
+  towerSpec,
+  TOWER_HORN_WALL_GAP_IN,
+} from "../../lib/pa/tower";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3, Horn, MidDriver } from "../../types";
 
@@ -17,26 +23,39 @@ export function towerBaffleHoles(
   }: { box: Dims3; plinth: number; mid: Pick<MidDriver, "size">; horn: Horn; baffleCy: number },
 ): THREE.Path[] {
   const spec = towerSpec(box, ctx.wall, horn);
-  const hy = plinth + spec.hornCenter - baffleCy;
-  // a horn drawn from its mesh: the hole follows its silhouette round its axis, and like the full-width concept's it
-  // stops half an inch inside the side walls (a hole past the baffle's edge would leave the baffle untriangulated)
-  const model = HORN_MESHES[horn.id];
-  const cut = towerHornCutout(box, ctx.wall, horn);
-  const halfW = (box.w - 2 * ctx.wall) / 2 - TOWER_HORN_WALL_GAP_IN;
   return [
-    circlePath(0, plinth + spec.midCenter - baffleCy, mid.size / 2 - 0.9),
-    model
-      ? polygonPath(
-          0,
-          hy,
-          partMeshSilhouette(model).map(
-            (p) => new THREE.Vector2(THREE.MathUtils.clamp(p.x, -halfW, halfW), p.y),
-          ),
-        )
-      : cut.shape === "circle"
-        ? circlePath(0, hy, cut.w / 2)
-        : roundedRectPath(0, hy, cut.w, cut.h, cut.r),
+    circlePath(0, plinth + spec.midCenter - baffleCy, paConeRadius(mid.size)),
+    hornBaffleHole(box, ctx.wall, horn, 0, plinth + spec.hornCenter - baffleCy),
   ];
+}
+
+/**
+ * A PA horn's cutout in a baffle `box.w` wide inside walls `wall` thick, its axis at (x, y), as the tower opens it
+ * (lib/pa/tower towerHornCutout). A horn drawn from its mesh: the hole follows its silhouette round its axis, and like
+ * the full-width concept's it stops half an inch inside the side walls (a hole past the baffle's edge would leave the
+ * baffle untriangulated).
+ */
+export function hornBaffleHole(
+  box: Pick<Dims3, "w">,
+  wall: number,
+  horn: Horn,
+  x: number,
+  y: number,
+): THREE.Path {
+  const model = HORN_MESHES[horn.id];
+  const cut = towerHornCutout(box, wall, horn);
+  const halfW = (box.w - 2 * wall) / 2 - TOWER_HORN_WALL_GAP_IN;
+  return model
+    ? polygonPath(
+        x,
+        y,
+        partMeshSilhouette(model).map(
+          (p) => new THREE.Vector2(THREE.MathUtils.clamp(p.x, -halfW, halfW), p.y),
+        ),
+      )
+    : cut.shape === HORN_CUTOUT_SHAPE.circle
+      ? circlePath(x, y, cut.w / 2)
+      : roundedRectPath(x, y, cut.w, cut.h, cut.r);
 }
 
 /** Internal partitions: the sub/mid floor, the mid/horn floor (towerSpec's), each with its top face at its height. */

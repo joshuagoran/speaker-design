@@ -16,6 +16,7 @@ import {
   foldedRearWallIn,
   foldedShelfIn,
   slotFinIn,
+  slotFinsOf,
   slotInnerEndCorrection,
   midGrossLiters,
   logGridCount,
@@ -29,6 +30,7 @@ import {
   braceWoodIn3,
 } from "./calc";
 import { rectangleEndCorrection } from "../acoustics/radiation";
+import { coilFactor, driverCircuit } from "../acoustics/driverCircuit";
 import type {
   BackJointId,
   BraceStyleId,
@@ -91,41 +93,38 @@ export function highpassTable(hpf: number, type: HighpassType): HighpassTable {
   return t;
 }
 
-/** A sub driver at an amp voltage: the circuit's constants, as boxModel computes them, and the grid's driver terms. */
+/**
+ * A sub driver at an amp voltage: the circuit's constants (lib/acoustics/driverCircuit, as boxModel takes them) and the
+ * grid's driver terms: the driver's impedance Zd = dRe + j·dIm and the source Pg·k (pgRe + j·pgIm), with the coil's
+ * inductance on the motor (k = Re/(Re + jωLe), exactly 1 without Le) in the same arithmetic as boxModel.
+ */
 export interface SubCircuit {
   ts: SubTS;
   volts: number;
   Sd: number;
-  Mas: number;
-  Cas: number;
-  dRe: number;
-  Pg: number;
   /** the mass-line reference, dB */
   ref: number;
+  dRe: Float64Array;
   dIm: Float64Array;
+  pgRe: Float64Array;
+  pgIm: Float64Array;
   band: number[];
 }
 export function subCircuit(ts: SubTS, volts: number, band: readonly number[]): SubCircuit {
-  const Sd = ts.Sd / 10000,
-    Mms = ts.Mms / 1000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const Mas = Mms / (Sd * Sd);
-  const Cas = Cms * Sd * Sd;
-  const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
+  const { Sd, Mms, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
+  const coil = Array.from(GRID, (f) => coilFactor(ts, 2 * Math.PI * f));
   return {
     ts,
     volts,
     Sd,
-    Mas,
-    Cas,
-    dRe: Ras + Rae,
-    Pg: (volts * ts.Bl) / (ts.Re * Sd),
     ref: 20 * Math.log10((RHO * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5),
-    dIm: GRID.map((f) => {
+    dRe: Float64Array.from(coil, (k) => Ras + Rae * k.re),
+    dIm: GRID.map((f, i) => {
       const w = 2 * Math.PI * f;
-      return w * Mas - 1 / (w * Cas);
+      return w * Mas - 1 / (w * Cas) + Rae * coil[i].im;
     }),
+    pgRe: Float64Array.from(coil, (k) => Pg * k.re),
+    pgIm: Float64Array.from(coil, (k) => Pg * k.im),
     band: bandIndices(band),
   };
 }
@@ -164,11 +163,14 @@ export function ventedCurves(
   const Map = (RHO * C * C) / ((2 * Math.PI * Fb) ** 2 * Vb);
   const Ral = 7 / (2 * Math.PI * Fb * Cab);
   const Rap = (2 * Math.PI * Fb * Map) / 50;
-  const { dRe, Pg, Sd } = c;
+  const { Sd } = c;
   for (let i = 0; i < N; i++) {
     const f = GRID[i],
       w = 2 * Math.PI * f;
-    const dIm = c.dIm[i];
+    const dRe = c.dRe[i],
+      dIm = c.dIm[i],
+      gRe = c.pgRe[i],
+      gIm = c.pgIm[i];
     const pIm = w * Map,
       pM = Rap * Rap + pIm * pIm,
       ypRe = Rap / pM,
@@ -181,8 +183,8 @@ export function ventedCurves(
     const tRe = dRe + bRe,
       tIm = dIm + bIm,
       tM = tRe * tRe + tIm * tIm;
-    const uRe = (Pg * tRe) / tM,
-      uIm = (-Pg * tIm) / tM;
+    const uRe = (gRe * tRe + gIm * tIm) / tM,
+      uIm = (gIm * tRe - gRe * tIm) / tM;
     const vRe = uRe * bRe - uIm * bIm,
       vIm = uRe * bIm + uIm * bRe;
     const pv = Math.sqrt(vRe * vRe + vIm * vIm),
@@ -351,13 +353,14 @@ export function sealedMid(
   const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
   const Pg = (volts * ts.Bl) / (ts.Re * Sd);
   const ref = 20 * Math.log10((RHO * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
-  // the cone's flow at a grid point
+  // the cone's flow at a grid point, the coil's inductance on the motor as closedBox takes it
   const flow = (f: number) => {
     const w = 2 * Math.PI * f,
-      zRe = Ras + Rae,
-      zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab),
+      k = coilFactor(ts, w),
+      zRe = Ras + Rae * k.re,
+      zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab) + Rae * k.im,
       zM = zRe * zRe + zIm * zIm;
-    return { w, U: Pg / Math.sqrt(zM) };
+    return { w, U: (Pg * Math.hypot(k.re, k.im)) / Math.sqrt(zM) };
   };
   let f3 = Infinity;
   for (let i = 0; i < MID_N && midGridFrequency(i) <= f3Top; i++) {
@@ -423,14 +426,16 @@ export function ventShape(
       ec: sideDuctEndCorrection(box, v, t, inset, n, most),
     };
   }
-  if (style === "slots")
+  if (style === "slots") {
+    const fins = slotFinsOf(v, iw, t);
     return {
       n: 1,
-      area: v.slotH * (iw - 2 * t),
+      area: v.slotH * (iw - fins * t),
       ec:
-        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) +
+        rectangleEndCorrection(2 * v.slotH, iw - fins * t) +
         slotInnerEndCorrection(box, v, t, inset, folded, most),
     };
+  }
   const r = v.dia / 2;
   return {
     n: v.nt,
@@ -471,7 +476,7 @@ export function subWoodIn3(
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
     // a straight slot's fins run on to the back (slotFinIn)
-    in3 += iw * len * t + v.slotH * (folded ? len : slotFinIn(box, t)) * t * 2;
+    in3 += iw * len * t + v.slotH * (folded ? len : slotFinIn(box, t)) * t * slotFinsOf(v, iw, t);
     if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;

@@ -1,6 +1,7 @@
 // Tailwind, compiled at build time (it used to run in the browser from the Play CDN). The color names are mapped onto the
 // palette: stone = the grays; panel = cards and inputs; green / orange (amber) / red = status; cmy-* = brand (cmy-a = actions
-// and focus, ink today; cmy-y = yellow accents, cmy-m = magenta (goal rank badges); chart colors are read from the palette
+// and focus, ink today; cmy-c = cyan (action buttons, the current page tab); cmy-y = yellow accents (section headings),
+// cmy-m = magenta (goal rank badges); chart colors are read from the palette
 // in the app code, usePalette()); 4 px corners, 6 px for large ones.
 //
 // Every palette color is a CSS variable holding "r g b": the light theme on :root, the dark one when the device asks for
@@ -54,7 +55,7 @@ export default {
         red: scale("red"),
         orange: scale("orange"),
         amber: scale("orange"),
-        cmy: { y: v("yellow"), m: v("magenta"), a: v("accent") },
+        cmy: { y: v("yellow"), m: v("magenta"), c: v("cyan"), a: v("accent") },
         soft: v("muted", 0.5),
       },
       // a bare `border` (and preflight) takes the palette's edge, not Tailwind's own gray
@@ -62,6 +63,8 @@ export default {
       borderRadius: { DEFAULT: "4px", lg: "6px" },
       boxShadow: { sheet: `0 -6px 20px ${v("shadow", 0.1)}` },
       fontFamily: { sans: font, serif: font, mono: font },
+      // three weight levels for settings: a card's title over a field's label over the field's value
+      fontWeight: { title: "800", label: "600", value: "400" },
     },
   },
   plugins: [

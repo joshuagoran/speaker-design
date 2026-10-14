@@ -32,7 +32,7 @@ export function ToggleGroup<T extends string | number | boolean>({
 }: Props<T>) {
   return (
     <div className={className}>
-      {label != null && <div className="text-sm text-stone-500 mb-1">{label}</div>}
+      {label != null && <div className="text-sm font-label text-stone-500 mb-1">{label}</div>}
       <div className={wrap ? "flex flex-wrap gap-1" : "flex gap-1"}>
         {options.map(([v, l, tip]) => {
           const off = disabled?.values.includes(v) ?? false;

@@ -2,15 +2,14 @@ import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../../../constants/paSliders";
 import { ToggleButton } from "../../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../../components/ui/ToggleGroup";
 import { Tooltip } from "../../../components/ui/Tooltip";
-import { SwatchPicker } from "../../../components/ui/SwatchPicker";
 import { Card } from "../../../components/ui/Card";
 import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
-import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, cabinetFinishName } from "../../../lib/data";
+import { CD_OPTIONS, HORN_OPTIONS, cabinetFinishName } from "../../../lib/data";
 import {
   BaffleColorPicker,
   CabinetFinishPicker,
-  PAINTED_PREFIX,
+  HornColorPicker,
 } from "../../../components/ui/FinishPickers";
 import { HIGHPASS_ALIGNMENTS, isRoundPort, ventSpeedLimit } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
@@ -25,7 +24,7 @@ import {
   settingsSheetBodyClass,
 } from "../../../components/ui/SettingsSheetTabs";
 import { useFolds } from "../../../hooks/useFolds";
-import { formatDims, formatHz } from "../../../lib/format";
+import { formatDims, formatHz, formatInches } from "../../../lib/format";
 import { crossoverSlopeName } from "../../../constants/crossovers";
 import { PA_LAYOUT_NAMES } from "../../../constants/paLayouts";
 import { PA_SETTINGS_RENAMED, PA_SETTINGS_SECTIONS } from "../../../constants/settingsSections";
@@ -48,27 +47,10 @@ import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 import { HardwareSettings } from "./HardwareSettings";
 import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
 import { NO_HANDLES_LABEL } from "../../../constants/hardware";
-import {
-  CLAMPED_BRACKET_NAME,
-  HORN_MOUNT_DEFAULT,
-  HORN_MOUNT_LABEL,
-  HORN_MOUNT_NAMES,
-  HORN_MOUNT_PLATE,
-  HORN_MOUNT_PLATE_FALLBACK,
-  HORN_MOUNT_PLY,
-  HORN_MOUNT_PLY_UNAVAILABLE,
-  HORN_MOUNT_TIPS,
-} from "../../../constants/hornMount";
+import { HORN_MOUNT_LABEL } from "../../../constants/hornMount";
 import { takesHornMount } from "../../../lib/pa/hornMount";
-import { plyMountFit } from "../../../components/stack-view/buildPlyMount";
-import { plateFit } from "../../../components/stack-view/buildPlate";
-import {
-  HORN_COLOR_CATALOG,
-  HORN_COLOR_CATALOG_LABEL,
-  HORN_FINISH_NAMES,
-} from "../../../constants/hornColor";
-import { cssHex, hornBodyColor, pickedHornColor } from "../../../lib/pa/hornColor";
-import { ON_DATA } from "../../../styles/palette";
+import { hornMountChoice } from "../../../components/stack-view/hornMountChoice";
+import { HornMountField } from "../../../components/ui/HornMountField";
 import { towerMidDims } from "../../../lib/pa/tower";
 
 interface Props {
@@ -269,33 +251,15 @@ export function SettingsPanel({ planner }: Props) {
     subDriver,
   );
   const finishName = cabinetFinishName(cabinetFinish);
-  // the horn color picker: the horn's catalog finish as a preset that clears the picked color
-  const hornFinish = hornOption.finish ?? "printed";
-  const hornColorPresets = {
-    [HORN_COLOR_CATALOG]: {
-      name: HORN_COLOR_CATALOG_LABEL,
-      swatch: cssHex(hornBodyColor(hornOption)),
-      ink: hornOption.finish ? ON_DATA.white : ON_DATA.ink,
-    },
-  };
   // a note under the Bracing setting for each panel a box's bracing leaves under the target, naming the box and the panel
   const braceNotes = [
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
     ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
   ];
-  // the horn mount, for a driver bolted straight to its horn on a lid: the plywood mount only when the driver's bolts
-  // fit it, else the aluminum plate; the plate, when no bolt can pass through it, gives way to the clamped L-bracket.
-  // The 3D view draws the same, so the setting and the summary show what it draws.
-  const hornMountShown = takesHornMount(hornOption, layout);
-  const plyMountFits =
-    hornMountShown && plyMountFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
-  const plateFits =
-    hornMountShown && plateFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
-  const shownHornMount = plyMountFits ? hornMount : HORN_MOUNT_DEFAULT;
-  const hornMountTips = {
-    ...HORN_MOUNT_TIPS,
-    ...(plateFits ? {} : { plate: HORN_MOUNT_PLATE_FALLBACK }),
-  };
+  // the horn mount, for a driver bolted straight to its horn on a lid (hornMountChoice: what the 3D view draws)
+  const mountChoice = takesHornMount(hornOption, layout)
+    ? hornMountChoice(hornOption, compressionDriver, effectiveMidBoxDims.w, hornMount)
+    : null;
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
@@ -321,11 +285,7 @@ export function SettingsPanel({ planner }: Props) {
           (b) =>
             `${PA_SETTINGS_TABS[b]}: ${handlePart(hardware[b].model)?.name ?? NO_HANDLES_LABEL.toLowerCase()}`,
         ),
-      ...(hornMountShown
-        ? [
-            `${HORN_MOUNT_LABEL}: ${shownHornMount === HORN_MOUNT_PLATE && !plateFits ? CLAMPED_BRACKET_NAME : HORN_MOUNT_NAMES[shownHornMount]}`,
-          ]
-        : []),
+      ...(mountChoice ? [`${HORN_MOUNT_LABEL}: ${mountChoice.name}`] : []),
     ].join(", "),
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
@@ -462,11 +422,7 @@ export function SettingsPanel({ planner }: Props) {
                     onChange={(v) => setSubVentField("throat", v)}
                   />
                   <ToggleGroup
-                    label={
-                      <Tooltip tip="Two per duct. Thicker dividers shrink the vent, so it tunes lower.">
-                        Dividers
-                      </Tooltip>
-                    }
+                    label={<Tooltip tip={UI_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
                     value={ductDividerPanel}
                     onChange={setDuctDividerPanel}
                     options={PANEL_NOMINAL_OPTIONS}
@@ -616,8 +572,10 @@ export function SettingsPanel({ planner }: Props) {
           />
           {hornExitMismatch && (
             <div className="text-sm text-red-700 mb-4">
-              Horn throat and driver exit don't match ({hornOption.exit}″ vs{" "}
-              {compressionDriver.exit}″).
+              {UI_TEXT.hornExitMismatch(
+                formatInches(hornOption.exit),
+                formatInches(compressionDriver.exit),
+              )}
             </div>
           )}
         </div>,
@@ -812,35 +770,14 @@ export function SettingsPanel({ planner }: Props) {
                 onChange={setBaffleInsetIn}
               />
             </div>
-            {hornMountShown && (
-              <ToggleGroup
-                label={HORN_MOUNT_LABEL}
-                value={shownHornMount}
-                onChange={setHornMount}
-                disabled={
-                  plyMountFits
-                    ? undefined
-                    : { values: [HORN_MOUNT_PLY], why: HORN_MOUNT_PLY_UNAVAILABLE }
-                }
-                options={keysOf(HORN_MOUNT_NAMES).map(
-                  (id) => [id, HORN_MOUNT_NAMES[id], hornMountTips[id]] as const,
-                )}
-                className="mt-3"
-              />
+            {mountChoice && (
+              <HornMountField choice={mountChoice} onChange={setHornMount} className="mt-3" />
             )}
             <HardwareSettings planner={planner} />
           </div>
           <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
           <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
-          <SwatchPicker
-            label="Horn color"
-            value={hornColor ?? HORN_COLOR_CATALOG}
-            onChange={(v) => setHornColor(pickedHornColor(v))}
-            swatches={PAINT_SWATCHES}
-            presets={hornColorPresets}
-            titlePrefix={PAINTED_PREFIX}
-            note={hornColor ?? `${HORN_COLOR_CATALOG_LABEL}: ${HORN_FINISH_NAMES[hornFinish]}`}
-          />
+          <HornColorPicker value={hornColor} onChange={setHornColor} horn={hornOption} />
           <div className="mb-5">
             <ToggleGroup
               label="Layout"

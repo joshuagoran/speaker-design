@@ -197,7 +197,7 @@ export function NotesPage() {
           </h3>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
-              ["1. Highpass", "LR24 at or slightly above the tuning. Match it in the planner."],
+              ["1. Highpass", "LR24 at or slightly above the tuning. Match it in your design."],
               [
                 "2. Limiter power",
                 `The lower of the sub's \u201c${STATS.firstLimit.label}\u201d power (when Xmax limits first) and the driver's rating; Medium or Aggressive. ${GXD8.model} maximum: ${GXD8.limiterW[1]} W.`,
@@ -212,7 +212,7 @@ export function NotesPage() {
               ],
               [
                 "Horns",
-                `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Set its limiter to the driver's rating, and the planner's HF amp slider to match.`,
+                `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Set its limiter to the driver's rating, and the HF amp power in your design to match.`,
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">

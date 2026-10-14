@@ -1,20 +1,33 @@
+import { PRESSED_CLASSES } from "./components/ui/buttonStyles";
 import { usePaPlanner } from "./pages/pa-stack/hooks/usePaPlanner";
 import { PaStackPage } from "./pages/pa-stack/PaStackPage";
 import { NotesPage } from "./pages/notes/NotesPage";
 import { FillsPage } from "./pages/fills/FillsPage";
 import { PaCutlistPage } from "./pages/cutlist/PaCutlistPage";
 import { HifiCutlistPage } from "./pages/cutlist/HifiCutlistPage";
+import { SpeakerCutlistPage } from "./pages/cutlist/SpeakerCutlistPage";
+import { StackCutlistPage } from "./pages/cutlist/StackCutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
 import { CoveragePage } from "./pages/coverage/CoveragePage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
 import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
+import { SpeakerPage } from "./pages/speaker/SpeakerPage";
+import { useSpeakerPage } from "./pages/speaker/useSpeakerPage";
+import { StackPage } from "./pages/stack/StackPage";
+import { useStack } from "./pages/stack/useStack";
+import { SpacePage } from "./pages/space/SpacePage";
+import { useSpace } from "./pages/space/useSpace";
 import { useEffect, useState, type MouseEvent } from "react";
 import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
+import { Notice } from "./components/ui/Notice";
+import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
 import { ThemeSwitch } from "./components/ui/ThemeSwitch";
 import { PageTabs } from "./components/ui/PageTabs";
 import { entriesOf } from "./lib/records";
+import { pageAt } from "./lib/pageRoute";
 import {
+  NOTES_PAGE,
   PAGE_HASHES,
   PROJECT_NAMES,
   PROJECT_NAV_LABELS,
@@ -23,17 +36,15 @@ import {
   type ProjectId,
 } from "./constants/pages";
 
-/** The page at the address's hash; the PA Design page for an unknown or empty one. */
-const viewOf = (): AppPage =>
-  entriesOf(PAGE_HASHES).find(([v, h]) => v !== "planner" && h === window.location.hash)?.[0] ??
-  "planner";
+/** The page at the address (`pageAt`). */
+const viewOf = (): AppPage => pageAt(window.location.pathname, window.location.hash);
 
 /** The project a page belongs to. */
 const projectOf = (v: AppPage): ProjectId =>
   entriesOf(PROJECT_PAGES).find(([, pages]) => pages.some(([p]) => p === v))?.[0] ?? "pa";
 
 /** The page shell: hash routing, the header navigation, and the design state of every page (held here so it survives switching tabs). */
-export function App() {
+export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   const [view, setView] = useState(viewOf);
   useEffect(() => {
     const on = () => setView(viewOf());
@@ -43,8 +54,11 @@ export function App() {
   const planner = usePaPlanner();
   const hifi = useHifiPlanner();
   const fills = useFillsPlanner();
+  const speakerPage = useSpeakerPage();
+  const stack = useStack();
+  const space = useSpace();
   const project = projectOf(view);
-  // two levels: the project (PA stack or hi-fi), then the project's own pages
+  // two levels: the project (PA stack, Hi-fi, Speaker, Stack or Space), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
@@ -67,7 +81,11 @@ export function App() {
             <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">
               SpeakNow
             </h1>
-            <nav className="flex gap-1" style={{ fontFamily: FONT }} aria-label="Projects">
+            <nav
+              className="flex flex-wrap gap-1"
+              style={{ fontFamily: FONT }}
+              aria-label="Projects"
+            >
               {entriesOf(PROJECT_NAMES).map(([p, label]) => {
                 const home = PROJECT_PAGES[p][0][0],
                   on = p === project;
@@ -77,7 +95,7 @@ export function App() {
                     href={PAGE_HASHES[home]}
                     aria-current={on ? "page" : undefined}
                     onClick={navigateTo(home, PAGE_HASHES[home])}
-                    className={`px-4 py-2 rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}
+                    className={`px-4 max-sm:px-2.5 py-2 whitespace-nowrap rounded border-2 text-base font-semibold ${on ? PRESSED_CLASSES : "border-stone-300 hover:border-stone-500"}`}
                   >
                     {label}
                   </a>
@@ -100,7 +118,13 @@ export function App() {
         key={view}
         className="md:flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable]"
       >
-        {view === "notes" ? (
+        {draftFailed && (
+          <div className={PAGE_WIDTH}>
+            <Notice>{DRAFT_FAILED_TEXT}</Notice>
+          </div>
+        )}
+        {/* Notes has no tab: it opens only at the path /notes */}
+        {view === NOTES_PAGE ? (
           <NotesPage />
         ) : view === "fills" ? (
           <FillsPage fills={fills} />
@@ -110,6 +134,16 @@ export function App() {
           <HifiCutlistPage hifi={hifi} />
         ) : view === "cutlist" ? (
           <PaCutlistPage planner={planner} />
+        ) : view === "speaker" ? (
+          <SpeakerPage speakerPage={speakerPage} planner={planner} hifi={hifi} />
+        ) : view === "speakerCutlist" ? (
+          <SpeakerCutlistPage speakerPage={speakerPage} />
+        ) : view === "stack" ? (
+          <StackPage stack={stack} speakerPage={speakerPage} planner={planner} />
+        ) : view === "stackCutlist" ? (
+          <StackCutlistPage stack={stack} />
+        ) : view === "space" ? (
+          <SpacePage space={space} stack={stack} speakerPage={speakerPage} />
         ) : view === "coverage" ? (
           <CoveragePage planner={planner} />
         ) : (

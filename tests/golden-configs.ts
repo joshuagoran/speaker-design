@@ -36,6 +36,8 @@ const seeds = JSON.parse(
   fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
 ) as GoldenConfig[];
 const base = seeds.find((c) => c.name === SEED_NAMES.lilBlockOptimized)!;
+/** The synthetic design on the 15 in mid (tests/stack-response gives its sum its own limit). */
+export const FIFTEEN_MID_CASE = "synthetic: 15 in mid";
 const synth = (
   [
     { name: "synthetic: 1/2 walls, 1.5 inset", wall: 0.5, inset: 1.5 },
@@ -66,7 +68,7 @@ const synth = (
       portStyle: "round4",
       cVent: { slotH: 3, nt: 4, dia: 3, throat: 2, len: 12 },
     },
-    { name: "synthetic: 15 in mid", mid: "bc15ndl76", mDim: { w: 18, h: 18, d: 16 } },
+    { name: FIFTEEN_MID_CASE, mid: "bc15ndl76", mDim: { w: 18, h: 18, d: 16 } },
   ] satisfies (Partial<GoldenConfig> & { name: string })[]
 ).map((o) => ({ ...base, ...o }));
 

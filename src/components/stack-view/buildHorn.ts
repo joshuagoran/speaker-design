@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { HORN_LIFT_IN, ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
+import { ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
+import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import type { SceneContext } from "./sceneContext";
 import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
 import { buildPlyMount, plyMountFit } from "./buildPlyMount";

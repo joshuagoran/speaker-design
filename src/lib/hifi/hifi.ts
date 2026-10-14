@@ -14,15 +14,17 @@ import {
   logGridCount,
   SEALED_QTC_MIN,
   sealedLitersForQtc,
+  unwrapRawPhase,
 } from "../pa/calc";
 import { rectangleEndCorrection } from "../acoustics/radiation";
+import { coilFactor, driverCircuit } from "../acoustics/driverCircuit";
 import { qtcFloorAt } from "../../constants/qtcText";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { panelLbPerSqFt } from "../panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
-import { BIRCH_PLY_STIFFNESS, MDF_STIFFNESS, plateFirstModeHz } from "../bracing";
+import { panelStock, plateFirstModeHz } from "../bracing";
 import type {
   Complex,
   BracePanelId,
@@ -43,6 +45,7 @@ import type {
   HifiSeatPaths,
   Horn,
   HifiWaveguide,
+  LimitId,
   MountAdapter,
   WaveguideSpec,
   RoundPort,
@@ -343,11 +346,7 @@ export function hifiPanelResonances(
   t: number,
   mat: PanelMaterial | undefined,
 ): PanelResonance[] {
-  const stock = {
-    t,
-    lbPerSqFt: panelWeightLb(t, mat),
-    ...(mat === "mdf" ? MDF_STIFFNESS : BIRCH_PLY_STIFFNESS),
-  };
+  const stock = panelStock(t, mat ?? PLYWOOD_MATERIAL);
   const w = dim.w - 2 * t,
     h = dim.h - 2 * t,
     d = dim.d - 2 * t;
@@ -452,33 +451,44 @@ export function passiveRadiatorBox(
   hpf: number,
   volts: number,
   hpType: HighpassType = "BW24",
-  opts: { QL?: number; N?: number; fmin?: number; fmax?: number; fTop?: number } = {},
+  opts: {
+    QL?: number;
+    N?: number;
+    fmin?: number;
+    fmax?: number;
+    fTop?: number;
+    /** give each point the box's phase, `rawPhase`, as boxModel's option does (the speaker model sums with it) */
+    phase?: boolean;
+  } = {},
 ) {
-  const { QL = 7, N = 420, fmin = 12, fmax = 300, fTop } = opts;
+  const { QL = 7, N = 420, fmin = 12, fmax = 300, fTop, phase } = opts;
   const { drv, n } = pr;
   if (!ts || !VbL || !drv || !n) return null;
-  const rho = 1.18,
-    Sd = ts.Sd / 1e4,
-    Mms = ts.Mms / 1000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const Mas = Mms / (Sd * Sd),
-    Cas = Cms * Sd * Sd;
-  const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
+  const rho = 1.18;
+  // the driver's circuit (lib/acoustics/driverCircuit, shared with the PA box models and the horn engine)
+  const { Sd, Mms, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
   const { Map, Cap, Cab, Fb, Fp } = passiveRadiatorTuning(drv, n, pr.addG, VbL);
   const Sp = drv.Sd / 1e4;
   const Rap = (2 * Math.PI * drv.Fs * (drv.Mms / 1000)) / (drv.Qms || 5) / (Sp * Sp) / n;
   const Ral = QL / (2 * Math.PI * Fb * Cab);
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
-  const out = [];
+  const out: {
+    f: number;
+    raw: number;
+    spl: number;
+    xmm: number;
+    prx: number;
+    rawPhase?: number;
+  }[] = [];
   const count = logGridCount(N, fmin, fmax, fTop);
   for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
-    // the same circuit in plain real arithmetic (the optimizer runs this loop for every radiator box it tries):
-    // Zd = Ras + Rae + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; Zp = Rap + j(w Map - 1/(w Cap)); Zbox = 1 / (1/Zc + 1/Zp + 1/Ral)
+    // the same circuit in plain real arithmetic (the optimizer runs this loop for every radiator box it tries), the
+    // coil's inductance on the motor as boxModel takes it (k = Re/(Re + jωLe), exactly 1 without Le):
+    // Zd = Ras + Rae·k + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; Zp = Rap + j(w Map - 1/(w Cap)); Zbox = 1 / (1/Zc + 1/Zp + 1/Ral)
     const w = 2 * Math.PI * f;
-    const dRe = Ras + Rae,
-      dIm = w * Mas - 1 / (w * Cas);
+    const k = coilFactor(ts, w);
+    const dRe = Ras + Rae * k.re,
+      dIm = w * Mas - 1 / (w * Cas) + Rae * k.im;
     const pRe = Rap,
       pIm = w * Map - 1 / (w * Cap),
       pM = pRe * pRe + pIm * pIm;
@@ -490,8 +500,10 @@ export function passiveRadiatorBox(
     const tRe = dRe + bRe,
       tIm = dIm + bIm,
       tM = tRe * tRe + tIm * tIm;
-    const uRe = (Pg * tRe) / tM,
-      uIm = (-Pg * tIm) / tM; // Ud = Pg / (Zd + Zbox)
+    const gRe = Pg * k.re,
+      gIm = Pg * k.im;
+    const uRe = (gRe * tRe + gIm * tIm) / tM,
+      uIm = (gIm * tRe - gRe * tIm) / tM; // Ud = Pg·k / (Zd + Zbox)
     const vRe = uRe * bRe - uIm * bIm,
       vIm = uRe * bIm + uIm * bRe; // Ud Zbox
     const pv = Math.sqrt(vRe * vRe + vIm * vIm);
@@ -506,8 +518,11 @@ export function passiveRadiatorBox(
       spl: raw + 20 * Math.log10(hp),
       xmm: Math.SQRT2 * (Ud / (w * Sd)) * hp * 1000,
       prx: Math.SQRT2 * (Up / (w * Sp * n)) * hp * 1000,
+      // as in boxModel: the radiated pressure is jω × the flow into the box air, in phase with −Ud Zbox
+      ...(phase && { rawPhase: Math.atan2(-vIm, -vRe) }),
     });
   }
+  if (phase) unwrapRawPhase(out);
   const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
   const f3 = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f;
   return { curve: out, Fb, Fp, f3, ref };
@@ -559,6 +574,12 @@ export const hifiVentPort = (
     : cfg.port.shape === "slot"
       ? { ...cfg.port, n: 1, w: slotWidth(cfg.dim, cfg.wall || 0.75) }
       : cfg.port;
+/** The share of a box's clear volume left as air: 3% goes to bracing and damping. */
+export const HIFI_NET_SHARE = 0.97;
+/** A woofer's displacement, L: its published one, else an estimate from its size (6.5″: 0.6 L, by volume). */
+export const hifiWooferDisplacementL = (
+  w: Pick<HifiWoofer, "size"> & { ts: Pick<HifiWoofer["ts"], "disp"> },
+) => (w.ts.disp != null ? w.ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6));
 /** A sealed box's effective volume over its net: light stuffing. */
 export const HIFI_STUFFING_GAIN = 1.1;
 /** The box alone, its curve run to fTop (Hz): xo-independent, so one box serves every crossover. */
@@ -582,8 +603,8 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   const pVol = ventPort
     ? ((pA + (ventPort.shape === "slot" ? wall * ventPort.w : 0)) * ventPort.len * 16.387) / 1e3
     : 0;
-  const disp = ts.disp != null ? ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
-  const net = Math.max(1, gross * 0.97 - disp - pVol); // 3% for bracing and damping
+  const disp = hifiWooferDisplacementL(w);
+  const net = Math.max(1, gross * HIFI_NET_SHARE - disp - pVol);
   const V = ampVoltage(cfg.wAmpW),
     N = cfg.N || GRID.N;
   const opts = { fmin: GRID.fmin, fmax: GRID.fmax, N, fTop };
@@ -647,9 +668,12 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
   return b && hifiSystemFromBox(b, w, t, cfg);
 }
 
-/** A tweeter's clean maximum level at 1 m: its sensitivity and power, derated below the frequency its rating assumes. */
+/**
+ * A tweeter's clean maximum level at 1 m: its sensitivity and power, derated below the frequency its rating assumes,
+ * and what sets the power (the amp, or the program rating: "thermal").
+ */
 export function tweeterMaxLevel(
-  t: HifiTweeter,
+  t: Pick<HifiTweeter, "hf">,
   cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain">,
 ) {
   const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
@@ -659,7 +683,8 @@ export function tweeterMaxLevel(
   const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
   const pMax = Math.min(pAmp, pProg);
   const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
-  return { imp, derate, pMax, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
+  const who: Extract<LimitId, "amp" | "thermal"> = pMax === pAmp ? "amp" : "thermal";
+  return { imp, derate, pMax, pProg, who, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
 }
 /**
  * The power the tweeter gets, amp watts into 8 Ω (as `tAmpW`): its own amp's when active; when passive, the one amp
@@ -693,6 +718,15 @@ export function tweeterLevelInBox(
       : own;
   return { ...level, tSens283, trim };
 }
+/** What the Hi-fi weights take for a part with no listed weight, lb: a woofer, a tweeter, a passive radiator. */
+export const HIFI_FALLBACK_LB = { woofer: 5, tweeter: 1.5, radiator: 0.75 } as const;
+/** A Hi-fi speaker's hardware besides its drivers, lb: the screws, the terminals and the damping. */
+export const HIFI_FIXINGS_LB = 1;
+/** Grams in a pound, as the radiators' added mass is weighed. */
+const GRAMS_PER_LB = 454;
+/** The radiators' weight, lb: each one's listed weight (or the fallback) and its added mass. */
+export const radiatorsLb = (pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">) =>
+  pr.n * ((pr.drv.lb || HIFI_FALLBACK_LB.radiator) + (pr.addG || 0) / GRAMS_PER_LB);
 /**
  * One speaker's weight, lb: the box, the drivers (a coaxial once: its woofer carries it), a pound of hardware and the
  * radiators with their added mass (no amps).
@@ -704,10 +738,10 @@ export const hifiWeightLb = (
   pr: PassiveRadiatorChoice | null,
 ) =>
   boxWeightLb(cfg.dim, cfg.wall || 0.75, cfg.mat) +
-  (w.lb || 5) +
-  (isCoax(w, t) ? 0 : t.lb || 1.5) +
-  1 +
-  (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
+  (w.lb || HIFI_FALLBACK_LB.woofer) +
+  (isCoax(w, t) ? 0 : t.lb || HIFI_FALLBACK_LB.tweeter) +
+  HIFI_FIXINGS_LB +
+  (pr ? radiatorsLb(pr) : 0);
 /**
  * The lowest crossover the tweeter may take on its waveguide: the higher of the tweeter's own minimum and the
  * waveguide's (its loading), with the part that sets it; null when neither sets one.

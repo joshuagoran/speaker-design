@@ -1,6 +1,7 @@
 import { Tooltip } from "../ui/Tooltip";
 import { SUB_BASS_BAND_HZ } from "../../lib/pa/calc";
 import { STAT_ROW_TEST_IDS } from "../../constants/statRowTestIds";
+import { UI_TEXT } from "../../constants/uiText";
 
 /** A statistic with plain-language help: its label, and the tooltip shown on it. */
 export interface StatDef {
@@ -68,6 +69,14 @@ export const STATS = {
   pairPrice: {
     label: "Pair",
     tip: "Driver cost for both speakers.",
+  },
+  partsPrice: {
+    label: "Price",
+    tip: `The purchased parts on the Cutlist tab, without the plywood. A ${UI_TEXT.partialPriceMark} shows that some parts have no price.`,
+  },
+  stackHeight: {
+    label: "Height",
+    tip: "From the stack's base to its highest point, with a horn on a top. A plinth or stand under the stack is not included.",
   },
 } as const satisfies Record<string, StatDef>;
 /** A row's or tile's name: a statistic from STATS (with its tooltip) or a plain label. */

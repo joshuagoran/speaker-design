@@ -1,26 +1,23 @@
-import { useEffect, useId, useState } from "react";
-import { CoverageMap } from "../../components/charts/CoverageMap";
+import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
+import { useState } from "react";
+import { CoverageMap, type MapBox } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { Button } from "../../components/ui/Button";
 import { Notice } from "../../components/ui/Notice";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Ellipsis } from "../../components/ui/Ellipsis";
 import { Slider } from "../../components/ui/Slider";
-import { SelectField } from "../../components/ui/SelectField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
-import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
+import { CoverageBandPicker } from "../../components/ui/CoverageBandPicker";
+import { RoomFields } from "../../components/ui/RoomFields";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
-import type { RoomSurface, SubPlacement } from "../../types";
-import {
-  ROOM_CEILING_FT,
-  ROOM_LENGTH_FT,
-  ROOM_WIDTH_FT,
-  useCoverageLayout,
-} from "./useCoverageLayout";
+import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
+import { SUB_PLACEMENT, SUB_PLACEMENT_OPTIONS } from "../../constants/subPlacement";
+import { useCoverageLayout } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { AmpPowerTable } from "./AmpPowerTable";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
@@ -35,7 +32,6 @@ import {
   settingsSheetBodyClass,
   settingsSheetRoomClass,
 } from "../../components/ui/SettingsSheetTabs";
-import { UI_TEXT } from "../../constants/uiText";
 import {
   COVERAGE_EDGE_DB,
   COVERAGE_LEVEL_REF_PLACE,
@@ -51,39 +47,9 @@ const TABS: [CoverageTab, string][] = [
   ["room", "Room"],
   ["stacks", "Stacks"],
 ];
-const NAMED_BANDS = ["sub", "kick", "mid", "high"] as const;
-const SURFACES: [RoomSurface, string][] = [
-  ["front", "Behind the stacks"],
-  ["back", "Far end"],
-  ["left", "Left side"],
-  ["right", "Right side"],
-  ["ceiling", "Ceiling"],
-];
-const SUB_PLACEMENTS: [SubPlacement, string][] = [
-  ["stacks", "Subs in the stacks"],
-  ["center", "Center pair"],
-  ["single", "One center sub"],
-];
 
 interface Props {
   planner: CoverageInputs;
-}
-
-/** The height the map may take: on phones, half the screen, so it stays in view above the open settings sheet. */
-function useMapMaxHeight() {
-  const read = () =>
-    typeof window === "undefined"
-      ? 640
-      : window.innerWidth < 768
-        ? Math.max(260, window.innerHeight * 0.5 - 40)
-        : Math.max(420, Math.min(760, window.innerHeight * 0.8));
-  const [h, setH] = useState(read);
-  useEffect(() => {
-    const on = () => setH(read());
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  return h;
 }
 
 /** Audience coverage: both stacks on a floor plan, level against the target across the room, and the listener's response. */
@@ -97,8 +63,17 @@ export function CoveragePage({ planner }: Props) {
   const [tab, setTab] = useState<CoverageTab>("band");
   const tabClass = (t: CoverageTab) => (tab === t ? "" : "max-md:hidden");
   const maxHeight = useMapMaxHeight();
-  const freqId = useId();
 
+  const mapStack = map.stack;
+  // every box at the sub's footprint; the stacks draw their horn's coverage and turn
+  const mapBoxes: MapBox[] = mapStack
+    ? map.boxes.map((b) => ({
+        ...b,
+        footprint: mapStack.footprint,
+        covH: b.kind === "stack" ? mapStack.horn.covH : null,
+        turnable: b.kind === "stack",
+      }))
+    : [];
   const rel = map.listenerDb != null ? map.listenerDb - map.target : null;
   const relClass =
     rel == null
@@ -114,15 +89,6 @@ export function CoveragePage({ planner }: Props) {
       : `${COVERAGE_BANDS[layout.band].name} band, ${formatHz(COVERAGE_BANDS[layout.band].lo)}–${formatHz(COVERAGE_BANDS[layout.band].hi)}`;
   const [left, right] = layout.stacks;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
-  const logPos = (f: number) =>
-    Math.round(
-      (Math.log(f / SINGLE_FREQ_RANGE[0]) / Math.log(SINGLE_FREQ_RANGE[1] / SINGLE_FREQ_RANGE[0])) *
-        1000,
-    );
-  const fromPos = (p: number) =>
-    Math.round(
-      SINGLE_FREQ_RANGE[0] * Math.pow(SINGLE_FREQ_RANGE[1] / SINGLE_FREQ_RANGE[0], p / 1000),
-    );
   const label = "text-sm text-stone-500 mb-1";
   const delay = (ms: number) =>
     ms < 0 ? `the tops wait ${(-ms).toFixed(1)} ms` : `${ms.toFixed(1)} ms on the sub`;
@@ -142,10 +108,25 @@ export function CoveragePage({ planner }: Props) {
             {map.stack && map.levels ? (
               <CoverageMap
                 view={map.view}
-                layout={layout}
-                actions={state}
-                boxes={map.boxes}
-                stack={map.stack}
+                room={room}
+                listener={layout.listener}
+                actions={{
+                  // the stacks (L, R) first; then the center subs, which move their cluster
+                  moveBox: (i, p) => {
+                    const b = map.boxes[i];
+                    if (i === 0 || i === 1) state.moveStack(i, p);
+                    else if (b)
+                      state.moveCluster({
+                        x: p.x + layout.cluster.x - b.x,
+                        y: p.y + layout.cluster.y - b.y,
+                      });
+                  },
+                  aimBox: (i, p) => {
+                    if (i === 0 || i === 1) state.aimStack(i, p);
+                  },
+                  moveListener: state.moveListener,
+                }}
+                boxes={mapBoxes}
                 busy={map.isPending}
                 maxHeight={maxHeight}
               />
@@ -245,7 +226,7 @@ export function CoveragePage({ planner }: Props) {
             {map.response.length > 0 && (
               <div className="mt-4">
                 <ResponseChart
-                  fmax={20000}
+                  fmax={FREQ_AXIS_MAX_HZ}
                   H={240}
                   yLabel="dB SPL at the listener"
                   series={[
@@ -306,124 +287,17 @@ export function CoveragePage({ planner }: Props) {
                 `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
               )}
             </p>
-            <ToggleGroup
-              label="Band"
-              value={layout.band}
-              onChange={state.setBand}
-              options={[
-                ...NAMED_BANDS.map(
-                  (b) =>
-                    [
-                      b,
-                      <>
-                        {COVERAGE_BANDS[b].name}{" "}
-                        <span className="text-xs opacity-70">
-                          {formatHz(COVERAGE_BANDS[b].lo)}–{formatHz(COVERAGE_BANDS[b].hi)}
-                        </span>
-                      </>,
-                    ] as const,
-                ),
-                ["one", "One frequency"] as const,
-              ]}
+            <CoverageBandPicker
+              band={layout.band}
+              freqHz={layout.freqHz}
+              onBand={state.setBand}
+              onFreqHz={state.setFreqHz}
+              oneNote={`One frequency adds everything with phase, so the interference between the stacks is easy to see. The limit is ${SINGLE_FREQ_RANGE[1]} Hz. Above it, the pattern is finer than the map.`}
             />
-            {layout.band === "one" && (
-              <div className="mt-3">
-                <div className="flex justify-between items-center gap-3 mb-1">
-                  <label htmlFor={freqId} className="text-sm text-stone-500">
-                    Frequency
-                  </label>
-                  <span className="text-sm tabular-nums font-medium">
-                    {formatHz(layout.freqHz)}
-                  </span>
-                </div>
-                <input
-                  id={freqId}
-                  type="range"
-                  min={0}
-                  max={1000}
-                  step={1}
-                  value={logPos(layout.freqHz)}
-                  aria-valuetext={formatHz(layout.freqHz)}
-                  onChange={(e) => state.setFreqHz(fromPos(parseFloat(e.target.value)))}
-                  className="w-full accent-stone-900"
-                />
-                <p className="text-xs text-stone-500 mt-1">
-                  One frequency adds everything with phase: the interference between the stacks
-                  shows plainly. Up to {SINGLE_FREQ_RANGE[1]} Hz; above that it's finer than the
-                  map.
-                </p>
-              </div>
-            )}
           </div>
 
           <div className={tabClass("room")}>
-            <ToggleGroup
-              label="Room"
-              value={room.outdoors}
-              onChange={state.setOutdoors}
-              options={
-                [
-                  [false, "Indoors"],
-                  [true, UI_TEXT.outdoors],
-                ] as const
-              }
-              wrap={false}
-              className="mb-3"
-            />
-            <Slider
-              label={room.outdoors ? "Area width" : "Width"}
-              value={room.widthFt}
-              min={ROOM_WIDTH_FT[0]}
-              max={ROOM_WIDTH_FT[1]}
-              step={1}
-              unit=" ft"
-              onChange={(widthFt) => state.setRoomSize({ widthFt, lengthFt: room.lengthFt })}
-            />
-            <Slider
-              label={room.outdoors ? "Area length" : "Length"}
-              value={room.lengthFt}
-              min={ROOM_LENGTH_FT[0]}
-              max={ROOM_LENGTH_FT[1]}
-              step={1}
-              unit=" ft"
-              onChange={(lengthFt) => state.setRoomSize({ widthFt: room.widthFt, lengthFt })}
-            />
-            {!room.outdoors && (
-              <>
-                <Slider
-                  label="Ceiling height"
-                  value={room.ceilingFt}
-                  min={ROOM_CEILING_FT[0]}
-                  max={ROOM_CEILING_FT[1]}
-                  step={1}
-                  unit=" ft"
-                  onChange={state.setCeilingFt}
-                />
-                <div className="grid grid-cols-2 gap-x-3">
-                  {SURFACES.map(([surface, name]) => (
-                    <SelectField
-                      key={surface}
-                      label={name}
-                      options={ROOM_MATERIAL_OPTIONS}
-                      value={ROOM_MATERIAL_OPTIONS.find((o) => o.id === room.materials[surface])}
-                      onChange={(o) => state.setMaterial(surface, o.id)}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-            <ToggleGroup
-              label="Dance floor"
-              value={room.crowd}
-              onChange={state.setCrowd}
-              options={
-                [
-                  ["empty", "Empty"],
-                  ["full", "Full"],
-                ] as const
-              }
-              wrap={false}
-            />
+            <RoomFields room={room} actions={state} />
           </div>
 
           <div className={tabClass("stacks")}>
@@ -431,11 +305,15 @@ export function CoveragePage({ planner }: Props) {
               label="Stacks"
               value={map.subs}
               onChange={state.setSubs}
-              options={SUB_PLACEMENTS}
+              options={SUB_PLACEMENT_OPTIONS}
               disabled={
                 map.levels?.sub
                   ? undefined
-                  : { values: SUB_PLACEMENTS.map(([s]) => s).filter((s) => s !== "stacks") }
+                  : {
+                      values: SUB_PLACEMENT_OPTIONS.map(([s]) => s).filter(
+                        (s) => s !== SUB_PLACEMENT.stacks,
+                      ),
+                    }
               }
               className="mb-3"
             />

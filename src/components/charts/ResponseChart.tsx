@@ -1,22 +1,34 @@
 import type { BandCurves, FrequencyPoint } from "../../types";
-import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
+import { MAX_OUTPUT_BOT, MAX_OUTPUT_TOP } from "../../constants/chartScales";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
 import { SVG_FONT, FONT } from "../../styles/fonts";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
+import { HOVER_TRANSITION } from "../ui/buttonStyles";
 
 /**
  * One curve on the chart: its points, legend label, line color and fill color. `band` shades the curve at the low and
  * high ends of an estimated Xmax (see `lib/xmax`); null or absent when the driver's Xmax is exact.
  */
 interface Series {
+  /** a stable key where labels can repeat (user-named bands); absent: the label */
+  id?: string;
   curve: readonly FrequencyPoint[];
   label: string;
   stroke: string;
   tint: string;
   band?: BandCurves<FrequencyPoint> | null;
+  /** a dashed line (its SVG dash pattern), for a curve that shares another's color; absent: solid */
+  dash?: string;
+  /** the line's width, px; absent: 2 (a sum drawn over its parts takes more) */
+  width?: number;
+  /**
+   * leave the line out where it is below the chart's floor, so it does not run along the axis as if it were data;
+   * absent: drawn along the floor
+   */
+  clipAtFloor?: boolean;
 }
 
 /** A labeled vertical line at a frequency. */
@@ -32,7 +44,7 @@ interface Props {
   span?: { lo: number; hi: number };
   fmax?: number;
   fmin?: number;
-  /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the PA stack's 80-135 dB; the Hi-fi charts pass HIFI_TOP / HIFI_BOT */
+  /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the maximum-output scale (MAX_OUTPUT_TOP / MAX_OUTPUT_BOT); a response chart passes HIFI_TOP / HIFI_BOT */
   top?: number;
   bot?: number;
   /** gridline spacing on the y axis */
@@ -44,15 +56,15 @@ interface Props {
   H?: number;
 }
 
-/** Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly. */
+/** Max-SPL chart: one or more curves ({f, spl}), on a fixed scale so setups compare directly. */
 export function ResponseChart({
   series,
   marks = [],
   span,
   fmax = 200,
   fmin = 15,
-  top = PA_DB_TOP,
-  bot = PA_DB_BOT,
+  top = MAX_OUTPUT_TOP,
+  bot = MAX_OUTPUT_BOT,
   step = 5,
   yLabel = "max dB SPL @ 1 m",
   unit = " dB",
@@ -79,9 +91,18 @@ export function ResponseChart({
     y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
   const paths = series.map((sr) => {
     const pts = sr.curve.filter((o) => o.f >= fmin && o.f <= fmax);
-    const d = pts
-      .map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1))
-      .join("");
+    // the runs of points the line draws: all of them, or (clipped at the floor) each run on or above the floor
+    const runs = sr.clipAtFloor
+      ? pts.reduce<FrequencyPoint[][]>((list, p, i) => {
+          if (p.spl < BOT) return list;
+          if (i > 0 && pts[i - 1].spl >= BOT) list[list.length - 1].push(p);
+          else list.push([p]);
+          return list;
+        }, [])
+      : [pts];
+    const runD = (run: readonly FrequencyPoint[]) =>
+      run.map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1)).join("");
+    const d = runs.map(runD).join("");
     // the band: along the high curve, back along the low one (none unless both have points on the chart)
     const inRange = (c: readonly FrequencyPoint[]) => c.filter((o) => o.f >= fmin && o.f <= fmax);
     const bandHi = sr.band ? inRange(sr.band.hi) : [],
@@ -96,9 +117,15 @@ export function ResponseChart({
       ...sr,
       d,
       bandD: band,
-      fill: pts.length
-        ? d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z`
-        : "",
+      // each run filled down to the floor
+      fill: runs
+        .filter((run) => run.length)
+        .map(
+          (run) =>
+            runD(run) +
+            `L${px(run[run.length - 1].f).toFixed(1)},${y1} L${px(run[0].f).toFixed(1)},${y1} Z`,
+        )
+        .join(""),
     };
   });
   const ticks = (
@@ -126,6 +153,11 @@ export function ResponseChart({
       </text>,
     );
   });
+  /** the curve whose legend item is under the pointer: the other curves fade back */
+  const [hot, setHot] = useState<string | null>(null);
+  const keyOf = (p: Pick<Series, "id" | "label">) => p.id ?? p.label;
+  /** a curve's opacity: full, or faded while another curve's legend item is under the pointer */
+  const faded = (p: Pick<Series, "id" | "label">) => (hot !== null && hot !== keyOf(p) ? 0.2 : 1);
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState<number | null>(null);
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -136,7 +168,10 @@ export function ResponseChart({
   const hits = hf
     ? (paths
         .map((p) => {
-          const pts = p.curve.filter((o) => o.f >= fmin && o.f <= fmax);
+          // a curve clipped at the floor reads nothing where it is not drawn
+          const pts = p.curve.filter(
+            (o) => o.f >= fmin && o.f <= fmax && (!p.clipAtFloor || o.spl >= BOT),
+          );
           const o = pts.length
             ? pts.reduce((b, q) =>
                 Math.abs(Math.log(q.f / hf)) < Math.abs(Math.log(b.f / hf)) ? q : b,
@@ -217,22 +252,38 @@ export function ResponseChart({
             </g>
           ))}
         {paths.map((p) => (
-          <path key={p.label + "f"} d={p.fill} fill={p.tint} />
+          <path
+            key={(p.id ?? p.label) + "f"}
+            d={p.fill}
+            fill={p.tint}
+            style={{ opacity: faded(p) }}
+            className={HOVER_TRANSITION}
+          />
         ))}
         {paths.map((p) =>
           p.bandD ? (
-            <path key={p.label + "b"} d={p.bandD} fill={alpha(p.stroke, 0.18)} stroke="none" />
+            <path
+              key={(p.id ?? p.label) + "b"}
+              d={p.bandD}
+              fill={alpha(p.stroke, 0.18)}
+              stroke="none"
+              style={{ opacity: faded(p) }}
+              className={HOVER_TRANSITION}
+            />
           ) : null,
         )}
         {paths.map((p) => (
           <path
-            key={p.label}
+            key={p.id ?? p.label}
             d={p.d}
             fill="none"
             stroke={p.stroke}
-            strokeWidth="2"
+            strokeWidth={p.width ?? 2}
+            strokeDasharray={p.dash}
             strokeLinejoin="round"
             strokeLinecap="round"
+            style={{ opacity: faded(p) }}
+            className={HOVER_TRANSITION}
           />
         ))}
         {hf && (
@@ -311,8 +362,20 @@ export function ResponseChart({
           style={{ fontFamily: FONT }}
         >
           {paths.map((p) => (
-            <span key={p.label} className="flex items-center gap-1.5">
-              <span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />
+            <span
+              key={p.id ?? p.label}
+              // a pointer over it or keyboard focus on it brings its curve forward
+              tabIndex={0}
+              className={`flex items-center gap-1.5 cursor-default rounded hover:text-stone-900 focus-visible:text-stone-900 ${HOVER_TRANSITION}`}
+              onMouseEnter={() => setHot(keyOf(p))}
+              onMouseLeave={() => setHot(null)}
+              onFocus={() => setHot(keyOf(p))}
+              onBlur={() => setHot(null)}
+            >
+              <span
+                className="inline-block w-4 h-0.5"
+                style={p.dash ? { borderTop: `2px dashed ${p.stroke}` } : { background: p.stroke }}
+              />
               {p.label}
             </span>
           ))}

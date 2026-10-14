@@ -9,7 +9,8 @@
 // ts (the maker's Thiele-Small figures): Fs Hz, Vas L, Sd cm², Re Ω, Bl T·m, Mms g, aes W (AES rating), disp L
 // (null where unpublished), Hvc / Hg (coil and gap heights) mm, and `pub` = every excursion figure the maker
 // publishes, one-way mm, with its formula and source URL. Do not add Xmax / xmax: src/lib/xmax derives them.
-// Subs must list a displacement (`disp`, L).
+// Subs must list a displacement (`disp`, L). Optional: surroundIn and dishDepthIn (the surround width and the cone's
+// depth, in), from the maker's dimension drawing only, with the drawing cited beside them.
 import type { RawDriver, SubDriver } from "../../types";
 
 /** The sub the planner starts on. */
@@ -46,6 +47,9 @@ export const BC18NBX_RAW: RawDriver<SubDriver> = {
   sens: 96.5,
   // B&C datasheet (bcspeakers.com product page, Oct 2026): depth 208 mm (8.19 in)
   depthIn: 8.19,
+  // surroundIn, dishDepthIn: not given. The maker's dimension drawing (one page,
+  // https://bcspeakers.com/uploads/products/dataSheetDrawings/2016_07_29_12_54_39_639_18NBX100_drawing.png, read Oct
+  // 2026) gives only 460 mm across, 422 mm cutout, 208 mm depth, 14 mm flange and a 157 mm magnet.
   note: "[datasheet, bcspeakers.com, Sep 2026] Neo, 1200 W nominal / 2400 W continuous, 96.5 dB, Xvar 12 mm, Le 1.85 mH, 20 lb. Displacement not published; 10.5 L assumed.",
 };
 
@@ -209,6 +213,9 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       aes: 1200,
       disp: 10.5,
     },
+    // surroundIn, dishDepthIn: not given. The maker's dimension drawing (one page,
+    // https://bcspeakers.com/uploads/products/dataSheetDrawings/2016_07_28_14_49_04_141_18TBX100_drawing.png, read
+    // Oct 2026) gives only 460 mm across, 422 mm cutout, 209 mm depth and a 16 mm flange.
     note: "[datasheet, bcspeakers.com, Sep 2026] Ferrite, 1200 W nominal / 2400 W continuous, 97 dB, Xvar 11 mm, 10.5 L displacement, 28 lb.",
   },
   {

@@ -26,6 +26,16 @@ const rememberSignedIn = (yes: boolean) => {
   }
 };
 
+/** The characters and length of a new document id, as Firestore's own auto ids. */
+const DOC_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const DOC_ID_LENGTH = 20;
+/** A new document id, random as Firestore's auto ids (both stores take any id). */
+const newDocId = () =>
+  Array.from(
+    crypto.getRandomValues(new Uint8Array(DOC_ID_LENGTH)),
+    (b) => DOC_ID_CHARS[b % DOC_ID_CHARS.length],
+  ).join("");
+
 /** What the UI holds before Firebase is fetched: the same sign-in calls, plus a prefetch for the sign-in button. */
 export interface FirebaseLoader {
   prefetch: () => void;
@@ -79,7 +89,7 @@ export function useConfigStore(collection: string) {
         if (un) un();
       };
     }
-    (async () => {
+    void (async () => {
       try {
         // boundary: the artifact host's `use("db")` resolves to the database handle (typed `unknown` in env.d.ts)
         const d = (
@@ -134,15 +144,21 @@ export function useConfigStore(collection: string) {
   const signOut = async () => {
     if (fb) await fb.signOut();
   };
-  const save = async (name: string, data: SavedConfigData): Promise<boolean> => {
+  /** writes `data` under `name` to the document `id`, or to a new one; false (and a message) when it fails */
+  const write = async (
+    id: string | undefined,
+    name: string,
+    data: SavedConfigData,
+    done: string,
+  ): Promise<boolean> => {
     if (!db || !name) return false;
     setCfgMsg("Saving…");
     try {
       await db
         .collection(collection)
-        .doc()
+        .doc(id)
         .set({ name, savedAt: Date.now(), ...data });
-      flash("Saved");
+      flash(done);
       return true;
     } catch (e) {
       flash(
@@ -154,6 +170,22 @@ export function useConfigStore(collection: string) {
       return false;
     }
   };
+  /** a new saved configuration */
+  const save = (name: string, data: SavedConfigData) => write(undefined, name, data, "Saved");
+  /** a new saved configuration under an id made here, so the caller can pick it: that id, or null when it fails */
+  const create = async (name: string, data: SavedConfigData) => {
+    const id = newDocId();
+    return (await write(id, name, data, "Saved")) ? id : null;
+  };
+  /** a saved configuration's data replaced by `data`, under `name` */
+  const overwrite = (id: string, name: string, data: SavedConfigData) =>
+    write(id, name, data, "Saved");
+  /** a saved configuration under a new name, its data kept */
+  const rename = ({ id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
+    write(id, name, data, "Renamed");
+  /** a copy of a saved configuration under `name` */
+  const duplicate = ({ id: _id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
+    write(undefined, name, data, "Duplicated");
   const remove = async (id: string) => {
     if (!db) return;
     try {
@@ -162,7 +194,23 @@ export function useConfigStore(collection: string) {
       flash("Couldn't delete");
     }
   };
-  return { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut, save, remove };
+  return {
+    db,
+    saved,
+    fb,
+    fbUser,
+    cfgMsg,
+    setCfgMsg,
+    flash,
+    signIn,
+    signOut,
+    save,
+    create,
+    overwrite,
+    rename,
+    duplicate,
+    remove,
+  };
 }
 
 /** What `useConfigStore` returns: the saved-config list and the actions on it. */

@@ -6,7 +6,7 @@
 // number 2πf/c; ka compares a piston's radius a with the wavelength; ρc/S is a plane wave's impedance across area S.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { besselJ, struveH1 } from "../src/lib/acoustics/bessel";
+import { besselJ, besselPair, struveH1 } from "../src/lib/acoustics/bessel";
 import {
   FLANGED_CIRCLE_END_RATIO,
   mouthImpedance,
@@ -26,15 +26,20 @@ import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/pa/calc";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
-import type { Complex, HornDesign, HornModel, HornPoint, HornSegment } from "../src/types";
+import type { Complex, HornDesign, HornModel, HornPoint, HornSegment, Matrix2 } from "../src/types";
 
 /** ρc: air's characteristic impedance, Pa·s/m (a plane wave's pressure over its particle speed). */
 const AIR_IMPEDANCE = AIR_DENSITY * SPEED_OF_SOUND;
 const SQUARE_INCH_TO_CM2 = 6.4516,
   M_TO_CM = 100;
 const waveNumberAt = (f: number) => (2 * Math.PI * f) / SPEED_OF_SOUND;
-/** A driver with its voice coil's inductance off: the box models have none, so checks against them need it off. */
+/**
+ * A driver with its voice coil's inductance off, for checks whose reference leaves the coil out (the piston formulas,
+ * a bank built by hand).
+ */
 const noInductance = (ts: HornDesign["driver"]): HornDesign["driver"] => ({ ...ts, Le: 0 });
+/** The inductances the checks against the box models run with, mH: none, and a coil like a 12″ mid's. */
+const BOX_MODEL_INDUCTANCES = [0, 1.5];
 
 /** Asserts that two numbers differ by at most `tolerance`. */
 const near = (actual: number, expected: number, tolerance: number, what: string) =>
@@ -291,8 +296,12 @@ const modelOf = (...args: Parameters<typeof hornModel>): HornModel => {
   return result;
 };
 
-test("with no horn and no radiation load it is the sealed box model", () => {
-  const driver = noInductance(DEFAULT_PA.mid.ts);
+test("with no horn and no radiation load it is the sealed box model, the coil's inductance included", () => {
+  for (const Le of BOX_MODEL_INDUCTANCES) sealedMatches({ ...DEFAULT_PA.mid.ts, Le });
+});
+
+/** The engine with no horn and no radiation load against closedBox, for one driver. */
+function sealedMatches(driver: HornDesign["driver"]) {
   const liters = 30,
     volts = 20;
   const sealed = closedBox(driver, liters, null, null, volts, {
@@ -316,7 +325,7 @@ test("with no horn and no radiation load it is the sealed box model", () => {
     near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
   });
   assert.strictEqual(horn.fb, null);
-});
+}
 
 test("with the radiation load on, a direct radiator still matches the box model low down", () => {
   // the air mass taken off the moving mass (8/3·ρa³) is the radiation reactance's mass at low ka: the two cancel there
@@ -327,8 +336,12 @@ test("with the radiation load on, a direct radiator still matches the box model 
   loaded.curve.forEach((p, i) => near(p.spl, unloaded.curve[i].spl, 0.2, `SPL at ${p.f} Hz`));
 });
 
-test("with no horn and no radiation load it is the vented box model", () => {
-  const driver = noInductance(DEFAULT_PA.sub.ts);
+test("with no horn and no radiation load it is the vented box model, the coil's inductance included", () => {
+  for (const Le of BOX_MODEL_INDUCTANCES) ventedMatches({ ...DEFAULT_PA.sub.ts, Le });
+});
+
+/** The engine with no horn and no radiation load against boxModel, for one driver. */
+function ventedMatches(driver: HornDesign["driver"]) {
   const liters = 180,
     ventSquareInches = 40,
     ventInches = 14,
@@ -361,7 +374,7 @@ test("with no horn and no radiation load it is the vented box model", () => {
     near(engine.portSpeed * highpass, box.vel, 1e-9, `vent speed ${at}`);
     near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
   });
-});
+}
 
 test("boxes side by side add 6 dB each doubling, and their mouths load each other", () => {
   const freqs = [60, 120, 250];
@@ -548,4 +561,152 @@ test("a driver with a negative or non-finite inductance is not modeled", () => {
       null,
       `Le ${Le}`,
     );
+});
+
+// The parabolic flare (Hornresp's PAR): the area grows linearly, as in a horn with flat, straight side walls between a
+// parallel top and bottom. The engine solves it exactly with Bessel functions (lib/acoustics/bessel besselPair).
+
+test("Bessel J₀, J₁, Y₀ and Y₁ (the parabolic flare's) match tables, the integral and their Wronskian", () => {
+  // tables (Abramowitz and Stegun, table 9.1)
+  const tables = [
+    { x: 1, j0: 0.7651976866, j1: 0.4400505857, y0: 0.0882569642, y1: -0.7812128213 },
+    { x: 10, j0: -0.2459357645, j1: 0.0434727462, y0: 0.0556711673, y1: 0.2490154242 },
+  ];
+  for (const t of tables) {
+    const b = besselPair(t.x);
+    for (const key of ["j0", "j1", "y0", "y1"] as const)
+      near(b[key], t[key], 1e-9, `${key}(${t.x})`);
+  }
+  // either side of the change from the series to Hankel's expansion (at 15), and far past it
+  for (const x of [
+    1e-4, 0.01, 0.3, 2.4048, 5, 9.7, 14, 14.999, 15, 15.001, 20, 37.3, 60, 300, 1e5,
+  ]) {
+    const b = besselPair(x);
+    // the first kind against the integral form
+    if (x < 1e3) {
+      near(b.j0, besselJ(0, x), 1e-10, `J0(${x})`);
+      near(b.j1, besselJ(1, x), 1e-10, `J1(${x})`);
+    }
+    // J₁Y₀ − J₀Y₁ = 2/(πx), relative
+    near((b.j1 * b.y0 - b.j0 * b.y1) * ((Math.PI * x) / 2), 1, 1e-10, `Wronskian at ${x}`);
+    // Y₀' = −Y₁
+    if (x > 0.1) {
+      const step = Math.min(1e-5 * x, 1e-4);
+      const slope = (besselPair(x + step).y0 - besselPair(x - step).y0) / (2 * step);
+      near(slope, -b.y1, 1e-6 * Math.max(1, Math.abs(b.y1)), `Y0'(${x})`);
+    }
+  }
+});
+
+/** A parabolic flare's forward-wave impedance at area S (m²), ξ meters from its zero: j(ρc/S)·H₀⁽²⁾(kξ)/H₁⁽²⁾(kξ). */
+const parForwardImpedance = (area: number, xi: number, f: number): Complex => {
+  const { j0, j1, y0, y1 } = besselPair(waveNumberAt(f) * xi);
+  return multiply(complex(0, AIR_IMPEDANCE / area), divide(complex(j0, -y0), complex(j1, -y1)));
+};
+
+test("a parabolic horn ended in its own forward wave shows the endless horn's throat impedance", () => {
+  // 1200 cm² to 4500 cm² over 50 cm: the area is zero L·S₁/(S₂ − S₁) before the throat
+  const horn: HornSegment = { profile: HORN_PROFILE.parabolic, s1: 1200, s2: 4500, length: 50 };
+  const zeroToThroat = (0.5 * 1200) / (4500 - 1200);
+  for (const f of [10, 40, 100, 400, 2000]) {
+    const throat = inputImpedance(
+      segmentMatrix(horn, f),
+      parForwardImpedance(0.45, zeroToThroat + 0.5, f),
+    );
+    nearComplex(throat, parForwardImpedance(0.12, zeroToThroat, f), 1e-8, `throat at ${f} Hz`);
+  }
+  // far from its zero the forward wave is a plane wave's, ρc/S
+  nearComplex(parForwardImpedance(0.45, 50, 2000), complex(AIR_IMPEDANCE / 0.45), 1e-3, "plane");
+});
+
+/** A straight duct's plane-wave matrix: `area` m², `lengthM` m long. */
+const planeWaveMatrix = (area: number, lengthM: number, f: number): Matrix2 => {
+  const phase = waveNumberAt(f) * lengthM,
+    z = AIR_IMPEDANCE / area;
+  return [
+    complex(Math.cos(phase)),
+    complex(0, z * Math.sin(phase)),
+    complex(0, Math.sin(phase) / z),
+    complex(Math.cos(phase)),
+  ];
+};
+
+test("a parabolic segment with equal areas is the straight duct, and one that barely flares is close to it", () => {
+  for (const f of [20, 85.75, 300, 1234]) {
+    const reference = planeWaveMatrix(0.01, 1, f);
+    const equal = segmentMatrix(
+      { profile: HORN_PROFILE.parabolic, s1: 100, s2: 100, length: 100 },
+      f,
+    );
+    for (let i = 0; i < 4; i++) nearComplex(equal[i], reference[i], 1e-9, `equal, ${i}, ${f} Hz`);
+    // 0.1 % wider at the end: the Bessel solutions far from their zero (kξ up to 20 000), within about that much
+    const flared = segmentMatrix(
+      { profile: HORN_PROFILE.parabolic, s1: 100, s2: 100.1, length: 100 },
+      f,
+    );
+    const size = Math.max(...reference.map(abs));
+    for (let i = 0; i < 4; i++)
+      assert.ok(
+        abs(subtract(flared[i], reference[i])) < 2e-3 * size,
+        `flared, element ${i}, ${f} Hz`,
+      );
+  }
+});
+
+/** The parabolic flare as `n` short conical segments, their ends on its linear area law. */
+const conicalSteps = (horn: HornSegment, n: number): HornSegment[] =>
+  Array.from({ length: n }, (_, i) => ({
+    profile: HORN_PROFILE.conical,
+    s1: horn.s1 + ((horn.s2 - horn.s1) * i) / n,
+    s2: horn.s1 + ((horn.s2 - horn.s1) * (i + 1)) / n,
+    length: horn.length / n,
+  }));
+
+test("a fine run of short conical segments on the parabolic law converges to the exact parabolic segment", () => {
+  const horn: HornSegment = { profile: HORN_PROFILE.parabolic, s1: 2070, s2: 4500, length: 50 };
+  const narrowing: HornSegment = {
+    profile: HORN_PROFILE.parabolic,
+    s1: 3000,
+    s2: 900,
+    length: 40,
+  };
+  for (const segment of [horn, narrowing])
+    for (const f of [30, 120, 600]) {
+      const load = mouthImpedance(segment.s2 / SQ_CM_PER_SQ_M, f, 2, 1);
+      const exact = inputImpedance(segmentMatrix(segment, f), load);
+      const errors = [4, 16, 64, 256].map((n) => {
+        const stepped = inputImpedance(chainMatrix(conicalSteps(segment, n), f), load);
+        return abs(subtract(stepped, exact)) / abs(exact);
+      });
+      for (let i = 1; i < errors.length; i++)
+        assert.ok(errors[i] < errors[i - 1] / 8, `${f} Hz: ${errors.join(", ")} fall as 1/n²`);
+      assert.ok(errors[3] < 1e-4, `${f} Hz: 256 steps within 1e-4 (${errors[3]})`);
+    }
+  // the real power a lossless chain takes in comes out, the narrowing segment included
+  for (const f of [25, 400]) {
+    const m = chainMatrix([narrowing, horn], f);
+    const flowOut = complex(1),
+      pressureOut = multiply(mouthImpedance(0.45, f, 2, 1), flowOut);
+    const pressureIn = add(multiply(m[0], pressureOut), multiply(m[1], flowOut)),
+      flowIn = add(multiply(m[2], pressureOut), multiply(m[3], flowOut));
+    near(
+      (pressureIn.re * flowIn.re + pressureIn.im * flowIn.im) / pressureOut.re,
+      1,
+      1e-8,
+      `power at ${f} Hz`,
+    );
+  }
+});
+
+test("a sub bin's parabolic flare and 64 conical steps of it model within 0.05 dB", () => {
+  const horn: HornSegment = { profile: HORN_PROFILE.parabolic, s1: 2070, s2: 4500, length: 50 };
+  const design: HornDesign = {
+    ...directRadiator(DEFAULT_PA.sub.ts, { liters: 162, port: { area: 600, length: 60 } }),
+    segments: [horn],
+  };
+  const freqs = hornGrid(15, 1000, 80);
+  const exact = modelOf(design, freqs, 10).curve,
+    stepped = modelOf({ ...design, segments: conicalSteps(horn, 64) }, freqs, 10).curve;
+  const worst = Math.max(...exact.map((p, i) => Math.abs(p.spl - stepped[i].spl)));
+  assert.ok(worst < 0.05, `worst gap ${worst} dB`);
 });

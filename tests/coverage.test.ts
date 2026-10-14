@@ -30,13 +30,8 @@ import {
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
-import {
-  DEFAULT_COVERAGE_LAYOUT,
-  boxReach,
-  fitted,
-  fromStored,
-  stackInRoom,
-} from "../src/pages/coverage/useCoverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { boxReach, fitted, fromStored, stackInRoom } from "../src/pages/coverage/useCoverageLayout";
 import {
   COVERAGE_LEVEL_REF,
   COVERAGE_TARGET_DB,
@@ -468,7 +463,9 @@ test("coverage: the reverberant field is the textbook Lw + 10·log10(4/R), from 
     R = A / (1 - alpha);
   // the horn's power from its level at 1 m and Molloy's Q for its coverage at 2 kHz (degrees)
   const horn = curveLevelAt(full.horn, 2000) ?? 0;
-  const [hh, hv] = slot.hornHalf.map((a) => (a * 180) / Math.PI);
+  const half = slot.hornHalf.horn;
+  assert.ok(half, "the horn's half angles");
+  const [hh, hv] = half.map((a) => (a * 180) / Math.PI);
   const sinDeg = (d: number) => Math.sin((d * Math.PI) / 180);
   const q = 180 / ((Math.asin(sinDeg(hh) * sinDeg(hv)) * 180) / Math.PI);
   // Lw (re ρc = 400): Lp(1 m) + 10·log10(4π / Q); two horns; less (1 − ᾱ) for the first reflection, kept as images

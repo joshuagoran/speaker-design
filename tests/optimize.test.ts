@@ -9,11 +9,11 @@ import {
   roomRequiredSpl,
   SUB_BAND_HZ,
   AMP_WATTS_MAX,
-  ventSizesFor,
   PA_REACH_WORDS,
   paOptimizerWalls,
   paSearchDesign,
 } from "../src/lib/pa/optimize";
+import { ventSizesFor } from "../src/lib/optimizer/searchSpace";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { panelIn } from "../src/lib/panel";
@@ -485,10 +485,11 @@ test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing 
 });
 
 test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", () => {
-  // "blocky" under a $750 budget and 90 lb, with the vent kept to its bottom slot: nothing that passes keeps the
+  // "blocky" under a $750 budget and 80 lb, with the vent kept to its bottom slot: nothing that passes keeps the
   // design's output (round tubes with elbows keep the round-tube seeds' output for less, so they no longer get here;
-  // and a driver below its minimum crossover only warns now, so $800 keeps it)
-  const lim = { maxLb: 90, budget: 750 };
+  // and a driver below its minimum crossover only warns now, so $800 keeps it). With datasheet Le, 90 lb reaches it
+  // once the closest design is put on the sliders, so the limit is 80 lb (119.4 dB, short of 122.3 dB)
+  const lim = { maxLb: 80, budget: 750 };
   const out = optimizePaStack({
     ...base,
     ...lim,
@@ -509,13 +510,14 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under a $750 budget and 95 lb, with the vent kept to its bottom slot, nothing that passes keeps the
-  // output; $825 does
+  // "blocky" under a $900 budget and 82 lb, with the vent kept to its bottom slot, nothing that passes keeps the F3;
+  // 91 lb does. (Before datasheet Le this was $750 and 95 lb, offering $825; with Le that closest design, once on the
+  // sliders, keeps the goals.)
   const out = optimizePaStack({
     ...base,
     cur: pick(SEED_NAMES.blocky),
-    maxLb: 95,
-    budget: 750,
+    maxLb: 82,
+    budget: 900,
     goal: "cheaper",
     locks: { vent: true },
   });
@@ -523,7 +525,7 @@ test("with only a closest card, the near miss still offers the looser limit that
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];
   assert.ok(
-    opts.some((o) => o.set.budget === 825),
+    opts.some((o) => o.set.maxLb === 91),
     JSON.stringify(opts.map((o) => o.text)),
   );
 });
@@ -549,9 +551,10 @@ test("Cheaper: fewest warnings, then strictly the cheapest, with weight breaking
 });
 
 test("a horn that keeps up only below full mid power turns the mid down instead of ruling the design out", () => {
-  // a 20 W HF amp, locked with its driver and horn, and every band asked to match the one below flat out: the cheapest
-  // mids at the full 2000 W outrun it
-  const c = { ...pick(SEED_NAMES.lightBlock), tilt: 0, hfTilt: 0, hfAmpW: 20 },
+  // a 10 W HF amp, locked with its driver and horn, and every band asked to match the one below flat out: the cheapest
+  // mids at the full 2000 W outrun it (20 W before datasheet Le; with the mid's Le the horn keeps up at 20 W, 2.2 dB to
+  // spare)
+  const c = { ...pick(SEED_NAMES.lightBlock), tilt: 0, hfTilt: 0, hfAmpW: 10 },
     lim = { maxLb: base.maxLb, budget: base.budget };
   const out = optimizePaStack({
     ...base,
@@ -597,13 +600,23 @@ test("a mid that keeps up only below full sub power turns the sub down instead o
 
 test("a band is turned down only as far as the keep-up check needs, not level with the band above", () => {
   // the sub outruns this mid at full power; it comes down until the mid is within the check's slack, which leaves it
-  // more output than turning it down until the mid is exactly level
+  // more output than turning it down until the mid is exactly level. The mid's amp is locked at 250 W: with datasheet
+  // Le, light block's Louder card at a free mid amp keeps up at full sub power, so nothing comes down
   const lim = { maxLb: base.maxLb, budget: base.budget };
-  const out = optimizePaStack({ ...base, cur: pick(SEED_NAMES.lightBlock), goals: ["louder"] });
+  const out = optimizePaStack({
+    ...base,
+    cur: { ...pick(SEED_NAMES.lightBlock), mAmpW: 250 },
+    goals: ["louder"],
+    locks: { mAmpW: true },
+  });
   const k = out.cards[0];
   assert.ok(k, out.goalMissing ?? "no card");
   const m = evaluateDesign(k.config)!;
   assert.deepEqual(designProblems(m, lim), [], "the card passes as it is");
+  assert.ok(
+    failsOn(evaluateDesign({ ...k.config, ampW: AMP_WATTS_MAX.ampW }), lim, "midKeepsUp"),
+    "at full sub power the mid would run out first",
+  );
   assert.ok(m.midGap < -0.1 && m.midGap >= -KEEP_UP_SLACK_DB, `mid gap ${m.midGap.toFixed(2)} dB`);
 });
 

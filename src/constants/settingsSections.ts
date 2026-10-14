@@ -30,3 +30,32 @@ export const CUTLIST_SETTINGS_SECTIONS = {
   cuts: "Cuts",
 } as const;
 export type CutlistSettingsSection = keyof typeof CUTLIST_SETTINGS_SECTIONS;
+
+/** The Speaker page settings column's fold sections, by id, and the name each shows. */
+export const SPEAKER_SETTINGS_SECTIONS = {
+  speaker: "Speaker",
+  construction: "Construction",
+  chambers: "Chambers and drivers",
+  bands: "Bands and filters",
+  look: "Look",
+  optimizer: "Optimizer",
+} as const;
+export type SpeakerSettingsSection = keyof typeof SPEAKER_SETTINGS_SECTIONS;
+
+/** The Stack settings column's fold sections, by id, and the name each shows. */
+export const STACK_SETTINGS_SECTIONS = {
+  stack: "Stack",
+  members: "Boxes",
+  crossovers: "Crossovers",
+  optimizer: "Optimizer",
+} as const;
+export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;
+
+/** The Space settings column's fold sections, by id, and the name each shows. */
+export const SPACE_SETTINGS_SECTIONS = {
+  space: "Space",
+  room: "Room and listeners",
+  placements: "Placements",
+  hardware: "Amp power and alignment",
+} as const;
+export type SpaceSettingsSection = keyof typeof SPACE_SETTINGS_SECTIONS;

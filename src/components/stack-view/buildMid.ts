@@ -1,6 +1,6 @@
 import { circlePath } from "./geometry";
 import { buildCabinet } from "./buildCabinet";
-import { buildCone } from "./buildCone";
+import { buildCone, paConeRadius } from "./buildCone";
 import type { SceneContext } from "./sceneContext";
 import type { BoxBracing, BoxHardwarePlan, BoxKeepOut, Dims3, MidDriver } from "../../types";
 import { buildHardware } from "./buildHardware";
@@ -36,7 +36,7 @@ export function buildMid(
     hardware?: BoxHardwarePlan | null;
   },
 ): { top: number } {
-  const r = mid.size / 2 - 0.9;
+  const r = paConeRadius(mid.size);
   xs.forEach((x) => {
     const z =
       baffleZ ?? buildCabinet(ctx, { dims: box, baffleHoles: [circlePath(0, 0, r)], y, x }).baffleZ;

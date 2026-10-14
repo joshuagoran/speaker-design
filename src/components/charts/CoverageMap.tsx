@@ -6,14 +6,13 @@ import { formatSigned } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/pa/coverage";
 import { materialAlpha } from "../../lib/pa/roomAcoustics";
 import type {
-  CoverageBox,
   CoverageGridView,
-  CoverageLayout,
+  CoverageRoom,
   CoverageStack,
+  FloorPlacement,
   FloorPoint,
   RoomSide,
 } from "../../types";
-import type { CoverageLayoutState } from "../../pages/coverage/useCoverageLayout";
 import { SVG_FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
@@ -36,21 +35,63 @@ const HANDLE_FT = 5;
 const EDGE_FT = 30;
 const PAD = { l: 30, r: 10, t: 24, b: 24 };
 
+/** The quiet line's font size and the width of one of its characters, px (the map's font). */
+const QUIET_FONT_PX = 12;
+const QUIET_CHAR_PX = 7;
+
+/** The quiet line as one line, or as two at the space nearest its middle when the floor is too narrow for one. */
+function quietLines(text: string, widthPx: number): string[] {
+  if (text.length * QUIET_CHAR_PX <= widthPx - 16) return [text];
+  const mid = text.length / 2;
+  const cut = [...text.matchAll(/ /g)]
+    .map((m) => m.index)
+    .reduce((a, b) => (Math.abs(b - mid) < Math.abs(a - mid) ? b : a), 0);
+  return [text.slice(0, cut), text.slice(cut + 1)];
+}
+
 type Drag =
-  | { kind: "stack"; i: 0 | 1; dx: number; dy: number }
-  | { kind: "aim"; i: 0 | 1 }
-  | { kind: "cluster"; dx: number; dy: number }
+  | { kind: "box"; i: number; dx: number; dy: number }
+  | { kind: "aim"; i: number }
   | { kind: "listener" };
+
+/**
+ * A box the map draws, at its spot and aim (ft, degrees): its label, its footprint (in), the horizontal coverage of its
+ * horn to draw (null: none), and whether it has a handle to turn it.
+ */
+export interface MapBox extends FloorPlacement {
+  label: string;
+  footprint: CoverageStack["footprint"];
+  covH: number | null;
+  turnable: boolean;
+}
+
+/** What a drag on the map does: move box `i` to a spot, turn it to face one, or move the listener. */
+export interface MapActions {
+  moveBox: (i: number, p: FloorPoint) => void;
+  aimBox: (i: number, p: FloorPoint) => void;
+  moveListener: (p: FloorPoint) => void;
+}
 
 interface Props {
   /** the grid on show, with the room and target it was computed for (an older one while the next computes) */
   view: CoverageGridView | null;
-  layout: CoverageLayout;
-  actions: Pick<CoverageLayoutState, "moveStack" | "aimStack" | "moveCluster" | "moveListener">;
-  boxes: readonly CoverageBox[];
-  stack: Pick<CoverageStack, "horn" | "footprint">;
+  room: CoverageRoom;
+  listener: FloorPoint;
+  actions: MapActions;
+  boxes: readonly MapBox[];
+  /**
+   * the boxes picked (their indexes; a mirrored pair's two boxes are one pick) and the pick of one by a press on it or
+   * its aim dot; both absent, the map has no pick
+   */
+  selected?: readonly number[];
+  onSelect?: (i: number) => void;
   /** the most height the map may take, px */
   maxHeight: number;
+  /**
+   * a room with no sound in it: its line, centered on the floor, which is drawn in a neutral fill (the palette's edge
+   * gray, not a level on the scale); absent, the floor shows the grid's levels
+   */
+  quiet?: string;
   /** whether a finer or newer grid is on its way: aria-busy only, no badge (the fine pass is quick) */
   busy: boolean;
 }
@@ -60,9 +101,19 @@ interface Props {
  * coverage edge and every 3 dB step. Drag a stack to move it, its dot to turn it, the center subs, or the listener (or tap
  * the floor to put the listener there).
  */
-export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, busy }: Props) {
+export function CoverageMap({
+  view,
+  room,
+  listener,
+  actions,
+  boxes,
+  selected = [],
+  onSelect,
+  maxHeight,
+  busy,
+  quiet,
+}: Props) {
   const pal = usePalette();
-  const { room, listener } = layout;
   const [box, cw] = useElementWidth(560);
   const k = Math.max(
     2,
@@ -120,10 +171,8 @@ export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, bu
     );
   }, [view, gx, gy, gw, gh]);
 
-  const stackBoxes = boxes.filter((b) => b.kind === "stack");
-  const sideFt = { w: stack.footprint.w / 12, d: stack.footprint.d / 12 };
-  const boxPx = Math.max(14, sideFt.w * k);
-  const handle = (b: CoverageBox) => {
+  const boxPx = (b: MapBox) => Math.max(14, (b.footprint.w / 12) * k);
+  const handle = (b: MapBox) => {
     const a = (b.aim * Math.PI) / 180;
     return { x: px(b.x + Math.sin(a) * HANDLE_FT), y: py(b.y + Math.cos(a) * HANDLE_FT) };
   };
@@ -137,28 +186,27 @@ export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, bu
   const apply = (d: Drag, X: number, Y: number) => {
     const p = toFt(X, Y);
     if (d.kind === "listener") actions.moveListener(p);
-    else if (d.kind === "aim") actions.aimStack(d.i, p);
-    else if (d.kind === "stack") actions.moveStack(d.i, { x: p.x - d.dx, y: p.y - d.dy });
-    else actions.moveCluster({ x: p.x - d.dx, y: p.y - d.dy });
+    else if (d.kind === "aim") actions.aimBox(d.i, p);
+    else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy });
   };
   const down = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
       p = toFt(X, Y);
     const near = (x: number, y: number, r: number) => Math.hypot(X - x, Y - y) < r;
     let d: Drag = { kind: "listener" };
-    const aimAt = stackBoxes.findIndex((b) => {
+    const aimAt = boxes.findIndex((b) => {
       const hp = handle(b);
-      return near(hp.x, hp.y, 16);
+      return b.turnable && near(hp.x, hp.y, 16);
     });
-    const onStack = stackBoxes.findIndex((b) => near(px(b.x), py(b.y), boxPx / 2 + 8));
-    const onSub = boxes.some((b) => b.kind === "sub" && near(px(b.x), py(b.y), boxPx / 2 + 8));
-    if (aimAt === 0 || aimAt === 1) d = { kind: "aim", i: aimAt };
-    else if (onStack === 0 || onStack === 1) {
-      const s = layout.stacks[onStack];
-      d = { kind: "stack", i: onStack, dx: p.x - s.x, dy: p.y - s.y };
-    } else if (onSub)
-      d = { kind: "cluster", dx: p.x - layout.cluster.x, dy: p.y - layout.cluster.y };
-    else if (near(px(listener.x), py(listener.y), 18)) d = { kind: "listener" };
+    const onBox = boxes.findIndex((b) => near(px(b.x), py(b.y), boxPx(b) / 2 + 8));
+    if (aimAt >= 0) {
+      d = { kind: "aim", i: aimAt };
+      onSelect?.(aimAt);
+    } else if (onBox >= 0) {
+      onSelect?.(onBox);
+      const b = boxes[onBox];
+      d = { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
+    } else if (near(px(listener.x), py(listener.y), 18)) d = { kind: "listener" };
     else if (p.x < -room.widthFt / 2 || p.x > room.widthFt / 2 || p.y < 0 || p.y > room.lengthFt)
       return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -258,7 +306,7 @@ export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, bu
             <rect x={PAD.l} y={PAD.t} width={w} height={h} />
           </clipPath>
         </defs>
-        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={ON_DATA.edge} />
+        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={quiet ? pal.edge : ON_DATA.edge} />
         <g clipPath="url(#coverage-room)">
           {image && (
             <image
@@ -283,25 +331,47 @@ export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, bu
           ))}
         </g>
         <g clipPath="url(#coverage-room)">
-          {stack.horn.covH > 0 &&
-            stackBoxes.flatMap((b) =>
-              [-1, 1].map((sg) => {
-                const a = ((b.aim + (sg * stack.horn.covH) / 2) * Math.PI) / 180;
-                const p = {
-                  x1: px(b.x),
-                  y1: py(b.y),
-                  x2: px(b.x + Math.sin(a) * EDGE_FT),
-                  y2: py(b.y + Math.cos(a) * EDGE_FT),
-                };
-                return (
-                  <g key={b.label + sg}>
-                    <line {...p} stroke={ON_DATA.ink} strokeOpacity="0.5" strokeWidth="2.5" />
-                    <line {...p} stroke={ON_DATA.white} strokeWidth="1.2" strokeDasharray="4 4" />
-                  </g>
-                );
-              }),
-            )}
+          {boxes.flatMap((b, i) =>
+            b.covH
+              ? [-1, 1].map((sg) => {
+                  const a = ((b.aim + (sg * (b.covH ?? 0)) / 2) * Math.PI) / 180;
+                  const p = {
+                    x1: px(b.x),
+                    y1: py(b.y),
+                    x2: px(b.x + Math.sin(a) * EDGE_FT),
+                    y2: py(b.y + Math.cos(a) * EDGE_FT),
+                  };
+                  return (
+                    <g key={`${i}${sg}`}>
+                      <line {...p} stroke={ON_DATA.ink} strokeOpacity="0.5" strokeWidth="2.5" />
+                      <line {...p} stroke={ON_DATA.white} strokeWidth="1.2" strokeDasharray="4 4" />
+                    </g>
+                  );
+                })
+              : [],
+          )}
         </g>
+        {quiet && (
+          <text
+            x={PAD.l + w / 2}
+            y={PAD.t + h / 2}
+            textAnchor="middle"
+            fill={pal.muted}
+            {...font}
+            fontSize={QUIET_FONT_PX}
+            pointerEvents="none"
+          >
+            {quietLines(quiet, w).map((line, i, all) => (
+              <tspan
+                key={line}
+                x={PAD.l + w / 2}
+                dy={i === 0 ? `${-(all.length - 1) * 0.6}em` : "1.2em"}
+              >
+                {line}
+              </tspan>
+            ))}
+          </text>
+        )}
         {sides.map(([side, x1, y1, x2, y2]) => (
           <line
             key={side}
@@ -339,10 +409,11 @@ export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, bu
         ))}
         {boxes.map((b, i) => {
           const hp = handle(b);
-          const bh = Math.max(14, sideFt.d * k);
+          const bw = boxPx(b),
+            bh = Math.max(14, (b.footprint.d / 12) * k);
           return (
             <g key={b.label + i}>
-              {b.kind === "stack" && (
+              {b.turnable && (
                 <>
                   <line
                     x1={px(b.x)}
@@ -365,14 +436,14 @@ export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, bu
               )}
               <g transform={`translate(${px(b.x)},${py(b.y)}) rotate(${-b.aim})`}>
                 <rect
-                  x={-boxPx / 2}
+                  x={-bw / 2}
                   y={-bh / 2}
-                  width={boxPx}
+                  width={bw}
                   height={bh}
                   rx="3"
                   fill={ON_DATA.ink}
-                  stroke={ON_DATA.white}
-                  strokeWidth="1.5"
+                  stroke={selected.includes(i) ? ON_DATA.cyan : ON_DATA.white}
+                  strokeWidth={selected.includes(i) ? 3 : 1.5}
                 />
               </g>
               <text

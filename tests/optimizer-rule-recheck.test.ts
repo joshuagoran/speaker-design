@@ -20,8 +20,24 @@ const input: PaOptimizerInput = {
   locks: {},
 };
 
+/**
+ * Light block's Louder card before datasheet Le (Oct 2026): its sub, the 30 × 25 × 31 box and its side ducts, locked.
+ * With Le the search picks a narrower box with slots there, where the estimate and the rule read the mid's gap alike.
+ */
+const WIDE_BOX: PaOptimizerInput = {
+  ...input,
+  cur: {
+    ...input.cur,
+    sub: "emnsw4018",
+    cDim: { w: 30, h: 25, d: 31 },
+    portStyle: "vslots",
+    cVent: { dia: 4, len: 19, nt: 2, slotH: 3, throat: 3 },
+  },
+  locks: { sub: true, vent: true, subDim: { w: "exact", h: "exact", d: "exact" } },
+};
+
 test("a shown card keeps the mid up with the sub by the bracing rule, not only by the estimate", () => {
-  const out = optimizePaStack(input);
+  const out = optimizePaStack(WIDE_BOX);
   const k = out.cards[0];
   assert.ok(k, out.goalMissing ?? "no card");
   // a wide box with a screwed back and a side duct each side: the rule's window frames (jointed rails on a 28″+ back)
@@ -34,14 +50,14 @@ test("a shown card keeps the mid up with the sub by the bracing rule, not only b
   // the card shows the rule's numbers and passes every check by them
   assert.equal(k.metrics.out, rule.out);
   assert.equal(k.metrics.heaviest, rule.heaviest);
-  assert.deepEqual(designProblems(rule, input), [], "the card passes by the rule");
+  assert.deepEqual(designProblems(rule, WIDE_BOX), [], "the card passes by the rule");
   assert.ok(
     rule.midGap >= -KEEP_UP_SLACK_DB,
     `the mid keeps up by the rule: ${rule.midGap.toFixed(2)} dB`,
   );
   // the estimate reads the mid's gap over a tenth of a dB kinder: picked and turned down by it, a card can sit past the
   // check's slack by the rule (with the estimate before its wide-back fit, PR #102, a card here read -0.40 dB by the
-  // estimate and -0.56 dB by the rule)
+  // estimate and -0.56 dB by the rule; with Le this card reads -0.12 dB by the estimate and -0.29 dB by the rule)
   assert.ok(
     estimate.midGap > rule.midGap + 0.1,
     `estimate ${estimate.midGap.toFixed(2)} dB, rule ${rule.midGap.toFixed(2)} dB`,
@@ -69,30 +85,36 @@ test("every card and the near miss's closest design show the rule's numbers", ()
 /** Light block with the sub, its vent and the box height locked: its wide boxes are where the estimate and the rule part. */
 const LOCKED: PaOptimizerInput["locks"] = { sub: true, vent: true, subDim: { h: "exact" } };
 
-test("with the sub, vent and height locked, every card both optimizers show passes by the rule", () => {
-  // light block's wide boxes: by the searches' brace estimate the loud and low ones sit just under the 125 lb limit, and
-  // by the rule several are over it (before the re-check, Fully optimize's Louder card was a 39 × 24 × 32 box at 129.5 lb,
-  // 117.7 lb by the estimate)
-  for (const goal of ["lower", "louder"] as const satisfies PaGoal[]) {
-    const run: PaOptimizerInput = {
-      ...input,
-      goals: [goal],
-      locks: LOCKED,
-    };
-    for (const [name, out] of [
-      ["Improve", optimizePaStack(run)],
-      ["Fully optimize", optimizePaStackExact(run)],
-    ] as const) {
-      assert.ok(out.cards.length, `${goal}, ${name}: cards`);
-      for (const k of out.cards)
-        assert.deepEqual(
-          designProblems(evaluateDesign(k.config), run),
-          [],
-          `${goal}, ${name}: ${k.label} (${k.metrics.heaviest.toFixed(1)} lb)`,
-        );
+// about 18 s alone (four runs, two of them Fully optimize); the full suite runs files in parallel, so it needs room past
+// the 30 s default, as the 110 lb test below
+test(
+  "with the sub, vent and height locked, every card both optimizers show passes by the rule",
+  { timeout: 60_000 },
+  () => {
+    // light block's wide boxes: by the searches' brace estimate the loud and low ones sit just under the 125 lb limit, and
+    // by the rule several are over it (before the re-check, Fully optimize's Louder card was a 39 × 24 × 32 box at 129.5 lb,
+    // 117.7 lb by the estimate)
+    for (const goal of ["lower", "louder"] as const satisfies PaGoal[]) {
+      const run: PaOptimizerInput = {
+        ...input,
+        goals: [goal],
+        locks: LOCKED,
+      };
+      for (const [name, out] of [
+        ["Improve", optimizePaStack(run)],
+        ["Fully optimize", optimizePaStackExact(run)],
+      ] as const) {
+        assert.ok(out.cards.length, `${goal}, ${name}: cards`);
+        for (const k of out.cards)
+          assert.deepEqual(
+            designProblems(evaluateDesign(k.config), run),
+            [],
+            `${goal}, ${name}: ${k.label} (${k.metrics.heaviest.toFixed(1)} lb)`,
+          );
+      }
     }
-  }
-});
+  },
+);
 
 test("Improve's further finalists: a Louder card the first batch by the estimate didn't hold", () => {
   // light block, locked: every Louder finalist by the estimate is over 125 lb by the rule; the next box pairs by the

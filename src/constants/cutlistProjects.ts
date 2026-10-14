@@ -1,13 +1,38 @@
 import type { ProjectId } from "./pages";
 
-/**
- * What the Cutlist page says for each project: what one set of boxes is called, the set-count choices and their
- * label, and where the boxes come from.
- */
+/** What one project's Cutlist page says: what one set of boxes is called, the set-count choices and their label, and where the boxes come from. */
+export interface CutlistProject {
+  set: string;
+  setsLabel: string;
+  sets: readonly number[];
+  source: string;
+}
+
+/** What the Cutlist page says for each project that has one (the Space has none). */
 export const CUTLIST_PROJECTS = {
-  pa: { set: "stack", setsLabel: "Stacks", sets: [1, 2, 4], source: "the Design page's boxes" },
-  hifi: { set: "speaker", setsLabel: "Speakers", sets: [1, 2, 4], source: "the Hi-fi page's box" },
-} as const satisfies Record<
-  ProjectId,
-  { set: string; setsLabel: string; sets: readonly number[]; source: string }
->;
+  pa: { set: "stack", setsLabel: "Stacks", sets: [1, 2, 4], source: "the stack's boxes" },
+  hifi: { set: "speaker", setsLabel: "Speakers", sets: [1, 2, 4], source: "the speaker's box" },
+  speaker: {
+    set: "speaker",
+    setsLabel: "Speakers",
+    sets: [1, 2, 4],
+    source: "the speaker on the Speaker page",
+  },
+  stack: {
+    set: "stack",
+    setsLabel: "Stacks",
+    sets: [1, 2, 4],
+    source: "the boxes on the Stack page",
+  },
+} as const satisfies Record<Exclude<ProjectId, "space">, CutlistProject>;
+
+/** A project with a Cutlist page. */
+export type CutlistProjectId = keyof typeof CUTLIST_PROJECTS;
+
+/** The projects whose cutlist choices this browser keeps (the PA stack's live in its planner and its saves). */
+export const CUTLIST_PROJECT = {
+  hifi: "hifi",
+  speaker: "speaker",
+  stack: "stack",
+} as const satisfies Record<string, CutlistProjectId>;
+export type StoredCutlistProject = (typeof CUTLIST_PROJECT)[keyof typeof CUTLIST_PROJECT];

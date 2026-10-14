@@ -7,4 +7,5 @@ build/build.sh pages
 echo
 echo "artifact page  http://127.0.0.1:8901/stack-planner.html"
 echo "pages build    http://127.0.0.1:8901/site/"
+echo "notes page     http://127.0.0.1:8901/site/notes/"
 cd dist && exec python3 -m http.server 8901

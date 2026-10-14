@@ -15,7 +15,7 @@ import {
 import { PANEL_STOCK } from "../src/data/catalog/plywood";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
 import { boxInternalLiters, subWeightLb } from "../src/lib/pa/calc";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { paOptimizerWalls } from "../src/lib/pa/optimize";
 import { PA_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 

@@ -1,10 +1,9 @@
 import { useMemo } from "react";
-import { AMP_POWER_TEXT, PAST_LIMIT_ON_PEAKS } from "../../constants/ampPower";
-import { SUB_LIMIT_NAMES } from "../../constants/limits";
+import { AMP_POWER_TEXT } from "../../constants/ampPower";
 import { SectionHeading } from "../../components/ui/SectionHeading";
+import { AmpPowerRows } from "../../components/stats/AmpPowerRows";
 import { DRIVER_PART_NAMES } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
-import { formatSigned, formatWatts } from "../../lib/format";
 import {
   channelPower,
   headroomDb,
@@ -40,12 +39,6 @@ interface Props {
   /** the system's gain to the target, dB (0 at its limit) */
   gain: number;
 }
-
-const th = "py-1 pr-3 font-normal whitespace-nowrap";
-const td = "py-1 pr-3 align-top whitespace-nowrap";
-/** A peak figure's color: the status red once the peaks pass the limit. */
-const tone = (r: Pick<ChannelPower, "pastLimit">) =>
-  r.pastLimit ? "text-red-700" : "text-stone-900";
 
 /**
  * Amp power per driver at the target: the model's power at each driver's max, brought down by the headroom to it, and
@@ -89,59 +82,11 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
   return (
     <div>
       <SectionHeading className="mb-1">{AMP_POWER_TEXT.heading}</SectionHeading>
-      <div className="overflow-x-auto">
-        <table className="text-sm w-full min-w-[760px] table-fixed border-collapse tabular-nums">
-          {/* wide enough at the least width that no cell wraps */}
-          <colgroup>
-            <col className="w-[19%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
-            <col className="w-[11%]" />
-            <col className="w-[11%]" />
-            <col className="w-[14%]" />
-            <col className="w-[25%]" />
-          </colgroup>
-          <thead>
-            <tr className="text-stone-500 text-left border-b border-stone-300">
-              <th className={th}>{AMP_POWER_TEXT.driver}</th>
-              <th className={`${th} text-right`}>{AMP_POWER_TEXT.avg}</th>
-              <th className={`${th} text-right`}>{AMP_POWER_TEXT.peak}</th>
-              <th className={`${th} text-right`}>{AMP_POWER_TEXT.maxPeak}</th>
-              <th className={`${th} text-right`}>{AMP_POWER_TEXT.amp}</th>
-              <th className={`${th} text-right`}>{AMP_POWER_TEXT.headroom}</th>
-              <th className={th}>{AMP_POWER_TEXT.limit}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.channel} className="border-b border-stone-300">
-                <td className={td}>{CHANNEL_NAMES[r.channel]}</td>
-                <td className={`${td} text-right`}>{formatWatts(r.avgW)}</td>
-                <td className={`${td} text-right ${tone(r)}`}>{formatWatts(r.peakW)}</td>
-                <td className={`${td} text-right`}>{formatWatts(r.maxPeakW)}</td>
-                {/* the CD's is into its own impedance (`HornResponse.pAmp`) */}
-                <td className={`${td} text-right`}>{formatWatts(r.ampW)}</td>
-                {/* rounded first, so a value just under 0 reads 0.0, never −0.0 */}
-                <td className={`${td} text-right ${tone(r)}`}>
-                  {formatSigned(Math.round(r.peakHeadroomDb * 10) / 10)} dB
-                </td>
-                {/* the sub section's "First limit" words, with a capital */}
-                <td className={td}>
-                  <div className="first-letter:uppercase">{SUB_LIMIT_NAMES[r.who]}</div>
-                  {/* always there, hidden while the peaks fit, so the rows keep their height */}
-                  <div
-                    className={`text-xs text-red-700 ${r.pastLimit ? "" : "invisible"}`}
-                    aria-hidden={!r.pastLimit}
-                  >
-                    {PAST_LIMIT_ON_PEAKS[r.who]}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-xs text-stone-500 mt-1">{AMP_POWER_TEXT.crestNote}</p>{" "}
+      <AmpPowerRows
+        firstColumn={AMP_POWER_TEXT.driver}
+        rows={rows.map((r) => ({ key: r.channel, name: CHANNEL_NAMES[r.channel], power: r }))}
+      />
+      <p className="text-xs text-stone-500 mt-1">{AMP_POWER_TEXT.crestNote}</p>
     </div>
   );
 }
