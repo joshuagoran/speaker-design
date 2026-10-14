@@ -2,7 +2,8 @@
 
 A plan, Oct 2026. It adds a 1-D horn model to the PA planner for the boxes in [pa-v2-plan.md](pa-v2-plan.md):
 front-loaded sub bins and mid horns with vented rear chambers, later folded and tapped horns. Phase 1 (the engine and
-its tests) is done. It matches Hornresp (see [Validation](#validation)).
+its tests) is done. It matches Hornresp (see [Validation](#validation)). The horn boxes now go to the modular
+Designer, not the PA page (see [Phases](#phases)).
 
 ## What the planner has today
 
@@ -157,13 +158,52 @@ Not compared:
 
 ## Phases
 
-1. **Engine and tests** (`src/lib/acoustics/`). No UI.
-2. **Sub bins on the PA page.** A front-loaded box type with a vented rear chamber, its settings in a
-   `SettingsSection`, its curves on the existing charts with their fixed axes (15 Hz–20 kHz; 80–135 dB).
+1. **Engine and tests** (`src/lib/acoustics/`). No UI. Done (#128, #132, #133): the 1-D chain, the duct vent with
+   round or slot exits, voice-coil inductance, several drivers on one throat (`drivers`), checked against Hornresp.
+2. **Horn boxes in the Designer.** Not on the PA page: the owner's rule is not to build what the modular Designer
+   replaces. The PA v2 sub bin becomes a Designer template, on a `designer-*` branch (parent `designer`). It waits on
+   the Designer page, its chamber editor and its response chart. `hornDesignOf` (`src/lib/speaker/hornDesign.ts`)
+   already maps a chamber onto the engine.
 3. **Mid horns and stacking.** Horn mids, N-box stacking, the 2.5-way roll-off, the summed response. Folded horns as
    a chain without bends.
 4. **Build outputs.** The 3D view and the cutlist for the flared walls: kerfed or bent panels, or stacked layers.
 5. **Optimizers.** Size the rear chamber, the port and the flare.
+
+## Using the engine
+
+For code that calls `hornModel` (the Designer, a future page):
+
+- **Two SPLs.** `spl` is on axis, each source a point source: the planner's convention, as its box models. `powerSpl`
+  is Hornresp's power response, with no directivity. They part above ~300 Hz, by the mouth's directivity index (5–11
+  dB at 500–950 Hz on the PA v2 mid box). Chart one on purpose and say which.
+- **Drivers on one throat: `drivers`.** One box with N drivers is `drivers: N`. `count: N` is N boxes side by side;
+  it also merges their vent exits by images, which overstates the exits' end correction when the vents sit apart.
+  The two give the same horn load.
+- **Voice-coil inductance comes from the catalog.** A driver's `Le` reaches the engine through `hornDesignOf`. No Le
+  means no inductance. The box models ignore Le, so a check against them needs `Le: 0`.
+- **Vents.** `HornPort.length` is the physical length plus the inner end correction; the exit's radiation load adds
+  the outer end. `HornPort.slot` gives a slot's opening, for its rectangle end correction. With the radiation load off
+  (the box models' mode) the vent is lumped and takes the full effective length.
+- **Losses.** `QL` and `Qp` default to the box models' 7 and 50. Hornresp's horn rear chamber is lossless
+  (`QL: Infinity, Qp: Infinity`).
+- **`portOffset`** is the vent exit's setback behind the mouth, on axis. It is not Hornresp's acoustic path length.
+- **Units** are Hornresp's: areas cm², lengths cm, volumes L, Le mH. `ze` and `xmm` are per driver; the amp sees
+  about `ze / drivers`.
+
+## Open gaps
+
+- **Le for most of the catalog.** Only the PA v2 drivers and the Hi-fi woofers list it. The others model with no
+  inductance and read a few dB high near the top of their band.
+- **Straight-walled 1-D flares.** Hornresp's parabolic profile (area grows linearly) is not in the engine. Use several
+  conical segments: the PA v2 sub bin uses four.
+- **Chamber standing waves.** The chambers are lumped, as Hornresp's masked mode. Hornresp can also model them as
+  ducts (Lrc, Atc).
+- **Inductance models.** Only Hornresp's plain Le; not its semi-inductance or lossy models.
+- **The leak.** The engine radiates the leak's flow, as the box models and Small's model. Hornresp does not: up to
+  0.6 dB below 20 Hz on a direct radiator.
+- **Slot exits with images.** In quarter or eighth space, or with boxes side by side, the slot's shape scales the
+  merged round exit: an approximation.
+- **Folds, tapped and back-loaded horns.** Not modeled (`hornDesignOf` names the gap).
 
 ## Open questions
 
@@ -173,21 +213,9 @@ Not compared:
 
 ## Running Hornresp
 
-Hornresp is a free Windows program (hornresp.net). It runs under Wine on Linux or a Mac. The steps used here, in a
-cloud session (Ubuntu 24.04):
+Hornresp is a free Windows program (hornresp.net). It runs under Wine on Linux, in a cloud session. `tools/hornresp/`
+has the setup, a script that drives it, a record writer and Hornresp's rules for a record (see its README).
 
-1. Install 32-bit Wine, a virtual display and a GUI driver: add the i386 architecture, then the packages `wine`,
-   `wine32:i386`, `xvfb` and `xdotool`.
-2. Unzip `Setup.exe` (it is a zip): `Hornresp.exe`, `Msvbvm60.dll`, the help file.
-3. Give Wine a "Courier New" font. Hornresp stops without it. A copy of Liberation Mono renamed to "Courier New" in
-   the prefix's `windows/Fonts` works.
-4. Start `Xvfb :99`, then `wine Hornresp.exe` with `DISPLAY=:99`. Drive it with `xdotool` and check it with
-   screenshots.
-5. Set the air: click the input window, then Ctrl+F5: 343 m/s and 1.18 kg/m³. The window's title then shows them.
-   A new container starts with Hornresp's defaults, so set the air each time.
-6. Per case: put the record in `Import`, then File > Import > Hornresp Record. Calculate, and answer "Yes" to mask the
-   chamber resonances. On the Acoustical Power chart, File > Export > All Chart Data. Use a short file name.
-7. Keep frequency, SPL, Ze and Xd up to 2 kHz in `tests/hornresp/<case>-results.txt`.
-
-Record files must have CRLF on every line. Multi-segment horns take `Fta` (the mouth's wall angle) in place of `Cir`.
-Hornresp rejects a record that breaks either rule as "not a valid record".
+- **Set the air each time:** 343 m/s and 1.18 kg/m³. A new container starts with Hornresp's defaults.
+- **Check the setup first:** run a committed case. Its results must be identical.
+- **Mask the chamber resonances:** lumped chambers, as the engine.
