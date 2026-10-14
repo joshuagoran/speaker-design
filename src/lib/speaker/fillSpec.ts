@@ -35,20 +35,27 @@ import {
 } from "./specParts";
 import { SEATED_EAR_FT, SPACE_HOME_ROOM } from "../../constants/space";
 import { STUFFING_VOLUME_GAIN } from "../pa/calc";
+import { DEFAULT_HIFI } from "../defaults";
 
 /**
- * A band of the coaxial's passive network: the maker's network isn't modeled, so it carries no filters; both bands
- * share the fill's one amp channel.
+ * A band of the coaxial's passive network: the cone below its HF section's recommended crossover (`hf.xo`) and the HF
+ * section above it, at the Hi-fi page's slope, as the coaxial monitor template crosses it (the maker's own network
+ * isn't published). A coaxial without HF data or a crossover keeps both bands open. Both bands share the fill's one
+ * amp channel.
  */
-const networkBand = (id: AdapterBandId, state: FillDesignState): SpeakerBand => ({
-  id,
-  name: SPEAKER_BAND_NAMES[id],
-  highpass: null,
-  lowpass: null,
-  levelDb: 0,
-  drive: HIFI_DRIVE.passive,
-  ampW: state.ampWatts,
-});
+function networkBand(id: AdapterBandId, state: FillDesignState): SpeakerBand {
+  const xo = state.driver.hf?.xo;
+  const filter = xo ? lrFilter(xo, DEFAULT_HIFI.crossoverOrder) : null;
+  return {
+    id,
+    name: SPEAKER_BAND_NAMES[id],
+    highpass: id === SPEAKER_BAND.high ? filter : null,
+    lowpass: id === SPEAKER_BAND.low ? filter : null,
+    levelDb: 0,
+    drive: HIFI_DRIVE.passive,
+    ampW: state.ampWatts,
+  };
+}
 
 /**
  * The fill as a speaker spec: a coaxial in a sealed or vented ½″ box through its maker's passive network. The round

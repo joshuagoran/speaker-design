@@ -370,7 +370,16 @@ test("speaker spec: every golden fill reads in as a coaxial in its box, the high
     const [coax] = driversOf(spec, DRIVER_KIND.coaxial);
     assert.deepEqual([coax.driverId, coax.count], [c.drv, 1], c.name);
     assert.deepEqual(coax.bands, [SPEAKER_BAND.low, SPEAKER_BAND.high]);
-    assert.ok(spec.bands.every((b) => b.drive === HIFI_DRIVE.passive && !b.highpass));
+    assert.ok(spec.bands.every((b) => b.drive === HIFI_DRIVE.passive));
+    // the highpass to the subs is the stack's; the bands cross only at the coaxial's own crossover
+    const [low, high] = spec.bands;
+    const xo = state.driver.hf?.xo;
+    assert.equal(low.highpass, null, c.name);
+    assert.deepEqual(
+      [low.lowpass?.hz ?? null, high.highpass?.hz ?? null],
+      [xo ?? null, xo ?? null],
+      c.name,
+    );
     assert.deepEqual(stack.members[0].crossover.highpass, {
       hz: state.highpassHz,
       type: crossoverSlopeName(state.highpassOrder),
