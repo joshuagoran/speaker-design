@@ -2,6 +2,7 @@ import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../../../constants/paSliders";
 import { ToggleButton } from "../../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../../components/ui/ToggleGroup";
 import { Tooltip } from "../../../components/ui/Tooltip";
+import { AMP_POWER_LABEL, AMP_POWER_TIP } from "../../../constants/ampPower";
 import { Card } from "../../../components/ui/Card";
 import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
@@ -659,7 +660,7 @@ export function SettingsPanel({ planner }: Props) {
                   ))}
                 </div>
                 <Slider
-                  label="Amp power per channel @ 8 Ω"
+                  label={<Tooltip tip={AMP_POWER_TIP}>{AMP_POWER_LABEL}</Tooltip>}
                   value={subAmpWatts}
                   min={AMP_WATTS_STEPS.ampW.min}
                   max={AMP_WATTS_MAX.ampW}
@@ -676,7 +677,7 @@ export function SettingsPanel({ planner }: Props) {
               <div className="text-sm text-stone-500 mb-1">{UI_TEXT.midBass} amp</div>
               <Card>
                 <Slider
-                  label="Mid amp power per channel @ 8 Ω"
+                  label={<Tooltip tip={AMP_POWER_TIP}>{AMP_POWER_LABEL}</Tooltip>}
                   value={midAmpWatts}
                   min={AMP_WATTS_STEPS.mAmpW.min}
                   max={AMP_WATTS_MAX.mAmpW}
@@ -706,7 +707,7 @@ export function SettingsPanel({ planner }: Props) {
               <div className="text-sm text-stone-500 mb-1">Horn amp</div>
               <Card>
                 <Slider
-                  label="HF amp power per channel @ 8 Ω"
+                  label={<Tooltip tip={AMP_POWER_TIP}>{AMP_POWER_LABEL}</Tooltip>}
                   value={hornAmpWatts}
                   min={AMP_WATTS_STEPS.hfAmpW.min}
                   max={AMP_WATTS_MAX.hfAmpW}

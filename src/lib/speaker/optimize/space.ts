@@ -30,7 +30,7 @@ import {
   speakerLayout,
 } from "../speakerLayout";
 import { takesHornMountAt } from "../../pa/hornMount";
-import { rangeOf } from "../../optimizer/searchSpace";
+import { inSearchSpace, rangeOf } from "../../optimizer/searchSpace";
 import { DEFAULT_PA } from "../../defaults";
 import {
   CD_OPTIONS,
@@ -117,13 +117,16 @@ const CROSSOVER_MIN_HZ = 20;
 /** The size a free axis may take, as factors of yours: from LOW to HIGH. */
 const SIZE_FACTORS: [number, number] = [0.7, 1.5];
 
-/** A cone kind's candidates: same kind and nominal size, with a US price and T/S; your part always. */
+/**
+ * A cone kind's candidates: same kind and nominal size, with a US price and T/S, each driver once (`inSearchSpace`);
+ * your part always.
+ */
 function coneCandidates(
   kind: DriverKind,
   current: string,
   catalog: SpeakerOptimizerCatalog,
 ): string[] {
-  const table: readonly { id: string; size: number; price: number | null }[] =
+  const table: readonly { id: string; size: number; price: number | null; variantOf?: string }[] =
     kind === DRIVER_KIND.sub
       ? catalog.sub
       : kind === DRIVER_KIND.mid
@@ -136,7 +139,9 @@ function coneCandidates(
   const own = byId(table, current);
   if (!own) return [current];
   const ids = table
-    .filter((d) => d.id === current || (d.size === own.size && d.price !== null))
+    .filter(
+      (d) => d.id === current || (inSearchSpace(d) && d.size === own.size && d.price !== null),
+    )
     .map((d) => d.id);
   // a coaxial with an HF section keeps one (its HF band would lose its model)
   if (kind === DRIVER_KIND.coaxial && byId(catalog.coaxial, current)?.hf)
@@ -748,8 +753,9 @@ export function ampGroups(bands: readonly SpeakerBand[], locks: SpeakerOptimizer
 const TOP_OVER_RATING = 2;
 
 /**
- * Each band's top amp power, W into 8 Ω: yours, or twice the strongest candidate's program rating (2 × AES, into its
- * impedance) where that is more, on the amp's step; a locked band keeps yours. Passive bands share the highest.
+ * Each band's top amp power, W into the driver's impedance (lib/power): yours, or twice the strongest candidate's
+ * program rating (2 × AES) where that is more, on the amp's step; a locked band keeps yours. Passive bands share the
+ * highest.
  */
 export function topAmps(
   spec: SpeakerSpec,
@@ -761,17 +767,18 @@ export function topAmps(
   for (const u of units) {
     if (u.kind === "cone") {
       for (const id of u.drivers) {
-        const aes =
+        const ts =
           u.driverKind === DRIVER_KIND.sub
-            ? byId(SUB_OPTIONS, id)?.ts.aes
+            ? byId(SUB_OPTIONS, id)?.ts
             : u.driverKind === DRIVER_KIND.mid
-              ? byId(MID_OPTIONS, id)?.ts.aes
+              ? byId(MID_OPTIONS, id)?.ts
               : u.driverKind === DRIVER_KIND.woofer
-                ? byId(HIFI_WOOFERS, id)?.ts.aes
-                : byId(FILL_OPTIONS, id)?.ts.aes;
-        raise(u.bands[0], 2 * (aes ?? 0));
+                ? byId(HIFI_WOOFERS, id)?.ts
+                : byId(FILL_OPTIONS, id)?.ts;
+        // the program rating, 2 × AES: the amp power is the watts into the driver
+        if (ts) raise(u.bands[0], 2 * ts.aes);
         const coaxHf = u.driverKind === DRIVER_KIND.coaxial ? byId(FILL_OPTIONS, id)?.hf : null;
-        if (coaxHf && u.bands[1]) raise(u.bands[1], (2 * coaxHf.aes * coaxHf.imp) / 8);
+        if (coaxHf && u.bands[1]) raise(u.bands[1], 2 * coaxHf.aes);
       }
     } else {
       for (const p of u.parts) {
@@ -779,7 +786,7 @@ export function topAmps(
           spec.cabinet.chambers[u.chamber].drivers[u.entry].kind === DRIVER_KIND.compression
             ? byId(CD_OPTIONS, p.driverId)?.hf
             : byId(HIFI_TWEETERS, p.driverId)?.hf;
-        if (hf) raise(u.band, (2 * hf.aes * hf.imp) / 8);
+        if (hf) raise(u.band, 2 * hf.aes);
       }
     }
   }

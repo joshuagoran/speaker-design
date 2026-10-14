@@ -22,6 +22,9 @@ import { MID_DEPTH_FALLBACK_IN } from "../src/data/catalog/driver-cutouts";
 import type { MidSystemConfig, SubSystemConfig } from "../src/types";
 import { close, db, LR24_ORDERS } from "./helpers";
 
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
+
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts)!;
 const cfg: MidSystemConfig = {
   midDims: { w: 15, h: 15, d: 15 },
@@ -107,11 +110,11 @@ test("mid max curve: each point is the smallest of Xmax, thermal and amp", (t) =
       V = m.V * s;
     assert.ok(o.spl <= c.spl + 1e-9, "never above the amp-limited curve");
     assert.ok(c.xmm * s <= mid.ts.Xmax * (1 + 1e-9), "excursion within Xmax");
-    assert.ok(V <= thermalVoltageLimit(mid.ts.aes) * (1 + 1e-9), "within program rating");
+    assert.ok(V <= thermalVoltageLimit(mid.ts) * (1 + 1e-9), "within program rating");
     // and at least one limit is exactly met
     const met =
       Math.abs(c.xmm * s - mid.ts.Xmax) < 1e-6 ||
-      Math.abs(V - thermalVoltageLimit(mid.ts.aes)) < 1e-6 ||
+      Math.abs(V - thermalVoltageLimit(mid.ts)) < 1e-6 ||
       Math.abs(V - m.V) < 1e-6;
     assert.ok(met, `${o.f.toFixed(0)} Hz: no limit met`);
   });
@@ -130,14 +133,14 @@ test("mid max in the passband: thermal-limited SPL = mass line at the program-ra
     close(
       t,
       o.spl,
-      nearestPoint(m.mdl!.curve, 400).spl + db(thermalVoltageLimit(mid.ts.aes) / m.V),
+      nearestPoint(m.mdl!.curve, 400).spl + db(thermalVoltageLimit(mid.ts) / m.V),
       1e-9,
     );
-  close(t, m.useV, Math.min(thermalVoltageLimit(mid.ts.aes), m.V), 1e-12);
+  close(t, m.useV, Math.min(thermalVoltageLimit(mid.ts), m.V), 1e-12);
 });
 test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above the sub curve", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
-    V = ampVoltage(10);
+    V = ampVoltage(10, EIGHT_OHM);
   const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
   const s = subThroughLowpass(mdl, ts, V, 20, 120, 4);
   const i = mdl.curve.indexOf(nearestPoint(mdl.curve, 120));
@@ -147,11 +150,11 @@ test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above th
 });
 test("subThroughLp: the lowpass relaxes the limits (more drive above the crossover)", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
-    V = ampVoltage(3000);
+    V = ampVoltage(3000, EIGHT_OHM);
   const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
   const s = subThroughLowpass(mdl, ts, V, 20, 80, 4),
     k = mdl.curve.indexOf(nearestPoint(mdl.curve, 200));
-  const vt = thermalVoltageLimit(ts.aes),
+  const vt = thermalVoltageLimit(ts),
     g = linkwitzRileyLowpass(mdl.curve[k].f, 80, 4);
   // at 200 Hz the filtered cone moves little: thermal or amp limits, not Xmax/port
   const lim = Math.min(vt, V);

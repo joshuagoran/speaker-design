@@ -18,13 +18,11 @@ import { driverName } from "./speakerParts";
 import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
 import { hfHeadroomChip } from "../../lib/pa/chips";
 import { hfLimitWatts } from "../../lib/pa/calc";
+import { bandLoads } from "../../lib/speaker/speakerLimits";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 
 /** A Speaker-page check. */
 type SpeakerChip = Chip<ChipId<"speaker">>;
-
-/** The impedance an amp's power is rated into, Ω (as both engines take the amp). */
-const RATED_OHMS = 8;
 
 /** A peak against its limit: its share, %, rounded. */
 const pctOf = (p: LimitPeak) => Math.round((100 * p.peak) / p.limit);
@@ -34,7 +32,7 @@ const pctOf = (p: LimitPeak) => Math.round((100 * p.peak) / p.limit);
  * keep-up against the band under it at their crossover in the box (lib/speaker/keepUp).
  */
 export function bandChips(
-  spec: Pick<SpeakerSpec, "bands" | "input">,
+  spec: Pick<SpeakerSpec, "bands" | "input" | "cabinet">,
   limits: SpeakerLimits,
   response?: Pick<SpeakerResponse, "bands">,
 ): { id: BandId; chips: SpeakerChip[] }[] {
@@ -65,7 +63,7 @@ export function bandChips(
         ? [
             "ok",
             "Amp-limited",
-            `The ${name} takes ${formatWatts(hf.watts)}${hf.imp === RATED_OHMS ? amp : ` into its ${hf.imp} Ω${amp} (rated into ${RATED_OHMS} Ω)`}, under its program rating${derated}.`,
+            `The ${name} takes ${formatWatts(hf.watts)}${amp}, under its program rating${derated}.`,
             "speakerHfPower",
           ]
         : [
@@ -81,7 +79,12 @@ export function bandChips(
     const padChip: SpeakerChip | null =
       hf && band?.drive === HIFI_DRIVE.passive && pad > 0
         ? [
-            ...hfHeadroomChip(pad, hf.programW, hfLimitWatts(hf.programW, hf.imp, pad), band.ampW),
+            ...hfHeadroomChip(
+              pad,
+              hf.programW,
+              hfLimitWatts(hf.programW, hf, pad, bandLoads(spec).get(b.id) ?? {}),
+              band.ampW,
+            ),
             "speakerHfPad",
           ]
         : null;
@@ -174,7 +177,7 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
             "speakerRadiatorTravel",
           ],
     );
-  const amp = `The amp gives ${formatWatts(c.driveW)} into ${RATED_OHMS} Ω`;
+  const amp = `The amp gives ${formatWatts(c.driveW)}`;
   const rating = `the driver's ${formatWatts(c.programW)} program rating (2 × AES)`;
   chips.push(
     // the same when they read the same (an amp sized to the rating)

@@ -20,6 +20,7 @@ import { DispersionPlaneToggle } from "../../components/ui/DispersionPlaneToggle
 import { dispersionPlaneName } from "../../constants/dispersionPlanes";
 import { Button } from "../../components/ui/Button";
 import { Tooltip } from "../../components/ui/Tooltip";
+import { AMP_POWER_TIP, HIFI_AMP_LABELS } from "../../constants/ampPower";
 import { Card } from "../../components/ui/Card";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { NumberField } from "../../components/ui/NumberField";
@@ -903,7 +904,7 @@ export function HifiPage({ hifi }: Props) {
                   onChange={setBaffleStepCompensationDb}
                 />
                 <Slider
-                  label="Woofer amp @ 8 Ω"
+                  label={<Tooltip tip={AMP_POWER_TIP}>{HIFI_AMP_LABELS.woofer}</Tooltip>}
                   value={wooferAmpWatts}
                   min={HIFI_AMP_WATTS_STEPS.wAmpW.min}
                   max={HIFI_AMP_WATTS_MAX.wAmpW}
@@ -913,7 +914,7 @@ export function HifiPage({ hifi }: Props) {
                   extra={renderLockButton("wAmpW", "the woofer amp power")}
                 />
                 <Slider
-                  label="Tweeter amp @ 8 Ω"
+                  label={<Tooltip tip={AMP_POWER_TIP}>{HIFI_AMP_LABELS.tweeter}</Tooltip>}
                   value={tweeterAmpWatts}
                   min={HIFI_AMP_WATTS_STEPS.tAmpW.min}
                   max={HIFI_AMP_WATTS_MAX.tAmpW}

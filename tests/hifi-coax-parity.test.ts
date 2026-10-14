@@ -19,6 +19,7 @@
 // - the room: Hi-fi adds the baffle step, placement and EQ (`HifiWooferPrep.gDb`); Fills has none, so the levels compare
 //   on the box's own curve (Hi-fi's `hifiBox`), before them.
 import { describe, expect, test } from "vite-plus/test";
+import { ohmsOf } from "../src/lib/power";
 import { fillSystem, ampVoltage, STUFFING_VOLUME_GAIN } from "../src/lib/pa/calc";
 import {
   HIFI_STUFFING_GAIN,
@@ -118,7 +119,7 @@ function parityRow(d: FillDriver, boxType: FillBoxType) {
   const hifiPad = sys ? Math.max(0, -sys.trim) : null;
   const hf = h.tweeter?.hf;
   const hifiHfLimW =
-    hf && hifiPad != null ? ((2 * hf.aes * hf.imp) / 8) * Math.pow(10, hifiPad / 10) : null;
+    hf && hifiPad != null ? ((2 * hf.aes * ohmsOf(hf)) / 8) * Math.pow(10, hifiPad / 10) : null;
   return { d, f, fill, h, sys, hifiPad, hifiHfLimW };
 }
 
@@ -222,7 +223,7 @@ describe("coaxials: the Hi-fi engine against the Fills model", () => {
   test("the pad: the same convention, to the woofer's modeled sensitivity instead of the maker's", () => {
     for (const { d, fill, sys, hifiPad } of rows) {
       if (!d.hf || !sys || hifiPad == null) continue;
-      const hfAt283 = d.hf.sens + 10 * Math.log10(8 / d.hf.imp);
+      const hfAt283 = d.hf.sens + 10 * Math.log10(8 / ohmsOf(d.hf));
       // Hi-fi's level match is Fills' modeled sensitivity, which doesn't depend on the box
       expect(sys.refW).toBeCloseTo(fill.sens, 9);
       expect(hifiPad).toBeCloseTo(Math.max(0, hfAt283 - fill.sens), 9);
@@ -268,7 +269,7 @@ describe("coaxials: the Hi-fi engine against the Fills model", () => {
       expect(h.tweeter).toBeNull();
       expect(coaxParts(d).gaps).toEqual([COAX_GAP.hf]);
       expect(fill.hfLimW).toBeNull();
-      expect(h.b.V).toBeCloseTo(ampVoltage(DEFAULT_FILL.ampWatts), 9);
+      expect(h.b.V).toBeCloseTo(ampVoltage(DEFAULT_FILL.ampWatts, h.woofer.ts), 9);
     }
   });
 });

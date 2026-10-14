@@ -45,6 +45,9 @@ import type {
   SpeakerSpec,
 } from "../src/types";
 
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
+
 /** The spec's response and its limits, with the same feed. */
 function modelOf(spec: SpeakerSpec, feed: SpeakerFeed) {
   const response = speakerResponse(spec, { feed });
@@ -270,7 +273,7 @@ test("speaker limits: a passive speaker's shared amp limits the sum before the n
   const low = spec.bands.find((b) => b.id === SPEAKER_BAND.low);
   assert.ok(low);
   // the channel's ceiling: its full voltage on the input, which no network filter lifts
-  const channel = 20 * Math.log10(ampVoltage(low.ampW) / SPEAKER_RESPONSE_VOLTS);
+  const channel = 20 * Math.log10(ampVoltage(low.ampW, EIGHT_OHM) / SPEAKER_RESPONSE_VOLTS);
   limits.sum.forEach((o, i) =>
     assert.ok(room(i) <= channel + 1e-9, `${o.f.toFixed(0)} Hz: ${room(i)} over ${channel} dB`),
   );
@@ -284,10 +287,16 @@ test("speaker limits: a passive band rides its channel through its pad; a band w
   const high = passive.bands.find((b) => b.id === SPEAKER_BAND.high);
   assert.ok(high && high.levelDb < 0, "the tweeter is padded");
   assert.ok(
-    Math.abs(bandDriveVolts(high) - ampVoltage(high.ampW) * 10 ** (high.levelDb / 20)) < 1e-12,
+    Math.abs(
+      bandDriveVolts(high, EIGHT_OHM) -
+        ampVoltage(high.ampW, EIGHT_OHM) * 10 ** (high.levelDb / 20),
+    ) < 1e-12,
   );
   // a network can't add gain: a band set above its channel gets the channel's full voltage
-  assert.equal(bandDriveVolts({ ...high, levelDb: 3 }), ampVoltage(high.ampW));
+  assert.equal(
+    bandDriveVolts({ ...high, levelDb: 3 }, EIGHT_OHM),
+    ampVoltage(high.ampW, EIGHT_OHM),
+  );
   const silent: SpeakerSpec = {
     ...passive,
     bands: passive.bands.map((b) => (b.id === SPEAKER_BAND.high ? { ...b, ampW: 0 } : b)),

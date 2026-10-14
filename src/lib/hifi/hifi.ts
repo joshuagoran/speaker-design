@@ -26,6 +26,7 @@ import { panelLbPerSqFt } from "../panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { panelStock, plateFirstModeHz } from "../bracing";
 import type {
+  NominalImpedance,
   Complex,
   BracePanelId,
   PanelResonance,
@@ -97,6 +98,7 @@ import {
 } from "./nearField";
 import { xmaxBandCurves } from "../xmax";
 import { coaxGaps } from "../data";
+import { SENSITIVITY_REFERENCE_OHMS, ohmsOf, voltsToWatts, wattsToVolts } from "../power";
 import { COAX_GAP_NAMES } from "../../constants/coax";
 
 const C = 343,
@@ -605,7 +607,7 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
     : 0;
   const disp = hifiWooferDisplacementL(w);
   const net = Math.max(1, gross * HIFI_NET_SHARE - disp - pVol);
-  const V = ampVoltage(cfg.wAmpW),
+  const V = ampVoltage(cfg.wAmpW, w.ts),
     N = cfg.N || GRID.N;
   const opts = { fmin: GRID.fmin, fmax: GRID.fmax, N, fTop };
   const hp = cfg.hp ?? null;
@@ -677,8 +679,9 @@ export function tweeterMaxLevel(
   cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain">,
 ) {
   const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
-  const imp = hf.imp || 8;
-  const pAmp = ((cfg.tAmpW || 50) * 8) / imp;
+  const imp = ohmsOf(hf);
+  // the amp power is the watts into the tweeter's impedance (lib/power)
+  const pAmp = cfg.tAmpW || 50;
   const derate = hf.aesXo && cfg.xo < hf.aesXo ? Math.pow(cfg.xo / hf.aesXo, 2) : 1;
   const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
   const pMax = Math.min(pAmp, pProg);
@@ -687,17 +690,22 @@ export function tweeterMaxLevel(
   return { imp, derate, pMax, pProg, who, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
 }
 /**
- * The power the tweeter gets, amp watts into 8 Ω (as `tAmpW`): its own amp's when active; when passive, the one amp
- * channel's (`wAmpW`) through the network's pad, the level match `trim` dB (so `wAmpW` · 10^(trim / 10)). A tweeter
- * quieter than the woofer (trim > 0) takes the full amp: a passive network can't add gain, so the woofer would be
- * padded instead, and the tweeter's level then caps the speaker's, as `maxLevel` reads it. The Fills page's `hfLimW`
- * (lib/pa/calc fillSystem) is this relation solved for the amp power that brings the HF to its program rating.
+ * The power the tweeter gets, W into its impedance (as `tAmpW`): its own amp's when active; when passive, the one amp
+ * channel's, `wAmpW` into the woofer's impedance, as a voltage through the network's pad, the level match `trim` dB
+ * (lib/power). A tweeter quieter than the woofer (trim > 0) takes the full amp: a passive network can't add gain, so
+ * the woofer would be padded instead, and the tweeter's level then caps the speaker's, as `maxLevel` reads it. The
+ * Fills page's `hfLimW` (lib/pa/calc fillSystem) is this relation solved for the amp power that brings the HF to its
+ * program rating.
  */
 export const tweeterAmpWatts = (
   cfg: Pick<HifiConfig, "drive" | "wAmpW" | "tAmpW">,
   trim: number,
+  woofer: NominalImpedance,
+  tweeter: NominalImpedance,
 ): HifiConfig["tAmpW"] =>
-  cfg.drive === HIFI_DRIVE.passive ? cfg.wAmpW * Math.pow(10, Math.min(0, trim) / 10) : cfg.tAmpW;
+  cfg.drive === HIFI_DRIVE.passive
+    ? voltsToWatts(wattsToVolts(cfg.wAmpW, woofer) * Math.pow(10, Math.min(0, trim) / 20), tweeter)
+    : cfg.tAmpW;
 /**
  * The tweeter in a box whose woofer's passband sensitivity is `refW` (dB at 2.83 V, `HifiSystem.refW`): its own
  * figures (`tweeterMaxLevel`), its sensitivity at 2.83 V, the level match `trim` (dB applied to the tweeter in the DSP,
@@ -708,13 +716,14 @@ export function tweeterLevelInBox(
   t: HifiTweeter,
   cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain" | "drive" | "wAmpW">,
   refW: number,
+  woofer: NominalImpedance,
 ) {
   const own = tweeterMaxLevel(t, cfg);
-  const tSens283 = own.tSens + 10 * Math.log10(8 / own.imp);
+  const tSens283 = own.tSens + 10 * Math.log10(SENSITIVITY_REFERENCE_OHMS / own.imp);
   const trim = refW - tSens283;
   const level =
     cfg.drive === HIFI_DRIVE.passive
-      ? tweeterMaxLevel(t, { ...cfg, tAmpW: tweeterAmpWatts(cfg, trim) })
+      ? tweeterMaxLevel(t, { ...cfg, tAmpW: tweeterAmpWatts(cfg, trim, woofer, t.hf) })
       : own;
   return { ...level, tSens283, trim };
 }
@@ -931,7 +940,7 @@ export function hifiWooferPrep(
   const { place, wallM } = placementOf(cfg);
   const { e, gDb } = shelfOn(b, cfg.dim.w, cfg.bsc || 0, place, wallM);
   const V = b.V,
-    vT = thermalVoltageLimit(w.ts.aes || 100),
+    vT = thermalVoltageLimit({ aes: w.ts.aes || 100, imp: w.ts.imp }),
     portMax = cfg.portMax || HIFI_PORT_MAX_MS,
     pr = b.pr,
     xR = pr ? pr.drv.Xmax : 0;
@@ -1097,7 +1106,7 @@ export function hifiSystemFromBox(
   // frequency its rating assumes, then the high-pass; level-matched to the woofer's passband level at 2.83 V (on-axis,
   // above the baffle step)
   const refW = m.ref - 20 * Math.log10(V / 2.83);
-  const { derate, pMax, tSens, tLevel, tSens283, trim } = tweeterLevelInBox(t, cfg, refW);
+  const { derate, pMax, tSens, tLevel, tSens283, trim } = tweeterLevelInBox(t, cfg, refW, ts);
   const tweeterAt = (f: number, volts: number) =>
     tSens283 +
     20 * Math.log10(volts / 2.83) +

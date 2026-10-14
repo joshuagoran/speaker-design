@@ -6,7 +6,7 @@ import { fillSystem, hfLimitWatts } from "../src/lib/pa/calc";
 import { fillChips } from "../src/lib/pa/chips";
 import { speakerFromFill } from "../src/lib/speaker/fillSpec";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
-import { speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { bandLoads, speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { bandChips } from "../src/pages/speaker/speakerChips";
 import { DEFAULT_FILL } from "../src/lib/defaults";
 import { FILL_OPTIONS } from "../src/lib/data";
@@ -47,7 +47,7 @@ test("speaker fill chips: with the Fills page's pad, the HF reaches its rating w
     const hf = limits.drivers.find((d) => d.band === SPEAKER_BAND.high);
     assert.ok(hf, driver.name);
     // the Fills page takes the full program rating; the speaker model derates it below its rating's frequency
-    const watts = hfLimitWatts(hf.programW, hf.imp, page.pad);
+    const watts = hfLimitWatts(hf.programW, hf, page.pad, bandLoads(spec).get(hf.band) ?? {});
     assert.ok(Math.abs(watts - page.hfLimW * hf.derate) < 1e-6 * page.hfLimW, driver.name);
     // the same verdict as the Fills page's chip, on its amp and on one past its limit
     for (const ampW of [state.ampWatts, Math.ceil(page.hfLimW * 1.5)]) {

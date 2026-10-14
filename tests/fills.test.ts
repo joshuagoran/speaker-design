@@ -1,5 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
+import { ohmsOf } from "../src/lib/power";
 import {
   fillSystem as fillSystemOrNull,
   boxModel,
@@ -14,6 +15,9 @@ import { DEFAULT_FILL } from "../src/lib/defaults";
 import { FILL_OPTIONS } from "../src/lib/data";
 import type { FillSystemConfig } from "../src/types";
 import { close, massLineSPL, LR24_ORDERS } from "./helpers";
+
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
 
 /** `fillSystem` for a fill that has a model, as every one here does. */
 const fillSystem = (...args: Parameters<typeof fillSystemOrNull>) => {
@@ -61,7 +65,7 @@ test("fills f3 includes the highpass: raising the highpass raises f3", (t) => {
 });
 test("fills model calls match the planner's box models", (t) => {
   const v = fillSystem(drv, base),
-    V = ampVoltage(300);
+    V = ampVoltage(300, EIGHT_OHM);
   const m = boxModel(drv.ts, v.eff, v.pArea, 4, 70, V, "LR24", { nPorts: 1 });
   close(t, v.vM!.Fb, m!.Fb, 1e-12);
   const s = fillSystem(drv, { ...base, boxType: "sealed" });
@@ -76,7 +80,7 @@ test("fills max curve stops at 300 Hz and respects every limit", (t) => {
     assert.ok(
       c.xmm * s <= drv.ts.Xmax * (1 + 1e-9) &&
         c.vel * s <= 20 * (1 + 1e-9) &&
-        v.V * s <= thermalVoltageLimit(drv.ts.aes) * (1 + 1e-9),
+        v.V * s <= thermalVoltageLimit(drv.ts) * (1 + 1e-9),
     );
   }
 });
@@ -89,10 +93,10 @@ test("fills: a small port is port-limited, a big one isn't", (t) => {
 });
 test("fills HF: limit through the pad = 2 x AES x (Z/8) x 10^(pad/10); pad from lfSens", (t) => {
   const v = fillSystem(drv, base);
-  close(t, v.pad, drv.hf!.sens + 10 * Math.log10(8 / drv.hf!.imp) - drv.lfSens, 1e-12);
-  close(t, v.hfLimW!, 2 * drv.hf!.aes * (drv.hf!.imp / 8) * 10 ** (v.pad / 10), 1e-9);
+  close(t, v.pad, drv.hf!.sens + 10 * Math.log10(8 / ohmsOf(drv.hf!)) - drv.lfSens, 1e-12);
+  close(t, v.hfLimW!, 2 * drv.hf!.aes * (ohmsOf(drv.hf!) / 8) * 10 ** (v.pad / 10), 1e-9);
   // behavior: at that amp power the HF sees exactly its program rating
-  const hfW = ((v.hfLimW! * 8) / drv.hf!.imp) * 10 ** (-v.pad / 10);
+  const hfW = ((v.hfLimW! * 8) / ohmsOf(drv.hf!)) * 10 ** (-v.pad / 10);
   close(t, hfW, 2 * drv.hf!.aes, 1e-9);
 });
 test("fills weight: 1/2 in birch shell at 1.6 lb/ft2 + driver + 1 lb", (t) => {

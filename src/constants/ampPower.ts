@@ -19,6 +19,17 @@ export const PAST_LIMIT_ON_PEAKS: Record<LimitId, string> = {
   throat: "Throat past limit on peaks",
 };
 
+/** Every amp power setting's label (PA, Fills, Speaker): the watts as entered, into the driver. */
+export const AMP_POWER_LABEL = "Amp power, W";
+/** The Hi-fi page's two amp power settings (the woofer's and the tweeter's channel). */
+export const HIFI_AMP_LABELS = {
+  woofer: "Woofer amp power, W",
+  tweeter: "Tweeter amp power, W",
+} as const;
+/** Its tooltip: the model takes the watts into the driver's impedance as entered (lib/power), so give it the load's. */
+export const AMP_POWER_TIP =
+  "Use your amp's power rating at the load it drives (for example, at 4 Ω or 8 Ω).";
+
 /** The Coverage page's amp power table: its heading, column names and notes. */
 export const AMP_POWER_TEXT = {
   heading: "Amp power at the target",

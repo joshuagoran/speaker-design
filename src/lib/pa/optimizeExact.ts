@@ -44,9 +44,12 @@ import {
   optimizePaStack,
   paSearchAmps,
   paSearchDesign,
+  paSearchSubs,
 } from "./optimize";
 import { VENT_STYLES, highpassOptions, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
 import {
+  ampVoltage,
+  ampWatts,
   boxInternalLiters,
   hornResponse,
   isRoundPort,
@@ -98,7 +101,7 @@ import {
 } from "./exactSub";
 import { MAX_ELBOWS } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
-import { MID_OPTIONS, SUB_OPTIONS } from "../data";
+import { MID_OPTIONS } from "../data";
 import { byId } from "../tables";
 import { keepGap } from "../optimizer/shortfall";
 import { ampForGain, onSlider } from "../optimizer/ampSteps";
@@ -135,6 +138,7 @@ import type {
 import { towerMidDims } from "./tower";
 import type { CardSlot } from "../optimizer/selectCards";
 import { savedBackJoint } from "../../constants/bracing";
+import { voltsToWatts } from "../power";
 
 // the most vent sizes any style has (a cache key's stride)
 const MAX_VENT_SIZES = Math.max(...VENT_STYLES.map((st) => ventSizesFor(st).length));
@@ -217,7 +221,8 @@ interface ExactSpace {
   cur: PaDesignConfig;
   locks: PaResolvedLocks;
   amps: Pick<PaDesignConfig, "ampW" | "mAmpW" | "hfAmpW">;
-  volts: number;
+  /** the sub amp's voltage into each sub (`subs`, by index): the amp power is the watts into its impedance */
+  volts: readonly number[];
   portMax: number;
   subs: SubDriver[];
   walls: number[];
@@ -253,13 +258,8 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
   const cur = paSearchDesign(input);
   const locks: PaResolvedLocks = { subDim: {}, midDim: {}, ...input.locks };
   const amps = paSearchAmps(cur, locks);
-  const curSub = byId(SUB_OPTIONS, cur.sub);
   // every sub of every size the budget allows (a locked one only if the tables have it)
-  const subs = locks.sub
-    ? curSub
-      ? [curSub]
-      : []
-    : SUB_OPTIONS.filter((o) => o.ts && o.price <= input.budget);
+  const subs = paSearchSubs(cur.sub, !!locks.sub, input.budget, true);
   const fbs: number[] = [];
   for (let f = grid.fb.from; f <= grid.fb.to; f += grid.fb.step) fbs.push(f);
   const hps = fbs.map((fb) =>
@@ -285,7 +285,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
     cur,
     locks,
     amps,
-    volts: Math.sqrt(amps.ampW * 8),
+    volts: subs.map((sub) => ampVoltage(amps.ampW, sub.ts)),
     portMax: cur.portMax,
     subs,
     walls,
@@ -461,7 +461,7 @@ export function paExactScore(
   const total = modelSteps(s, mine.length);
   for (const si of mine) {
     const sub = s.subs[si];
-    const c = subCircuit(sub.ts, s.volts, SUB_BAND_HZ);
+    const c = subCircuit(sub.ts, s.volts[si], SUB_BAND_HZ);
     const rows: number[] = [];
     for (let ri = 0; ri < s.rungs.length; ri++) {
       const V = s.rungs[ri];
@@ -672,7 +672,7 @@ function exactHook(
   const circuitOf = (si: number) => {
     let c = circuits.get(si);
     if (!c) {
-      c = subCircuit(s.subs[si].ts, s.volts, SUB_BAND_HZ);
+      c = subCircuit(s.subs[si].ts, s.volts[si], SUB_BAND_HZ);
       circuits.set(si, c);
     }
     return c;
@@ -989,16 +989,20 @@ function exactHook(
     key: string,
   ): SubDesign | null => {
     const sub = s.subs[si];
-    let lim = subLimitOf(cs, area, sub.ts, s.volts, ventSpeedLimit(style, s.portMax));
+    const volts = s.volts[si];
+    let lim = subLimitOf(cs, area, sub.ts, volts, ventSpeedLimit(style, s.portMax));
     let ampW = s.amps.ampW;
     // A sub its port limits fails the checks; with its amp free it comes down, as in the quick search, to the highest
     // slider step under the port's limit (then the amp sets the level). A locked amp leaves it out.
     const portLimited = lim.who === "port";
     if (portLimited) {
-      const w = s.locks.ampW ? null : onSlider((lim.V * (1 - 1e-9)) ** 2 / 8, AMP_WATTS_STEPS.ampW);
+      const w = s.locks.ampW
+        ? null
+        : onSlider(ampWatts(lim.V * (1 - 1e-9), sub.ts), AMP_WATTS_STEPS.ampW);
       if (w === null) return null;
       ampW = w;
-      lim = { who: "amp", V: Math.sqrt(w * 8), W: w };
+      const V = ampVoltage(w, sub.ts);
+      lim = { who: "amp", V, W: voltsToWatts(V, sub.ts) };
     }
     subDesigns++;
     return {
@@ -1014,10 +1018,10 @@ function exactHook(
       area,
       cs,
       lim,
-      out0: outputAt(cs, lim, s.volts),
+      out0: outputAt(cs, lim, volts),
       need: s.xoLos.map(
         (xo, xi) =>
-          musicAt(cs.xoSpl[xi], gridFrequency(s.xoIdx[xi]), xo, s.cur.xoLoOrder, lim, s.volts) -
+          musicAt(cs.xoSpl[xi], gridFrequency(s.xoIdx[xi]), xo, s.cur.xoLoOrder, lim, volts) -
           s.cur.tilt,
       ),
       chS:
@@ -1036,7 +1040,11 @@ function exactHook(
       return;
     }
     const sub = s.subs[u.si];
-    const outUb = outputAt(u.cs, subLimitOf(u.cs, Infinity, sub.ts, s.volts, s.portMax), s.volts);
+    const outUb = outputAt(
+      u.cs,
+      subLimitOf(u.cs, Infinity, sub.ts, s.volts[u.si], s.portMax),
+      s.volts[u.si],
+    );
     for (let ti = 0; ti < s.walls.length; ti++) {
       const t = s.walls[ti];
       const pairs = bare(u.si, ti, u.ri);
@@ -1419,7 +1427,11 @@ function exactHook(
     let st = unitStatics.get(u);
     if (!st) {
       st = {
-        out: outputAt(u.cs, subLimitOf(u.cs, Infinity, sub.ts, s.volts, s.portMax), s.volts),
+        out: outputAt(
+          u.cs,
+          subLimitOf(u.cs, Infinity, sub.ts, s.volts[u.si], s.portMax),
+          s.volts[u.si],
+        ),
         lbs: s.walls.map((_, ti) => lightestOf(bare(u.si, ti, u.ri))),
       };
       unitStatics.set(u, st);

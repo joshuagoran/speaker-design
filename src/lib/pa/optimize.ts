@@ -17,6 +17,7 @@ import {
   midSystem,
   subwooferLimits,
   ampVoltage,
+  ampWatts,
   hornResponse,
   subWeightLb,
   ventSpeedLimit,
@@ -94,7 +95,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
-import { highpassOptions, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
+import { highpassOptions, inSearchSpace, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
 import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
@@ -688,6 +689,23 @@ export const paSearchAmps = (cur: PaDesignConfig, locks: PaOptimizerLocks) => ({
 });
 
 /**
+ * The subs a PA search tries: yours alone when it is locked (none when the tables don't have it); else every sub with
+ * T/S that the budget allows, of your size class or of every size (`allSizes`, the exact search), each driver once
+ * (`inSearchSpace`: no other impedance version of it), yours always, a variant included.
+ */
+export function paSearchSubs(
+  curId: string,
+  locked: boolean,
+  budget: number,
+  allSizes: boolean,
+): SubDriver[] {
+  const curSub = byId(SUB_OPTIONS, curId);
+  if (locked) return curSub ? [curSub] : [];
+  const table = allSizes ? SUB_OPTIONS : subDriversOfSize(curSub ? curSub.size : 18);
+  return table.filter((o) => (o.id === curId || inSearchSpace(o)) && !!o.ts && o.price <= budget);
+}
+
+/**
  * The quick search; `onProgress` hears how far it has got (coarse: grid points, then work units per step). With `exact`,
  * the exact search (lib/pa/optimizeExact) adds its grid's designs to this search's pool and reports its own progress.
  */
@@ -744,11 +762,7 @@ export function optimizePaStack(
   ): o is T & { price: number } => !!o.ts && o.price != null;
   // a locked driver that isn't in the tables leaves nothing to search. The exact search runs this one too: its designs
   // join the exact search's pool, so Fully optimize's cards are never behind Improve's (the two grids differ)
-  const subs = locks.sub
-    ? curSub
-      ? [curSub]
-      : []
-    : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
+  const subs = paSearchSubs(cur.sub, !!locks.sub, budget, false);
   const walls = paOptimizerWalls(cur);
   const braceStyle = paSearchBraceStyle(cur);
   const backJoint = savedBackJoint(cur.backJoint);
@@ -760,7 +774,8 @@ export function optimizePaStack(
     h: rangeOf(locks.subDim.h, cur.cDim.h, SUB_BOX_RANGE.h),
     d: rangeOf(locks.subDim.d, cur.cDim.d, SUB_BOX_RANGE.d),
   };
-  const AMP_V = ampVoltage(amps.ampW);
+  /** the sub amp's voltage into a sub: the amp power is the watts into its impedance (lib/power) */
+  const subAmpV = (sub: SubDriver) => ampVoltage(amps.ampW, sub.ts);
 
   // box shapes inside the limits with gross volume near G, lightest first, a few distinct depths
   const allExact = sr.w[0] === sr.w[1] && sr.h[0] === sr.h[1] && sr.d[0] === sr.d[1];
@@ -847,6 +862,7 @@ export function optimizePaStack(
             Leff = (Sp * 0.00064516 * 343 * 343) / ((2 * Math.PI * Fb) ** 2 * (V / 1000));
           const Lp = Leff / 0.0254 - 1.46 * Math.sqrt(Sp / Math.PI);
           if (Lp <= 0) continue;
+          const AMP_V = subAmpV(sub);
           const mdl = boxModel(sub.ts, V, Sp, Lp, hpf, AMP_V, cur.hpType, { N: 70 });
           evals++;
           if (!mdl) continue;
@@ -1030,12 +1046,11 @@ export function optimizePaStack(
           // no vent keeps up at full power (an unlocked amp searched at its maximum): the biggest vent that fits,
           // with the amp turned down to where the port still has a 10% air-speed margin
           if (!pushed && fallback && !locks.ampW) {
-            const vW =
-              Math.pow(
-                (fallback.s.AMP_V * (0.9 * ventSpeedLimit(style, cur.portMax))) /
-                  fallback.s.mdl.peakVel,
-                2,
-              ) / 8;
+            const vW = ampWatts(
+              (fallback.s.AMP_V * (0.9 * ventSpeedLimit(style, cur.portMax))) /
+                fallback.s.mdl.peakVel,
+              sd.sub.ts,
+            );
             const ampW = onSlider(vW, AMP_WATTS_STEPS.ampW);
             if (ampW !== null) {
               const c = { ...fallback.c, ampW };
@@ -1235,7 +1250,7 @@ export function optimizePaStack(
           midNetLiters(boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset), disp, bracing) *
           STUFFING_VOLUME_GAIN;
         for (const xoLo of xoLos) {
-          const V = ampVoltage(amps.mAmpW),
+          const V = ampVoltage(amps.mAmpW, m.ts),
             mdl = closedBox(m.ts, eff, xoLo, null, V, {
               N: 120,
               hpOrder: cur.xoLoOrder,
@@ -1482,10 +1497,9 @@ export function optimizePaStack(
   }
   // the designs inside the limits that come closest to every goal, for the closest card when none keeps them
   const gapSum = (x: Score) => goals.reduce((sum, g) => sum + goalGap(g, x), 0);
-  add(
-    combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b)),
-    PA_FINALISTS.closest,
-  );
+  /** the designs inside the limits by how close they come to every goal: the closest finalists, and their batches */
+  const closestRanked = combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b));
+  add(closestRanked, PA_FINALISTS.closest);
   if (also.length && curM) {
     const cm = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
     const ranked = combos
@@ -1634,13 +1648,22 @@ export function optimizePaStack(
     const r = chooseFrom(lim, target);
     if (r && r.cards[0].slot.kind === "first") break;
     const next: Combo[] = [];
-    for (const x of firstCandidates) {
-      if (next.length >= PA_FINALISTS.cards) break;
-      const k = boxesOf(x);
-      if (pooledBoxes.has(k)) continue;
-      pooledBoxes.add(k);
-      next.push(x);
-    }
+    /** up to `n` designs from `list` whose boxes aren't in the pool yet */
+    const takeFrom = (list: readonly Combo[], n: number) => {
+      let taken = 0;
+      for (const x of list) {
+        if (taken >= n) break;
+        const k = boxesOf(x);
+        if (pooledBoxes.has(k)) continue;
+        pooledBoxes.add(k);
+        next.push(x);
+        taken++;
+      }
+    };
+    takeFrom(firstCandidates, PA_FINALISTS.cards);
+    // with no card at all, the next closest designs too: the rule's weights can put every closest finalist the
+    // estimate let in over a limit, which leaves nothing that passes to show
+    if (!r) takeFrom(closestRanked, PA_FINALISTS.closest);
     if (!next.length) break;
     for (const x of next) {
       finalists.set(JSON.stringify(x.c), x);
@@ -1736,7 +1759,7 @@ export function optimizePaStack(
     h: PA_SLIDERS.subH,
     d: PA_SLIDERS.subD,
   };
-  const onSliders = (p: PoolEntry, axis: PaGoal): PoolEntry => {
+  const onSliders = (p: PoolEntry, axis: PaGoal, L: ProblemLimits = lim): PoolEntry => {
     const sides = (["w", "h", "d"] as const).map((k) =>
       nearSteps(p.c.cDim[k], SUB_SIDE[k], sr[k], cur.cDim[k]),
     );
@@ -1758,7 +1781,7 @@ export function optimizePaStack(
     );
     if (sides.every((o) => o.length === 1) && lens.length === 1) return p;
     // a try may fail only what the card already fails (the near miss names its blockers from these)
-    const had = new Set(designProblemList(p.m, lim).map((x) => x.id));
+    const had = new Set(designProblemList(p.m, L).map((x) => x.id));
     const kept = goals.filter((g) => goalGap(g, p.m) === 0);
     let best: PoolEntry | null = null;
     for (const w of sides[0])
@@ -1768,7 +1791,7 @@ export function optimizePaStack(
             const c = { ...p.c, cDim: { w, h, d }, cVent: { ...p.c.cVent, len } },
               m = evaluateDesign(c);
             evals++;
-            if (!m || designProblemList(m, lim).some((x) => !had.has(x.id))) continue;
+            if (!m || designProblemList(m, L).some((x) => !had.has(x.id))) continue;
             if (kept.some((g) => goalGap(g, m) > 0)) continue;
             const q = { c, m, ch: changes(c) };
             if (!best || obj[axis](metric(q)) < obj[axis](metric(best))) best = q;
@@ -1778,10 +1801,31 @@ export function optimizePaStack(
   const axisOf = (k: PlannedCard) => (k.slot.kind === "alt" ? k.slot.axis : goal);
 
   const choose0 = choose;
-  const chooseAmps = (L: ProblemLimits, tgt: number) => {
-    const res = choose0(L, tgt);
+  // The cards on the sliders. A closest card is chosen by the pool's numbers, but on the sliders it can keep every goal
+  // (a side or the duct rounded to its step retunes the box): then it is the fix it is, and the notice naming what it
+  // misses, and the near miss's looser limits, don't apply.
+  const settle = (res: PaChosen | null, L: ProblemLimits, tgt: number): PaChosen | null => {
     if (!res) return res;
-    const cs = res.cards.map((k) => ({ ...k, p: onSliders(k.p, axisOf(k)) }));
+    const cards = res.cards.map((k) => ({ ...k, p: onSliders(k.p, axisOf(k), L) }));
+    const [lead] = cards;
+    const keepsAll =
+      !!lead &&
+      lead.slot.kind === "closest" &&
+      goals.every((g) => goalOk(g, { ...lead.p.m, out: lead.p.m.out + (target - tgt) }));
+    if (!keepsAll) return { ...res, cards };
+    return {
+      ...res,
+      cards: [
+        { ...lead, slot: { kind: "fix" }, label: CARD_LABELS.fix, why: FIX_WHY[goal] },
+        ...cards.slice(1),
+      ],
+      fixMisses: false,
+    };
+  };
+  const chooseAmps = (L: ProblemLimits, tgt: number) => {
+    const res = settle(choose0(L, tgt), L, tgt);
+    if (!res) return res;
+    const cs = res.cards;
     // output-first cards keep all the output they found; the others come down to the target
     const keepOut = (k: PlannedCard) =>
       (goals.some((g) => ["louder", "lower"].includes(g)) && k === cs[0]) ||
@@ -1833,7 +1877,7 @@ export function optimizePaStack(
       },
     ];
     const worked = tries.filter((x) => {
-      const r = choose(x.L, x.t);
+      const r = settle(choose(x.L, x.t), x.L, x.t);
       return r && !r.fixMisses;
     });
     // fewest problems, then the least short of the goals (your design is one of them, so this is never behind it on the

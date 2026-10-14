@@ -25,6 +25,7 @@ import { close, tsModel } from "./helpers";
 // Keep each with a note; the model uses Mms/Bl/Re/Sd/Fs/Qms, not the listed Vas/Qes.
 const KNOWN: Record<string, string> = {
   "bc18ps:Vas": "datasheet Vas 245 L vs 283 L from Mms/Sd/Fs; noted on the driver",
+  "bc18nws4:Vas": "datasheet Vas 203.5 L vs about 234 L from Mms/Sd/Fs; noted on the driver",
   "es12nlw9300:Qes": "datasheet Qes 0.45 vs 0.394 from Bl/Mms/Re/Fs; Qtc reads ~12% low",
   "lv123f:Vas": "datasheet Vas 42 L vs 37.3 L",
   "cindcx10:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.53x",

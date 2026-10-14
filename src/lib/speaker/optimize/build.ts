@@ -24,6 +24,8 @@ import {
   type SizeModel,
 } from "./space";
 import { tunedPort } from "./vent";
+import { ampWatts } from "../../pa/calc";
+import { bandLoads } from "../speakerLimits";
 import type { UnitOption } from "./screen";
 
 /** What a build reads of the search. */
@@ -173,6 +175,7 @@ export function trimAmps(
   if (ev.metrics.musicDb === null || !groups.length) return ev;
   const room = neededRoom(ev, needDb);
   const watts = new Map(spec.bands.map((b) => [b.id, b.ampW]));
+  const loads = bandLoads(spec);
   for (const group of groups) {
     let w = 0;
     for (const id of group) {
@@ -194,7 +197,7 @@ export function trimAmps(
       }
       const pad =
         band.drive === HIFI_DRIVE.passive ? Math.pow(10, Math.min(0, band.levelDb) / 20) : 1;
-      const need = Math.pow(vNeed / pad, 2) / 8;
+      const need = ampWatts(vNeed / pad, loads.get(id) ?? {});
       w = Math.max(
         w,
         Math.ceil(need / SPEAKER_STEPS.ampW) * SPEAKER_STEPS.ampW,

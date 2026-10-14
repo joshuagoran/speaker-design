@@ -164,6 +164,7 @@ function hifiBandParts(
       drive: state.drive,
     },
     refW,
+    state.woofer.ts,
   );
   return {
     subsonic: box.hpf ? { hz: box.hpf, type: HIFI_SUBSONIC_TYPE } : null,

@@ -5,6 +5,12 @@ import { PORT_TUBES } from "../../data/catalog/port-tubes";
 import { keysOf } from "../records";
 
 /**
+ * A catalog row the optimizers search: a driver joins every search space once, as its standard version; another
+ * impedance version of it (`variantOf`) stays in the pickers only.
+ */
+export const inSearchSpace = (row: { variantOf?: string }) => row.variantOf === undefined;
+
+/**
  * A dimension's search range under its lock: `exact` holds it at `cur`, `max` lets it go from `lo` up to `cur` (never
  * above `hi`), free takes the whole [lo, hi].
  */

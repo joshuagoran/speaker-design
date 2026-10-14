@@ -18,7 +18,7 @@ export interface HornDesign extends Pick<
 export function useHornDesign(): HornDesign {
   const [hornOption, setHornOption] = useState(DEFAULT_PA.horn);
   const [compressionDriver, setCompressionDriver] = useState(DEFAULT_PA.cd);
-  const [hornAmpWatts, setHornAmpWatts] = useState(DEFAULT_PA.hfAmpW); // amp power per HF channel, rated into 8 Ω
+  const [hornAmpWatts, setHornAmpWatts] = useState(DEFAULT_PA.hfAmpW); // amp power per HF channel, W into the driver
   const [hornBelowMidDb, setHornBelowMidDb] = useState(DEFAULT_PA.hfTilt); // the music balance: the horn band level below the mid, dB
   return {
     hornOption,

@@ -62,6 +62,9 @@ import type {
   VentSpec,
 } from "../src/types";
 
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
+
 // boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW)
 const seeds = JSON.parse(
   fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
@@ -89,7 +92,7 @@ const random = (seed: number) => () => (seed = (seed * 16807) % 2147483647) / 21
 test("exact PA search: one shared curve per volume and tuning gives the planner's numbers for every vent", () => {
   const rnd = random(11);
   const mid = MID_OPTIONS[0];
-  const volts = ampVoltage(3000);
+  const volts = ampVoltage(3000, EIGHT_OHM);
   let n = 0;
   for (let k = 0; k < 300; k++) {
     const sub = SUB_OPTIONS[Math.floor(rnd() * SUB_OPTIONS.length)];

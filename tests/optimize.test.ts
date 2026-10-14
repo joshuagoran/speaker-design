@@ -36,6 +36,9 @@ import { close } from "./helpers";
 import { SEED_NAMES } from "./seeds";
 import { evaluate as evaluateGolden } from "./golden-configs";
 
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
+
 // boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW)
 const seeds = JSON.parse(
   fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
@@ -93,7 +96,7 @@ test("evaluate() gives the planner's numbers (golden's evaluation, without the h
 
 test("bandOut is the lowest music-limit level from 40 to 90 Hz (a peak can't raise it)", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
-    V = ampVoltage(500);
+    V = ampVoltage(500, EIGHT_OHM);
   const mdl = boxModel(ts, 150, 60, 12, 30, V, "BW24")!,
     L = subwooferLimits(mdl, ts, V, 20);
   const sc = 20 * Math.log10(L.V / V),
@@ -510,24 +513,60 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under a $900 budget and 82 lb, with the vent kept to its bottom slot, nothing that passes keeps the F3;
-  // 91 lb does. (Before datasheet Le this was $750 and 95 lb, offering $825; with Le that closest design, once on the
-  // sliders, keeps the goals.)
-  const out = optimizePaStack({
-    ...base,
-    cur: pick(SEED_NAMES.blocky),
-    maxLb: 82,
-    budget: 900,
-    goal: "cheaper",
-    locks: { vent: true },
-  });
+  // "blocky" under a $900 budget, with the vent kept to its bottom slot. The weight limit comes from the search itself,
+  // so catalog edits move it with them: the lightest whole-lb limit at which a design that passes keeps the goals (the
+  // goal's card or a fix), found by halving. One lb under it only a closest card is left, and the near miss offers the
+  // 10 % more weight that reaches the goals again.
+  const run = (maxLb: number) =>
+    optimizePaStack({
+      ...base,
+      cur: pick(SEED_NAMES.blocky),
+      maxLb,
+      budget: 900,
+      goal: "cheaper",
+      locks: { vent: true },
+    });
+  const answers = (maxLb: number) => {
+    const kind = run(maxLb).cards[0]?.slot.kind;
+    return kind === "first" || kind === "fix";
+  };
+  let lo = 60,
+    hi = 125;
+  assert.ok(!answers(lo) && answers(hi), "the halving brackets the limit");
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (answers(mid)) hi = mid;
+    else lo = mid;
+  }
+  const maxLb = hi - 1;
+  const out = run(maxLb);
   assert.ok((out.goalMissing ?? "").startsWith(OUT_OF_REACH_LEAD), out.goalMissing ?? "no notice");
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];
   assert.ok(
-    opts.some((o) => o.set.maxLb === 91),
-    JSON.stringify(opts.map((o) => o.text)),
+    opts.some((o) => o.set.maxLb === Math.ceil(maxLb * 1.1)),
+    `${maxLb} lb: ${JSON.stringify(opts.map((o) => o.text))}`,
   );
+});
+
+test("a closest design that keeps every goal once on the sliders is the fix, with no out-of-reach notice", () => {
+  // "blocky" at 82 lb and $900: by the pool's numbers nothing passing keeps the goals, but the closest design, its sides
+  // and duct rounded to the sliders' steps, does
+  const lim = { maxLb: 82, budget: 900 };
+  const out = optimizePaStack({
+    ...base,
+    ...lim,
+    cur: pick(SEED_NAMES.blocky),
+    goal: "cheaper",
+    locks: { vent: true },
+  });
+  const k = out.cards[0];
+  assert.ok(k, "a card is shown");
+  assert.equal(k.slot.kind, "fix");
+  assert.deepEqual(designProblems(evaluateDesign(k.config)!, lim), []);
+  assert.ok(k.metrics.out >= out.target - 1e-9, `${k.metrics.out} dB`);
+  assert.equal(out.goalMissing, null);
+  assert.equal(out.nearMiss, null);
 });
 
 test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {
