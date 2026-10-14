@@ -51,6 +51,7 @@ function numberFields(port: SpeakerPort) {
       walls: { nominal: "3/4", thicknessIn: 0.75 },
       chamber: { dims: { w: 24, h: 32, d: 18 }, drivers: [] },
       clearW: 22.37,
+      clearH: 30.5,
       onChange: () => {},
     }),
   );

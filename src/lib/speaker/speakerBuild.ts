@@ -464,9 +464,17 @@ function ventRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
     return [...subKeepOut(f.box, t, baffleInsetIn(cabinet), rule.portStyle, vent, rule.sub).vent];
   }
   const { port } = rule;
-  if (port.shape === PORT_SHAPE.slot)
+  if (port.shape === PORT_SHAPE.slot) {
+    const z: readonly [number, number] = [0, Math.min(inD, port.len)];
+    // the slots up the front sides, each against its wall
+    if (port.place === SLOT_PLACE.sides)
+      return slotOpeningsAt(f.placed, port, t).map((o) => {
+        const c = insidePoint(f, { xIn: f.placed.cx + o.x, yIn: f.placed.y0 + o.y + o.h / 2 });
+        return { x: [c.x - o.w / 2, c.x + o.w / 2], y: [c.y - o.h / 2, c.y + o.h / 2], z };
+      });
     // the slots stacked along the floor, each under its shelf
-    return [{ x: [0, iw], y: [0, port.n * (port.h + t)], z: [0, Math.min(inD, port.len)] }];
+    return [{ x: [0, iw], y: [0, port.n * (port.h + t)], z }];
+  }
   const tubes = roundPortsAt(f.placed, port);
   return tubes.spots.map((s) => {
     const c = insidePoint(f, { xIn: f.placed.cx + s.x, yIn: f.placed.y0 + s.y });

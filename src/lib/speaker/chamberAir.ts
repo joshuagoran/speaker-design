@@ -21,6 +21,7 @@ import {
   CABINET_CONSTRUCTION,
   DRIVER_KIND,
   PORT_SHAPE,
+  SLOT_PLACE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
 
@@ -128,7 +129,12 @@ export function chamberVentModel(
   const { port } = vent;
   switch (port.shape) {
     case PORT_SHAPE.slot: {
-      const w = port.w ?? face.w;
+      // an open slot up the front sides: each opening is as tall as the slot's long side, at most the clear face (the
+      // layout cuts it so); a divided slot is always on the floor
+      const w =
+        port.fins === undefined && port.place === SLOT_PLACE.sides
+          ? Math.min(port.w ?? face.h, face.h)
+          : (port.w ?? face.w);
       if (port.fins !== undefined) {
         // the PA letterbox (lib/pa/calc ventGeometry): its fins take their thickness off the width; its mouth on the
         // floor (which mirrors it), its inner end as the PA slot's, folded up the back wall when too long to run

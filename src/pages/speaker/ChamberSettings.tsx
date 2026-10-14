@@ -40,6 +40,7 @@ import {
   SET_BY,
   SET_BY_NAMES,
   SLOT_KIND_NAMES,
+  SLOT_PLACE_NAMES,
   SLOT_KIND_TIPS,
   SLOT_FOLD_NAMES,
   TUBE_ENDS_NAMES,
@@ -52,9 +53,9 @@ import {
   CHAMBER_LOAD,
   DRIVER_KIND,
   HORN_PLACEMENT,
-  PA_SLOT_FINS,
   PORT_SHAPE,
   SLOT_KIND,
+  SLOT_PLACE,
   TUBE_ENDS,
   TUBE_LAYOUT,
   VENT_KIND,
@@ -96,6 +97,7 @@ import { formatInches } from "../../lib/format";
 import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
+import { withSlotKind, withSlotPlace } from "../../lib/speaker/slotPort";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
 import { ELBOW_COUNTS, elbowCountOf } from "../../lib/tubeFold";
@@ -298,6 +300,7 @@ export function ChamberSettings({
             walls={cabinet.panel}
             chamber={chamber}
             clearW={placed?.clear.w ?? chamber.dims.w - 2 * cabinet.panel.thicknessIn}
+            clearH={placed?.clear.h ?? chamber.dims.h - 2 * cabinet.panel.thicknessIn}
             onChange={setPort}
           />
           {!vents && <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.ventFixed}</p>}
@@ -426,6 +429,7 @@ export function PortFields({
   walls,
   chamber,
   clearW,
+  clearH,
   onChange,
 }: {
   port: SpeakerPort;
@@ -435,6 +439,8 @@ export function PortFields({
   chamber: Pick<SpeakerChamber, "dims" | "drivers">;
   /** the chamber's clear width, in: a plain slot's long side when Auto */
   clearW: number;
+  /** the chamber's clear height, in: a plain slot's long side when Auto, up the front sides */
+  clearH: number;
   onChange: (p: SpeakerPort) => void;
 }) {
   if (port.shape === PORT_SHAPE.slot)
@@ -444,6 +450,7 @@ export function PortFields({
         t={walls.thicknessIn}
         chamber={chamber}
         clearW={clearW}
+        clearH={clearH}
         onChange={onChange}
       />
     );
@@ -508,28 +515,27 @@ function SlotFields({
   t,
   chamber,
   clearW,
+  clearH,
   onChange,
 }: {
   port: SpeakerSlotPort;
   t: SpeakerPanel["thicknessIn"];
   chamber: Pick<SpeakerChamber, "dims">;
   clearW: number;
+  clearH: number;
   onChange: (p: SpeakerPort) => void;
 }) {
   const letterbox = port.fins !== undefined;
   const { h, len } = port;
+  const sides = port.place === SLOT_PLACE.sides;
+  /** a plain slot's long side when Auto: the clear width, or the clear height up the front sides */
+  const autoLong = sides ? clearH : clearW;
   const kind = (
     <ToggleGroup
       label={<Tooltip tip={SPEAKER_TEXT.slotKindTip}>{SPEAKER_TEXT.slotKind}</Tooltip>}
       className="mb-1"
       value={letterbox ? SLOT_KIND.letterbox : SLOT_KIND.plain}
-      onChange={(k) =>
-        onChange(
-          k === SLOT_KIND.letterbox
-            ? { shape: PORT_SHAPE.slot, n: 1, h, len, fins: port.fins ?? PA_SLOT_FINS }
-            : { shape: PORT_SHAPE.slot, n: 1, h, len },
-        )
-      }
+      onChange={(k) => onChange(withSlotKind(port, k))}
       options={entriesOf(SLOT_KIND_NAMES).map(([k, name]) => [k, name, SLOT_KIND_TIPS[k]] as const)}
     />
   );
@@ -590,19 +596,26 @@ function SlotFields({
         <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
       </div>
       <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.slotPlaceTip}>{SPEAKER_TEXT.slotPlace}</Tooltip>}
+        className="mb-3"
+        value={port.place ?? SLOT_PLACE.floor}
+        onChange={(place) => onChange(withSlotPlace(port, place))}
+        options={entriesOf(SLOT_PLACE_NAMES)}
+      />
+      <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.slotLongSetByTip}>{SPEAKER_TEXT.slotLongSetBy}</Tooltip>}
         className="mb-2"
         value={port.w === undefined ? SET_BY.auto : SET_BY.custom}
         onChange={(v) => {
           const { w: _w, ...rest } = port;
-          onChange(v === SET_BY.auto ? rest : { ...rest, w: shownIn(clearW) });
+          onChange(v === SET_BY.auto ? rest : { ...rest, w: shownIn(autoLong) });
         }}
         options={entriesOf(SET_BY_NAMES)}
       />
       <NumberField
         label={SPEAKER_TEXT.slotLong}
-        // Auto: the chamber's clear width, read-only
-        {...onFieldStep(port.w ?? clearW, SPEAKER_STEPS.portSizeIn)}
+        // Auto: the chamber's clear width (its clear height up the sides), read-only
+        {...onFieldStep(port.w ?? autoLong, SPEAKER_STEPS.portSizeIn)}
         disabled={port.w === undefined}
         min={0.25}
         onChange={(w) => onChange({ ...port, w })}

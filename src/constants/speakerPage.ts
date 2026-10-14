@@ -1,5 +1,5 @@
 // The Speaker page's names and choices (src/pages/speaker): the spec's ids as the page shows them.
-import type { SLOT_KIND, TUBE_ENDS, TUBE_LAYOUT } from "./speakerSpec";
+import type { SLOT_KIND, SLOT_PLACE, TUBE_ENDS, TUBE_LAYOUT } from "./speakerSpec";
 import type {
   ArchBlock,
   ChamberLoad,
@@ -20,16 +20,16 @@ import { UI_TEXT } from "./uiText";
 
 /** Each driver kind as the Speaker page names it: the catalog table it picks from. */
 export const DRIVER_KIND_NAMES = {
-  sub: "PA sub",
-  mid: "PA mid-bass",
+  sub: "Subwoofer",
+  mid: "Mid-bass",
   compression: "Compression driver",
-  woofer: "Hi-fi woofer",
+  woofer: "Woofer",
   tweeter: "Tweeter",
   coaxial: "Coaxial",
 } as const satisfies Record<DriverKind, string>;
 
 /**
- * The driver picker's types: one woofer list for the three woofer kinds (PA sub, PA mid-bass, Hi-fi woofer), with
+ * The driver picker's types: one woofer list for the three woofer kinds (subwoofer, mid-bass, woofer), with
  * their size as a filter, then the other kinds.
  */
 export const DRIVER_TYPE_NAMES = {
@@ -71,6 +71,12 @@ export const SLOT_KIND_TIPS = {
     "A wide slot along the bottom of the front, split by dividers. Its opening is at the floor.",
   plain: "A rectangular opening in the front or the back, with no dividers.",
 } as const satisfies Record<keyof typeof SLOT_KIND, string>;
+
+/** Each slot position as the Speaker page names it (`SLOT_PLACE`). */
+export const SLOT_PLACE_NAMES = {
+  floor: "Floor",
+  sides: "Front sides",
+} as const satisfies Record<keyof typeof SLOT_PLACE, string>;
 
 /** Each kind of round tube end as the Speaker page names it (`TUBE_ENDS`). */
 export const TUBE_ENDS_NAMES = {
@@ -269,7 +275,7 @@ export const SPEAKER_TEXT = {
   wallPanelSummary: (t: string) => `${t} walls`,
   hardware: "Hardware",
   hardwareTip:
-    "The PA box hardware: two handles, an input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell. None: no hardware.",
+    "Two handles, an input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell. None: no hardware.",
   hardwareNone: "None",
   hardwareOn: "Handles and input dish",
   handles: "Handles",
@@ -280,9 +286,9 @@ export const SPEAKER_TEXT = {
   hardwareSummary: (handles: string) => `hardware with ${handles}`,
   noHardwareSummary: "no hardware",
   braceTarget: "Bracing target",
-  /** the target's tooltip, with the PA boxes' target in words */
-  braceTargetTip: (pa: string) =>
-    `Braces are added until the first resonance of each panel is above this frequency. The PA boxes use ${pa}.`,
+  /** the target's tooltip, with the default target in words */
+  braceTargetTip: (def: string) =>
+    `Braces are added until the first resonance of each panel is above this frequency. Default: ${def}.`,
   /** under the Top choice when an arched top cannot apply: the start of the reason (`ARCH_BLOCK_TEXT`) */
   archFlat: "The top stays flat.",
   fromLeft: "From left, in",
@@ -298,15 +304,18 @@ export const SPEAKER_TEXT = {
   slotLong: "Opening, long side, in",
   slotLongSetBy: "Long side",
   slotLongSetByTip:
-    "Auto: the slot has the full clear width of the chamber. Custom: you type the width. The slot stays centered.",
+    "Auto: the slot has the full clear width of the chamber, or the full clear height on the front sides. Custom: you type the size.",
   slotHeight: "Slot height, in",
   portLength: "Length, in",
   slotKind: "Slot type",
   slotKindTip:
-    "Divided slot: the slot of the PA sub. It runs along the floor from the frame front. Fins divide it. If it is too long to run straight, it folds up the back. It needs the frame construction. Open slot: a rectangular opening with no dividers, as on a hi-fi speaker. You can stack more than one.",
+    "Divided slot: a slot along the floor, split by fins. It folds up the back when it is too long. It needs the frame construction. Open slot: a rectangular opening with no fins. You can use more than one.",
+  slotPlace: "Slot position",
+  slotPlaceTip:
+    "Floor: the slots stack up from the floor. Front sides: the slots stand on the floor against the side walls, beside the horn mouth.",
   slotFins: "Fins",
   slotFinsTip:
-    "Fins split a divided slot into equal openings. Each fin has the thickness of the walls. The fins hold the floor. The PA sub uses two. The most is set by the width and the slot height: each opening stays at least half the slot height wide.",
+    "Fins split a divided slot into equal openings. Each fin is as thick as the walls. Default: two. Most: each opening stays at least half the slot height wide.",
   slotKindResets:
     "Switching the type resets the other type's settings: fins, or count, long side and fold.",
   slotFolds: "The slot is too long to run straight. It folds up the back.",
@@ -316,9 +325,8 @@ export const SPEAKER_TEXT = {
     "Up the back: if the slot is too long to run straight, it folds up the back wall. No: the slot must fit straight.",
   tubeEnds: "Tube ends",
   tubeEndsTip:
-    "Flared: the tubes of the PA sub, with flared ends. They need a PA sub driver in this chamber. Plain: a plain round port, as on a hi-fi speaker.",
-  tubeEndsNoSub:
-    "Flared tubes need a PA sub driver in this chamber. Until then, the tubes are plain.",
+    "Flared: tubes with flared ends. They need a sub driver in this chamber. Plain: plain round tubes.",
+  tubeEndsNoSub: "Flared tubes need a sub driver in this chamber. Until then, the tubes are plain.",
   tubeLayout: "Tube position",
   elbows: "Elbows",
   elbowsTip:

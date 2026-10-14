@@ -4,6 +4,7 @@ import type { HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
 import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
+import { ReadOnlyField } from "../../components/ui/ReadOnlyField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -118,7 +119,7 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
           />
         )}
         {front && (
-          <NumberField
+          <ReadOnlyField
             label={
               <Tooltip
                 tip={
@@ -132,9 +133,6 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
             }
             value={shownIn(front.liters)}
             unit="L"
-            // read-only: the drivers and the walls set it
-            disabled
-            onChange={() => {}}
           />
         )}
       </div>
