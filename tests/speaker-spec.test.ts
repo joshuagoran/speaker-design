@@ -1,7 +1,6 @@
 // The speaker spec (lib/speaker): every golden design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
 import { PA_FLOOR } from "./speaker-cases";
-import { SPACE_SEAT_AREA } from "../src/constants/space";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs, fillConfigs, type GoldenConfig } from "./golden-configs";
@@ -536,8 +535,7 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
     const seat = { x: state.listeningSeat.x, y: state.distanceToWallFt + state.listeningSeat.y };
     assert.deepEqual(space.venue.listener, seat, name);
     assert.equal(space.venue.earFt, state.earHeightIn / 12, name);
-    // a living room round the pair and the seat, the listening area at the seat
-    assert.deepEqual(space.venue.area, { ...seat, ...SPACE_SEAT_AREA }, name);
+    // a living room round the pair and the seat
     assert.ok(space.venue.room.widthFt >= state.speakerSpacingFt, name);
     assert.ok(space.venue.room.lengthFt > seat.y, name);
   }

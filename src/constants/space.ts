@@ -25,7 +25,7 @@ export const SPACE_HOME_ROOM: CoverageRoom = {
 /** The room is at least this much wider than a pair of speakers, and longer than its seat is from the front wall, ft. */
 export const SPACE_HOME_MARGIN_FT = 4;
 
-/** The level a living room's listening area should get, dB SPL: loud music at home. */
+/** The level a living room should get, dB SPL: loud music at home. */
 export const SPACE_HOME_TARGET_DB = 90;
 
 /** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
@@ -33,12 +33,6 @@ export const DRIVER_PART = {
   cone: "cone",
   hf: "hf",
 } as const;
-
-/** A seat's listening area, ft: a sofa's width, a little deep. */
-export const SPACE_SEAT_AREA = { widthFt: 6, lengthFt: 4 } as const;
-
-/** How far the audience's listening area starts past the boxes' fronts, ft (the map's stats leave that floor out too). */
-export const SPACE_AUDIENCE_GAP_FT = 4;
 
 /** The ear's height of a seated listener, ft. */
 export const SEATED_EAR_FT = 3.5;
@@ -87,9 +81,9 @@ export const SPACE_TEXT = {
   coverage: "Coverage",
   side: "Side view",
   sideNote:
-    "The placements seen from the side, to scale: each box at its lift and tilt, a line along each one's highest band. The cyan dot is the listener's ear; the band under the floor is the listening area.",
+    "The speakers seen from the side, to scale, at their height and tilt. Each dashed line shows where a speaker points (the axis of its highest band). The cyan dot is the listener's ear.",
   response: "Response at the listener",
-  levels: "Levels at the listening area",
+  levels: "Levels",
   noPlacements: "Nothing is placed yet. Pick a stack or speaker and press Place.",
   missing:
     "A placement names a stack or speaker that is not in this space. The model leaves it out.",
@@ -164,34 +158,30 @@ export const SPACE_TEXT = {
     "Some boxes need a time offset to line up at their crossovers (listed above). A delay, an all-pass filter or moving the box can give it.",
   placementNote: "Some placements play later, to line up with other speakers in the room.",
   outdoors: "Outdoors",
-  areaWidth: "Area width, ft",
-  areaLength: "Area length, ft",
-  areaCenter: "Area center from the front wall, ft",
   ear: "Ear height, ft",
   target: "Target level, lowest band",
   measuredAt: "Measured at",
   /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
   mapCaption: (band: string, target: string, place: string) =>
-    `${band}, ${target} dB target at ${place}. The dashed box is the listening area.`,
+    `${band}, ${target} dB target at ${place}.`,
   balance: "Music balance",
   balanceTip:
     "Flat: each band plays at the same level. PA music tilt: each higher band plays a little lower, so the bass is stronger, as many PA systems are set.",
-  /** the band levels' heading: each band at the middle of the listening area */
-  bandLevels: "Each band at the middle of the listening area, at this level:",
+  /** the band levels' heading: each band at the listener */
+  bandLevels: "Each band at the listener, at this level:",
   /** one band's level and target there, dB (already formatted) */
   bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
   targetCurve: "Target, music balance",
-  listenerHint:
-    "The dashed box on the map is the listening area. Tap the map, or drag the cyan dot, to move the listener.",
+  listenerHint: "Tap the map, or drag the cyan dot, to move the listener.",
   mapHint:
     "Drag a placement to move it, its dot to turn it, or the listener (tap the floor to put them there).",
   oneNote: (hz: number) =>
     `One frequency adds everything with phase, so the interference between the placements is easy to see. The limit is ${hz} Hz. Above it, the pattern is finer than the map.`,
-  areaAverage: "Area average",
-  areaMax: "Area at the limit",
+  audienceAverage: "Audience average",
+  audienceMax: "Audience at the limit",
   listener: "Listener",
-  /** the share of the listening area at or above a level against the target */
-  areaAtLeast: (db: string) => `Area ≥ ${db} dB`,
+  /** the share of the floor at or above a level against the target (as the coverage page counts it) */
+  floorAtLeast: (db: string) => `Floor ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
   /** the reference can't get the band's target: where it is measured (`COVERAGE_LEVEL_REF_PLACE`), dB */
@@ -201,5 +191,5 @@ export const SPACE_TEXT = {
     `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
   listenerVs: "The listener against the target:",
   modelNote:
-    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
+    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the audience average, the listener, or 1 m in front of the speakers) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
 } as const;

@@ -38,8 +38,8 @@ import type {
   CoverageBand,
   CoverageGrid,
   CoverageGridView,
+  CoverageLevelRef,
   FloorPoint,
-  ListeningArea,
   PaPlannerDesign,
   SavedConfig,
   SpaceDesign,
@@ -74,21 +74,9 @@ const inRoom = <P extends FloorPoint>(p: P, room: SpaceVenue["room"]): P => ({
 const onFloor = (p: FloorPoint, room: SpaceVenue["room"]): FloorPoint =>
   inRoom({ x: snap(p.x), y: snap(p.y) }, room);
 
-/** A listening area kept inside the room: no wider or longer than it, its edges on its floor. */
-function areaInRoom(area: ListeningArea, room: SpaceVenue["room"]): ListeningArea {
-  const widthFt = Math.min(area.widthFt, room.widthFt),
-    lengthFt = Math.min(area.lengthFt, room.lengthFt);
-  return {
-    widthFt,
-    lengthFt,
-    x: clamp(area.x, -(room.widthFt - widthFt) / 2, (room.widthFt - widthFt) / 2),
-    y: clamp(area.y, lengthFt / 2, room.lengthFt - lengthFt / 2),
-  };
-}
-
 /**
  * A space kept inside its room (after the room changes size): each placement's spot on the floor (a follower's stored
- * spot too, so it lands inside when it goes on its own), the listener, and the listening area.
+ * spot too, so it lands inside when it goes on its own) and the listener.
  */
 export function fittedSpace(space: SpaceSpec): SpaceSpec {
   const { room } = space.venue;
@@ -98,7 +86,6 @@ export function fittedSpace(space: SpaceSpec): SpaceSpec {
     venue: {
       ...space.venue,
       listener: inRoom(space.venue.listener, room),
-      area: areaInRoom(space.venue.area, room),
     },
   };
 }
@@ -196,9 +183,35 @@ function oneMeterAverage(req: Omit<SpaceGridRequest, "cols">, spots: readonly Fl
   return levels.length ? levels.reduce((a, b) => a + b, 0) / levels.length : null;
 }
 
+/** Where a level reference reads: the listener, the spots 1 m in front of the placements, and the boxes' spots. */
+interface ReferenceSpots {
+  /** the listener's spot; null when the reference is not the listener (so moving the listener moves nothing else) */
+  listener: FloorPoint | null;
+  meterSpots: readonly FloorPoint[];
+  /** the boxes' spots: the audience average leaves the floor right in front of them out (as on the coverage page) */
+  boxes: readonly FloorPoint[];
+}
+
 /**
- * The system's gain, dB: what brings the listening area's average (at the limit) down to the target, or 0 (the limit)
- * when it doesn't reach it.
+ * A request's level at the limit at the reference, as the coverage page reads it, dB: the audience average over the
+ * grid's floor (needs `grid`; null without it), the level at the listener, or the mean of the 1 m spots. Null when
+ * nothing reaches it. Only the listener's own reference reads the listener.
+ */
+export function referenceAtLimit(
+  levelRef: CoverageLevelRef,
+  req: Omit<SpaceGridRequest, "cols">,
+  spots: ReferenceSpots,
+  grid: CoverageGrid | null,
+): number | null {
+  if (levelRef === COVERAGE_LEVEL_REF.listener)
+    return spots.listener && spaceLevelAt(req, spots.listener);
+  if (levelRef === COVERAGE_LEVEL_REF.stacks) return oneMeterAverage(req, spots.meterSpots);
+  return grid ? audienceAverage(grid, req.room, spots.boxes) : null;
+}
+
+/**
+ * The system's gain, dB: what brings the reference's level (at the limit) down to the target, or 0 (the limit) when it
+ * doesn't reach it.
  */
 const systemGain = (target: number, atLimit: number | null) =>
   atLimit !== null ? Math.min(0, target - atLimit) : 0;
@@ -259,7 +272,7 @@ export function useSpace() {
         stacks,
         speakers,
       }),
-    // the model reads only these (the name, the listener, the area and the target don't move it)
+    // the model reads only these (the name, the listener and the target don't move it)
     [placements, room, stacks, speakers],
   );
   const req = useMemo<Omit<SpaceGridRequest, "cols">>(
@@ -326,29 +339,27 @@ export function useSpace() {
     // the spots read the placements, the room and which placements the model holds
     [placements, room, model],
   );
+  /** the listener's spot when it is the reference; null otherwise, so the other references ignore the listener */
+  const refListener = levelRef === COVERAGE_LEVEL_REF.listener ? venue.listener : null;
   /** a request's level at the limit at the reference, when points alone give it (not the audience average) */
   const pointRefAtLimit = (r: Omit<SpaceGridRequest, "cols">) =>
-    levelRef === COVERAGE_LEVEL_REF.listener
-      ? spaceLevelAt(r, venue.listener)
-      : levelRef === COVERAGE_LEVEL_REF.stacks
-        ? oneMeterAverage(r, meterSpots)
-        : null;
+    referenceAtLimit(levelRef, r, { listener: refListener, meterSpots, boxes: spots }, null);
   const refAtLimit = useMemo(
     () => (placed ? pointRefAtLimit(req) : null),
     // the reference reads these
-    [placed, req, levelRef, venue.listener, meterSpots],
+    [placed, req, levelRef, refListener, meterSpots],
   );
-  // the grid on show: the listening area's average at the limit, and the gain that brings the reference to the target
-  const areaAtLimit = useMemo(
-    () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, spots, venue.area) : null),
-    [shown, placed, spots, venue.area],
+  // the grid on show: the audience's average at the limit, and the gain that brings the reference to the target
+  const audienceAtLimit = useMemo(
+    () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, spots) : null),
+    [shown, placed, spots],
   );
   const fromGrid = levelRef === COVERAGE_LEVEL_REF.audience;
   // the grid on show with the target and gain of the band it belongs to (an older band's while the next computes)
   const view = useMemo<CoverageGridView | null>(() => {
     if (!shown || !placed) return null;
     const atLimit = fromGrid
-      ? areaAtLimit
+      ? audienceAtLimit
       : shown.req === req
         ? refAtLimit
         : pointRefAtLimit(shown.req);
@@ -360,10 +371,10 @@ export function useSpace() {
     shown,
     placed,
     fromGrid,
-    areaAtLimit,
+    audienceAtLimit,
     req,
     refAtLimit,
-    venue.listener,
+    refListener,
     meterSpots,
     venue.targetDb,
     crossovers,
@@ -374,11 +385,11 @@ export function useSpace() {
   const currentAtLimit = fromGrid ? (view ? view.atLimit : null) : refAtLimit;
   const refTarget = fromGrid && view ? view.target + view.gain : target;
   const stats = useMemo(
-    () => (view ? coverageStats(view.grid, view.room, spots, view.target, venue.area) : null),
-    [view, spots, venue.area],
+    () => (view ? coverageStats(view.grid, view.room, spots, view.target) : null),
+    [view, spots],
   );
   const gain = fromGrid ? (view ? view.gain : 0) : systemGain(target, currentAtLimit);
-  /** each band's level at the middle of the listening area at the space's level, and its target */
+  /** each band's level at the listener at the space's level, and its target */
   const bandLevels = useMemo(
     () =>
       placed
@@ -393,7 +404,7 @@ export function useSpace() {
                   freqHz,
                   COVERAGE_GRID_COLS,
                 ),
-                venue.area,
+                venue.listener,
               ) + gain,
             target: spaceTargetAt(venue.targetDb, bandCenterHz(b, freqHz), crossovers, balance),
           }))
@@ -403,7 +414,7 @@ export function useSpace() {
       model,
       room,
       venue.earFt,
-      venue.area,
+      venue.listener,
       venue.targetDb,
       freqHz,
       gain,
@@ -457,9 +468,9 @@ export function useSpace() {
     isPending: placed && !(failed && failed.req === req) && (!shown || shown.req !== req),
     error: failed ? failed.message : "",
     listenerDb: listenerAtLimit !== null ? listenerAtLimit + gain : null,
-    /** the listening area's average at the space's level (null until a grid arrives) */
-    areaDb: areaAtLimit !== null ? areaAtLimit + gain : null,
-    areaAtLimit,
+    /** the audience's average at the space's level (null until a grid arrives) */
+    audienceDb: audienceAtLimit !== null ? audienceAtLimit + gain : null,
+    audienceAtLimit,
     /** the target in the band on show, where it is measured, and the reference's level at the space's level */
     target,
     levelRef,

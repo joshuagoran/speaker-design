@@ -79,7 +79,7 @@ test("Space target: flat, the same target in every band", () => {
     expect(spaceTargetAt(100, f, crossovers, AUTO_BALANCE_MODE.flat)).toBe(100);
 });
 
-test("Space levels: a design with no room of its own measures at the listening area, flat", () => {
+test("Space levels: a design with no room of its own measures at the audience average, flat", () => {
   const { venue } = layersFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, {
     id: "h",
     name: "Hi-fi",

@@ -26,12 +26,7 @@ import {
   CHAMBER_LOAD,
   SPEAKER_PART_NAMES,
 } from "../../constants/speakerSpec";
-import {
-  SPACE_HOME_MARGIN_FT,
-  SPACE_HOME_ROOM,
-  SPACE_HOME_TARGET_DB,
-  SPACE_SEAT_AREA,
-} from "../../constants/space";
+import { SPACE_HOME_MARGIN_FT, SPACE_HOME_ROOM, SPACE_HOME_TARGET_DB } from "../../constants/space";
 
 /** A Linkwitz-Riley filter of `order` at `hz` (the PA and Hi-fi crossovers). */
 export const lrFilter = (hz: number, order: CrossoverOrder): BandFilter => ({
@@ -110,8 +105,8 @@ export const spacePlacement = (
 
 /**
  * A living room for a design that names none (the Hi-fi pair, a fill): SPACE_HOME_ROOM, grown to hold the boxes'
- * spread and the seat with SPACE_HOME_MARGIN_FT to spare; the listener at the seat, a seat-sized listening area round
- * them, and the room's target (flat, over the listening area).
+ * spread and the seat with SPACE_HOME_MARGIN_FT to spare; the listener at the seat, and the room's target (flat, as the
+ * audience average).
  */
 export function homeVenue(
   spreadFt: number,
@@ -127,9 +122,8 @@ export function homeVenue(
     room,
     listener,
     earFt,
-    area: { ...listener, ...SPACE_SEAT_AREA },
     targetDb: SPACE_HOME_TARGET_DB,
-    // measured over the listening area, the same target in every band
+    // measured as the audience average, the same target in every band
     levelRef: COVERAGE_LEVEL_REF.audience,
     balance: AUTO_BALANCE_MODE.flat,
   };

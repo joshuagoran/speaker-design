@@ -79,7 +79,7 @@ const relClass = (rel: number) =>
 /**
  * The Space page (docs/speaker-designer-plan.md, L4b): stacks and speakers placed in a room, each at its spot, lift and
  * aim, a mirror pair following its partner; their amp power and alignment; the coverage across the floor on the fixed
- * scale, the levels at the listening area, a side view of the heights and tilts, and the response at the listener.
+ * scale, the levels at the reference, a side view of the heights and tilts, and the response at the listener.
  */
 export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   const pal = usePalette();
@@ -136,21 +136,21 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
       ? `${formatHz(space.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[space.band].name} band, ${formatHz(COVERAGE_BANDS[space.band].lo)}–${formatHz(COVERAGE_BANDS[space.band].hi)}`;
   const listenerRel = space.listenerDb !== null ? space.listenerDb - space.refTarget : null;
-  const { areaDb, areaAtLimit } = space;
+  const { audienceDb, audienceAtLimit } = space;
   const tiles: StatTileItem[] = [
-    ...(areaDb !== null
-      ? [[SPACE_TEXT.areaAverage, areaDb.toFixed(1), "dB"] satisfies StatTileItem]
+    ...(audienceDb !== null
+      ? [[SPACE_TEXT.audienceAverage, audienceDb.toFixed(1), "dB"] satisfies StatTileItem]
       : []),
-    ...(areaAtLimit !== null
-      ? [[SPACE_TEXT.areaMax, areaAtLimit.toFixed(1), "dB"] satisfies StatTileItem]
+    ...(audienceAtLimit !== null
+      ? [[SPACE_TEXT.audienceMax, audienceAtLimit.toFixed(1), "dB"] satisfies StatTileItem]
       : []),
     ...(space.listenerDb !== null
       ? [[SPACE_TEXT.listener, space.listenerDb.toFixed(1), "dB"] satisfies StatTileItem]
       : []),
     ...(stats
       ? ([
-          [SPACE_TEXT.areaAtLeast(formatSigned(-3, 0)), pct(stats.within3)],
-          [SPACE_TEXT.areaAtLeast(formatSigned(COVERAGE_EDGE_DB, 0)), pct(stats.within6)],
+          [SPACE_TEXT.floorAtLeast(formatSigned(-3, 0)), pct(stats.within3)],
+          [SPACE_TEXT.floorAtLeast(formatSigned(COVERAGE_EDGE_DB, 0)), pct(stats.within6)],
           [SPACE_TEXT.spread, stats.spread.toFixed(1), "dB"],
         ] satisfies StatTileItem[])
       : []),
@@ -176,7 +176,6 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
       {children}
     </SettingsSection>
   );
-  const { area } = venue;
   /** where the target is measured, in a sentence */
   const refPlace = SPACE_LEVEL_REF_PLACE[space.levelRef];
   return (
@@ -204,7 +203,6 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 view={view}
                 room={venue.room}
                 listener={venue.listener}
-                area={area}
                 boxes={boxes}
                 actions={{
                   moveBox: space.movePlacement,
@@ -281,7 +279,6 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                     room={venue.room}
                     listener={venue.listener}
                     earFt={venue.earFt}
-                    area={area}
                   />
                   <p className="text-xs text-stone-500 mt-2">{SPACE_TEXT.sideNote}</p>
                 </Card>
@@ -372,34 +369,6 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
               />
               <div className="flex flex-wrap gap-x-3 gap-y-3 mb-3">
-                <NumberField
-                  label={SPACE_TEXT.areaCenter}
-                  value={area.y}
-                  min={0}
-                  max={venue.room.lengthFt}
-                  step={0.5}
-                  onChange={(y) => space.editVenue((v) => ({ ...v, area: { ...v.area, y } }))}
-                />
-                <NumberField
-                  label={SPACE_TEXT.areaWidth}
-                  value={area.widthFt}
-                  min={1}
-                  max={venue.room.widthFt}
-                  step={1}
-                  onChange={(widthFt) =>
-                    space.editVenue((v) => ({ ...v, area: { ...v.area, widthFt } }))
-                  }
-                />
-                <NumberField
-                  label={SPACE_TEXT.areaLength}
-                  value={area.lengthFt}
-                  min={1}
-                  max={venue.room.lengthFt}
-                  step={1}
-                  onChange={(lengthFt) =>
-                    space.editVenue((v) => ({ ...v, area: { ...v.area, lengthFt } }))
-                  }
-                />
                 <NumberField
                   label={SPACE_TEXT.ear}
                   value={venue.earFt}

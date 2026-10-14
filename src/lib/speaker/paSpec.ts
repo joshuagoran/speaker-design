@@ -42,7 +42,6 @@ import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
-import { SPACE_AUDIENCE_GAP_FT } from "../../constants/space";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import {
   AUTO_DELAY,
@@ -410,25 +409,14 @@ export type PaFloor = Pick<
 >;
 
 /**
- * The coverage page's floor as a venue: its room, listener, ear height and target; the listening area the audience's
- * floor, the room's width from SPACE_AUDIENCE_GAP_FT past the stacks to the back wall.
+ * The coverage page's floor as a venue: its room, listener, ear height and target, measured where the page measures it.
  */
 export function paVenue(floor: PaFloor): SpaceVenue {
   const { room } = floor;
-  const front = Math.min(
-    room.lengthFt - 1,
-    Math.max(...floor.stacks.map((s) => s.y)) + SPACE_AUDIENCE_GAP_FT,
-  );
   return {
     room,
     listener: floor.listener,
     earFt: floor.earFt,
-    area: {
-      x: 0,
-      y: (front + room.lengthFt) / 2,
-      widthFt: room.widthFt,
-      lengthFt: room.lengthFt - front,
-    },
     targetDb: floor.targetDb,
     // as the coverage page: its target in the sub band, measured where it measures it, under the PA music balance
     levelRef: floor.levelRef,

@@ -1,5 +1,5 @@
 import { AssumptionsList } from "../../components/ui/AssumptionsList";
-import { BOX_SHADOW_HZ } from "../../lib/pa/coverage";
+import { BOX_SHADOW_HZ, STATS_CLEARANCE_FT } from "../../lib/pa/coverage";
 import { SPACE_LEVEL_REF_PLACE } from "../../constants/space";
 import { AUTO_BALANCE_MODE_LABEL, type AutoBalanceMode } from "../../constants/autoBalance";
 import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
@@ -24,7 +24,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
       "Levels",
       [
         `Target: ${venue.targetDb} dB SPL in the lowest band at ${SPACE_LEVEL_REF_PLACE[levelRef]}, music balance ${AUTO_BALANCE_MODE_LABEL[balance].toLowerCase()} (${target.toFixed(0)} dB in this band), never past the limit.`,
-        `Audience average: the mean dB over the listening area. "${SPACE_LEVEL_REF_PLACE.stacks}": ear height, 1 m in front of each placed stack or speaker that has a model, on its aim, averaged.`,
+        `Audience average: the mean dB over the whole floor, but ${STATS_CLEARANCE_FT} ft around every box. "${SPACE_LEVEL_REF_PLACE.stacks}": ear height, 1 m in front of each placed stack or speaker that has a model, on its aim, averaged.`,
         "One input drives the whole space. Each band plays at its Level and its box's level; the placement with the least headroom sets the level.",
       ],
     ],

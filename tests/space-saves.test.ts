@@ -150,7 +150,7 @@ test("space edits: a placement keeps where it stands when it starts or stops fol
   assert.equal(following.x, -placements[0].x);
 });
 
-test("space edits: a smaller room keeps the placements, the listener and the listening area inside", () => {
+test("space edits: a smaller room keeps the placements, and the listener inside", () => {
   const design = paSpace();
   const { venue } = design.space;
   const shrunk = fittedSpace({
@@ -167,10 +167,6 @@ test("space edits: a smaller room keeps the placements, the listener and the lis
     [-8, 8],
   );
   assert.deepEqual(shrunk.venue.listener, { x: 0, y: 20 });
-  const { area } = shrunk.venue;
-  assert.ok(area.widthFt <= 16 && area.lengthFt <= 20);
-  assert.ok(Math.abs(area.x) + area.widthFt / 2 <= 8 + 1e-9);
-  assert.ok(area.y - area.lengthFt / 2 >= 0 && area.y + area.lengthFt / 2 <= 20 + 1e-9);
 });
 
 test("space: a design that names no room gets one 20 ft wide, 30 ft long and 12 ft high", () => {

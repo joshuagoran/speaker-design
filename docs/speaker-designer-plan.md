@@ -336,12 +336,12 @@ Each PR stands alone. Lowest risk first.
       | Phone summary strip                                                | Stack page on phones                                                                           | Done: the stack strip (`tests/stack-summary`)        |
       | Coverage map: stacks, toe-in, listener, bands                      | Space                                                                                          | Done                                                 |
       | Target level                                                       | Space                                                                                          | Done                                                 |
-      | "Measured at" (listener, 1 m from the stacks, audience)            | Space: the listening area today; add the listener and 1 m                                      | Done: "Measured at" (`tests/space-balance`)          |
+      | "Measured at" (listener, 1 m from the stacks, audience)            | Space: the same three choices, the audience average as the PA page counts it                   | Done: "Measured at" (`tests/space-balance`)          |
       | Subs in the stacks, center pair, one center sub                    | Space: place the sub (and any speaker) from the Place list                                     | Done: the sub is placed like any speaker             |
       | Mirror pair, ear height, room, materials, crowd                    | Space                                                                                          | Done                                                 |
       | Sub delay to the mids                                              | Stack auto delay                                                                               | Done                                                 |
       | Listener response with the music-balance target curve              | Space listener response, with the target curve                                                 | Done: the target curve ("Music balance")             |
-      | "Turned down to balance" (each band's pad)                         | Space levels (each band's level at the listening area)                                         | Done: each band's level and target                   |
+      | "Turned down to balance" (each band's pad)                         | Space levels (each band's level at the listener)                                               | Done: each band's level and target                   |
       | Amp power table (power each channel needs)                         | Space "Amp power and alignment" fold: one amp power per band, no table                         | Done: one amp power per band (`tests/space-saves`)   |
       | Assumptions list                                                   | Space, below the map                                                                           | Done: under the map                                  |
       | Cutlist of one box                                                 | Speaker Cutlist tab                                                                            | Done                                                 |
@@ -885,7 +885,7 @@ Each PR stands alone. Lowest risk first.
       - **Types.** A `SpacePlacement` has a spot (its base's front center), a lift, an aim (`SpaceAim`: yaw and pitch), a
         mirror image, `follows` (a mirrored copy: it takes an earlier placement's item, spot, lift, aim, level and delay, x and yaw turned
         over), and its level and delay on its feed. `StackPose.pitchDeg` tilts a member in
-        its stack. The venue is the room (`CoverageRoom`), the listener, the ear height, a listening area and the target.
+        its stack. The venue is the room (`CoverageRoom`), the listener, the ear height and the target.
       - **One aim model** (`lib/speaker/spaceLayout`). A member tilts about its bottom front edge by its cabinet's kick-back
         and its tilt in the stack; the placement tilts the whole stack about its base's front center, lifts it, turns it
         and sets it on its spot. Each driver spot points along its member's front. The model and both views use it. What
@@ -894,15 +894,14 @@ Each PR stands alone. Lowest risk first.
         a piston or a horn's coverage) and drivers with yaw and pitch; the PA page builds its scene from them, unchanged.
         A space plays each placement's stack response at each band's amp power, each driver spot with its
         band's share, its own coverage and, for a cone band, its baffle step. The whole space plays from one input at its
-        music limit; the page turns it down until the listening area's average gets the target.
+        music limit; the page turns it down until the reference (the audience average, the listener or 1 m out) gets the target.
       - **Parity** (`tests/space-coverage.test.ts`). The PA design's space on the coverage page's floor: the sub plays
         within 0.5 dB of the page; the map's shape (each cell less the map's mean) within 0.4 dB mean and 0.8 dB at the
         90th percentile in every band. With the page's band levels moved to the space's, the same engine: within 0.15 dB
         mean and 0.3 dB at the 90th percentile, indoors and outdoors. Tilting a lifted stack down moves its hot spot closer;
         lifting it above the ears makes it quieter close in.
       - **Page** (`#space`). One Place list: every stack preset and speaker template, the stack and speaker open now,
-        and the saved ones; the room, the listening area and the target; the amp power of each band and the alignment; the coverage map on its fixed scale (with the
-        listening area), the levels at the listening area, a side view of the heights and tilts, and the response at the
+        and the saved ones; the room, the target and where it is measured; the amp power of each band and the alignment; the coverage map on its fixed scale, the levels, a side view of the heights and tilts, and the response at the
         listener. Saves go to `spaces` with copies of the stacks and speakers.
       - **Not yet.** The 3D view of a space.
       - **Music balance (L3f).** The Stack and Space pages start from presets (`src/pages/stack/stackPresets`): the PA

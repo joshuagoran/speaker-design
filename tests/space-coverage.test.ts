@@ -14,6 +14,7 @@ import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import {
   autoSubDelayMs,
   computeCoverageGrid,
+  audienceAverage,
   coverageScene,
   coverageSlots,
   COVERAGE_GRID_COLS,
@@ -31,6 +32,9 @@ import {
   type SpaceModel,
 } from "../src/lib/speaker/spaceCoverage";
 import { DEFAULT_PA } from "../src/lib/defaults";
+import { referenceAtLimit } from "../src/pages/space/useSpace";
+import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
+import { oneMeterSpots } from "../src/lib/speaker/spaceBalance";
 import { keysOf } from "../src/lib/records";
 import { PLINTH_HEIGHT_IN } from "../src/constants/paLayouts";
 import type {
@@ -334,4 +338,31 @@ test("space model: with the music balance in its band Levels, the PA design's sp
     const gap = gaps[band] ?? Infinity;
     assert.ok(Math.abs(gap - sub) < BALANCE_GAP_DB, `${band} ${gap} dB, sub ${sub} dB`);
   }
+});
+
+test("space model: with Measured at the audience average, moving only the listener changes nothing on the map", () => {
+  const design = paSpace(FLOORS.indoors);
+  const { venue } = design.space;
+  assert.equal(venue.levelRef, COVERAGE_LEVEL_REF.audience);
+  const model = spaceModel(design);
+  const req = spaceGridRequest(model, venue, "mid", 0, COVERAGE_GRID_COLS);
+  const grid = computeSpaceGrid(req);
+  const boxes = model.placements.map((p) => ({
+    x: p.item.placement.x,
+    y: p.item.placement.y,
+  }));
+  const meterSpots = oneMeterSpots(design, venue.room);
+  const at = (listener: { x: number; y: number } | null) =>
+    referenceAtLimit(COVERAGE_LEVEL_REF.audience, req, { listener, meterSpots, boxes }, grid);
+  // the map's request holds the room and the ear, not the listener, so its grid is the same wherever one stands
+  // and so is the audience average, as the coverage page counts it (the whole floor but the boxes' clearance)
+  const average = audienceAverage(grid, req.room, boxes);
+  assert.ok(average !== null && Number.isFinite(average));
+  assert.equal(at({ x: 0, y: 5 }), average);
+  assert.equal(at({ x: -6, y: 18 }), average);
+  assert.equal(at(null), average);
+  // only the listener's own reference follows the listener
+  const atListener = (listener: { x: number; y: number }) =>
+    referenceAtLimit(COVERAGE_LEVEL_REF.listener, req, { listener, meterSpots, boxes }, grid);
+  assert.notEqual(atListener({ x: 0, y: 5 }), atListener({ x: -6, y: 18 }));
 });

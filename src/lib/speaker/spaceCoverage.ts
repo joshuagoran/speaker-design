@@ -6,7 +6,7 @@
 // model is half-space; the floor image puts the floor back, as on the PA page). Pure.
 //
 // The whole space plays from one input. At its music limit the placement with the least headroom (less its level) sets
-// the level; the page then turns it down so the listening area's average gets the target, never past the limit.
+// the level; the page then turns it down so the reference (the audience's average, as on the coverage page) gets the target, never past the limit.
 import type {
   BandId,
   Complex,

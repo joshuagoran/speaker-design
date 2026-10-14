@@ -87,12 +87,11 @@ const isPlacements = (value: unknown): value is SpacePlacement[] =>
     hasFields(p, { x: "number", y: "number", liftIn: "number", item: "object", aim: "object" }),
   );
 
-/** Whether a value reads as a venue: its room, listener, ear height, listening area, target and balance. */
+/** Whether a value reads as a venue: its room, listener, ear height, target, where it is measured and balance. */
 const isVenue = (value: unknown): value is SpaceVenue =>
   hasFields(value, {
     room: "object",
     listener: "object",
-    area: "object",
     earFt: "number",
     targetDb: "number",
     levelRef: "string",

@@ -2256,27 +2256,20 @@ export interface SpacePlacement extends FloorPoint {
 /** Which part of a driver entry radiates, by id (`DRIVER_PART`): its cone or its HF section. */
 export type DriverPart = (typeof DRIVER_PART)[keyof typeof DRIVER_PART];
 
-/** The floor the space's level stats count: a rectangle, its center and its size, ft. */
-export interface ListeningArea extends FloorPoint {
-  widthFt: number;
-  lengthFt: number;
-}
-
-/** Where a space plays: the room, the listener (a probe), the listening area and the level it should get. */
+/** Where a space plays: the room, the listener (a probe) and the level it should get. */
 export interface SpaceVenue {
   room: CoverageRoom;
   listener: FloorPoint;
   /** the ear's height above the floor, ft: the map and the levels are worked out there */
   earFt: CoverageLayout["earFt"];
-  area: ListeningArea;
   /**
    * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
    * (`balance`) less: the space is turned down to it, never past its limit
    */
   targetDb: CoverageLayout["targetDb"];
   /**
-   * where the target is measured: the listening area's average, the listener, or 1 m in front of each placement
-   * (averaged).
+   * where the target is measured, as on the coverage page: the audience's average (the floor but the space in front of
+   * each box), the listener, or 1 m in front of each placement (averaged).
    */
   levelRef: CoverageLevelRef;
   /**

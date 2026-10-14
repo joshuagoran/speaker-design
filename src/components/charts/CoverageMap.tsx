@@ -11,7 +11,6 @@ import type {
   CoverageStack,
   FloorPlacement,
   FloorPoint,
-  ListeningArea,
   RoomSide,
 } from "../../types";
 import { SVG_FONT } from "../../styles/fonts";
@@ -66,8 +65,6 @@ interface Props {
   listener: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
-  /** the listening area the stats count, outlined; absent: the whole floor */
-  area?: ListeningArea;
   /** the most height the map may take, px */
   maxHeight: number;
   /** whether a finer or newer grid is on its way: aria-busy only, no badge (the fine pass is quick) */
@@ -79,16 +76,7 @@ interface Props {
  * coverage edge and every 3 dB step. Drag a stack to move it, its dot to turn it, the center subs, or the listener (or tap
  * the floor to put the listener there).
  */
-export function CoverageMap({
-  view,
-  room,
-  listener,
-  actions,
-  boxes,
-  area,
-  maxHeight,
-  busy,
-}: Props) {
+export function CoverageMap({ view, room, listener, actions, boxes, maxHeight, busy }: Props) {
   const pal = usePalette();
   const [box, cw] = useElementWidth(560);
   const k = Math.max(
@@ -322,19 +310,6 @@ export function CoverageMap({
                   );
                 })
               : [],
-          )}
-          {area && (
-            <rect
-              data-testid={COVERAGE_TEST_IDS.area}
-              x={px(area.x - area.widthFt / 2)}
-              y={py(area.y - area.lengthFt / 2)}
-              width={area.widthFt * k}
-              height={area.lengthFt * k}
-              fill="none"
-              stroke={ON_DATA.ink}
-              strokeWidth="1.5"
-              strokeDasharray="6 4"
-            />
           )}
         </g>
         {sides.map(([side, x1, y1, x2, y2]) => (
