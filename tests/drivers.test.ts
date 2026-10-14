@@ -174,3 +174,12 @@ test("xmax: the maker id, not the driver's name, picks the hi-fi estimate band",
     assert.deepEqual([xmax.lo, xmax.hi], [k[0] * pub.Xmax, k[1] * pub.Xmax], d.id);
   }
 });
+
+test("mids: a given impedance is positive, and the 10MB600 carries its datasheet depth", () => {
+  for (const d of MID_OPTIONS) {
+    const imp = d.ts.imp;
+    assert.ok(imp === undefined || imp > 0, d.name);
+  }
+  // 126 mm, the datasheet drawing's overall depth
+  assert.equal(MID_OPTIONS.find((d) => d.id === "es10mb600")?.depthIn, 4.96);
+});
