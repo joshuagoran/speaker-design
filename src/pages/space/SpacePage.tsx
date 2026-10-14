@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { alpha, TARGET_DASH } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
@@ -26,7 +26,7 @@ import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
 import { entriesOf, keysOf } from "../../lib/records";
 import { formatHz, formatSigned } from "../../lib/format";
-import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
+import { MD_UP, RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE_LABEL, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
@@ -39,6 +39,7 @@ import {
 } from "../../constants/settingsSections";
 import {
   NO_DELAY_MS,
+  placementDomId,
   SPACE_LEVEL_REF_PLACE,
   SPACE_LEVEL_REFS,
   SPACE_TEXT,
@@ -58,6 +59,7 @@ import { STACK_STARTS, startGroup } from "../stack/stackPresets";
 import { STACK_START, STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
 import { byId } from "../../lib/tables";
 import { placementGroups } from "../../lib/speaker/fillAlign";
+import { resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { spaceAlignment } from "../../lib/speaker/spaceAlignment";
 import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
 
@@ -112,6 +114,33 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
     savedSpeakers: speakers,
   });
   const [placePick, setPlacePick] = useState("");
+  /** the placement picked on the map (an index), and which placements show their controls: none at first */
+  const [selected, setSelected] = useState<number | null>(null);
+  const [openItems, setOpenItems] = useState<readonly number[]>([]);
+  /** the placement to bring into view after the next render, and whether to scroll (a count tells repeats apart) */
+  const [reveal, setReveal] = useState<{ k: number; scroll: boolean; n: number } | null>(null);
+  /** picks placement `k`: opens its item (and the Placements section), and scrolls it into view when `scroll` */
+  const pick = (k: number, scroll: boolean) => {
+    setSelected(k);
+    setOpenItems((o) => (o.includes(k) ? o : [...o, k]));
+    if (!folds.open.placements) folds.toggle("placements");
+    setReveal((r) => ({ k, scroll, n: (r?.n ?? 0) + 1 }));
+  };
+  // a pick on the map scrolls only where the settings are their own pane (md up): on a phone the page would jump away
+  // from the map mid-drag
+  const pickOnMap = (k: number) => pick(k, window.matchMedia(MD_UP).matches);
+  /** a placement is new at the end of the list: opens it and brings it into view */
+  const pickNew = () => pick(placements.length, true);
+  useEffect(() => {
+    if (reveal?.scroll)
+      document.getElementById(placementDomId(reveal.k))?.scrollIntoView({ block: "start" });
+  }, [reveal]);
+  /** after placement `k` goes, the numbers above it move down one */
+  const afterRemoved = (k: number) => {
+    const shift = (i: number) => (i > k ? i - 1 : i);
+    setOpenItems((o) => o.filter((i) => i !== k).map(shift));
+    setSelected((s) => (s === null || s === k ? null : shift(s)));
+  };
   const picked = byId(placeList, placePick) ?? placeList[0];
   /** each placement's name: its number and what it places */
   const names = placements.map((p, k) => `${k + 1}. ${itemName(design, p.item)}`);
@@ -205,6 +234,8 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 room={venue.room}
                 listener={venue.listener}
                 boxes={boxes}
+                selected={selected}
+                onSelect={pickOnMap}
                 actions={{
                   moveBox: space.movePlacement,
                   aimBox: space.aimPlacement,
@@ -385,36 +416,54 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
           {section(
             "placements",
             <>
-              {placements.map((p, k) => (
-                <PlacementSettings
-                  key={k}
-                  index={k}
-                  placement={p}
-                  names={names}
-                  room={venue.room}
-                  onEdit={(edit) => space.editPlacement(k, edit)}
-                  onFollows={(follows) => space.setFollows(k, follows)}
-                  onRemove={() => space.removePlacement(k)}
-                  onMirrorPair={() => space.addMirrorPair(k)}
-                  groups={groups}
-                  onAlign={(to) => space.alignTo(k, to)}
-                />
-              ))}
               <SelectField
-                label={SPACE_TEXT.place}
+                label={SPACE_TEXT.addPlacement}
                 options={placeList}
                 value={picked}
                 onChange={(o) => setPlacePick(o.id)}
                 group={(o) => o.group}
               />
-              <Button variant="primary" className="mb-3" onClick={() => space.place(picked.item())}>
-                {SPACE_TEXT.place}
+              <Button
+                variant="primary"
+                className="mb-3"
+                onClick={() => {
+                  space.place(picked.item());
+                  pickNew();
+                }}
+              >
+                {SPACE_TEXT.addPlacement}
               </Button>
               {stacks.length === 0 && speakers.length === 0 && (
                 <p className="text-xs text-stone-500 mb-2">
                   {signedIn ? SPACE_TEXT.noLibrarySaved : SPACE_TEXT.noLibrary}
                 </p>
               )}
+              {placements.map((p, k) => (
+                <PlacementSettings
+                  key={k}
+                  index={k}
+                  placement={p}
+                  resolved={resolvedPlacement(placements, k)}
+                  open={openItems.includes(k)}
+                  onOpenChange={(open) =>
+                    setOpenItems((o) => (open ? [...o, k] : o.filter((i) => i !== k)))
+                  }
+                  names={names}
+                  room={venue.room}
+                  onEdit={(edit) => space.editPlacement(k, edit)}
+                  onFollows={(follows) => space.setFollows(k, follows)}
+                  onRemove={() => {
+                    space.removePlacement(k);
+                    afterRemoved(k);
+                  }}
+                  onMirrorPair={() => {
+                    space.addMirrorPair(k);
+                    pickNew();
+                  }}
+                  groups={groups}
+                  onAlign={(to) => space.alignTo(k, to)}
+                />
+              ))}
             </>,
           )}
           {section(

@@ -2,20 +2,31 @@ import { useState } from "react";
 import type { SpacePlacement, SpaceVenue } from "../../types";
 import { Notice } from "../../components/ui/Notice";
 import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
+import { CardFold } from "../../components/ui/CardFold";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { byId } from "../../lib/tables";
 import { wrapYawDeg } from "../../lib/speaker/spaceLayout";
-import { SPACE_LIFT_MAX_IN, SPACE_PITCH_DEG, SPACE_TEXT } from "../../constants/space";
+import {
+  placementDomId,
+  SPACE_LIFT_MAX_IN,
+  SPACE_PITCH_DEG,
+  SPACE_TEXT,
+} from "../../constants/space";
+import { formatSigned } from "../../lib/format";
 import { INCHES_PER_FOOT } from "../../constants/units";
 import { FIELD_ROW, shownIn } from "../speaker/speakerFields";
 
 interface Props {
   index: number;
   placement: SpacePlacement;
+  /** the placement as it stands (a mirrored copy takes its lead's spot and level), for the folded row's summary */
+  resolved: SpacePlacement;
+  /** whether the item shows its controls, and the change when the person opens or closes it */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** each placement's name, in the space's order */
   names: readonly string[];
   /** the room, whose floor bounds its spot */
@@ -47,6 +58,9 @@ const tenth = (v: number) => Math.round(v * 10) / 10;
 export function PlacementSettings({
   index,
   placement,
+  resolved,
+  open,
+  onOpenChange,
   names,
   room,
   onEdit,
@@ -73,10 +87,25 @@ export function PlacementSettings({
   const half = room.widthFt / 2;
   /** the highest height above the floor, ft */
   const heightMaxFt = SPACE_LIFT_MAX_IN / INCHES_PER_FOOT;
+  // the folded row: a mirrored copy names the placement it follows, then its spot and level
+  const where = SPACE_TEXT.placementSummary(
+    formatSigned(resolved.x),
+    resolved.y.toFixed(1),
+    formatSigned(resolved.levelDb),
+  );
+  const summary =
+    placement.follows !== null
+      ? `${SPACE_TEXT.follows} ${names[placement.follows] ?? ""} · ${where}`
+      : where;
   return (
-    <Card className="mb-3">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h4 className="font-semibold min-w-0 truncate">{names[index]}</h4>
+    <CardFold
+      id={placementDomId(index)}
+      title={names[index] ?? ""}
+      summary={summary}
+      open={open}
+      onOpenChange={onOpenChange}
+    >
+      <div className="flex justify-end mb-3">
         <Button size="xs" onClick={onRemove}>
           {SPACE_TEXT.remove}
         </Button>
@@ -192,6 +221,6 @@ export function PlacementSettings({
           )}
         </>
       )}
-    </Card>
+    </CardFold>
   );
 }

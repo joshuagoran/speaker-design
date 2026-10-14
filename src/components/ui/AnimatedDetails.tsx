@@ -7,6 +7,9 @@ interface Props {
   children: React.ReactNode | ((shown: boolean) => React.ReactNode);
   className?: string;
   summaryClassName?: string;
+  /** whether it is open, when the parent decides (with `onOpenChange`); absent, it keeps its own state, closed at first */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /** A `<details>` drop-down whose content slides open and shut, like the fold sections. */
@@ -15,8 +18,11 @@ export function AnimatedDetails({
   children,
   className = "",
   summaryClassName = "",
+  open: openProp,
+  onOpenChange,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = openProp ?? ownOpen;
   const [ref, shown] = useHeightAnimation(open);
   return (
     <details open={shown} className={className}>
@@ -24,7 +30,8 @@ export function AnimatedDetails({
         className={summaryClassName}
         onClick={(e) => {
           e.preventDefault();
-          setOpen((o) => !o);
+          setOwnOpen(!open);
+          onOpenChange?.(!open);
         }}
       >
         {summary}

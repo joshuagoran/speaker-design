@@ -76,6 +76,12 @@ export const SPACE_LEVEL_REF_PLACE: Record<CoverageLevelRef, string> = {
 /** A delay under this is no delay, ms. */
 export const NO_DELAY_MS = 0.05;
 
+/** The control that puts a stack or speaker in the space (the Placements section's first control). */
+const ADD_PLACEMENT = "Add speaker or stack";
+
+/** The DOM id of placement `k`'s item in the Placements list, so a pick on the map can scroll it into view. */
+export const placementDomId = (k: number) => `space-placement-${k}`;
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
@@ -85,13 +91,13 @@ export const SPACE_TEXT = {
     "The speakers seen from the side, to scale, at their height and tilt. Each dashed line shows where a speaker points (the axis of its highest band). The cyan dot is the listener's ear.",
   response: "Response at the listener",
   levels: "Levels",
-  noPlacements: "Nothing is placed yet. Pick a stack or speaker and press Place.",
+  noPlacements: `Nothing is placed yet. Pick a stack or speaker and press ${ADD_PLACEMENT}.`,
   missing:
     "A placement names a stack or speaker that is not in this space. The model leaves it out.",
   startHint:
     "Both replace this space. A start from a design or a preset stands in a room made for it. A PA start also sets the band balance to More bass. Open a saved space from the library above.",
   clear: "Start empty",
-  place: "Place",
+  addPlacement: ADD_PLACEMENT,
   /** the Place list's groups */
   placeGroups: {
     stackPresets: "Stack presets",
@@ -107,6 +113,9 @@ export const SPACE_TEXT = {
   noLibrary: "Sign in to place your saved stacks and speakers here too.",
   noLibrarySaved: "Save a stack or speaker to place it here.",
   remove: "Remove",
+  /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its level, dB */
+  placementSummary: (fromCenter: string, fromFront: string, level: string) =>
+    `${fromCenter} ft from the center line · ${fromFront} ft from the front wall · ${level} dB`,
   addPair: "Add a mirrored copy",
   addPairTip:
     "Adds a copy on the other side of the room's center line. The copy follows this placement: its position, aim, level, delay and amp power.",
