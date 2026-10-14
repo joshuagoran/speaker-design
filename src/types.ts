@@ -212,13 +212,8 @@ export interface SubDriver {
   src: string;
   size: SubSize;
   ts: SubTS;
-  /**
-   * the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered. A
-   * figure whose reference the maker doesn't state, worked out from the T/S, carries `sensDerived`.
-   */
+  /** the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered */
   sens?: number;
-  /** `sens` is derived (its reference worked out from the T/S): the Notes page's check against the T/S skips it */
-  sensDerived?: true;
   /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
   depthIn?: number;
   /**

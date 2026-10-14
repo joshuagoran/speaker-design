@@ -745,11 +745,12 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       aes: 1000,
       disp: 10.5,
     },
-    // Ciare's datasheet PDF states 96.5 dB at 2.83 V/1 m; the T/S agree (2.1 % efficiency on Re 6.1 Ω).
+    // Ciare states 96.5 dB at 2.83 V / 1 m, on axis (https://ciare.com/en/products/lf-driver/18/8/NDH18-4S and the
+    // datasheet PDF); the T/S agree (2.1 % efficiency on Re 6.1 Ω).
     sens: 96.5,
     // Ciare product page: depth 208 mm (US Speaker lists 207 mm)
     depthIn: 8.19,
-    note: "[ciare.com product page and datasheet, Oct 2026] 8 Ω version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 96.5 dB at 2.83 V, 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 120 L vented. The 4 Ω version (NDH18-4S-4) is the next entry. Displacement not published; 10.5 L assumed.",
+    note: "[ciare.com product page and datasheet, Oct 2026] 8 Ω version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 96.5 dB at 2.83 V / 1 m, 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 120 L vented. The 4 Ω version (NDH18-4S-4) is the next entry. Displacement not published; 10.5 L assumed.",
   },
   // Ciare NDH18-4S-4, 4 Ω (part PNDH18-4S-4). Specs: https://ciare.com/en/products/lf-driver/18/4/NDH18-4S (read Oct
   // 2026). Price: US Speaker, https://www.usspeaker.com/ciare%20ndh18-4s-4-1.htm ($459.95, read Oct 2026).
@@ -784,14 +785,12 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       aes: 1000,
       disp: 10.5,
     },
-    // Ciare's 100.5 dB, with no reference stated for this version (US Speaker labels it 1 W/1 m). Derived: the T/S give
-    // 100.5 dB at 2.83 V (2.6 % efficiency, 2.67 W into Re 3.0 Ω), the reference the 8 Ω sheet states, so it is about
-    // 97.5 dB at 1 W (4 Ω nominal). The Notes page's check against the T/S skips a derived figure.
+    // Ciare states 100.5 dB at 2.83 V / 1 m, on axis (https://ciare.com/en/products/lf-driver/18/4/NDH18-4S; US Speaker
+    // labels it 1 W/1 m). The T/S agree (2.6 % efficiency, 2.67 W into Re 3.0 Ω); about 97.5 dB at 1 W (4 Ω nominal).
     sens: 100.5,
-    sensDerived: true,
     // Ciare product page: depth 208 mm (US Speaker lists 207 mm)
     depthIn: 8.19,
-    note: "[ciare.com product page, Oct 2026] 4 Ω version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 100.5 dB (reference not stated; the T/S say 2.83 V, about 97.5 dB at 1 W), 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 90 L vented. Displacement not published; 10.5 L assumed.",
+    note: "[ciare.com product page, Oct 2026] 4 Ω version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 100.5 dB at 2.83 V / 1 m (about 97.5 dB at 1 W), 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 90 L vented. Displacement not published; 10.5 L assumed.",
   },
   {
     id: "f18fh510",
