@@ -420,7 +420,7 @@ export function paVenue(floor: PaFloor): SpaceVenue {
     targetDb: floor.targetDb,
     // as the coverage page: its target in the sub band, measured where it measures it, under the PA music balance
     levelRef: floor.levelRef,
-    balance: AUTO_BALANCE_MODE.paMusic,
+    balance: AUTO_BALANCE_MODE.moreBass,
   };
 }
 

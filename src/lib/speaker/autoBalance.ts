@@ -55,7 +55,7 @@ export const PA_MUSIC_TILT: MusicTilt = { tilt: DEFAULT_PA.tilt, hfTilt: DEFAULT
 /** The tilt each auto balance option sets. */
 export const AUTO_BALANCE_TILT: Record<AutoBalanceMode, MusicTilt> = {
   [AUTO_BALANCE_MODE.flat]: FLAT_TILT,
-  [AUTO_BALANCE_MODE.paMusic]: PA_MUSIC_TILT,
+  [AUTO_BALANCE_MODE.moreBass]: PA_MUSIC_TILT,
 };
 
 /** The highest crossover that takes `tilt` (a crossover to a sub), Hz: the PA page's highest sub-to-mid crossover. */

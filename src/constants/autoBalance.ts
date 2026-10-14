@@ -17,18 +17,15 @@ export const AUTO_BALANCE_STATUS = {
 export const AUTO_BALANCE_MODE = {
   /** every band at the same level at each crossover */
   flat: "flat",
-  /**
-   * More bass: each higher band below the lower band at each crossover. The id keeps its old spelling: saved spaces
-   * carry it (`SpaceVenue.balance`).
-   */
-  paMusic: "paMusic",
+  /** More bass (the PA's music balance): each higher band below the lower band at each crossover */
+  moreBass: "moreBass",
 } as const;
 export type AutoBalanceMode = (typeof AUTO_BALANCE_MODE)[keyof typeof AUTO_BALANCE_MODE];
 
 /** The options' labels, as the toggle shows them. */
 export const AUTO_BALANCE_MODE_LABEL: Record<AutoBalanceMode, string> = {
   [AUTO_BALANCE_MODE.flat]: "Flat",
-  [AUTO_BALANCE_MODE.paMusic]: "More bass",
+  [AUTO_BALANCE_MODE.moreBass]: "More bass",
 };
 
 export const AUTO_BALANCE_TEXT = {

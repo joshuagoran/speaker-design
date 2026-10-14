@@ -30,7 +30,7 @@ interface Props<L> {
 /** The toggle's options, flat first (the default). */
 const MODE_OPTIONS: readonly ToggleOption<AutoBalanceMode>[] = [
   AUTO_BALANCE_MODE.flat,
-  AUTO_BALANCE_MODE.paMusic,
+  AUTO_BALANCE_MODE.moreBass,
 ].map((m) => [m, AUTO_BALANCE_MODE_LABEL[m]] as const);
 
 /**
@@ -65,7 +65,7 @@ export function AutoBalanceButton<L>({
       >
         {AUTO_BALANCE_TEXT.button}
       </Button>
-      {balance.status === AUTO_BALANCE_STATUS.balanced && mode === AUTO_BALANCE_MODE.paMusic && (
+      {balance.status === AUTO_BALANCE_STATUS.balanced && mode === AUTO_BALANCE_MODE.moreBass && (
         <p className="text-xs text-stone-500 mt-1">{AUTO_BALANCE_TEXT.levels(balance.bands)}</p>
       )}
       {balance.status === AUTO_BALANCE_STATUS.balanced &&

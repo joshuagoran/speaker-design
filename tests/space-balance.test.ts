@@ -46,7 +46,7 @@ describe("Space target: the PA presets take the PA page's target in every band",
       const cfg = defaultPaDesign(layout);
       const design = presetSpace(preset, layout);
       const { venue } = design.space;
-      expect(venue.balance).toBe(AUTO_BALANCE_MODE.paMusic);
+      expect(venue.balance).toBe(AUTO_BALANCE_MODE.moreBass);
       expect(venue.levelRef).toBe(DEFAULT_COVERAGE_LAYOUT.levelRef);
       const crossovers = spaceCrossoversHz(design);
       expect(crossovers).toEqual([cfg.xoLo, cfg.xoHi]);
@@ -66,7 +66,7 @@ describe("Space target: the PA presets take the PA page's target in every band",
             venue.targetDb,
             Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi),
             crossovers,
-            AUTO_BALANCE_MODE.paMusic,
+            AUTO_BALANCE_MODE.moreBass,
           ),
         ).toBe(bandTarget(venue.targetDb, band, 0, balance));
     });
