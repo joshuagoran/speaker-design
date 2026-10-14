@@ -30,9 +30,4 @@ export const AMP_POWER_TEXT = {
   headroom: "Peak headroom",
   limit: "Limit",
   crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. Max peak is the power at the first limit.`,
-  /** the Space page's column head over each channel */
-  channel: "Channel",
-  /** the Space page's note: what the table reads */
-  spaceNote:
-    "Each amp channel at the space's level, from its band's music limit. A channel that feeds more than one band shows the band that takes the most power.",
 } as const;

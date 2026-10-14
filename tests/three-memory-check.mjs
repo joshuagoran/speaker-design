@@ -10,7 +10,8 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts.ts";
-import { SPEAKER_START_NAMES, SPEAKER_START_TEXT } from "../src/constants/speakerStarts.ts";
+import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
+import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
 
 const REBUILDS = 30;
 /** The pages with a 3D view: the PA stack (the default view), Hi-fi, the Speaker and Stack pages, and the control each steps. */
@@ -36,9 +37,9 @@ const VIEWS = [
       await page.getByRole("button", { name: PA_LAYOUT_NAMES.tower, exact: true }).first().click();
       await page.evaluate(() => (location.hash = "#speaker"));
       await page
-        .getByLabel(SPEAKER_START_TEXT.startFrom)
+        .getByLabel(START_PICKER_TEXT.startFrom)
         .selectOption({ label: SPEAKER_START_NAMES.paTower });
-      await page.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
+      await page.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
       await builtTwice(page);
     },
   },
@@ -48,7 +49,7 @@ const VIEWS = [
     hash: "#stack",
     ...NUMBER,
     prepare: async (page) => {
-      await page.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).first().click();
+      await page.getByRole("button", { name: START_PICKER_TEXT.startOver }).first().click();
       await builtTwice(page);
     },
   },

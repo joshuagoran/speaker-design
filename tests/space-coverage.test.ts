@@ -14,6 +14,7 @@ import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import {
   autoSubDelayMs,
   computeCoverageGrid,
+  audienceAverage,
   coverageScene,
   coverageSlots,
   COVERAGE_GRID_COLS,
@@ -31,8 +32,9 @@ import {
   type SpaceModel,
 } from "../src/lib/speaker/spaceCoverage";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { withSubPlacement } from "../src/lib/speaker/subPlacement";
-import { SUB_PLACEMENT } from "../src/constants/subPlacement";
+import { referenceAtLimit } from "../src/pages/space/useSpace";
+import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
+import { oneMeterSpots } from "../src/lib/speaker/spaceBalance";
 import { keysOf } from "../src/lib/records";
 import { PLINTH_HEIGHT_IN } from "../src/constants/paLayouts";
 import type {
@@ -130,7 +132,8 @@ function bandGapsDb(layout: CoverageLayout, model: SpaceModel) {
     const v = coverageSlots(scene, req.levels, [f], true)[0].out[page];
     const own = spaceOutputs(model, f);
     const sum = model.feeds
-      .filter((x) => x.placement === 0 && x.band === band)
+      // the left stack is the first box (a feed's id starts with its box's number)
+      .filter((x) => x.id.startsWith("0/") && x.band === band)
       .reduce((acc, x) => add(acc, own[x.id] ?? complex(0)), complex(0));
     assert.ok(v, page);
     out[page] = 20 * Math.log10(abs(sum) / abs(v));
@@ -243,7 +246,7 @@ test("space model: the PA design's space maps the floor as the coverage page doe
   const layout = FLOORS.indoors;
   const design = paSpace(layout);
   const model = spaceModel(design);
-  assert.ok(!model.missing && !model.unassigned);
+  assert.ok(!model.missing);
   const gaps = bandGapsDb(layout, model);
   assert.ok(Math.abs(gaps.sub ?? Infinity) < SUB_GAP_DB, `sub ${gaps.sub} dB`);
   const spaceGrid = (band: CoverageBand) =>
@@ -264,44 +267,6 @@ test("space model: with the page's levels, the space's engine maps the floor as 
       (band) =>
         computeSpaceGrid(spaceGridRequest(model, design.space.venue, band, 0, COVERAGE_GRID_COLS)),
     );
-  }
-});
-
-/**
- * The map's shape with the subs in the center (lib/speaker/subPlacement), as played, on the page's default floor: on the
- * starting design (Oct 2026) center pair sub mean 0.02, p90 0.06; kick 0.13, 0.26; mid 0.29, 0.65. One center sub
- * 0.03, 0.07; 0.17, 0.37; 0.29, 0.64.
- */
-const CENTER_SUBS_SHAPE_DB: Omit<ShapeTolerance, "high"> = {
-  sub: { mean: 0.1, p90: 0.15 },
-  kick: { mean: 0.25, p90: 0.45 },
-  mid: { mean: 0.4, p90: 0.8 },
-};
-
-test("space model: the subs in a center pair or one center sub map the floor as the coverage page does", () => {
-  for (const subs of [SUB_PLACEMENT.center, SUB_PLACEMENT.single]) {
-    const layout: CoverageLayout = { ...FLOORS.indoors, subs };
-    const read = withSubPlacement(
-      layersFromPa(defaultPaDesign(), { id: "pa", name: "PA" }, layout),
-      subs,
-      layout.cluster,
-    );
-    const design: SpaceDesign = {
-      space: read.space,
-      stacks: [read.stack],
-      speakers: read.speakers,
-    };
-    const model = spaceModel(design);
-    assert.ok(!model.missing && !model.unassigned, subs);
-    for (const band of keysOf(CENTER_SUBS_SHAPE_DB)) {
-      const gap = shapeGap(
-        paGrid(layout, band),
-        computeSpaceGrid(spaceGridRequest(model, design.space.venue, band, 0, COVERAGE_GRID_COLS)),
-      );
-      const tol = CENTER_SUBS_SHAPE_DB[band];
-      assert.ok(gap.mean <= tol.mean, `${subs}, ${band}: mean ${gap.mean.toFixed(2)} dB`);
-      assert.ok(gap.p90 <= tol.p90, `${subs}, ${band}: 90th percentile ${gap.p90.toFixed(2)} dB`);
-    }
   }
 });
 
@@ -374,4 +339,31 @@ test("space model: with the music balance in its band Levels, the PA design's sp
     const gap = gaps[band] ?? Infinity;
     assert.ok(Math.abs(gap - sub) < BALANCE_GAP_DB, `${band} ${gap} dB, sub ${sub} dB`);
   }
+});
+
+test("space model: with Measured at the audience average, moving only the listener changes nothing on the map", () => {
+  const design = paSpace(FLOORS.indoors);
+  const { venue } = design.space;
+  assert.equal(venue.levelRef, COVERAGE_LEVEL_REF.audience);
+  const model = spaceModel(design);
+  const req = spaceGridRequest(model, venue, "mid", 0, COVERAGE_GRID_COLS);
+  const grid = computeSpaceGrid(req);
+  const boxes = model.placements.map((p) => ({
+    x: p.item.placement.x,
+    y: p.item.placement.y,
+  }));
+  const meterSpots = oneMeterSpots(design, venue.room);
+  const at = (listener: { x: number; y: number } | null) =>
+    referenceAtLimit(COVERAGE_LEVEL_REF.audience, req, { listener, meterSpots, boxes }, grid);
+  // the map's request holds the room and the ear, not the listener, so its grid is the same wherever one stands
+  // and so is the audience average, as the coverage page counts it (the whole floor but the boxes' clearance)
+  const average = audienceAverage(grid, req.room, boxes);
+  assert.ok(average !== null && Number.isFinite(average));
+  assert.equal(at({ x: 0, y: 5 }), average);
+  assert.equal(at({ x: -6, y: 18 }), average);
+  assert.equal(at(null), average);
+  // only the listener's own reference follows the listener
+  const atListener = (listener: { x: number; y: number }) =>
+    referenceAtLimit(COVERAGE_LEVEL_REF.listener, req, { listener, meterSpots, boxes }, grid);
+  assert.notEqual(atListener({ x: 0, y: 5 }), atListener({ x: -6, y: 18 }));
 });

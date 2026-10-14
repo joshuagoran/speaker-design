@@ -9,6 +9,9 @@ import type {
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
 import { STACK_TEXT } from "../../constants/stack";
+import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
+import type { PageDraft } from "../../hooks/usePageDraft";
 
 /** The id a stack has until the library saves it (then it takes the document's). */
 export const DRAFT_STACK_ID = "draft";
@@ -76,3 +79,14 @@ export function stackFromSaved(c: SavedConfig): StackDesign | null {
     return null;
   return { stack: { id: c.id, name: c.name, members, notes }, speakers };
 }
+
+/** The Stack page's working design in the browser: the save document, with the stack's id and name. */
+export const stackDraft: PageDraft<StackDesign> = {
+  key: PAGE_DRAFT_KEYS.stack,
+  empty: emptyStack,
+  toDraft: (design) => draftDocument(stackSnapshot(design), design.stack),
+  fromDraft: (raw) => {
+    const doc = asDraftDocument(raw);
+    return doc && stackFromSaved(doc);
+  },
+};

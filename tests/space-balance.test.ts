@@ -12,14 +12,10 @@ import { musicBalanceOf } from "../src/lib/pa/musicBalance";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { startLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import {
-  oneMeterSpots,
-  spaceCrossoversHz,
-  spaceTargetAt,
-  venueBalance,
-  venueLevelRef,
-} from "../src/lib/speaker/spaceBalance";
-import { resolvedPlacement } from "../src/lib/speaker/spaceLayout";
+import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
+import { oneMeterSpots, spaceCrossoversHz, spaceTargetAt } from "../src/lib/speaker/spaceBalance";
+import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { AUTO_BALANCE_MODE } from "../src/constants/autoBalance";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
@@ -50,8 +46,8 @@ describe("Space target: the PA presets take the PA page's target in every band",
       const cfg = defaultPaDesign(layout);
       const design = presetSpace(preset, layout);
       const { venue } = design.space;
-      expect(venueBalance(venue)).toBe(AUTO_BALANCE_MODE.paMusic);
-      expect(venueLevelRef(venue)).toBe(DEFAULT_COVERAGE_LAYOUT.levelRef);
+      expect(venue.balance).toBe(AUTO_BALANCE_MODE.moreBass);
+      expect(venue.levelRef).toBe(DEFAULT_COVERAGE_LAYOUT.levelRef);
       const crossovers = spaceCrossoversHz(design);
       expect(crossovers).toEqual([cfg.xoLo, cfg.xoHi]);
       const balance = musicBalanceOf({
@@ -61,7 +57,7 @@ describe("Space target: the PA presets take the PA page's target in every band",
         hornBelowMidDb: cfg.hfTilt,
       });
       for (const f of RESPONSE_FREQS)
-        expect(spaceTargetAt(venue.targetDb, f, crossovers, venueBalance(venue))).toBe(
+        expect(spaceTargetAt(venue.targetDb, f, crossovers, venue.balance)).toBe(
           balancedTarget(venue.targetDb, f, balance),
         );
       for (const band of keysOf(COVERAGE_BANDS))
@@ -70,7 +66,7 @@ describe("Space target: the PA presets take the PA page's target in every band",
             venue.targetDb,
             Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi),
             crossovers,
-            AUTO_BALANCE_MODE.paMusic,
+            AUTO_BALANCE_MODE.moreBass,
           ),
         ).toBe(bandTarget(venue.targetDb, band, 0, balance));
     });
@@ -83,18 +79,21 @@ test("Space target: flat, the same target in every band", () => {
     expect(spaceTargetAt(100, f, crossovers, AUTO_BALANCE_MODE.flat)).toBe(100);
 });
 
-test("Space levels: a save from before the settings measures at the listening area, flat", () => {
-  const { venue } = presetSpace(STACK_PRESET.paStack, "stack").space;
-  const old = { ...venue, levelRef: undefined, balance: undefined };
-  expect(venueLevelRef(old)).toBe(COVERAGE_LEVEL_REF.audience);
-  expect(venueBalance(old)).toBe(AUTO_BALANCE_MODE.flat);
+test("Space levels: a design with no room of its own measures at the audience average, flat", () => {
+  const { venue } = layersFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, {
+    id: "h",
+    name: "Hi-fi",
+  }).space;
+  expect(venue.levelRef).toBe(COVERAGE_LEVEL_REF.audience);
+  expect(venue.balance).toBe(AUTO_BALANCE_MODE.flat);
 });
 
-test("Space levels: 1 m from each placement, along its aim (a mirror pair mirrored)", () => {
+test("Space levels: 1 m from each box, along its aim (a mirrored pair's boxes mirrored)", () => {
   const design = presetSpace(STACK_PRESET.paStack, "stack");
   const spots = oneMeterSpots(design, design.space.venue.room);
-  design.space.placements.forEach((_, k) => {
-    const p = resolvedPlacement(design.space.placements, k);
+  const boxes = expandPlacements(design.space.placements);
+  expect(spots).toHaveLength(boxes.length);
+  boxes.forEach((p, k) => {
     const a = p.aim.yawDeg * RAD;
     expect(spots[k].x).toBeCloseTo(p.x + Math.sin(a) * ONE_METER_FT, 9);
     expect(spots[k].y).toBeCloseTo(p.y + Math.cos(a) * ONE_METER_FT, 9);

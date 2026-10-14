@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
 import { SelectField } from "../../components/ui/SelectField";
+import { StartPicker } from "../../components/ui/StartPicker";
 import { Notice } from "../../components/ui/Notice";
 import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
@@ -66,7 +67,6 @@ import {
   STACK_START_NAMES,
   type StackStart,
 } from "../../constants/stackPresets";
-import { SPEAKER_START_TEXT } from "../../constants/speakerStarts";
 import { stackFromOldSave, type OldSave } from "./oldSaves";
 import { useOldSaves } from "./useOldSaves";
 import type { StackPlanner } from "./useStack";
@@ -345,18 +345,18 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 maxLength={200}
                 onChange={stack.setNotes}
               />
-              <SelectField
-                label={SPEAKER_START_TEXT.startFrom}
+              <StartPicker
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(o.id)}
                 group={(o) => o.group}
+                onStart={startFrom}
+                secondary={{
+                  label: STACK_TEXT.clear,
+                  onClick: () => stack.setDesign(emptyStack()),
+                }}
+                hint={STACK_TEXT.startHint}
               />
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Button onClick={startFrom}>{SPEAKER_START_TEXT.startOver}</Button>
-                <Button onClick={() => stack.setDesign(emptyStack())}>{STACK_TEXT.clear}</Button>
-              </div>
-              <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.startHint}</p>
               {oldPicked && (
                 <>
                   <SelectField
@@ -392,17 +392,6 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   onRemove={() => stack.removeMember(k)}
                 />
               ))}
-              {members.length > 0 && (
-                <AutoBalanceButton
-                  className="mb-3"
-                  balance={stack.balance}
-                  onApply={stack.applyBalance}
-                  mode={stack.balanceMode}
-                  onMode={stack.setBalanceMode}
-                  tipExtra={AUTO_BALANCE_TEXT.stackTip}
-                  notes={stack.shared.map((ks) => AUTO_BALANCE_TEXT.sharedCrossover(ks))}
-                />
-              )}
               {picked ? (
                 <>
                   <SelectField
@@ -412,6 +401,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                     onChange={(o) => setPick(o.id)}
                   />
                   <Button
+                    variant="primary"
                     className="mb-2"
                     onClick={() => {
                       const speaker: SpeakerSpec = {
@@ -427,6 +417,17 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 </>
               ) : (
                 <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.noLibrary}</p>
+              )}
+              {members.length > 0 && (
+                <AutoBalanceButton
+                  className="mt-4 mb-3"
+                  balance={stack.balance}
+                  onApply={stack.applyBalance}
+                  mode={stack.balanceMode}
+                  onMode={stack.setBalanceMode}
+                  tipExtra={AUTO_BALANCE_TEXT.stackTip}
+                  notes={stack.shared.map((ks) => AUTO_BALANCE_TEXT.sharedCrossover(ks))}
+                />
               )}
             </>,
           )}

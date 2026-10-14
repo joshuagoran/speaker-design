@@ -1,16 +1,17 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
-import type { CoverageBand, CoverageLevelRef, CoverageRoom } from "../types";
+import type { CoverageBand, CoverageLevelRef, CoverageRoom, FloorPoint } from "../types";
 import type { ToggleOption } from "../components/ui/ToggleGroup";
+import type { SurfaceName } from "../components/ui/RoomFields";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 
 /**
- * A living room for a design that names no room (the Hi-fi pair, a fill): 16 × 22 ft, a 9 ft ceiling, drywall all
+ * A living room for a design that names no room (the Hi-fi pair, a fill): 20 × 30 ft, a 12 ft ceiling, drywall all
  * round, an empty floor. A wider or longer layout grows it (lib/speaker/spaceLayout `homeVenue`).
  */
 export const SPACE_HOME_ROOM: CoverageRoom = {
-  widthFt: 16,
-  lengthFt: 22,
-  ceilingFt: 9,
+  widthFt: 20,
+  lengthFt: 30,
+  ceilingFt: 12,
   materials: {
     front: "drywall",
     back: "drywall",
@@ -22,10 +23,35 @@ export const SPACE_HOME_ROOM: CoverageRoom = {
   outdoors: false,
 };
 
+/**
+ * Where the listener sits in the empty space, ft: on the center line, two thirds down the living room (a seat back from
+ * the speakers a new placement stands by, and clear of the middle where the map's quiet line is).
+ */
+export const SPACE_HOME_SEAT: FloorPoint = { x: 0, y: (SPACE_HOME_ROOM.lengthFt * 2) / 3 };
+
+/** The room's surfaces, as the Space page's fields name them (the same words as the position fields' "front wall"). */
+export const SPACE_SURFACE_NAMES: readonly SurfaceName[] = [
+  ["front", "Front wall"],
+  ["back", "Back wall"],
+  ["left", "Left wall"],
+  ["right", "Right wall"],
+  ["ceiling", "Ceiling"],
+];
+
+/** The tooltip on the left wall's field. */
+export const SPACE_LEFT_WALL_TIP =
+  "Left and right as seen from the listener, facing the front wall.";
+
 /** The room is at least this much wider than a pair of speakers, and longer than its seat is from the front wall, ft. */
 export const SPACE_HOME_MARGIN_FT = 4;
 
-/** The level a living room's listening area should get, dB SPL: loud music at home. */
+/**
+ * The side of the center line each box of a mirrored pair stands on, seen from the listener (+x is right): the map
+ * labels the box with it after the placement's number ("1L", "1R").
+ */
+export const PAIR_SIDE = { left: "L", right: "R" } as const;
+
+/** The level a living room should get, dB SPL: loud music at home. */
 export const SPACE_HOME_TARGET_DB = 90;
 
 /** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
@@ -34,44 +60,41 @@ export const DRIVER_PART = {
   hf: "hf",
 } as const;
 
-/** The front end picker's id for none. */
-export const NO_FRONT_END = "none";
-
-/** The front end choices' names: none, fixed analog cards, or a DSP (`FRONT_END_KIND`). */
-export const FRONT_END_NAMES = {
-  [NO_FRONT_END]: "None",
-  analog: "Analog",
-  digital: "DSP",
+/** The Place list's fixed choice ids: the stack and the speaker open now. */
+export const PLACE_ID = {
+  openStack: "open-stack",
+  openSpeaker: "open-speaker",
 } as const;
 
-/** A seat's listening area, ft: a sofa's width, a little deep. */
-export const SPACE_SEAT_AREA = { widthFt: 6, lengthFt: 4 } as const;
-
-/** How far the audience's listening area starts past the boxes' fronts, ft (the map's stats leave that floor out too). */
-export const SPACE_AUDIENCE_GAP_FT = 4;
+/** The Place list's id prefixes: a choice's id is its prefix and the preset, template or saved document it names. */
+export const PLACE_ID_PREFIX = {
+  stackPreset: "stack-preset:",
+  speakerTemplate: "speaker-template:",
+  savedStack: "saved-stack:",
+  savedSpeaker: "saved-speaker:",
+} as const;
 
 /** The ear's height of a seated listener, ft. */
 export const SEATED_EAR_FT = 3.5;
 
-/** How far a placement may turn either way on the floor, and tilt up or down, degrees. */
-export const SPACE_YAW_DEG = 90;
+/** A placement turns freely on the floor: its yaw wraps within this half turn either way (never clamps), degrees. */
+export const SPACE_YAW_DEG = 180;
+/** How far a placement may tilt up or down, degrees. */
 export const SPACE_PITCH_DEG = 30;
 
 /** The highest lift under a placement, in (a tall stand, a fly bar). */
 export const SPACE_LIFT_MAX_IN = 240;
-
-/** An amp by its number in the space (1 up). */
-const ampName = (n: number) => `Amp ${n}`;
 
 /** The band a fill's level is matched to the mains in (lib/speaker/fillAlign): the voice range a fill is there for. */
 export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
 
 /**
  * How much later than the mains a fill arrives at the listener, ms, so the sound still seems to come from the mains (the
- * precedence effect): the "Delay after the mains" field's starting value and its range (5 to 15 ms are usual).
+ * precedence effect): what the Align action adds to the path difference. 5 to 15 ms are usual: `FILL_PRECEDENCE_MS` is the
+ * first, `FILL_PRECEDENCE_MAX_MS` the last.
  */
 export const FILL_PRECEDENCE_MS = 5;
-export const FILL_PRECEDENCE_MAX_MS = 20;
+export const FILL_PRECEDENCE_MAX_MS = 15;
 
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
 const SPACE_ONE_METER = "1 m from the speakers";
@@ -90,121 +113,165 @@ export const SPACE_LEVEL_REF_PLACE: Record<CoverageLevelRef, string> = {
   stacks: SPACE_ONE_METER,
 };
 
+/** A delay under this is no delay, ms. */
+export const NO_DELAY_MS = 0.05;
+
+/** The control that puts a stack or speaker in the space (the Placements section's first control). */
+const ADD_PLACEMENT = "Add speaker or stack";
+
+/** The DOM id of placement `k`'s item in the Placements list, so a pick on the map can scroll it into view. */
+export const placementDomId = (k: number) => `space-placement-${k}`;
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
   coverage: "Coverage",
   side: "Side view",
-  sideNote:
-    "The placements seen from the side, to scale: each box at its lift and tilt, a line along each one's highest band. The cyan dot is the listener's ear; the band under the floor is the listening area.",
+  /** the Side view heading's tooltip, and the one line under the drawing */
+  sideTip:
+    "The speakers seen from the side, to scale, at their height and tilt. Each dashed line shows where a speaker points: the axis of its highest band.",
+  sideNote: "The cyan dot is the listener's ear.",
   response: "Response at the listener",
-  levels: "Levels at the listening area",
-  hardware: "Hardware",
-  noPlacements: "Place a saved stack or speaker, or start from a preset.",
-  missing:
-    "A placement names a stack or speaker that is not in this space. The space leaves it out.",
-  startHint:
-    "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on its own floor, and the Hi-fi pair in its room. A PA start sets each band's level for PA music. Open a saved space from the library above.",
+  levels: "Levels",
+  /** the line on the map of a room with nothing placed */
+  quietRoom: "Add a speaker or stack to hear the room.",
+  noPlacements: `Nothing is placed yet. Pick a stack or speaker and press ${ADD_PLACEMENT}.`,
+  missing: "A placement names a stack or speaker that is not in this space, so it is left out.",
+  /** under the start buttons, and its tooltip */
+  startHint: "Both replace this space.",
+  startTip:
+    "A preset stands in a room made for it. A PA preset also sets the band balance to More bass. Open a saved space from the library above.",
   clear: "Start empty",
-  subs: "Subs",
-  subsHint:
-    "Where a PA start puts its subs. In a center pair or one center sub, the subs stand at the middle of the front and the tops stay at their height, on stands. A tower or satellite start keeps its own layout.",
-  savedStack: "Saved stack",
-  savedSpeaker: "Saved speaker",
-  addStack: "Place stack",
-  addSpeaker: "Place speaker",
-  noLibrary:
-    "Save stacks on the Stack page, or speakers on the Speaker page, to place them here (sign in first).",
+  addPlacement: ADD_PLACEMENT,
+  /** the Place list's groups */
+  placeGroups: {
+    stackPresets: "Stack presets",
+    speakerTemplates: "Speaker templates",
+    open: "Open now",
+    savedStacks: "Saved stacks",
+    savedSpeakers: "Saved speakers",
+  },
+  /** the open stack or speaker in the Place list */
+  openStack: (name: string) => `Stack: ${name}`,
+  openSpeaker: (name: string) => `Speaker: ${name}`,
+  /** under the Place list: signed out, and signed in with nothing saved */
+  noLibrary: "Sign in to place your saved stacks and speakers here too.",
+  noLibrarySaved: "Save a stack or speaker to place it here.",
   remove: "Remove",
-  addPair: "Add the mirror pair",
-  follows: "Mirror of",
-  followsNone: "None (placed on its own)",
-  followsTip:
-    "A left and right pair: this placement follows the one you pick, turned over the room's center line.",
-  across: "Across, ft",
-  acrossTip:
-    "Its front center from the room's center line. + is to the right, seen from the audience.",
+  /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its level, dB */
+  placementSummary: (fromCenter: string, fromFront: string, level: string) =>
+    `${fromCenter} ft from the center line · ${fromFront} ft from the front wall · ${level} dB`,
+  mirrored: "Mirrored pair",
+  mirroredTip:
+    "Adds a copy on the other side of the center line. It mirrors this box's position and rotation.",
+  /** a mirrored placement's folded row says it stands twice */
+  pairSummary: "pair",
+  fromCenter: "From the center line, ft",
+  fromCenterTip:
+    "Its front center from the room's center line. + is to the right, seen from the listener.",
   down: "From the front wall, ft",
-  lift: "Lift, in",
-  liftTip: "The gap under it: a plinth, a stand, a fly bar.",
-  yaw: "Yaw, °",
+  height: "Height above the floor, ft",
+  heightTip: "The gap under it: a plinth, a stand, a fly bar.",
+  yaw: "Rotation, °",
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
-  pitch: "Pitch, °",
-  pitchTip:
-    "Its tilt, + up. A box's tilt in the stack and its cabinet's kick-back add to it (set those on the Stack and Speaker pages).",
-  mirror: "Mirror image",
+  pitch: "Tilt, °",
+  pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
+  mirror: "Flip left and right",
+  mirrorTip:
+    "Turns the box over, so its left and right sides swap. Use it for a speaker made as a left or right model.",
   level: "Level, dB",
   delay: "Delay, ms",
   alignTo: "Align to",
   alignToTip:
-    "For a fill: the placement it plays after. Align sets the delay and level of this placement and its mirror pair for the listener. The sound arrives just after the placement you pick and its mirror pair, at their level in the mid band. Move the listener to the area the fill covers first.",
+    "The placement to line this one up with, for a fill that plays after it. Move the listener to the area this placement covers first. The Align button sets this placement's Delay and Level.",
   align: "Align",
-  alignAfter: "Delay after the mains, ms",
-  alignAfterTip:
-    "How much later the fill plays than the placement it is aligned to, at the listener. People hear the sound as coming from the mains when the fill plays a few milliseconds later (the precedence effect). Common values are 5 to 15 ms. The alignment is exact at the listener. Across the room, it changes.",
-  /** a mirror pair in the "Align to" list: its placements' names */
-  pairName: (names: readonly string[]) => names.join(" + "),
+  delayTip: `The Align button lines this placement up with the one you pick, plus ${FILL_PRECEDENCE_MS} ms. Adding ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms more than the path difference makes people hear the sound from the main speakers.`,
   alignFillNone:
     "Cannot align: this placement and the one you pick must each hold a modeled stack or speaker.",
-  feedTip:
-    "The front end's level and delay on this placement's feed (a fill under, and after, the mains).",
-  amps: "Amps",
-  addAmp: "Add amp",
-  ampModel: "Model",
-  customAmp: "Other amp",
-  watts: "Watts per channel",
-  frontEnd: "Front end",
-  dsp: "DSP unit",
-  noDsp: "Other DSP",
-  /** an amp by its number in the space (1 up) */
-  amp: ampName,
-  channel: (amp: number, ch: number) => `${ampName(amp)} ch ${ch}`,
-  unassigned: "No channel",
-  channelsOver: (amp: number, used: number, has: number) =>
-    `${ampName(amp)} has ${has} channels; this space uses ${used}.`,
-  noChannel:
-    "A band has no amp channel: the space drives it at its own amp power (set on the Speaker page).",
-  analogDelay:
-    "An analog front end has fixed cards with no delay: a stack's alignment or a placement's delay needs a DSP.",
-  noFrontEnd:
-    "No front end: only speakers with an internal crossover straight off the amps. The space still uses each stack's filters.",
+  feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
+  ampPower: "Amp power",
+  ampPowerHint: "The power of the amp for each band, in watts into 8 Ω.",
+  ampPowerTip:
+    "The space finds each speaker's limit from it. A mirrored pair, and a speaker placed twice, share one figure.",
+  /** a band's amp power field: the band (or a passive network's bands) it is for */
+  ampPowerFor: (bands: string) => `${bands}: amp power, W`,
+  alignment: "Alignment",
+  alignmentHint: "The settings for each box and band, at the level and delay the space asks of it.",
+  alignmentTip: "A delay, an all-pass filter or moving the box can give a time offset.",
+  /** a band's filters, as a row's value: its corner and slope */
+  highpass: (filter: string) => `High-pass ${filter}`,
+  lowpass: (filter: string) => `Low-pass ${filter}`,
+  fullRange: "Full range",
+  /** a band's level, dB (already formatted) */
+  levelIs: (db: string) => `Level ${db} dB`,
+  noDelay: "No delay",
+  /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (in) */
+  delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,
+  offsetNote: "Some boxes need a time offset to line up at their crossovers.",
+  placementNote: "Some placements play later, to line up with other speakers in the room.",
   outdoors: "Outdoors",
-  areaWidth: "Area width, ft",
-  areaLength: "Area length, ft",
-  areaCenter: "Area center from the front wall, ft",
   ear: "Ear height, ft",
-  target: "Target level, lowest band",
+  target: "Target level",
+  /** the Target level's tooltip */
+  targetTip:
+    "The level the lowest band gets at the spot in Measured at. With More bass, each higher band is quieter.",
   measuredAt: "Measured at",
   /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
   mapCaption: (band: string, target: string, place: string) =>
-    `${band}, ${target} dB target at ${place}. The dashed box is the listening area.`,
-  balance: "Music balance",
-  balanceTip:
-    "The target in each band. Flat: the same target in every band. PA music tilt: each band above a crossover is lower (the auto balance steps).",
-  /** the band levels' heading: each band at the middle of the listening area */
-  bandLevels: "Each band at the middle of the listening area, at this level:",
+    `${band}, ${target} dB target at ${place}.`,
+  /** the band levels' heading: each band at the listener */
+  bandLevels: "Each band at the listener, at this level:",
   /** one band's level and target there, dB (already formatted) */
   bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
-  targetCurve: "Target, music balance",
-  listenerHint:
-    "The dashed box on the map is the listening area. Tap the map, or drag the cyan dot, to move the listener.",
-  mapHint:
-    "Drag a placement to move it, its dot to turn it, or the listener (tap the floor to put them there).",
-  oneNote: (hz: number) =>
-    `One frequency adds everything with phase, so the interference between the placements is easy to see. The limit is ${hz} Hz. Above it, the pattern is finer than the map.`,
-  areaAverage: "Area average",
-  areaMax: "Area at the limit",
+  targetCurve: "Target, band balance",
+  listenerHint: "Tap the map, or drag the cyan dot, to move the listener.",
+  /** under the one-frequency slider */
+  oneNote: "One frequency adds all sources with phase.",
+  audienceAverage: "Audience average",
+  audienceMax: "Audience at the limit",
   listener: "Listener",
-  /** the share of the listening area at or above a level against the target */
-  areaAtLeast: (db: string) => `Area ≥ ${db} dB`,
+  /** the share of the floor at or above a level against the target (as the coverage page counts it) */
+  floorAtLeast: (db: string) => `Floor ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
   /** the reference can't get the band's target: where it is measured (`COVERAGE_LEVEL_REF_PLACE`), dB */
-  cannotReach: (place: string, target: number, atLimit: number) =>
-    `It cannot reach ${target.toFixed(0)} dB at ${place} in this band: ${atLimit.toFixed(1)} dB at its limit.`,
-  turnedDown: (db: number, place: string, target: number) =>
-    `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
+  cannotReach: (target: number, atLimit: number) =>
+    `It cannot reach ${target.toFixed(0)} dB: ${atLimit.toFixed(1)} dB at its limit.`,
+  turnedDown: (db: number, target: number) =>
+    `Turned down ${db.toFixed(1)} dB to reach ${target.toFixed(0)} dB.`,
   listenerVs: "The listener against the target:",
-  modelNote:
-    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
+} as const;
+
+/** The Space page's Details fold: its own groups and lines (the room's groups come from the coverage page's list). */
+export const SPACE_DETAILS = {
+  map: "The map",
+  mapLines: (limitHz: number) => [
+    "Drag a placement to move it.",
+    "Drag its dot to turn it.",
+    "Drag the listener, or tap the floor to put the listener there.",
+    "One frequency shows the interference between the placements.",
+    `One frequency goes up to ${limitHz} Hz. Above it, the pattern is finer than the map.`,
+  ],
+  levels: "Levels",
+  /** the target in the band on show, where it is measured (`SPACE_LEVEL_REF_PLACE`), dB */
+  targetLine: (targetDb: number, place: string, bandDb: number) =>
+    `Target: ${targetDb} dB SPL in the lowest band, at ${place} (${bandDb} dB in this band).`,
+  moreBass: "With More bass, each band above a crossover is quieter.",
+  flat: "With Flat, every band has the same target.",
+  headroom: "The box with the least headroom sets the level.",
+  turnDown:
+    "Then the space is turned down until Measured at gets the target, never past the limit.",
+  bandLevel: "Each band plays at its Level and its box's level.",
+  audience: (clearanceFt: number) =>
+    `Audience average: the mean over the floor, except ${clearanceFt} ft around every box.`,
+  oneMeter: (place: string) =>
+    `${place}: the mean at ear height, 1 m in front of each placed stack or speaker that plays, on its aim.`,
+  boxes: "Boxes and drivers",
+  boxLines: (listenM: number) => [
+    "Each box plays through its crossover, level and delay.",
+    `The stack's delays put the boxes in phase at the crossovers, ${listenM} m out.`,
+    "Each driver covers the room from its own place and aim.",
+    "A driver's place includes its cabinet's kick-back, its tilt in the stack and the placement's tilt.",
+    "Each cone band has a first-order baffle-step shelf.",
+  ],
 } as const;

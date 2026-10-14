@@ -11,7 +11,6 @@ import type {
   CoverageStack,
   FloorPlacement,
   FloorPoint,
-  ListeningArea,
   RoomSide,
 } from "../../types";
 import { SVG_FONT } from "../../styles/fonts";
@@ -35,6 +34,20 @@ const HANDLE_FT = 5;
 /** how far the horn's coverage edges are drawn, ft */
 const EDGE_FT = 30;
 const PAD = { l: 30, r: 10, t: 24, b: 24 };
+
+/** The quiet line's font size and the width of one of its characters, px (the map's font). */
+const QUIET_FONT_PX = 12;
+const QUIET_CHAR_PX = 7;
+
+/** The quiet line as one line, or as two at the space nearest its middle when the floor is too narrow for one. */
+function quietLines(text: string, widthPx: number): string[] {
+  if (text.length * QUIET_CHAR_PX <= widthPx - 16) return [text];
+  const mid = text.length / 2;
+  const cut = [...text.matchAll(/ /g)]
+    .map((m) => m.index)
+    .reduce((a, b) => (Math.abs(b - mid) < Math.abs(a - mid) ? b : a), 0);
+  return [text.slice(0, cut), text.slice(cut + 1)];
+}
 
 type Drag =
   | { kind: "box"; i: number; dx: number; dy: number }
@@ -66,10 +79,19 @@ interface Props {
   listener: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
-  /** the listening area the stats count, outlined; absent: the whole floor */
-  area?: ListeningArea;
+  /**
+   * the boxes picked (their indexes; a mirrored pair's two boxes are one pick) and the pick of one by a press on it or
+   * its aim dot; both absent, the map has no pick
+   */
+  selected?: readonly number[];
+  onSelect?: (i: number) => void;
   /** the most height the map may take, px */
   maxHeight: number;
+  /**
+   * a room with no sound in it: its line, centered on the floor, which is drawn in a neutral fill (the palette's edge
+   * gray, not a level on the scale); absent, the floor shows the grid's levels
+   */
+  quiet?: string;
   /** whether a finer or newer grid is on its way: aria-busy only, no badge (the fine pass is quick) */
   busy: boolean;
 }
@@ -85,9 +107,11 @@ export function CoverageMap({
   listener,
   actions,
   boxes,
-  area,
+  selected = [],
+  onSelect,
   maxHeight,
   busy,
+  quiet,
 }: Props) {
   const pal = usePalette();
   const [box, cw] = useElementWidth(560);
@@ -175,8 +199,11 @@ export function CoverageMap({
       return b.turnable && near(hp.x, hp.y, 16);
     });
     const onBox = boxes.findIndex((b) => near(px(b.x), py(b.y), boxPx(b) / 2 + 8));
-    if (aimAt >= 0) d = { kind: "aim", i: aimAt };
-    else if (onBox >= 0) {
+    if (aimAt >= 0) {
+      d = { kind: "aim", i: aimAt };
+      onSelect?.(aimAt);
+    } else if (onBox >= 0) {
+      onSelect?.(onBox);
       const b = boxes[onBox];
       d = { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
     } else if (near(px(listener.x), py(listener.y), 18)) d = { kind: "listener" };
@@ -279,7 +306,7 @@ export function CoverageMap({
             <rect x={PAD.l} y={PAD.t} width={w} height={h} />
           </clipPath>
         </defs>
-        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={ON_DATA.edge} />
+        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={quiet ? pal.edge : ON_DATA.edge} />
         <g clipPath="url(#coverage-room)">
           {image && (
             <image
@@ -323,20 +350,28 @@ export function CoverageMap({
                 })
               : [],
           )}
-          {area && (
-            <rect
-              data-testid={COVERAGE_TEST_IDS.area}
-              x={px(area.x - area.widthFt / 2)}
-              y={py(area.y - area.lengthFt / 2)}
-              width={area.widthFt * k}
-              height={area.lengthFt * k}
-              fill="none"
-              stroke={ON_DATA.ink}
-              strokeWidth="1.5"
-              strokeDasharray="6 4"
-            />
-          )}
         </g>
+        {quiet && (
+          <text
+            x={PAD.l + w / 2}
+            y={PAD.t + h / 2}
+            textAnchor="middle"
+            fill={pal.muted}
+            {...font}
+            fontSize={QUIET_FONT_PX}
+            pointerEvents="none"
+          >
+            {quietLines(quiet, w).map((line, i, all) => (
+              <tspan
+                key={line}
+                x={PAD.l + w / 2}
+                dy={i === 0 ? `${-(all.length - 1) * 0.6}em` : "1.2em"}
+              >
+                {line}
+              </tspan>
+            ))}
+          </text>
+        )}
         {sides.map(([side, x1, y1, x2, y2]) => (
           <line
             key={side}
@@ -407,8 +442,8 @@ export function CoverageMap({
                   height={bh}
                   rx="3"
                   fill={ON_DATA.ink}
-                  stroke={ON_DATA.white}
-                  strokeWidth="1.5"
+                  stroke={selected.includes(i) ? ON_DATA.cyan : ON_DATA.white}
+                  strokeWidth={selected.includes(i) ? 3 : 1.5}
                 />
               </g>
               <text

@@ -75,15 +75,3 @@ export const SPEAKER_START_SPEAKER_NAMES = {
   paTop: "PA mid/high box",
   paTower: "PA tower",
 } as const satisfies Record<SpeakerStart, string>;
-
-/** The picker's groups: the templates, then the designs you have now. */
-export const SPEAKER_START_GROUPS = {
-  templates: "Templates",
-  current: "Your current designs",
-} as const;
-
-/** The start picker's label and its button (the Node checks find them by these). */
-export const SPEAKER_START_TEXT = {
-  startFrom: "Start from",
-  startOver: "Start over from this",
-} as const;

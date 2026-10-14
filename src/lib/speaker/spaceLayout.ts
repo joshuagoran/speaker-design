@@ -12,6 +12,8 @@
 import type {
   BandId,
   DriverPart,
+  FloorPoint,
+  PlacedSource,
   SpaceDesign,
   SpacePlacement,
   SpeakerChamber,
@@ -33,7 +35,7 @@ import {
 import { stackMember } from "./specParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { INCHES_PER_FOOT, RAD } from "../../constants/units";
-import { DRIVER_PART } from "../../constants/space";
+import { DRIVER_PART, PAIR_SIDE, SPACE_YAW_DEG } from "../../constants/space";
 
 /** A point in the room, ft: across, down the room, up. */
 export interface RoomPoint {
@@ -42,27 +44,61 @@ export interface RoomPoint {
   z: number;
 }
 
+/** A yaw wrapped into -180..180 (the half turn either way): 190 is -170, and a turn past 180 carries on smoothly. */
+export function wrapYawDeg(deg: number): number {
+  return deg - 360 * Math.ceil((deg - SPACE_YAW_DEG) / 360) + 0;
+}
+
+/** The yaw that faces point `to` from point `from` on the floor (ft), whole degrees in -180..180; 0 is straight down the room. */
+export function yawToward(from: FloorPoint, to: FloorPoint): number {
+  return wrapYawDeg(Math.round(Math.atan2(to.x - from.x, to.y - from.y) / RAD));
+}
+
 /**
- * The placement as it stands: one that follows an earlier one (a mirror pair) takes that one's item, spot, lift and aim,
- * x and yaw turned over and the image mirrored; its own level, delay and channels stay.
+ * The boxes the model places, in the placements' order: a placement on its own stands once; a mirrored one stands twice,
+ * as set and then as its mirror image across the center line (x and rotation turned over, the box flipped left and
+ * right). The two share its item, lift, level and delay. Each carries its placement's index (`source`) and, in a pair,
+ * its side of the center line seen from the listener (the one at the smaller x is the left).
  */
-export function resolvedPlacement(
-  placements: readonly SpacePlacement[],
-  k: number,
+export function expandPlacements(placements: readonly SpacePlacement[]): PlacedSource[] {
+  return placements.flatMap((p, source): PlacedSource[] => {
+    if (!p.mirrored) return [{ ...p, source, image: false, side: null }];
+    const asSetIsLeft = p.x <= 0;
+    return [
+      { ...p, source, image: false, side: asSetIsLeft ? PAIR_SIDE.left : PAIR_SIDE.right },
+      {
+        ...p,
+        // 0 - x, not -x: a box on the center line keeps x = 0, not -0
+        x: 0 - p.x,
+        aim: { yawDeg: wrapYawDeg(-p.aim.yawDeg), pitchDeg: p.aim.pitchDeg },
+        mirror: !p.mirror,
+        source,
+        image: true,
+        side: asSetIsLeft ? PAIR_SIDE.right : PAIR_SIDE.left,
+      },
+    ];
+  });
+}
+
+/**
+ * The placement after a drag moved one of its boxes to `to` (ft): the box as set moves it there; the mirror image moves
+ * it to the spot's mirror image, so the image stands where it was dragged.
+ */
+export function movedPlacement(p: SpacePlacement, image: boolean, to: FloorPoint): SpacePlacement {
+  return { ...p, x: image ? 0 - to.x : to.x, y: to.y };
+}
+
+/**
+ * The placement after a drag turned one of its boxes (as `PlacedSource` stands, at `box`) to face `toward` (ft): the
+ * image's yaw is the placement's, turned over.
+ */
+export function aimedPlacement(
+  p: SpacePlacement,
+  box: Pick<PlacedSource, "x" | "y" | "image">,
+  toward: FloorPoint,
 ): SpacePlacement {
-  const p = placements[k];
-  const j = p.follows;
-  if (j === null || j < 0 || j >= k) return p;
-  const lead = resolvedPlacement(placements, j);
-  return {
-    ...p,
-    item: lead.item,
-    x: -lead.x,
-    y: lead.y,
-    liftIn: lead.liftIn,
-    aim: { yawDeg: -lead.aim.yawDeg, pitchDeg: lead.aim.pitchDeg },
-    mirror: !lead.mirror,
-  };
+  const yawDeg = yawToward(box, toward);
+  return { ...p, aim: { ...p.aim, yawDeg: box.image ? wrapYawDeg(-yawDeg) : yawDeg } };
 }
 
 /**
@@ -131,9 +167,9 @@ export interface PlacedBox {
   pitch: number;
 }
 
-/** One placement laid out: as it stands (`resolvedPlacement`), its stack, its boxes and drivers; null stack: missing. */
+/** One box of a placement laid out: as it stands (`expandPlacements`), its stack, its boxes and drivers; null stack: missing. */
 export interface PlacedItem {
-  placement: SpacePlacement;
+  placement: PlacedSource;
   stack: ReturnType<typeof placementStack>;
   boxes: PlacedBox[];
   drivers: PlacedDriver[];
@@ -147,16 +183,14 @@ export type BandOfPart = (
 ) => BandId | null;
 
 /**
- * Each placement laid out in the room. `bandOf` names the band each driver part feeds (lib/speaker/spaceCoverage
+ * Each placement laid out in the room, a mirrored pair as two (`expandPlacements`). `bandOf` names the band each driver part feeds (lib/speaker/spaceCoverage
  * passes the speaker model's rule); a part on no band is left out.
  */
 export function spaceLayout(
   design: Pick<SpaceDesign, "space" | "stacks" | "speakers">,
   bandOf: BandOfPart,
 ): PlacedItem[] {
-  const { placements } = design.space;
-  return placements.map((_, k) => {
-    const placement = resolvedPlacement(placements, k);
+  return expandPlacements(design.space.placements).map((placement) => {
     const stack = placementStack(design, placement.item);
     if (!stack) return { placement, stack, boxes: [], drivers: [] };
     return { placement, stack, ...layStack(stack, placementFrame(placement), bandOf) };

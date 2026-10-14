@@ -38,7 +38,7 @@ const pairs = (p: Palette): [string, string, string, number][] => {
     ["page text on accent (primary buttons)", p.white, p.accent, 4.5],
     ["page text on cyan (action buttons)", p.white, p.cyan, 4.5],
     ["page text on magenta (special buttons)", p.white, p.magenta, 4.5],
-    ["muted on edge (section headers)", p.muted, p.edge, 4.5],
+    ["muted on edge (section headers, the quiet map floor)", p.muted, p.edge, 4.5],
     ["ink on edge (section headers)", p.ink, p.edge, 4.5],
     ["focus ring (accent) on the page", p.accent, p.white, 3],
     ["ink on sub tint (cutlist)", p.ink, p.subTint, 4.5],

@@ -27,7 +27,7 @@ export const STACK_TEXT = {
   gaps: "The response leaves out part of a box's speaker. Open that speaker on the Speaker page to see which part.",
   fullRange: "full range",
   startHint:
-    "Both replace this stack. A PA start sets each band's level for PA music. Open a saved stack from the library above.",
+    "Both replace this stack. A PA start sets each band's level to the More bass band balance. Open a saved stack from the library above.",
   clear: "Start empty",
   oldSave: "Old PA or Hi-fi save",
   oldSaveBad: "This save does not open. Some of its fields are not valid.",

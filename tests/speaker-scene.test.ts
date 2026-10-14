@@ -79,6 +79,7 @@ function paDesign(c: GoldenConfig): PaPlannerDesign {
     hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
     spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
     hardware: savedHardware(c.hardware),
+    divider: c.divider ?? DEFAULT_PA.divider,
   };
 }
 /** A PA design's speaker of `part`, read through the adapter. */
