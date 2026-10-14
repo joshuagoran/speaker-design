@@ -471,13 +471,16 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     },
     note: "[datasheet, per Josh; matches usspeaker.com] Ferrite, 1000 W AES / 2000 W program, 94 dB 1 W/1 m, Le 3 mH, 34.5 lb. Xmax 14 mm as published, which matches the (Hvc \u2212 Hg)/2 + Hg/4 convention (13.5 mm); plain (Hvc \u2212 Hg)/2 gives 11 mm. Displacement not published; 10.5 L assumed.",
   },
+  // Ciare NDH18-4S, 8 \u03a9 (part PNDH18-4S). Specs: https://ciare.com/en/products/lf-driver/18/8/NDH18-4S (read Oct 2026)
+  // and Ciare's datasheet PDF (8 \u03a9 only), which agree. Price: US Speaker, https://www.usspeaker.com/ciare%2018ndh4s-1.htm
+  // ($459.95, read Oct 2026). The id keeps its spelling from before the 4 \u03a9 entry: saved designs and links carry it.
   {
     id: "ciarendh18",
-    lb: 19.8,
-    name: "Ciare NDH18-4S",
+    lb: 17.6,
+    name: "Ciare NDH18-4S (8 \u03a9)",
     maker: "ciare",
     price: 459.95,
-    src: "usspeaker.com, Sep 2026",
+    src: "usspeaker.com, Oct 2026",
     size: 18,
     ts: {
       Fs: 31,
@@ -488,8 +491,8 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Sd: 1164,
       pub: {
         Xmax: 11.5,
-        formula: "hg/4",
-        src: "https://www.ciare.com/uploads/products/datasheet/Ciare%20NDH18-4S%20EN.pdf",
+        formula: "unstated",
+        src: "https://ciare.com/en/products/lf-driver/18/8/NDH18-4S",
       },
       Hvc: 30,
       Hg: 14,
@@ -500,7 +503,50 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       aes: 1000,
       disp: 10.5,
     },
-    note: "[usspeaker.com spec table, Sep 2026] 8 \u03a9 version. Neo, 2000 W program (1000 W AES assumed), 96.5 dB, 4 in coil, 19.8 lb. A 4 \u03a9 version (NDH18-4S-4, same price) also exists. Ciare's Xmax uses (Hvc \u2212 Hg)/2 + Hg/4. Displacement not published; 10.5 L assumed.",
+    // Ciare's datasheet PDF states 96.5 dB at 2.83 V/1 m; the T/S agree (2.1 % efficiency on Re 6.1 \u03a9).
+    sens: 96.5,
+    // Ciare product page: depth 208 mm (US Speaker lists 207 mm)
+    depthIn: 8.19,
+    note: "[ciare.com product page and datasheet, Oct 2026] 8 \u03a9 version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 96.5 dB at 2.83 V, 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 120 L vented. The 4 \u03a9 version (NDH18-4S-4) is the next entry. Displacement not published; 10.5 L assumed.",
+  },
+  // Ciare NDH18-4S-4, 4 \u03a9 (part PNDH18-4S-4). Specs: https://ciare.com/en/products/lf-driver/18/4/NDH18-4S (read Oct
+  // 2026). Price: US Speaker, https://www.usspeaker.com/ciare%20ndh18-4s-4-1.htm ($459.95, read Oct 2026).
+  {
+    id: "ciarendh18s4",
+    lb: 17.6,
+    name: "Ciare NDH18-4S-4 (4 \u03a9)",
+    maker: "ciare",
+    price: 459.95,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 31,
+      Qts: 0.25,
+      Qes: 0.25,
+      Qms: 9.8,
+      Vas: 240,
+      Sd: 1164,
+      pub: {
+        Xmax: 11.5,
+        formula: "unstated",
+        src: "https://ciare.com/en/products/lf-driver/18/4/NDH18-4S",
+      },
+      Hvc: 30,
+      Hg: 14,
+      Re: 3.0,
+      Le: 1.7,
+      Bl: 22.2,
+      Mms: 216,
+      aes: 1000,
+      disp: 10.5,
+    },
+    // Ciare gives no reference for this version (US Speaker labels it 1 W/1 m). The T/S give 100.5 dB at 2.83 V (2.6 %
+    // efficiency, 2.67 W into Re 3.0 \u03a9), the reference the 8 \u03a9 sheet states, so it is about 97.5 dB at 1 W (4 \u03a9
+    // nominal). Stored as the 2.83 V figure: the Notes page compares `sens` with the T/S sensitivity at 2.83 V.
+    sens: 100.5,
+    // Ciare product page: depth 208 mm (US Speaker lists 207 mm)
+    depthIn: 8.19,
+    note: "[ciare.com product page, Oct 2026] 4 \u03a9 version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 100.5 dB (reference not stated; the T/S say 2.83 V, about 97.5 dB at 1 W), 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 90 L vented. The PA model turns watts into volts at 8 \u03a9 for every sub, so it lets this driver take about 3 dB more than its 1000 W thermal rating. Displacement not published; 10.5 L assumed.",
   },
   {
     id: "f18fh510",
