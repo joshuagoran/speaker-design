@@ -155,6 +155,7 @@ import {
   CHAMBER_LOAD,
   DRIVER_KIND,
   PORT_SHAPE,
+  SLOT_PLACE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
 
@@ -478,15 +479,12 @@ function ventRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
   });
 }
 
-/** How many steps each flare segment's keep-out takes, its size tapering from one step to the next. */
-const FLARE_STEPS = 4;
-
 /**
  * The room a horn built into the chamber takes, which no brace or rib may enter: its flare from the mouth on the baffle
- * back along its path (drawn straight, at most the chamber's inside depth: speakerLayout `hornFlare`), each segment
- * tapering from its mouth to its throat in FLARE_STEPS steps (each step as large as its wider end), then its drivers at
- * the throat, a cone's depth further, as large as the throat or the cone, whichever is larger. The rear chamber's walls
- * round it are braced; the flare's own walls hold themselves. None for a chamber without a horn.
+ * back along its path (lib/speaker/hornGeometry, as the views draw it: its legs, turns and the drivers' bay), each box as
+ * large as the two sections it spans, then the drivers at the throat, a cone's depth further where the cone is deeper than
+ * the bay. The rear chamber's walls round it are braced; the flare's own walls hold themselves. None for a chamber without
+ * a horn.
  */
 /**
  * Where a horn's flare leaves each panel it runs along from the mouth (its keep-out reaches the panel there), back from
@@ -517,41 +515,54 @@ function flareLines(f: ChamberFrame, regions: readonly BoxRegion[]): PaBoxSuppor
 function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
   const flare = hornFlare(cabinet, f.placed);
   if (!flare) return [];
-  const c = insidePoint(f, {
-    xIn: flare.mouth.x + flare.mouth.w / 2,
-    yIn: flare.mouth.y + flare.mouth.h / 2,
-  });
+  const { path } = flare;
   const { inD } = f.inside;
   const out: BoxRegion[] = [];
-  let z = 0;
-  // from the mouth back: the last segment first, each from its mouth end to its throat end
-  for (const s of [...flare.segments].reverse()) {
-    for (let i = 0; i < FLARE_STEPS && z < inD; i++) {
-      const at = (k: number) => ({
-        w: s.mouth.w + ((s.throat.w - s.mouth.w) * k) / FLARE_STEPS,
-        h: s.mouth.h + ((s.throat.h - s.mouth.h) * k) / FLARE_STEPS,
-      });
-      const [a, b] = [at(i), at(i + 1)];
-      const z1 = Math.min(inD, z + s.length / FLARE_STEPS);
-      out.push(roomAround(c, Math.max(a.w, b.w), Math.max(a.h, b.h), z, z1));
-      z = z1;
-    }
+  /** a box round two rectangles' union, from `za` to `zb` back from the baffle (either way round), kept inside the chamber */
+  const room = (
+    a: { cx: number; cy: number; w: number; h: number },
+    b: { cx: number; cy: number; w: number; h: number },
+    za: number,
+    zb: number,
+  ) => {
+    const [z0, z1] = [Math.min(za, zb), Math.min(inD, Math.max(za, zb))];
+    if (z0 >= inD) return;
+    const x0 = Math.min(a.cx - a.w / 2, b.cx - b.w / 2),
+      x1 = Math.max(a.cx + a.w / 2, b.cx + b.w / 2),
+      y0 = Math.min(a.cy - a.h / 2, b.cy - b.h / 2),
+      y1 = Math.max(a.cy + a.h / 2, b.cy + b.h / 2);
+    const c = insidePoint(f, { xIn: (x0 + x1) / 2, yIn: (y0 + y1) / 2 });
+    out.push(roomAround(c, x1 - x0, y1 - y0, z0, z1));
+  };
+  // each leg from section to section (each box as large as both ends), then each turn
+  for (const leg of path.legs)
+    leg.sections.forEach((sec, i) => {
+      const next = leg.sections[i + 1];
+      if (next) room(sec, next, sec.z, next.z);
+    });
+  for (const t of path.turns) {
+    const rect = { cx: t.cx, cy: (t.y0 + t.y1) / 2, w: t.w, h: t.y1 - t.y0 };
+    room(rect, rect, t.z0, t.z1);
   }
-  const throat = flare.segments[0]?.throat ?? flare.mouth;
-  const cones = f.placed.chamber.drivers.flatMap((d) => coneBuild(d) ?? []);
-  const coneIn = Math.max(0, ...cones.map((k) => k.depthIn));
-  const coneW = Math.max(0, ...cones.map((k) => k.body.cutoutIn));
-  if (coneIn > 0 && z < inD)
-    out.push(
-      roomAround(
-        c,
-        Math.max(throat.w, coneW),
-        Math.max(throat.h, coneW),
-        z,
-        Math.min(inD, z + coneIn),
-      ),
-    );
-  return out;
+  // the drivers at the throat: their bay, and a cone deeper than it, as large as the bay or the cone, whichever is larger
+  const { bay } = path;
+  if (bay) {
+    const cones = f.placed.chamber.drivers.flatMap((d) => coneBuild(d) ?? []);
+    const coneIn = Math.max(0, ...cones.map((k) => k.depthIn));
+    const coneW = Math.max(0, ...cones.map((k) => k.body.cutoutIn));
+    const rect = { cx: bay.x + bay.w / 2, cy: bay.y + bay.h / 2, w: bay.w, h: bay.h };
+    const deep = {
+      ...rect,
+      w: Math.max(rect.w, coneW),
+      h: Math.max(rect.h, coneW),
+    };
+    const behind = path.folds % 2 === 0;
+    room(rect, rect, bay.z0, bay.z1);
+    if (coneIn > bay.z1 - bay.z0)
+      room(deep, deep, behind ? bay.z1 : bay.z0, behind ? bay.z0 + coneIn : bay.z1 - coneIn);
+  }
+  // the flare's lines are read from the mouth back
+  return out.sort((x, y) => x.z[0] - y.z[0]);
 }
 
 /** The bracing rule's results on general chambers, by their inputs (the page asks again on every change). */
@@ -871,14 +882,21 @@ function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]
   const { port } = rule;
   if (port.shape === PORT_SHAPE.slot) {
     const fits = hifiSlotFits(chamber.dims, port, t);
+    const tooLong = fits
+      ? null
+      : port.folded
+        ? SPEAKER_TEXT.slotTooLongFolded
+        : SPEAKER_TEXT.slotTooLong;
+    const shelf = slotShelfPart(box, { ...port, w: port.w ?? f.inside.iw }, t, tooLong);
     return {
+      // slots up the sides: the same plate, a wall of each slot instead of a roof
       parts: [
-        slotShelfPart(
-          box,
-          { ...port, w: port.w ?? f.inside.iw },
-          t,
-          fits ? null : port.folded ? SPEAKER_TEXT.slotTooLongFolded : SPEAKER_TEXT.slotTooLong,
-        ),
+        port.place === SLOT_PLACE.sides
+          ? {
+              ...shelf,
+              note: joinNotes([SPEAKER_TEXT.sideSlotWalls(port.n, formatInches(port.h)), tooLong]),
+            }
+          : shelf,
       ],
       vent: [],
     };
@@ -1075,10 +1093,16 @@ function chamberNotes(
     const { port } = rule;
     if (port.shape === PORT_SHAPE.slot)
       baffle.push(
-        slotOpeningNote(
-          { ...port, w: port.w ?? f.inside.iw },
-          slotOpeningsAt(placed, port, t).map((o) => marks.up(placed.y0 + o.y)),
-        ),
+        port.place === SLOT_PLACE.sides
+          ? SPEAKER_TEXT.sideSlotOpening(
+              port.n,
+              formatInches(port.h),
+              formatInches(slotOpeningsAt(placed, port, t)[0].h),
+            )
+          : slotOpeningNote(
+              { ...port, w: port.w ?? f.inside.iw },
+              slotOpeningsAt(placed, port, t).map((o) => marks.up(placed.y0 + o.y)),
+            ),
       );
     else {
       const tubes = roundPortsAt(placed, port);

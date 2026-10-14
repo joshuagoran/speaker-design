@@ -291,3 +291,41 @@ export function polygonPath(centerX: number, centerY: number, points: readonly T
   path.closePath();
   return path;
 }
+
+/** A rectangle across a duct: its center, where along z it is, and its size, inches. */
+export interface DuctSection {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * A duct as flat panels, open at both ends: four planar sides from each rectangle to the next, each panel with its own
+ * vertices so the edges stay sharp (a conical horn segment's walls are straight; a kink shows where two segments meet).
+ */
+export function ductGeometry(sections: readonly DuctSection[]) {
+  /** a rectangle's corners, counterclockwise from its lower left */
+  const corners = ({ x, y, z, w, h }: DuctSection) =>
+    [
+      [x - w / 2, y - h / 2, z],
+      [x + w / 2, y - h / 2, z],
+      [x + w / 2, y + h / 2, z],
+      [x - w / 2, y + h / 2, z],
+    ] as const;
+  const pos: number[] = [];
+  for (let i = 0; i + 1 < sections.length; i++) {
+    const a = corners(sections[i]),
+      b = corners(sections[i + 1]);
+    for (let k = 0; k < 4; k++) {
+      const next = (k + 1) % 4;
+      // one panel: two triangles
+      for (const p of [a[k], a[next], b[next], a[k], b[next], b[k]]) pos.push(...p);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.computeVertexNormals();
+  return geo;
+}

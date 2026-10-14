@@ -2,6 +2,7 @@ import type { Horn, SpeakerDriver, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { AmtPlate, RibbonPlate } from "./HifiFront";
 import {
+  driverAcrossIn,
   driverHorn,
   driverSpots,
   driversOnBaffle,
@@ -13,6 +14,7 @@ import {
   roundPortsAt,
   speakerBounds,
   type PlacedChamber,
+  type HornFlare,
   slotOpeningsAt,
   hornFitsWhereSet,
   hornCutoutBox,
@@ -273,6 +275,61 @@ export function SpeakerFront({ spec }: Props) {
     }
   };
 
+  /** a horn-loaded chamber's drawing: see where it is used */
+  const hornParts = (placed: PlacedChamber, flare: HornFlare, i: number) => {
+    const { mouth, path } = flare;
+    const { clear } = placed;
+    // the path's last leg ends at the mouth: its sections are what shows through it, nested
+    const seen = path.legs[path.legs.length - 1].sections;
+    /** where a segment starts or ends: the outlines drawn (the steps between are the flare's walls) */
+    const joints = seen.filter((sec) => sec.joint);
+    const corner = (n: number) =>
+      seen
+        .map((sec) => {
+          const x = sec.cx + ((n % 2 ? 1 : -1) * sec.w) / 2,
+            y = sec.cy + ((n < 2 ? -1 : 1) * sec.h) / 2;
+          return `${px(x)},${py(y)}`;
+        })
+        .join(" ");
+    const line = { fill: "none", stroke: pal.muted, strokeWidth: 0.8 };
+    const out: React.JSX.Element[] = [
+      // the walls' inside edges: the clear face the horn, the vents and the drivers stand in
+      rect(`e${i}`, clear.x + clear.w / 2, clear.y + clear.h / 2, clear.w, clear.h, {
+        fill: "none",
+        stroke: pal.muted,
+        strokeWidth: 0.8,
+      }),
+      rect(`m${i}`, mouth.x + mouth.w / 2, mouth.y + mouth.h / 2, mouth.w, mouth.h, {
+        rx: 2,
+        fill: pal.panel,
+        stroke: pal.ink,
+        strokeWidth: 1.2,
+      }),
+      ...joints.map((sec, j) =>
+        rect(`s${i}.${j}`, sec.cx, sec.cy, sec.w, sec.h, { ...line, strokeWidth: 0.6 }),
+      ),
+      ...[0, 1, 2, 3].map((n) => <polyline key={`w${i}.${n}`} points={corner(n)} {...line} />),
+    ];
+    // a straight path shows its drivers through the throat; a folded one has them out of sight
+    if (path.folds === 0)
+      placed.chamber.drivers.forEach((d, j) =>
+        driverSpots(placed, d).forEach((spot, n) => {
+          const across = driverAcrossIn(d);
+          if (across > 0)
+            out.push(
+              circle(
+                `b${i}.${j}.${n}`,
+                spot.xIn + path.driverShift.x,
+                spot.yIn + path.driverShift.y,
+                across / 2,
+                behind,
+              ),
+            );
+        }),
+      );
+    return out;
+  };
+
   const ro = cabinet.roundoverIn;
   const shells = layout.oneShell
     ? [{ x0: -layout.size.w / 2, y0: 0, w: layout.size.w, h: layout.size.h }]
@@ -315,20 +372,10 @@ export function SpeakerFront({ spec }: Props) {
       {layout.chambers.flatMap((placed, i) => {
         const { chamber } = placed;
         const parts = vent(placed, i);
-        // a horn built into the box: its mouth in the baffle
+        // a horn built into the box: the panel edges inside the face, its mouth in the baffle with the flare's sections
+        // seen through it (each segment's end, the straight walls between), and the drivers behind its throat
         const flare = hornFlare(cabinet, placed);
-        if (flare)
-          parts.push(
-            <rect
-              key={`m${i}`}
-              x={px(flare.mouth.x)}
-              y={py(flare.mouth.y + flare.mouth.h)}
-              width={flare.mouth.w * k}
-              height={flare.mouth.h * k}
-              rx={2}
-              fill={pal.ink}
-            />,
-          );
+        if (flare) parts.push(...hornParts(placed, flare, i));
         // the passive radiators: on the baffle as a cone, on the back dashed
         radiatorsAt(cabinet, placed).spots.forEach((s, j) =>
           parts.push(

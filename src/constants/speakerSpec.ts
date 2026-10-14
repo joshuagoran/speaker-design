@@ -120,6 +120,15 @@ export const PORT_SHAPE = {
   duct: string;
 };
 
+/**
+ * Where a Hi-fi rule slot's openings are on the baffle, by id: stacked along the floor (the Hi-fi box's), or up each front
+ * side of the chamber, beside the horn mouth (the PA v2 boxes').
+ */
+export const SLOT_PLACE = {
+  floor: "floor",
+  sides: "sides",
+} as const;
+
 /** The fins across the PA sub's letterbox slot (lib/pa/calc ventGeometry splits it in three). */
 export const PA_SLOT_FINS = 2;
 

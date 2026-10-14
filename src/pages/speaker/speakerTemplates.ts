@@ -50,6 +50,7 @@ import {
   HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
+  SLOT_PLACE,
   SPEAKER_BAND,
   SPEAKER_BAND_NAMES,
   SPEAKER_PART,
@@ -264,7 +265,8 @@ const paV2Band = (
 /**
  * A slot on each front side of a PA v2 box: `widthMm` wide, the opening's height (`longIn`) tall, `lengthMm` long. The
  * spec takes the slot's narrow size as its height and its long size as its width: the model reads only the area and the
- * opening's rectangle, and the views draw a Hi-fi slot along the bottom (a slot's place is not movable yet).
+ * opening's rectangle. `place` puts the openings up the front sides, beside the horn mouth, where the views draw them
+ * (lib/speaker/speakerLayout slotOpeningsAt), a column of the horn's face each.
  */
 const sideSlots = (
   widthMm: number,
@@ -280,6 +282,7 @@ const sideSlots = (
     w: stepped(longIn),
     len: stepped(inches(lengthMm)),
     folded,
+    place: SLOT_PLACE.sides,
   },
   maxSpeedMs: DEFAULT_PA.portMax,
 });

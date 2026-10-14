@@ -69,7 +69,7 @@ test("speaker horn load: Horn starts one conical section from the cones to the c
     const flare = hornFlare(horned.cabinet, placed);
     assert.ok(flare, `${template}: the flare draws`);
     assert.equal(flare.mouthClipped, false);
-    assert.equal(flare.placeholder, false);
+    assert.ok(flare.path.fits, `${template}: the path fits the chamber`);
     // the length: the clear depth less the deepest cone
     const room = hornRoom(spec.cabinet, chamber, placed);
     const cone = Math.max(...chamber.drivers.map((d) => coneDepthIn(d) ?? 0));

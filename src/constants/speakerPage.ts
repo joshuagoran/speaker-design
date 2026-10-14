@@ -189,12 +189,16 @@ export const MODEL_GAP_TEXT = {
 export const SPEAKER_TEXT = {
   views: "The speaker",
   front: "Front",
-  hornPlaceholder:
-    "The views draw a folded horn path straight. They also shorten a path that is longer than its chamber is deep. The fold layout comes later.",
+  section: "Sections",
+  sectionNote:
+    "Top and side, cut through the horn's center, the baffle at the left. The horn's walls follow its flare sections; the drivers stand in their bay behind the throat; a folded path turns at the walls. A slot on a front side runs back along the side wall.",
+  /** the horn's path does not fit its chamber: what it needs and what the chamber gives, as formatted lengths */
+  hornNoRoom: (needs: { depth: string; height: string }, room: { depth: string; height: string }) =>
+    `A horn path does not fit its chamber. It needs ${needs.depth} of depth and ${needs.height} of height. The chamber gives ${room.depth} and ${room.height}. The views draw the horn as it is, past the walls. Make the chamber larger, shorten the path, or set the path to Folded.`,
   hornMouthClipped:
-    "A horn mouth is larger than the clear face of its chamber. The views draw it at the clear face, with a smaller flare.",
+    "A horn mouth is larger than the face its chamber leaves it (the clear face, less any side slots). The views draw it at that face, with a smaller flare.",
   hornMouthMoved:
-    "A horn mouth is set outside the clear face of its chamber. The views move it to the nearest place that fits.",
+    "A horn mouth is set outside the face its chamber leaves it (the clear face, less any side slots). The views move it to the nearest place that fits.",
   ventMoved:
     "A port or radiator is set outside the clear face of its chamber. The views move it to the nearest place that fits.",
   response: "Response",
@@ -238,6 +242,11 @@ export const SPEAKER_TEXT = {
   portTooLong: "too long for this chamber: make it shorter",
   slotTooLong: "too long to run straight in this chamber: make it shorter, or fold it",
   slotTooLongFolded: "too long to fold in this chamber: make it shorter",
+  /** the cutlist's notes for slots up the front sides: the openings on the baffle, and the walls that close them */
+  sideSlotOpening: (n: number, w: string, h: string) =>
+    `${n} × slot up the front sides, one side then the other: ${w}″ wide, ${h}″ tall openings against the side walls, standing on the bottom panel`,
+  sideSlotWalls: (n: number, w: string) =>
+    `walls of the ${n} side slots: each ${w}″ in from its side wall, as tall as its opening, running back from the baffle`,
   /** a chamber whose braces can't bring every panel to the target (or a panel over its strength limit), by its place */
   underTarget: (n: number, target: string) =>
     `Chamber ${n} does not get to the ${target} bracing target. Not enough braces fit around its drivers, vent and horn. These panels are below the target, or above a strength limit:`,

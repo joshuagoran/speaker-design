@@ -209,9 +209,16 @@ Each PR stands alone. Lowest risk first.
       wall is the one partition. An overhang keeps its own floor past the chamber under it.
     - A chamber that touches no other is its own box.
     - The cabinet's construction sets the style (L3e): the PA frame, or the Hi-fi box and its roundover.
-    - A horn-loaded chamber shows its mouth on the baffle and a flare from its segments.
-    - A folded path, or a path longer than the chamber, is a straight placeholder. A note says so.
-    - A mouth larger than the clear face is drawn at the clear face. A note says so.
+    - A horn-loaded chamber shows its mouth on the baffle and the path behind it, from one geometry
+      (`lib/speaker/hornGeometry`, by `hornFlare`) that the 3D view, the front view, the side and top sections and the
+      bracing's keep-out all read. Each section is as high as the mouth and as wide as the segment's flare law needs
+      (a conical segment's walls are straight panels, an exponential one's curve), the areas at the throat, the mouth
+      and every segment's end are the model's, and the path is the segments' length. The drivers stand in a bay behind
+      the throat.
+    - A folded path runs in legs along the depth, stacked up the box, as few folds as fit. A path that does not fit
+      (folded or not) is drawn as it is, past the walls, and a note gives what it needs and what the chamber has.
+    - A mouth larger than the face its chamber leaves it (the clear face, less the columns of side slots) is drawn at that
+      face. A note says so.
     - Not drawn yet: the aim (see the owner decisions) and the PA plinth. The arched top draws in 3D on a PA frame
       with one shell, over a top chamber that runs the full width and is at least half the width tall
       (`drawsArchedTop`, L3e). The front drawing and the Hi-fi box draw it flat.
@@ -247,8 +254,9 @@ Each PR stands alone. Lowest risk first.
       - The PA v2 slots store their narrow size as the height and their long side as the width, in sizes of ⅛″. The
         model reads only the area and the rectangle. The slot settings show the count, the narrow side, the long side
         (where the slot sets one) and the length. "Auto" net air counts each slot and its shelf.
-      - Later, with movable ports: the side slots draw on the sides (today the views draw a slot along the bottom), and
-        "Auto" net air takes off the air of a horn's flare (today a horn chamber's net air is set).
+      - The side slots draw up the front sides (`place` on the slot, `SLOT_PLACE`), beside the mouth. A slot's place is
+        not a setting yet. Later, with movable ports: "Auto" net air takes off the air of a horn's flare (today a horn
+        chamber's net air is set).
       - A horn mouth that a square would make taller than the clear face draws wider than square, up to the clear
         width. The PA v2 bins' mouths then fit the face.
     - **Cabinet settings (done).** A "Construction" fold: the construction, the baffle inset (a frame only) and the
@@ -808,7 +816,7 @@ Each PR stands alone. Lowest risk first.
     5. The vents: today the vent rules place a horn chamber's ports and slots as for a direct box (for example a slot
        across the bottom, through the mouth). Draw and cut them where the rear chamber is, for example side slots,
        and keep them clear of the flare.
-    - Later in the same item: folded paths. They replace the straight placeholder of today.
+    - Folded paths draw (`hornGeometry`). Still later: the folded path's own cutlist.
   - **Positioning** (owner, Oct 2026; planned). All positions use one rule: x from the center line (0 = centered, +
     to the right in the front view), y up from the bottom. This applies to chambers (in the cabinet), driver groups,
     vents, horn mouths and later movable parts. Today chamber `at` is the lower-left corner, and that changes to this

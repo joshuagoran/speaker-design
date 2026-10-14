@@ -34,6 +34,25 @@ const STRAIGHT_RATIO = 1e-4;
 export const isSizedSegment = (segment: HornSegment) =>
   [segment.s1, segment.s2, segment.length].every((v) => Number.isFinite(v) && v > 0);
 
+/** Whether a segment's two areas are equal (within `STRAIGHT_RATIO`): a straight duct, whatever its profile. */
+export const isStraightSegment = (segment: HornSegment) =>
+  Math.abs(segment.s2 / segment.s1 - 1) < STRAIGHT_RATIO;
+
+/**
+ * The area of a segment `x` cm along it from its start, cm², by its flare law, as the transfer matrix takes it
+ * (`segmentMatrix`): an exponential's grows as S₁·e^(m·x), a conical's radius (so the square root of its area) grows
+ * linearly, and a segment with equal areas is straight. `x` is held to the segment's length. The drawings read it, so
+ * they follow the model's flare.
+ */
+export function segmentAreaAt(segment: HornSegment, x: number): number {
+  const along = Math.min(Math.max(x, 0), segment.length) / segment.length;
+  if (isStraightSegment(segment)) return segment.s1;
+  if (segment.profile === HORN_PROFILE.exponential)
+    return segment.s1 * (segment.s2 / segment.s1) ** along;
+  const radius = Math.sqrt(segment.s1) + (Math.sqrt(segment.s2) - Math.sqrt(segment.s1)) * along;
+  return radius * radius;
+}
+
 /** Below this |(γx)²| the exponential solutions use their series form (see expSolutions). */
 const SERIES_LIMIT = 1e-8;
 

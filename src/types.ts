@@ -28,6 +28,7 @@ import type {
   HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
+  SLOT_PLACE,
   SPACE_ITEM,
   SPEAKER_BAND,
   SPEAKER_MODEL_GAP,
@@ -1962,15 +1963,21 @@ export type SpeakerRoundPort = RoundPort &
     | { flared: true; corners?: boolean; position?: never }
   );
 
+/** Where a Hi-fi rule slot's openings are on the baffle (`SLOT_PLACE`). */
+export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
+
 /**
  * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (the PA page's two), its
  * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
  * (the PA slot rule: lib/pa/calc ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
  * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
+ * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
+ * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width and its long side `w` its height.
  */
 export interface SpeakerSlotPort extends SlotPort {
   fins?: number;
   folded?: boolean;
+  place?: SlotPlace;
 }
 
 /**
