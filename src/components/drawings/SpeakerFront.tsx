@@ -22,6 +22,8 @@ import {
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
+import { coneParts } from "../../lib/speaker/driverParts";
+import { CM2_PER_IN2 } from "../../constants/units";
 import { byId } from "../../lib/tables";
 import { isAmt, isRibbon } from "../../lib/hifi/hifi";
 import { PANEL } from "../../constants/cutParts";
@@ -310,23 +312,35 @@ export function SpeakerFront({ spec }: Props) {
       ),
       ...[0, 1, 2, 3].map((n) => <polyline key={`w${i}.${n}`} points={corner(n)} {...line} />),
     ];
-    // a straight path shows its drivers through the throat; a folded one has them out of sight
-    if (path.folds === 0)
+    // a straight path shows its drivers through the throat (their frames dashed, their cones' outlines solid), and the
+    // walls' back edges across them; a folded one has them out of sight
+    if (path.folds === 0) {
       placed.chamber.drivers.forEach((d, j) =>
         driverSpots(placed, d).forEach((spot, n) => {
           const across = driverAcrossIn(d);
-          if (across > 0)
-            out.push(
-              circle(
-                `b${i}.${j}.${n}`,
-                spot.xIn + path.driverShift.x,
-                spot.yIn + path.driverShift.y,
-                across / 2,
-                behind,
-              ),
-            );
+          const x = spot.xIn + path.driverShift.x,
+            y = spot.yIn + path.driverShift.y;
+          if (across > 0) out.push(circle(`b${i}.${j}.${n}`, x, y, across / 2, behind));
+          const sd = coneParts(d)?.ts.Sd;
+          if (sd)
+            out.push(circle(`c${i}.${j}.${n}`, x, y, Math.sqrt(sd / CM2_PER_IN2 / Math.PI), line));
         }),
       );
+      // the throat: the walls' back edges, over the cones where the horn loads them
+      const [throat] = path.legs[0].sections;
+      for (const side of [-1, 1])
+        out.push(
+          <line
+            key={`t${i}.${side}`}
+            x1={px(throat.cx + (side * throat.w) / 2)}
+            x2={px(throat.cx + (side * throat.w) / 2)}
+            y1={py(throat.cy - throat.h / 2)}
+            y2={py(throat.cy + throat.h / 2)}
+            stroke={pal.ink}
+            strokeWidth={1.2}
+          />,
+        );
+    }
     return out;
   };
 

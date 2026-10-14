@@ -74,7 +74,7 @@ import {
   type ConeBody,
   type HardwareCutNotes,
 } from "../pa/calc";
-import { subDriverDepthIn, subTubeKit } from "../pa/tubes";
+import { subTubeKit } from "../pa/tubes";
 import { towerHornCutout } from "../pa/tower";
 import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
 import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
@@ -111,7 +111,7 @@ import {
 } from "../data";
 import { byId } from "../tables";
 import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls } from "./chamberAir";
-import { driverListing, sourceOf } from "./driverParts";
+import { coneDepthIn, driverListing, sourceOf } from "./driverParts";
 import {
   PORT_RULE,
   driverAcrossIn,
@@ -133,10 +133,8 @@ import {
 } from "./speakerLayout";
 import {
   DRIVER_CUTOUT_IN,
-  HIFI_DEPTH_PER_SIZE,
   HIFI_DRIVER_CUTOUT_IN,
   HIFI_MOTOR_CUTOUT_SHARE,
-  MID_DEPTH_FALLBACK_IN,
 } from "../../data/catalog/driver-cutouts";
 import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
@@ -293,11 +291,13 @@ interface ConeBuild {
 
 /** A cone driver's body (its catalog's, or the Hi-fi estimates where the catalog has none); null for another kind. */
 function coneBuild(driver: SpeakerDriver): ConeBuild | null {
+  /** its depth behind the baffle's front: the catalog's, or the fallback for its kind and size */
+  const depthIn = coneDepthIn(driver) ?? 0;
   const hifiCone = (size: number, lb: number, ts: ConeBuild["ts"]): ConeBuild => {
     const cutoutIn = HIFI_DRIVER_CUTOUT_IN[size] ?? driverAcrossIn(driver);
     return {
       body: { cutoutIn, motorIn: cutoutIn * HIFI_MOTOR_CUTOUT_SHARE },
-      depthIn: size * HIFI_DEPTH_PER_SIZE,
+      depthIn,
       lb,
       ts,
     };
@@ -305,16 +305,14 @@ function coneBuild(driver: SpeakerDriver): ConeBuild | null {
   switch (driver.kind) {
     case DRIVER_KIND.sub: {
       const sub = byId(SUB_OPTIONS, driver.driverId);
-      return sub
-        ? { body: paConeBody(sub.size), depthIn: subDriverDepthIn(sub), lb: sub.lb, ts: sub.ts }
-        : null;
+      return sub ? { body: paConeBody(sub.size), depthIn, lb: sub.lb, ts: sub.ts } : null;
     }
     case DRIVER_KIND.mid: {
       const mid = byId(MID_OPTIONS, driver.driverId);
       return mid
         ? {
             body: paConeBody(mid.size),
-            depthIn: mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size],
+            depthIn,
             lb: mid.lb || 0,
             ts: mid.ts,
           }
@@ -333,9 +331,6 @@ function coneBuild(driver: SpeakerDriver): ConeBuild | null {
       return null;
   }
 }
-
-/** A cone driver's depth behind the baffle's front, in (its catalog's, or the Hi-fi estimate); null for another kind. */
-export const coneDepthIn = (driver: SpeakerDriver) => coneBuild(driver)?.depthIn ?? null;
 
 /** One driver's weight, lb: its catalog weight (the Hi-fi fallbacks where a Hi-fi part lists none) and its horn's. */
 function driverLb(driver: SpeakerDriver): number {
@@ -544,7 +539,8 @@ function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
     const rect = { cx: t.cx, cy: (t.y0 + t.y1) / 2, w: t.w, h: t.y1 - t.y0 };
     room(rect, rect, t.z0, t.z1);
   }
-  // the drivers at the throat: their bay, and a cone deeper than it, as large as the bay or the cone, whichever is larger
+  // the drivers at the throat: their bay (the front chamber), and each body behind its cone's face, as large as
+  // the bay or the cone, whichever is larger
   const { bay } = path;
   if (bay) {
     const cones = f.placed.chamber.drivers.flatMap((d) => coneBuild(d) ?? []);
@@ -556,10 +552,11 @@ function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
       w: Math.max(rect.w, coneW),
       h: Math.max(rect.h, coneW),
     };
-    const behind = path.folds % 2 === 0;
+    /** the bodies run behind the cones' faces: back along z on an even path, toward the baffle on an odd one */
+    const way = path.folds % 2 === 0 ? 1 : -1;
+    // the front chamber, then the deepest driver from its cone's face
     room(rect, rect, bay.z0, bay.z1);
-    if (coneIn > bay.z1 - bay.z0)
-      room(deep, deep, behind ? bay.z1 : bay.z0, behind ? bay.z0 + coneIn : bay.z1 - coneIn);
+    if (coneIn > 0) room(deep, deep, bay.coneZ, bay.coneZ + way * coneIn);
   }
   // the flare's lines are read from the mouth back
   return out.sort((x, y) => x.z[0] - y.z[0]);

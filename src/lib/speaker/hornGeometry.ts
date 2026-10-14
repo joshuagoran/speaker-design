@@ -17,6 +17,12 @@
 // legs are as wide as the mouth instead, so that they stack: their top and bottom take the area's law (flat for a
 // parabolic segment, curved for the others). The path's axis is straight through the mouth's center.
 //
+// The walls start at the throat, just in front of the cones: the throat is the opening between the side walls' back
+// edges (lib/speaker/hornThroat), narrower than the cones where the horn loads them, so the edges cover the cones'
+// outer parts. The drivers' bay behind it is the front chamber: as deep as the walls' clearance (`frontIn`), the box
+// round the cones across, its sides closing it off from the wedges beside the flare, each wall's back edge returning
+// to them along the throat's plane. The drivers' bodies stand behind the bay.
+//
 // A folded path runs in legs along the box's depth, one more than it has folds, stacked up the box; each leg is as long
 // along the depth as it is along the path, so the legs' lengths add up to the path. A turn joins two legs through a gap
 // as high as the duct there, so the air meets the same area; the path length does not count a turn's own bend (the
@@ -67,10 +73,17 @@ export interface HornTurn {
   y1: number;
 }
 
-/** The bay the drivers stand in behind the throat: the box round the cones, from `z0` to `z1`. */
+/**
+ * The bay the drivers stand in behind the throat: the front chamber, the box round the cones from `z0` to `z1` (the
+ * walls' back edges at one end, the cones' faces at the other), and the drivers' bodies behind it.
+ */
 export interface HornBay extends FaceRect {
   z0: number;
   z1: number;
+  /** where the cones' faces (their frames' fronts) stand, in: the bay's end away from the throat */
+  coneZ: number;
+  /** where the drivers' bodies end behind the cones, in */
+  bodyZ: number;
 }
 
 /** A horn's path, throat to mouth. */
@@ -109,6 +122,8 @@ export interface HornPathInput {
   depthIn: number;
   /** the wall between two legs, in */
   wallIn: number;
+  /** how far the walls' back edges stand in front of the cones, in: the front chamber's depth (0 with no cone) */
+  frontIn: number;
   /** the path is folded (a bass bin): at least one fold, as many as it needs to fit */
   folded: boolean;
 }
@@ -183,7 +198,7 @@ function hornPathWithFolds(
   total: number,
   n: number,
 ): HornPath | null {
-  const { segments, areaScale, mouth, drivers, clear, depthIn, wallIn } = input;
+  const { segments, areaScale, mouth, drivers, clear, depthIn, wallIn, frontIn } = input;
   /** the area at path distance `s` along segment `i`, in² */
   const areaIn = (i: number, s: number) =>
     (segmentAreaAt(segments[i], (s - starts[i]) * CM_PER_IN) / CM2_PER_IN2) * areaScale;
@@ -214,7 +229,7 @@ function hornPathWithFolds(
       ),
     );
 
-  const plan = foldPlan(n, total, drivers !== null, heightAt);
+  const plan = foldPlan(n, total, drivers ? frontIn + HORN_DRIVER_ROOM_IN : 0, heightAt);
   if (!plan) return null;
   const { legs } = plan;
   const middle = { x: mouth.x + mouth.w / 2, y: mouth.y + mouth.h / 2 };
@@ -303,17 +318,21 @@ function hornPathWithFolds(
     x: within(throat.cx, drivers.w, clear.x, clear.w),
     y: within(throat.cy, drivers.h, clear.y, clear.h),
   };
+  /** the drivers face the throat: behind it on an even path (its first leg starts at the back), ahead on an odd one */
+  const way = n % 2 === 0 ? 1 : -1;
+  const coneZ = throat.z + way * frontIn;
   const bay: HornBay | null = drivers &&
     bayAt && {
       x: bayAt.x - drivers.w / 2,
       y: bayAt.y - drivers.h / 2,
       w: drivers.w,
       h: drivers.h,
-      // an even path's first leg starts at the back, the drivers behind it; an odd one starts at the front, ahead of it
-      z0: n % 2 === 0 ? throat.z : throat.z - room,
-      z1: n % 2 === 0 ? throat.z + room : throat.z,
+      z0: Math.min(throat.z, coneZ),
+      z1: Math.max(throat.z, coneZ),
+      coneZ,
+      bodyZ: coneZ + way * room,
     };
-  const depthNeed = Math.max(plan.backZ + plan.backGap, bay?.z1 ?? 0);
+  const depthNeed = Math.max(plan.backZ + plan.backGap, bay ? Math.max(bay.z1, bay.bodyZ) : 0);
   const heightNeed =
     n > 0
       ? slabs.reduce((sum, h) => sum + h, 0) + n * wallIn
@@ -357,7 +376,7 @@ function hornPathWithFolds(
 function foldPlan(
   n: number,
   total: number,
-  hasDrivers: boolean,
+  driverRoom: number,
   heightAt: (s: number) => number,
 ): FoldPlan | null {
   if (n === 0) {
@@ -369,9 +388,12 @@ function foldPlan(
     };
   }
   const toFront = (k: number) => (n - k) % 2 === 0;
-  /** where leg `k` stops at the front, in: the baffle for the mouth's leg; a path that starts there leaves the drivers room */
+  /**
+   * where leg `k` stops at the front, in: the baffle for the mouth's leg; a path that starts there leaves the drivers
+   * room (`driverRoom`: their front chamber and their bodies; 0 with no drivers)
+   */
   const frontEnd = (k: number, gap: number) =>
-    k === n ? 0 : k === 0 && n % 2 === 1 && hasDrivers ? Math.max(gap, HORN_DRIVER_ROOM_IN) : gap;
+    k === n ? 0 : k === 0 && n % 2 === 1 ? Math.max(gap, driverRoom) : gap;
   let frontGap = 0,
     backGap = 0,
     backZ = total;

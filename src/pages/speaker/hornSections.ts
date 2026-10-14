@@ -3,6 +3,7 @@
 import type { HornSegment, SpeakerHorn } from "../../types";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { shownIn, shownTenth } from "./speakerFields";
+import { throatAreaCm2 } from "../../lib/speaker/hornThroat";
 
 /** A new section's end area over its start area: it doubles, as a flare step. */
 const NEW_SECTION_AREA_RATIO = 2;
@@ -130,3 +131,14 @@ export const withStepsSmoothed = (segments: readonly HornSegment[]): HornSegment
 /** The horn's path length, in, as the summary shows it: every section's length together. */
 export const pathIn = (horn: Pick<SpeakerHorn, "segments">) =>
   shownInOfCm(horn.segments.reduce((sum, s) => sum + s.length, 0));
+
+/**
+ * The sections with the throat (the first section's start area) set from the compression ratio: the cones' area
+ * `conesCm2` over `ratio` (lib/speaker/hornThroat). The throat area field and the ratio edit this one figure.
+ */
+export const withCompressionRatio = (
+  segments: readonly HornSegment[],
+  conesCm2: number,
+  ratio: number,
+): HornSegment[] =>
+  segments.map((s, k) => (k === 0 ? { ...s, s1: throatAreaCm2(conesCm2, ratio) } : s));

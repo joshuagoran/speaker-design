@@ -14,6 +14,7 @@ import {
 import { DEFAULT_VENTS } from "../src/pages/speaker/speakerParts";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { frontChamber, throatCones } from "../src/lib/speaker/hornThroat";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { baffleInsetIn } from "../src/lib/speaker/chamberAir";
 import {
@@ -205,15 +206,22 @@ test("speaker templates: the PA v2 sub bin's drivers share one throat, and the h
     assert.equal(design.drivers, count);
     assert.equal(design.driver, PA_V2_SUB_BIN.sub.ts);
     assert.equal(design.rear.liters, PA_V2_SUB_BIN.rearLiters * count);
-    // one straight-sided (parabolic) flare at the box's inside height: from the drivers' bay, as wide as the plan's
-    // throat, to the face between the slots
+    // one straight-sided (parabolic) flare at the box's inside height: from the throat the compression ratio sets (the
+    // cones' area over it), narrower than the cones, to the face between the slots
     assert.equal(design.segments.length, 1);
     const [flareSegment] = design.segments;
     assert.equal(flareSegment.profile, HORN_PROFILE.parabolic);
     assert.equal(flareSegment.length, PA_V2_SUB_BIN.flareCm);
     const insideH = chamber.dims.h - 2 * spec.cabinet.panel.thicknessIn;
-    const throatIn = PA_V2_SUB_BIN.throatWidthMm / MM_PER_IN;
-    assert.ok(Math.abs(flareSegment.s1 / CM2_PER_IN2 - throatIn * insideH) < 1e-9, "throat");
+    const conesCm2 = PA_V2_SUB_BIN.sub.ts.Sd * count;
+    assert.ok(
+      Math.abs(flareSegment.s1 - conesCm2 / PA_V2_SUB_BIN.compression) < 1e-9,
+      `${template}: the throat`,
+    );
+    // the front chamber: the cones' air under the walls' back edges
+    const cones = throatCones(chamber.drivers);
+    assert.ok(cones && cones.count === count, template);
+    assert.equal(design.throatChamber, frontChamber(cones.cone, count).liters, template);
     assert.ok(
       flare && Math.abs(flareSegment.s2 / CM2_PER_IN2 - flare.mouth.w * flare.mouth.h) < 1e-9,
     );
@@ -236,7 +244,12 @@ test("speaker templates: the PA v2 mid box has two 10″ in one throat, tuned to
   const result = hornDesignOf(chamber, { count: 1, angle: 2 });
   assert.ok(result.ok);
   assert.equal(result.design.drivers, PA_V2_MID_BOX.drivers);
-  assert.equal(result.design.throatChamber, PA_V2_MID_BOX.throatChamberL);
+  // the throat from the compression ratio, the front chamber from the cones under the walls
+  const conesCm2 = PA_V2_MID_BOX.mid.ts.Sd * PA_V2_MID_BOX.drivers;
+  assert.ok(Math.abs(result.design.segments[0].s1 - conesCm2 / PA_V2_MID_BOX.compression) < 1e-9);
+  const cones = throatCones(chamber.drivers);
+  assert.ok(cones);
+  assert.equal(result.design.throatChamber, frontChamber(cones.cone, cones.count).liters);
   const model = hornModel(result.design, hornGrid(), 2.83);
   assert.ok(model && model.fb !== null && model.fb > 90 && model.fb < 100, `Fb ${model?.fb}`);
   const [cone1, cone2] = chamber.drivers;

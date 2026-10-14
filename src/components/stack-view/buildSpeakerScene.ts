@@ -105,7 +105,7 @@ export const SPEAKER_GROUP_NAMES = {
   driver: "speakerDriver",
 } as const;
 
-/** How far a horn driver's face stands off the bay's plate, in. */
+/** How far a horn driver's face stands back from the cones' plane, in. */
 const HORN_DRIVER_GAP_IN = 0.02;
 /** The angle two panels of a horn's flare make before the view draws a line along their edge, degrees. */
 const HORN_EDGE_DEG = 3;
@@ -639,9 +639,10 @@ function chamberParts(
             placed,
             driver,
             { x: x + shift.x, y: y + shift.y },
-            // the bay's z range is back from the baffle's inside face; the cone faces the throat, its body behind it
+            // the bay's z range is back from the baffle's inside face; the cone faces the throat, its face the walls'
+            // clearance behind their back edges, its body behind it
             bay
-              ? { front: innerZ - bay.z0, back: innerZ - bay.z1 }
+              ? { front: innerZ - bay.coneZ, back: innerZ - bay.bodyZ }
               : { front: innerZ, back: innerZ - HORN_DRIVER_ROOM_IN },
           );
         });
@@ -831,7 +832,8 @@ function chamberParts(
         const rect = { cx: t.cx, cy: (t.y0 + t.y1) / 2, w: t.w, h: t.y1 - t.y0 };
         duct(SPEAKER_MESH_NAMES.hornTurn, [at({ ...rect, z: t.z0 }), at({ ...rect, z: t.z1 })]);
       }
-      // the drivers' bay behind the throat: its panels, and the plate between it and the throat
+      // the drivers' bay behind the throat (the front chamber): its sides, and the walls' back edges returning to them
+      // along the throat's plane, round the throat (narrower than the cones where the walls cover them)
       const { bay } = path;
       if (bay) {
         const rect = { cx: bay.x + bay.w / 2, cy: bay.y + bay.h / 2, w: bay.w, h: bay.h };
@@ -868,7 +870,7 @@ function chamberParts(
 
 /**
  * A front-loaded or tapped horn's driver inside its chamber, in the cutaway: a body of its cone's cutout at (x, y), its
- * cone at `front` (the throat's plane, or the bay's, z in the group) and its body `ROOM` behind it toward `back`,
+ * cone at `front` (the cones' plane behind the walls' back edges, z in the group) and its body behind it to `back`,
  * kept off the back panel.
  */
 function addHornDriver(
@@ -885,7 +887,7 @@ function addHornDriver(
   const depth = Math.abs(front - back);
   const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, depth, 32), ctx.materials.black);
   body.rotation.x = Math.PI / 2; // its axis along z
-  // a hair behind the bay's plate, so the cone's face doesn't fight it
+  // a hair behind the cones' plane, so the cone's face doesn't fight the bay's sides
   body.position.set(
     x,
     y,

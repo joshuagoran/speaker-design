@@ -191,7 +191,7 @@ export const SPEAKER_TEXT = {
   front: "Front",
   section: "Sections",
   sectionNote:
-    "Top and side, cut through the horn's center, the baffle at the left. The horn's walls follow its flare sections; the drivers stand in their bay behind the throat; a folded path turns at the walls. A slot on a front side runs back along the side wall.",
+    "Top and side, cut through the horn's center, the baffle at the left. The horn's walls follow its flare sections. They start just in front of the cones and cover their outer parts. The dashed box is the front chamber, between the cones and the back edges of the walls. A folded path turns at the walls. A slot on a front side runs back along the side wall.",
   /** the horn's path does not fit its chamber: what it needs and what the chamber gives, as formatted lengths */
   hornNoRoom: (needs: { depth: string; height: string }, room: { depth: string; height: string }) =>
     `A horn path does not fit its chamber. It needs ${needs.depth} of depth and ${needs.height} of height. The chamber gives ${room.depth} and ${room.height}. The views draw the horn as it is, past the walls. Make the chamber larger, shorten the path, or set the path to Folded.`,
@@ -336,8 +336,12 @@ export const SPEAKER_TEXT = {
   hornProfile: "Profile",
   hornStart: "Start area, in²",
   hornEnd: "End area, in²",
-  hornThroat: "Throat chamber",
-  hornThroatTip: "The air between the cones and the horn throat, in liters. Use 0 for none.",
+  hornCompression: "Compression ratio",
+  hornCompressionTip:
+    "How much of the cone the horn walls cover. A higher ratio loads the cone more. It gives more output low in the band but less at the top, and faster air at the throat.",
+  hornFrontChamber: "Front chamber",
+  hornFrontChamberTip:
+    "The air between the cones and the back edges of the horn walls. The edges stay clear of full cone travel. The drivers set this value.",
   hornPath: "Path",
   hornPathTip:
     "Only the sections set the response. The views draw a folded path straight for now. The fold layout comes later.",

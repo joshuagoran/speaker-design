@@ -11,7 +11,6 @@ import {
   speakerLayout,
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
-import { HORN_DRIVER_ROOM_IN } from "../../constants/hornPath";
 import { PORT_SHAPE } from "../../constants/speakerSpec";
 
 interface Props {
@@ -28,8 +27,9 @@ const GAP_PX = 14;
  * the horn's center, the baffle at the left, from the horn geometry the 3D view and the front view read too
  * (lib/speaker/hornGeometry, by `hornFlare`). Each shows the walls and the baffle in section, the horn's legs along the
  * depth (the top section shows the flare of the side walls, the side section the height) with the turns of a folded
- * path, the drivers in their bay behind the throat, and a slot's channel (up a front side in the top section, along the
- * floor in the side). Null when no chamber has a horn.
+ * path, the drivers behind the throat (their front chamber dashed, between the walls' back edges and the cones, the
+ * walls narrower than the cones where the horn loads them), and a slot's channel (up a front side in the top section,
+ * along the floor in the side). Null when no chamber has a horn.
  */
 export function SpeakerSection({ spec }: Props) {
   const pal = usePalette();
@@ -62,7 +62,7 @@ export function SpeakerSection({ spec }: Props) {
       ...(path.bay
         ? [
             {
-              z: path.bay.z1,
+              z: Math.max(path.bay.z1, path.bay.bodyZ),
               cx: path.bay.x + path.bay.w / 2,
               w: path.bay.w,
               cy: path.bay.y + path.bay.h / 2,
@@ -200,7 +200,7 @@ export function SpeakerSection({ spec }: Props) {
               return (
                 <rect
                   key={`td${j}.${i}`}
-                  {...box(0, vTop, path.bay.z0, path.bay.z0 + HORN_DRIVER_ROOM_IN, x - r, x + r)}
+                  {...box(0, vTop, path.bay.coneZ, path.bay.bodyZ, x - r, x + r)}
                   fill={pal.muted}
                 />
               );
@@ -249,7 +249,7 @@ export function SpeakerSection({ spec }: Props) {
               return (
                 <rect
                   key={`sd${j}.${i}`}
-                  {...box(1, vSide, path.bay.z0, path.bay.z0 + HORN_DRIVER_ROOM_IN, y - r, y + r)}
+                  {...box(1, vSide, path.bay.coneZ, path.bay.bodyZ, y - r, y + r)}
                   fill={pal.muted}
                 />
               );

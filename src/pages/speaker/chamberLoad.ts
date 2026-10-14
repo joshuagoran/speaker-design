@@ -8,9 +8,9 @@ import type {
   SpeakerChamber,
   SpeakerHorn,
 } from "../../types";
-import { coneParts } from "../../lib/speaker/driverParts";
+import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { clearDepthIn } from "../../lib/speaker/chamberAir";
-import { coneDepthIn, MIN_NET_L } from "../../lib/speaker/speakerBuild";
+import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -61,7 +61,6 @@ export function startingHorn(
   const mouth = Math.max(throat, room.clear.w * room.clear.h * CM2_PER_IN2);
   const pathIn = Math.max(MIN_PATH_IN, room.depthIn - Math.max(...cones.map((c) => c.depthIn)));
   return {
-    throatChamber: 0,
     segments: [
       { profile: HORN_PROFILE.conical, s1: throat, s2: mouth, length: pathIn * CM_PER_IN },
     ],

@@ -11,6 +11,8 @@ export const LIMIT_NAMES = {
   radiator: "radiator",
   thermal: "thermal",
   amp: "amp",
+  /** the air speed at a horn's throat (lib/speaker/speakerLimits) */
+  throat: "throat",
 } as const;
 
 /**
@@ -27,6 +29,7 @@ export const PER_FREQUENCY_LIMITS: ReadonlySet<LimitId> = new Set<LimitId>([
   LIMIT_NAMES.Xmax,
   LIMIT_NAMES.port,
   LIMIT_NAMES.radiator,
+  LIMIT_NAMES.throat,
 ]);
 
 /** What stops a level, in words: a Speaker-page band's limit (and, without the radiator, the sub's). */
@@ -36,6 +39,7 @@ export const DRIVER_LIMIT_NAMES: Record<LimitId, string> = {
   radiator: "radiator travel",
   thermal: "driver program rating",
   amp: "amplifier power",
+  throat: "horn throat air speed",
 };
 
 /** What stops the sub's music level, as the sub section's "First limit" row and the Coverage amp power table say it. */
@@ -61,4 +65,5 @@ export const WOOFER_LIMITED_BY: Record<WooferLimit, string> = {
   radiator: "radiator travel",
   thermal: "the woofer's power rating",
   amp: "the amp",
+  throat: "air speed at the horn throat",
 };

@@ -182,6 +182,8 @@ function modelChamber(
         drive: model.curve.map((o) => ({
           xmm: o.xmm,
           vel: read.design.rear.port ? o.portSpeed : undefined,
+          // a horn's throat; a chamber with no segments radiates from the cones (no throat)
+          throat: read.design.segments.length ? o.throatSpeed : undefined,
         })),
       },
     };

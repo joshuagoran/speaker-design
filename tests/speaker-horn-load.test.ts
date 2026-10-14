@@ -11,8 +11,7 @@ import {
 } from "../src/pages/speaker/chamberLoad";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
-import { coneParts } from "../src/lib/speaker/driverParts";
-import { coneDepthIn } from "../src/lib/speaker/speakerBuild";
+import { coneDepthIn, coneParts } from "../src/lib/speaker/driverParts";
 import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speakerStarts";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
@@ -55,7 +54,6 @@ test("speaker horn load: Horn starts one conical section from the cones to the c
     assert.equal(horn.segments.length, 1);
     const [s] = horn.segments;
     assert.equal(s.profile, HORN_PROFILE.conical);
-    assert.equal(horn.throatChamber, 0);
     assert.equal(horn.path, HORN_PATH.straight);
     assert.equal(horn.drive.kind, HORN_DRIVE.front);
     assert.equal(horn.mouthPosition, undefined, "the mouth centered");

@@ -16,6 +16,7 @@ export const PAST_LIMIT_ON_PEAKS: Record<LimitId, string> = {
   thermal: "Past rating on peaks",
   port: "Port past limit on peaks",
   radiator: "Radiators past Xmax on peaks",
+  throat: "Throat past limit on peaks",
 };
 
 /** The Coverage page's amp power table: its heading, column names and notes. */

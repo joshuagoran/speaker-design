@@ -352,7 +352,6 @@ describe("horns", () => {
       load: {
         kind: CHAMBER_LOAD.horn,
         horn: {
-          throatChamber: 2,
           segments,
           portOffset: 0,
           drive: { kind: HORN_DRIVE.front },
@@ -846,7 +845,6 @@ describe("vent and mouth positions", () => {
             load: {
               kind: CHAMBER_LOAD.horn,
               horn: {
-                throatChamber: 2,
                 segments: [{ profile: HORN_PROFILE.exponential, s1: 100, s2: 400, length: 20 }],
                 portOffset: 0,
                 drive: { kind: HORN_DRIVE.back },

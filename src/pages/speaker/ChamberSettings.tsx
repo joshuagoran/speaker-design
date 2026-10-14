@@ -254,6 +254,7 @@ export function ChamberSettings({
       {chamber.load.kind === CHAMBER_LOAD.horn && (
         <HornSettings
           horn={chamber.load.horn}
+          drivers={chamber.drivers}
           onEdit={(edit) =>
             onEdit((c) =>
               c.load.kind === CHAMBER_LOAD.horn

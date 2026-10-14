@@ -530,7 +530,6 @@ test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamb
         load: {
           kind: CHAMBER_LOAD.horn,
           horn: {
-            throatChamber: 0,
             segments: [{ s1: 400, s2: 2000, length: 50, profile: HORN_PROFILE.exponential }],
             portOffset: 0,
             drive: { kind: HORN_DRIVE.front },

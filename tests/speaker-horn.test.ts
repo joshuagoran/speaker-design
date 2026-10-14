@@ -16,9 +16,11 @@ import {
   withSectionAdded,
   withSectionProfile,
   withSectionRemoved,
+  withCompressionRatio,
   withSectionSize,
   withStepsSmoothed,
 } from "../src/pages/speaker/hornSections";
+import { compressionRatio, conesAreaCm2 } from "../src/lib/speaker/hornThroat";
 import { SPEAKER_TEXT } from "../src/constants/speakerPage";
 import { hornText } from "../src/pages/speaker/speakerText";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -152,9 +154,21 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
   const exp = withSegments(BIN, (s) => withSectionProfile(s, 0, HORN_PROFILE.exponential));
   assert.equal(hornOf(exp).segments[0].profile, HORN_PROFILE.exponential);
   assert.ok(maxDiff(BIN, exp) > 0);
-  // the throat chamber
-  const throat = withHorn(BIN, (h) => ({ ...h, throatChamber: 5 }));
-  assert.ok(maxDiff(BIN, throat) > 0.1);
+  // the compression ratio: it sets the throat (the first section's start), the one figure both fields edit
+  const drivers = BIN.cabinet.chambers[0].drivers;
+  const cones = conesAreaCm2(drivers);
+  assert.ok(Math.abs((compressionRatio(cones, segments) ?? 0) - 1) < 1e-9, "the bin starts at 1:1");
+  const loaded = withSegments(BIN, (s) => withCompressionRatio(s, cones, 2));
+  assert.ok(Math.abs((compressionRatio(cones, hornOf(loaded).segments) ?? 0) - 2) < 1e-9);
+  assert.equal(hornOf(loaded).segments[0].s1, cones / 2, "half the cones' area");
+  assert.deepEqual(hornOf(loaded).segments.slice(1), segments.slice(1), "the other sections stay");
+  assert.ok(maxDiff(BIN, loaded) > 0.1, "the response changes");
+  const [wide, narrow] = [flareOf(BIN), flareOf(loaded)];
+  assert.ok(wide && narrow);
+  assert.ok(
+    Math.abs(narrow.path.legs[0].sections[0].w * 2 - wide.path.legs[0].sections[0].w) < 1e-9,
+    "the walls start half as far apart",
+  );
   // a folded path: the same sound, the flare drawn in legs that add up to the same path
   const folded = withHorn(BIN, (h) => ({ ...h, path: HORN_PATH.folded }));
   assert.equal(maxDiff(BIN, folded), 0);
@@ -163,10 +177,10 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
   assert.ok(Math.abs(foldedPath.pathIn - lengthIn(BIN)) < 1e-9, "the path is as long");
 });
 
-test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 830.6 in²)", () => {
+test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.2 in²)", () => {
   const segments = hornOf(BIN).segments;
   const shown = shownIn2(segments[0].s2);
-  assert.equal(shown, 830.6, "the bin's first joint as the field shows it, to the tenth");
+  assert.equal(shown, 630.2, "the bin's first joint as the field shows it, to the tenth");
   // typed into the second section's start: no step, and it snaps to the first section's end
   const start = withSectionSize(segments, 1, "s1", shown);
   assert.ok(!stepsIn(start, 1));
@@ -283,11 +297,6 @@ test("speaker horn: a size that is not positive and finite is a named gap, never
     assert.equal(flareOf(spec), null, `${what}: no flare drawn`);
     assert.equal(flareMeshes(spec).length, 0, what);
     assert.ok(!(mouthNote(spec) ?? "").includes("NaN"), what);
-  }
-  for (const throatChamber of [-1, Infinity, Number.NaN]) {
-    const spec = withHorn(BIN, (h) => ({ ...h, throatChamber }));
-    assert.deepEqual(responseOf(spec).chambers[0].gaps, [SPEAKER_MODEL_GAP.noModel]);
-    assert.ok(finiteResponse(spec));
   }
 });
 

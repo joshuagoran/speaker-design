@@ -10,7 +10,15 @@ import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speaker
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { CHAMBER_LOAD, PORT_SHAPE, SLOT_PLACE } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { CM_PER_IN, CM2_PER_IN2 } from "../src/constants/units";
+import { CM_PER_IN, CM2_PER_IN2, MM_PER_IN } from "../src/constants/units";
+import { CONE_TRAVEL_MARGIN } from "../src/constants/hornThroat";
+import { coneParts } from "../src/lib/speaker/driverParts";
+import { wallClearanceIn } from "../src/lib/speaker/hornThroat";
+import {
+  buildSpeakerScene,
+  SPEAKER_MESH_NAMES,
+} from "../src/components/stack-view/buildSpeakerScene";
+import * as THREE from "three";
 import type { HornSegment } from "../src/types";
 
 const EPS = 1e-6;
@@ -22,9 +30,10 @@ const BOX: Pick<HornPathInput, "mouth" | "clear" | "depthIn" | "wallIn"> = {
   depthIn: 30,
   wallIn: 0.75,
 };
-/** The mouth's area, cm², and a cone's cutout in the bay: two 8 in cones side by side. */
+/** The mouth's area, cm², and a cone's cutout in the bay: two 8 in cones side by side, the walls 0.8 in in front. */
 const MOUTH_CM2 = 12 * 10 * CM2_PER_IN2;
 const DRIVERS = { x: -8.25, y: 8, w: 16.5, h: 8 };
+const FRONT_IN = 0.8;
 
 const seg = (
   profile: HornSegment["profile"],
@@ -63,6 +72,7 @@ const input = (segments: HornSegment[], extra: Partial<HornPathInput> = {}): Hor
   segments,
   areaScale: 1,
   drivers: DRIVERS,
+  frontIn: FRONT_IN,
   folded: false,
   ...extra,
 });
@@ -108,6 +118,11 @@ function insideRoom(path: HornPath, i: HornPathInput) {
     const b = path.bay;
     assert.ok(within(b.x + b.w / 2, b.y + b.h / 2, b.w, b.h), "the bay is inside the face");
     assert.ok(b.z0 >= -EPS && b.z1 <= depthIn + EPS, "the bay is inside the depth");
+    assert.ok(
+      b.bodyZ >= -EPS && b.bodyZ <= depthIn + EPS,
+      "the drivers' bodies are inside the depth",
+    );
+    assert.ok(b.coneZ === b.z0 || b.coneZ === b.z1, "the cones at the bay's end");
   }
 }
 
@@ -274,7 +289,14 @@ test("horn geometry: the path fits the box's inside, and the bay of the drivers 
     const [throat] = path.legs[0].sections;
     assert.ok(path.bay, name);
     assert.ok(Math.abs(path.bay.z0 - throat.z) < EPS, `${name}: the bay starts at the throat`);
-    assert.ok(path.bay.z1 > path.bay.z0, `${name}: and runs behind it`);
+    // the front chamber: the walls' back edges at the throat, the cones' faces their clearance behind them
+    assert.ok(
+      Math.abs(path.bay.z1 - throat.z - FRONT_IN) < EPS,
+      `${name}: as deep as the clearance`,
+    );
+    assert.equal(path.bay.coneZ, path.bay.z1, name);
+    assert.ok(path.bay.bodyZ > path.bay.coneZ, `${name}: the bodies behind the cones`);
+    assert.ok(path.bay.bodyZ <= i.depthIn + EPS, `${name}: inside the depth`);
   }
 });
 
@@ -475,5 +497,64 @@ test("horn geometry: the PA v2 sub bins are straight-sided horns at the box's in
       ),
       `${template}: straight side walls`,
     );
+  }
+});
+
+test("horn geometry: the PA v2 horns' walls start narrower than the cones, their back edges clear of the cone travel", () => {
+  for (const template of [
+    SPEAKER_TEMPLATE.paV2SubBinOne,
+    SPEAKER_TEMPLATE.paV2SubBinTwo,
+    SPEAKER_TEMPLATE.paV2MidBox,
+  ]) {
+    const spec = templateSpeaker(template);
+    const [placed] = speakerLayout(spec.cabinet).chambers;
+    const flare = hornFlare(spec.cabinet, placed);
+    assert.ok(flare?.path.bay, template);
+    const { bay } = flare.path;
+    const [throat] = flare.path.legs[0].sections;
+    const [driver] = placed.chamber.drivers;
+    const ts = coneParts(driver)?.ts;
+    assert.ok(ts, template);
+    // the walls' back edges cover the cones' outer parts: the throat is narrower than a cone
+    const coneIn = (2 * Math.sqrt(ts.Sd / Math.PI)) / CM_PER_IN;
+    assert.ok(
+      throat.w < coneIn,
+      `${template}: the throat ${throat.w.toFixed(2)} in, a cone ${coneIn.toFixed(2)} in`,
+    );
+    // the edges stand in front of the cones by the clearance: past the cone at full travel, with a margin
+    const clearance = bay.coneZ - throat.z;
+    assert.ok(Math.abs(clearance - wallClearanceIn(placed.chamber.drivers)) < EPS, template);
+    assert.ok(clearance > ts.Xmax / MM_PER_IN, `${template}: past Xmax`);
+    assert.ok(
+      clearance >= (ts.Xmax * CONE_TRAVEL_MARGIN) / MM_PER_IN - EPS,
+      `${template}: past Xmax with the margin`,
+    );
+    // the 3D view builds the same: the flare's back end that far in front of the drivers' faces, narrower than them
+    const scene = buildSpeakerScene({ spec, cutaway: true });
+    scene.updateMatrixWorld(true);
+    const named = (name: string) => {
+      const out: THREE.Mesh[] = [];
+      scene.traverse((o) => o.name === name && o instanceof THREE.Mesh && out.push(o));
+      return out;
+    };
+    const [flareMesh] = named(SPEAKER_MESH_NAMES.hornFlare);
+    const drivers = named(SPEAKER_MESH_NAMES.hornDriver);
+    assert.ok(flareMesh && drivers.length === placed.chamber.drivers.length, template);
+    const flareBox = new THREE.Box3().setFromObject(flareMesh);
+    const back = flareBox.min.z;
+    const position = flareMesh.geometry.getAttribute("position");
+    const xs: number[] = [];
+    const v = new THREE.Vector3();
+    for (let k = 0; k < position.count; k++) {
+      v.fromBufferAttribute(position, k).applyMatrix4(flareMesh.matrixWorld);
+      if (Math.abs(v.z - back) < 1e-6) xs.push(v.x);
+    }
+    const throatW = Math.max(...xs) - Math.min(...xs);
+    assert.ok(Math.abs(throatW - throat.w) < 1e-6, `${template}: the 3D throat`);
+    for (const d of drivers) {
+      const box = new THREE.Box3().setFromObject(d);
+      assert.ok(Math.abs(back - box.max.z - clearance) < 0.05, `${template}: the 3D clearance`);
+      assert.ok(throatW < box.max.x - box.min.x, `${template}: the 3D walls overlap the cone`);
+    }
   }
 });

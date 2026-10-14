@@ -81,6 +81,7 @@ test("limit ids show the words the pages have always shown", () => {
     radiator: "radiator",
     thermal: "thermal",
     amp: "amp",
+    throat: "throat",
   });
   assert.deepEqual(SUB_LIMIT_NAMES, {
     port: "port air speed",

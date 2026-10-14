@@ -109,7 +109,7 @@ export function bandChips(
 
 /** A chamber's checks: its cones at the amp's full power through their band's (named `bandName`) filters. */
 export function chamberChips(c: SpeakerChamberLimits, bandName: string): SpeakerChip[] {
-  const { excursion, port, radiator } = c;
+  const { excursion, port, radiator, throat } = c;
   const band = `${bandName} band`;
   const chips: SpeakerChip[] = [
     excursion.peak > excursion.limit
@@ -140,6 +140,22 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
             "Port speed inside its limit",
             `At most ${port.peak.toFixed(1)} m/s (${formatHz(port.hz)}), under the ${port.limit.toFixed(1)} m/s it takes.`,
             "speakerPortSpeed",
+          ],
+    );
+  if (throat)
+    chips.push(
+      throat.peak > throat.limit
+        ? [
+            "warn",
+            "Throat air too fast at full power",
+            `${throat.peak.toFixed(1)} m/s at the horn throat at ${formatHz(throat.hz)}, over the ${throat.limit.toFixed(1)} m/s the box takes. Use a lower compression ratio.`,
+            "speakerThroatSpeed",
+          ]
+        : [
+            "ok",
+            "Throat air speed inside its limit",
+            `At most ${throat.peak.toFixed(1)} m/s at the horn throat (${formatHz(throat.hz)}), under the ${throat.limit.toFixed(1)} m/s the box takes.`,
+            "speakerThroatSpeed",
           ],
     );
   if (radiator)

@@ -810,7 +810,7 @@ export interface DriverLayout {
 
 /** What stops a level, by id (`LIMIT_NAMES` holds the word a chart label shows for it). */
 export type LimitId = keyof typeof LIMIT_NAMES;
-/** What limits the woofer's output at a frequency: any limit, a radiator's travel included. */
+/** What limits a woofer's output at a frequency: any limit (a radiator's travel, and a horn throat's air speed). */
 export type WooferLimit = LimitId;
 
 /** The woofer's response at one frequency, with the baffle step, placement, EQ and low-pass applied. */
@@ -1607,8 +1607,8 @@ export interface HornModel {
   fb: number | null;
 }
 
-/** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator). */
-export type SubLimitWho = Exclude<LimitId, "radiator">;
+/** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator, no horn throat). */
+export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
 
 /** The sub's music limit: the drive level (volts and watts into 8 ohm) where the first of port, cone, driver and amp gives out. */
 export interface SubLimits {
@@ -2027,10 +2027,12 @@ export type HornDrive =
 export type HornPath = (typeof HORN_PATH)[keyof typeof HORN_PATH];
 
 /**
- * A horn built into the box: the horn engine's throat chamber, segments and vent offset (`HornDesign`). The chamber's
- * own net air and vent are the horn's rear chamber.
+ * A horn built into the box: the horn engine's segments and vent offset (`HornDesign`). The chamber's own net air and
+ * vent are the horn's rear chamber. Its front chamber is not a setting: it comes from the walls over the cones
+ * (lib/speaker/hornThroat); an older save's `throatChamber` is not read. The first segment's start area is the throat,
+ * which the compression ratio shows.
  */
-export interface SpeakerHorn extends Pick<HornDesign, "throatChamber" | "segments" | "portOffset"> {
+export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset"> {
   drive: HornDrive;
   path: HornPath;
   /**
@@ -2385,10 +2387,15 @@ export interface SpeakerChamberResponse {
 }
 
 /**
- * A chamber's cones at one frequency (sine peaks): each cone's excursion, mm, the vent's air speed, m/s, and the
- * radiators' travel, mm, where the box has a vent or radiators.
+ * A chamber's cones at one frequency (sine peaks): each cone's excursion, mm, the vent's air speed, m/s, the
+ * radiators' travel, mm, and the air speed at a horn's throat, m/s, where the box has a vent, radiators or a horn.
  */
-export type ChamberDrivePoint = Pick<WooferPoint, "xmm"> & { vel?: number; prx?: number };
+export type ChamberDrivePoint = Pick<WooferPoint, "xmm"> & {
+  vel?: number;
+  prx?: number;
+  /** the air speed at a horn's throat, m/s, peak; absent without a horn */
+  throat?: number;
+};
 
 /**
  * A speaker's response (lib/speaker/speakerResponse `speakerResponse`): on axis at 1 m in half space, at
@@ -2445,6 +2452,8 @@ export interface SpeakerChamberLimits {
   port: LimitPeak | null;
   /** null without radiators */
   radiator: LimitPeak | null;
+  /** the air speed at a horn's throat against the box's air speed limit; null without a horn */
+  throat: LimitPeak | null;
   /** the drive's power into 8 Ω, W, and the cones' program rating (2 × AES), W */
   driveW: number;
   programW: number;

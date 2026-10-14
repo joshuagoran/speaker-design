@@ -597,7 +597,6 @@ const bassBin: SpeakerChamber = {
   load: {
     kind: CHAMBER_LOAD.horn,
     horn: {
-      throatChamber: 2,
       segments: [
         { profile: HORN_PROFILE.exponential, s1: 600, s2: 2400, length: 60 },
         { profile: HORN_PROFILE.conical, s1: 2400, s2: 6000, length: 50 },
@@ -660,7 +659,6 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
     load: {
       kind: CHAMBER_LOAD.horn,
       horn: {
-        throatChamber: 0,
         segments: [
           { profile: HORN_PROFILE.exponential, s1: 2420, s2: 6000, length: 60 },
           { profile: HORN_PROFILE.conical, s1: 6000, s2: 9000, length: 40 },
