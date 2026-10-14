@@ -17,6 +17,7 @@ import {
   midSystem,
   subwooferLimits,
   ampVoltage,
+  ampWatts,
   hornResponse,
   subWeightLb,
   ventSpeedLimit,
@@ -1030,12 +1031,10 @@ export function optimizePaStack(
           // no vent keeps up at full power (an unlocked amp searched at its maximum): the biggest vent that fits,
           // with the amp turned down to where the port still has a 10% air-speed margin
           if (!pushed && fallback && !locks.ampW) {
-            const vW =
-              Math.pow(
-                (fallback.s.AMP_V * (0.9 * ventSpeedLimit(style, cur.portMax))) /
-                  fallback.s.mdl.peakVel,
-                2,
-              ) / 8;
+            const vW = ampWatts(
+              (fallback.s.AMP_V * (0.9 * ventSpeedLimit(style, cur.portMax))) /
+                fallback.s.mdl.peakVel,
+            );
             const ampW = onSlider(vW, AMP_WATTS_STEPS.ampW);
             if (ampW !== null) {
               const c = { ...fallback.c, ampW };
@@ -1630,17 +1629,28 @@ export function optimizePaStack(
   const boxesOf = ({ c }: Combo) =>
     JSON.stringify([c.sub, c.cDim, c.portStyle, c.cVent, c.wall, c.mid, c.mDim, c.layout]);
   const pooledBoxes = new Set([...finalists.values()].map(boxesOf));
+  // the designs inside the limits by how close they come to every goal, for the closest card's batches
+  const closestCandidates = combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b));
   for (let batch = 0; batch < PA_FINALIST_BATCHES; batch++) {
     const r = chooseFrom(lim, target);
     if (r && r.cards[0].slot.kind === "first") break;
     const next: Combo[] = [];
-    for (const x of firstCandidates) {
-      if (next.length >= PA_FINALISTS.cards) break;
-      const k = boxesOf(x);
-      if (pooledBoxes.has(k)) continue;
-      pooledBoxes.add(k);
-      next.push(x);
-    }
+    /** up to `n` designs from `list` whose boxes aren't in the pool yet */
+    const takeFrom = (list: readonly Combo[], n: number) => {
+      let taken = 0;
+      for (const x of list) {
+        if (taken >= n) break;
+        const k = boxesOf(x);
+        if (pooledBoxes.has(k)) continue;
+        pooledBoxes.add(k);
+        next.push(x);
+        taken++;
+      }
+    };
+    takeFrom(firstCandidates, PA_FINALISTS.cards);
+    // with no card at all, the next closest designs too: the rule's weights can put every closest finalist the
+    // estimate let in over a limit, which leaves nothing that passes to show
+    if (!r) takeFrom(closestCandidates, PA_FINALISTS.closest);
     if (!next.length) break;
     for (const x of next) {
       finalists.set(JSON.stringify(x.c), x);
@@ -1736,7 +1746,7 @@ export function optimizePaStack(
     h: PA_SLIDERS.subH,
     d: PA_SLIDERS.subD,
   };
-  const onSliders = (p: PoolEntry, axis: PaGoal): PoolEntry => {
+  const onSliders = (p: PoolEntry, axis: PaGoal, L: ProblemLimits = lim): PoolEntry => {
     const sides = (["w", "h", "d"] as const).map((k) =>
       nearSteps(p.c.cDim[k], SUB_SIDE[k], sr[k], cur.cDim[k]),
     );
@@ -1758,7 +1768,7 @@ export function optimizePaStack(
     );
     if (sides.every((o) => o.length === 1) && lens.length === 1) return p;
     // a try may fail only what the card already fails (the near miss names its blockers from these)
-    const had = new Set(designProblemList(p.m, lim).map((x) => x.id));
+    const had = new Set(designProblemList(p.m, L).map((x) => x.id));
     const kept = goals.filter((g) => goalGap(g, p.m) === 0);
     let best: PoolEntry | null = null;
     for (const w of sides[0])
@@ -1768,7 +1778,7 @@ export function optimizePaStack(
             const c = { ...p.c, cDim: { w, h, d }, cVent: { ...p.c.cVent, len } },
               m = evaluateDesign(c);
             evals++;
-            if (!m || designProblemList(m, lim).some((x) => !had.has(x.id))) continue;
+            if (!m || designProblemList(m, L).some((x) => !had.has(x.id))) continue;
             if (kept.some((g) => goalGap(g, m) > 0)) continue;
             const q = { c, m, ch: changes(c) };
             if (!best || obj[axis](metric(q)) < obj[axis](metric(best))) best = q;
@@ -1778,10 +1788,31 @@ export function optimizePaStack(
   const axisOf = (k: PlannedCard) => (k.slot.kind === "alt" ? k.slot.axis : goal);
 
   const choose0 = choose;
-  const chooseAmps = (L: ProblemLimits, tgt: number) => {
-    const res = choose0(L, tgt);
+  // The cards on the sliders. A closest card is chosen by the pool's numbers, but on the sliders it can keep every goal
+  // (a side or the duct rounded to its step retunes the box): then it is the fix it is, and the notice naming what it
+  // misses, and the near miss's looser limits, don't apply.
+  const settle = (res: PaChosen | null, L: ProblemLimits, tgt: number): PaChosen | null => {
     if (!res) return res;
-    const cs = res.cards.map((k) => ({ ...k, p: onSliders(k.p, axisOf(k)) }));
+    const cards = res.cards.map((k) => ({ ...k, p: onSliders(k.p, axisOf(k), L) }));
+    const [lead] = cards;
+    const keepsAll =
+      !!lead &&
+      lead.slot.kind === "closest" &&
+      goals.every((g) => goalOk(g, { ...lead.p.m, out: lead.p.m.out + (target - tgt) }));
+    if (!keepsAll) return { ...res, cards };
+    return {
+      ...res,
+      cards: [
+        { ...lead, slot: { kind: "fix" }, label: CARD_LABELS.fix, why: FIX_WHY[goal] },
+        ...cards.slice(1),
+      ],
+      fixMisses: false,
+    };
+  };
+  const chooseAmps = (L: ProblemLimits, tgt: number) => {
+    const res = settle(choose0(L, tgt), L, tgt);
+    if (!res) return res;
+    const cs = res.cards;
     // output-first cards keep all the output they found; the others come down to the target
     const keepOut = (k: PlannedCard) =>
       (goals.some((g) => ["louder", "lower"].includes(g)) && k === cs[0]) ||
@@ -1833,7 +1864,7 @@ export function optimizePaStack(
       },
     ];
     const worked = tries.filter((x) => {
-      const r = choose(x.L, x.t);
+      const r = settle(choose(x.L, x.t), x.L, x.t);
       return r && !r.fixMisses;
     });
     // fewest problems, then the least short of the goals (your design is one of them, so this is never behind it on the

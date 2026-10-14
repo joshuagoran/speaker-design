@@ -510,13 +510,14 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under a $900 budget and 82 lb, with the vent kept to its bottom slot, nothing that passes keeps the F3;
-  // 91 lb does. (Before datasheet Le this was $750 and 95 lb, offering $825; with Le that closest design, once on the
-  // sliders, keeps the goals.)
+  // "blocky" under a $900 budget and 80 lb, with the vent kept to its bottom slot, nothing that passes keeps the F3
+  // (the closest reaches 42 Hz against 41 Hz); 88 lb does. (Before datasheet Le this was $750 and 95 lb, offering $825;
+  // then 82 lb, offering 91 lb, until the lighter Ciare NDH18-4S data: from 81 lb its closest design keeps the goals
+  // once on the sliders, so it is the fix.)
   const out = optimizePaStack({
     ...base,
     cur: pick(SEED_NAMES.blocky),
-    maxLb: 82,
+    maxLb: 80,
     budget: 900,
     goal: "cheaper",
     locks: { vent: true },
@@ -525,9 +526,29 @@ test("with only a closest card, the near miss still offers the looser limit that
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];
   assert.ok(
-    opts.some((o) => o.set.maxLb === 91),
+    opts.some((o) => o.set.maxLb === 88),
     JSON.stringify(opts.map((o) => o.text)),
   );
+});
+
+test("a closest design that keeps every goal once on the sliders is the fix, with no out-of-reach notice", () => {
+  // "blocky" at 82 lb and $900: by the pool's numbers nothing passing keeps the goals, but the closest design, its sides
+  // and duct rounded to the sliders' steps, does
+  const lim = { maxLb: 82, budget: 900 };
+  const out = optimizePaStack({
+    ...base,
+    ...lim,
+    cur: pick(SEED_NAMES.blocky),
+    goal: "cheaper",
+    locks: { vent: true },
+  });
+  const k = out.cards[0];
+  assert.ok(k, "a card is shown");
+  assert.equal(k.slot.kind, "fix");
+  assert.deepEqual(designProblems(evaluateDesign(k.config)!, lim), []);
+  assert.ok(k.metrics.out >= out.target - 1e-9, `${k.metrics.out} dB`);
+  assert.equal(out.goalMissing, null);
+  assert.equal(out.nearMiss, null);
 });
 
 test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {

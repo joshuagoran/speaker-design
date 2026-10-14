@@ -24,6 +24,7 @@ import {
   type SizeModel,
 } from "./space";
 import { tunedPort } from "./vent";
+import { ampWatts } from "../../pa/calc";
 import type { UnitOption } from "./screen";
 
 /** What a build reads of the search. */
@@ -194,7 +195,7 @@ export function trimAmps(
       }
       const pad =
         band.drive === HIFI_DRIVE.passive ? Math.pow(10, Math.min(0, band.levelDb) / 20) : 1;
-      const need = Math.pow(vNeed / pad, 2) / 8;
+      const need = ampWatts(vNeed / pad);
       w = Math.max(
         w,
         Math.ceil(need / SPEAKER_STEPS.ampW) * SPEAKER_STEPS.ampW,

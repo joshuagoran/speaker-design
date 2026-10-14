@@ -46,7 +46,11 @@ interface CoverageJob {
 /** The planner fields the map reads: what the balanced levels read, and the crossovers' orders. */
 export type CoverageInputs = Pick<
   PaPlanner,
-  keyof PaBalanceInputs | "subMidCrossoverOrder" | "midHornCrossoverOrder"
+  | keyof PaBalanceInputs
+  | "subMidCrossoverOrder"
+  | "midHornCrossoverOrder"
+  | "subDriver"
+  | "midDriver"
 >;
 
 /** The map's results: the floor grid (null until the first one arrives), the boxes, the listener's level and response. */

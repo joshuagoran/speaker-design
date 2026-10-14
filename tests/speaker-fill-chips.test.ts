@@ -47,7 +47,7 @@ test("speaker fill chips: with the Fills page's pad, the HF reaches its rating w
     const hf = limits.drivers.find((d) => d.band === SPEAKER_BAND.high);
     assert.ok(hf, driver.name);
     // the Fills page takes the full program rating; the speaker model derates it below its rating's frequency
-    const watts = hfLimitWatts(hf.programW, hf.imp, page.pad);
+    const watts = hfLimitWatts(hf.programW, hf, page.pad);
     assert.ok(Math.abs(watts - page.hfLimW * hf.derate) < 1e-6 * page.hfLimW, driver.name);
     // the same verdict as the Fills page's chip, on its amp and on one past its limit
     for (const ampW of [state.ampWatts, Math.ceil(page.hfLimW * 1.5)]) {

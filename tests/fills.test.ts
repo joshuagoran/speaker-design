@@ -1,5 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
+import { ohmsOf } from "../src/lib/power";
 import {
   fillSystem as fillSystemOrNull,
   boxModel,
@@ -76,7 +77,7 @@ test("fills max curve stops at 300 Hz and respects every limit", (t) => {
     assert.ok(
       c.xmm * s <= drv.ts.Xmax * (1 + 1e-9) &&
         c.vel * s <= 20 * (1 + 1e-9) &&
-        v.V * s <= thermalVoltageLimit(drv.ts.aes) * (1 + 1e-9),
+        v.V * s <= thermalVoltageLimit(drv.ts) * (1 + 1e-9),
     );
   }
 });
@@ -89,10 +90,10 @@ test("fills: a small port is port-limited, a big one isn't", (t) => {
 });
 test("fills HF: limit through the pad = 2 x AES x (Z/8) x 10^(pad/10); pad from lfSens", (t) => {
   const v = fillSystem(drv, base);
-  close(t, v.pad, drv.hf!.sens + 10 * Math.log10(8 / drv.hf!.imp) - drv.lfSens, 1e-12);
-  close(t, v.hfLimW!, 2 * drv.hf!.aes * (drv.hf!.imp / 8) * 10 ** (v.pad / 10), 1e-9);
+  close(t, v.pad, drv.hf!.sens + 10 * Math.log10(8 / ohmsOf(drv.hf!)) - drv.lfSens, 1e-12);
+  close(t, v.hfLimW!, 2 * drv.hf!.aes * (ohmsOf(drv.hf!) / 8) * 10 ** (v.pad / 10), 1e-9);
   // behavior: at that amp power the HF sees exactly its program rating
-  const hfW = ((v.hfLimW! * 8) / drv.hf!.imp) * 10 ** (-v.pad / 10);
+  const hfW = ((v.hfLimW! * 8) / ohmsOf(drv.hf!)) * 10 ** (-v.pad / 10);
   close(t, hfW, 2 * drv.hf!.aes, 1e-9);
 });
 test("fills weight: 1/2 in birch shell at 1.6 lb/ft2 + driver + 1 lb", (t) => {

@@ -4,9 +4,11 @@ import type {
   FrequencyPoint,
   HornResponse,
   LimitId,
+  NominalImpedance,
   PaMaxPoint,
   SubLimits,
 } from "../../types";
+import { voltsToWatts } from "../power";
 
 /** An amp channel of the stack: one per driver, named as the coverage map's pads name the bands. */
 export type AmpChannel = keyof BalancedLevels["pads"];
@@ -54,28 +56,31 @@ export const peakPower = (avgW: number, crestDb: number = MUSIC_CREST_DB) =>
 export const headroomDb = (gain: number, pad: number) => Math.max(0, -(gain + pad));
 
 /**
- * Watts into 8 ohm for a voltage. The model takes the sub and mid at 8 ohm nominal (`ampVoltage`,
- * `thermalVoltageLimit`, `SubLimits.W`; the catalog lists only their Re), so their watts and the amp's agree.
+ * The sub at its music limit: the drive and limit `subwooferLimits` found (watts into the driver), against the amp's
+ * voltage into the driver's nominal impedance.
  */
-const wattsInto8 = (v: number) => (v * v) / 8;
-
-/** The sub at its music limit: the drive and limit `subwooferLimits` found, against the amp's voltage. */
-export const subMax = (lim: Pick<SubLimits, "W" | "who">, ampV: number): ChannelMax => ({
+export const subMax = (
+  lim: Pick<SubLimits, "W" | "who">,
+  ampV: number,
+  driver: NominalImpedance,
+): ChannelMax => ({
   wAtMax: lim.W,
-  ampW: wattsInto8(ampV),
+  ampW: voltsToWatts(ampV, driver),
   who: lim.who,
 });
 
 /**
  * The mid at its max between the crossovers. The model's limit curve (`maxOutputCurve`) gives each frequency its own
  * drive; music drives the whole band at one level, so the lowest drive in the band sets it, and that point's limit
- * names it. `curve` is the model at the amp's voltage `ampV`, point for point with `max`.
+ * names it. `curve` is the model at the amp's voltage `ampV`, point for point with `max`; watts are into the driver's
+ * nominal impedance.
  */
 export function midMax(
   max: readonly PaMaxPoint[],
   curve: readonly Pick<FrequencyPoint, "spl">[],
   ampV: number,
   band: readonly [lo: number, hi: number],
+  driver: NominalImpedance,
 ): ChannelMax | null {
   let low: { db: number; who: LimitId } | null = null;
   for (const [i, p] of max.entries()) {
@@ -86,8 +91,8 @@ export function midMax(
   }
   if (!low) return null;
   return {
-    wAtMax: wattsInto8(ampV * 10 ** (low.db / 20)),
-    ampW: wattsInto8(ampV),
+    wAtMax: voltsToWatts(ampV * 10 ** (low.db / 20), driver),
+    ampW: voltsToWatts(ampV, driver),
     who: low.who,
   };
 }

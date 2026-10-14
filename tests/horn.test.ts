@@ -1,5 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
+import { ohmsOf } from "../src/lib/power";
 import {
   hornResponse,
   pistonBeamWidthDeg,
@@ -15,7 +16,7 @@ test("horn power: amp into Z, capped at 2 x AES, derated below the rated crossov
   close(
     t,
     a!.P,
-    Math.min((100 * 8) / n314t.imp, 2 * n314t.aes * Math.min(1, (900 / n314t.aesXo) ** 2)),
+    Math.min((100 * 8) / ohmsOf(n314t), 2 * n314t.aes * Math.min(1, (900 / n314t.aesXo) ** 2)),
     1e-9,
   );
   const b = hornResponse(

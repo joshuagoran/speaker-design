@@ -43,6 +43,8 @@ import {
   hornById,
 } from "../../data";
 import { byId } from "../../tables";
+import { ampWatts, thermalVoltageLimit } from "../../pa/calc";
+import { wattsToVolts } from "../../power";
 import { CHAMBER_LOAD, DRIVER_KIND, VENT_KIND } from "../../../constants/speakerSpec";
 import { HIFI_DRIVE } from "../../../constants/hifiEngine";
 import { SPEAKER_STEPS } from "../../../constants/speakerSteps";
@@ -761,17 +763,18 @@ export function topAmps(
   for (const u of units) {
     if (u.kind === "cone") {
       for (const id of u.drivers) {
-        const aes =
+        const ts =
           u.driverKind === DRIVER_KIND.sub
-            ? byId(SUB_OPTIONS, id)?.ts.aes
+            ? byId(SUB_OPTIONS, id)?.ts
             : u.driverKind === DRIVER_KIND.mid
-              ? byId(MID_OPTIONS, id)?.ts.aes
+              ? byId(MID_OPTIONS, id)?.ts
               : u.driverKind === DRIVER_KIND.woofer
-                ? byId(HIFI_WOOFERS, id)?.ts.aes
-                : byId(FILL_OPTIONS, id)?.ts.aes;
-        raise(u.bands[0], 2 * (aes ?? 0));
+                ? byId(HIFI_WOOFERS, id)?.ts
+                : byId(FILL_OPTIONS, id)?.ts;
+        // the amp's rated watts that reach the program rating (2 × AES) at the driver's impedance
+        if (ts) raise(u.bands[0], ampWatts(thermalVoltageLimit(ts)));
         const coaxHf = u.driverKind === DRIVER_KIND.coaxial ? byId(FILL_OPTIONS, id)?.hf : null;
-        if (coaxHf && u.bands[1]) raise(u.bands[1], (2 * coaxHf.aes * coaxHf.imp) / 8);
+        if (coaxHf && u.bands[1]) raise(u.bands[1], ampWatts(wattsToVolts(2 * coaxHf.aes, coaxHf)));
       }
     } else {
       for (const p of u.parts) {
@@ -779,7 +782,7 @@ export function topAmps(
           spec.cabinet.chambers[u.chamber].drivers[u.entry].kind === DRIVER_KIND.compression
             ? byId(CD_OPTIONS, p.driverId)?.hf
             : byId(HIFI_TWEETERS, p.driverId)?.hf;
-        if (hf) raise(u.band, (2 * hf.aes * hf.imp) / 8);
+        if (hf) raise(u.band, ampWatts(wattsToVolts(2 * hf.aes, hf)));
       }
     }
   }

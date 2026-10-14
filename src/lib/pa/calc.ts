@@ -55,6 +55,7 @@ import type {
   SubLimitWho,
   SubSystem,
   SubSystemConfig,
+  NominalImpedance,
   ThieleSmall,
   TowerHorn,
   VentedBoxModel,
@@ -121,6 +122,7 @@ import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
 import { towerHornCutout, towerSpec } from "./tower";
 import { KG_PER_LB } from "../../constants/units";
+import { AMP_RATING, ohmsOf, voltsToWatts, wattsToVolts } from "../power";
 import { PA_SLOT_FINS } from "../../constants/speakerSpec";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
@@ -2055,27 +2057,31 @@ export function internalWoodLiters(parts: CutPart[], box: CutBoxId) {
 
 // ---- limits ----
 // Every limit is an amp output voltage for a sine at the amp's rated power into 8 ohm. Port and
-// cone limits use the sine's peaks. Thermal is program power, 2 x AES: AES noise has a 6 dB crest,
-// so a sine with the same peak voltage carries twice the AES power; music with at least that crest
-// keeps the coil's average at or under AES.
-export const thermalVoltageLimit = (aes: number) => Math.sqrt(2 * aes * 8);
-export const ampVoltage = (W: number) => Math.sqrt(W * 8);
+// cone limits use the sine's peaks. Thermal is program power, 2 x AES, into the driver's nominal
+// impedance (lib/power): AES noise has a 6 dB crest, so a sine with the same peak voltage carries
+// twice the AES power; music with at least that crest keeps the coil's average at or under AES.
+export const thermalVoltageLimit = (ts: Pick<ThieleSmall, "aes" | "imp">) =>
+  wattsToVolts(2 * ts.aes, ts);
+/** The amp's voltage at its rated power, V RMS (rated into 8 Ω). */
+export const ampVoltage = (W: number) => wattsToVolts(W, AMP_RATING);
+/** The amp's rated power that gives `V`, W (rated into 8 Ω). */
+export const ampWatts = (V: number) => voltsToWatts(V, AMP_RATING);
 // Broadband ("music") limit: one drive level for the whole band.
 export function subwooferLimits(
   mdl: VentedBoxModel,
-  ts: Pick<ThieleSmall, "aes">,
+  ts: Pick<ThieleSmall, "aes" | "imp">,
   AMP_V: number,
   portMax: number,
 ): SubLimits {
   const vp = (AMP_V * portMax) / mdl.peakVel,
     vx = (AMP_V * 100) / mdl.xmaxPct,
-    vt = thermalVoltageLimit(ts.aes);
+    vt = thermalVoltageLimit(ts);
   const L = Math.min(vp, vx, vt, AMP_V);
   const sc = 20 * Math.log10(L / AMP_V);
   return {
     who: L === vp ? "port" : L === vx ? "Xmax" : L === vt ? "thermal" : "amp",
     V: L,
-    W: (L * L) / 8,
+    W: voltsToWatts(L, ts),
     vel: (mdl.peakVel * L) / AMP_V,
     xPct: (mdl.xmaxPct * L) / AMP_V,
     spl30: mdl.spl30 + sc,
@@ -2091,11 +2097,11 @@ export function subwooferLimits(
  */
 export function sineLimitAt(
   o: { xmm: number; vel?: number },
-  ts: Pick<ThieleSmall, "aes" | "Xmax">,
+  ts: Pick<ThieleSmall, "aes" | "imp" | "Xmax">,
   AMP_V: number,
   portMax: number,
 ): { V: number; who: SubLimitWho; vp: number; vx: number; vt: number } {
-  const vt = thermalVoltageLimit(ts.aes);
+  const vt = thermalVoltageLimit(ts);
   const vp = o.vel != null ? (AMP_V * portMax) / o.vel : Infinity,
     vx = (AMP_V * ts.Xmax) / o.xmm;
   const V = Math.min(vp, vx, vt, AMP_V);
@@ -2105,7 +2111,7 @@ export function sineLimitAt(
 // Per-frequency sine limit: each frequency meets its own port and excursion limits.
 export function maxOutputCurve(
   curve: { f: number; spl: number; xmm: number; vel?: number }[],
-  ts: Pick<ThieleSmall, "aes" | "Xmax">,
+  ts: Pick<ThieleSmall, "aes" | "imp" | "Xmax">,
   AMP_V: number,
   portMax: number,
 ): PaMaxPoint[] {
@@ -2158,11 +2164,11 @@ export function subMusicOutputAt(
 }
 
 /**
- * The amp power, W into 8 Ω, at which an HF section of `imp` Ω behind a passive pad of `pad` dB reaches its rating
- * `ratingW` (W into its impedance): the Fills page's and the Speaker page's HF headroom check.
+ * The amp power, W into 8 Ω, at which an HF section (at its nominal impedance) behind a passive pad of `pad` dB reaches
+ * its rating `ratingW` (W into its impedance): the Fills page's and the Speaker page's HF headroom check.
  */
-export const hfLimitWatts = (ratingW: number, imp: number, pad: number) =>
-  ((ratingW * imp) / 8) * Math.pow(10, pad / 10);
+export const hfLimitWatts = (ratingW: number, hf: NominalImpedance, pad: number) =>
+  ampWatts(wattsToVolts(ratingW, hf)) * Math.pow(10, pad / 10);
 
 // ---- horn ----
 // Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24 (or, order 8, LR48)
@@ -2178,8 +2184,8 @@ export function hornPower(
   xoHi: number,
   hfAmpW: number,
 ): Pick<HornResponse, "P" | "pAmp" | "pProg" | "derate" | "imp" | "who"> {
-  const imp = hf.imp || 8;
-  const pAmp = (hfAmpW * 8) / imp;
+  const imp = ohmsOf(hf);
+  const pAmp = voltsToWatts(ampVoltage(hfAmpW), hf);
   const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
   const pProg = 2 * hf.aes * derate;
   const P = Math.min(pAmp, pProg);
@@ -2395,13 +2401,13 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
 // sine limit (the filter scales excursion and port speed with the output).
 export function subThroughLowpass(
   mdl: VentedBoxModel,
-  ts: Pick<ThieleSmall, "aes" | "Xmax">,
+  ts: Pick<ThieleSmall, "aes" | "imp" | "Xmax">,
   AMP_V: number,
   portMax: number,
   xoLo: number,
   order: CrossoverOrder,
 ): FrequencyPoint[] {
-  const vt = thermalVoltageLimit(ts.aes);
+  const vt = thermalVoltageLimit(ts);
   return mdl.curve.map((o) => {
     const g = linkwitzRileyLowpass(o.f, xoLo, order);
     const vp = (AMP_V * portMax) / (o.vel * g),
@@ -2522,7 +2528,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
         phase: cfg.phase,
       })
     : null;
-  const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;
+  const vTherm = mid.ts ? thermalVoltageLimit(mid.ts) : 0;
   const useV = Math.min(vTherm, V);
   if (!mid.ts || !mdl)
     return {
@@ -2576,8 +2582,10 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
   // sensitivities are 1 W/1 m at their own impedance, so the HF's is moved to 2.83 V (a 16 ohm section gets half the
   // power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox)
   const hf = drv.hf;
-  const pad = hf ? Math.max(0, hf.sens + 10 * Math.log10(8 / hf.imp) - (drv.lfSens || sens)) : 0;
-  const hfLimW = hf ? hfLimitWatts(2 * hf.aes, hf.imp, pad) : null; // amp watts (8 ohm rating)
+  const pad = hf
+    ? Math.max(0, hf.sens + 10 * Math.log10(AMP_RATING.imp / ohmsOf(hf)) - (drv.lfSens || sens))
+    : 0;
+  const hfLimW = hf ? hfLimitWatts(2 * hf.aes, hf, pad) : null; // amp watts (8 ohm rating)
   const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1; // 1/2" birch ~1.6 lb/ft2
   const portLimited = vented && max.some((o) => o.who === "port");
   const common = { V, gross, pArea, disp, net, eff, max, sens, f3, pad, hfLimW, lb, portLimited };

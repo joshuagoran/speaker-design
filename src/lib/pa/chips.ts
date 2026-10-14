@@ -17,6 +17,8 @@ import type {
   VentSpec,
 } from "../../types";
 import {
+  ampVoltage,
+  ampWatts,
   isRoundPort,
   maxFoldedSlotIn,
   maxStraightSlotIn,
@@ -25,6 +27,7 @@ import {
   SEALED_QTC_MIN,
 } from "./calc";
 import { qtcFloorAt } from "../../constants/qtcText";
+import { voltsToWatts } from "../power";
 import { subTubeSpan, tubeLayout, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../tubeFold";
 import { PA_SLIDERS } from "../../constants/paSliders";
@@ -394,7 +397,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       ? [
           "warn",
           "Excursion-limited",
-          `The cone reaches Xmax at ${Math.round(Math.pow((V * 100) / ((peakX / ts.Xmax) * 100), 2) / 8)} W, below ${vTherm < V ? `its ${2 * ts.aes} W program rating` : `the ${mAmpW} W amp`}. Raise the crossover.`,
+          `The cone reaches Xmax at ${Math.round(voltsToWatts((V * ts.Xmax) / peakX, ts))} W, below ${vTherm < V ? `its ${2 * ts.aes} W program rating` : `the ${mAmpW} W amp`}. Raise the crossover.`,
           "midExcursionLimited",
         ]
       : vTherm < V
@@ -416,7 +419,8 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       m = midAtXo,
       gap = m.spl - needDb;
     // amp power that would close the gap, if the amp is what's short
-    const wNeed = Math.pow(V * Math.pow(10, -gap / 20), 2) / 8;
+    const vNeed = V * Math.pow(10, -gap / 20),
+      wNeed = ampWatts(vNeed);
     F.push(
       gap < -KEEP_UP_SLACK_DB
         ? [
@@ -424,7 +428,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
             KEEP_UP_TEXT.shortTitle(PA_SETTINGS_TABS.mid),
             `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${midBelowSubDb} dB for the mid band. ` +
               (m.who === "amp"
-                ? wNeed <= 2 * ts.aes
+                ? vNeed <= vTherm
                   ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel is enough.`
                   : "More amp does not help: the driver reaches its rating first."
                 : m.who === "thermal"
@@ -508,7 +512,8 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
             "warn",
             KEEP_UP_TEXT.shortTitle(PA_SETTINGS_TABS.horn),
             `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hornBelowMidDb} dB for the HF band. ` +
-              (hornModel.who === "amp" && (wNeed * 8) / hornModel.imp <= hornModel.pProg
+              (hornModel.who === "amp" &&
+              voltsToWatts(ampVoltage(wNeed), hornModel) <= hornModel.pProg
                 ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel is enough.`
                 : "The driver's rating is the limit. Raise the crossover."),
             "hornKeepsUp",

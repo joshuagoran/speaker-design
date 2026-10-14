@@ -6,9 +6,9 @@
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
 // Fields: id (unique, lowercase), name, maker (a MAKER_NAMES id), size in (15 | 18), lb, price $, src, note.
-// ts (the maker's Thiele-Small figures): Fs Hz, Vas L, Sd cm², Re Ω, Bl T·m, Mms g, aes W (AES rating), disp L
-// (null where unpublished), Hvc / Hg (coil and gap heights) mm, and `pub` = every excursion figure the maker
-// publishes, one-way mm, with its formula and source URL. Do not add Xmax / xmax: src/lib/xmax derives them.
+// ts (the maker's Thiele-Small figures): Fs Hz, Vas L, Sd cm², Re Ω, imp (nominal impedance) Ω, Bl T·m, Mms g, aes W
+// (AES rating), disp L (null where unpublished), Hvc / Hg (coil and gap heights) mm, and `pub` = every excursion
+// figure the maker publishes, one-way mm, with its formula and source URL. Do not add Xmax / xmax: src/lib/xmax derives them.
 // Subs must list a displacement (`disp`, L). Optional: surroundIn and dishDepthIn (the surround width and the cone's
 // depth, in), from the maker's dimension drawing only, with the drawing cited beside them.
 import type { RawDriver, SubDriver } from "../../types";
@@ -38,6 +38,7 @@ export const BC18NBX_RAW: RawDriver<SubDriver> = {
     Hvc: 25,
     Hg: 11,
     Re: 5.2,
+    imp: 8,
     Le: 1.85,
     Bl: 24.8,
     Mms: 217,
@@ -78,6 +79,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 28.2,
       Hg: 12,
       Re: 5.0,
+      imp: 8,
       Le: 1.36,
       Bl: 30.9,
       Mms: 294,
@@ -111,6 +113,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 40.64,
       Hg: 12.7,
       Re: 5.9,
+      imp: 8,
       Le: 1.54,
       Bl: 28.2,
       Mms: 237,
@@ -142,6 +145,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       },
       Hg: 9.5,
       Re: 6.1,
+      imp: 8,
       Le: 4.54,
       Bl: 26.8,
       Mms: 217,
@@ -173,6 +177,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       },
       Hg: 9.5,
       Re: 5.2,
+      imp: 8,
       Le: 1.67,
       Bl: 18.8,
       Mms: 137,
@@ -207,6 +212,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 25,
       Hg: 12,
       Re: 5.1,
+      imp: 8,
       Le: 1.6,
       Bl: 25.5,
       Mms: 209,
@@ -217,6 +223,43 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     // https://bcspeakers.com/uploads/products/dataSheetDrawings/2016_07_28_14_49_04_141_18TBX100_drawing.png, read
     // Oct 2026) gives only 460 mm across, 422 mm cutout, 209 mm depth and a 16 mm flange.
     note: "[datasheet, bcspeakers.com, Sep 2026] Ferrite, 1200 W nominal / 2400 W continuous, 97 dB, Xvar 11 mm, 10.5 L displacement, 28 lb.",
+  },
+  // B&C 18TBX100-4, the 4 Ω version (read Oct 2026). Specs: https://www.bcspeakers.com/en/products/lf-driver/18/4/18TBX100
+  // Price: US Speaker, https://www.usspeaker.com/B&C-18TBX100-1.htm (4 Ω version, $399.90).
+  {
+    id: "bc18tbxs4",
+    lb: 28,
+    name: "B&C 18TBX100 (4 Ω)",
+    maker: "bc",
+    price: 399.9,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 30,
+      Qts: 0.31,
+      Qes: 0.33,
+      Qms: 7,
+      Vas: 256,
+      Sd: 1210,
+      pub: {
+        Xmax: 9,
+        formula: "unstated",
+        Xvar: 11,
+        src: "https://www.bcspeakers.com/en/products/lf-driver/18/4/18TBX100",
+      },
+      Hvc: 25,
+      Hg: 12,
+      Re: 3.7,
+      imp: 4,
+      Le: 1.73,
+      Bl: 22,
+      Mms: 230,
+      aes: 1200,
+      disp: 10.5,
+    },
+    // B&C product page: depth 209 mm
+    depthIn: 8.23,
+    note: "[bcspeakers.com product page, Oct 2026] 4 Ω version. Ferrite, 1200 W nominal / 2400 W continuous, 94 dB at 2 V (1 W into 4 Ω; about 97 dB at 2.83 V), Xvar 11 mm, Le 1.73 mH, 28 lb. The 4 Ω page gives no displacement; 10.5 L, the 8 Ω version's.",
   },
   {
     id: "bc18sw",
@@ -242,6 +285,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 34,
       Hg: 14,
       Re: 5.3,
+      imp: 8,
       Le: 1.9,
       Bl: 30.3,
       Mms: 275,
@@ -249,6 +293,43 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       disp: 10.5,
     },
     note: "[datasheet, bcspeakers.com, Sep 2026] Neo, 1700 W nominal / 3400 W continuous, 97 dB, Xvar 16 mm, 10.5 L displacement, 26.2 lb.",
+  },
+  // B&C 18SW115-4, the 4 Ω version (read Oct 2026). Specs: https://www.bcspeakers.com/en/products/lf-driver/18/4/18SW115
+  // Price: US Speaker, https://www.usspeaker.com/B&C-18sw115-1.htm (4 Ω version, $739.56).
+  {
+    id: "bc18sws4",
+    lb: 26.2,
+    name: "B&C 18SW115 (4 Ω)",
+    maker: "bc",
+    price: 739.56,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 34,
+      Qts: 0.3,
+      Qes: 0.31,
+      Qms: 6.1,
+      Vas: 149.1,
+      Sd: 1210,
+      pub: {
+        Xmax: 14,
+        formula: "unstated",
+        Xvar: 16,
+        src: "https://www.bcspeakers.com/en/products/lf-driver/18/4/18SW115",
+      },
+      Hvc: 34,
+      Hg: 14,
+      Re: 3.3,
+      imp: 4,
+      Le: 1.36,
+      Bl: 26,
+      Mms: 304,
+      aes: 1700,
+      disp: 10.5,
+    },
+    // B&C product page: depth 242 mm
+    depthIn: 9.53,
+    note: "[bcspeakers.com product page, Oct 2026] 4 Ω version. Neo, 1700 W nominal / 3400 W continuous, 96 dB at 2 V (1 W into 4 Ω; about 99 dB at 2.83 V), Xvar 16 mm, Le 1.36 mH, 26.2 lb. The 4 Ω page gives no displacement; 10.5 L, the 8 Ω version's.",
   },
   {
     id: "bc18tbw",
@@ -274,6 +355,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 31,
       Hg: 15,
       Re: 5.3,
+      imp: 8,
       Le: 2.45,
       Bl: 26.4,
       Mms: 245,
@@ -281,6 +363,43 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       disp: 11.0,
     },
     note: "[datasheet, bcspeakers.com, Sep 2026] Ferrite, 1500 W nominal / 3000 W continuous, 96 dB, Xvar 14 mm, 34 lb. 11.0 L displacement (B&C datasheet).",
+  },
+  // B&C 18TBW100-4, the 4 Ω version (read Oct 2026). Specs: https://www.bcspeakers.com/en/products/lf-driver/18/4/18TBW100
+  // Price: US Speaker, https://www.usspeaker.com/B&C-18TBW100-1.htm (4 Ω version, $472.38).
+  {
+    id: "bc18tbws4",
+    lb: 33.95,
+    name: "B&C 18TBW100 (4 Ω)",
+    maker: "bc",
+    price: 472.38,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 33,
+      Qts: 0.32,
+      Qes: 0.34,
+      Qms: 6.23,
+      Vas: 181.5,
+      Sd: 1210,
+      pub: {
+        Xmax: 12,
+        formula: "unstated",
+        Xvar: 14,
+        src: "https://www.bcspeakers.com/en/products/lf-driver/18/4/18TBW100",
+      },
+      Hvc: 31,
+      Hg: 15,
+      Re: 3.2,
+      imp: 4,
+      Le: 1.64,
+      Bl: 22.8,
+      Mms: 268,
+      aes: 1500,
+      disp: 11.0,
+    },
+    // B&C product page: depth 241 mm
+    depthIn: 9.49,
+    note: "[bcspeakers.com product page, Oct 2026] 4 Ω version. Ferrite, 1500 W nominal / 3000 W continuous, 96 dB at 2 V (1 W into 4 Ω; about 99 dB at 2.83 V), Xvar 14 mm, Le 1.64 mH, 33.95 lb. The 4 Ω page gives no displacement; 11.0 L, the 8 Ω version's.",
   },
   {
     id: "bc18ps",
@@ -306,6 +425,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 21,
       Hg: 10.5,
       Re: 5.3,
+      imp: 8,
       Le: 2.1,
       Bl: 22.5,
       Mms: 202,
@@ -338,6 +458,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 25,
       Hg: 12,
       Re: 5.1,
+      imp: 8,
       Le: 1.7,
       Bl: 28,
       Mms: 211,
@@ -346,7 +467,81 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     },
     note: "[datasheet, bcspeakers.com, Sep 2026] Neo, 1200 W nominal / 2400 W continuous, 98 dB, Xvar 11 mm, Le 1.7 mH, 20 lb. Displacement not published; 10.5 L assumed.",
   },
+  // B&C 18NW100-4, the 4 Ω version (read Oct 2026). Specs: https://www.bcspeakers.com/en/products/lf-driver/18/4/18NW100
+  // Price: US Speaker, https://www.usspeaker.com/B&C-18nw100-1.htm (4 Ω version, $458.10).
+  {
+    id: "bc18nws4",
+    lb: 19.95,
+    name: "B&C 18NW100 (4 Ω)",
+    maker: "bc",
+    price: 458.1,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 30,
+      Qts: 0.27,
+      Qes: 0.28,
+      Qms: 6.2,
+      Vas: 203.5,
+      Sd: 1210,
+      pub: {
+        Xmax: 9,
+        formula: "unstated",
+        Xvar: 11,
+        src: "https://www.bcspeakers.com/en/products/lf-driver/18/4/18NW100",
+      },
+      Hvc: 25,
+      Hg: 12,
+      Re: 3.7,
+      imp: 4,
+      Le: 1.7,
+      Bl: 24.7,
+      Mms: 244,
+      aes: 1200,
+      disp: 10.5,
+    },
+    // B&C product page: depth 209 mm
+    depthIn: 8.23,
+    note: "[bcspeakers.com product page, Oct 2026] 4 Ω version. Neo, 1200 W nominal / 2400 W continuous, 95 dB at 2 V (1 W into 4 Ω; about 98 dB at 2.83 V), Xvar 11 mm, Le 1.7 mH, 19.95 lb. B&C's page gives 1199 W nominal; 1200 W, the 8 Ω version's, is used. B&C's Vas is 13% below what its Mms and Sd imply; the model uses Fs, Mms and Sd, not Vas. Displacement not published; 10.5 L assumed, as for the 8 Ω version.",
+  },
   BC18NBX_RAW,
+  // B&C 18NBX100-4, the 4 Ω version (read Oct 2026). Specs: https://www.bcspeakers.com/en/products/lf-driver/18/4/18NBX100
+  // Price: US Speaker, https://www.usspeaker.com/B&C-18nbx100-1.htm (4 Ω version, $448.56).
+  {
+    id: "bc18nbxs4",
+    lb: 19.95,
+    name: "B&C 18NBX100 (4 Ω)",
+    maker: "bc",
+    price: 448.56,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 35,
+      Qts: 0.37,
+      Qes: 0.39,
+      Qms: 7,
+      Vas: 192,
+      Sd: 1210,
+      pub: {
+        Xmax: 10,
+        formula: "unstated",
+        Xvar: 12,
+        src: "https://www.bcspeakers.com/en/products/lf-driver/18/4/18NBX100",
+      },
+      Hvc: 25,
+      Hg: 11,
+      Re: 3.6,
+      imp: 4,
+      Le: 1.74,
+      Bl: 22,
+      Mms: 225,
+      aes: 1200,
+      disp: 10.5,
+    },
+    // B&C product page: depth 208 mm
+    depthIn: 8.19,
+    note: "[bcspeakers.com product page, Oct 2026] 4 Ω version. Neo, 1200 W nominal / 2400 W continuous, 96 dB at 2 V (1 W into 4 Ω; about 99 dB at 2.83 V), Xvar 12 mm, Le 1.74 mH, 19.95 lb. Displacement not published; 10.5 L assumed, as for the 8 Ω version.",
+  },
   {
     id: "lv18403",
     lb: 36.2,
@@ -370,6 +565,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 31.7,
       Hg: 15,
       Re: 5.7,
+      imp: 8,
       Le: 1.98,
       Bl: 28.05,
       Mms: 255.5,
@@ -401,6 +597,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 22.7,
       Hg: 12,
       Re: 4.9,
+      imp: 8,
       Le: 1.69,
       Bl: 25.5,
       Mms: 239.2,
@@ -432,6 +629,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 32.5,
       Hg: 15,
       Re: 5.7,
+      imp: 8,
       Le: 2.13,
       Bl: 27.75,
       Mms: 259.3,
@@ -463,6 +661,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 32,
       Hg: 10,
       Re: 7.0,
+      imp: 8,
       Le: 3,
       Bl: 32.5,
       Mms: 377,
@@ -471,13 +670,49 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     },
     note: "[datasheet, per Josh; matches usspeaker.com] Ferrite, 1000 W AES / 2000 W program, 94 dB 1 W/1 m, Le 3 mH, 34.5 lb. Xmax 14 mm as published, which matches the (Hvc \u2212 Hg)/2 + Hg/4 convention (13.5 mm); plain (Hvc \u2212 Hg)/2 gives 11 mm. Displacement not published; 10.5 L assumed.",
   },
-  // Ciare NDH18-4S, 8 \u03a9 (part PNDH18-4S). Specs: https://ciare.com/en/products/lf-driver/18/8/NDH18-4S (read Oct 2026)
-  // and Ciare's datasheet PDF (8 \u03a9 only), which agree. Price: US Speaker, https://www.usspeaker.com/ciare%2018ndh4s-1.htm
-  // ($459.95, read Oct 2026). The id keeps its spelling from before the 4 \u03a9 entry: saved designs and links carry it.
+  // Ciare 18.00SW-4, the 4 Ω version (read Oct 2026). Specs: https://ciare.com/en/products/lf-driver/18/4/18.00SW
+  // Price: US Speaker, https://www.usspeaker.com/ciare%201800sw-4-1.htm ($455.04).
+  {
+    id: "ciare18sws4",
+    lb: 34.6,
+    name: "Ciare 18.00SW-4 (4 Ω)",
+    maker: "ciare",
+    price: 455.04,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 36,
+      Qts: 0.61,
+      Qes: 0.7,
+      Qms: 6.6,
+      Vas: 94,
+      Sd: 1134,
+      pub: {
+        Xmax: 14,
+        formula: "unstated",
+        src: "https://ciare.com/en/products/lf-driver/18/4/18.00SW",
+      },
+      Hvc: 32,
+      Hg: 10,
+      Re: 3.25,
+      imp: 4,
+      Le: 2.7,
+      Bl: 20,
+      Mms: 375,
+      aes: 1000,
+      disp: 10.5,
+    },
+    // Ciare product page: depth 210 mm
+    depthIn: 8.27,
+    note: "[ciare.com product page, Oct 2026] 4 Ω version. Ferrite, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 94 dB (reference not stated), Le 2.7 mH, 32 mm winding, 10 mm gap, 416 mm cutout, 15.7 kg (34.6 lb). Ciare does not state how its 14 mm Xmax is defined ((Hvc − Hg)/2 + Hg/4 gives 13.5 mm). Displacement not published; 10.5 L assumed.",
+  },
+  // Ciare NDH18-4S, 8 Ω (part PNDH18-4S). Specs: https://ciare.com/en/products/lf-driver/18/8/NDH18-4S (read Oct 2026)
+  // and Ciare's datasheet PDF (8 Ω only), which agree. Price: US Speaker, https://www.usspeaker.com/ciare%2018ndh4s-1.htm
+  // ($459.95, read Oct 2026). The id keeps its spelling from before the 4 Ω entry: saved designs and links carry it.
   {
     id: "ciarendh18",
     lb: 17.6,
-    name: "Ciare NDH18-4S (8 \u03a9)",
+    name: "Ciare NDH18-4S (8 Ω)",
     maker: "ciare",
     price: 459.95,
     src: "usspeaker.com, Oct 2026",
@@ -497,24 +732,25 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 30,
       Hg: 14,
       Re: 6.1,
+      imp: 8,
       Le: 1.9,
       Bl: 27.7,
       Mms: 212,
       aes: 1000,
       disp: 10.5,
     },
-    // Ciare's datasheet PDF states 96.5 dB at 2.83 V/1 m; the T/S agree (2.1 % efficiency on Re 6.1 \u03a9).
+    // Ciare's datasheet PDF states 96.5 dB at 2.83 V/1 m; the T/S agree (2.1 % efficiency on Re 6.1 Ω).
     sens: 96.5,
     // Ciare product page: depth 208 mm (US Speaker lists 207 mm)
     depthIn: 8.19,
-    note: "[ciare.com product page and datasheet, Oct 2026] 8 \u03a9 version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 96.5 dB at 2.83 V, 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 120 L vented. The 4 \u03a9 version (NDH18-4S-4) is the next entry. Displacement not published; 10.5 L assumed.",
+    note: "[ciare.com product page and datasheet, Oct 2026] 8 Ω version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 96.5 dB at 2.83 V, 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 120 L vented. The 4 Ω version (NDH18-4S-4) is the next entry. Displacement not published; 10.5 L assumed.",
   },
-  // Ciare NDH18-4S-4, 4 \u03a9 (part PNDH18-4S-4). Specs: https://ciare.com/en/products/lf-driver/18/4/NDH18-4S (read Oct
+  // Ciare NDH18-4S-4, 4 Ω (part PNDH18-4S-4). Specs: https://ciare.com/en/products/lf-driver/18/4/NDH18-4S (read Oct
   // 2026). Price: US Speaker, https://www.usspeaker.com/ciare%20ndh18-4s-4-1.htm ($459.95, read Oct 2026).
   {
     id: "ciarendh18s4",
     lb: 17.6,
-    name: "Ciare NDH18-4S-4 (4 \u03a9)",
+    name: "Ciare NDH18-4S-4 (4 Ω)",
     maker: "ciare",
     price: 459.95,
     src: "usspeaker.com, Oct 2026",
@@ -534,6 +770,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 30,
       Hg: 14,
       Re: 3.0,
+      imp: 4,
       Le: 1.7,
       Bl: 22.2,
       Mms: 216,
@@ -541,12 +778,12 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       disp: 10.5,
     },
     // Ciare gives no reference for this version (US Speaker labels it 1 W/1 m). The T/S give 100.5 dB at 2.83 V (2.6 %
-    // efficiency, 2.67 W into Re 3.0 \u03a9), the reference the 8 \u03a9 sheet states, so it is about 97.5 dB at 1 W (4 \u03a9
+    // efficiency, 2.67 W into Re 3.0 Ω), the reference the 8 Ω sheet states, so it is about 97.5 dB at 1 W (4 Ω
     // nominal). Stored as the 2.83 V figure: the Notes page compares `sens` with the T/S sensitivity at 2.83 V.
     sens: 100.5,
     // Ciare product page: depth 208 mm (US Speaker lists 207 mm)
     depthIn: 8.19,
-    note: "[ciare.com product page, Oct 2026] 4 \u03a9 version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 100.5 dB (reference not stated; the T/S say 2.83 V, about 97.5 dB at 1 W), 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 90 L vented. The PA model turns watts into volts at 8 \u03a9 for every sub, so it lets this driver take about 3 dB more than its 1000 W thermal rating. Displacement not published; 10.5 L assumed.",
+    note: "[ciare.com product page, Oct 2026] 4 Ω version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 100.5 dB (reference not stated; the T/S say 2.83 V, about 97.5 dB at 1 W), 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 90 L vented. Displacement not published; 10.5 L assumed.",
   },
   {
     id: "f18fh510",
@@ -572,6 +809,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 22,
       Hg: 10.5,
       Re: 5.1,
+      imp: 8,
       Le: 1.06,
       Bl: 21,
       Mms: 139,
@@ -579,6 +817,44 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       disp: 6.1,
     },
     note: "[usspeaker.com spec table, Sep 2026] Ferrite, 600 W AES / 1200 W program, 98 dB, 19.4 lb. Sd 1134 cm² is self-consistent with the published Vas. 6.1 L displacement (Faital datasheet).",
+  },
+  // FaitalPRO 18FH510, the 4 Ω version (read Oct 2026). Specs:
+  // https://faitalpro.com/products/files/18FH510/4/18FH510_datasheet_4.pdf
+  // Price: US Speaker, https://www.usspeaker.com/faital%20pro%2018FH510-1.htm (4 Ω version, $389.95).
+  {
+    id: "f18fh510s4",
+    lb: 19.3,
+    name: "FaitalPRO 18FH510 (4 Ω)",
+    maker: "faital",
+    price: 389.95,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 30,
+      Qts: 0.26,
+      Qes: 0.27,
+      Qms: 13.6,
+      Vas: 391.4,
+      Sd: 1207,
+      pub: {
+        Xmax: 9.45,
+        formula: "hg/3",
+        Xdamage: 20,
+        src: "https://faitalpro.com/products/files/18FH510/4/18FH510_datasheet_4.pdf",
+      },
+      Hvc: 22.4,
+      Hg: 10.5,
+      Re: 3.3,
+      imp: 4,
+      Le: 1.06,
+      Bl: 18.3,
+      Mms: 146.3,
+      aes: 600,
+      disp: 6.1,
+    },
+    // Faital datasheet: depth 201.5 mm
+    depthIn: 7.93,
+    note: "[faitalpro.com datasheet, Oct 2026] 4 Ω version. Ferrite, 600 W AES / 1200 W max, 98 dB 1 W/1 m (2 V into 4 Ω; about 101 dB at 2.83 V), Le 1.06 mH, 19.3 lb. Xmax is Faital's (Hvc − Hg)/2 + Hg/3. 6.1 L displacement (Faital datasheet). Faital served the datasheet in Italian; the figures are the same fields.",
   },
   {
     id: "f18fh500",
@@ -604,6 +880,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 22,
       Hg: 10.5,
       Re: 5.1,
+      imp: 8,
       Le: 1.35,
       Bl: 19,
       Mms: 137,
@@ -611,6 +888,44 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       disp: 5.7,
     },
     note: "[web search, Sep 2026; not checked against the datasheet] Neo, 600 W AES / 1200 W program, 99 dB, 10.1 lb. usspeaker lists Sd 1134 / Vas 375 L, also self-consistent; probably an older datasheet revision. 5.7 L displacement (Faital datasheet).",
+  },
+  // FaitalPRO 18FH500, the 4 Ω version (read Oct 2026). Specs:
+  // https://faitalpro.com/products/files/18FH500/4/18FH500_datasheet_4.pdf
+  // Price: US Speaker, https://www.usspeaker.com/faital%20pro%2018FH500-1.htm (4 Ω version, $459.95).
+  {
+    id: "f18fh500s4",
+    lb: 10.1,
+    name: "FaitalPRO 18FH500 (4 Ω)",
+    maker: "faital",
+    price: 459.95,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 28,
+      Qts: 0.29,
+      Qes: 0.3,
+      Qms: 7.2,
+      Vas: 456.7,
+      Sd: 1207,
+      pub: {
+        Xmax: 9.45,
+        formula: "hg/3",
+        Xdamage: 17.5,
+        src: "https://faitalpro.com/products/files/18FH500/4/18FH500_datasheet_4.pdf",
+      },
+      Hvc: 22.4,
+      Hg: 10.5,
+      Re: 3.3,
+      imp: 4,
+      Le: 1.07,
+      Bl: 16.7,
+      Mms: 143.9,
+      aes: 600,
+      disp: 5.7,
+    },
+    // Faital datasheet: depth 202 mm
+    depthIn: 7.95,
+    note: "[faitalpro.com datasheet, Oct 2026] 4 Ω version. Neo, 600 W AES / 1200 W max, 98 dB 1 W/1 m (2 V into 4 Ω; about 101 dB at 2.83 V), Le 1.07 mH, 10.1 lb. Xmax is Faital's (Hvc − Hg)/2 + Hg/3. 5.7 L displacement (Faital datasheet). US Speaker also sells a 16 Ω version.",
   },
   {
     id: "f18fx600",
@@ -636,6 +951,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 26.5,
       Hg: 12,
       Re: 5.0,
+      imp: 8,
       Le: 1.35,
       Bl: 24.5,
       Mms: 175,
@@ -668,6 +984,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 23,
       Hg: 10.5,
       Re: 5.3,
+      imp: 8,
       Le: 1.8,
       Bl: 22,
       Mms: 175.2,
@@ -675,6 +992,44 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       disp: 7.1,
     },
     note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1000 W AES / 2000 W program, 98 dB, 22.3 lb. usspeaker lists Sd 1134 / Vas 215 L, also self-consistent; probably an older datasheet revision. 7.1 L displacement (Faital datasheet).",
+  },
+  // FaitalPRO 18HP1010, the 4 Ω version (read Oct 2026). Specs:
+  // https://faitalpro.com/products/files/18HP1010/4/18HP1010_datasheet_4.pdf
+  // Price: US Speaker, https://www.usspeaker.com/faital%20pro%2018HP1010-1.htm (4 Ω version, $459.95).
+  {
+    id: "f18hp1010s4",
+    lb: 22.3,
+    name: "FaitalPRO 18HP1010 (4 Ω)",
+    maker: "faital",
+    price: 459.95,
+    src: "usspeaker.com, Oct 2026",
+    size: 18,
+    ts: {
+      Fs: 35,
+      Qts: 0.31,
+      Qes: 0.32,
+      Qms: 7.8,
+      Vas: 225.9,
+      Sd: 1207,
+      pub: {
+        Xmax: 9.75,
+        formula: "hg/3",
+        Xdamage: 21.9,
+        src: "https://faitalpro.com/products/files/18HP1010/4/18HP1010_datasheet_4.pdf",
+      },
+      Hvc: 23,
+      Hg: 10.5,
+      Re: 2.7,
+      imp: 4,
+      Le: 1.26,
+      Bl: 18.4,
+      Mms: 186.2,
+      aes: 1000,
+      disp: 7.1,
+    },
+    // Faital datasheet: depth 203.5 mm
+    depthIn: 8.01,
+    note: "[faitalpro.com datasheet, Oct 2026] 4 Ω version. Ferrite, 1000 W AES / 2000 W max, 98 dB 1 W/1 m (2 V into 4 Ω; about 101 dB at 2.83 V), Le 1.26 mH, 22.3 lb. Xmax is Faital's (Hvc − Hg)/2 + Hg/3. 7.1 L displacement (Faital datasheet).",
   },
   {
     id: "by18pwb",
@@ -700,6 +1055,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 30,
       Hg: 12,
       Re: 6.0,
+      imp: 8,
       Le: 2,
       Bl: 25,
       Mms: 245,
@@ -732,6 +1088,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 27,
       Hg: 12,
       Re: 5.3,
+      imp: 8,
       Le: 1.7,
       Bl: 26.4,
       Mms: 200,
@@ -761,6 +1118,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
         src: "https://www.eighteensound.it/en/products/lf-driver/18-0/8/18lw2420.pdf",
       },
       Re: 5.0,
+      imp: 8,
       Le: 1.9,
       Bl: 24.6,
       Mms: 192,
@@ -792,6 +1150,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 22,
       Hg: 10,
       Re: 5.62,
+      imp: 8,
       Le: 1.5,
       Bl: 22.81,
       Mms: 177.81,
@@ -823,13 +1182,14 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 30,
       Hg: 10,
       Re: 5.29,
+      imp: 8,
       Le: 1.16,
       Bl: 24.76,
       Mms: 217.4,
       aes: 1200,
       disp: 10.5,
     },
-    note: "[datasheet, celestion.com, Oct 2026] Ferrite, 1200 W AES / 2400 W continuous, 97 dB, 4 in coil, Le 1.16 mH, 8.7 in deep, 25.5 lb; also sold in 4 \u03a9. Parts Express lists Xmax 10 mm. Displacement not published; 10.5 L assumed.",
+    note: "[datasheet, celestion.com, Oct 2026] Ferrite, 1200 W AES / 2400 W continuous, 97 dB, 4 in coil, Le 1.16 mH, 8.7 in deep, 25.5 lb; also sold in 4 Ω. Parts Express lists Xmax 10 mm. Displacement not published; 10.5 L assumed.",
   },
   {
     id: "celtsq1845",
@@ -854,13 +1214,14 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 36,
       Hg: 12,
       Re: 5.0,
+      imp: 8,
       Le: 3.06,
       Bl: 33.8,
       Mms: 316,
       aes: 1800,
       disp: 10.5,
     },
-    note: "[datasheet, celestion.com, Oct 2026] Neo, 1800 W AES / 3600 W continuous, 96.5 dB, 4.5 in coil, Le 3.06 mH, 9.5 in deep, 26 lb; also sold in 4 \u03a9. Xmech 40 mm (not stated whether one-way or peak to peak, so not entered as Xlim). Displacement not published; 10.5 L assumed.",
+    note: "[datasheet, celestion.com, Oct 2026] Neo, 1800 W AES / 3600 W continuous, 96.5 dB, 4.5 in coil, Le 3.06 mH, 9.5 in deep, 26 lb; also sold in 4 Ω. Xmech 40 mm (not stated whether one-way or peak to peak, so not entered as Xlim). Displacement not published; 10.5 L assumed.",
   },
   {
     id: "sbnero15",
@@ -886,6 +1247,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       Hvc: 33.2,
       Hg: 14,
       Re: 5.3,
+      imp: 8,
       Le: 2.08,
       Bl: 24.4,
       Mms: 207,

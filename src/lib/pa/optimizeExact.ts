@@ -47,6 +47,8 @@ import {
 } from "./optimize";
 import { VENT_STYLES, highpassOptions, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
 import {
+  ampVoltage,
+  ampWatts,
   boxInternalLiters,
   hornResponse,
   isRoundPort,
@@ -135,6 +137,7 @@ import type {
 import { towerMidDims } from "./tower";
 import type { CardSlot } from "../optimizer/selectCards";
 import { savedBackJoint } from "../../constants/bracing";
+import { voltsToWatts } from "../power";
 
 // the most vent sizes any style has (a cache key's stride)
 const MAX_VENT_SIZES = Math.max(...VENT_STYLES.map((st) => ventSizesFor(st).length));
@@ -285,7 +288,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
     cur,
     locks,
     amps,
-    volts: Math.sqrt(amps.ampW * 8),
+    volts: ampVoltage(amps.ampW),
     portMax: cur.portMax,
     subs,
     walls,
@@ -995,10 +998,11 @@ function exactHook(
     // slider step under the port's limit (then the amp sets the level). A locked amp leaves it out.
     const portLimited = lim.who === "port";
     if (portLimited) {
-      const w = s.locks.ampW ? null : onSlider((lim.V * (1 - 1e-9)) ** 2 / 8, AMP_WATTS_STEPS.ampW);
+      const w = s.locks.ampW ? null : onSlider(ampWatts(lim.V * (1 - 1e-9)), AMP_WATTS_STEPS.ampW);
       if (w === null) return null;
       ampW = w;
-      lim = { who: "amp", V: Math.sqrt(w * 8), W: w };
+      const V = ampVoltage(w);
+      lim = { who: "amp", V, W: voltsToWatts(V, sub.ts) };
     }
     subDesigns++;
     return {

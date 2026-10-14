@@ -5,6 +5,7 @@ import { MAX_SPL_TIP, STATS } from "../../../components/optimizer/StatRow";
 import { StatRowGrid, type StatRowItem } from "../../../components/stats/StatRowGrid";
 import { midChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
+import { voltsToWatts } from "../../../lib/power";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES } from "../../../constants/limits";
@@ -117,7 +118,7 @@ export function MidSection({ planner }: Props) {
                     STATS.peakExcursion,
                     `${((midModeled.mdl.peakX * midUsedVoltage) / midVoltage).toFixed(1)} mm`,
                     `${(((midModeled.mdl.peakX * midUsedVoltage) / midVoltage / midDriver.ts.Xmax) * 100).toFixed(0)}% of Xmax`,
-                    `At ${Math.round((midUsedVoltage * midUsedVoltage) / 8)} W, with the ${subMidCrossoverHz} Hz highpass.`,
+                    `At ${Math.round(voltsToWatts(midUsedVoltage, midDriver.ts))} W, with the ${subMidCrossoverHz} Hz highpass.`,
                   ],
                   ...xmaxRows(midDriver.ts),
                 ]}

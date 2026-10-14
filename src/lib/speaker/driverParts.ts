@@ -24,6 +24,7 @@ import { hifiWooferDisplacementL } from "../hifi/hifi";
 import { subDriverDepthIn } from "../pa/tubes";
 import { HIFI_DEPTH_PER_SIZE, MID_DEPTH_FALLBACK_IN } from "../../data/catalog/driver-cutouts";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
+import { ohmsOf } from "../power";
 
 /**
  * A cone driver as the models take it: its Thiele/Small parameters (with the coil's inductance where published) and
@@ -123,9 +124,6 @@ export interface HfParts {
   imp: number;
 }
 
-/** The impedance a datasheet assumes where it gives none, Ω (as hornResponse and tweeterMaxLevel take it). */
-const NOMINAL_OHMS = 8;
-
 /**
  * A driver's HF section: a compression driver's or a tweeter's datasheet, or a coaxial's compression section; null for
  * a cone kind, an unknown id, or one with no published sensitivity.
@@ -134,15 +132,15 @@ export function hfParts(driver: SpeakerDriver): HfParts | null {
   switch (driver.kind) {
     case DRIVER_KIND.compression: {
       const hf = byId(CD_OPTIONS, driver.driverId)?.hf;
-      return hf ? { sens: hf.sens, imp: hf.imp || NOMINAL_OHMS } : null;
+      return hf ? { sens: hf.sens, imp: ohmsOf(hf) } : null;
     }
     case DRIVER_KIND.tweeter: {
       const hf = hifiDriverById("tweeter", driver.driverId)?.hf;
-      return hf ? { sens: hf.sens, imp: hf.imp || NOMINAL_OHMS } : null;
+      return hf ? { sens: hf.sens, imp: ohmsOf(hf) } : null;
     }
     case DRIVER_KIND.coaxial: {
       const hf = byId(FILL_OPTIONS, driver.driverId)?.hf;
-      return hf ? { sens: hf.sens, imp: hf.imp || NOMINAL_OHMS } : null;
+      return hf ? { sens: hf.sens, imp: ohmsOf(hf) } : null;
     }
     case DRIVER_KIND.sub:
     case DRIVER_KIND.mid:

@@ -125,8 +125,17 @@ export interface XmaxBand {
   hi: number;
 }
 
+/**
+ * A driver's nominal impedance, Ω, from its datasheet: one field for every driver kind (a cone driver's T/S, a
+ * compression driver's, a tweeter's or a coaxial's HF section). Every engine turns watts into volts at it (lib/power).
+ * Absent where not entered: the engines then take 8 Ω (`FALLBACK_OHMS`), a gap the entry's note names.
+ */
+export interface NominalImpedance {
+  imp?: number;
+}
+
 /** The Thiele-Small parameters and ratings every driver table lists. `disp` is the driver's displacement in liters, null where unpublished. */
-export interface ThieleSmall {
+export interface ThieleSmall extends NominalImpedance {
   Fs: number;
   Qts: number;
   Qes: number;
@@ -172,19 +181,19 @@ export type BoxModelTS = Pick<
   "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms" | "Le"
 >;
 
-/** Subs always list a displacement. */
+/** Subs always list a displacement and their nominal impedance. */
 export interface SubTS extends ThieleSmall {
   disp: number;
+  imp: number;
 }
 
 /**
- * Hi-fi woofers also list 2.83 V sensitivity and nominal impedance (informational; no model reads them), and their
- * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) takes its inductance from the fill table where
- * the maker publishes it, but that table has no LF impedance, so `imp` is absent there.
+ * Hi-fi woofers also list 2.83 V sensitivity (informational; no model reads it), their nominal impedance (ThieleSmall's
+ * `imp`) and their inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) takes both from the fill
+ * table where it lists them.
  */
 export interface HifiWooferTS extends ThieleSmall {
   sens: number;
-  imp?: number;
 }
 
 // ---- PA stack ----
@@ -234,13 +243,12 @@ export interface MidDriver {
 }
 
 /** The compression section of a compression driver (1 W / 1 m on `sensRef`, aes in watts above `aesXo`). */
-export interface CompressionHf {
+export interface CompressionHf extends NominalImpedance {
   sens: number;
   sensRef: string;
   aes: number;
   aesXo: number;
   minXo: number;
-  imp: number;
 }
 
 export interface CompressionDriver {
@@ -527,11 +535,10 @@ export type PaintSwatch = readonly [hex: string, name: string];
 
 // ---- Fills ----
 
-export interface FillHf {
+export interface FillHf extends NominalImpedance {
   sens: number;
   aes: number;
   xo: number | null;
-  imp: number;
   cov: number | null;
 }
 
@@ -591,12 +598,11 @@ export interface HifiWoofer {
  */
 export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon" | "amt" | "coaxial";
 
-export interface TweeterHf {
+export interface TweeterHf extends NominalImpedance {
   sens: number;
   aes: number;
   aesXo: number | null;
   minXo: number | null;
-  imp: number;
   fs: number | null;
 }
 
@@ -3285,7 +3291,7 @@ export interface MidChipsInput {
   smallerBoxNetL: MidSystemBase["smallerBoxNetL"];
   /** the tower's mid chamber: the sub's footprint sets it */
   isTower: boolean;
-  ts: Pick<ThieleSmall, "Xmax" | "aes">;
+  ts: Pick<ThieleSmall, "Xmax" | "aes" | "imp">;
   /** amp volts, the volts the driver can use, and the thermal limit in volts */
   V: number;
   useV: number;

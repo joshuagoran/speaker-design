@@ -33,7 +33,7 @@ import type {
   SpeakerSpec,
 } from "../../types";
 import { abs } from "../acoustics/complex";
-import { ampVoltage, hornPower, sineLimitAt } from "../pa/calc";
+import { ampVoltage, ampWatts, hornPower, sineLimitAt } from "../pa/calc";
 import { tweeterMaxLevel } from "../hifi/hifi";
 import { CD_OPTIONS, HIFI_PASSIVES, hifiDriverById } from "../data";
 import { byId } from "../tables";
@@ -97,7 +97,7 @@ function driverPower(driver: SpeakerDriver, band: SpeakerBand, driveV: number) {
   // no highpass: the rating as published (a coaxial's own network, which the spec doesn't model)
   const xo = band.highpass?.hz ?? Infinity;
   /** the drive as amp watts into 8 Ω, as both engines take their amp */
-  const ampW = (driveV * driveV) / 8;
+  const ampW = ampWatts(driveV);
   switch (driver.kind) {
     case DRIVER_KIND.compression: {
       const hf = byId(CD_OPTIONS, driver.driverId)?.hf;
@@ -279,7 +279,7 @@ export function speakerLimits(
       port,
       radiator,
       throat,
-      driveW: (driveV * driveV) / 8,
+      driveW: ampWatts(driveV),
       programW: 2 * parts.ts.aes,
     };
   });

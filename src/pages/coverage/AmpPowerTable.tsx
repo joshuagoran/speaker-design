@@ -29,6 +29,8 @@ interface Props {
     CoverageInputs,
     | "subModeled"
     | "subAmpVoltage"
+    | "subDriver"
+    | "midDriver"
     | "midModeled"
     | "hornModel"
     | "subMidCrossoverHz"
@@ -48,6 +50,8 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
   const {
     subModeled,
     subAmpVoltage,
+    subDriver,
+    midDriver,
     midModeled,
     hornModel,
     subMidCrossoverHz,
@@ -57,20 +61,29 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
     const out: ChannelPower[] = [];
     if (subModeled)
       out.push(
-        channelPower("sub", subMax(subModeled.lim, subAmpVoltage), headroomDb(gain, pads.sub)),
+        channelPower(
+          "sub",
+          subMax(subModeled.lim, subAmpVoltage, subDriver.ts),
+          headroomDb(gain, pads.sub),
+        ),
       );
     const mid =
       midModeled &&
-      midMax(midModeled.max, midModeled.mdl.curve, midModeled.V, [
-        subMidCrossoverHz,
-        midHornCrossoverHz,
-      ]);
+      midMax(
+        midModeled.max,
+        midModeled.mdl.curve,
+        midModeled.V,
+        [subMidCrossoverHz, midHornCrossoverHz],
+        midDriver.ts,
+      );
     if (mid) out.push(channelPower("mid", mid, headroomDb(gain, pads.mid)));
     if (hornModel) out.push(channelPower("horn", hornMax(hornModel), headroomDb(gain, pads.horn)));
     return out;
   }, [
     subModeled,
     subAmpVoltage,
+    subDriver,
+    midDriver,
     midModeled,
     hornModel,
     subMidCrossoverHz,

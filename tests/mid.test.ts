@@ -107,11 +107,11 @@ test("mid max curve: each point is the smallest of Xmax, thermal and amp", (t) =
       V = m.V * s;
     assert.ok(o.spl <= c.spl + 1e-9, "never above the amp-limited curve");
     assert.ok(c.xmm * s <= mid.ts.Xmax * (1 + 1e-9), "excursion within Xmax");
-    assert.ok(V <= thermalVoltageLimit(mid.ts.aes) * (1 + 1e-9), "within program rating");
+    assert.ok(V <= thermalVoltageLimit(mid.ts) * (1 + 1e-9), "within program rating");
     // and at least one limit is exactly met
     const met =
       Math.abs(c.xmm * s - mid.ts.Xmax) < 1e-6 ||
-      Math.abs(V - thermalVoltageLimit(mid.ts.aes)) < 1e-6 ||
+      Math.abs(V - thermalVoltageLimit(mid.ts)) < 1e-6 ||
       Math.abs(V - m.V) < 1e-6;
     assert.ok(met, `${o.f.toFixed(0)} Hz: no limit met`);
   });
@@ -130,10 +130,10 @@ test("mid max in the passband: thermal-limited SPL = mass line at the program-ra
     close(
       t,
       o.spl,
-      nearestPoint(m.mdl!.curve, 400).spl + db(thermalVoltageLimit(mid.ts.aes) / m.V),
+      nearestPoint(m.mdl!.curve, 400).spl + db(thermalVoltageLimit(mid.ts) / m.V),
       1e-9,
     );
-  close(t, m.useV, Math.min(thermalVoltageLimit(mid.ts.aes), m.V), 1e-12);
+  close(t, m.useV, Math.min(thermalVoltageLimit(mid.ts), m.V), 1e-12);
 });
 test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above the sub curve", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
@@ -151,7 +151,7 @@ test("subThroughLp: the lowpass relaxes the limits (more drive above the crossov
   const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
   const s = subThroughLowpass(mdl, ts, V, 20, 80, 4),
     k = mdl.curve.indexOf(nearestPoint(mdl.curve, 200));
-  const vt = thermalVoltageLimit(ts.aes),
+  const vt = thermalVoltageLimit(ts),
     g = linkwitzRileyLowpass(mdl.curve[k].f, 80, 4);
   // at 200 Hz the filtered cone moves little: thermal or amp limits, not Xmax/port
   const lim = Math.min(vt, V);

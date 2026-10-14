@@ -10,6 +10,7 @@ import {
   linkwitzRileyHighpass,
   linkwitzRileyLowpass,
   thermalVoltageLimit,
+  ampVoltage,
   isRoundPort,
   maxStraightSlotIn,
   slotFolds,
@@ -48,6 +49,7 @@ import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { defaultBraceStyleNear } from "../bracing";
+import { voltsToWatts } from "../power";
 
 const RHO = 1.18,
   C = 343,
@@ -233,17 +235,17 @@ export function subLimitOf(
   const peakVel = s.velArea / (areaIn2 * 0.00064516);
   const vp = (volts * portMax) / peakVel,
     vx = (volts * 100) / s.xmaxPct,
-    vt = thermalVoltageLimit(ts.aes);
+    vt = thermalVoltageLimit(ts);
   const L = Math.min(vp, vx, vt, volts);
   return {
     who: L === vp ? "port" : L === vx ? "Xmax" : L === vt ? "thermal" : "amp",
     V: L,
-    W: (L * L) / 8,
+    W: voltsToWatts(L, ts),
   };
 }
 /** The vent area (in²) at and above which the port no longer sets a curve's music limit (it is the same above it). */
 export function portFreeArea(s: CurveSummary, ts: SubTS, volts: number, portMax: number) {
-  const other = Math.min((volts * 100) / s.xmaxPct, thermalVoltageLimit(ts.aes), volts);
+  const other = Math.min((volts * 100) / s.xmaxPct, thermalVoltageLimit(ts), volts);
   return (s.velArea * other) / (volts * portMax) / 0.00064516;
 }
 /** The clean output (bandOutputDb) at a music limit. */
@@ -347,7 +349,7 @@ export function sealedMid(
   brace: MidBrace,
 ): SealedMid {
   const ts = mid.ts;
-  const volts = Math.sqrt(mAmpW * 8);
+  const volts = ampVoltage(mAmpW);
   const { Sd, Mms, Mas, Cas, Cab, Fc, Qts } = sealedBox(mid, box, t, inset, brace);
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
   const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
@@ -371,7 +373,7 @@ export function sealedMid(
       break;
     }
   }
-  const vt = thermalVoltageLimit(ts.aes);
+  const vt = thermalVoltageLimit(ts);
   return {
     Qtc: Qts * (Fc / ts.Fs),
     f3,

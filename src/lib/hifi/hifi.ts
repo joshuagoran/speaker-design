@@ -97,6 +97,7 @@ import {
 } from "./nearField";
 import { xmaxBandCurves } from "../xmax";
 import { coaxGaps } from "../data";
+import { ohmsOf, voltsToWatts } from "../power";
 import { COAX_GAP_NAMES } from "../../constants/coax";
 
 const C = 343,
@@ -677,8 +678,8 @@ export function tweeterMaxLevel(
   cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain">,
 ) {
   const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
-  const imp = hf.imp || 8;
-  const pAmp = ((cfg.tAmpW || 50) * 8) / imp;
+  const imp = ohmsOf(hf);
+  const pAmp = voltsToWatts(ampVoltage(cfg.tAmpW || 50), hf);
   const derate = hf.aesXo && cfg.xo < hf.aesXo ? Math.pow(cfg.xo / hf.aesXo, 2) : 1;
   const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
   const pMax = Math.min(pAmp, pProg);
@@ -931,7 +932,7 @@ export function hifiWooferPrep(
   const { place, wallM } = placementOf(cfg);
   const { e, gDb } = shelfOn(b, cfg.dim.w, cfg.bsc || 0, place, wallM);
   const V = b.V,
-    vT = thermalVoltageLimit(w.ts.aes || 100),
+    vT = thermalVoltageLimit({ aes: w.ts.aes || 100, imp: w.ts.imp }),
     portMax = cfg.portMax || HIFI_PORT_MAX_MS,
     pr = b.pr,
     xR = pr ? pr.drv.Xmax : 0;

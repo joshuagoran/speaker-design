@@ -2,6 +2,7 @@
 // read through the L1 adapters, give the same curves, net air and tuning as the Hi-fi and PA models.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
+import { ohmsOf } from "../src/lib/power";
 import { configs } from "./golden-configs";
 import {
   PA_FLOOR,
@@ -476,7 +477,7 @@ test("speaker model: the PA top and tower sum their chambers' cones and the horn
         phase: true,
       });
     assert.ok(midBox && (!tower || subBox));
-    const hornFlat = cd.hf.sens + 10 * Math.log10(8 / cd.hf.imp);
+    const hornFlat = cd.hf.sens + 10 * Math.log10(8 / ohmsOf(cd.hf));
     const { lowHz } = horn.hf;
     const at = (o: { raw: number; rawPhase?: number }) =>
       scale(phasor(o.rawPhase ?? NaN), 10 ** (o.raw / 20));

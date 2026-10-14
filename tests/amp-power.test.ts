@@ -19,6 +19,9 @@ import {
 import type { PaMaxPoint } from "../src/types";
 import { close } from "./helpers";
 
+/** A driver at 8 Ω, where an amp's rated watts are its watts. */
+const EIGHT_OHM = { imp: 8 };
+
 test("power at the target: 10 dB under the max is a tenth, 3 dB about half", (t) => {
   close(t, powerAtTarget(800, 10), 80, 1e-9);
   close(t, powerAtTarget(800, 0), 800, 1e-9);
@@ -39,7 +42,7 @@ test("headroom: the gain and the pad together, never below 0", () => {
 });
 
 test("a channel at the target: 13 dB headroom under an amp-limited 800 W sub", (t) => {
-  const r = channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800)), 13);
+  const r = channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM), 13);
   close(t, r.ampW, 800, 1e-9);
   close(t, r.avgW, 800 * 10 ** -1.3, 1e-9);
   close(t, r.peakW, 800 * 10 ** -0.3, 1e-9);
@@ -49,14 +52,14 @@ test("a channel at the target: 13 dB headroom under an amp-limited 800 W sub", (
 
 test("peak headroom: the headroom less the crest's lead over a sine's (about 7 dB)", (t) => {
   close(t, MUSIC_CREST_DB - SINE_CREST_DB, 6.99, 0.01);
-  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800));
+  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM);
   close(t, channelPower("sub", max, 10).peakHeadroomDb, SINE_CREST_DB, 1e-9);
   close(t, channelPower("sub", max, 4).peakHeadroomDb, 4 - 10 + SINE_CREST_DB, 1e-9);
 });
 
 test("the owner's screenshot: an Xmax-limited sub at 7.0 dB, peaks right at Xmax", (t) => {
   // 644 W sine at Xmax: the peaks (1,288 W) reach Xmax's peaks (twice 644 W) at 7.0 dB, and pass them below
-  const max = subMax({ W: 644, who: "Xmax" }, ampVoltage(800));
+  const max = subMax({ W: 644, who: "Xmax" }, ampVoltage(800), EIGHT_OHM);
   const at7 = channelPower("sub", max, 7);
   close(t, at7.peakHeadroomDb, 0, 0.05);
   assert.equal(at7.pastLimit, false);
@@ -70,11 +73,11 @@ test("the owner's screenshot: an Xmax-limited sub at 7.0 dB, peaks right at Xmax
 test("max peak: twice the amp's rating amp-limited, twice the model's watts at another limit", (t) => {
   close(
     t,
-    channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800)), 9).maxPeakW,
+    channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM), 9).maxPeakW,
     1600,
     1e-9,
   );
-  const xmax = channelPower("sub", subMax({ W: 642, who: "Xmax" }, ampVoltage(800)), 9);
+  const xmax = channelPower("sub", subMax({ W: 642, who: "Xmax" }, ampVoltage(800), EIGHT_OHM), 9);
   close(t, xmax.maxPeakW, 1284, 1e-9);
   close(t, xmax.ampW, 800, 1e-9);
   close(
@@ -87,7 +90,7 @@ test("max peak: twice the amp's rating amp-limited, twice the model's watts at a
 
 test("peak headroom reads off the two peak columns, and equals the headroom less about 7 dB", (t) => {
   // the owner's case: an Xmax-limited sub at 114 W average, 1,140 W peak
-  const max = subMax({ W: 642, who: "Xmax" }, ampVoltage(800));
+  const max = subMax({ W: 642, who: "Xmax" }, ampVoltage(800), EIGHT_OHM);
   for (const h of [0, 4.5, 7.5, 12]) {
     const r = channelPower("sub", max, h);
     close(t, r.peakHeadroomDb, 10 * Math.log10(r.maxPeakW / r.peakW), 1e-9);
@@ -99,7 +102,7 @@ test("peak headroom reads off the two peak columns, and equals the headroom less
 });
 
 test("past the limit only once the peak headroom reads below 0.0 dB", () => {
-  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800));
+  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM);
   const edge = MUSIC_CREST_DB - SINE_CREST_DB;
   assert.equal(channelPower("sub", max, edge).pastLimit, false);
   assert.equal(channelPower("sub", max, edge - 0.04).pastLimit, false);
@@ -138,10 +141,10 @@ test("the mid: the lowest drive between the crossovers sets its max, and names t
     { f: 500, spl: 109, who: "thermal" },
     { f: 1000, spl: 112, who: "amp" },
   ];
-  const m = midMax(max, curve, V, [80, 1200]);
+  const m = midMax(max, curve, V, [80, 1200], EIGHT_OHM);
   assert.ok(m);
   assert.equal(m.who, "Xmax");
   close(t, m.ampW, 1000, 1e-9);
   close(t, m.wAtMax, 1000 * 10 ** -0.6, 1e-9);
-  assert.equal(midMax(max, curve, V, [2000, 3000]), null);
+  assert.equal(midMax(max, curve, V, [2000, 3000], EIGHT_OHM), null);
 });
