@@ -11,7 +11,6 @@ import { spacePlacement } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { spaceModel } from "../src/lib/speaker/spaceCoverage";
 import { spaceAlignment } from "../src/lib/speaker/spaceAlignment";
-import { fillAlignment } from "../src/lib/speaker/fillAlign";
 import { speakerFromFill } from "../src/lib/speaker/fillSpec";
 import { presetLayers } from "../src/pages/stack/stackPresets";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
@@ -153,41 +152,30 @@ function paWithFill(): SpaceDesign {
     speakers: [...read.speakers, fill],
     space: {
       ...read.space,
-      placements: [...read.space.placements, spacePlacement({ x: 0, y: 30 }, item, 60)],
+      placements: [
+        ...read.space.placements,
+        { ...spacePlacement({ x: 0, y: 30 }, item, 60), fill: true },
+      ],
       venue: { ...read.space.venue, listener: { x: 0, y: 40 } },
     },
   };
 }
 
-test("alignment: a pair is one placement, to align and to align to; its two boxes share the delay", () => {
+test("alignment: a pair is one placement to solve; its two boxes share the delay and level", () => {
   const design = paWithFill();
   const model = spaceModel(design);
-  // three boxes in the model (the pair's two and the fill), two placements in the list
+  // three boxes in the model (the pair's two and the fill), two placements in the list and the solver
   assert.equal(model.placements.length, 3);
   const rows = spaceAlignment(model);
   assert.deepEqual([...new Set(rows.map((r) => r.placement))], [0, 1]);
-  // aligning the fill to the pair, or the pair to the fill, is a setting of one placement
-  const fillToPair = fillAlignment(model, design.space.venue, design.space.placements, 1, 0);
-  assert.ok(fillToPair);
-  assert.equal(fillToPair.placement, 1);
-  const pairToFill = fillAlignment(model, design.space.venue, design.space.placements, 0, 1);
-  assert.ok(pairToFill);
-  assert.equal(pairToFill.placement, 0);
-  // applied to the pair, both boxes play it
-  const set = {
-    ...design,
-    space: {
-      ...design.space,
-      placements: design.space.placements.map((p, i) =>
-        i === 0 ? { ...p, delayMs: pairToFill.delayMs, levelDb: pairToFill.levelDb } : p,
-      ),
-    },
-  };
-  const [a, b] = spaceModel(set).placements;
-  assert.equal(a.item.placement.delayMs, pairToFill.delayMs);
-  assert.equal(b.item.placement.delayMs, pairToFill.delayMs);
-  // a placement does not align to itself
-  assert.equal(fillAlignment(model, design.space.venue, design.space.placements, 0, 0), null);
+  assert.equal(model.solved.length, 2);
+  // every voice of a placement, the pair's two boxes alike, plays its one solved delay
+  for (const f of model.feeds) {
+    const own = model.solved[f.placement];
+    assert.ok(own);
+    assert.ok(Math.abs(f.delayMs - f.memberDelayMs - own.delayMs) < 1e-9, f.id);
+    assert.ok(Math.abs(f.gainDb - f.memberLevelDb - own.levelDb) < 1e-9, f.id);
+  }
 });
 
 /** A space as the library stores it and reads it back. */

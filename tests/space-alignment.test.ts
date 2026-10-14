@@ -34,7 +34,7 @@ const withFeed = (
   },
 });
 
-/** The PA space with a fill speaker placed down the room (placement 1), playing `delayMs` later. */
+/** The PA space with a fill placed down the room (placement 1), playing a typed `delayMs` later. */
 function withFill(delayMs: number): SpaceDesign {
   const design = paSpace();
   const fill = speakerFromFill(DEFAULT_FILL, { id: "fill", name: "Fill" });
@@ -45,7 +45,10 @@ function withFill(delayMs: number): SpaceDesign {
       speakers: [...design.speakers, fill],
       space: {
         ...design.space,
-        placements: [...design.space.placements, spacePlacement({ x: 0, y: 30 }, item, 60)],
+        placements: [
+          ...design.space.placements,
+          { ...spacePlacement({ x: 0, y: 30 }, item, 60), fill: true },
+        ],
       },
     },
     1,

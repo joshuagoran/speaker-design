@@ -21,6 +21,7 @@ import { GLUED_BACK } from "../../constants/bracing";
 import { defaultBraceStyleNear } from "../bracing";
 import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
 import {
+  AUTO_DELAY,
   CABINET_CONSTRUCTION,
   CABINET_TOP,
   CHAMBER_LOAD,
@@ -100,7 +101,14 @@ export const spacePlacement = (
   mirror,
   mirrored,
   levelDb: 0,
-  delayMs: 0,
+  delayMs: AUTO_DELAY,
+  fill: false,
+});
+
+/** The middle of a room's floor, ft: where a new space's alignment point starts. */
+export const roomCenter = (room: Pick<SpaceVenue["room"], "lengthFt">): FloorPoint => ({
+  x: 0,
+  y: room.lengthFt / 2,
 });
 
 /**
@@ -121,6 +129,7 @@ export function homeVenue(
   return {
     room,
     listener,
+    alignAt: roomCenter(room),
     earFt,
     targetDb: SPACE_HOME_TARGET_DB,
     // measured as the audience average, the same target in every band

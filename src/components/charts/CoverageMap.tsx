@@ -52,7 +52,8 @@ function quietLines(text: string, widthPx: number): string[] {
 type Drag =
   | { kind: "box"; i: number; dx: number; dy: number }
   | { kind: "aim"; i: number }
-  | { kind: "listener" };
+  | { kind: "listener" }
+  | { kind: "alignAt" };
 
 /**
  * A box the map draws, at its spot and aim (ft, degrees): its label, its footprint (in), the horizontal coverage of its
@@ -65,11 +66,15 @@ export interface MapBox extends FloorPlacement {
   turnable: boolean;
 }
 
-/** What a drag on the map does: move box `i` to a spot, turn it to face one, or move the listener. */
+/**
+ * What a drag on the map does: move box `i` to a spot, turn it to face one, move the listener, or move the alignment
+ * point (where it has one).
+ */
 export interface MapActions {
   moveBox: (i: number, p: FloorPoint) => void;
   aimBox: (i: number, p: FloorPoint) => void;
   moveListener: (p: FloorPoint) => void;
+  moveAlignAt?: (p: FloorPoint) => void;
 }
 
 interface Props {
@@ -77,6 +82,8 @@ interface Props {
   view: CoverageGridView | null;
   room: CoverageRoom;
   listener: FloorPoint;
+  /** the alignment point, drawn as a diamond (absent: none) */
+  alignAt?: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
   /**
@@ -105,6 +112,7 @@ export function CoverageMap({
   view,
   room,
   listener,
+  alignAt,
   actions,
   boxes,
   selected = [],
@@ -186,6 +194,7 @@ export function CoverageMap({
   const apply = (d: Drag, X: number, Y: number) => {
     const p = toFt(X, Y);
     if (d.kind === "listener") actions.moveListener(p);
+    else if (d.kind === "alignAt") actions.moveAlignAt?.(p);
     else if (d.kind === "aim") actions.aimBox(d.i, p);
     else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy });
   };
@@ -207,6 +216,8 @@ export function CoverageMap({
       const b = boxes[onBox];
       d = { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
     } else if (near(px(listener.x), py(listener.y), 18)) d = { kind: "listener" };
+    else if (alignAt && actions.moveAlignAt && near(px(alignAt.x), py(alignAt.y), 18))
+      d = { kind: "alignAt" };
     else if (p.x < -room.widthFt / 2 || p.x > room.widthFt / 2 || p.y < 0 || p.y > room.lengthFt)
       return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -293,7 +304,7 @@ export function CoverageMap({
         role="img"
         aria-busy={busy}
         data-testid={COVERAGE_TEST_IDS.map}
-        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
+        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room.${alignAt ? ` The alignment point is ${alignAt.x.toFixed(0)} ft across and ${alignAt.y.toFixed(0)} ft down the room.` : ""} Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -459,6 +470,20 @@ export function CoverageMap({
             </g>
           );
         })}
+        {alignAt && (
+          <g transform={`translate(${px(alignAt.x)} ${py(alignAt.y)}) rotate(45)`}>
+            <rect x="-8" y="-8" width="16" height="16" fill={ON_DATA.ink} />
+            <rect
+              x="-6"
+              y="-6"
+              width="12"
+              height="12"
+              fill={ON_DATA.magenta}
+              stroke={ON_DATA.white}
+              strokeWidth="2"
+            />
+          </g>
+        )}
         <circle cx={px(listener.x)} cy={py(listener.y)} r="9" fill={ON_DATA.ink} />
         <circle
           cx={px(listener.x)}

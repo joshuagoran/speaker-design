@@ -17,6 +17,7 @@ import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { HORN_PROFILE } from "./constants/hornEngine";
 import type {
   AUTO_DELAY,
+  AUTO_LEVEL,
   CABINET_CONSTRUCTION,
   ARCH_BLOCK,
   CABINET_TOP,
@@ -2280,10 +2281,18 @@ export interface SpacePlacement extends FloorPoint {
    * (`expandPlacements`)
    */
   mirrored: boolean;
-  /** the front end's level on its feed, against the space's other placements, dB (a fill under the mains) */
-  levelDb: number;
-  /** the front end's delay on its feed, ms (a fill waiting for the mains) */
-  delayMs: number;
+  /**
+   * the front end's level on its feed, against the space's other placements, dB (a fill under the mains), or, for a
+   * fill, Auto (`AUTO_LEVEL`): the space's solver sets it (lib/speaker/solveFeeds)
+   */
+  levelDb: number | typeof AUTO_LEVEL;
+  /**
+   * the front end's delay on its feed, ms, or Auto (`AUTO_DELAY`): the space's solver sets it
+   * (lib/speaker/solveFeeds). A mirrored pair's boxes share it.
+   */
+  delayMs: number | typeof AUTO_DELAY;
+  /** a fill: its Auto delay lines it up with the nearest main at its own aim point, not with the mains */
+  fill: boolean;
 }
 
 /** Which side of the center line a box of a mirrored pair stands on, seen from the listener, by id (`PAIR_SIDE`). */
@@ -2307,6 +2316,11 @@ export type DriverPart = (typeof DRIVER_PART)[keyof typeof DRIVER_PART];
 export interface SpaceVenue {
   room: CoverageRoom;
   listener: FloorPoint;
+  /**
+   * the alignment point, ft: the mains' Auto delays make them arrive together here (lib/speaker/solveFeeds). It
+   * starts at the room's center; moving the listener doesn't move it.
+   */
+  alignAt: FloorPoint;
   /** the ear's height above the floor, ft: the map and the levels are worked out there */
   earFt: CoverageLayout["earFt"];
   /**

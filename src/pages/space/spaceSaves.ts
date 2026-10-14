@@ -88,8 +88,8 @@ const isStack = (value: unknown): value is StackSpec =>
   Array.isArray(Reflect.get(value, "members"));
 
 /**
- * Whether a value reads as a list of placements: each names an item and has a spot, an aim and whether it is a mirrored
- * pair. (A draft or save from the time a placement could follow another has `follows` and no `mirrored`: not read.)
+ * Whether a value reads as a list of placements: each names an item and has a spot, an aim, whether it is a mirrored
+ * pair and whether it is a fill. (A draft or save from the time a placement could follow another has `follows` and no `mirrored`: not read.)
  */
 const isPlacements = (value: unknown): value is SpacePlacement[] =>
   Array.isArray(value) &&
@@ -102,6 +102,7 @@ const isPlacements = (value: unknown): value is SpacePlacement[] =>
         item: "object",
         aim: "object",
         mirrored: "boolean",
+        fill: "boolean",
       }) && !("follows" in p),
   );
 
@@ -109,11 +110,15 @@ const isPlacements = (value: unknown): value is SpacePlacement[] =>
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
   Object.values(ids).some((id) => id === value);
 
-/** Whether a value reads as a venue: its room, listener, ear height, target, where it is measured and balance. */
+/**
+ * Whether a value reads as a venue: its room, listener, alignment point, ear height, target, where it is measured and
+ * balance.
+ */
 const isVenue = (value: unknown): value is SpaceVenue =>
   hasFields(value, {
     room: "object",
     listener: "object",
+    alignAt: "object",
     earFt: "number",
     targetDb: "number",
     levelRef: "string",

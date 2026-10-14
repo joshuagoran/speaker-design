@@ -86,16 +86,32 @@ export const SPACE_PITCH_DEG = 30;
 /** The highest lift under a placement, in (a tall stand, a fly bar). */
 export const SPACE_LIFT_MAX_IN = 240;
 
-/** The band a fill's level is matched to the mains in (lib/speaker/fillAlign): the voice range a fill is there for. */
+/** The band a fill's Auto level is matched to the mains in (lib/speaker/solveFeeds): the voice range a fill is there for. */
 export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
 
 /**
- * How much later than the mains a fill arrives at the listener, ms, so the sound still seems to come from the mains (the
- * precedence effect): what the Align action adds to the path difference. 5 to 15 ms are usual: `FILL_PRECEDENCE_MS` is the
- * first, `FILL_PRECEDENCE_MAX_MS` the last.
+ * How much later than the mains a fill arrives in its area, ms, so the sound still seems to come from the mains (the
+ * precedence effect): what a fill's Auto delay adds (lib/speaker/solveFeeds). 5 to 15 ms are usual:
+ * `FILL_PRECEDENCE_MS` is the first, `FILL_PRECEDENCE_MAX_MS` the last.
  */
 export const FILL_PRECEDENCE_MS = 5;
 export const FILL_PRECEDENCE_MAX_MS = 15;
+
+/** Why a solved delay is not what its rule asks, by id (lib/speaker/solveFeeds). */
+export const DELAY_NOTE = {
+  /** a fill that would need a delay under 0 ms: it is held at 0 and arrives late */
+  clamped: "clamped",
+  /** a fill with no main to line up with */
+  noMain: "noMain",
+} as const;
+
+/** A main arriving at the listener within this of the latest main is on time (green), ms. */
+export const ARRIVAL_MAIN_ON_TIME_MS = 1;
+/** A main within this of the latest main is close (orange); beyond it, off (red), ms. */
+export const ARRIVAL_MAIN_CLOSE_MS = 3;
+
+/** How a box's arrival at the listener compares with the mains, by id (the status colors: green, orange, red). */
+export const ARRIVAL_STATUS = { onTime: "onTime", close: "close", off: "off" } as const;
 
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
 const SPACE_ONE_METER = "1 m from the speakers";
@@ -139,9 +155,9 @@ export const SPACE_TEXT = {
   noPlacements: `Nothing is placed yet. Pick a stack or speaker and press ${ADD_PLACEMENT}.`,
   missing: "A placement names a stack or speaker that is not in this space, so it is left out.",
   /** under the start buttons, and its tooltip */
-  startHint: "Both replace this space.",
+  startHint: "A preset brings its own room.",
   startTip:
-    "A preset stands in a room made for it. A PA preset also sets the band balance to More bass. Open a saved space from the library above.",
+    "A PA preset also sets the band balance to More bass. Open a saved space from the library above.",
   clear: "Start empty",
   addPlacement: ADD_PLACEMENT,
   /** the Place list's groups */
@@ -182,13 +198,16 @@ export const SPACE_TEXT = {
     "Turns the box over, so its left and right sides swap. Use it for a speaker made as a left or right model.",
   level: "Level, dB",
   delay: "Delay, ms",
-  alignTo: "Align to",
-  alignToTip:
-    "The placement to line this one up with, for a fill that plays after it. Move the listener to the area this placement covers first. The Align button sets this placement's Delay and Level.",
-  align: "Align",
-  delayTip: `The Align button lines this placement up with the one you pick, plus ${FILL_PRECEDENCE_MS} ms. Adding ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms more than the path difference makes people hear the sound from the main speakers.`,
-  alignFillNone:
-    "Cannot align: this placement and the one you pick must each hold a modeled stack or speaker.",
+  delayTip: `Auto delays the early boxes so they arrive with the last one at the alignment point. A fill arrives ${FILL_PRECEDENCE_MS} ms after the mains in its area.`,
+  /** an Auto delay: the time (ms) and the distance it equals (ft), already formatted */
+  delayAuto: (ms: string, ft: string) => `Auto: ${ms} ms (${ft} ft)`,
+  /** an Auto level, dB, already formatted */
+  levelAuto: (db: string) => `Auto: ${db} dB`,
+  fillLevelTip: "Auto plays this fill at the level of the nearest main, where the fill aims.",
+  fill: "Fill",
+  fillTip: `A fill plays ${FILL_PRECEDENCE_MS} ms after the nearest main, where it aims.`,
+  delayClamped: "This fill arrives late even with no delay. Move it nearer to its area.",
+  delayNoMain: "No main to line up with. Add a placement that is not a fill.",
   feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
   ampPower: "Amp power",
   ampPowerHint: AMP_POWER_TIP,
@@ -226,6 +245,11 @@ export const SPACE_TEXT = {
   bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
   targetCurve: "Target, band balance",
   listenerHint: "Tap the map, or drag the cyan dot, to move the listener.",
+  alignAtHint: "Drag the magenta diamond to move the alignment point.",
+  arrivals: "Arrival at the listener",
+  arrivalsTip: `Each box against the last main. Mains want 0 ms. A fill wants ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms.`,
+  /** one arrival row: the placement's name, then its time (ms) and distance (ft) after the last main, already formatted */
+  arrivalIs: (name: string, ms: string, ft: string) => `${name}: ${ms} ms (${ft} ft)`,
   /** under the one-frequency slider */
   oneNote: "One frequency adds all sources with phase.",
   audienceAverage: "Audience average",
@@ -250,6 +274,7 @@ export const SPACE_DETAILS = {
     "Drag a placement to move it.",
     "Drag its dot to turn it.",
     "Drag the listener, or tap the floor to put the listener there.",
+    "Drag the alignment point. The mains arrive together there.",
     "One frequency shows the interference between the placements.",
     `One frequency goes up to ${limitHz} Hz. Above it, the pattern is finer than the map.`,
   ],

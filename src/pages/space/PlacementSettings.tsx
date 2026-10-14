@@ -1,15 +1,17 @@
-import { useState } from "react";
 import type { SpacePlacement, SpaceVenue } from "../../types";
 import { Notice } from "../../components/ui/Notice";
 import { Button } from "../../components/ui/Button";
 import { CardFold } from "../../components/ui/CardFold";
 import { NumberField } from "../../components/ui/NumberField";
-import { SelectField, type SelectOption } from "../../components/ui/SelectField";
+import { AutoNumberField } from "../../components/ui/AutoNumberField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
-import { byId } from "../../lib/tables";
 import { wrapYawDeg } from "../../lib/speaker/spaceLayout";
+import { delayDistanceIn } from "../../lib/speaker/spaceAlignment";
+import type { SolvedFeed } from "../../lib/speaker/solveFeeds";
+import { AUTO_DELAY, AUTO_LEVEL } from "../../constants/speakerSpec";
 import {
+  DELAY_NOTE,
   placementDomId,
   SPACE_LIFT_MAX_IN,
   SPACE_PITCH_DEG,
@@ -18,7 +20,7 @@ import {
 import { formatSigned } from "../../lib/format";
 import { INCHES_PER_FOOT } from "../../constants/units";
 import { shownIn } from "../speaker/speakerFields";
-import { FIELD_ROW, GAP_Y } from "../../styles/layout";
+import { FIELD_ROW } from "../../styles/layout";
 
 interface Props {
   index: number;
@@ -32,8 +34,8 @@ interface Props {
   room: Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
   onEdit: (edit: (p: SpacePlacement) => SpacePlacement) => void;
   onRemove: () => void;
-  /** sets its delay and level to play with placement `to` at the listener; false when there is nothing to align to */
-  onAlign: (to: number) => boolean;
+  /** its delay and level as the space's solver sets them; undefined until the model holds it */
+  solved: SolvedFeed | undefined;
 }
 
 /** A value kept between `lo` and `hi`. */
@@ -44,7 +46,8 @@ const tenth = (v: number) => Math.round(v * 10) / 10;
 
 /**
  * One placement's settings: where it stands (all in feet), its aim, a flip, whether it is a mirrored pair (the box
- * stands again on the other side of the center line), and its level and delay on its feed.
+ * stands again on the other side of the center line), whether it is a fill, and its level and delay on its feed (Auto
+ * or typed; a main's level is always typed).
  */
 export function PlacementSettings({
   index,
@@ -55,17 +58,11 @@ export function PlacementSettings({
   room,
   onEdit,
   onRemove,
-  onAlign,
+  solved,
 }: Props) {
-  /** the last alignment found nothing to align to */
-  const [alignFailed, setAlignFailed] = useState(false);
-  /** the placement picked to align to, by its index; null: the first one listed */
-  const [alignPick, setAlignPick] = useState<string | null>(null);
-  // it aligns to any placement but its own (a mirrored pair is one placement)
-  const targets: SelectOption[] = names.flatMap((name, i) =>
-    i === index ? [] : [{ id: String(i), name }],
-  );
-  const alignTo = (alignPick !== null ? byId(targets, alignPick) : undefined) ?? targets[0];
+  /** the delay and level it plays with, solved or typed */
+  const delayMs = solved?.delayMs ?? (placement.delayMs === AUTO_DELAY ? 0 : placement.delayMs);
+  const levelDb = solved?.levelDb ?? (placement.levelDb === AUTO_LEVEL ? 0 : placement.levelDb);
   /** how far either side of the center line its spot may go, ft */
   const half = room.widthFt / 2;
   /** the highest height above the floor, ft */
@@ -74,7 +71,7 @@ export function PlacementSettings({
   const where = SPACE_TEXT.placementSummary(
     formatSigned(placement.x),
     placement.y.toFixed(1),
-    formatSigned(placement.levelDb),
+    formatSigned(levelDb),
   );
   const summary = placement.mirrored ? `${SPACE_TEXT.pairSummary} · ${where}` : where;
   return (
@@ -154,41 +151,60 @@ export function PlacementSettings({
         >
           {SPACE_TEXT.mirrored}
         </ToggleButton>
+        <ToggleButton
+          on={placement.fill}
+          title={SPACE_TEXT.fillTip}
+          onClick={() =>
+            // a new fill's level starts at Auto; a main keeps the level it plays at, typed
+            onEdit((p) => ({
+              ...p,
+              fill: !p.fill,
+              levelDb: p.fill ? tenth(levelDb) : AUTO_LEVEL,
+            }))
+          }
+        >
+          {SPACE_TEXT.fill}
+        </ToggleButton>
       </div>
-      <div className={FIELD_ROW}>
-        <NumberField
-          label={<Tooltip tip={SPACE_TEXT.feedTip}>{SPACE_TEXT.level}</Tooltip>}
-          value={tenth(placement.levelDb)}
+      {placement.fill ? (
+        <AutoNumberField
+          label={<Tooltip tip={SPACE_TEXT.fillLevelTip}>{SPACE_TEXT.level}</Tooltip>}
+          auto={placement.levelDb === AUTO_LEVEL}
+          autoText={SPACE_TEXT.levelAuto(formatSigned(levelDb))}
+          value={tenth(levelDb)}
+          fieldLabel={SPACE_TEXT.level}
           step={0.5}
-          onChange={(levelDb) => onEdit((p) => ({ ...p, levelDb }))}
+          // a typed level starts from the one Auto set
+          onAuto={(auto) => onEdit((p) => ({ ...p, levelDb: auto ? AUTO_LEVEL : tenth(levelDb) }))}
+          onChange={(db) => onEdit((p) => ({ ...p, levelDb: db }))}
         />
-        <NumberField
-          label={<Tooltip tip={SPACE_TEXT.delayTip}>{SPACE_TEXT.delay}</Tooltip>}
-          value={tenth(placement.delayMs)}
-          min={0}
-          step={0.1}
-          onChange={(delayMs) => onEdit((p) => ({ ...p, delayMs }))}
-        />
-      </div>
-      {alignTo && (
-        <div className={GAP_Y}>
-          <div className={FIELD_ROW}>
-            <SelectField
-              label={<Tooltip tip={SPACE_TEXT.alignToTip}>{SPACE_TEXT.alignTo}</Tooltip>}
-              options={targets}
-              value={alignTo}
-              onChange={(o) => {
-                setAlignPick(o.id);
-                setAlignFailed(false);
-              }}
-            />
-          </div>
-          <Button size="xs" onClick={() => setAlignFailed(!onAlign(Number(alignTo.id)))}>
-            {SPACE_TEXT.align}
-          </Button>
-          {alignFailed && <Notice>{SPACE_TEXT.alignFillNone}</Notice>}
+      ) : (
+        <div className={FIELD_ROW}>
+          <NumberField
+            label={<Tooltip tip={SPACE_TEXT.feedTip}>{SPACE_TEXT.level}</Tooltip>}
+            value={tenth(levelDb)}
+            step={0.5}
+            onChange={(db) => onEdit((p) => ({ ...p, levelDb: db }))}
+          />
         </div>
       )}
+      <AutoNumberField
+        label={<Tooltip tip={SPACE_TEXT.delayTip}>{SPACE_TEXT.delay}</Tooltip>}
+        auto={placement.delayMs === AUTO_DELAY}
+        autoText={SPACE_TEXT.delayAuto(
+          delayMs.toFixed(1),
+          (delayDistanceIn(delayMs) / INCHES_PER_FOOT).toFixed(1),
+        )}
+        value={tenth(delayMs)}
+        fieldLabel={SPACE_TEXT.delay}
+        min={0}
+        step={0.1}
+        // a typed delay starts from the one Auto set
+        onAuto={(auto) => onEdit((p) => ({ ...p, delayMs: auto ? AUTO_DELAY : tenth(delayMs) }))}
+        onChange={(ms) => onEdit((p) => ({ ...p, delayMs: ms }))}
+      />
+      {solved?.delayNote === DELAY_NOTE.clamped && <Notice>{SPACE_TEXT.delayClamped}</Notice>}
+      {solved?.delayNote === DELAY_NOTE.noMain && <Notice>{SPACE_TEXT.delayNoMain}</Notice>}
     </CardFold>
   );
 }

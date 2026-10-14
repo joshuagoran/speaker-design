@@ -22,8 +22,9 @@ import { keysOf } from "../../lib/records";
 import {
   spaceGridRequest,
   spaceLevelAt,
-  spaceModel,
+  spaceModelLaidOut,
   spaceResponse,
+  withSolved,
   type SpaceGridRequest,
 } from "../../lib/speaker/spaceCoverage";
 import { aimedPlacement, movedPlacement } from "../../lib/speaker/spaceLayout";
@@ -32,7 +33,7 @@ import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { presetLayers } from "../stack/stackPresets";
 import { STACK_START_DESIGN_NAMES, type StackPreset } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
-import { fillAlignment } from "../../lib/speaker/fillAlign";
+import { listenerArrivals, solveFeeds } from "../../lib/speaker/solveFeeds";
 import { withSpeaker } from "../stack/useStack";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
@@ -90,7 +91,10 @@ const inRoom = <P extends FloorPoint>(p: P, room: RoomFloor): P => ({
 const onFloor = (p: FloorPoint, room: RoomFloor): FloorPoint =>
   inRoom({ x: snap(p.x), y: snap(p.y) }, room);
 
-/** A space kept inside its room (after the room changes size): each placement's spot on the floor and the listener. */
+/**
+ * A space kept inside its room (after the room changes size): each placement's spot on the floor, the listener and the
+ * alignment point.
+ */
 export function fittedSpace(space: SpaceSpec): SpaceSpec {
   const { room } = space.venue;
   return {
@@ -99,6 +103,7 @@ export function fittedSpace(space: SpaceSpec): SpaceSpec {
     venue: {
       ...space.venue,
       listener: inRoom(space.venue.listener, room),
+      alignAt: inRoom(space.venue.alignAt, room),
     },
   };
 }
@@ -291,15 +296,27 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   const room = useDeferredValue(venue.room);
   const stacks = useDeferredValue(design.stacks);
   const speakers = useDeferredValue(design.speakers);
-  const model = useMemo(
+  /** the model at the typed delays and levels (Auto ones at 0): what the solver reads */
+  const laidOut = useMemo(
     () =>
-      spaceModel({
+      spaceModelLaidOut({
         space: { ...space, placements, venue: { ...venue, room } },
         stacks,
         speakers,
       }),
     // the model reads only these (the name, the listener and the target don't move it)
     [placements, room, stacks, speakers],
+  );
+  /** every Auto delay and level, solved from the layout (the listener doesn't move them) */
+  const solved = useMemo(
+    () => solveFeeds(laidOut, { alignAt: venue.alignAt, earFt: venue.earFt, room }),
+    [laidOut, venue.alignAt, venue.earFt, room],
+  );
+  const model = useMemo(() => withSolved(laidOut, solved), [laidOut, solved]);
+  /** each placement's arrival at the listener against the latest main */
+  const arrivals = useMemo(
+    () => listenerArrivals(model, venue.listener, venue.earFt),
+    [model, venue.listener, venue.earFt],
   );
   const req = useMemo<Omit<SpaceGridRequest, "cols">>(
     () => spaceGridRequest(model, { room, earFt: venue.earFt }, band, freqHz, COVERAGE_GRID_COLS),
@@ -550,6 +567,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     /** replaces the design whole: a start, a clear or an opened save */
     replaceDesign,
     model,
+    arrivals,
     view,
     stats,
     gain,
@@ -602,20 +620,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       if (box) editPlacements((list) => withBoxAimed(list, box, p));
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
-    /**
-     * sets the delay and level of placement `k` (a mirrored pair is one placement) to play with placement `to` at the
-     * listener, a little after it (lib/speaker/fillAlign); false when there is nothing to align to
-     */
-    alignTo: (k: number, to: number) => {
-      const aligned = fillAlignment(model, venue, space.placements, k, to);
-      if (aligned)
-        editPlacement(aligned.placement, (p) => ({
-          ...p,
-          levelDb: aligned.levelDb,
-          delayMs: aligned.delayMs,
-        }));
-      return aligned !== null;
-    },
+    /** moves the alignment point, where the mains arrive together */
+    moveAlignAt: (p: FloorPoint) => editVenue((v) => ({ ...v, alignAt: onFloor(p, v.room) })),
     /** the room's settings (`RoomFields`) */
     room: {
       // a smaller room keeps what it holds inside
