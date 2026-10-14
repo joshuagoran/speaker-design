@@ -25,7 +25,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - US spelling everywhere (center, color): UI text, comments, docs and identifiers. Keys that saved data or links
   already carry keep their spelling (comment why).
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
-- Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent.
+- Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent. When a second page needs a control, first move it into `src/components/ui`, then use it on both pages.
 - A page with settings uses `SettingsLayout`: from md up the page doesn't scroll; the results and the `SettingsColumn` are two panes, each with its own scrollbar. Long settings (PA, Hi-fi) split into `SettingsSection` folds with a one-line summary each, built from the state and the catalog. Page width and gutters come from `PAGE_WIDTH` (`src/styles/layout.ts`): the full window width, never capped; on very wide screens a single result block (chart, stat tiles, detail list, notices) (also the saved configurations, optimizer, Details and dispersion blocks) stops at `RESULT_MAX_WIDTH` and prose at `READING_WIDTH`. The PA and Hi-fi Design results take two columns from `RESULTS_TWO_COLUMN_PX` (`resultsGridClass` / `resultsCellClass`), using the full pane.
 
 ## TypeScript
