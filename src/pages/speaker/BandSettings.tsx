@@ -1,4 +1,5 @@
 import { Tooltip } from "../../components/ui/Tooltip";
+import { AMP_POWER_LABEL, AMP_POWER_TIP } from "../../constants/ampPower";
 import type { SpeakerBand } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -68,8 +69,8 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
       <NumberField
         // passive: the channel it shares
         label={
-          <Tooltip tip={SPEAKER_TEXT.ampTip}>
-            {band.drive === HIFI_DRIVE.passive ? "Shared amp channel" : "Amp power"}
+          <Tooltip tip={AMP_POWER_TIP}>
+            {band.drive === HIFI_DRIVE.passive ? SPEAKER_TEXT.sharedAmp : AMP_POWER_LABEL}
           </Tooltip>
         }
         value={band.ampW}

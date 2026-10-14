@@ -1,16 +1,15 @@
 // Watts and volts at a driver's nominal impedance: the one rule every engine (PA, Hi-fi, Speaker, Stack, Space and the
-// optimizers) uses to turn a power rating into a drive voltage and back. A driver takes `volts² / imp` watts; an amp is
-// a voltage ceiling, its watts rated into 8 Ω (`AMP_RATING`), so a 4 Ω driver takes twice an amp's rated watts. That is
-// an ideal amp, and an estimate: real amps list about 1.5× their 8 Ω watts into 4 Ω (src/data/catalog/amps.ts `w4`),
-// some less, but no design names its amp model yet, so there is no listed rating to read.
+// optimizers) uses to turn a power figure into a drive voltage and back. A driver takes `volts² / imp` watts. An amp
+// power setting is the watts into the driver's nominal impedance, as entered: the user gives the amp's rating at the
+// load it drives (the settings' tooltip says so), and the model takes it as it is, with no conversion from 8 Ω.
 // Pure.
 import type { NominalImpedance } from "../types";
 
 /** The impedance a driver is taken at where its nominal impedance isn't entered, Ω (a gap: `NominalImpedance`). */
 export const FALLBACK_OHMS = 8;
 
-/** The load an amp's watts are rated into: the amp is a voltage ceiling, √(8 Ω · W). */
-export const AMP_RATING = { imp: 8 } as const satisfies Required<NominalImpedance>;
+/** The load a 2.83 V sensitivity is 1 W into, Ω: a datasheet's 1 W figure moves to 2.83 V by 10·log10(8 / imp). */
+export const SENSITIVITY_REFERENCE_OHMS = 8;
 
 /** A part's nominal impedance, Ω: its own, or `FALLBACK_OHMS` where it isn't entered. */
 export const ohmsOf = (part: NominalImpedance): number =>

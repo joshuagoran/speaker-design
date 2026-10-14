@@ -42,7 +42,11 @@ test("headroom: the gain and the pad together, never below 0", () => {
 });
 
 test("a channel at the target: 13 dB headroom under an amp-limited 800 W sub", (t) => {
-  const r = channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM), 13);
+  const r = channelPower(
+    "sub",
+    subMax({ W: 800, who: "amp" }, ampVoltage(800, EIGHT_OHM), EIGHT_OHM),
+    13,
+  );
   close(t, r.ampW, 800, 1e-9);
   close(t, r.avgW, 800 * 10 ** -1.3, 1e-9);
   close(t, r.peakW, 800 * 10 ** -0.3, 1e-9);
@@ -52,14 +56,14 @@ test("a channel at the target: 13 dB headroom under an amp-limited 800 W sub", (
 
 test("peak headroom: the headroom less the crest's lead over a sine's (about 7 dB)", (t) => {
   close(t, MUSIC_CREST_DB - SINE_CREST_DB, 6.99, 0.01);
-  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM);
+  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800, EIGHT_OHM), EIGHT_OHM);
   close(t, channelPower("sub", max, 10).peakHeadroomDb, SINE_CREST_DB, 1e-9);
   close(t, channelPower("sub", max, 4).peakHeadroomDb, 4 - 10 + SINE_CREST_DB, 1e-9);
 });
 
 test("the owner's screenshot: an Xmax-limited sub at 7.0 dB, peaks right at Xmax", (t) => {
   // 644 W sine at Xmax: the peaks (1,288 W) reach Xmax's peaks (twice 644 W) at 7.0 dB, and pass them below
-  const max = subMax({ W: 644, who: "Xmax" }, ampVoltage(800), EIGHT_OHM);
+  const max = subMax({ W: 644, who: "Xmax" }, ampVoltage(800, EIGHT_OHM), EIGHT_OHM);
   const at7 = channelPower("sub", max, 7);
   close(t, at7.peakHeadroomDb, 0, 0.05);
   assert.equal(at7.pastLimit, false);
@@ -73,11 +77,16 @@ test("the owner's screenshot: an Xmax-limited sub at 7.0 dB, peaks right at Xmax
 test("max peak: twice the amp's rating amp-limited, twice the model's watts at another limit", (t) => {
   close(
     t,
-    channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM), 9).maxPeakW,
+    channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800, EIGHT_OHM), EIGHT_OHM), 9)
+      .maxPeakW,
     1600,
     1e-9,
   );
-  const xmax = channelPower("sub", subMax({ W: 642, who: "Xmax" }, ampVoltage(800), EIGHT_OHM), 9);
+  const xmax = channelPower(
+    "sub",
+    subMax({ W: 642, who: "Xmax" }, ampVoltage(800, EIGHT_OHM), EIGHT_OHM),
+    9,
+  );
   close(t, xmax.maxPeakW, 1284, 1e-9);
   close(t, xmax.ampW, 800, 1e-9);
   close(
@@ -90,7 +99,7 @@ test("max peak: twice the amp's rating amp-limited, twice the model's watts at a
 
 test("peak headroom reads off the two peak columns, and equals the headroom less about 7 dB", (t) => {
   // the owner's case: an Xmax-limited sub at 114 W average, 1,140 W peak
-  const max = subMax({ W: 642, who: "Xmax" }, ampVoltage(800), EIGHT_OHM);
+  const max = subMax({ W: 642, who: "Xmax" }, ampVoltage(800, EIGHT_OHM), EIGHT_OHM);
   for (const h of [0, 4.5, 7.5, 12]) {
     const r = channelPower("sub", max, h);
     close(t, r.peakHeadroomDb, 10 * Math.log10(r.maxPeakW / r.peakW), 1e-9);
@@ -102,7 +111,7 @@ test("peak headroom reads off the two peak columns, and equals the headroom less
 });
 
 test("past the limit only once the peak headroom reads below 0.0 dB", () => {
-  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800), EIGHT_OHM);
+  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800, EIGHT_OHM), EIGHT_OHM);
   const edge = MUSIC_CREST_DB - SINE_CREST_DB;
   assert.equal(channelPower("sub", max, edge).pastLimit, false);
   assert.equal(channelPower("sub", max, edge - 0.04).pastLimit, false);
@@ -121,19 +130,19 @@ test("the horn: its model's power and the amp's power into its impedance", () =>
   assert.deepEqual(m, { wAtMax: 120, ampW: 200, who: "thermal" });
 });
 
-test("the amp rating column: a 16 ohm CD on a 100 W (8 ohm) amp gets 50 W", (t) => {
+test("the amp rating column: a 16 Ω CD on 100 W of amp power gets 100 W (the watts into the driver)", (t) => {
   const hf = { sens: 108, sensRef: "", aes: 80, aesXo: 1000, minXo: 1000, imp: 16 };
   const h = hornResponse(hf, {}, 1200, 100, 4);
   assert.ok(h);
   const r = channelPower("horn", hornMax(h), 10);
-  close(t, r.ampW, 50, 1e-9);
+  close(t, r.ampW, 100, 1e-9);
   // amp-limited: the max peak is twice the amp's watts into the CD
   assert.equal(r.who, "amp");
-  close(t, r.maxPeakW, 100, 1e-9);
+  close(t, r.maxPeakW, 200, 1e-9);
 });
 
 test("the mid: the lowest drive between the crossovers sets its max, and names the limit", (t) => {
-  const V = ampVoltage(1000);
+  const V = ampVoltage(1000, EIGHT_OHM);
   const curve = [{ spl: 100 }, { spl: 110 }, { spl: 112 }, { spl: 112 }];
   const max: PaMaxPoint[] = [
     { f: 50, spl: 80, who: "Xmax" }, // below the band: ignored

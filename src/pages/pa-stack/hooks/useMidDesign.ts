@@ -24,7 +24,7 @@ export function useMidDesign(): MidDesign {
   const [midDriver, setMidDriver] = useState(DEFAULT_PA.mid);
   const [midBoxPreset, setMidBoxPreset] = useState(DEFAULT_PA.midBox); // last preset loaded
   const [midBoxDims, setMidBoxDims] = useState<Dims3>(DEFAULT_PA.mDim);
-  const [midAmpWatts, setMidAmpWatts] = useState(DEFAULT_PA.mAmpW); // amp power per mid channel, into 8 Ω
+  const [midAmpWatts, setMidAmpWatts] = useState(DEFAULT_PA.mAmpW); // amp power per mid channel, W into the driver
   const [midBelowSubDb, setMidBelowSubDb] = useState(DEFAULT_PA.tilt); // the music balance: the mid band level below the sub, dB
   const setMidBoxDim = (k: keyof Dims3, v: number) => setMidBoxDims((p) => ({ ...p, [k]: v }));
   const [midSize, setMidSize] = useState<MidSize>(DEFAULT_PA.midSize);

@@ -18,7 +18,7 @@ import { driverName } from "./speakerParts";
 import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
 import { hfHeadroomChip } from "../../lib/pa/chips";
 import { hfLimitWatts } from "../../lib/pa/calc";
-import { AMP_RATING } from "../../lib/power";
+import { bandLoads } from "../../lib/speaker/speakerLimits";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 
 /** A Speaker-page check. */
@@ -32,7 +32,7 @@ const pctOf = (p: LimitPeak) => Math.round((100 * p.peak) / p.limit);
  * keep-up against the band under it at their crossover in the box (lib/speaker/keepUp).
  */
 export function bandChips(
-  spec: Pick<SpeakerSpec, "bands" | "input">,
+  spec: Pick<SpeakerSpec, "bands" | "input" | "cabinet">,
   limits: SpeakerLimits,
   response?: Pick<SpeakerResponse, "bands">,
 ): { id: BandId; chips: SpeakerChip[] }[] {
@@ -63,7 +63,7 @@ export function bandChips(
         ? [
             "ok",
             "Amp-limited",
-            `The ${name} takes ${formatWatts(hf.watts)}${hf.imp === AMP_RATING.imp ? amp : ` into its ${hf.imp} Ω${amp} (rated into ${AMP_RATING.imp} Ω)`}, under its program rating${derated}.`,
+            `The ${name} takes ${formatWatts(hf.watts)}${amp}, under its program rating${derated}.`,
             "speakerHfPower",
           ]
         : [
@@ -79,7 +79,12 @@ export function bandChips(
     const padChip: SpeakerChip | null =
       hf && band?.drive === HIFI_DRIVE.passive && pad > 0
         ? [
-            ...hfHeadroomChip(pad, hf.programW, hfLimitWatts(hf.programW, hf, pad), band.ampW),
+            ...hfHeadroomChip(
+              pad,
+              hf.programW,
+              hfLimitWatts(hf.programW, hf, pad, bandLoads(spec).get(b.id) ?? {}),
+              band.ampW,
+            ),
             "speakerHfPad",
           ]
         : null;
@@ -172,7 +177,7 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
             "speakerRadiatorTravel",
           ],
     );
-  const amp = `The amp gives ${formatWatts(c.driveW)} into ${AMP_RATING.imp} Ω`;
+  const amp = `The amp gives ${formatWatts(c.driveW)}`;
   const rating = `the driver's ${formatWatts(c.programW)} program rating (2 × AES)`;
   chips.push(
     // the same when they read the same (an amp sized to the rating)

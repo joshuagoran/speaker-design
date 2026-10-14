@@ -38,7 +38,7 @@ import {
   needsWaveguide,
   isCoax,
 } from "./hifi";
-import { ampVoltage, ventTuning } from "../pa/calc";
+import { ventTuning } from "../pa/calc";
 import { hifiPairLevelDb, inFarField } from "./nearField";
 import { hifiBoxMin } from "./boxLayout";
 import { boxSliderMins } from "../boxFit";
@@ -56,6 +56,7 @@ import {
 } from "../data";
 import type {
   ChangeName,
+  NominalImpedance,
   ChipId,
   Dims3,
   DimensionLockMode,
@@ -146,7 +147,8 @@ export const hifiSearchTweeterLevel = (
   box: Pick<HifiScoredBox, "refW">,
   xo: number,
   wAmpW: number,
-) => tweeterLevelInBox(tt, { ...cur, xo, wAmpW }, box.refW).tLevel;
+  woofer: NominalImpedance,
+) => tweeterLevelInBox(tt, { ...cur, xo, wAmpW }, box.refW, woofer).tLevel;
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -885,7 +887,9 @@ export function optimizeHifiSpeaker(
   });
   // a tweeter's clean level in a box at a crossover and woofer amp: its own amp's (step 2), or through the passive pad
   const tweeterLevel = (ti: number, e: BoxEntry, xi: number, wAmpW: number) =>
-    passive ? hifiSearchTweeterLevel(tws[ti].tt, cur, e, xos[xi], wAmpW) : tws[ti].tLevel[xi];
+    passive
+      ? hifiSearchTweeterLevel(tws[ti].tt, cur, e, xos[xi], wAmpW, e.w.ts)
+      : tws[ti].tLevel[xi];
   // what the cards hold a design to: what the goals keep, and the axes the alternatives come from
   const K = curM ? keeps(curM) : null;
   const meets = (m: HifiMetrics) => !K || goals.every((g) => gapTo(K[g], m) === 0);
@@ -914,7 +918,6 @@ export function optimizeHifiSpeaker(
     dLevel: number[] = [],
     dWamp: number[] = [];
   const seatDb = 20 * Math.log10(seat) - HIFI_PAIR_SUM_DB,
-    V0 = ampVoltage(amps.wAmpW),
     nearSeat = !inFarField(seat);
   let lastBi = -1,
     bTws: readonly number[] = [];
@@ -962,7 +965,7 @@ export function optimizeHifiSpeaker(
           : ampForGain(amps.wAmpW, tLevel - r.ampDb, HIFI_AMP_WATTS_STEPS.wAmpW);
         if (w === null) continue;
         wAmpW = w;
-        wLevel = Math.min(r.ampDb + 20 * Math.log10(ampVoltage(w) / V0), r.drvDb);
+        wLevel = Math.min(r.ampDb + 10 * Math.log10(w / amps.wAmpW), r.drvDb);
         if (passive) tLevel = tweeterLevel(ti, e, r.xi, w);
         if (tLevel < wLevel) continue;
       }

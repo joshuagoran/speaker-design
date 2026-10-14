@@ -349,7 +349,7 @@ export function sealedMid(
   brace: MidBrace,
 ): SealedMid {
   const ts = mid.ts;
-  const volts = ampVoltage(mAmpW);
+  const volts = ampVoltage(mAmpW, ts);
   const { Sd, Mms, Mas, Cas, Cab, Fc, Qts } = sealedBox(mid, box, t, inset, brace);
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
   const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);

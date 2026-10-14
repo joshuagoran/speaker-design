@@ -269,7 +269,7 @@ describe("coaxials: the Hi-fi engine against the Fills model", () => {
       expect(h.tweeter).toBeNull();
       expect(coaxParts(d).gaps).toEqual([COAX_GAP.hf]);
       expect(fill.hfLimW).toBeNull();
-      expect(h.b.V).toBeCloseTo(ampVoltage(DEFAULT_FILL.ampWatts), 9);
+      expect(h.b.V).toBeCloseTo(ampVoltage(DEFAULT_FILL.ampWatts, h.woofer.ts), 9);
     }
   });
 });

@@ -22,6 +22,9 @@ import { MID_DEPTH_FALLBACK_IN } from "../src/data/catalog/driver-cutouts";
 import type { MidSystemConfig, SubSystemConfig } from "../src/types";
 import { close, db, LR24_ORDERS } from "./helpers";
 
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
+
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts)!;
 const cfg: MidSystemConfig = {
   midDims: { w: 15, h: 15, d: 15 },
@@ -137,7 +140,7 @@ test("mid max in the passband: thermal-limited SPL = mass line at the program-ra
 });
 test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above the sub curve", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
-    V = ampVoltage(10);
+    V = ampVoltage(10, EIGHT_OHM);
   const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
   const s = subThroughLowpass(mdl, ts, V, 20, 120, 4);
   const i = mdl.curve.indexOf(nearestPoint(mdl.curve, 120));
@@ -147,7 +150,7 @@ test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above th
 });
 test("subThroughLp: the lowpass relaxes the limits (more drive above the crossover)", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
-    V = ampVoltage(3000);
+    V = ampVoltage(3000, EIGHT_OHM);
   const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
   const s = subThroughLowpass(mdl, ts, V, 20, 80, 4),
     k = mdl.curve.indexOf(nearestPoint(mdl.curve, 200));

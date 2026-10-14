@@ -46,7 +46,7 @@ export function useSubwooferDesign(): SubwooferDesign {
   const [ductDividerPanel, setDuctDividerPanel] = useState<PanelNominal>(DEFAULT_PA.divider);
   const [subHighpassHz, setSubHighpassHz] = useState(DEFAULT_PA.hpf);
   const [subHighpassType, setSubHighpassType] = useState<HighpassType>(DEFAULT_PA.hpType); // sub highpass alignment
-  const [subAmpWatts, setSubAmpWatts] = useState(DEFAULT_PA.ampW); // amp power per sub channel, into 8 Ω
+  const [subAmpWatts, setSubAmpWatts] = useState(DEFAULT_PA.ampW); // amp power per sub channel, W into the driver
   const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(DEFAULT_PA.portMax); // peak port air speed allowed, m/s
   const setSubBoxDim = (k: keyof Dims3, v: number) => setSubBoxDims((p) => ({ ...p, [k]: v }));
   const setSubVentField = (k: Exclude<keyof VentSpec, "div">, v: number) =>

@@ -19,6 +19,17 @@ export const PAST_LIMIT_ON_PEAKS: Record<LimitId, string> = {
   throat: "Throat past limit on peaks",
 };
 
+/** Every amp power setting's label (PA, Fills, Speaker): the watts as entered, into the driver. */
+export const AMP_POWER_LABEL = "Amp power, W";
+/** The Hi-fi page's two amp power settings (the woofer's and the tweeter's channel). */
+export const HIFI_AMP_LABELS = {
+  woofer: "Woofer amp power, W",
+  tweeter: "Tweeter amp power, W",
+} as const;
+/** Its tooltip: the model takes the watts into the driver's impedance as entered (lib/power), so give it the load's. */
+export const AMP_POWER_TIP =
+  "Use your amp's power rating at the load it drives (for example, at 4 Ω or 8 Ω).";
+
 /** The Coverage page's amp power table: its heading, column names and notes. */
 export const AMP_POWER_TEXT = {
   heading: "Amp power at the target",
@@ -30,7 +41,4 @@ export const AMP_POWER_TEXT = {
   headroom: "Peak headroom",
   limit: "Limit",
   crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. Max peak is the power at the first limit.`,
-  /** shown when a driver is below 8 Ω: no amp model is chosen, so its rating there is an ideal amp's */
-  lowImpedanceNote:
-    "Below 8 Ω the amp rating is an estimate: an ideal amp, twice its 8 Ω watts into 4 Ω. Real amps list about 1.5×; check yours.",
 } as const;

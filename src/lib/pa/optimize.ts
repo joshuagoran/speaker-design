@@ -95,7 +95,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
-import { highpassOptions, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
+import { highpassOptions, inSearchSpace, rangeOf, ventSizesFor } from "../optimizer/searchSpace";
 import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
@@ -689,6 +689,23 @@ export const paSearchAmps = (cur: PaDesignConfig, locks: PaOptimizerLocks) => ({
 });
 
 /**
+ * The subs a PA search tries: yours alone when it is locked (none when the tables don't have it); else every sub with
+ * T/S that the budget allows, of your size class or of every size (`allSizes`, the exact search), each driver once
+ * (`inSearchSpace`: no other impedance version of it).
+ */
+export function paSearchSubs(
+  curId: string,
+  locked: boolean,
+  budget: number,
+  allSizes: boolean,
+): SubDriver[] {
+  const curSub = byId(SUB_OPTIONS, curId);
+  if (locked) return curSub ? [curSub] : [];
+  const table = allSizes ? SUB_OPTIONS : subDriversOfSize(curSub ? curSub.size : 18);
+  return table.filter((o) => inSearchSpace(o) && !!o.ts && o.price <= budget);
+}
+
+/**
  * The quick search; `onProgress` hears how far it has got (coarse: grid points, then work units per step). With `exact`,
  * the exact search (lib/pa/optimizeExact) adds its grid's designs to this search's pool and reports its own progress.
  */
@@ -745,11 +762,7 @@ export function optimizePaStack(
   ): o is T & { price: number } => !!o.ts && o.price != null;
   // a locked driver that isn't in the tables leaves nothing to search. The exact search runs this one too: its designs
   // join the exact search's pool, so Fully optimize's cards are never behind Improve's (the two grids differ)
-  const subs = locks.sub
-    ? curSub
-      ? [curSub]
-      : []
-    : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
+  const subs = paSearchSubs(cur.sub, !!locks.sub, budget, false);
   const walls = paOptimizerWalls(cur);
   const braceStyle = paSearchBraceStyle(cur);
   const backJoint = savedBackJoint(cur.backJoint);
@@ -761,7 +774,8 @@ export function optimizePaStack(
     h: rangeOf(locks.subDim.h, cur.cDim.h, SUB_BOX_RANGE.h),
     d: rangeOf(locks.subDim.d, cur.cDim.d, SUB_BOX_RANGE.d),
   };
-  const AMP_V = ampVoltage(amps.ampW);
+  /** the sub amp's voltage into a sub: the amp power is the watts into its impedance (lib/power) */
+  const subAmpV = (sub: SubDriver) => ampVoltage(amps.ampW, sub.ts);
 
   // box shapes inside the limits with gross volume near G, lightest first, a few distinct depths
   const allExact = sr.w[0] === sr.w[1] && sr.h[0] === sr.h[1] && sr.d[0] === sr.d[1];
@@ -848,6 +862,7 @@ export function optimizePaStack(
             Leff = (Sp * 0.00064516 * 343 * 343) / ((2 * Math.PI * Fb) ** 2 * (V / 1000));
           const Lp = Leff / 0.0254 - 1.46 * Math.sqrt(Sp / Math.PI);
           if (Lp <= 0) continue;
+          const AMP_V = subAmpV(sub);
           const mdl = boxModel(sub.ts, V, Sp, Lp, hpf, AMP_V, cur.hpType, { N: 70 });
           evals++;
           if (!mdl) continue;
@@ -1034,6 +1049,7 @@ export function optimizePaStack(
             const vW = ampWatts(
               (fallback.s.AMP_V * (0.9 * ventSpeedLimit(style, cur.portMax))) /
                 fallback.s.mdl.peakVel,
+              sd.sub.ts,
             );
             const ampW = onSlider(vW, AMP_WATTS_STEPS.ampW);
             if (ampW !== null) {
@@ -1234,7 +1250,7 @@ export function optimizePaStack(
           midNetLiters(boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset), disp, bracing) *
           STUFFING_VOLUME_GAIN;
         for (const xoLo of xoLos) {
-          const V = ampVoltage(amps.mAmpW),
+          const V = ampVoltage(amps.mAmpW, m.ts),
             mdl = closedBox(m.ts, eff, xoLo, null, V, {
               N: 120,
               hpOrder: cur.xoLoOrder,

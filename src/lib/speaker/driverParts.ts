@@ -31,7 +31,7 @@ import { ohmsOf } from "../power";
  * its power rating, which the limits read (lib/speaker/speakerLimits), and its displacement, L.
  */
 export interface ConeParts {
-  ts: BoxModelTS & Pick<ThieleSmall, "aes">;
+  ts: BoxModelTS & Pick<ThieleSmall, "aes" | "imp">;
   dispL: number;
 }
 

@@ -17,7 +17,6 @@ import type {
   VentSpec,
 } from "../../types";
 import {
-  ampVoltage,
   ampWatts,
   isRoundPort,
   maxFoldedSlotIn,
@@ -420,7 +419,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       gap = m.spl - needDb;
     // amp power that would close the gap, if the amp is what's short
     const vNeed = V * Math.pow(10, -gap / 20),
-      wNeed = ampWatts(vNeed);
+      wNeed = ampWatts(vNeed, ts);
     F.push(
       gap < -KEEP_UP_SLACK_DB
         ? [
@@ -512,8 +511,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
             "warn",
             KEEP_UP_TEXT.shortTitle(PA_SETTINGS_TABS.horn),
             `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hornBelowMidDb} dB for the HF band. ` +
-              (hornModel.who === "amp" &&
-              voltsToWatts(ampVoltage(wNeed), hornModel) <= hornModel.pProg
+              (hornModel.who === "amp" && wNeed <= hornModel.pProg
                 ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel is enough.`
                 : "The driver's rating is the limit. Raise the crossover."),
             "hornKeepsUp",
@@ -611,7 +609,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
 
 /**
  * An HF section through a passive pad `pad` dB on the amp it shares: the amp power at which it reaches its program
- * rating `ratingW` (`hfLimW`, W into 8 Ω) against the amp's `ampW`. The Fills page's and the Speaker page's check.
+ * rating `ratingW` (`hfLimW`, W into the channel's load) against the amp's `ampW`. The Fills page's and the Speaker page's check.
  */
 export function hfHeadroomChip(
   pad: number,

@@ -234,6 +234,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 399.9,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "bc18tbx",
     ts: {
       Fs: 30,
       Qts: 0.31,
@@ -304,6 +305,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 739.56,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "bc18sw",
     ts: {
       Fs: 34,
       Qts: 0.3,
@@ -374,6 +376,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 472.38,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "bc18tbw",
     ts: {
       Fs: 33,
       Qts: 0.32,
@@ -477,6 +480,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 458.1,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "bc18nw",
     ts: {
       Fs: 30,
       Qts: 0.27,
@@ -515,6 +519,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 448.56,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "bc18nbx",
     ts: {
       Fs: 35,
       Qts: 0.37,
@@ -680,6 +685,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 455.04,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "ciare18sw",
     ts: {
       Fs: 36,
       Qts: 0.61,
@@ -755,6 +761,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 459.95,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "ciarendh18",
     ts: {
       Fs: 31,
       Qts: 0.25,
@@ -829,6 +836,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 389.95,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "f18fh510",
     ts: {
       Fs: 30,
       Qts: 0.26,
@@ -900,6 +908,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 459.95,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "f18fh500",
     ts: {
       Fs: 28,
       Qts: 0.29,
@@ -1004,6 +1013,7 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     price: 459.95,
     src: "usspeaker.com, Oct 2026",
     size: 18,
+    variantOf: "f18hp1010",
     ts: {
       Fs: 35,
       Qts: 0.31,

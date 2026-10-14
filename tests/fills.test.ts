@@ -16,6 +16,9 @@ import { FILL_OPTIONS } from "../src/lib/data";
 import type { FillSystemConfig } from "../src/types";
 import { close, massLineSPL, LR24_ORDERS } from "./helpers";
 
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
+
 /** `fillSystem` for a fill that has a model, as every one here does. */
 const fillSystem = (...args: Parameters<typeof fillSystemOrNull>) => {
   const s = fillSystemOrNull(...args);
@@ -62,7 +65,7 @@ test("fills f3 includes the highpass: raising the highpass raises f3", (t) => {
 });
 test("fills model calls match the planner's box models", (t) => {
   const v = fillSystem(drv, base),
-    V = ampVoltage(300);
+    V = ampVoltage(300, EIGHT_OHM);
   const m = boxModel(drv.ts, v.eff, v.pArea, 4, 70, V, "LR24", { nPorts: 1 });
   close(t, v.vM!.Fb, m!.Fb, 1e-12);
   const s = fillSystem(drv, { ...base, boxType: "sealed" });

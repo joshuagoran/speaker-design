@@ -7,6 +7,7 @@ import { StatTileGrid } from "../../components/stats/StatTileGrid";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { CrossoverSlopeButtons } from "../../components/ui/CrossoverSlopeButtons";
 import { Tooltip } from "../../components/ui/Tooltip";
+import { AMP_POWER_LABEL, AMP_POWER_TIP } from "../../constants/ampPower";
 import { Card } from "../../components/ui/Card";
 import { SelectField } from "../../components/ui/SelectField";
 import { Slider } from "../../components/ui/Slider";
@@ -298,7 +299,7 @@ export function FillsPage({ fills }: Props) {
               label="Highpass slope"
             />
             <Slider
-              label="Amp power per box @ 8 Ω"
+              label={<Tooltip tip={AMP_POWER_TIP}>{AMP_POWER_LABEL}</Tooltip>}
               value={ampWatts}
               min={25}
               max={800}

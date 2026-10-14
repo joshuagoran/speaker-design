@@ -42,6 +42,10 @@ import type {
   ListenerGeometry,
 } from "../src/types";
 import { close } from "./helpers";
+import { ohmsOf } from "../src/lib/power";
+
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
 
 const IN = 0.0254;
 /** The default design as the model reads it. */
@@ -167,17 +171,42 @@ test("the high-pass reaches the optimizer: every box it searches carries it, unc
 // ---- passive drive ----
 
 test("active drive gives the tweeter its own amp; passive the woofer amp through the pad", (t) => {
-  assert.strictEqual(tweeterAmpWatts({ wAmpW: 100, tAmpW: 50 }, -10), 50);
-  assert.strictEqual(tweeterAmpWatts({ drive: HIFI_DRIVE.active, wAmpW: 100, tAmpW: 50 }, -10), 50);
+  assert.strictEqual(tweeterAmpWatts({ wAmpW: 100, tAmpW: 50 }, -10, EIGHT_OHM, EIGHT_OHM), 50);
+  assert.strictEqual(
+    tweeterAmpWatts({ drive: HIFI_DRIVE.active, wAmpW: 100, tAmpW: 50 }, -10, EIGHT_OHM, EIGHT_OHM),
+    50,
+  );
   close(
     t,
-    tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100, tAmpW: 50 }, -10) ?? 0,
+    tweeterAmpWatts(
+      { drive: HIFI_DRIVE.passive, wAmpW: 100, tAmpW: 50 },
+      -10,
+      EIGHT_OHM,
+      EIGHT_OHM,
+    ) ?? 0,
     10,
     1e-12,
   );
-  close(t, tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100 }, -20) ?? 0, 1, 1e-12);
+  close(
+    t,
+    tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100 }, -20, EIGHT_OHM, EIGHT_OHM) ?? 0,
+    1,
+    1e-12,
+  );
   // a network can't add gain: a tweeter quieter than the woofer gets the whole amp
-  assert.strictEqual(tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100 }, 3), 100);
+  close(
+    t,
+    tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100 }, 3, EIGHT_OHM, EIGHT_OHM) ?? 0,
+    100,
+    1e-9,
+  );
+  // the channel's voltage: 100 W into a 4 Ω woofer puts 25 W into a 16 Ω tweeter, 10 dB down 2.5 W
+  close(
+    t,
+    tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100 }, -10, { imp: 4 }, { imp: 16 }) ?? 0,
+    2.5,
+    1e-9,
+  );
 });
 
 test("passive drive matches the Fills page: the same pad, and the HF at its program rating at hfLimW", (t) => {
@@ -204,7 +233,7 @@ test("passive drive matches the Fills page: the same pad, and the HF at its prog
       hf: { sens: hf.sens, aes: hf.aes, imp: hf.imp, aesXo: null, minXo: null, fs: null },
     };
     const at = (wAmpW: number) =>
-      tweeterLevelInBox(tw, { xo: cfg.xo, drive: HIFI_DRIVE.passive, wAmpW }, drv.lfSens);
+      tweeterLevelInBox(tw, { xo: cfg.xo, drive: HIFI_DRIVE.passive, wAmpW }, drv.lfSens, drv.ts);
     close(t, at(100).trim, -fill.pad, 1e-9, `${drv.id} pad`);
     // at hfLimW the amp just brings the HF to its program rating (2 × AES); below it the amp limits, above it the rating
     close(t, at(fill.hfLimW).pMax, 2 * hf.aes, 1e-9 * hf.aes, `${drv.id} at hfLimW`);
@@ -223,8 +252,12 @@ test("a passive design's tweeter runs off the woofer amp through the trim, whate
     b = sysOf({ ...passive, tAmpW: 5 });
   assert.ok(a.trim < 0, `the tweeter is padded down: ${a.trim}`);
   assert.strictEqual(a.tLevel, b.tLevel);
-  // the same as an active design whose tweeter amp gives what the pad passes
-  const same = sysOf({ ...cfg, tAmpW: cfg.wAmpW * Math.pow(10, a.trim / 10) });
+  // the same as an active design whose tweeter amp gives what the pad passes: the woofer channel's voltage, padded,
+  // into the tweeter's impedance (lib/power)
+  const same = sysOf({
+    ...cfg,
+    tAmpW: cfg.wAmpW * (ohmsOf(woofer.ts) / ohmsOf(tweeter.hf)) * Math.pow(10, a.trim / 10),
+  });
   close(t, a.tLevel, same.tLevel, 1e-9);
   close(t, a.pMax, same.pMax, 1e-9);
   // the woofer side doesn't change: one channel at the woofer's amp power
@@ -319,7 +352,7 @@ test("the optimizer's passive shortcut reads the tweeter level the full model gi
         const c = { ...space.cfgOf(x), xo, wAmpW, guide: space.guideOf(T0) };
         const sys = hifiSystem(w, tt, c);
         assert.ok(sys, x.key);
-        const quick = hifiSearchTweeterLevel(tt, cur, x, xo, wAmpW);
+        const quick = hifiSearchTweeterLevel(tt, cur, x, xo, wAmpW, w.ts);
         close(t, quick, sys.tLevel, 1e-9, `${x.key} at ${xo} Hz, ${wAmpW} W`);
         n++;
       }

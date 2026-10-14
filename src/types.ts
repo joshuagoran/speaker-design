@@ -215,6 +215,11 @@ export interface SubDriver {
   sens?: number;
   /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
   depthIn?: number;
+  /**
+   * another impedance version of the entry with this id (the standard one, 8 Ω where both exist): every page's picker
+   * lists it, but the optimizers search the standard one only (lib/optimizer/searchSpace `inSearchSpace`)
+   */
+  variantOf?: SubDriver["id"];
   /** the surround's width, in, from the maker's dimension drawing; absent where it gives none (the front chamber estimates it) */
   surroundIn?: number;
   /**
@@ -1624,7 +1629,7 @@ export interface HornModel {
 /** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator, no horn throat). */
 export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
 
-/** The sub's music limit: the drive level (volts and watts into 8 ohm) where the first of port, cone, driver and amp gives out. */
+/** The sub's music limit: the drive level (volts, and watts into the driver) where the first of port, cone, driver and amp gives out. */
 export interface SubLimits {
   who: SubLimitWho;
   V: number;
@@ -1821,7 +1826,7 @@ export interface FillDesignState {
   highpassHz: number;
   /** the highpass's slope: LR24 (4) or LR48 (8) */
   highpassOrder: CrossoverOrder;
-  /** per box, rated into 8 Ω */
+  /** per box, W into the coaxial's woofer (lib/power) */
   ampWatts: number;
   maxPortAirSpeedMs: number;
 }
@@ -2167,7 +2172,7 @@ export interface SpeakerBand {
    */
   drive: HifiDrive;
   /**
-   * the power of the amp channel that drives it, W into 8 Ω: its own channel's when active; when passive, the channel
+   * the power of the amp channel that drives it, W into its load (lib/power): its own channel's when active; when passive, the channel
    * it shares (the same figure as the band it shares it with). The limits read it (lib/speaker/speakerLimits).
    */
   ampW: number;
@@ -2444,7 +2449,7 @@ export interface SpeakerChamberLimits {
   radiator: LimitPeak | null;
   /** the air speed at a horn's throat against the box's air speed limit; null without a horn */
   throat: LimitPeak | null;
-  /** the drive's power into 8 Ω, W, and the cones' program rating (2 × AES), W */
+  /** the drive's power into the band's load, W, and the cones' program rating (2 × AES), W */
   driveW: number;
   programW: number;
 }

@@ -36,6 +36,9 @@ import { close } from "./helpers";
 import { SEED_NAMES } from "./seeds";
 import { evaluate as evaluateGolden } from "./golden-configs";
 
+/** An 8 Ω load: the amp power's watts into it (lib/power). */
+const EIGHT_OHM = { imp: 8 };
+
 // boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW)
 const seeds = JSON.parse(
   fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
@@ -93,7 +96,7 @@ test("evaluate() gives the planner's numbers (golden's evaluation, without the h
 
 test("bandOut is the lowest music-limit level from 40 to 90 Hz (a peak can't raise it)", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
-    V = ampVoltage(500);
+    V = ampVoltage(500, EIGHT_OHM);
   const mdl = boxModel(ts, 150, 60, 12, 30, V, "BW24")!,
     L = subwooferLimits(mdl, ts, V, 20);
   const sc = 20 * Math.log10(L.V / V),
