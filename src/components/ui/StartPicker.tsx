@@ -1,7 +1,7 @@
 import { Button } from "./Button";
 import { SelectField, type SelectOption } from "./SelectField";
 import { START_PICKER_TEXT } from "../../constants/startPicker";
-import { STACK, STACK_TIGHT } from "../../styles/layout";
+import { GAP_Y, GAP_Y_TIGHT } from "../../styles/layout";
 
 interface Props<T extends SelectOption> {
   options: readonly T[];
@@ -31,7 +31,7 @@ export function StartPicker<T extends SelectOption>({
   hint,
 }: Props<T>) {
   return (
-    <div className={STACK}>
+    <div className={GAP_Y}>
       <SelectField
         label={START_PICKER_TEXT.startFrom}
         options={options}
@@ -39,7 +39,7 @@ export function StartPicker<T extends SelectOption>({
         onChange={onChange}
         group={group}
       />
-      <div className={STACK_TIGHT}>
+      <div className={GAP_Y_TIGHT}>
         <div className="flex flex-wrap gap-2">
           <Button variant="primary" onClick={onStart}>
             {START_PICKER_TEXT.startOver}

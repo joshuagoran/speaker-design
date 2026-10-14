@@ -2,18 +2,25 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 
-// Layouts own the spacing (CLAUDE.md, "UI rules"): a container spaces its children with one gap rule (`STACK` and the
+// Layouts own the spacing (CLAUDE.md, "UI rules"): a container spaces its children with one gap rule (`GAP_Y` and the
 // others in `src/styles/layout.ts`), so a shared control from `src/components/ui` carries no outer margin. This test
 // fails when a page (or another component) passes one of those controls a margin class in its `className`.
 //
 // How it works, with no list to keep: the controls are every component exported from `src/components/ui`; every
 // `<Control ...>` in `src/**/*.tsx` is found, the `className` among its own props is cut out, and each string in it is
-// checked for a margin utility: `m-`, `mt-`, `mb-`, `my-`, `mx-`, `ml-`, `mr-`, with a sign or a variant (`-mt-1`,
-// `md:mb-3`). The plain elements a control renders inside itself may keep margins (a label's gap to its field is part
+// checked for a margin utility: `m-`, `mt-`, `mb-`, `my-`, `mx-`, `ml-`, `mr-`, the logical `ms-` and `me-`, with a
+// sign, a variant or the important prefix (`-mt-1`, `md:mb-3`, `max-md:mb-0`, `!mb-3`), and the arbitrary forms
+// (`m-[3px]`, `[margin:3px]`, `[margin-top:3px]`). The plain elements a control renders inside itself may keep margins (a label's gap to its field is part
 // of the control); only a margin handed to a control from outside is the problem.
 
-/** A margin utility in a class string: start of the string, a space or a variant colon, an optional sign, then `m`. */
-const MARGIN = /(?:^|[\s:])-?m[tbyxlr]?-/;
+/**
+ * A margin utility in a class string: start of the string, a space or a variant colon, an optional important prefix
+ * and sign, then `m`, an optional side (`t b y x l r`, the logical `s e`, and `bs be is ie`) and `-`; or an arbitrary
+ * `[margin...:` property. `m*-auto` (`ml-auto`, `mt-auto`, `mx-auto`) is exempt: it is not spacing but alignment, it
+ * pushes the control to the far side of its flex or grid container, so the layout still owns every gap.
+ */
+const MARGIN =
+  /(?:^|[\s:])!?-?(?:m(?:[tbyxlrse]|[bi][se])?-(?!auto(?:[\s!]|$))|\[margin(?:-[a-z-]+)?:)/;
 
 const filesIn = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -88,6 +95,29 @@ test("the check finds a margin on a control and nothing else", () => {
   expect(found('<NumberField onChange={(v) => set(v)} className="mt-2" />')).toEqual([
     "NumberField: mt-2",
   ]);
+  // the important prefix, logical sides, arbitrary values and a variant before the utility
+  expect(found('<NumberField className="!mb-3" />')).toEqual(["NumberField: !mb-3"]);
+  expect(found('<NumberField className="md:!-mt-1" />')).toEqual(["NumberField: md:!-mt-1"]);
+  expect(found('<NumberField className="ms-2" />')).toEqual(["NumberField: ms-2"]);
+  expect(found('<NumberField className="w-full me-2" />')).toEqual(["NumberField: w-full me-2"]);
+  expect(found('<NumberField className="m-[3px]" />')).toEqual(["NumberField: m-[3px]"]);
+  expect(found('<NumberField className="[margin:3px]" />')).toEqual(["NumberField: [margin:3px]"]);
+  expect(found('<NumberField className="[margin-top:3px]" />')).toEqual([
+    "NumberField: [margin-top:3px]",
+  ]);
+  expect(found('<NumberField className="max-md:mb-0" />')).toEqual(["NumberField: max-md:mb-0"]);
+  // a class built with cn(), clsx() or a template string
+  expect(found('<NumberField className={cn("w-full", on && "mb-3")} />')).toEqual([
+    "NumberField: mb-3",
+  ]);
+  expect(found('<NumberField className={clsx("w-full", { "mt-2": on })} />')).toEqual([
+    "NumberField: mt-2",
+  ]);
+  expect(found("<NumberField className={`w-full ${on ? 'x' : ''} mb-3`} />")).toEqual([
+    "NumberField: w-full ${on ? 'x' : ''} mb-3",
+  ]);
+  // none: `m*-auto` aligns the control, it does not space it
+  expect(found('<NumberField className="ml-auto mt-auto mx-auto md:ms-auto" />')).toEqual([]);
   // none: a margin on a plain element, other classes (even ones that contain "m-"), a margin inside another prop
   expect(found('<div className="mb-3"><ToggleGroup className="col-span-2" /></div>')).toEqual([]);
   expect(found('<NumberField className="min-w-0 max-w-md" onChange={() => 1} />')).toEqual([]);

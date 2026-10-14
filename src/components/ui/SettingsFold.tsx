@@ -1,6 +1,6 @@
 import { AnimatedDetails } from "./AnimatedDetails";
 import { HOVER_TRANSITION } from "./buttonStyles";
-import { STACK } from "../../styles/layout";
+import { GAP_Y } from "../../styles/layout";
 
 interface Props {
   /** the fold's name, e.g. "Advanced" */
@@ -21,7 +21,7 @@ export function SettingsFold({ title, summary, children }: Props) {
       className="text-sm rounded border border-stone-300 px-3 py-2"
       summaryClassName={`cursor-pointer py-1 font-label text-stone-500 hover:text-stone-900 ${HOVER_TRANSITION}`}
     >
-      <div className={`pt-2 ${STACK}`}>{children}</div>
+      <div className={`pt-2 ${GAP_Y}`}>{children}</div>
     </AnimatedDetails>
   );
 }

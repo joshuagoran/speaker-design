@@ -2,7 +2,7 @@ import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { paTotals, type PaTotalsInputs } from "../../../lib/pa/totals";
-import { FLEX_STACK } from "../../../styles/layout";
+import { FLEX_GAP_Y } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<PaPlanner, "expandedSections" | "toggleSection"> & PaTotalsInputs;
@@ -13,7 +13,7 @@ export function TotalsSection({ planner }: Props) {
   const { expandedSections, toggleSection, plinthHeightIn } = planner;
   return (
     <>
-      <section className={`min-w-0 mt-6 ${FLEX_STACK}`} style={{ fontFamily: FONT }}>
+      <section className={`min-w-0 mt-6 ${FLEX_GAP_Y}`} style={{ fontFamily: FONT }}>
         <FoldHeading
           id="totals"
           title="Totals for the current selection"

@@ -11,7 +11,7 @@ import {
   handleOffsetTip,
 } from "../../constants/hardware";
 import { keysOf } from "../../lib/records";
-import { STACK } from "../../styles/layout";
+import { GAP_Y } from "../../styles/layout";
 import type { BoxHandles } from "../../types";
 
 interface Props {
@@ -27,7 +27,7 @@ interface Props {
  */
 export function HandleFields({ label, handles, onChange }: Props) {
   return (
-    <div className={STACK}>
+    <div className={GAP_Y}>
       <ToggleGroup
         label={label}
         value={handles.model}

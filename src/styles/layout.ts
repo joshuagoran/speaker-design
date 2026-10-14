@@ -43,34 +43,34 @@ export const resultsCellClass = (wide: boolean, place: string) =>
  * A container of fields, cards, folds and notes, in block layout: 0.75 rem between each child and the one before it
  * (a settings column's body, a settings section's body, a card). A child that renders nothing leaves no gap.
  */
-export const STACK = "space-y-3";
+export const GAP_Y = "space-y-3";
 
-/** A tighter stack, 0.5 rem, for a field's own helper lines (a hint and a notice under a button). */
-export const STACK_TIGHT = "space-y-2";
+/** A tighter column, 0.5 rem, for a field's own helper lines (a hint and a notice under a button). */
+export const GAP_Y_TIGHT = "space-y-2";
 
 /**
- * A stack in flex layout, 0.75 rem: for a heading and its body, where a child can be hidden with `display: none` (a
- * hidden child leaves no gap, which `STACK` cannot do for a hidden first child).
+ * A column in flex layout, 0.75 rem: for a heading and its body, where a child can be hidden with `display: none` (a
+ * hidden child leaves no gap, which `GAP_Y` cannot do for a hidden first child).
  */
-export const FLEX_STACK = "flex flex-col gap-3";
+export const FLEX_GAP_Y = "flex flex-col gap-3";
 
 /** A row of number fields that wraps onto more lines where the pane is narrow: 0.75 rem between fields, both ways. */
 export const FIELD_ROW = "flex flex-wrap gap-3";
 
 /** The settings column's body when it holds fold sections: 1 rem between one section and the next, on purpose wider than a field gap. */
-export const SECTION_STACK = "space-y-4";
+export const SECTION_GAP_Y = "space-y-4";
 
-/** `SECTION_STACK` from md up only: the PA settings fold at md and up, and on phones the sheet's tabs group them. */
-export const SECTION_STACK_MD_UP = "md:space-y-4";
+/** `SECTION_GAP_Y` from md up only: the PA settings fold at md and up, and on phones the sheet's tabs group them. */
+export const SECTION_GAP_Y_MD_UP = "md:space-y-4";
 
 /** A heading and the line under it that describes it: 0.25 rem apart, so the pair reads as one. */
 export const HEADING_GROUP = "space-y-1";
 
 /** Blocks of a settings section that each have their own heading (a list of cards, then the next list): 1.25 rem apart. */
-export const BLOCK_STACK = "space-y-5";
+export const BLOCK_GAP_Y = "space-y-5";
 
-/** `STACK` from md up only: a fold body whose children are tab groups, which phones show one at a time. */
-export const STACK_MD_UP = "md:space-y-3";
+/** `GAP_Y` from md up only: a fold body whose children are tab groups, which phones show one at a time. */
+export const GAP_Y_MD_UP = "md:space-y-3";
 
-/** `BLOCK_STACK` from md up only: the PA settings' tab groups, side by side in one fold on desktop. */
-export const BLOCK_STACK_MD_UP = "md:space-y-5";
+/** `BLOCK_GAP_Y` from md up only: the PA settings' tab groups, side by side in one fold on desktop. */
+export const BLOCK_GAP_Y_MD_UP = "md:space-y-5";

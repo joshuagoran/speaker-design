@@ -9,7 +9,7 @@ import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { UI_TEXT } from "../../../constants/uiText";
-import { FLEX_STACK, STACK } from "../../../styles/layout";
+import { FLEX_GAP_Y, GAP_Y } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<
@@ -50,14 +50,14 @@ export function HornSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className={`mt-2 ${FLEX_STACK}`} style={{ fontFamily: FONT }}>
+      <section className={`mt-2 ${FLEX_GAP_Y}`} style={{ fontFamily: FONT }}>
         <FoldHeading
           id="horn"
           title={UI_TEXT.horn}
           folds={expandedSections}
           toggle={toggleSection}
         />
-        <FoldBody open={expandedSections.horn} className={STACK}>
+        <FoldBody open={expandedSections.horn} className={GAP_Y}>
           {hornModel ? (
             <>
               <StatTileGrid

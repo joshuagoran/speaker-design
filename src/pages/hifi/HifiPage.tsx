@@ -77,12 +77,12 @@ import type { Dims3 } from "../../types";
 import { entriesOf, keysOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
 import {
-  FLEX_STACK,
+  FLEX_GAP_Y,
   HEADING_GROUP,
   PAGE_WIDTH,
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
-  STACK,
+  GAP_Y,
   resultsCellClass,
   resultsGridClass,
 } from "../../styles/layout";
@@ -392,7 +392,7 @@ export function HifiPage({ hifi }: Props) {
     <SettingsLayout
       results={
         <>
-          <div className={`${RESULT_MAX_WIDTH} min-w-0 mb-8 ${STACK}`}>
+          <div className={`${RESULT_MAX_WIDTH} min-w-0 mb-8 ${GAP_Y}`}>
             <SavedConfigs
               bare
               store={store}
@@ -455,7 +455,7 @@ export function HifiPage({ hifi }: Props) {
               <div className={cell("col-start-2 row-start-1")}>
                 <WarningChips chips={warningChips} />
               </div>
-              <section className={`${cell("col-start-1 row-start-2")} ${STACK}`}>
+              <section className={`${cell("col-start-1 row-start-2")} ${GAP_Y}`}>
                 <SectionHeading>{HIFI_RESULT_HEADINGS.response}</SectionHeading>
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
@@ -485,7 +485,7 @@ export function HifiPage({ hifi }: Props) {
                   ]}
                 />
               </section>
-              <section className={`${cell("col-start-2 row-start-2")} ${STACK}`}>
+              <section className={`${cell("col-start-2 row-start-2")} ${GAP_Y}`}>
                 <SectionHeading>{HIFI_RESULT_HEADINGS.maxOutput}</SectionHeading>
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
@@ -512,7 +512,7 @@ export function HifiPage({ hifi }: Props) {
                 />
               </section>
               {/* beside the dispersion map, the map sets the row's height and the room view fills the rest */}
-              <section className={`${cell("col-start-2 row-start-3 self-stretch")} ${FLEX_STACK}`}>
+              <section className={`${cell("col-start-2 row-start-3 self-stretch")} ${FLEX_GAP_Y}`}>
                 <SectionHeading>{HIFI_RESULT_HEADINGS.seat}</SectionHeading>
                 <div
                   className={
@@ -565,7 +565,7 @@ export function HifiPage({ hifi }: Props) {
                 </div>
               </section>
               <section
-                className={`${RESULT_MAX_WIDTH} ${cell("col-start-1 row-start-3")} ${STACK}`}
+                className={`${RESULT_MAX_WIDTH} ${cell("col-start-1 row-start-3")} ${GAP_Y}`}
               >
                 <SectionHeading>{HIFI_RESULT_HEADINGS.dispersion}</SectionHeading>
                 <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />

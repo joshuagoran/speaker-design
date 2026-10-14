@@ -19,7 +19,7 @@ import {
   throatCones,
 } from "../../lib/speaker/hornThroat";
 import { shownIn } from "./speakerFields";
-import { FIELD_ROW, HEADING_GROUP, STACK, STACK_TIGHT } from "../../styles/layout";
+import { FIELD_ROW, HEADING_GROUP, GAP_Y, GAP_Y_TIGHT } from "../../styles/layout";
 import { hornText } from "./speakerText";
 import {
   joinsNext,
@@ -98,7 +98,7 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
       return next ? { ...h, segments: next } : h;
     });
   return (
-    <section className={`border-t border-stone-300 pt-3 ${STACK}`}>
+    <section className={`border-t border-stone-300 pt-3 ${GAP_Y}`}>
       <div className={HEADING_GROUP}>
         <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
         <p className="text-xs text-stone-500">{hornText(horn)}</p>
@@ -139,12 +139,12 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
           />
         )}
       </div>
-      <div className={STACK_TIGHT}>
+      <div className={GAP_Y_TIGHT}>
         <div className="text-sm font-label text-stone-500">
           <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
         </div>
         {segments.map((s, i) => (
-          <div key={i} className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${STACK}`}>
+          <div key={i} className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${GAP_Y}`}>
             <CardHeading
               sub
               action={

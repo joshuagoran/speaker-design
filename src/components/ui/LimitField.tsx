@@ -1,6 +1,6 @@
 import { NumberField } from "./NumberField";
 import { ToggleGroup } from "./ToggleGroup";
-import { STACK_TIGHT } from "../../styles/layout";
+import { GAP_Y_TIGHT } from "../../styles/layout";
 
 interface Props {
   label: React.ReactNode;
@@ -19,7 +19,7 @@ interface Props {
 /** A limit that can be off: a No limit / Limit choice, and its number when it is on. */
 export function LimitField({ label, value, onChange, startAt, unit, min, step, words }: Props) {
   return (
-    <div className={STACK_TIGHT}>
+    <div className={GAP_Y_TIGHT}>
       <ToggleGroup
         label={label}
         value={value !== null}

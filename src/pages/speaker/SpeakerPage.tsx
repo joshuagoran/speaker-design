@@ -60,7 +60,7 @@ import {
   READING_WIDTH,
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
-  STACK,
+  GAP_Y,
   resultsCellClass,
   resultsGridClass,
 } from "../../styles/layout";
@@ -317,7 +317,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             manage
           />
           <SpeakerOptimizerResults optimizer={optimizer} />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <SectionHeading>{SPEAKER_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
               <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
@@ -328,14 +328,14 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   />
                 )}
               </Viewer3DCard>
-              <Card stack={false} className={`flex flex-col ${VIEW_HEIGHT}`}>
+              <Card gapY={false} className={`flex flex-col ${VIEW_HEIGHT}`}>
                 <div className="flex-1 min-h-0">
                   <SpeakerFront spec={spec} />
                 </div>
                 <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.front}</p>
               </Card>
               {flares.length > 0 && (
-                <Card stack={false} className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
+                <Card gapY={false} className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
                   <div className="flex-1 min-h-0">
                     <SpeakerSection spec={spec} />
                   </div>
@@ -370,7 +370,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
           </section>
           {/* Response beside Maximum output (and Price, weight and bracing under Response) once the pane is wide enough */}
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} mt-5 ${resultsGridClass(wide)}`}>
-            <section className={`${cell("col-start-1 row-start-1")} ${STACK}`}>
+            <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
               <SectionHeading>{SPEAKER_TEXT.response}</SectionHeading>
               <ResponseChart
                 fmin={FREQ_AXIS_MIN_HZ}
@@ -417,7 +417,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             <section
               className={`${cell(
                 limits.bands.length > 0 ? "col-start-1 row-start-2" : "col-start-2 row-start-1",
-              )} ${STACK}`}
+              )} ${GAP_Y}`}
             >
               <SectionHeading>{SPEAKER_TEXT.build}</SectionHeading>
               <StatTileGrid tiles={buildTiles} />
@@ -468,7 +468,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               </p>
             </section>
             {limits.bands.length > 0 && (
-              <section className={`${cell("col-start-2 row-start-1 row-span-2")} ${STACK}`}>
+              <section className={`${cell("col-start-2 row-start-1 row-span-2")} ${GAP_Y}`}>
                 <SectionHeading>{SPEAKER_TEXT.maxOutput}</SectionHeading>
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
@@ -524,7 +524,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             )}
           </div>
           {dispersion && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${STACK}`}>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
               <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
               <DispersionBlock
                 map={dispersion}

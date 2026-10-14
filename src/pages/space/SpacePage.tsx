@@ -32,7 +32,7 @@ import {
   MD_UP,
   READING_WIDTH,
   RESULT_MAX_WIDTH,
-  STACK,
+  GAP_Y,
 } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
@@ -234,7 +234,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             saveName={name}
             manage
           />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <div className={HEADING_GROUP}>
               <SectionHeading>{SPACE_TEXT.coverage}</SectionHeading>
               <p className="text-sm text-stone-500">
@@ -281,7 +281,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             </div>
           </section>
           {placements.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
               <SectionHeading>{SPACE_TEXT.levels}</SectionHeading>
               {tiles.length > 0 && <StatTileGrid tiles={tiles} />}
               {view && (
@@ -314,7 +314,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               )}
             </section>
           )}
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <SectionHeading>
               <Tooltip tip={SPACE_TEXT.sideTip}>{SPACE_TEXT.side}</Tooltip>
             </SectionHeading>
@@ -329,7 +329,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             </Card>
           </section>
           {space.response.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
               <SectionHeading>{SPACE_TEXT.response}</SectionHeading>
               <ResponseChart
                 fmax={FREQ_AXIS_MAX_HZ}

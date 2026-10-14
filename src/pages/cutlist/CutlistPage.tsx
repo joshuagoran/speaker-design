@@ -69,11 +69,11 @@ import {
 import { UI_TEXT } from "../../constants/uiText";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import {
-  FLEX_STACK,
+  FLEX_GAP_Y,
   READING_WIDTH,
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
-  STACK_TIGHT,
+  GAP_Y_TIGHT,
 } from "../../styles/layout";
 import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
@@ -279,7 +279,7 @@ export function CutlistPage({
       foldsAt="desktop"
       summary={summaries[id]}
     >
-      <div className={`${FLEX_STACK} pb-2 ${tabClass(id)}`}>{children}</div>
+      <div className={`${FLEX_GAP_Y} pb-2 ${tabClass(id)}`}>{children}</div>
     </SettingsSection>
   );
   const th = "py-1 font-normal text-stone-500";
@@ -568,14 +568,17 @@ export function CutlistPage({
               {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
             </p>
           </div>
-          <StatTileGrid
-            tiles={[
-              ["Sheets", totalSheets],
-              ["Pieces", totalPieces],
-              ["Full-length rips", rips],
-              ["Full-width crosscuts", crosscuts],
-            ]}
-          />
+          {/* pb-4 on top of the column's gap keeps the 36 px the tiles had below them (mb-4 plus gap-5) */}
+          <div className="pb-4">
+            <StatTileGrid
+              tiles={[
+                ["Sheets", totalSheets],
+                ["Pieces", totalPieces],
+                ["Full-length rips", rips],
+                ["Full-width crosscuts", crosscuts],
+              ]}
+            />
+          </div>
           {cut.notes.map((n) => (
             <p key={n} className={`${READING_WIDTH} text-sm text-orange-700`}>
               {n}
@@ -695,7 +698,7 @@ export function CutlistPage({
               </p>
             ) : (
               <>
-                <div className={STACK_TIGHT}>
+                <div className={GAP_Y_TIGHT}>
                   <ToggleGroup
                     label={
                       <Tooltip tip="Locked: along the sheet's length. Any: the layout can turn it.">

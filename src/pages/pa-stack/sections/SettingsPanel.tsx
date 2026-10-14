@@ -53,11 +53,11 @@ import { hornMountChoice } from "../../../components/stack-view/hornMountChoice"
 import { HornMountField } from "../../../components/ui/HornMountField";
 import { towerMidDims } from "../../../lib/pa/tower";
 import {
-  BLOCK_STACK,
-  BLOCK_STACK_MD_UP,
+  BLOCK_GAP_Y,
+  BLOCK_GAP_Y_MD_UP,
   HEADING_GROUP,
-  STACK,
-  STACK_TIGHT,
+  GAP_Y,
+  GAP_Y_TIGHT,
 } from "../../../styles/layout";
 
 interface Props {
@@ -327,7 +327,7 @@ export function SettingsPanel({ planner }: Props) {
     >
       {section(
         "sub",
-        <div className={`${tabClass("sub")} ${BLOCK_STACK}`}>
+        <div className={`${tabClass("sub")} ${BLOCK_GAP_Y}`}>
           <SelectField
             label="Sub driver"
             options={subDriverChoices}
@@ -375,7 +375,7 @@ export function SettingsPanel({ planner }: Props) {
               <span>Vent</span>
               {renderLockButton("vent", "the vent style")}
             </div>
-            <div className={STACK_TIGHT}>
+            <div className={GAP_Y_TIGHT}>
               <div className={HEADING_GROUP}>
                 <div className="flex flex-wrap gap-1">
                   {(
@@ -504,7 +504,7 @@ export function SettingsPanel({ planner }: Props) {
       )}
       {section(
         "mid",
-        <div className={`${tabClass("mid")} ${BLOCK_STACK}`}>
+        <div className={`${tabClass("mid")} ${BLOCK_GAP_Y}`}>
           <ToggleGroup
             label="Mid-bass size"
             value={midSize}
@@ -567,7 +567,7 @@ export function SettingsPanel({ planner }: Props) {
       )}
       {section(
         "horn",
-        <div className={`${tabClass("horn")} ${BLOCK_STACK}`}>
+        <div className={`${tabClass("horn")} ${BLOCK_GAP_Y}`}>
           <SelectField
             label="Compression driver"
             options={CD_OPTIONS}
@@ -594,7 +594,7 @@ export function SettingsPanel({ planner }: Props) {
       )}
       {section(
         "xo",
-        <div className={BLOCK_STACK_MD_UP}>
+        <div className={BLOCK_GAP_Y_MD_UP}>
           <div className={tabClass("mid")}>
             <div>
               <div className="text-sm text-stone-500 mb-1">Crossovers</div>
@@ -731,8 +731,8 @@ export function SettingsPanel({ planner }: Props) {
       )}
       {section(
         "build",
-        <div className={`${tabClass("build")} ${BLOCK_STACK}`}>
-          <div className={STACK}>
+        <div className={`${tabClass("build")} ${BLOCK_GAP_Y}`}>
+          <div className={GAP_Y}>
             <ToggleGroup
               label={
                 <span className="flex items-center justify-between gap-2">
@@ -788,7 +788,7 @@ export function SettingsPanel({ planner }: Props) {
           <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
           <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
           <HornColorPicker value={hornColor} onChange={setHornColor} horn={hornOption} />
-          <div className={STACK}>
+          <div className={GAP_Y}>
             <ToggleGroup
               label="Layout"
               value={layout}

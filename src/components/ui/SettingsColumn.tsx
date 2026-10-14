@@ -5,11 +5,11 @@ import type { Folds } from "../../hooks/useFolds";
 import { FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
 import {
-  FLEX_STACK,
-  SECTION_STACK,
-  SECTION_STACK_MD_UP,
-  STACK,
-  STACK_MD_UP,
+  FLEX_GAP_Y,
+  SECTION_GAP_Y,
+  SECTION_GAP_Y_MD_UP,
+  GAP_Y,
+  GAP_Y_MD_UP,
 } from "../../styles/layout";
 
 interface Props<Id extends string> {
@@ -26,10 +26,10 @@ interface Props<Id extends string> {
   /** extra classes on the scrolling part */
   bodyClassName?: string;
   /**
-   * how the column spaces its children when it has no fold sections (default `STACK`); a column whose children are
+   * how the column spaces its children when it has no fold sections (default `GAP_Y`); a column whose children are
    * tab groups, some hidden on phones, passes a flex rule, which leaves no gap at a hidden child
    */
-  stack?: string;
+  gapY?: string;
   children: React.ReactNode;
 }
 
@@ -44,7 +44,7 @@ export function SettingsColumn<Id extends string>({
   top,
   className = "",
   bodyClassName = "",
-  stack = STACK,
+  gapY = GAP_Y,
   children,
 }: Props<Id>) {
   return (
@@ -70,7 +70,7 @@ export function SettingsColumn<Id extends string>({
         </div>
       )}
       <div
-        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 ${folds ? (foldsAt === "desktop" ? SECTION_STACK_MD_UP : SECTION_STACK) : `md:pt-3 ${stack}`} ${bodyClassName}`}
+        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 ${folds ? (foldsAt === "desktop" ? SECTION_GAP_Y_MD_UP : SECTION_GAP_Y) : `md:pt-3 ${gapY}`} ${bodyClassName}`}
       >
         {children}
       </div>
@@ -100,7 +100,7 @@ export function SettingsSection<Id extends string>({
 }: SectionProps<Id>) {
   return (
     // the section bleeds to the panel edges (the column pads its body), so the heading bar spans the panel; the body pads itself
-    <section className={`md:-mx-4 ${FLEX_STACK}`}>
+    <section className={`md:-mx-4 ${FLEX_GAP_Y}`}>
       <FoldHeading
         id={id}
         title={title}
@@ -116,7 +116,7 @@ export function SettingsSection<Id extends string>({
       <FoldBody
         open={folds.open[id]}
         foldsAt={foldsAt}
-        className={`pb-1 md:px-4 ${foldsAt === "desktop" ? STACK_MD_UP : STACK}`}
+        className={`pb-1 md:px-4 ${foldsAt === "desktop" ? GAP_Y_MD_UP : GAP_Y}`}
       >
         {children}
       </FoldBody>

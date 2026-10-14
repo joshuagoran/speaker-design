@@ -11,7 +11,7 @@ import {
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
-import { STACK_TIGHT } from "../../styles/layout";
+import { GAP_Y_TIGHT } from "../../styles/layout";
 
 interface Props<L> {
   /** the balance the design takes now, for the picked option (lib/speaker/autoBalance): whether it can balance, and why not */
@@ -48,7 +48,7 @@ export function AutoBalanceButton<L>({
   notes = [],
 }: Props<L>) {
   return (
-    <div className={STACK_TIGHT}>
+    <div className={GAP_Y_TIGHT}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-sm font-label text-stone-500">
           <Tooltip tip={tipExtra ? `${BAND_BALANCE_TIP} ${tipExtra}` : BAND_BALANCE_TIP}>

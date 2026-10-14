@@ -5,7 +5,7 @@ import { LooseLimits } from "./LooseLimits";
 import { NoFitNotice } from "./NoFitNotice";
 import { ResultCards } from "./ResultCards";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
-import { MD_UP, RESULT_MAX_WIDTH, STACK } from "../../styles/layout";
+import { MD_UP, RESULT_MAX_WIDTH, GAP_Y } from "../../styles/layout";
 
 /** The words the results block takes from a page's optimizer text. */
 export interface OptimizerResultsText {
@@ -73,7 +73,7 @@ export function DesignOptimizerResults<Card, Limits, Near extends NearMissView<L
   if (!result || isOptimizing) return null;
   const { cards, current, nearMiss, goalMissing } = result;
   return (
-    <section ref={top} className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+    <section ref={top} className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
       <SectionHeading>{text.results}</SectionHeading>
       {stale && <Notice>{text.stale}</Notice>}
       {current && current.problems.length > 0 && (

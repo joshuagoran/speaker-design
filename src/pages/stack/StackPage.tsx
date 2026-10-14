@@ -31,7 +31,7 @@ import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { formatHz } from "../../lib/format";
 import { DEFAULT_PA } from "../../lib/defaults";
-import { READING_WIDTH, RESULT_MAX_WIDTH, STACK } from "../../styles/layout";
+import { READING_WIDTH, RESULT_MAX_WIDTH, GAP_Y } from "../../styles/layout";
 import {
   FREQ_AXIS_MAX_HZ,
   FREQ_AXIS_MIN_HZ,
@@ -201,7 +201,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
           />
           {summary && <SummaryStrip items={summary} />}
           <StackOptimizerResults optimizer={optimizer} />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <SectionHeading>{STACK_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
               <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
@@ -213,7 +213,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   />
                 )}
               </Viewer3DCard>
-              <Card stack={false} className={`flex flex-col ${VIEW_HEIGHT}`}>
+              <Card gapY={false} className={`flex flex-col ${VIEW_HEIGHT}`}>
                 <div className="flex-1 min-h-0">
                   <StackFront
                     stack={design.stack}
@@ -234,7 +234,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             {members.length === 0 && <Notice>{STACK_TEXT.noMembers}</Notice>}
             {response.members.some((m) => m === null) && <Notice>{STACK_TEXT.missing}</Notice>}
           </section>
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${STACK}`}>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <SectionHeading>{STACK_TEXT.response}</SectionHeading>
             <ResponseChart
               fmin={FREQ_AXIS_MIN_HZ}
@@ -272,7 +272,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.modelNote}</p>
           </section>
           {limits.sum.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${STACK}`}>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
               <SectionHeading>{STACK_TEXT.maxOutput}</SectionHeading>
               <ResponseChart
                 fmin={FREQ_AXIS_MIN_HZ}
@@ -320,7 +320,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             </section>
           )}
           {dispersion && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${STACK}`}>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
               <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
               <DispersionBlock
                 map={dispersion}

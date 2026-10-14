@@ -79,7 +79,7 @@ import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./sp
 import { PlaceFields } from "./PlaceFields";
 import { HornSettings } from "./HornSettings";
 import { onFieldStep, shownIn, shownTenth } from "./speakerFields";
-import { FIELD_ROW, STACK } from "../../styles/layout";
+import { FIELD_ROW, GAP_Y } from "../../styles/layout";
 import { hornRoom, startingHorn, withChamberLoad } from "./chamberLoad";
 import {
   defaultHornPlacement,
@@ -747,7 +747,7 @@ function DriverFields({
       bands: coaxial ? (slot === 0 ? [band, d.bands[1] ?? band] : [d.bands[0], band]) : [band],
     }));
   return (
-    <div className={`border-t border-stone-300 pt-3 ${STACK}`}>
+    <div className={`border-t border-stone-300 pt-3 ${GAP_Y}`}>
       <div className="grid grid-cols-2 gap-3">
         <SelectField
           label="Type"

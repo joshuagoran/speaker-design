@@ -12,7 +12,7 @@ import { BAFFLE_THICKNESS_IN, buildCabinet } from "./buildCabinet";
 import { buildHifiCabinet } from "./buildHifiCabinet";
 import { buildCone, paConeRadius } from "./buildCone";
 import { buildHorn } from "./buildHorn";
-import { buildDriverBody } from "./buildBraces";
+import { buildBracesAt, buildDriverBody } from "./buildBraces";
 import { hornBaffleHole } from "./towerParts";
 import { buildSubSlotShelf, buildSubVent, subVentHoles, subVentPlan } from "./buildSubwoofer";
 import {
@@ -50,6 +50,8 @@ import {
   hornCutoutBox,
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
+import { cabinetBuild } from "../../lib/speaker/speakerBuild";
+import { bracingRegions } from "../../lib/bracing";
 import { PANEL } from "../../constants/cutParts";
 import {
   CD_OPTIONS,
@@ -116,6 +118,21 @@ const SLOT_CORNER_IN = 0.02;
 /** How close two places count as the same, in. */
 const SAME_IN = 1e-9;
 
+/** A chamber's inside as the bracing rule takes it: across, up and deep, in. */
+const braceInner = ({ iw, ih, inD }: { iw: number; ih: number; inD: number }) => ({
+  x: iw,
+  y: ih,
+  z: inD,
+});
+
+/** The braces and ribs the bracing rule puts in chamber `index`, as regions of its inside. */
+const braceRegionsOf = (cabinet: SpeakerSpec["cabinet"], index: number) => {
+  const built = cabinetBuild(cabinet).chambers[index];
+  return built
+    ? bracingRegions(built.bracing, braceInner(built.inside), cabinet.panel.thicknessIn)
+    : [];
+};
+
 /** What the scene draws: the spec's cabinet and look, and the view's cutaway. */
 export interface SpeakerSceneProps {
   spec: Pick<SpeakerSpec, "cabinet" | "look">;
@@ -126,7 +143,8 @@ export interface SpeakerSceneProps {
  * What the scene reads of its props, as a key that changes exactly when the scene does: the construction, the top, the
  * panels' thickness, inset and roundover; each chamber's place, size, vent (a port's sizes and position, the radiators'
  * part, count and position), drivers (part, count, position, horn) and horn path (its drive, path, segments' areas and
- * lengths and flare laws, and mouth position); the look and the cutaway.
+ * lengths and flare laws, and mouth position), and, in the cutaway, its braces and ribs (so the bracing style and target
+ * rebuild it); the look and the cutaway.
  * The model's own inputs (stuffing, net air, bands, a port's elbows and a horn's throat chamber) are left out.
  */
 export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
@@ -139,9 +157,11 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
     wall: cabinet.panel.thicknessIn,
     inset: baffleInsetIn(cabinet),
     roundover: cabinet.roundoverIn,
-    chambers: cabinet.chambers.map(({ at, dims, vent, drivers, load }) => ({
+    chambers: cabinet.chambers.map(({ at, dims, vent, drivers, load }, i) => ({
       at,
       dims,
+      // the braces and ribs the cutaway draws (the bracing style and target, and anything else that moves them)
+      braces: cutaway ? braceRegionsOf(cabinet, i) : null,
       vent:
         vent.kind === VENT_KIND.vented
           ? {
@@ -321,6 +341,19 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       at = { zf: built.frontZ, innerZ: built.shellFrontZ, banded: false };
     }
     for (const { parts } of members) parts.build(at);
+    // the braces and ribs the bracing rule puts in each chamber, shown in the cutaway
+    if (cutaway)
+      for (const { placed, g } of members) {
+        const built = cabinetBuild(cabinet).chambers[layout.chambers.indexOf(placed)];
+        if (!built) continue;
+        const { clear } = placed;
+        buildBracesAt(ctx, {
+          bracing: built.bracing,
+          inner: braceInner(built.inside),
+          corner: { x: clear.x - placed.cx, y: clear.y - placed.y0, z: at.innerZ },
+          parent: g,
+        });
+      }
     if (!layout.oneShell) continue;
     // the walls the chambers share, inside the shell's walls, from the back panel to the baffle's inside face
     const zB = -dims.d / 2 + T;

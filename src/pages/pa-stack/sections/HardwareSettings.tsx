@@ -8,7 +8,7 @@ import { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 import { keysOf } from "../../../lib/records";
 import type { BoxHandles, HardwareBoxId } from "../../../types";
 import type { PaPlanner } from "../hooks/usePaPlanner";
-import { STACK } from "../../../styles/layout";
+import { GAP_Y } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<PaPlanner, "hardware" | "setHardware" | "subHardware" | "midHardware" | "layout">;
@@ -24,7 +24,7 @@ export function HardwareSettings({ planner }: Props) {
     hardwareChip(plan),
   );
   return (
-    <div className={STACK}>
+    <div className={GAP_Y}>
       {boxes.map((box) => (
         <HandleFields
           key={box}

@@ -21,7 +21,7 @@ import { useCoverageLayout } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { AmpPowerTable } from "./AmpPowerTable";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
-import { HEADING_GROUP, RESULT_MAX_WIDTH, STACK } from "../../styles/layout";
+import { HEADING_GROUP, RESULT_MAX_WIDTH, GAP_Y } from "../../styles/layout";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { formatHz } from "../../lib/format";
@@ -98,7 +98,7 @@ export function CoveragePage({ planner }: Props) {
       className={settingsSheetRoomClass(sheetOpen)}
       results={
         <div className="min-w-0 flex flex-col gap-5">
-          <section className={STACK}>
+          <section className={GAP_Y}>
             <div className={HEADING_GROUP}>
               <SectionHeading>Audience coverage</SectionHeading>
               <p className="text-sm text-stone-500">
@@ -172,7 +172,7 @@ export function CoveragePage({ planner }: Props) {
         <SettingsColumn
           label="Coverage settings"
           className={SETTINGS_SHEET_CLASS}
-          stack="flex flex-col gap-6 max-md:gap-0"
+          gapY="flex flex-col gap-6 max-md:gap-0"
           bodyClassName={`md:pb-4 ${settingsSheetBodyClass(sheetOpen)}`}
           top={
             <SettingsSheetTabs
@@ -187,7 +187,7 @@ export function CoveragePage({ planner }: Props) {
             />
           }
         >
-          <div className={`${tabClass("listener")} ${STACK}`}>
+          <div className={`${tabClass("listener")} ${GAP_Y}`}>
             <div className={HEADING_GROUP}>
               <div className={label}>Listener</div>
               {rel != null ? (
@@ -264,7 +264,7 @@ export function CoveragePage({ planner }: Props) {
             )}
           </div>
 
-          <div className={`${tabClass("band")} ${STACK}`}>
+          <div className={`${tabClass("band")} ${GAP_Y}`}>
             <Slider
               label="Target level, sub band"
               value={layout.targetDb}
@@ -301,11 +301,11 @@ export function CoveragePage({ planner }: Props) {
             />
           </div>
 
-          <div className={`${tabClass("room")} ${STACK}`}>
+          <div className={`${tabClass("room")} ${GAP_Y}`}>
             <RoomFields room={room} actions={state} />
           </div>
 
-          <div className={`${tabClass("stacks")} ${STACK}`}>
+          <div className={`${tabClass("stacks")} ${GAP_Y}`}>
             <ToggleGroup
               label="Stacks"
               value={map.subs}

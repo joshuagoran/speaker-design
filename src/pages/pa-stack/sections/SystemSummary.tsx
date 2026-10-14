@@ -9,7 +9,7 @@ import { subBassLevel } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { UI_TEXT } from "../../../constants/uiText";
-import { STACK } from "../../../styles/layout";
+import { GAP_Y } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<
@@ -46,7 +46,7 @@ export function SystemSummary({ planner }: Props) {
   } = planner;
   if (!subModeled) return null;
   return (
-    <section className={`min-w-0 ${STACK}`} style={{ fontFamily: FONT }}>
+    <section className={`min-w-0 ${GAP_Y}`} style={{ fontFamily: FONT }}>
       <StatTileGrid
         tiles={[
           [STATS.netVolume, subNetLiters.toFixed(0), "L"],

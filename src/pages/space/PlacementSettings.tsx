@@ -18,7 +18,7 @@ import {
 import { formatSigned } from "../../lib/format";
 import { INCHES_PER_FOOT } from "../../constants/units";
 import { shownIn } from "../speaker/speakerFields";
-import { FIELD_ROW, STACK } from "../../styles/layout";
+import { FIELD_ROW, GAP_Y } from "../../styles/layout";
 
 interface Props {
   index: number;
@@ -171,7 +171,7 @@ export function PlacementSettings({
         />
       </div>
       {alignTo && (
-        <div className={STACK}>
+        <div className={GAP_Y}>
           <div className={FIELD_ROW}>
             <SelectField
               label={<Tooltip tip={SPACE_TEXT.alignToTip}>{SPACE_TEXT.alignTo}</Tooltip>}

@@ -2,7 +2,7 @@ import { useId } from "react";
 import { ToggleGroup } from "./ToggleGroup";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
 import { formatHz } from "../../lib/format";
-import { STACK } from "../../styles/layout";
+import { GAP_Y } from "../../styles/layout";
 import type { CoverageBand } from "../../types";
 
 /** The named bands, in the picker's order. */
@@ -32,7 +32,7 @@ interface Props {
 export function CoverageBandPicker({ band, freqHz, onBand, onFreqHz, oneNote }: Props) {
   const freqId = useId();
   return (
-    <div className={STACK}>
+    <div className={GAP_Y}>
       <ToggleGroup
         label="Band"
         value={band}

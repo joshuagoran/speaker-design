@@ -1,7 +1,7 @@
 import { AnimatedDetails } from "./AnimatedDetails";
 import { Card } from "./Card";
 import { HOVER_TRANSITION } from "./buttonStyles";
-import { STACK } from "../../styles/layout";
+import { GAP_Y } from "../../styles/layout";
 
 interface Props {
   /** the DOM id, to scroll it into view */
@@ -41,7 +41,7 @@ export function CardFold({ id, title, summary, open, onOpenChange, children }: P
         }
         summaryClassName={`flex items-center gap-3 min-h-11 px-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden group rounded ${HOVER_TRANSITION}`}
       >
-        <div className={`px-3 pb-3 ${STACK}`}>{children}</div>
+        <div className={`px-3 pb-3 ${GAP_Y}`}>{children}</div>
       </AnimatedDetails>
     </Card>
   );

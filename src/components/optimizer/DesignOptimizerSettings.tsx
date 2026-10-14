@@ -15,7 +15,7 @@ import {
 } from "../../lib/optimizer/goalKeeps";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import type { OptimizerProgress, SpeakerGoal } from "../../types";
-import { STACK_TIGHT } from "../../styles/layout";
+import { GAP_Y_TIGHT } from "../../styles/layout";
 
 /** The words the fold takes from a page's optimizer text. */
 export interface OptimizerFoldText {
@@ -93,7 +93,7 @@ export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limit
       <KeepDetails
         lines={keepLinesFrom(SPEAKER_GOAL_KEEPS, o.goals, goalDefs, SPEAKER_KEEP_WORDS, modeled)}
       />
-      <div className={STACK_TIGHT}>
+      <div className={GAP_Y_TIGHT}>
         <NumberField
           label={T.target}
           value={o.targetDb}

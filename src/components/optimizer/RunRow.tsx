@@ -1,7 +1,7 @@
 import { Button } from "../ui/Button";
 import { Ellipsis } from "../ui/Ellipsis";
 import type { OptimizerProgress, PaOptimizerResult } from "../../types";
-import { STACK_TIGHT } from "../../styles/layout";
+import { GAP_Y_TIGHT } from "../../styles/layout";
 
 interface Props {
   busy: boolean;
@@ -38,7 +38,7 @@ export function RunRow({
   children,
 }: Props) {
   return (
-    <div className={STACK_TIGHT}>
+    <div className={GAP_Y_TIGHT}>
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">
           {runLabel}
