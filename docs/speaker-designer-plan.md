@@ -368,7 +368,7 @@ Each PR stands alone. Lowest risk first.
       | Bought parts                                                       | Speaker Cutlist parts table (#150)                                                             | With #150                                            |
       | Fills page (coaxial fill box)                                      | Speaker "Fill" template                                                                        | Done                                                 |
       | Fill chips (HF pad and power limit)                                | Speaker band chips                                                                             | Done: the HF pad chip (`tests/speaker-fill-chips`)   |
-      | Fill delay and level to the mains                                  | Space: "Align to" a placement; the Delay is the path difference plus 5 ms                      | Done (`tests/fill-align`)                            |
+      | Fill delay and level to the mains                                  | Space: Auto Delay and Level. Mains meet at the alignment point. A fill plays 5 ms late.        | Done (`tests/space-solve-feeds`)                     |
       | Notes: racks, signal path, amps, DSP, passive crossover, materials | Space "Notes" tab (static); rich text later                                                    | Done: the Space "Notes" tab                          |
 
     - **Totals** (`lib/speaker/speakerTotals`, `tests/stack-totals.test.ts`). The Speaker page shows the price and

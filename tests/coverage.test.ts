@@ -4,8 +4,10 @@ import {
   audienceAverage,
   autoSubDelayMs,
   balanceLevels,
+  BAND_POINTS,
   bandTarget,
   contourSegments,
+  COVERAGE_BANDS,
   coverageBoxes,
   coverageFrequencies,
   coverageGrid,
@@ -249,6 +251,19 @@ test("coverage: two stacks at one low frequency add on the center line and cance
     center - dip > 10,
     `center ${center.toFixed(1)} dB, dip ${dip.toFixed(1)} dB at ${x.toFixed(1)} ft`,
   );
+});
+
+test("coverage: a band's modal sub-points stay inside the band, and each point keeps its whole share", () => {
+  // a crossover above every band's top splits every point
+  for (const band of ["sub", "mid", "high"] as const) {
+    const { lo, hi } = COVERAGE_BANDS[band];
+    const { freqs, shares } = coverageFrequencies(band, 0, 1e5, 4);
+    for (const f of freqs)
+      assert.ok(f >= lo * (1 - 1e-12) && f <= hi * (1 + 1e-12), `${band} ${f}`);
+    // every point weighs 1, so the shares sum to the point count
+    assert.ok(Math.abs(shares.reduce((a, b) => a + b, 0) - BAND_POINTS) < 1e-9);
+    assert.ok(shares.every((x) => x > 0 && x <= 1));
+  }
 });
 
 test("coverage: the band average smooths the low-frequency dip a single frequency shows", () => {

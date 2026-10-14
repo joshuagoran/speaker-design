@@ -443,7 +443,10 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
     name: "B&C 18NW100",
     maker: "bc",
     price: 458.1,
-    src: "usspeaker.com, Sep 2026",
+    // $458.10 new, in stock at Parts Express (https://www.parts-express.com/B-C-18NW100-18-Neodymium-Subwoofer-Speaker-Driver-294-574,
+    // SKU 294-574, read 14 Oct 2026) and the same at usspeaker.com. Full Compass blocked the page read. Listings at other
+    // prices (eBay, Parts Express search snippets) are third-party or stale.
+    src: "parts-express.com 294-574 and usspeaker.com, Oct 2026",
     size: 18,
     ts: {
       Fs: 31,

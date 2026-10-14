@@ -175,8 +175,14 @@ export const HORN_PATH = {
 /** A first-order filter's type (6 dB/oct): a series capacitor or coil, as a super tweeter on the HF channel. */
 export const FIRST_ORDER_FILTER = "1st";
 
-/** A stack member's delay when the stack aligns it (the PA sub against the tops). */
+/**
+ * A delay its rule sets: a stack member's when the stack aligns it (the PA sub against the tops), a space placement's
+ * when the space's solver does (lib/speaker/solveFeeds).
+ */
 export const AUTO_DELAY = "auto";
+
+/** A space fill's level when the space's solver sets it (lib/speaker/solveFeeds): the nearest main's, where it aims. */
+export const AUTO_LEVEL = "auto";
 
 /** What a space places, by id: a stack, or a speaker alone on its own input range. */
 export const SPACE_ITEM = {

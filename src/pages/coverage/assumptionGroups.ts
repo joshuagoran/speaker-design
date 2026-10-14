@@ -52,7 +52,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
       "Summing and readouts",
       [
         `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase (the stacks interfere); above, band averages add by power.`,
-        `Bands, Hz: ${bands}; each averaged over ${BAND_POINTS} frequencies.`,
+        `Bands, Hz: ${bands}; each averaged over ${BAND_POINTS} frequencies, with more where the room modes sum.`,
         `The floor stats leave out ${STATS_CLEARANCE_FT} ft around every box.`,
       ],
     ],

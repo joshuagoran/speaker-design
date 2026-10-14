@@ -61,6 +61,7 @@ import {
   DIRECT_LOAD,
   NO_FILTERS,
   lrFilter,
+  roomCenter,
   spacePlacement,
   speakerIdentity,
   stackMember,
@@ -414,6 +415,7 @@ export function paVenue(floor: PaFloor): SpaceVenue {
   return {
     room,
     listener: floor.listener,
+    alignAt: roomCenter(room),
     earFt: floor.earFt,
     targetDb: floor.targetDb,
     // as the coverage page: its target in the sub band, measured where it measures it, under the PA music balance

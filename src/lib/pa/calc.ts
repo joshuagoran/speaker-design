@@ -2555,6 +2555,30 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   return { V, grossL, disp, recessL, netL, effL, vTherm, useV, smallerBoxNetL, mdl, max };
 }
 
+/**
+ * The pad that brings a coaxial's HF section down to its woofer behind a passive network, dB (never negative). Both
+ * sensitivities are 1 W / 1 m at their own impedance, so the HF's moves to 2.83 V first (a 16 ohm section gets half
+ * the power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox). Zero without
+ * an HF section. The Fills page's limits and the Fill speaker template both read it.
+ * @param hf the coaxial's HF section, or null for a fill without one
+ * @param wooferSensDb the woofer's sensitivity at 2.83 V / 1 m, dB
+ */
+export function fillHfPadDb(hf: FillDriver["hf"], wooferSensDb: number): number {
+  if (!hf) return 0;
+  return Math.max(
+    0,
+    hf.sens + 10 * Math.log10(SENSITIVITY_REFERENCE_OHMS / ohmsOf(hf)) - wooferSensDb,
+  );
+}
+
+/**
+ * The pad for a fill driver: its HF section down to the maker's woofer sensitivity (`lfSens`). The Fills page's limits
+ * and the Fill speaker template both read this one expression, so they cannot drift apart.
+ */
+export function fillDriverPadDb(drv: Pick<FillDriver, "hf" | "lfSens">): number {
+  return fillHfPadDb(drv.hf, drv.lfSens);
+}
+
 // ---- passive coaxial fills ----
 // drv: FILL_OPTIONS entry. cfg: { boxType: "vented" | "sealed", dim {w,h,d} external in, port {n, dia, len},
 // hp (highpass to the subs, Hz), hpOrder (its slope: 4 = LR24, 8 = LR48), ampW (per box, watts into the woofer's
@@ -2588,12 +2612,7 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
   // sensitivities are 1 W/1 m at their own impedance, so the HF's is moved to 2.83 V (a 16 ohm section gets half the
   // power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox)
   const hf = drv.hf;
-  const pad = hf
-    ? Math.max(
-        0,
-        hf.sens + 10 * Math.log10(SENSITIVITY_REFERENCE_OHMS / ohmsOf(hf)) - (drv.lfSens || sens),
-      )
-    : 0;
+  const pad = fillDriverPadDb(drv);
   const hfLimW = hf ? hfLimitWatts(2 * hf.aes, hf, pad, ts) : null; // amp watts into the woofer's impedance
   const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1; // 1/2" birch ~1.6 lb/ft2
   const portLimited = vented && max.some((o) => o.who === "port");

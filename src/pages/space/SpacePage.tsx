@@ -57,6 +57,7 @@ import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage
 import { stackFromSaved } from "../stack/stackSaves";
 import type { StackPlanner } from "../stack/useStack";
 import { PlacementSettings } from "./PlacementSettings";
+import { ArrivalList } from "./ArrivalList";
 import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
 import { emptySpace, itemName } from "./spaceSaves";
@@ -245,6 +246,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               view={view}
               room={venue.room}
               listener={venue.listener}
+              alignAt={venue.alignAt}
               boxes={boxes}
               selected={model.placements.flatMap((p, i) =>
                 p.item.placement.source === selected ? [i] : [],
@@ -257,6 +259,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                 moveBox: space.moveBox,
                 aimBox: space.aimBox,
                 moveListener: space.moveListener,
+                moveAlignAt: space.moveAlignAt,
               }}
               busy={space.isPending}
               maxHeight={maxHeight}
@@ -271,14 +274,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               onFreqHz={space.setFreqHz}
               oneNote={SPACE_TEXT.oneNote}
             />
-            <div className={READING_WIDTH}>
-              <SpaceAssumptions
-                venue={venue}
-                levelRef={space.levelRef}
-                balance={space.balance}
-                target={space.target}
-              />
-            </div>
           </section>
           {placements.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
@@ -312,6 +307,14 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                   ))}
                 </p>
               )}
+            </section>
+          )}
+          {space.arrivals.length > 0 && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+              <SectionHeading>
+                <Tooltip tip={SPACE_TEXT.arrivalsTip}>{SPACE_TEXT.arrivals}</Tooltip>
+              </SectionHeading>
+              <ArrivalList arrivals={space.arrivals} names={names} />
             </section>
           )}
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
@@ -361,6 +364,14 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               />
             </section>
           )}
+          <div className={`${READING_WIDTH} mt-5`}>
+            <SpaceAssumptions
+              venue={venue}
+              levelRef={space.levelRef}
+              balance={space.balance}
+              target={space.target}
+            />
+          </div>
         </>
       }
       settings={
@@ -434,6 +445,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                 />
               </div>
               <p className="text-xs text-stone-500">{SPACE_TEXT.listenerHint}</p>
+              <p className="text-xs text-stone-500">{SPACE_TEXT.alignAtHint}</p>
             </>,
           )}
           {section(
@@ -476,7 +488,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                     space.removePlacement(k);
                     afterRemoved(k);
                   }}
-                  onAlign={(to) => space.alignTo(k, to)}
+                  solved={model.solved[k]}
                 />
               ))}
             </>,

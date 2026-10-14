@@ -10,7 +10,11 @@
 //   reverberant field from everything the boxes radiate, the same everywhere. The two hand over in a crossfade.
 // Below COHERENT_BELOW_HZ the image paths sum with phase, so the two stacks interfere; above it a band average adds
 // the separate paths (each box, each reflection) by power, as their comb filtering averages out across a band.
-import { SPEED_OF_SOUND } from "../../constants/acoustics";
+import {
+  MODAL_SUBPOINTS,
+  MODAL_SUBPOINTS_WHOLE_BAND,
+  SPEED_OF_SOUND,
+} from "../../constants/acoustics";
 import {
   baffleStepShelf,
   logSpacedFrequencies,
@@ -181,6 +185,8 @@ export interface PaCoverageScene extends CoverageScene {
  */
 export interface CoverageSlot {
   f: number;
+  /** its share of the band average's weight: 1 for a band point, 1/M for each of the M frequencies a point splits into */
+  share: number;
   k: number;
   coherent: boolean;
   out: Partial<Record<CoverageVoice["id"], Complex>>;
@@ -494,6 +500,13 @@ export const balancedTarget = (target: number, f: number, b: MusicBalance) =>
 export const bandCenterHz = (band: CoverageBand, freqHz: number) =>
   band === "one" ? freqHz : Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi);
 
+/** A band's frequency range, Hz (the one frequency for "one": `lo` = `hi`). */
+export const bandRangeHz = (
+  band: CoverageBand,
+  freqHz: number,
+): Pick<(typeof COVERAGE_BANDS)["sub"], "lo" | "hi"> =>
+  band === "one" ? { lo: freqHz, hi: freqHz } : COVERAGE_BANDS[band];
+
 /** A band's target: the balanced target at the band's center (or at the one frequency). */
 export const bandTarget = (target: number, band: CoverageBand, freqHz: number, b: MusicBalance) =>
   balancedTarget(target, bandCenterHz(band, freqHz), b);
@@ -613,22 +626,31 @@ export function coverageSlots(
   levels: CoverageLevels,
   freqs: readonly number[],
   allCoherent: boolean,
+  shares?: readonly number[],
 ): CoverageSlot[] {
   const { stack } = scene;
   const srcs = paStackSources(stack);
   const skirts = bandSkirts(stack);
-  return sceneSlots(scene, freqs, allCoherent, (f) => bandOutputs(stack, levels, srcs, skirts, f));
+  return sceneSlots(
+    scene,
+    freqs,
+    allCoherent,
+    (f) => bandOutputs(stack, levels, srcs, skirts, f),
+    shares,
+  );
 }
 
 /**
  * Each voice's output at each frequency (`outputs`, from the frequency and its index in `freqs`), and the scene's room
- * at that frequency.
+ * at that frequency. `shares` is each frequency's share of the band average's weight (`coverageFrequencies`); every
+ * frequency weighs 1 without it.
  */
 export function sceneSlots(
   scene: CoverageScene,
   freqs: readonly number[],
   allCoherent: boolean,
   outputs: (f: number, i: number) => CoverageSlot["out"],
+  shares?: readonly number[],
 ): CoverageSlot[] {
   const { room, modal, voices } = scene;
   // how many of each voice's drivers play: the boxes' own (not their images), for the reverberant field
@@ -701,6 +723,7 @@ export function sceneSlots(
     }
     return {
       f,
+      share: shares?.[i] ?? 1,
       k,
       coherent: allCoherent || f < COHERENT_BELOW_HZ,
       out,
@@ -715,14 +738,48 @@ export function sceneSlots(
   });
 }
 
-/** The frequencies a band averages, or the one frequency, and whether they all sum with phase. */
+/**
+ * The frequencies a band averages, or the one frequency, each with its share of the average's weight, and whether
+ * they all sum with phase. A band takes `BAND_POINTS` points, log-spaced from its bottom to its top, each weighing 1.
+ * In a band view, a point below the top of the room's modal crossfade (`modalCrossoverHz`, null outdoors) splits into
+ * M frequencies, log-spaced across the point's share of the band (a ratio of one point to the next, centered on the
+ * point), each weighing 1/M of it: one point near a room mode then doesn't draw a lobe pattern of its own, and the
+ * band's weight per point stays 1. The first and last points' shares would reach past the band's edges, so each share
+ * is clamped to the band's range (the sub-points then space evenly across the clamped share, still weighing 1/M each,
+ * and the point's total weight stays 1): no frequency falls below the band's bottom or above its top. M is `subpoints`,
+ * else `MODAL_SUBPOINTS`, or `MODAL_SUBPOINTS_WHOLE_BAND` for a band that lies wholly below the top of the crossfade.
+ * The one-frequency view never splits.
+ */
 export function coverageFrequencies(
   band: CoverageBand,
   freqHz: number,
-): { freqs: number[]; coherent: boolean } {
-  if (band === "one") return { freqs: [freqHz], coherent: true };
+  modalCrossoverHz: number | null = null,
+  subpoints?: number,
+): { freqs: number[]; shares: number[]; coherent: boolean } {
+  if (band === "one") return { freqs: [freqHz], shares: [1], coherent: true };
   const b = COVERAGE_BANDS[band];
-  return { freqs: logSpacedFrequencies(b.lo, b.hi, BAND_POINTS), coherent: false };
+  const modalTop = modalCrossoverHz === null ? 0 : modalTopHz(modalCrossoverHz);
+  /** M, how many frequencies a point in the modal range splits into */
+  const split = subpoints ?? (b.hi < modalTop ? MODAL_SUBPOINTS_WHOLE_BAND : MODAL_SUBPOINTS);
+  /** the ratio of one band point to the next */
+  const pointRatio = Math.pow(b.hi / b.lo, 1 / (BAND_POINTS - 1));
+  const freqs: number[] = [],
+    shares: number[] = [];
+  for (const f of logSpacedFrequencies(b.lo, b.hi, BAND_POINTS)) {
+    if (split > 1 && f < modalTop) {
+      /** the point's share of the band, Hz: a ratio either side of it, clamped to the band's edges */
+      const from = Math.max(b.lo, f / Math.sqrt(pointRatio)),
+        to = Math.min(b.hi, f * Math.sqrt(pointRatio));
+      for (let j = 0; j < split; j++) {
+        freqs.push(from * Math.pow(to / from, (j + 0.5) / split));
+        shares.push(1 / split);
+      }
+    } else {
+      freqs.push(f);
+      shares.push(1);
+    }
+  }
+  return { freqs, shares, coherent: false };
 }
 
 // scratch space for the sum: per source geometry (GEO values each), per path pressure
@@ -750,11 +807,15 @@ export function levelAtPoint(
     pim = new Float64Array(paths);
   }
   let geoReady = false;
-  let acc = 0;
+  let acc = 0,
+    totalShare = 0;
   for (const sl of slots) {
     const w = sl.modal && modal ? sl.modal.weight : 0;
+    totalShare += sl.share;
+    // a band average: the slots' mean squares, each by its share (never the pressures across frequencies)
     if (w > 0 && sl.modal && modal)
       acc +=
+        sl.share *
         w *
         modalPressure2(modal.modes, modal.sources, sl.modal, px + modal.modes.size[0] / 2, py, pz);
     if (w >= 1) continue;
@@ -818,9 +879,9 @@ export function levelAtPoint(
       }
       ms += re * re + im * im;
     } else for (let p = 0; p < paths; p++) ms += pre[p] * pre[p] + pim[p] * pim[p];
-    acc += (1 - w) * ms;
+    acc += sl.share * (1 - w) * ms;
   }
-  return 10 * Math.log10(Math.max(1e-12, acc / Math.max(1, slots.length)));
+  return 10 * Math.log10(Math.max(1e-12, acc / Math.max(1, totalShare)));
 }
 
 /** The grid's row count for `cols` columns across the room. */
@@ -859,11 +920,15 @@ export function computeCoverageGrid({
   layout,
   cols,
 }: CoverageRequest): CoverageGrid {
-  const { freqs, coherent } = coverageFrequencies(layout.band, layout.freqHz);
   const scene = coverageScene(stack, layout);
+  const { freqs, shares, coherent } = coverageFrequencies(
+    layout.band,
+    layout.freqHz,
+    scene.modal?.crossoverHz ?? null,
+  );
   return coverageGrid(
     scene,
-    coverageSlots(scene, levels, freqs, coherent),
+    coverageSlots(scene, levels, freqs, coherent, shares),
     layout.room,
     layout.earFt,
     cols,
@@ -875,11 +940,15 @@ export function coverageLevelAt(
   { stack, levels, layout }: Omit<CoverageRequest, "cols">,
   at: FloorPoint,
 ): number {
-  const { freqs, coherent } = coverageFrequencies(layout.band, layout.freqHz);
   const scene = coverageScene(stack, layout);
+  const { freqs, shares, coherent } = coverageFrequencies(
+    layout.band,
+    layout.freqHz,
+    scene.modal?.crossoverHz ?? null,
+  );
   return levelAtPoint(
     scene,
-    coverageSlots(scene, levels, freqs, coherent),
+    coverageSlots(scene, levels, freqs, coherent, shares),
     at.x * FT,
     at.y * FT,
     layout.earFt * FT,

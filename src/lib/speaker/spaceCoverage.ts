@@ -5,6 +5,9 @@
 // coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step (the speaker
 // model is half-space; the floor image puts the floor back, as on the PA page). Pure.
 //
+// Each placement's own delay and level are its solved ones (lib/speaker/solveFeeds: Auto ones from the layout, the rest
+// as typed).
+//
 // The whole space plays from one input. At its music limit the placement with the least headroom (less its level) sets
 // the level; the page then turns it down so the reference (the audience's average, as on the coverage page) gets the target, never past the limit.
 import type {
@@ -47,6 +50,7 @@ import {
 import { coneParts, isConeKind } from "./driverParts";
 import { driverHorn, speakerLayout } from "./speakerLayout";
 import { spaceLayout, type BandOfPart, type PlacedDriver, type PlacedItem } from "./spaceLayout";
+import { solveFeeds, typedFeed, type SolvedFeed } from "./solveFeeds";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
 import { COAX_HF_EXIT_IN } from "../../constants/coax";
@@ -115,8 +119,12 @@ interface VoiceFeed extends CoverageVoice {
   pressure: readonly Complex[];
   /** the member's level and the placement's, dB */
   gainDb: number;
+  /** of that level, the member's, dB */
+  memberLevelDb: number;
   /** the member's delay and the placement's, ms */
   delayMs: number;
+  /** of that delay, the member's: the stack's own alignment, ms */
+  memberDelayMs: number;
   /** the baffle's width for a cone band's baffle step, in; null for an HF section */
   baffleWIn: number | null;
   /** the band's share each of its spots plays: one over their count */
@@ -129,6 +137,8 @@ export interface SpaceModel {
   placements: SpacePlacementModel[];
   scene: CoverageScene;
   feeds: VoiceFeed[];
+  /** each placement's delay and level (by its index in the space; a mirrored pair is one), as the solver sets them */
+  solved: SolvedFeed[];
   /** the space's input headroom at its music limit, dB: the least of its placements', less their levels; 0 unknown */
   headroomDb: number;
   /** a placement names a stack or speaker the design lacks */
@@ -190,8 +200,37 @@ function placementModel(
   return { item, response, limits, headroomDb };
 }
 
-/** The space worked out (see the file's note). */
+/**
+ * The model with each placement playing `solved` (by its index in the space): its feeds' delays and levels, and the
+ * space's headroom (the least of its placements', less their levels).
+ */
+export function withSolved(model: SpaceModel, solved: SolvedFeed[]): SpaceModel {
+  const rooms = model.placements.flatMap((p) =>
+    p.headroomDb === null ? [] : [p.headroomDb - (solved[p.item.placement.source]?.levelDb ?? 0)],
+  );
+  return {
+    ...model,
+    feeds: model.feeds.map((f) => ({
+      ...f,
+      delayMs: f.memberDelayMs + (solved[f.placement]?.delayMs ?? 0),
+      gainDb: f.memberLevelDb + (solved[f.placement]?.levelDb ?? 0),
+    })),
+    solved,
+    headroomDb: rooms.length ? Math.min(...rooms) : 0,
+  };
+}
+
+/** The space worked out (see the file's note), its Auto delays and levels solved at its venue. */
 export function spaceModel(design: SpaceDesign): SpaceModel {
+  const laid = spaceModelLaidOut(design);
+  return withSolved(laid, solveFeeds(laid, design.space.venue));
+}
+
+/**
+ * The space worked out with each placement's typed delay and level, Auto ones at 0 (what the solver reads; `withSolved`
+ * sets the solved ones). Moving the listener or the alignment point doesn't change it.
+ */
+export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
   const cache = new Map<string, Pick<SpacePlacementModel, "response" | "limits">>();
   const items = spaceLayout(design, bandOfPart);
   const placements = items.map((item) => placementModel(design, item, cache));
@@ -218,8 +257,11 @@ export function spaceModel(design: SpaceDesign): SpaceModel {
           id,
           pattern,
           pressure: band.pressure,
-          gainDb: item.stack ? item.stack.stack.members[d.member].levelDb + placement.levelDb : 0,
-          delayMs: member.delayMs + placement.delayMs,
+          // the placement's own level and delay are added by `withSolved`
+          gainDb: 0,
+          memberLevelDb: item.stack ? item.stack.stack.members[d.member].levelDb : 0,
+          delayMs: 0,
+          memberDelayMs: member.delayMs,
           baffleWIn: d.part === DRIVER_PART.cone ? speakerLayout(d.speaker.cabinet).size.w : null,
           share: 1 / (spots.get(`${d.member}/${d.band}`) ?? 1),
         });
@@ -237,21 +279,23 @@ export function spaceModel(design: SpaceDesign): SpaceModel {
       ];
     });
   });
-  const rooms = placements.flatMap((p) =>
-    p.headroomDb === null ? [] : [p.headroomDb - p.item.placement.levelDb],
-  );
   const list = [...feeds.values()];
-  return {
-    placements,
-    scene: sceneOf(
-      design.space.venue.room,
-      list.map(({ id, pattern }) => ({ id, pattern })),
-      boxes,
-    ),
-    feeds: list,
-    headroomDb: rooms.length ? Math.min(...rooms) : 0,
-    missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
-  };
+  // each placement at its typed delay and level, Auto ones at 0
+  return withSolved(
+    {
+      placements,
+      scene: sceneOf(
+        design.space.venue.room,
+        list.map(({ id, pattern }) => ({ id, pattern })),
+        boxes,
+      ),
+      feeds: list,
+      solved: [],
+      headroomDb: 0,
+      missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
+    },
+    design.space.placements.map(typedFeed),
+  );
 }
 
 /** Each voice's output at 1 m at `f`, the space at its music limit: its band's share, level, delay and baffle step. */
@@ -275,6 +319,8 @@ export function spaceOutputs(model: SpaceModel, f: number): CoverageSlot["out"] 
 export interface SpaceGridRequest {
   scene: CoverageScene;
   freqs: number[];
+  /** each frequency's share of the band average's weight (`coverageFrequencies`) */
+  shares: number[];
   coherent: boolean;
   outputs: CoverageSlot["out"][];
   room: Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
@@ -290,10 +336,15 @@ export function spaceGridRequest(
   freqHz: number,
   cols: number,
 ): SpaceGridRequest {
-  const { freqs, coherent } = coverageFrequencies(band, freqHz);
+  const { freqs, shares, coherent } = coverageFrequencies(
+    band,
+    freqHz,
+    model.scene.modal?.crossoverHz ?? null,
+  );
   return {
     scene: model.scene,
     freqs,
+    shares,
     coherent,
     outputs: freqs.map((f) => spaceOutputs(model, f)),
     room: { widthFt: venue.room.widthFt, lengthFt: venue.room.lengthFt },
@@ -304,7 +355,7 @@ export function spaceGridRequest(
 
 /** The slots a request sums. */
 const requestSlots = (req: Omit<SpaceGridRequest, "room" | "cols" | "earFt">) =>
-  sceneSlots(req.scene, req.freqs, req.coherent, (_, i) => req.outputs[i]);
+  sceneSlots(req.scene, req.freqs, req.coherent, (_, i) => req.outputs[i], req.shares);
 
 /** The floor map for a request: what the worker runs. The space at its music limit, dB SPL. */
 export const computeSpaceGrid = (req: SpaceGridRequest): CoverageGrid =>
