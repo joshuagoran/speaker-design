@@ -14,6 +14,9 @@ import { paVenue } from "../../lib/speaker/paSpec";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { SPACE_TEXT } from "../../constants/space";
+import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
+import type { PageDraft } from "../../hooks/usePageDraft";
 
 /** The id a space has until the library saves it (then it takes the document's). */
 export const DRAFT_SPACE_ID = "draft";
@@ -125,3 +128,14 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
     speakers,
   };
 }
+
+/** The Space page's working design in the browser: the save document, with the space's id and name. */
+export const spaceDraft: PageDraft<SpaceDesign> = {
+  key: PAGE_DRAFT_KEYS.space,
+  empty: emptySpace,
+  toDraft: (design) => draftDocument(spaceSnapshot(design), design.space),
+  fromDraft: (raw) => {
+    const doc = asDraftDocument(raw);
+    return doc && spaceFromSaved(doc);
+  },
+};

@@ -15,7 +15,8 @@ import {
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
-import { emptyStack, stackFromSaved, stackSnapshot } from "./stackSaves";
+import { stackDraft, stackFromSaved, stackSnapshot } from "./stackSaves";
+import { usePageDraft } from "../../hooks/usePageDraft";
 import { useStackOptimizer } from "./useStackOptimizer";
 import { STACK_TEXT } from "../../constants/stack";
 import type { SavedConfig, SpeakerSpec, StackDesign, StackMember, StackSpec } from "../../types";
@@ -67,7 +68,7 @@ export function withSpeaker(speakers: readonly SpeakerSpec[], speaker: SpeakerSp
  * make and the library (the signed-in user's `stacks`). Held in App, so the stack survives switching pages.
  */
 export function useStack() {
-  const [design, setDesign] = useState<StackDesign>(emptyStack);
+  const [design, setDesign] = usePageDraft(stackDraft);
   // how many times the whole stack was replaced (a start, a saved stack opened): the optimizer's locks start over with it
   const [round, setRound] = useState(0);
   /** the whole stack replaced: the optimizer's cards, locks and Undo are dropped */

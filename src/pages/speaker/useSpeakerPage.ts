@@ -18,6 +18,9 @@ import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { speakerSummary } from "./speakerText";
+import { usePageDraft, type PageDraft } from "../../hooks/usePageDraft";
+import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
 import { useSpeakerOptimizer } from "./useSpeakerOptimizer";
 import type {
@@ -59,6 +62,29 @@ export function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speak
   );
 }
 
+/** What the library saves: the spec without its id and name, undefined fields dropped (the stores reject them). */
+export function speakerSnapshot(spec: SpeakerSpec): SavedSpeakerData {
+  const { id: _id, name: _name, ...speaker } = spec;
+  return JSON.parse(JSON.stringify({ summary: speakerSummary(spec), speaker }));
+}
+
+/** A saved speaker opened: the document's id and name, and its spec; null for a document that holds no speaker. */
+export function speakerFromSaved(c: SavedConfig): SpeakerSpec | null {
+  const saved: unknown = Reflect.get(c, "speaker");
+  return isSavedSpeaker(saved) ? { ...saved, id: c.id, name: c.name } : null;
+}
+
+/** The Speaker page's working design in the browser: the save document, with the speaker's id and name. */
+export const speakerDraft: PageDraft<SpeakerSpec> = {
+  key: PAGE_DRAFT_KEYS.speaker,
+  empty: emptySpeaker,
+  toDraft: (spec) => draftDocument(speakerSnapshot(spec), spec),
+  fromDraft: (raw) => {
+    const doc = asDraftDocument(raw);
+    return doc && speakerFromSaved(doc);
+  },
+};
+
 /** The prefix of the ids the Speaker page gives the bands it adds. */
 const NEW_BAND_ID = "band";
 
@@ -79,7 +105,7 @@ const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
  * signed-in user's `speakers`). Held in App, so the design survives switching pages.
  */
 export function useSpeakerPage() {
-  const [spec, setSpec] = useState<SpeakerSpec>(emptySpeaker);
+  const [spec, setSpec] = usePageDraft(speakerDraft);
   /**
    * how many times the chamber list was replaced (a start, a saved speaker opened) or lost a chamber: each chamber's
    * settings take it with their index as their key, so no settings state carries over to another chamber
@@ -169,19 +195,16 @@ export function useSpeakerPage() {
       return bands.length ? { ...s, cabinet: moveDrivers(s, id, bands[0].id), bands } : s;
     });
   /** what the library saves: the spec without its id and name, undefined fields dropped (the stores reject them) */
-  const snapshot = (): SavedSpeakerData => {
-    const { id: _id, name: _name, ...speaker } = spec;
-    return JSON.parse(JSON.stringify({ summary: speakerSummary(spec), speaker }));
-  };
+  const snapshot = (): SavedSpeakerData => speakerSnapshot(spec);
   /** opens a saved speaker: the document's id and name, and its spec */
   const restore = (c: SavedConfig) => {
-    const saved: unknown = Reflect.get(c, "speaker");
+    const saved = speakerFromSaved(c);
     // a document without a speaker (written elsewhere): left closed, with a word on the library's row
-    if (!isSavedSpeaker(saved)) {
+    if (!saved) {
       store.flash(MISSING_SPEAKER_TEXT);
       return;
     }
-    replaceSpec({ ...saved, id: c.id, name: c.name });
+    replaceSpec(saved);
   };
   return {
     spec,

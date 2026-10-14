@@ -31,7 +31,8 @@ import { COVERAGE_LAYOUT_KEY } from "../../constants/coverageTestIds";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
 import type { PlaceItem } from "./placeOptions";
-import { DRAFT_SPACE_ID, emptySpace, spaceFromSaved, spaceSnapshot } from "./spaceSaves";
+import { DRAFT_SPACE_ID, spaceDraft, spaceFromSaved, spaceSnapshot } from "./spaceSaves";
+import { usePageDraft } from "../../hooks/usePageDraft";
 import type {
   BandId,
   CoverageBand,
@@ -254,7 +255,7 @@ export const withItemPlaced = (d: SpaceDesign, item: PlaceItem): SpaceDesign =>
  * settings make and the library (the signed-in user's `spaces`). Held in App, so the space survives switching pages.
  */
 export function useSpace() {
-  const [design, setDesign] = useState<SpaceDesign>(emptySpace);
+  const [design, setDesign] = usePageDraft(spaceDraft);
   const [band, setBand] = useState<CoverageBand>("mid");
   const [freqHz, setFreqHz] = useState(63);
   const { space } = design;
