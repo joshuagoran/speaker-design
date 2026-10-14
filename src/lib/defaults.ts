@@ -300,16 +300,21 @@ export const DEFAULT_MONITOR = {
  */
 export const PA_V2_SUB_BIN = {
   sub: BC18NBX,
-  /** the box's outside width and depth, mm (its height: the drivers' openings and two walls) */
+  /**
+   * the box's outside width and depth, mm (its height: the drivers' openings and two walls). The depth is the
+   * mock-up's 766 mm made 3/8″ deeper (the template's 30 1/2″): the smallest 1/8″ step that holds the flare, the
+   * walls' clearance and the drivers at their catalog depth.
+   */
   widthMm: 1182,
-  depthMm: 766,
+  depthMm: 775,
   /** each driver's share of the throat's and the mouth's height, mm: two 18″ fill the 920 mm mouth */
   openingMm: 460,
   /**
    * the flare: its compression ratio (the cones' area over the throat's: the side walls' back edges cover the cones'
-   * outer parts, lib/speaker/hornThroat; the best of 1 to 3 in quarter steps, docs/pa-v2-plan.md), and its length, cm
+   * outer parts, lib/speaker/hornThroat; the owner's pick from the sweep of 1 to 3 in quarter steps, for the flatter
+   * band, docs/pa-v2-plan.md), and its length, cm
    */
-  compression: 1,
+  compression: 2,
   flareCm: 50,
   /** each driver's share of the rear chamber's net air, L: the wedges beside the flare join it (~324 L for two) */
   rearLiters: 162,
@@ -335,9 +340,13 @@ export const PA_V2_MID_BOX = {
   mid: byIdOrThrow(MID_OPTIONS, "es10mb600", CATALOG_TABLE_NAMES.mids),
   drivers: 2,
   hfHorn: byIdOrThrow(HORN_OPTIONS, "diy_rosse110x50", CATALOG_TABLE_NAMES.horns),
-  /** the box's outside width and depth, mm (its height: the opening and two walls) */
+  /**
+   * the box's outside width and depth, mm (its height: the opening and two walls). The depth is the mock-up's 526 mm
+   * made 1/4″ deeper (the template's 21″): the smallest 1/8″ step that holds the flare, the walls' clearance and the
+   * drivers at their depth.
+   */
   widthMm: 614,
-  depthMm: 526,
+  depthMm: 533,
   /** the throat's and the mouth's height, mm, and the cones' spacing in it */
   openingMm: 560,
   coneSpacingMm: 280,

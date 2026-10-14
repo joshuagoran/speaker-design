@@ -21,7 +21,8 @@
 // edges (lib/speaker/hornThroat), narrower than the cones where the horn loads them, so the edges cover the cones'
 // outer parts. The drivers' bay behind it is the front chamber: as deep as the walls' clearance (`frontIn`), the box
 // round the cones across, its sides closing it off from the wedges beside the flare, each wall's back edge returning
-// to them along the throat's plane. The drivers' bodies stand behind the bay.
+// to them along the throat's plane. The drivers' bodies stand behind the bay, as deep as the deepest driver's catalog
+// depth, and the path fits only with them inside the box.
 //
 // A folded path runs in legs along the box's depth, one more than it has folds, stacked up the box; each leg is as long
 // along the depth as it is along the path, so the legs' lengths add up to the path. A turn joins two legs through a gap
@@ -35,12 +36,7 @@ import type { FaceRect } from "./speakerLayout";
 import { isStraightSegment, segmentAreaAt } from "../acoustics/hornSegments";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { HORN_PROFILE } from "../../constants/hornEngine";
-import {
-  HORN_DRIVER_ROOM_IN,
-  HORN_FIT_TOLERANCE_IN,
-  HORN_MAX_FOLDS,
-  HORN_PATH_STEPS,
-} from "../../constants/hornPath";
+import { HORN_FIT_TOLERANCE_IN, HORN_MAX_FOLDS, HORN_PATH_STEPS } from "../../constants/hornPath";
 
 /** A section across the path: where it is along it and in the box, and its rectangle. */
 export interface HornSection {
@@ -124,6 +120,8 @@ export interface HornPathInput {
   wallIn: number;
   /** how far the walls' back edges stand in front of the cones, in: the front chamber's depth (0 with no cone) */
   frontIn: number;
+  /** how deep the drivers' bodies reach behind the cones' faces, in: the deepest driver's catalog depth */
+  bodyIn: number;
   /** the path is folded (a bass bin): at least one fold, as many as it needs to fit */
   folded: boolean;
 }
@@ -198,7 +196,7 @@ function hornPathWithFolds(
   total: number,
   n: number,
 ): HornPath | null {
-  const { segments, areaScale, mouth, drivers, clear, depthIn, wallIn, frontIn } = input;
+  const { segments, areaScale, mouth, drivers, clear, depthIn, wallIn, frontIn, bodyIn } = input;
   /** the area at path distance `s` along segment `i`, in² */
   const areaIn = (i: number, s: number) =>
     (segmentAreaAt(segments[i], (s - starts[i]) * CM_PER_IN) / CM2_PER_IN2) * areaScale;
@@ -229,7 +227,7 @@ function hornPathWithFolds(
       ),
     );
 
-  const plan = foldPlan(n, total, drivers ? frontIn + HORN_DRIVER_ROOM_IN : 0, heightAt);
+  const plan = foldPlan(n, total, drivers ? frontIn + bodyIn : 0, heightAt);
   if (!plan) return null;
   const { legs } = plan;
   const middle = { x: mouth.x + mouth.w / 2, y: mouth.y + mouth.h / 2 };
@@ -310,7 +308,6 @@ function hornPathWithFolds(
   });
 
   const [throat] = pathLegs[0].sections;
-  const room = HORN_DRIVER_ROOM_IN;
   /** the bay's center along one axis: at the throat's, kept inside the face (centered where the bay is larger) */
   const within = (at: number, size: number, lo: number, span: number) =>
     size >= span ? lo + span / 2 : Math.min(lo + span - size / 2, Math.max(lo + size / 2, at));
@@ -330,7 +327,7 @@ function hornPathWithFolds(
       z0: Math.min(throat.z, coneZ),
       z1: Math.max(throat.z, coneZ),
       coneZ,
-      bodyZ: coneZ + way * room,
+      bodyZ: coneZ + way * bodyIn,
     };
   const depthNeed = Math.max(plan.backZ + plan.backGap, bay ? Math.max(bay.z1, bay.bodyZ) : 0);
   const heightNeed =

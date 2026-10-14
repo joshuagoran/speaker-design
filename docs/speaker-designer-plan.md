@@ -255,7 +255,7 @@ Each PR stands alone. Lowest risk first.
         high-pass. A pair, hung or on pedestals, is the Space page's (no field for it).
       - PA v2 sub bin (`PA_V2_SUB_BIN`, one or two 18″): one front-loaded horn chamber, the drivers stacked in one
         throat (the engine's `drivers`), a straight-sided flare: the box's own top and bottom, two flat side walls
-        that angle out from the throat (a 1:1 compression ratio, the walls over the cones' outer parts) to a mouth
+        that angle out from the throat (a 2:1 compression ratio, the walls over the cones' outer parts) to a mouth
         that fills the face between the slots. Its area grows linearly: one parabolic section, at the box's inside
         height. Net rear air set (~324 L for two), a slot
         on each front side, folded, tuned to ~35 Hz, a 30 Hz BW24 subsonic.

@@ -11,6 +11,7 @@ import type {
 import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { clearDepthIn } from "../../lib/speaker/chamberAir";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
+import { wallClearanceIn } from "../../lib/speaker/hornThroat";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -45,7 +46,8 @@ export const hornRoom = (
 
 /**
  * A starting horn for the chamber: one conical section from its cones' total area (every cone's Sd times its count) to
- * a mouth the size of the clear face, as long as the clear depth less the deepest cone; no throat chamber, a straight
+ * a mouth the size of the clear face, as long as the clear depth less the deepest cone and the walls' clearance in
+ * front of the cones (lib/speaker/hornThroat); a 1:1 compression ratio, a straight
  * path, front-loaded, its mouth centered. Null when the chamber has no cone with Thiele/Small parameters.
  */
 export function startingHorn(
@@ -59,7 +61,11 @@ export function startingHorn(
   if (cones.length === 0) return null;
   const throat = cones.reduce((sum, c) => sum + c.sd, 0);
   const mouth = Math.max(throat, room.clear.w * room.clear.h * CM2_PER_IN2);
-  const pathIn = Math.max(MIN_PATH_IN, room.depthIn - Math.max(...cones.map((c) => c.depthIn)));
+  // the walls' back edges stand their clearance in front of the cones
+  const pathIn = Math.max(
+    MIN_PATH_IN,
+    room.depthIn - Math.max(...cones.map((c) => c.depthIn)) - wallClearanceIn(chamber.drivers),
+  );
   return {
     segments: [
       { profile: HORN_PROFILE.conical, s1: throat, s2: mouth, length: pathIn * CM_PER_IN },

@@ -52,7 +52,7 @@ import { CM2_PER_IN2 } from "../../constants/units";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { hornPath, type HornPath } from "./hornGeometry";
-import { wallClearanceIn } from "./hornThroat";
+import { driverBodyIn, wallClearanceIn } from "./hornThroat";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
   ARCH_BLOCK,
@@ -696,6 +696,7 @@ export function hornFlare(
     depthIn: clearDepthIn(cabinet, placed.dims),
     wallIn: t,
     frontIn: wallClearanceIn(placed.chamber.drivers),
+    bodyIn: driverBodyIn(placed.chamber.drivers),
     folded: horn.path === HORN_PATH.folded,
   });
   if (!path) return null;

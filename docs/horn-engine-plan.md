@@ -50,7 +50,7 @@ The chain multiplies them per frequency.
   just in front of the cones, clear of 1.5 × Xmax and the surround. The air between the cones and the edges is the
   front chamber (Hornresp's Vtc): each cone's area times that clearance, plus the air in its dish (a cone 40% of the
   driver's catalog depth deep). `lib/speaker/hornThroat` works it out; it is not a setting. With S₁ it makes a
-  low-pass, f ≈ c·S₁ / (2π·Vtc): a higher ratio loads the cones more but lowers it. The PA v2 sub bins take 1:1 and
+  low-pass, f ≈ c·S₁ / (2π·Vtc): a higher ratio loads the cones more but lowers it. The PA v2 sub bins take 2:1 and
   the mid box 2:1 (see [pa-v2-plan.md](pa-v2-plan.md#compression-ratio)).
 - **Solid angle.** The piston formula is half space (2π). Quarter and eighth space (π, π/2) use mirror images: an
   approximation. Free air (4π) is not modeled.

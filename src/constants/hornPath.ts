@@ -11,9 +11,10 @@ export const HORN_PATH_STEPS = 8;
 export const HORN_MAX_FOLDS = 8;
 
 /**
- * The room a driver's body at the throat takes along the path, in, behind its front chamber (the walls' clearance in
- * front of the cone, lib/speaker/hornThroat): where a folded path with an odd number of folds starts at the front, the
- * driver stands between the baffle and the throat. A path with an even number starts at the back, the driver behind it.
+ * The room a driver's body at the throat takes along the path, in, behind its front chamber, where no driver gives its
+ * depth (lib/speaker/hornThroat `driverBodyIn`; a cone's is its catalog depth): where a folded path with an odd number
+ * of folds starts at the front, the driver stands between the baffle and the throat. A path with an even number starts
+ * at the back, the driver behind it.
  */
 export const HORN_DRIVER_ROOM_IN = 3;
 

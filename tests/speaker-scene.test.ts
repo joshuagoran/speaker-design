@@ -343,10 +343,12 @@ describe("horns", () => {
     const [base] = sub.cabinet.chambers;
     const segments = [
       { profile: HORN_PROFILE.exponential, s1: 100, s2: 300, length: 15 },
-      { profile: HORN_PROFILE.conical, s1: 300, s2: 450, length: 8 },
+      { profile: HORN_PROFILE.conical, s1: 300, s2: 450, length: 12 },
     ];
+    // deep enough for the path, the walls' clearance and the 18″ at its catalog depth behind them
     const hornChamber = (path: (typeof HORN_PATH)[keyof typeof HORN_PATH]): SpeakerChamber => ({
       ...base,
+      dims: { ...base.dims, d: 28 },
       netLiters: 40,
       vent: { kind: VENT_KIND.sealed },
       load: {

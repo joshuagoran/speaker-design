@@ -91,7 +91,7 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 - **Ports.** Sub: ~600 cm² per driver, ~680 mm long, folded once along the back wall. Mid: ~120 cm² per driver,
   ~165 mm, straight. Smaller ports limit the output. Flare their ends.
 - **Sub flare.** Straight-sided. The box's own top and bottom are the flare's top and bottom. Two flat side walls
-  angle out from the throat (~263 mm wide at 1:1, see [Compression ratio](#compression-ratio)) to the mouth (the face
+  angle out from the throat (~131 mm wide at 2:1, see [Compression ratio](#compression-ratio)) to the mouth (the face
   between the slots, ~980 mm), ~500 mm deep. The height stays the same, so the area grows linearly along the flare:
   Hornresp's parabolic (PAR) flare, not a conical one.
 - **Mid flare.** Flat top and bottom (the box's own), two curved side walls: an exponential flare (see
@@ -139,9 +139,11 @@ the cones' area. For 2 × 18″ it gave 0.3–0.8 dB less from 60 to 120 Hz and 
   directivity: its radiated power equals the plain box's.
 - **Sub tuning.** 35 Hz is the textbook alignment for 162 L per driver. Against 42 Hz it gains 6 dB at 30–35 Hz and
   loses 1–3 dB at 45–60 Hz, where the cone reaches Xmax. Above 70 Hz the two are equal.
-- **Vents.** The sub's slots (~680 mm) fold once along the back wall; the box stays 766 mm deep. The mid's slots
+- **Vents.** The sub's slots (~680 mm) fold once along the back wall; the box stays ~775 mm deep. The mid's slots
   (~165 mm) stay straight. A long vent's own air acts as a spring and lowers the tuning. So these are shorter than the
   simple (lumped) formula gives: ~760 and ~180 mm would tune to ~33 and ~93 Hz.
+- **Depth.** The planner's boxes are a little deeper than the mock-up: the sub bin 3/8″ (766 → ~775 mm), the mid box
+  1/4″ (526 → ~533 mm). Then the drivers fit at their full catalog depth behind the front chamber.
 - **Voice-coil inductance.** The 10MB600's Le is 1.6 mH. It costs ~4 dB at 950 Hz and little below 500 Hz. The
   10PR320 (Le 0.57 mH) gives ~1.5 dB more at 950 Hz and ~1 dB more at 120–150 Hz, with ~0.5 dB less below 60 Hz.
 - **Wedges.** The wedges beside the sub's flare join its rear chamber (~324 L net). The mid's are sealed.
@@ -165,9 +167,9 @@ against the box's limit (23.5 m/s) at every point. It never binds: at most 12 m/
 
 | Sub bin, 2 × 18″ | 40 Hz | 63 Hz | 100 Hz | 160 Hz | Score      |
 | ---------------- | ----- | ----- | ------ | ------ | ---------- |
-| **1:1**          | 130.6 | 133.0 | 133.9  | 125.1  | **130.66** |
+| 1:1              | 130.6 | 133.0 | 133.9  | 125.1  | 130.66     |
 | 1.5:1            | 130.6 | 132.8 | 133.4  | 125.5  | 130.60     |
-| 2:1              | 130.6 | 132.7 | 133.2  | 125.6  | 130.57     |
+| **2:1**          | 130.6 | 132.7 | 133.2  | 125.6  | **130.57** |
 | 2.5:1            | 130.6 | 132.7 | 133.0  | 125.7  | 130.55     |
 | 3:1              | 130.6 | 132.6 | 132.9  | 125.7  | 130.54     |
 
@@ -182,9 +184,10 @@ against the box's limit (23.5 m/s) at every point. It never binds: at most 12 m/
 
 - **What limits.** The amp everywhere in the mid box's band. In the sub bins, Xmax from ~42 to ~62 Hz and the amp
   elsewhere. At 160 Hz the sub is past its 120 Hz crossover (the input range).
-- **Sub bins: 1:1.** The ratio changes little. A higher ratio takes up to 1 dB off at 100 Hz and adds ~0.5 dB at
-  160 Hz. The band gets flatter (its deviation falls from 1.6 to 1.2 dB) but lower. 1:1 scores best, by less than
-  0.1 dB. The one-driver bin gives the same (124.7/126.9/128.1/122.6 dB at 1:1).
+- **Sub bins: 2:1 (owner's pick).** The ratio changes little. A higher ratio takes up to 1 dB off at 100 Hz and adds
+  ~0.5 dB at 160 Hz. The band gets flatter (its deviation falls from 1.6 to 1.2 dB) but lower. 1:1 scores best, by
+  less than 0.1 dB; the owner picked 2:1 for the flatter band (deviation 1.3 dB). The one-driver bin gives the same
+  (124.7/126.7/127.3/123.1 dB at 2:1).
 - **Mid box: 2:1.** The ratio adds 1.5–2.5 dB from 250 to 800 Hz. Past 2:1 the top of the band gains little and the
   band gets less flat. The throat is ~63 mm wide: the walls cover most of each cone.
 

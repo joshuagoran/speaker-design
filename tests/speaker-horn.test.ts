@@ -157,10 +157,10 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
   // the compression ratio: it sets the throat (the first section's start), the one figure both fields edit
   const drivers = BIN.cabinet.chambers[0].drivers;
   const cones = conesAreaCm2(drivers);
-  assert.ok(Math.abs((compressionRatio(cones, segments) ?? 0) - 1) < 1e-9, "the bin starts at 1:1");
-  const loaded = withSegments(BIN, (s) => withCompressionRatio(s, cones, 2));
-  assert.ok(Math.abs((compressionRatio(cones, hornOf(loaded).segments) ?? 0) - 2) < 1e-9);
-  assert.equal(hornOf(loaded).segments[0].s1, cones / 2, "half the cones' area");
+  assert.ok(Math.abs((compressionRatio(cones, segments) ?? 0) - 2) < 1e-9, "the bin starts at 2:1");
+  const loaded = withSegments(BIN, (s) => withCompressionRatio(s, cones, 4));
+  assert.ok(Math.abs((compressionRatio(cones, hornOf(loaded).segments) ?? 0) - 4) < 1e-9);
+  assert.equal(hornOf(loaded).segments[0].s1, cones / 4, "a quarter of the cones' area");
   assert.deepEqual(hornOf(loaded).segments.slice(1), segments.slice(1), "the other sections stay");
   assert.ok(maxDiff(BIN, loaded) > 0.1, "the response changes");
   const [wide, narrow] = [flareOf(BIN), flareOf(loaded)];
@@ -177,10 +177,10 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
   assert.ok(Math.abs(foldedPath.pathIn - lengthIn(BIN)) < 1e-9, "the path is as long");
 });
 
-test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.2 in²)", () => {
+test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 489.6 in²)", () => {
   const segments = hornOf(BIN).segments;
   const shown = shownIn2(segments[0].s2);
-  assert.equal(shown, 630.2, "the bin's first joint as the field shows it, to the tenth");
+  assert.equal(shown, 489.6, "the bin's first joint as the field shows it, to the tenth");
   // typed into the second section's start: no step, and it snaps to the first section's end
   const start = withSectionSize(segments, 1, "s1", shown);
   assert.ok(!stepsIn(start, 1));

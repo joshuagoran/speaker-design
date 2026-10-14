@@ -12,6 +12,7 @@
 import type { HornSegment, SpeakerDriver, ThieleSmall } from "../../types";
 import { coneDepthIn, coneParts, type ConeParts } from "./driverParts";
 import { CM_PER_IN, MM_PER_IN } from "../../constants/units";
+import { HORN_DRIVER_ROOM_IN } from "../../constants/hornPath";
 import {
   CONE_DISH_PER_DEPTH,
   CONE_SURROUND_RISE_SHARE,
@@ -77,6 +78,15 @@ export const wallClearanceIn = (drivers: readonly SpeakerDriver[]) =>
     0,
     ...drivers.flatMap((d) => frontCone(d) ?? []).map((c) => frontChamber(c.cone, 1).clearanceIn),
   );
+
+/**
+ * How deep the drivers' bodies reach behind the cones' faces, in: the deepest driver's depth (its catalog's, or the
+ * fallback for its kind and size, `coneDepthIn`); `HORN_DRIVER_ROOM_IN` where no driver has one.
+ */
+export function driverBodyIn(drivers: readonly SpeakerDriver[]): number {
+  const depths = drivers.flatMap((d) => coneDepthIn(d) ?? []);
+  return depths.length ? Math.max(...depths) : HORN_DRIVER_ROOM_IN;
+}
 
 /** Every cone's area on the throat, cm² (each cone's Sd times its count); 0 with no cone. */
 export const conesAreaCm2 = (drivers: readonly SpeakerDriver[]) =>

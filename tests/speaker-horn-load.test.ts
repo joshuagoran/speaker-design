@@ -12,6 +12,7 @@ import {
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { coneDepthIn, coneParts } from "../src/lib/speaker/driverParts";
+import { wallClearanceIn } from "../src/lib/speaker/hornThroat";
 import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speakerStarts";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
@@ -68,10 +69,11 @@ test("speaker horn load: Horn starts one conical section from the cones to the c
     assert.ok(flare, `${template}: the flare draws`);
     assert.equal(flare.mouthClipped, false);
     assert.ok(flare.path.fits, `${template}: the path fits the chamber`);
-    // the length: the clear depth less the deepest cone
+    // the length: the clear depth less the deepest cone and the walls' clearance in front of it
     const room = hornRoom(spec.cabinet, chamber, placed);
     const cone = Math.max(...chamber.drivers.map((d) => coneDepthIn(d) ?? 0));
-    assert.ok(Math.abs(s.length / CM_PER_IN - (room.depthIn - cone)) < 1e-9, template);
+    const clearance = wallClearanceIn(chamber.drivers);
+    assert.ok(Math.abs(s.length / CM_PER_IN - (room.depthIn - cone - clearance)) < 1e-9, template);
     // the net air: the rear chamber, the flare's air taken off
     const before = responseOf(spec).chambers[i].netLiters;
     assert.ok(after.netLiters !== null);

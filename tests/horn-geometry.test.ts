@@ -34,6 +34,8 @@ const BOX: Pick<HornPathInput, "mouth" | "clear" | "depthIn" | "wallIn"> = {
 const MOUTH_CM2 = 12 * 10 * CM2_PER_IN2;
 const DRIVERS = { x: -8.25, y: 8, w: 16.5, h: 8 };
 const FRONT_IN = 0.8;
+/** The drivers' bodies, in behind the cones. */
+const BODY_IN = 4;
 
 const seg = (
   profile: HornSegment["profile"],
@@ -73,6 +75,7 @@ const input = (segments: HornSegment[], extra: Partial<HornPathInput> = {}): Hor
   areaScale: 1,
   drivers: DRIVERS,
   frontIn: FRONT_IN,
+  bodyIn: BODY_IN,
   folded: false,
   ...extra,
 });
@@ -295,7 +298,10 @@ test("horn geometry: the path fits the box's inside, and the bay of the drivers 
       `${name}: as deep as the clearance`,
     );
     assert.equal(path.bay.coneZ, path.bay.z1, name);
-    assert.ok(path.bay.bodyZ > path.bay.coneZ, `${name}: the bodies behind the cones`);
+    assert.ok(
+      Math.abs(path.bay.bodyZ - path.bay.coneZ - BODY_IN) < EPS,
+      `${name}: the bodies behind the cones, as deep as given`,
+    );
     assert.ok(path.bay.bodyZ <= i.depthIn + EPS, `${name}: inside the depth`);
   }
 });
