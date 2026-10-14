@@ -192,10 +192,6 @@ For code that calls `hornModel` (the Designer, a future page):
 
 ## Open gaps
 
-- **Le for most of the catalog.** Only the PA v2 drivers and the Hi-fi woofers list it. The others model with no
-  inductance and read a few dB high near the top of their band.
-- **Straight-walled 1-D flares.** Hornresp's parabolic profile (area grows linearly) is not in the engine. Use several
-  conical segments: the PA v2 sub bin uses four.
 - **Chamber standing waves.** The chambers are lumped, as Hornresp's masked mode. Hornresp can also model them as
   ducts (Lrc, Atc).
 - **Inductance models.** Only Hornresp's plain Le; not its semi-inductance or lossy models.
