@@ -120,10 +120,10 @@ export const SPACE_TEXT = {
   down: "From the front wall, ft",
   height: "Height above the floor, ft",
   heightTip: "The gap under it: a plinth, a stand, a fly bar.",
-  yaw: "Yaw, °",
+  yaw: "Rotation, °",
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
-  pitch: "Pitch, °",
-  pitchTip: "Its tilt, + up. A box's tilt in the stack and its cabinet's kick-back add to it.",
+  pitch: "Tilt, °",
+  pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
   mirror: "Flip left and right",
   mirrorTip:
     "Turns the box over, so its left and right sides swap. Use it for a speaker made as a left or right model.",
