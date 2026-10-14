@@ -275,6 +275,8 @@ export function spaceOutputs(model: SpaceModel, f: number): CoverageSlot["out"] 
 export interface SpaceGridRequest {
   scene: CoverageScene;
   freqs: number[];
+  /** each frequency's share of the band average's weight (`coverageFrequencies`) */
+  shares: number[];
   coherent: boolean;
   outputs: CoverageSlot["out"][];
   room: Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
@@ -290,10 +292,15 @@ export function spaceGridRequest(
   freqHz: number,
   cols: number,
 ): SpaceGridRequest {
-  const { freqs, coherent } = coverageFrequencies(band, freqHz);
+  const { freqs, shares, coherent } = coverageFrequencies(
+    band,
+    freqHz,
+    model.scene.modal?.crossoverHz ?? null,
+  );
   return {
     scene: model.scene,
     freqs,
+    shares,
     coherent,
     outputs: freqs.map((f) => spaceOutputs(model, f)),
     room: { widthFt: venue.room.widthFt, lengthFt: venue.room.lengthFt },
@@ -304,7 +311,7 @@ export function spaceGridRequest(
 
 /** The slots a request sums. */
 const requestSlots = (req: Omit<SpaceGridRequest, "room" | "cols" | "earFt">) =>
-  sceneSlots(req.scene, req.freqs, req.coherent, (_, i) => req.outputs[i]);
+  sceneSlots(req.scene, req.freqs, req.coherent, (_, i) => req.outputs[i], req.shares);
 
 /** The floor map for a request: what the worker runs. The space at its music limit, dB SPL. */
 export const computeSpaceGrid = (req: SpaceGridRequest): CoverageGrid =>

@@ -100,7 +100,7 @@ export const FILL_PRECEDENCE_MAX_MS = 15;
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
 const SPACE_ONE_METER = "1 m from the speakers";
 const SPACE_ONE_METER_TIP =
-  "The mean level at ear height, 1 m in front of each placed stack or speaker that plays, on its aim.";
+  "The mean level at ear height, 1 m in front of each placed stack or speaker that plays in the band, on its aim.";
 
 /** The Space page's "Measured at" choices: the PA's, with its own 1 m reference. */
 export const SPACE_LEVEL_REFS: readonly ToggleOption<CoverageLevelRef>[] = COVERAGE_LEVEL_REFS.map(
@@ -268,7 +268,7 @@ export const SPACE_DETAILS = {
   audience: (clearanceFt: number) =>
     `Audience average: the mean over the floor, except ${clearanceFt} ft around every box.`,
   oneMeter: (place: string) =>
-    `${place}: the mean at ear height, 1 m in front of each placed stack or speaker that plays, on its aim.`,
+    `${place}: the mean at ear height, 1 m in front of each placed stack or speaker that plays in the band, on its aim.`,
   boxes: "Boxes and drivers",
   boxLines: (listenM: number) => [
     "Each box plays through its crossover, level and delay.",
