@@ -12,5 +12,4 @@ export const PAGE_DRAFT_KEYS = {
 export const DRAFT_WRITE_MS = 300;
 
 /** What the page says after a restored draft broke it and was dropped. */
-export const DRAFT_FAILED_TEXT =
-  "Your unsaved designs did not load after the reload. Each page shows a new design.";
+export const DRAFT_FAILED_TEXT = "Your last design did not load.";
