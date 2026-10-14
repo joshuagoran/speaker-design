@@ -29,7 +29,8 @@ import { formatHz, formatSigned } from "../../lib/format";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
-import { AUTO_BALANCE_MODE_LABEL } from "../../constants/autoBalance";
+import { AUTO_BALANCE_MODE_LABEL, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
+import { BAND_BALANCE_TIP } from "../../lib/speaker/autoBalance";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import {
@@ -362,7 +363,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 options={SPACE_LEVEL_REFS}
               />
               <ToggleGroup
-                label={<Tooltip tip={SPACE_TEXT.balanceTip}>{SPACE_TEXT.balance}</Tooltip>}
+                label={<Tooltip tip={BAND_BALANCE_TIP}>{AUTO_BALANCE_TEXT.label}</Tooltip>}
                 className="mb-3"
                 value={space.balance}
                 onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}

@@ -89,7 +89,7 @@ export const SPACE_TEXT = {
   missing:
     "A placement names a stack or speaker that is not in this space. The model leaves it out.",
   startHint:
-    "Both replace this space. A start from a design or a preset stands in a room made for it. A PA start also sets the music balance to PA music tilt. Open a saved space from the library above.",
+    "Both replace this space. A start from a design or a preset stands in a room made for it. A PA start also sets the band balance to More bass. Open a saved space from the library above.",
   clear: "Start empty",
   place: "Place",
   /** the Place list's groups */
@@ -165,14 +165,11 @@ export const SPACE_TEXT = {
   /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
   mapCaption: (band: string, target: string, place: string) =>
     `${band}, ${target} dB target at ${place}.`,
-  balance: "Music balance",
-  balanceTip:
-    "Flat: each band plays at the same level. PA music tilt: each higher band plays a little lower, so the bass is stronger, as many PA systems are set.",
   /** the band levels' heading: each band at the listener */
   bandLevels: "Each band at the listener, at this level:",
   /** one band's level and target there, dB (already formatted) */
   bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
-  targetCurve: "Target, music balance",
+  targetCurve: "Target, band balance",
   listenerHint: "Tap the map, or drag the cyan dot, to move the listener.",
   mapHint:
     "Drag a placement to move it, its dot to turn it, or the listener (tap the floor to put them there).",
@@ -192,5 +189,5 @@ export const SPACE_TEXT = {
     `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
   listenerVs: "The listener against the target:",
   modelNote:
-    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the audience average, the listener, or 1 m in front of the speakers) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
+    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the audience average, the listener, or 1 m in front of the speakers) gets the target in the band on show. The target is the lowest band's; with More bass, each band above a crossover is quieter.",
 } as const;

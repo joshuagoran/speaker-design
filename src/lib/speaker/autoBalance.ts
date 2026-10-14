@@ -61,6 +61,13 @@ export const AUTO_BALANCE_TILT: Record<AutoBalanceMode, MusicTilt> = {
 /** The highest crossover that takes `tilt` (a crossover to a sub), Hz: the PA page's highest sub-to-mid crossover. */
 export const SUB_CROSSOVER_MAX_HZ = PA_SLIDERS.xoLo.max;
 
+/** The Band balance tooltip: what each option does, with the numbers of the PA music tilt. */
+export const BAND_BALANCE_TIP = AUTO_BALANCE_TEXT.tip(
+  PA_MUSIC_TILT.tilt,
+  PA_MUSIC_TILT.hfTilt,
+  SUB_CROSSOVER_MAX_HZ,
+);
+
 /** How far the band above a crossover at `hz` sits below the band under it, dB. */
 export const tiltAt = (hz: number, tilt: MusicTilt) =>
   hz <= SUB_CROSSOVER_MAX_HZ ? tilt.tilt : tilt.hfTilt;
@@ -195,9 +202,20 @@ function speakerBands(
   return { bands, unmodeled };
 }
 
+/** One band's name and the Level the balance gives it, dB. */
+export interface BandLevel {
+  name: SpeakerBand["name"];
+  levelDb: SpeakerBand["levelDb"];
+}
+
 /** What an auto balance gives: the Levels to set, or why the Levels stay. */
 export type AutoBalance<L> =
-  | { status: typeof AUTO_BALANCE_STATUS.balanced; levels: L }
+  | {
+      status: typeof AUTO_BALANCE_STATUS.balanced;
+      levels: L;
+      /** the same Levels by band name, from the lowest band up (what the page shows next to the button) */
+      bands: BandLevel[];
+    }
   | { status: typeof AUTO_BALANCE_STATUS.oneBand }
   | { status: typeof AUTO_BALANCE_STATUS.outOfRange }
   | {
@@ -228,6 +246,10 @@ export function autoBalanceSpeaker(
   return {
     status: AUTO_BALANCE_STATUS.balanced,
     levels: Object.fromEntries(chain.map((o) => [o.key, o.levelDb])),
+    bands: chain.map((o) => ({
+      name: spec.bands.find((b) => b.id === o.key)?.name ?? o.key,
+      levelDb: o.levelDb,
+    })),
   };
 }
 
@@ -250,6 +272,9 @@ export type StackLevels = Record<SpeakerSpec["id"], SpeakerLevels>;
 interface StackBandKey {
   speakerId: SpeakerSpec["id"];
   band: BandId;
+  /** the band's name, and its speaker's */
+  name: SpeakerBand["name"];
+  speakerName: SpeakerSpec["name"];
 }
 
 /**
@@ -280,7 +305,13 @@ export function autoBalanceStack(
     const own = speakerBands({ ...speaker, input: member.crossover }, run.response);
     for (const b of own.unmodeled)
       unmodeled.push(AUTO_BALANCE_TEXT.memberBand(speaker.name, b.name));
-    for (const b of own.bands) bands.push({ ...b, key: { speakerId: speaker.id, band: b.key } });
+    for (const b of own.bands) {
+      const name = speaker.bands.find((sb) => sb.id === b.key)?.name ?? b.key;
+      bands.push({
+        ...b,
+        key: { speakerId: speaker.id, band: b.key, name, speakerName: speaker.name },
+      });
+    }
   });
   if (unmodeled.length) return { status: AUTO_BALANCE_STATUS.unmodeled, names: unmodeled };
   if (bands.length < 2) return { status: AUTO_BALANCE_STATUS.oneBand };
@@ -289,7 +320,13 @@ export function autoBalanceStack(
   const levels: StackLevels = {};
   for (const { key, levelDb } of chain)
     levels[key.speakerId] = { ...levels[key.speakerId], [key.band]: levelDb };
-  return { status: AUTO_BALANCE_STATUS.balanced, levels };
+  // a band name that two bands share (two "Mid" bands) goes with its speaker's name
+  const count = (name: string) => chain.filter((o) => o.key.name === name).length;
+  const named = chain.map(({ key, levelDb }) => ({
+    name: count(key.name) > 1 ? AUTO_BALANCE_TEXT.memberBand(key.speakerName, key.name) : key.name,
+    levelDb,
+  }));
+  return { status: AUTO_BALANCE_STATUS.balanced, levels, bands: named };
 }
 
 const sameFilter = (a: BandFilter | null, b: BandFilter | null) =>

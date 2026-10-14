@@ -205,6 +205,26 @@ test("auto balance: a 3-band speaker (the PA tower) with the PA music tilt gives
   }
 });
 
+test("auto balance: the result names each band's Level, from the lowest band, as the line under the button shows it", () => {
+  const [tower] = layersFromPa(defaultPaDesign("tower"), ID, DEFAULT_COVERAGE_LAYOUT).speakers;
+  const balance = balanceOf(tower, PA_MUSIC_TILT);
+  assert.equal(balance.status, AUTO_BALANCE_STATUS.balanced);
+  if (balance.status !== AUTO_BALANCE_STATUS.balanced) return;
+  const byId = balance.levels;
+  assert.deepEqual(
+    balance.bands.map((b) => b.name),
+    [SPEAKER_BAND.low, SPEAKER_BAND.mid, SPEAKER_BAND.high].map(
+      (id) => tower.bands.find((b) => b.id === id)?.name,
+    ),
+  );
+  assert.deepEqual(
+    balance.bands.map((b) => b.levelDb),
+    [SPEAKER_BAND.low, SPEAKER_BAND.mid, SPEAKER_BAND.high].map((id) => byId[id]),
+  );
+  // a true minus sign, the lowest band at 0 dB
+  assert.match(AUTO_BALANCE_TEXT.levels(balance.bands), /^[^,]+ 0 dB, [^,]+ −\d/);
+});
+
 test("auto balance: a 4-band speaker (the PA tower with a tweeter over its horn) meets flat by default", () => {
   const tower = layersFromPa(defaultPaDesign("tower"), ID, DEFAULT_COVERAGE_LAYOUT).speakers[0];
   const tweeter = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay)

@@ -392,17 +392,6 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   onRemove={() => stack.removeMember(k)}
                 />
               ))}
-              {members.length > 0 && (
-                <AutoBalanceButton
-                  className="mb-3"
-                  balance={stack.balance}
-                  onApply={stack.applyBalance}
-                  mode={stack.balanceMode}
-                  onMode={stack.setBalanceMode}
-                  tipExtra={AUTO_BALANCE_TEXT.stackTip}
-                  notes={stack.shared.map((ks) => AUTO_BALANCE_TEXT.sharedCrossover(ks))}
-                />
-              )}
               {picked ? (
                 <>
                   <SelectField
@@ -428,6 +417,17 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 </>
               ) : (
                 <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.noLibrary}</p>
+              )}
+              {members.length > 0 && (
+                <AutoBalanceButton
+                  className="mt-4 mb-3"
+                  balance={stack.balance}
+                  onApply={stack.applyBalance}
+                  mode={stack.balanceMode}
+                  onMode={stack.setBalanceMode}
+                  tipExtra={AUTO_BALANCE_TEXT.stackTip}
+                  notes={stack.shared.map((ks) => AUTO_BALANCE_TEXT.sharedCrossover(ks))}
+                />
               )}
             </>,
           )}
