@@ -22,7 +22,6 @@ import type {
   CABINET_TOP,
   CHAMBER_LOAD,
   FIRST_ORDER_FILTER,
-  FRONT_END_KIND,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   HORN_PATH,
@@ -34,7 +33,7 @@ import type {
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
-import type { DRIVER_PART } from "./constants/space";
+import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
@@ -1937,11 +1936,10 @@ export type SpeakerDriver = {
 
 /**
  * Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each, and
- * their dividers' nominal size (`divider`) and exact thickness (`div`). A spec saved before the size has no `divider`:
- * it is the size nearest `div` (lib/speaker/cabinetPanels `ductDividerOf`).
+ * their dividers' nominal size (`divider`) and exact thickness (`div`).
  */
 export interface SideDuctPort
-  extends Pick<VentSpec, "throat" | "len" | "div">, Pick<PaDesignConfig, "divider"> {
+  extends Pick<VentSpec, "throat" | "len" | "div">, Required<Pick<PaDesignConfig, "divider">> {
   shape: (typeof PORT_SHAPE)["duct"];
   n: 1 | 2;
 }
@@ -2138,14 +2136,14 @@ export interface SpeakerBand {
   levelDb: number;
   /**
    * active: its filters run in the front end and it has an amp channel of its own; passive: a network in the box, on
-   * a channel it shares (`SpaceChannel.bands`), as a super tweeter on the HF channel through a capacitor
+   * a channel it shares, as a super tweeter on the HF channel through a capacitor
    */
   drive: HifiDrive;
   /**
    * the power of the amp channel that drives it, W into 8 Ω: its own channel's when active; when passive, the channel
    * it shares (the same figure as the band it shares it with). The limits read it (lib/speaker/speakerLimits).
    */
-  ampW: SpaceAmp["watts"];
+  ampW: number;
 }
 
 /** Any single box: its cabinet, drivers, bands and look. */
@@ -2171,7 +2169,7 @@ export type SpeakerPart = (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART];
 
 /** The PA design as the planner holds it: every field set (a save can lack the later ones). */
 export type PaPlannerDesign = PaDesignConfig &
-  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH" | "hardware">>;
+  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH" | "hardware" | "divider">>;
 
 /**
  * Where a member stands in its stack, in: from the stack's origin (the middle of its base, at its front), or from the
@@ -2218,22 +2216,6 @@ export interface StackSpec {
   notes: string;
 }
 
-/** An amplifier in a space: its catalog model where one is picked, and its power per channel, W. */
-export interface SpaceAmp {
-  id: string;
-  model: AmpId | null;
-  watts: number;
-}
-
-/** One amp channel a placement takes: the member it feeds (0 for a speaker alone) and that member's bands. */
-export interface SpaceChannel {
-  amp: SpaceAmp["id"];
-  channel: number;
-  member: number;
-  /** the bands it feeds: one active band, or every band of a passive network */
-  bands: readonly BandId[];
-}
-
 /** What a space places, by id (`SPACE_ITEM`): a stack, or a speaker alone on its own input range. */
 export type SpaceItemKind = (typeof SPACE_ITEM)[keyof typeof SPACE_ITEM];
 
@@ -2249,7 +2231,7 @@ export interface SpaceAim {
 
 /**
  * A stack or a speaker placed in a space: its spot on the floor (its base's front center, ft), the lift under it (a
- * plinth, a stand), its aim, a mirror image, what the front end does to its feed, and the amp channels it takes.
+ * plinth, a stand), its aim, a mirror image, and what is done to its feed (a level and a delay).
  */
 export interface SpacePlacement extends FloorPoint {
   item:
@@ -2260,59 +2242,55 @@ export interface SpacePlacement extends FloorPoint {
   aim: SpaceAim;
   mirror: boolean;
   /**
-   * a left and right pair: the earlier placement (an index) this one is the mirror image of across the room's center
-   * line; its item, spot, lift and aim follow that one's, x and yaw turned over, the image mirrored. Null: placed on its
-   * own.
+   * a left and right pair: the placement stands twice, as set and as its mirror image across the room's center line
+   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level and delay
+   * (`expandPlacements`)
    */
-  follows: number | null;
+  mirrored: boolean;
   /** the front end's level on its feed, against the space's other placements, dB (a fill under the mains) */
   levelDb: number;
   /** the front end's delay on its feed, ms (a fill waiting for the mains) */
   delayMs: number;
-  channels: readonly SpaceChannel[];
 }
 
-/** How a front end processes, by id (`FRONT_END_KIND`): fixed analog cards, or a DSP. */
-export type FrontEndKind = (typeof FRONT_END_KIND)[keyof typeof FRONT_END_KIND];
+/** Which side of the center line a box of a mirrored pair stands on, seen from the listener, by id (`PAIR_SIDE`). */
+export type PairSide = (typeof PAIR_SIDE)[keyof typeof PAIR_SIDE];
 
-/** The processing ahead of the amps: the stacks' crossovers, delays and levels run in it, analog or digital. */
-export interface SpaceFrontEnd {
-  kind: FrontEndKind;
-  /** the DSP unit (`DSP_UNITS`), where a digital front end names one */
-  dspId: DspUnit["id"] | null;
+/**
+ * One box the model places: a placement as it stands (`expandPlacements`). `source` is the placement's index in the
+ * space; `image` is set for the mirror image of a mirrored pair; `side` is the box's side of the center line in a
+ * pair, null for a placement on its own.
+ */
+export interface PlacedSource extends SpacePlacement {
+  source: number;
+  image: boolean;
+  side: PairSide | null;
 }
 
 /** Which part of a driver entry radiates, by id (`DRIVER_PART`): its cone or its HF section. */
 export type DriverPart = (typeof DRIVER_PART)[keyof typeof DRIVER_PART];
 
-/** The floor the space's level stats count: a rectangle, its center and its size, ft. */
-export interface ListeningArea extends FloorPoint {
-  widthFt: number;
-  lengthFt: number;
-}
-
-/** Where a space plays: the room, the listener (a probe), the listening area and the level it should get. */
+/** Where a space plays: the room, the listener (a probe) and the level it should get. */
 export interface SpaceVenue {
   room: CoverageRoom;
   listener: FloorPoint;
   /** the ear's height above the floor, ft: the map and the levels are worked out there */
   earFt: CoverageLayout["earFt"];
-  area: ListeningArea;
   /**
    * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
    * (`balance`) less: the space is turned down to it, never past its limit
    */
   targetDb: CoverageLayout["targetDb"];
   /**
-   * where the target is measured: the listening area's average, the listener, or 1 m in front of each placement
-   * (averaged). Absent in saves from before it: the listening area (`venueLevelRef`).
+   * where the target is measured, as on the coverage page: the audience's average (the floor but the space in front of
+   * each box), the listener, or 1 m in front of each placement (averaged).
    */
-  levelRef?: CoverageLevelRef;
+  levelRef: CoverageLevelRef;
   /**
    * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
-   * or the PA music tilt (lib/speaker/autoBalance). Absent in saves from before it: flat (`venueBalance`).
+   * or the PA music tilt (lib/speaker/autoBalance).
    */
-  balance?: AutoBalanceMode;
+  balance: AutoBalanceMode;
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
@@ -2320,9 +2298,6 @@ export interface SpaceSpec {
   id: string;
   name: string;
   placements: readonly SpacePlacement[];
-  amps: readonly SpaceAmp[];
-  /** null: none (passive speakers straight off the amps) */
-  frontEnd: SpaceFrontEnd | null;
   venue: SpaceVenue;
 }
 

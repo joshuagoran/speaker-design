@@ -57,7 +57,6 @@ import type {
   FloorPlacement,
   FloorPoint,
   FrequencyPoint,
-  ListeningArea,
   MusicBalance,
   PaStackGeometry,
   PhasedPoint,
@@ -931,19 +930,11 @@ export function gridLevelAt(
   return top * (1 - ty) + bot * ty;
 }
 
-/** Whether a spot (feet) is inside a listening area. */
-export const inArea = (area: ListeningArea, p: FloorPoint) =>
-  Math.abs(p.x - area.x) <= area.widthFt / 2 && Math.abs(p.y - area.y) <= area.lengthFt / 2;
-
-/**
- * The grid's levels over the audience's floor: every cell but those right in front of a box, and only those inside
- * `area` where one is given, dB.
- */
+/** The grid's levels over the audience's floor: every cell but those right in front of a box, dB. */
 function audienceLevels(
   grid: CoverageGrid,
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
   boxes: readonly FloorPoint[],
-  area?: ListeningArea,
 ): number[] {
   const { cols, rows, db } = grid;
   const vals: number[] = [];
@@ -951,7 +942,6 @@ function audienceLevels(
     for (let i = 0; i < cols; i++) {
       const x = -room.widthFt / 2 + ((i + 0.5) * room.widthFt) / cols,
         y = ((j + 0.5) * room.lengthFt) / rows;
-      if (area && !inArea(area, { x, y })) continue;
       if (boxes.some((b) => Math.hypot(x - b.x, y - b.y) < STATS_CLEARANCE_FT)) continue;
       vals.push(db[j * cols + i]);
     }
@@ -966,9 +956,8 @@ export function audienceAverage(
   grid: CoverageGrid,
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
   boxes: readonly FloorPoint[],
-  area?: ListeningArea,
 ): number | null {
-  const vals = audienceLevels(grid, room, boxes, area);
+  const vals = audienceLevels(grid, room, boxes);
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
 }
 
@@ -1002,9 +991,8 @@ export function coverageStats(
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
   boxes: readonly FloorPoint[],
   target: number,
-  area?: ListeningArea,
 ): CoverageStats {
-  const vals = audienceLevels(grid, room, boxes, area).map((v) => v - target);
+  const vals = audienceLevels(grid, room, boxes).map((v) => v - target);
   if (!vals.length) return { within3: 0, within6: 0, spread: 0 };
   vals.sort((a, b) => a - b);
   const share = (t: number) => vals.filter((v) => v >= t).length / vals.length;

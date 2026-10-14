@@ -10,6 +10,7 @@ import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../../lib/defaults";
 import { PA_PRESET_BAND_LEVELS } from "../../data/presets/pa-band-levels";
 import {
+  STACK_PRESET,
   STACK_START,
   STACK_START_GROUPS,
   type StackPreset,
@@ -42,27 +43,31 @@ const paPreset = (layout: PaLayout, identity: SpecIdentity) =>
     PA_PRESET_BAND_LEVELS[layout],
   );
 
+/** The layers a preset gives under `identity`: a PA preset, or the Hi-fi pair (the Hi-fi page's starting design). */
+export function presetLayers(preset: StackPreset, identity: SpecIdentity): DesignLayers {
+  return preset === STACK_PRESET.hifiPair
+    ? layersFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, identity)
+    : paPreset(PA_PRESET_LAYOUTS[preset], identity);
+}
+
 /**
- * The layers a start gives under `identity`: a PA preset, the Hi-fi pair (the Hi-fi page's starting design), or the
- * current PA design on its floor.
+ * The layers a start gives under `identity`: a preset, or the current PA design on its floor.
  */
 export function startLayers(
   start: StackStart,
   identity: SpecIdentity,
   current: CurrentPa,
 ): DesignLayers {
-  switch (start) {
-    case STACK_START.hifiPair:
-      return layersFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, identity);
-    case STACK_START.paCurrent:
-      return paLayers(current.pa, identity, current.floor);
-    default:
-      return paPreset(PA_PRESET_LAYOUTS[start], identity);
-  }
+  return start === STACK_START.paCurrent
+    ? paLayers(current.pa, identity, current.floor)
+    : presetLayers(start, identity);
 }
 
 /** Every start the picker lists, in order: the presets, then the current PA design. */
 export const STACK_STARTS: readonly StackStart[] = Object.values(STACK_START);
+
+/** Every preset, in the picker's order. */
+export const STACK_PRESETS: readonly StackPreset[] = Object.values(STACK_PRESET);
 
 /** The picker's group a start is listed under. */
 export const startGroup = (start: StackStart) =>

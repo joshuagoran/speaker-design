@@ -29,7 +29,7 @@ import type {
   StackSpec,
   SubDriver,
 } from "../../types";
-import { HORN_OPTIONS, SUB_OPTIONS, mainsDsp } from "../data";
+import { HORN_OPTIONS, SUB_OPTIONS } from "../data";
 import { byIdOrThrow } from "../tables";
 import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter, ventSpeedLimit } from "../pa/calc";
 import { modelTubeElbows } from "../pa/tubes";
@@ -42,14 +42,12 @@ import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
-import { SPACE_AUDIENCE_GAP_FT } from "../../constants/space";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import {
   AUTO_DELAY,
   CABINET_CONSTRUCTION,
   CABINET_TOP,
   DRIVER_KIND,
-  FRONT_END_KIND,
   HORN_PLACEMENT,
   PA_SLOT_FINS,
   PORT_SHAPE,
@@ -63,14 +61,12 @@ import {
   BASE_POSE,
   DIRECT_LOAD,
   NO_FILTERS,
-  channelCounter,
   lrFilter,
   spacePlacement,
   speakerIdentity,
   stackMember,
   stuffingPctOf,
 } from "./specParts";
-import { ductDividerOf } from "./cabinetPanels";
 
 /** The sub's round tubes as a round port: `nt` tubes of `dia`, `len` long, with the elbows the model takes. */
 const roundTubes = (cfg: PaPlannerDesign, sub: SubDriver): SpeakerPort => ({
@@ -90,8 +86,7 @@ const sideDucts = (cfg: PaPlannerDesign, n: 1 | 2): SpeakerPort => ({
   throat: cfg.cVent.throat,
   len: cfg.cVent.len,
   div: cfg.cVent.div,
-  // the PA page's size; a design that names none: the size nearest the thickness
-  divider: cfg.divider ?? ductDividerOf(cfg.cVent),
+  divider: cfg.divider,
 });
 
 /** The sub's vent as a chamber's port, by port style. */
@@ -414,78 +409,50 @@ export type PaFloor = Pick<
 >;
 
 /**
- * The coverage page's floor as a venue: its room, listener, ear height and target; the listening area the audience's
- * floor, the room's width from SPACE_AUDIENCE_GAP_FT past the stacks to the back wall.
+ * The coverage page's floor as a venue: its room, listener, ear height and target, measured where the page measures it.
  */
 export function paVenue(floor: PaFloor): SpaceVenue {
   const { room } = floor;
-  const front = Math.min(
-    room.lengthFt - 1,
-    Math.max(...floor.stacks.map((s) => s.y)) + SPACE_AUDIENCE_GAP_FT,
-  );
   return {
     room,
     listener: floor.listener,
     earFt: floor.earFt,
-    area: {
-      x: 0,
-      y: (front + room.lengthFt) / 2,
-      widthFt: room.widthFt,
-      lengthFt: room.lengthFt - front,
-    },
     targetDb: floor.targetDb,
     // as the coverage page: its target in the sub band, measured where it measures it, under the PA music balance
     levelRef: floor.levelRef,
-    balance: AUTO_BALANCE_MODE.paMusic,
+    balance: AUTO_BALANCE_MODE.moreBass,
   };
 }
 
 /**
  * The PA design read in: its speakers, its stack (`paStack`) and its space on the coverage page's floor: the stacks at
- * its spots (`stacks`, left then right; the right one a mirror image, following the left where the page mirrors them)
+ * its spots (`stacks`, left then right; where the page mirrors them, one mirrored placement stands for both)
  * on their plinths. Satellite places no stack: one sub on its plinth midway, and the tops on their stands at the spots,
- * each on its own input range, `tilt` under the sub as in the stack. Each band has an amp, as the design powers it; the
- * DSP is the mains rack's; the venue is the page's room and listener (`paVenue`).
+ * each on its own input range, `tilt` under the sub as in the stack. Each band's amp power is the design's; the venue
+ * is the page's room and listener (`paVenue`).
  */
 export function layersFromPa(
   cfg: PaPlannerDesign,
   design: SpecIdentity,
   floor: PaFloor,
 ): DesignLayers {
-  const channel = channelCounter();
   const stack = paStack(cfg, design);
   const tower = cfg.layout === "tower";
   const speakers = tower
     ? [towerSpeaker(cfg, design)]
     : [subSpeaker(cfg, design), topSpeaker(cfg, design)];
   const [subId, topId] = speakers.map((s) => s.id);
-  const subChannels = (member = 0) => [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low], member)];
-  const topChannels = (member = 0) => [
-    channel(SPEAKER_BAND.mid, [SPEAKER_BAND.mid], member),
-    channel(SPEAKER_BAND.high, [SPEAKER_BAND.high], member),
-  ];
-  /** the stack's channels: the sub's then the top's, or the tower's three */
-  const stackChannels = () =>
-    tower
-      ? [SPEAKER_BAND.low, SPEAKER_BAND.mid, SPEAKER_BAND.high].map((band) => channel(band, [band]))
-      : [...subChannels(0), ...topChannels(1)];
   const [left, right] = floor.stacks;
   const stackItem = { kind: SPACE_ITEM.stack, id: stack.id } as const;
   const speakerItem = (id: SpeakerSpec["id"]) => ({ kind: SPACE_ITEM.speaker, id }) as const;
-  /** the left and right spots' placements of `item`, the right one following the left (index `leftAt`) when mirrored */
-  const pair = (
-    item: SpacePlacement["item"],
-    liftIn: number,
-    channels: () => SpacePlacement["channels"],
-    leftAt: number,
-  ) => [
-    spacePlacement(left, item, liftIn, channels(), { yawDeg: left.aim }),
-    spacePlacement(right, item, liftIn, channels(), {
-      yawDeg: right.aim,
-      mirror: true,
-      follows: floor.mirror ? leftAt : null,
-    }),
-  ];
+  /** the placements of `item` at the left and right spots: one mirrored placement where the page mirrors them */
+  const pair = (item: SpacePlacement["item"], liftIn: number) =>
+    floor.mirror
+      ? [spacePlacement(left, item, liftIn, { yawDeg: left.aim, mirrored: true })]
+      : [
+          spacePlacement(left, item, liftIn, { yawDeg: left.aim }),
+          spacePlacement(right, item, liftIn, { yawDeg: right.aim, mirror: true }),
+        ];
   const placements: SpacePlacement[] =
     cfg.layout === "satellite"
       ? [
@@ -493,26 +460,19 @@ export function layersFromPa(
             { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 },
             speakerItem(subId),
             PLINTH_HEIGHT_IN,
-            subChannels(),
           ),
-          ...pair(speakerItem(topId), SATELLITE_COLUMN_H_IN, () => topChannels(), 1).map((p) => ({
+          ...pair(speakerItem(topId), SATELLITE_COLUMN_H_IN).map((p) => ({
             ...p,
             levelDb: -cfg.tilt,
           })),
         ]
-      : pair(stackItem, PLINTH_HEIGHT_IN, stackChannels, 0);
+      : pair(stackItem, PLINTH_HEIGHT_IN);
   return {
     speakers,
     stack,
     space: {
       ...design,
       placements,
-      amps: [
-        { id: SPEAKER_BAND.low, model: null, watts: cfg.ampW },
-        { id: SPEAKER_BAND.mid, model: null, watts: cfg.mAmpW },
-        { id: SPEAKER_BAND.high, model: null, watts: cfg.hfAmpW },
-      ],
-      frontEnd: { kind: FRONT_END_KIND.digital, dspId: mainsDsp().id },
       venue: paVenue(floor),
     },
   };

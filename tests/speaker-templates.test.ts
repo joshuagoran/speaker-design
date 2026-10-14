@@ -12,7 +12,7 @@ import {
   withVentPosition,
 } from "../src/pages/speaker/speakerPlaces";
 import { DEFAULT_VENTS } from "../src/pages/speaker/speakerParts";
-import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { hfBandOf, speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { baffleInsetIn } from "../src/lib/speaker/chamberAir";
@@ -27,6 +27,7 @@ import { takesHornMountAt } from "../src/lib/pa/hornMount";
 import { HORN_OPTIONS } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";
 import {
+  DEFAULT_FILL,
   DEFAULT_HIFI,
   DEFAULT_HIFI_LOOK,
   DEFAULT_MONITOR,
@@ -52,6 +53,7 @@ import {
   VENT_KIND,
 } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
+import { crossoverSlopeName } from "../src/constants/crossovers";
 import { TOWER_MID_HEIGHT_IN } from "../src/constants/paLayouts";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { PANEL } from "../src/constants/cutParts";
@@ -159,6 +161,39 @@ test("speaker templates: each builds a draft spec the model takes whole, with it
     const sources = { pa: defaultPaDesign(), hifi: DEFAULT_HIFI, hifiLook: DEFAULT_HIFI_LOOK };
     assert.deepEqual(startSpeaker(template, sources), spec, template);
   }
+});
+
+test("speaker templates: every band is crossed where it hands over, and no sub or HF band plays unfiltered", () => {
+  for (const template of SPEAKER_TEMPLATES) {
+    const spec = templateSpeaker(template);
+    const drivers = spec.cabinet.chambers.flatMap((c) => c.drivers);
+    const hfBands = new Set(drivers.map(hfBandOf));
+    const subBands = new Set(
+      drivers.filter((d) => d.kind === DRIVER_KIND.sub).flatMap((d) => d.bands),
+    );
+    spec.bands.forEach((band, i) => {
+      const at = `${template} ${band.id}`;
+      // a band hands over to the next one up with its own low-pass, and takes over from the one below with its own
+      // high-pass (the input range filters every band, so it is no crossover between them)
+      if (i < spec.bands.length - 1) assert.ok(band.lowpass, `${at}: no low-pass to the next band`);
+      if (i > 0) assert.ok(band.highpass, `${at}: no high-pass from the band below`);
+      // an HF section never plays the lows, a sub never plays the mids: its own filter or the input range's
+      if (hfBands.has(band.id))
+        assert.ok(band.highpass ?? spec.input.highpass, `${at}: HF section with no high-pass`);
+      if (subBands.has(band.id))
+        assert.ok(band.lowpass ?? spec.input.lowpass, `${at}: sub with no low-pass`);
+    });
+  }
+});
+
+test("speaker templates: the fill's coaxial crosses at its HF section's recommended crossover", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.fill);
+  const xo = DEFAULT_FILL.driver.hf?.xo;
+  assert.ok(xo, "the default fill's coaxial has a crossover");
+  const filter = { hz: xo, type: crossoverSlopeName(DEFAULT_HIFI.crossoverOrder) };
+  const [low, high] = spec.bands;
+  assert.deepEqual([low.highpass, low.lowpass], [null, filter]);
+  assert.deepEqual([high.highpass, high.lowpass], [filter, null]);
 });
 
 test("speaker templates: the picker lists every template, then the current designs", () => {

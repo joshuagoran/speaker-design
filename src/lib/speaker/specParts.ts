@@ -1,12 +1,11 @@
 // Small parts the read adapters share (lib/speaker paSpec, hifiSpec, fillSpec).
+import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
+import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import type {
   BandFilter,
-  BandId,
   ChamberLoad,
   CrossoverOrder,
   FloorPoint,
-  SpaceAmp,
-  SpaceChannel,
   SpaceAim,
   SpacePlacement,
   SpaceVenue,
@@ -27,12 +26,7 @@ import {
   CHAMBER_LOAD,
   SPEAKER_PART_NAMES,
 } from "../../constants/speakerSpec";
-import {
-  SPACE_HOME_MARGIN_FT,
-  SPACE_HOME_ROOM,
-  SPACE_HOME_TARGET_DB,
-  SPACE_SEAT_AREA,
-} from "../../constants/space";
+import { SPACE_HOME_MARGIN_FT, SPACE_HOME_ROOM, SPACE_HOME_TARGET_DB } from "../../constants/space";
 
 /** A Linkwitz-Riley filter of `order` at `hz` (the PA and Hi-fi crossovers). */
 export const lrFilter = (hz: number, order: CrossoverOrder): BandFilter => ({
@@ -74,16 +68,6 @@ export const speakerIdentity = (design: SpecIdentity, part: SpeakerPart): SpecId
   name: `${design.name} · ${SPEAKER_PART_NAMES[part]}`,
 });
 
-/** Hands out each amp's channels in order: the next free channel on `amp`, feeding `bands` of stack member `member`. */
-export function channelCounter() {
-  const used = new Map<SpaceAmp["id"], number>();
-  return (amp: SpaceAmp["id"], bands: readonly BandId[], member = 0): SpaceChannel => {
-    const channel = used.get(amp) ?? 0;
-    used.set(amp, channel + 1);
-    return { amp, channel, member, bands };
-  };
-}
-
 /** A member's place on the stack's base, at its origin. */
 export const BASE_POSE: StackPose = { xIn: 0, yIn: 0, zIn: 0, on: null, pitchDeg: 0 };
 
@@ -95,19 +79,18 @@ export const stackMember = (
 ): StackMember => ({ speakerId, pose, mirror: false, crossover, levelDb: 0, delayMs: 0 });
 
 /**
- * A placement at `spot`, `liftIn` up, turned `yawDeg` on the floor: no tilt, level or delay of its own; a mirror image
- * of placement `follows` where one is named (a left and right pair).
+ * A placement at `spot`, `liftIn` up, turned `yawDeg` on the floor: no tilt, level or delay of its own; `mirrored`
+ * stands it twice, the second a mirror image across the center line (a left and right pair).
  */
 export const spacePlacement = (
   spot: FloorPoint,
   item: SpacePlacement["item"],
   liftIn: SpacePlacement["liftIn"],
-  channels: SpacePlacement["channels"],
   {
     yawDeg = 0,
     mirror = false,
-    follows = null,
-  }: Partial<Pick<SpaceAim, "yawDeg">> & Partial<Pick<SpacePlacement, "mirror" | "follows">> = {},
+    mirrored = false,
+  }: Partial<Pick<SpaceAim, "yawDeg">> & Partial<Pick<SpacePlacement, "mirror" | "mirrored">> = {},
 ): SpacePlacement => ({
   x: spot.x,
   y: spot.y,
@@ -115,16 +98,15 @@ export const spacePlacement = (
   liftIn,
   aim: { yawDeg, pitchDeg: 0 },
   mirror,
-  follows,
+  mirrored,
   levelDb: 0,
   delayMs: 0,
-  channels,
 });
 
 /**
  * A living room for a design that names none (the Hi-fi pair, a fill): SPACE_HOME_ROOM, grown to hold the boxes'
- * spread and the seat with SPACE_HOME_MARGIN_FT to spare; the listener at the seat, a seat-sized listening area round
- * them, and the room's target.
+ * spread and the seat with SPACE_HOME_MARGIN_FT to spare; the listener at the seat, and the room's target (flat, as the
+ * audience average).
  */
 export function homeVenue(
   spreadFt: number,
@@ -140,7 +122,9 @@ export function homeVenue(
     room,
     listener,
     earFt,
-    area: { ...listener, ...SPACE_SEAT_AREA },
     targetDb: SPACE_HOME_TARGET_DB,
+    // measured as the audience average, the same target in every band
+    levelRef: COVERAGE_LEVEL_REF.audience,
+    balance: AUTO_BALANCE_MODE.flat,
   };
 }

@@ -1,4 +1,4 @@
-import type { ListeningArea, SpaceVenue } from "../../types";
+import type { SpaceVenue } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { alpha } from "../../styles/palette";
 import { SVG_FONT } from "../../styles/fonts";
@@ -10,7 +10,6 @@ interface Props {
   room: Pick<SpaceVenue["room"], "lengthFt" | "ceilingFt" | "outdoors">;
   listener: SpaceVenue["listener"];
   earFt: SpaceVenue["earFt"];
-  area: ListeningArea;
 }
 
 /** The drawing's margins, px: the axis labels on the left and below. */
@@ -42,10 +41,9 @@ function hull(points: readonly [number, number][]): [number, number][] {
 
 /**
  * Side view of a space, to scale: the floor down the room (the front wall at the left) and the height, each box at its
- * lift and tilt (its outline seen from the side), a line along each placement's highest band, the listener's ear and
- * the listening area on the floor.
+ * lift and tilt (its outline seen from the side), a line along each placement's highest band, and the listener's ear.
  */
-export function SpaceSide({ items, room, listener, earFt, area }: Props) {
+export function SpaceSide({ items, room, listener, earFt }: Props) {
   const pal = usePalette();
   const top =
     Math.max(
@@ -100,13 +98,6 @@ export function SpaceSide({ items, room, listener, earFt, area }: Props) {
           {f}
         </text>
       ))}
-      <rect
-        x={X(area.y - area.lengthFt / 2)}
-        y={Y(0)}
-        width={area.lengthFt * k}
-        height={5}
-        fill={alpha(pal.cyan, 0.35)}
-      />
       <line x1={X(0)} x2={X(room.lengthFt)} y1={Y(0)} y2={Y(0)} stroke={pal.ink} strokeWidth="2" />
       {!room.outdoors && (
         <>

@@ -154,12 +154,6 @@ export const SPACE_ITEM = {
   speaker: "speaker",
 } as const;
 
-/** How a space's front end processes, by id: fixed analog cards (PA v2), or a DSP. */
-export const FRONT_END_KIND = {
-  analog: "analog",
-  digital: "digital",
-} as const;
-
 /** Why a chamber has no horn-engine design yet, by id (lib/speaker/hornDesign `hornDesignOf`). */
 export const HORN_ENGINE_GAP = {
   /** a tapped horn: the engine models only a front-loaded one */

@@ -1,6 +1,7 @@
 import { ToggleGroup } from "./ToggleGroup";
 import { Slider } from "./Slider";
 import { SelectField } from "./SelectField";
+import { Tooltip } from "./Tooltip";
 import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
 import { UI_TEXT } from "../../constants/uiText";
 import type { CoverageRoom, FloorCrowd, RoomMaterial, RoomSurface } from "../../types";
@@ -10,8 +11,11 @@ export const ROOM_WIDTH_FT: [number, number] = [16, 80];
 export const ROOM_LENGTH_FT: [number, number] = [16, 100];
 export const ROOM_CEILING_FT: [number, number] = [8, 40];
 
-/** Each surface whose material is set, and the name its field shows. */
-const SURFACES: [RoomSurface, string][] = [
+/** A surface whose material is set, and the name its field shows. */
+export type SurfaceName = readonly [RoomSurface, string];
+
+/** Each surface whose material is set, and the name its field shows (the Coverage page's). */
+const SURFACES: readonly SurfaceName[] = [
   ["front", "Behind the stacks"],
   ["back", "Far end"],
   ["left", "Left side"],
@@ -31,10 +35,14 @@ export interface RoomActions {
 interface Props {
   room: CoverageRoom;
   actions: RoomActions;
+  /** the surfaces' field names, when a page names them its own way (default: the Coverage page's) */
+  surfaces?: readonly SurfaceName[];
+  /** a tooltip on a surface's field name */
+  surfaceTips?: Partial<Record<RoomSurface, string>>;
 }
 
 /** A coverage room's settings: indoors or out, its size, each surface's material, and the dance floor. */
-export function RoomFields({ room, actions }: Props) {
+export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {} }: Props) {
   return (
     <>
       <ToggleGroup
@@ -80,10 +88,12 @@ export function RoomFields({ room, actions }: Props) {
             onChange={actions.setCeilingFt}
           />
           <div className="grid grid-cols-2 gap-x-3">
-            {SURFACES.map(([surface, name]) => (
+            {surfaces.map(([surface, name]) => (
               <SelectField
                 key={surface}
-                label={name}
+                label={
+                  surfaceTips[surface] ? <Tooltip tip={surfaceTips[surface]}>{name}</Tooltip> : name
+                }
                 options={ROOM_MATERIAL_OPTIONS}
                 value={ROOM_MATERIAL_OPTIONS.find((o) => o.id === room.materials[surface])}
                 onChange={(o) => actions.setMaterial(surface, o.id)}
@@ -103,6 +113,7 @@ export function RoomFields({ room, actions }: Props) {
           ] as const
         }
         wrap={false}
+        className="mb-3"
       />
     </>
   );

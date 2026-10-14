@@ -6,7 +6,6 @@ import type {
   ChamberVent,
   DesignLayers,
   HifiDesignState,
-  SpaceAmp,
   SpacePlacement,
   SpeakerBand,
   SpeakerDriver,
@@ -27,7 +26,6 @@ import { MAX_ELBOWS } from "../tubeFold";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
-  FRONT_END_KIND,
   HORN_PLACEMENT,
   ONE_WATT_VOLTS,
   PORT_SHAPE,
@@ -42,7 +40,6 @@ import {
   FLUSH_BOX,
   flushBracing,
   NO_FILTERS,
-  channelCounter,
   homeVenue,
   lrFilter,
   spacePlacement,
@@ -245,8 +242,7 @@ export function speakerFromHifi(
 /**
  * The Hi-fi design read in: the speaker, a stack of one with the sub highpass (where set) as its crossover, and the
  * space: the pair `speakerSpacingFt` apart, `distanceToWallFt` from the wall behind, toed in toward the middle on their
- * stands, the right one a mirror image; the seat as the listener. Active: a woofer amp and a tweeter amp, a channel of
- * each per speaker, behind a DSP. Passive: one amp channel per speaker, and a DSP only for a sub highpass.
+ * stands, the right one a mirror image; the seat as the listener.
  */
 export function layersFromHifi(
   state: HifiDesignState,
@@ -254,43 +250,24 @@ export function layersFromHifi(
   design: SpecIdentity,
 ): DesignLayers {
   const speaker = speakerFromHifi(state, look, speakerIdentity(design, SPEAKER_PART.speaker));
-  /** one channel per speaker when its bands share a passive network */
-  const passive = speaker.bands.every((b) => b.drive === HIFI_DRIVE.passive);
   const { subHighpass } = state;
-  const amps: SpaceAmp[] = passive
-    ? [{ id: SPEAKER_BAND.low, model: null, watts: state.wooferAmpWatts }]
-    : [
-        { id: SPEAKER_BAND.low, model: null, watts: state.wooferAmpWatts },
-        { id: SPEAKER_BAND.high, model: null, watts: state.tweeterAmpWatts },
-      ];
   const crossover = {
     highpass: subHighpass ? lrFilter(subHighpass.hz, subHighpass.order) : null,
     lowpass: null,
   };
-  const channel = channelCounter();
-  /** the speaker's stack at `side` -1 (left) or 1 (right) of the middle; the right one follows the left */
-  const placement = (side: -1 | 1): SpacePlacement =>
-    spacePlacement(
-      { x: (side * state.speakerSpacingFt) / 2, y: state.distanceToWallFt },
-      { kind: SPACE_ITEM.stack, id: design.id },
-      state.standHeightIn,
-      passive
-        ? [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low, SPEAKER_BAND.high])]
-        : [
-            channel(SPEAKER_BAND.low, [SPEAKER_BAND.low]),
-            channel(SPEAKER_BAND.high, [SPEAKER_BAND.high]),
-          ],
-      // toed in: the left one turns toward +x, the right one toward −x
-      { yawDeg: -side * state.toeInDeg, mirror: side === 1, follows: side === 1 ? 0 : null },
-    );
+  /** the speaker's stack left of the middle, toed in (turned toward +x); mirrored, the right one is its image */
+  const placement: SpacePlacement = spacePlacement(
+    { x: -state.speakerSpacingFt / 2, y: state.distanceToWallFt },
+    { kind: SPACE_ITEM.stack, id: design.id },
+    state.standHeightIn,
+    { yawDeg: state.toeInDeg, mirrored: true },
+  );
   return {
     speakers: [speaker],
     stack: { ...design, members: [stackMember(speaker.id, crossover)], notes: "" },
     space: {
       ...design,
-      placements: [placement(-1), placement(1)],
-      amps,
-      frontEnd: passive && !subHighpass ? null : { kind: FRONT_END_KIND.digital, dspId: null },
+      placements: [placement],
       // the seat is `listeningSeat.y` back from the speakers
       venue: homeVenue(
         state.speakerSpacingFt,

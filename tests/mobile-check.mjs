@@ -9,14 +9,15 @@
 // only while it is chosen: switching back brings the box back (the size the user set is kept).
 // On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { GOAL_SHORT_NAMES, PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
 import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds.ts";
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
-import { SPEAKER_START_NAMES, SPEAKER_START_TEXT } from "../src/constants/speakerStarts.ts";
+import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
+import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
 import { SPEAKER_OPTIMIZER_TEXT } from "../src/constants/speakerOptimizerText.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
@@ -45,13 +46,11 @@ const views = [
   "#fills",
   "#hifi",
   "#hifi-cutlist",
-  "#notes",
   "#speaker",
   "#speaker-cutlist",
   "#stack",
   "#stack-cutlist",
   "#space",
-  "#space-notes",
 ];
 const failures = [];
 
@@ -189,6 +188,32 @@ for (const size of sizes) {
   await ctx.close();
 }
 
+// The Notes page has no tab and no hash: it opens at the path /notes. Serve the page at that path and check it as the
+// views are checked, and that no tab leads to it.
+for (const size of sizes) {
+  const ctx = await browser.newContext({ ...size });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on("pageerror", (e) => errs.push(e.message));
+  await p.route("https://speaknow.test/**", (r) =>
+    r.fulfill({ path: fileURLToPath(page), contentType: "text/html" }),
+  );
+  await p.goto("https://speaknow.test/notes/");
+  await p.waitForFunction(() => document.querySelector("nav a"), null, { timeout: 30000 });
+  await p.waitForTimeout(600);
+  const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
+  if (m.sw > m.iw)
+    failures.push(`${size.name} /notes: page scrolls sideways (${m.sw} > ${m.iw} px)`);
+  for (const t of m.small) failures.push(`${size.name} /notes: small touch target ${t}`);
+  for (const t of m.captions) failures.push(`${size.name} /notes: detail caption ${t}`);
+  if (!(await p.locator("h2").count()))
+    failures.push(`${size.name} /notes: the Notes page is not shown`);
+  if (await p.locator("nav a", { hasText: /^Notes$/ }).count())
+    failures.push(`${size.name}: a tab leads to Notes`);
+  for (const e of errs) failures.push(`${size.name} /notes: page error: ${e}`);
+  await ctx.close();
+}
+
 // Detail-row captions on desktop windows, every view (sections fold on phones only, so all are open here). At these
 // widths PA Design's results column puts its detail rows two to a line, so each row is at its narrowest.
 for (const width of [1024, 1600]) {
@@ -230,12 +255,12 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
   await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
   const closed = p.locator("aside button[aria-expanded=false]");
   for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
-  const start = p.getByLabel(SPEAKER_START_TEXT.startFrom);
+  const start = p.getByLabel(START_PICKER_TEXT.startFrom);
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => fallbackStart.test(o));
   if (many) {
     await start.selectOption({ label: many });
-    await p.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
+    await p.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
   }
   // the Keep list (a closed fold inside the Optimizer fold) open too: its long lines must wrap inside the pane
   const keep = p.locator("aside details:not([open]) > summary", {

@@ -2,6 +2,7 @@
 
 DIY speaker planner: PA stack, cutlist, fills and hi-fi tabs, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `build/build.sh` (`vp build` + `build/inline.mjs`); sources in `src/`, strict TypeScript (`tsconfig.json`), shared types in `src/types.ts`;
 checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without the global CLI); phone layout check in `tests/mobile-check.mjs` (CI).
+The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`, `src/lib/pageRoute.ts`; the Pages build also writes `notes/index.html`).
 
 ## UI rules
 
@@ -24,8 +25,10 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Dispersion maps (owner-approved color exception, these maps only) use the continuous VituixCAD-style scale, +6 to −36 dB with a contour every 3 dB (`DISPERSION_SCALE` in `src/styles/palette.ts`), not the CMYK brand palette. They are the one frequency chart off the 15 Hz–20 kHz axis: every map shares fixed axes of ±90° and 50 Hz–20 kHz (`src/constants/chartScales.ts`), since below about 85 Hz the default designs are flat at every angle; one `DispersionMap` component and key, with the crossovers marked.
 - US spelling everywhere (center, color): UI text, comments, docs and identifiers. Keys that saved data or links
   already carry keep their spelling (comment why).
+- Level words: louder and quieter for level (dB), higher and lower for frequency (Hz). Never "lower" for "quieter".
+- No blocks of text on a page. A line on the page is one short sentence. Longer explanations go in a Tooltip on the nearest label, or in the page's Details fold as short bullets.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
-- Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent.
+- Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent. When a second page needs a control, first move it into `src/components/ui`, then use it on both pages.
 - A page with settings uses `SettingsLayout`: from md up the page doesn't scroll; the results and the `SettingsColumn` are two panes, each with its own scrollbar. Long settings (PA, Hi-fi) split into `SettingsSection` folds with a one-line summary each, built from the state and the catalog. Page width and gutters come from `PAGE_WIDTH` (`src/styles/layout.ts`): the full window width, never capped; on very wide screens a single result block (chart, stat tiles, detail list, notices) (also the saved configurations, optimizer, Details and dispersion blocks) stops at `RESULT_MAX_WIDTH` and prose at `READING_WIDTH`. The PA and Hi-fi Design results take two columns from `RESULTS_TWO_COLUMN_PX` (`resultsGridClass` / `resultsCellClass`), using the full pane.
 
 ## TypeScript
@@ -55,6 +58,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Never attach session links (e.g. `Claude-Session:` trailers or claude.ai/code URLs) to commit messages, PR descriptions or comments.
 - Two layers enforce this: `.claude/settings.json` (`attribution.sessionUrl: false`) turns the links off in cloud sessions, and `.github/workflows/no-session-links.yml` strips them from PR bodies and fails a PR whose commits carry one.
 - A PR that finishes an issue says `Closes #N` so merging closes it.
+- PR titles and descriptions are short and in STE. The title names what changes for the user (e.g. "Space: add speakers or stacks, kept drafts"). The description has two sections: "What changes" (short bullets by area, written for the user, no internal names or code unless the change is internal) and "Tests" (one or two lines). Keep the description current: rewrite it when the PR changes, do not append.
 
 ## Agents and usage
 

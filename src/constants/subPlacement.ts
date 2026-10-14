@@ -1,6 +1,6 @@
 import type { SubPlacement } from "../types";
 
-/** Where the subs stand, by id: in the stacks, a center pair, or one center sub (the PA Coverage page, the Space page). */
+/** Where the subs stand, by id: in the stacks, a center pair, or one center sub (the PA Coverage page). */
 export const SUB_PLACEMENT = {
   stacks: "stacks",
   center: "center",

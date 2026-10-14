@@ -83,7 +83,7 @@ import { Notice } from "../../components/ui/Notice";
 import { formatInches } from "../../lib/format";
 import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
-import { ductDividerOf, withDuctDivider } from "../../lib/speaker/cabinetPanels";
+import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 
 /** The driver types as the type picker lists them: one woofer type, then the other kinds. */
@@ -476,7 +476,7 @@ function PortFields({
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
           className="mb-3"
-          value={ductDividerOf(port)}
+          value={port.divider}
           onChange={(divider) => onChange(withDuctDivider(port, divider, walls))}
           options={PANEL_NOMINAL_OPTIONS}
         />

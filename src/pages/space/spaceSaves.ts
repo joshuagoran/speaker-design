@@ -3,32 +3,35 @@
 import type {
   SavedConfig,
   SavedSpaceData,
-  SpaceAmp,
   SpaceDesign,
-  SpaceFrontEnd,
   SpacePlacement,
   SpaceVenue,
   SpeakerSpec,
   StackSpec,
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
-import { paVenue } from "../../lib/speaker/paSpec";
-import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
+import { homeVenue } from "../../lib/speaker/specParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
-import { SPACE_TEXT } from "../../constants/space";
+import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
+import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
+import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
+import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
+import type { PageDraft } from "../../hooks/usePageDraft";
 
 /** The id a space has until the library saves it (then it takes the document's). */
 export const DRAFT_SPACE_ID = "draft";
 
-/** A space with nothing placed, named as a new one, on the coverage page's default floor, with no hardware. */
+/**
+ * A space with nothing placed, named as a new one, in the default living room (20 × 30 × 12 ft) with a seated listener
+ * two thirds down it: the page opens on a quiet, empty room.
+ */
 export const emptySpace = (): SpaceDesign => ({
   space: {
     id: DRAFT_SPACE_ID,
     name: SPACE_TEXT.newName,
     placements: [],
-    amps: [],
-    frontEnd: null,
-    venue: paVenue(DEFAULT_COVERAGE_LAYOUT),
+    venue: homeVenue(0, SPACE_HOME_SEAT, SEATED_EAR_FT),
   },
   stacks: [],
   speakers: [],
@@ -84,36 +87,43 @@ const isStack = (value: unknown): value is StackSpec =>
   hasFields(value, { id: "string", name: "string", notes: "string" }) &&
   Array.isArray(Reflect.get(value, "members"));
 
-/** Whether a value reads as a list of placements: each names an item and has a spot, an aim and channels. */
+/**
+ * Whether a value reads as a list of placements: each names an item and has a spot, an aim and whether it is a mirrored
+ * pair. (A draft or save from the time a placement could follow another has `follows` and no `mirrored`: not read.)
+ */
 const isPlacements = (value: unknown): value is SpacePlacement[] =>
   Array.isArray(value) &&
   value.every(
     (p: unknown) =>
-      hasFields(p, { x: "number", y: "number", liftIn: "number", item: "object", aim: "object" }) &&
-      Array.isArray(Reflect.get(p, "channels")),
+      hasFields(p, {
+        x: "number",
+        y: "number",
+        liftIn: "number",
+        item: "object",
+        aim: "object",
+        mirrored: "boolean",
+      }) && !("follows" in p),
   );
 
-/** Whether a value reads as a list of amps: each with its id and watts. */
-const isAmps = (value: unknown): value is SpaceAmp[] =>
-  Array.isArray(value) &&
-  value.every((a: unknown) => hasFields(a, { id: "string", watts: "number" }));
+/** Whether a value is one of a const record's values (a saved string that names an id the app has). */
+const isOneOf = (ids: Record<string, string>, value: unknown) =>
+  Object.values(ids).some((id) => id === value);
 
-/** Whether a value reads as a front end (its kind), or none. */
-const isFrontEnd = (value: unknown): value is SpaceFrontEnd | null =>
-  value === null || hasFields(value, { kind: "string" });
-
-/** Whether a value reads as a venue: its room, listener, ear height, listening area and target. */
+/** Whether a value reads as a venue: its room, listener, ear height, target, where it is measured and balance. */
 const isVenue = (value: unknown): value is SpaceVenue =>
   hasFields(value, {
     room: "object",
     listener: "object",
-    area: "object",
     earFt: "number",
     targetDb: "number",
-  });
+    levelRef: "string",
+    balance: "string",
+  }) &&
+  isOneOf(COVERAGE_LEVEL_REF, Reflect.get(value, "levelRef")) &&
+  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance"));
 
 /**
- * A saved space opened: the document's id and name, its placements, hardware and venue, and its stacks and speakers;
+ * A saved space opened: the document's id and name, its placements and venue, and its stacks and speakers;
  * null for a document that holds no space (written elsewhere). Its fields are trusted from there: `spaceSnapshot`
  * wrote them.
  */
@@ -123,13 +133,9 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
   const speakers: unknown = Reflect.get(c, "speakers");
   if (typeof space !== "object" || space === null) return null;
   const placements: unknown = Reflect.get(space, "placements");
-  const amps: unknown = Reflect.get(space, "amps");
-  const frontEnd: unknown = Reflect.get(space, "frontEnd");
   const venue: unknown = Reflect.get(space, "venue");
   if (
     !isPlacements(placements) ||
-    !isAmps(amps) ||
-    !isFrontEnd(frontEnd) ||
     !isVenue(venue) ||
     !Array.isArray(stacks) ||
     !stacks.every(isStack) ||
@@ -138,8 +144,19 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
   )
     return null;
   return {
-    space: { id: c.id, name: c.name, placements, amps, frontEnd, venue },
+    space: { id: c.id, name: c.name, placements, venue },
     stacks,
     speakers,
   };
 }
+
+/** The Space page's working design in the browser: the save document, with the space's id and name. */
+export const spaceDraft: PageDraft<SpaceDesign> = {
+  key: PAGE_DRAFT_KEYS.space,
+  empty: emptySpace,
+  toDraft: (design) => draftDocument(spaceSnapshot(design), design.space),
+  fromDraft: (raw) => {
+    const doc = asDraftDocument(raw);
+    return doc && spaceFromSaved(doc);
+  },
+};

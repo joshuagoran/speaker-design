@@ -12,7 +12,7 @@ import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { HandleFields } from "../../components/ui/HandleFields";
 import { Tooltip } from "../../components/ui/Tooltip";
-import { SelectField } from "../../components/ui/SelectField";
+import { StartPicker } from "../../components/ui/StartPicker";
 import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
@@ -86,7 +86,6 @@ import {
 import {
   SPEAKER_START,
   SPEAKER_START_NAMES,
-  SPEAKER_START_TEXT,
   type SpeakerStart,
 } from "../../constants/speakerStarts";
 import { ChamberSettings } from "./ChamberSettings";
@@ -144,6 +143,7 @@ export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
   hornMount: planner.hornMount,
   spacerH: planner.spacerHeightIn,
   hardware: planner.hardware,
+  divider: planner.ductDividerPanel,
 });
 
 /**
@@ -519,17 +519,14 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 maxLength={60}
                 onChange={speakerPage.setName}
               />
-              <SelectField
-                label={SPEAKER_START_TEXT.startFrom}
+              <StartPicker
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(o.id)}
                 group={(o) => o.group}
+                onStart={startFrom}
+                hint={SPEAKER_TEXT.startOverHint}
               />
-              <Button variant="primary" onClick={startFrom} className="mb-2">
-                {SPEAKER_START_TEXT.startOver}
-              </Button>
-              <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.startOverHint}</p>
             </>,
           )}
           {section(

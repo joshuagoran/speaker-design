@@ -1,8 +1,8 @@
 // Where a new stack (Stack page) or space (Space page) starts: a preset, or the current PA design
 // (src/pages/stack/stackPresets). The PA page becomes these presets at L3f (docs/speaker-designer-plan.md). The picker's
-// label, button and "current designs" group are the Speaker page's start picker's (SPEAKER_START_TEXT,
-// SPEAKER_START_GROUPS).
-import { SPEAKER_START_GROUPS } from "./speakerStarts";
+// label, button and "current designs" group are the start picker's (START_PICKER_TEXT,
+// START_PICKER_GROUPS).
+import { START_PICKER_GROUPS } from "./startPicker";
 
 /** The presets, by id: the PA page's starting design in each layout, and the Hi-fi page's pair. */
 export const STACK_PRESET = {
@@ -41,5 +41,5 @@ export const STACK_START_DESIGN_NAMES = {
 /** The picker's groups. */
 export const STACK_START_GROUPS = {
   presets: "Presets",
-  current: SPEAKER_START_GROUPS.current,
+  current: START_PICKER_GROUPS.current,
 } as const;

@@ -56,6 +56,6 @@ export const SPACE_SETTINGS_SECTIONS = {
   space: "Space",
   room: "Room and listeners",
   placements: "Placements",
-  hardware: "Hardware",
+  hardware: "Amp power and alignment",
 } as const;
 export type SpaceSettingsSection = keyof typeof SPACE_SETTINGS_SECTIONS;

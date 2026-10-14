@@ -71,6 +71,8 @@ interface Props {
   unit?: string;
   onChange: (value: number) => void;
   extra?: React.ReactNode;
+  /** a line under the slider */
+  note?: React.ReactNode;
   /**
    * The values it may take, when not all of `min`–`max`: stepping or dragging into a gap jumps across it, and it stops
    * at the last range's end. A value already in a gap (a saved one, say) still shows as it is.
@@ -79,7 +81,18 @@ interface Props {
 }
 
 /** Labeled range slider with a numeric readout. */
-export function Slider({ label, value, min, max, step, unit, onChange, extra, ranges }: Props) {
+export function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+  extra,
+  note,
+  ranges,
+}: Props) {
   const id = useId();
   const shown = typeof value === "number" ? value.toFixed(countDecimals(step)) : value;
   const allowed = ranges && rangesOnSteps(ranges, min, max, step);
@@ -134,6 +147,7 @@ export function Slider({ label, value, min, max, step, unit, onChange, extra, ra
         }}
         className="w-full accent-stone-900"
       />
+      {note != null && <p className="text-xs text-stone-500 tabular-nums mt-1">{note}</p>}
     </div>
   );
 }

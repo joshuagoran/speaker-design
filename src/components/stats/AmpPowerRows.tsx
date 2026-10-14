@@ -23,7 +23,7 @@ const tone = (r: Pick<ChannelPower, "pastLimit">) =>
   r.pastLimit ? "text-red-700" : "text-stone-900";
 
 /**
- * The amp power table (the PA Coverage page's and the Space page's): each channel's average and peak power at the
+ * The amp power table (the PA Coverage page's): each channel's average and peak power at the
  * target, the power at its first limit, the amp's rating, the peak headroom and the limit. A row whose peaks pass its
  * limit is flagged.
  */
