@@ -91,12 +91,18 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 - **Ports.** Sub: ~600 cm² per driver, ~680 mm long, folded once along the back wall. Mid: ~120 cm² per driver,
   ~165 mm, straight. Smaller ports limit the output. Flare their ends.
 - **Sub flare.** Straight-sided. The box's own top and bottom are the flare's top and bottom. Two flat side walls
-  angle out from the drivers' bay (~450 mm wide) to the mouth (the face between the slots, ~980 mm), ~500 mm deep.
-  The height stays the same, so the area grows linearly along the flare: Hornresp's parabolic (PAR) flare, not a
-  conical one.
+  angle out from the throat (~263 mm wide at 1:1, see [Compression ratio](#compression-ratio)) to the mouth (the face
+  between the slots, ~980 mm), ~500 mm deep. The height stays the same, so the area grows linearly along the flare:
+  Hornresp's parabolic (PAR) flare, not a conical one.
 - **Mid flare.** Flat top and bottom (the box's own), two curved side walls: an exponential flare (see
   [Mid horn](#mid-horn)). Its mouth fills the face between the slots, at the box's inside height.
-- **Front chamber.** Start the flare at the cone. Leave no cavity in front of it.
+- **Throat and front chamber.** There is no throat plate. The side walls start narrower than the cones, so their
+  back edges cover the outer parts of each cone. The throat is the opening between the back edges, at the box's
+  inside height (the top and bottom stay the box's panels). The back edges stand just in front of the cones, clear of
+  full cone travel (1.5 × Xmax) and of the surround: ~26 mm for the 18NBX100, ~16 mm for the 10MB600. The air
+  between each cone and the back edges is the front chamber: ~6.5 L per 18″ and ~1.2 L per 10″, with the air in the
+  cone's dish. The sides of the drivers' bay close it off from the wedges beside the flare. Make the bay no larger
+  than the cones need.
 - **Drivers.** The 18NBX100, 4018LF and 3012HO suit vented chambers. The 10MB600 (Qts 0.22) suits sealed or horn
   loading. Vented, it gives a small chamber and a bump near tuning. A fixed shelf flattens the bump.
 - **Simulate first.** Model the chamber, ports and flare (Hornresp, or the planner's horn engine). Check the sum.
@@ -123,7 +129,7 @@ is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). T
 | 950 Hz    | —                     | —                  | 132 dB               | 127 dB             | 138 dB      |
 
 The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures. The sub bin is modeled as built: one
-straight-sided (parabolic) flare from the drivers' bay to the mouth. The first model took four conical segments from
+straight-sided (parabolic) flare from the throat to the mouth. The first model took four conical segments from
 the cones' area. For 2 × 18″ it gave 0.3–0.8 dB less from 60 to 120 Hz and 0.9–1.3 dB more at 150 and 200 Hz.
 
 - **Horn gain.** On axis, the sub bin gains 4–6 dB from 100 to 150 Hz. The mid box gains 4–6 dB from 150 to 950 Hz.
@@ -144,6 +150,43 @@ the cones' area. For 2 × 18″ it gave 0.3–0.8 dB less from 60 to 120 Hz and 
   ~2 dB to spare.
 - **Little sub-to-top delay.** Both have ~3–5 ms group delay at 120–150 Hz.
 - **Limits.** The geometry is an estimate. Above ~350 Hz the mid results are approximate (1-D model).
+
+### Compression ratio
+
+The compression ratio is the cones' area divided by the throat's area. At 1:1 the throat is as large as the cones,
+and the horn does not load them. A higher ratio loads them more: more output low in the band, less at the top
+(the front chamber and the throat make a low-pass), and faster air at the throat. The walls cover the cones' outer
+parts at 1:1 too, because the throat is a slot as high as the box and a cone is round.
+
+The planner swept each box from 1:1 to 3:1 in steps of 0.25 (the Speaker page's templates, the PA's amps, the input
+range applied). The score is the mean of the maximum SPL across the band less its standard deviation: highest and
+flattest. The band is 35–120 Hz for the sub bins and 120–950 Hz for the mid box. The throat's air speed was checked
+against the box's limit (23.5 m/s) at every point. It never binds: at most 12 m/s at 3:1.
+
+| Sub bin, 2 × 18″ | 40 Hz | 63 Hz | 100 Hz | 160 Hz | Score      |
+| ---------------- | ----- | ----- | ------ | ------ | ---------- |
+| **1:1**          | 130.6 | 133.0 | 133.9  | 125.1  | **130.66** |
+| 1.5:1            | 130.6 | 132.8 | 133.4  | 125.5  | 130.60     |
+| 2:1              | 130.6 | 132.7 | 133.2  | 125.6  | 130.57     |
+| 2.5:1            | 130.6 | 132.7 | 133.0  | 125.7  | 130.55     |
+| 3:1              | 130.6 | 132.6 | 132.9  | 125.7  | 130.54     |
+
+| Mid box, 2 × 10″ | 125 Hz | 250 Hz | 500 Hz | 800 Hz | Score      |
+| ---------------- | ------ | ------ | ------ | ------ | ---------- |
+| 1:1              | 127.4  | 135.3  | 136.4  | 134.1  | 131.98     |
+| 1.5:1            | 127.2  | 136.4  | 137.9  | 135.6  | 132.30     |
+| 1.75:1           | 127.1  | 136.7  | 138.4  | 136.0  | 132.35     |
+| **2:1**          | 127.1  | 136.8  | 138.9  | 136.3  | **132.36** |
+| 2.5:1            | 127.0  | 136.8  | 139.5  | 136.6  | 132.30     |
+| 3:1              | 127.0  | 136.7  | 140.0  | 136.7  | 132.19     |
+
+- **What limits.** The amp everywhere in the mid box's band. In the sub bins, Xmax from ~42 to ~62 Hz and the amp
+  elsewhere. At 160 Hz the sub is past its 120 Hz crossover (the input range).
+- **Sub bins: 1:1.** The ratio changes little. A higher ratio takes up to 1 dB off at 100 Hz and adds ~0.5 dB at
+  160 Hz. The band gets flatter (its deviation falls from 1.6 to 1.2 dB) but lower. 1:1 scores best, by less than
+  0.1 dB. The one-driver bin gives the same (124.7/126.9/128.1/122.6 dB at 1:1).
+- **Mid box: 2:1.** The ratio adds 1.5–2.5 dB from 250 to 800 Hz. Past 2:1 the top of the band gains little and the
+  band gets less flat. The throat is ~63 mm wide: the walls cover most of each cone.
 
 ## Alternative: 4-way with folded horn subs
 

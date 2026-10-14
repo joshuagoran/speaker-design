@@ -152,8 +152,10 @@ Each PR stands alone. Lowest risk first.
     - **One exception** (owner, Oct 2026). The PA and Hi-fi pages go away at L3f, so their saves get one read
       adapter. It opens an old PA or Hi-fi save as speakers and a stack. The policy above still holds for all
       other saves.
-  - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's throat chamber and
-    segments (`HornDesign`, PR #128). The chamber's net air and vent are the horn's rear chamber.
+  - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's segments (`HornDesign`,
+    PR #128). The chamber's net air and vent are the horn's rear chamber. The front chamber is not a setting: the
+    side walls start narrower than the cones, their back edges over the cones' outer parts and just clear of full
+    cone travel, and the air under the edges is the front chamber (`lib/speaker/hornThroat`, below).
     `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. Alike drivers in one throat go to the engine
     as one driver and a count (`drivers`, Hornresp's Nd). The engine wires them in parallel, and each cone
     keeps its own air load. A folded path (a bass bin) has the same segments; its fold
@@ -216,7 +218,10 @@ Each PR stands alone. Lowest risk first.
       walls angle out in straight lines; an exponential one keeps its height and its side walls curve; a conical one
       grows on both sides together, as a pyramid. Each segment starts with the shape the one before it ends with, so
       the walls kink at a joint and never step. The areas at the throat, the mouth and every segment's end are the
-      model's, and the path is the segments' length. The drivers stand in a bay behind the throat.
+      model's, and the path is the segments' length. The walls start at the throat, just in front of the cones; where
+      the throat is narrower than the cones, their back edges cover the cones' outer parts (the front view draws the
+      edges across the cones' outlines). The drivers' bay behind the throat is the front chamber, as deep as the
+      walls' clearance; the drivers' bodies stand behind it.
     - A folded path runs in legs along the depth, stacked up the box, as few folds as fit. A path that does not fit
       (folded or not) is drawn as it is, past the walls, and a note gives what it needs and what the chamber has.
     - A mouth larger than the face its chamber leaves it (the clear face, less the columns of side slots) is drawn at that
@@ -250,10 +255,11 @@ Each PR stands alone. Lowest risk first.
         high-pass. A pair, hung or on pedestals, is the Space page's (no field for it).
       - PA v2 sub bin (`PA_V2_SUB_BIN`, one or two 18″): one front-loaded horn chamber, the drivers stacked in one
         throat (the engine's `drivers`), a straight-sided flare: the box's own top and bottom, two flat side walls
-        that angle out from the drivers' bay (450 mm wide) to a mouth that fills the face between the slots. Its area
-        grows linearly: one parabolic section, at the box's inside height. Net rear air set (~324 L for two), a slot
+        that angle out from the throat (a 1:1 compression ratio, the walls over the cones' outer parts) to a mouth
+        that fills the face between the slots. Its area grows linearly: one parabolic section, at the box's inside
+        height. Net rear air set (~324 L for two), a slot
         on each front side, folded, tuned to ~35 Hz, a 30 Hz BW24 subsonic.
-      - PA v2 mid box (`PA_V2_MID_BOX`): two 10″ in one throat with a 1 L throat chamber and an exponential flare
+      - PA v2 mid box (`PA_V2_MID_BOX`): two 10″ in one throat at a 2:1 compression ratio and an exponential flare
         (flat top and bottom, curved side walls), its mouth the face between the slots at the box's inside height,
         ~34 L rear air, side slots, tuned to ~95 Hz, crossed at the R-OSSE's lowest crossover.
       - The PA v2 slots store their narrow size as the height and their long side as the width, in sizes of ⅛″. The
@@ -798,15 +804,25 @@ Each PR stands alone. Lowest risk first.
       on does each section after the first show its start area, so a step can be made. A step turns it on, and it stays
       on until the user turns it off (`stepsLatched`). A step shows a note: "Section 2 starts at a different area than section 1 ends. This makes a step in the
       horn." Turning it off sets each start area back to the previous end area (`withStepsSmoothed`).
-    - The throat chamber, L (as the net air). The path: straight or folded.
+    - The compression ratio (owner, Oct 2026): the cones' area over the throat's (1:1 leaves the cones unloaded). It
+      sets the first section's start area, the one figure both fields edit (`withCompressionRatio`). The tip: "How
+      much of the cone the horn walls cover. A higher ratio loads the cone more. It gives more output low in the band
+      but less at the top, and faster air at the throat."
+    - The front chamber, L, shown only (`lib/speaker/hornThroat` `frontChamber`). The walls' back edges stand in
+      front of the cones by their clearance: 1.5 × Xmax (`CONE_TRAVEL_MARGIN`) and the surround (6% of the cone's
+      radius). Each cone holds its area times the clearance, and the air in its dish (a cone 40% of the driver's
+      catalog depth deep, `CONE_DISH_PER_DEPTH`). Older saves' throat chamber is not read.
+    - The throat's air speed at full power is a limit against the box's air speed limit (its vent's, or the PA's
+      port limit when sealed), as a vent's: a check under the chamber and a limit in the maximum SPL.
+    - The path: straight or folded.
     - The drive: front-loaded can be picked; tapped and back-loaded show, but cannot be picked, with a note that the
       horn engine takes only a front-loaded horn today.
-    - A size that is not positive and finite (an area, a length or the throat chamber) is the `noModel` gap, and the
+    - A size that is not positive and finite (an area or a length) is the `noModel` gap, and the
       views draw no flare: never NaN (`isSizedSegment`, the horn engine's and `hornFlare`'s check).
     - The load (done, owner Oct 2026): each chamber has a "Load" setting, "Direct" or "Horn"
       (`src/pages/speaker/chamberLoad.ts`). Horn starts a horn from the chamber's cones: one conical section from
       the cones' total Sd to a mouth the size of the clear face, as long as the clear depth less the deepest cone. It
-      has no throat chamber, a straight path and a front-loaded drive. The net air becomes the rear chamber's: the
+      has a 1:1 compression ratio, a straight path and a front-loaded drive. The net air becomes the rear chamber's: the
       chamber's net air less the flare's air. Direct removes the horn and sets the net air back to Auto. A chamber
       with no cone driver cannot take a horn. The vent stays as it was: a vent the horn engine does not take (a slot
       the box sets the width of, side ducts, radiators) stays a named gap.

@@ -44,6 +44,14 @@ The chain multiplies them per frequency.
   of order 0, so the segment is exact, not a run of short steps. `besselPair` gives J₀, J₁, Y₀ and Y₁ from their
   series below 15 and Hankel's expansion above, fast enough for every frequency. A run of short conical segments on
   the same law converges to it: 64 of them come within 0.05 dB on a sub bin.
+- **Throat and front chamber (the Speaker page).** A horn built into a box has no throat plate. Its side walls start
+  narrower than the cones, so their back edges cover the outer parts of each cone, and the throat (S₁) is the opening
+  between the edges at the box's inside height. The compression ratio is the cones' area over S₁. The edges stand
+  just in front of the cones, clear of 1.5 × Xmax and the surround. The air between the cones and the edges is the
+  front chamber (Hornresp's Vtc): each cone's area times that clearance, plus the air in its dish (a cone 40% of the
+  driver's catalog depth deep). `lib/speaker/hornThroat` works it out; it is not a setting. With S₁ it makes a
+  low-pass, f ≈ c·S₁ / (2π·Vtc): a higher ratio loads the cones more but lowers it. The PA v2 sub bins take 1:1 and
+  the mid box 2:1 (see [pa-v2-plan.md](pa-v2-plan.md#compression-ratio)).
 - **Solid angle.** The piston formula is half space (2π). Quarter and eighth space (π, π/2) use mirror images: an
   approximation. Free air (4π) is not modeled.
 - **Losses.** Leakage (QL) and vent loss (Qp), as options. The defaults are the box models' 7 and 50. Hornresp's
@@ -73,7 +81,8 @@ The chain multiplies them per frequency.
     500–950 Hz for the PA v2 mid box.
 - **Cone excursion, port and throat air speed, electrical impedance.**
 - **Group delay,** for the front end's alignment.
-- **Limits:** the existing thermal, excursion and port-speed logic, on the new curves (phase 2).
+- **Limits:** the existing thermal, excursion and port-speed logic, on the new curves (phase 2). The throat's air
+  speed takes the box's air speed limit, as a vent does (the Speaker page's maximum SPL and its checks).
 
 ### Stacking
 
