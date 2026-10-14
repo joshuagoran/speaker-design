@@ -68,7 +68,13 @@ import {
 } from "../../constants/purchasedParts";
 import { UI_TEXT } from "../../constants/uiText";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
-import { READING_WIDTH, RESULTS_TWO_COLUMN_PX, RESULT_MAX_WIDTH } from "../../styles/layout";
+import {
+  FLEX_GAP_Y,
+  READING_WIDTH,
+  RESULTS_TWO_COLUMN_PX,
+  RESULT_MAX_WIDTH,
+  GAP_Y_TIGHT,
+} from "../../styles/layout";
 import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -273,7 +279,7 @@ export function CutlistPage({
       foldsAt="desktop"
       summary={summaries[id]}
     >
-      <div className={`flex flex-col gap-4 pb-2 ${tabClass(id)}`}>{children}</div>
+      <div className={`${FLEX_GAP_Y} pb-2 ${tabClass(id)}`}>{children}</div>
     </SettingsSection>
   );
   const th = "py-1 font-normal text-stone-500";
@@ -562,14 +568,17 @@ export function CutlistPage({
               {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
             </p>
           </div>
-          <StatTileGrid
-            tiles={[
-              ["Sheets", totalSheets],
-              ["Pieces", totalPieces],
-              ["Full-length rips", rips],
-              ["Full-width crosscuts", crosscuts],
-            ]}
-          />
+          {/* pb-4 on top of the column's gap keeps the 36 px the tiles had below them (mb-4 plus gap-5) */}
+          <div className="pb-4">
+            <StatTileGrid
+              tiles={[
+                ["Sheets", totalSheets],
+                ["Pieces", totalPieces],
+                ["Full-length rips", rips],
+                ["Full-width crosscuts", crosscuts],
+              ]}
+            />
+          </div>
           {cut.notes.map((n) => (
             <p key={n} className={`${READING_WIDTH} text-sm text-orange-700`}>
               {n}
@@ -689,7 +698,7 @@ export function CutlistPage({
               </p>
             ) : (
               <>
-                <div>
+                <div className={GAP_Y_TIGHT}>
                   <ToggleGroup
                     label={
                       <Tooltip tip="Locked: along the sheet's length. Any: the layout can turn it.">
@@ -699,7 +708,6 @@ export function CutlistPage({
                     value={preset}
                     onChange={(k) => setGrain(GRAIN_PRESETS[k])}
                     options={entriesOf(PRESET_NAMES)}
-                    className="mb-2"
                   />
                   <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 items-center">
                     {GRAIN_ROWS.map(([panel, label, opts]) => (

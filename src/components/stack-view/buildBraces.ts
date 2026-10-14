@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { bracingRegions } from "../../lib/bracing";
 import { BAFFLE_THICKNESS_IN } from "./buildCabinet";
 import type { SceneContext } from "./sceneContext";
-import type { BoxBracing, BoxKeepOut, BoxRegion, Dims3 } from "../../types";
+import type { BoxAxis, BoxBracing, BoxKeepOut, BoxRegion, Dims3 } from "../../types";
 
 /** The name the brace and rib meshes carry, so a check can find them in the scene. */
 export const BRACE_MESH_NAME = "brace";
@@ -50,13 +50,43 @@ export function buildBraces(
     y: box.h - 2 * T,
     z: box.d - ctx.inset - BAFFLE_THICKNESS_IN - T,
   };
-  const place = insideToScene(ctx, box, y, x);
-  for (const r of bracingRegions(bracing, inner, T)) {
-    const { size, at } = place(r);
+  buildBracesAt(ctx, {
+    bracing,
+    inner,
+    // the inside's left wall, floor and baffle face, as `insideToScene` places them
+    corner: { x: x - inner.x / 2, y: y + T, z: box.d / 2 - ctx.inset - BAFFLE_THICKNESS_IN },
+    parent,
+  });
+}
+
+/**
+ * The braces and ribs of a box whose inside (`inner`, in) has its left wall at `corner.x`, its floor at `corner.y` and
+ * the baffle's rear face at `corner.z`, in `parent`'s coordinates.
+ */
+export function buildBracesAt(
+  ctx: SceneContext,
+  {
+    bracing,
+    inner,
+    corner,
+    parent,
+  }: {
+    bracing: Pick<BoxBracing, "windows" | "notch" | "ribs">;
+    inner: Record<BoxAxis, number>;
+    corner: { x: number; y: number; z: number };
+    parent: THREE.Object3D;
+  },
+) {
+  for (const r of bracingRegions(bracing, inner, ctx.wall)) {
+    const size = [r.x[1] - r.x[0], r.y[1] - r.y[0], r.z[1] - r.z[0]] as const;
     if (size.some((s) => s <= 0)) continue;
     const m = new THREE.Mesh(new THREE.BoxGeometry(...size), ctx.materials.brace);
     m.name = BRACE_MESH_NAME;
-    m.position.copy(at);
+    m.position.set(
+      corner.x + (r.x[0] + r.x[1]) / 2,
+      corner.y + (r.y[0] + r.y[1]) / 2,
+      corner.z - (r.z[0] + r.z[1]) / 2,
+    );
     parent.add(m);
   }
 }

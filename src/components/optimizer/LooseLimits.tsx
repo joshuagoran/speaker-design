@@ -19,7 +19,7 @@ interface Props<S> {
 /** The near miss's option buttons: each loosens one limit and runs the search again. */
 export function LooseLimits<S>({ options, onPick, lead }: Props<S>) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs text-stone-500">
+    <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500">
       {lead}
       {options.map((o) => (
         <ToggleButton key={o.text} on={false} title={o.tip} onClick={() => onPick(o.set)}>

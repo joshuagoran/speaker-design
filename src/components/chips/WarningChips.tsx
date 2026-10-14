@@ -17,9 +17,9 @@ interface Props {
 }
 
 /** Stack of warning chips, each `[status, heading, text, id]` as returned by subChips, midChips, hornChips, fillChips and hifiChips. */
-export function WarningChips({ chips, className = "", tips }: Props) {
+export function WarningChips({ chips, tips }: Props) {
   return (
-    <div className={`${RESULT_MAX_WIDTH} flex flex-col gap-1.5 ${className}`.trim()}>
+    <div className={`${RESULT_MAX_WIDTH} flex flex-col gap-1.5`}>
       {chips.map(([kind, head, body, id]) => (
         <div
           key={id}

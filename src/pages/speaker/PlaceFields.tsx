@@ -4,7 +4,8 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf } from "../../lib/records";
 import { SPEAKER_TEXT, SET_BY, SET_BY_NAMES } from "../../constants/speakerPage";
-import { FIELD_ROW, shownIn } from "./speakerFields";
+import { shownIn } from "./speakerFields";
+import { FIELD_ROW } from "../../styles/layout";
 
 interface Props<P extends FacePoint> {
   label: React.ReactNode;
@@ -36,7 +37,6 @@ export function PlaceFields<P extends FacePoint>({
     <>
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.placeTip}>{label}</Tooltip>}
-        className="mb-2"
         value={value ? SET_BY.custom : SET_BY.auto}
         onChange={(v) =>
           onChange(

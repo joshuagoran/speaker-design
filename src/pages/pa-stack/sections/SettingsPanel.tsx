@@ -53,6 +53,13 @@ import { takesHornMount } from "../../../lib/pa/hornMount";
 import { hornMountChoice } from "../../../components/stack-view/hornMountChoice";
 import { HornMountField } from "../../../components/ui/HornMountField";
 import { towerMidDims } from "../../../lib/pa/tower";
+import {
+  BLOCK_GAP_Y,
+  BLOCK_GAP_Y_MD_UP,
+  HEADING_GROUP,
+  GAP_Y,
+  GAP_Y_TIGHT,
+} from "../../../styles/layout";
 
 interface Props {
   planner: Pick<
@@ -321,7 +328,7 @@ export function SettingsPanel({ planner }: Props) {
     >
       {section(
         "sub",
-        <div className={tabClass("sub")}>
+        <div className={`${tabClass("sub")} ${BLOCK_GAP_Y}`}>
           <SelectField
             label="Sub driver"
             options={subDriverChoices}
@@ -329,7 +336,7 @@ export function SettingsPanel({ planner }: Props) {
             onChange={setSubDriver}
             extra={renderLockButton("sub", "the sub driver")}
           />
-          <div className="mb-5">
+          <div>
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
             <Card>
               <Slider
@@ -364,142 +371,147 @@ export function SettingsPanel({ planner }: Props) {
               />
             </Card>
           </div>
-          <div className="mb-5">
+          <div>
             <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2">
               <span>Vent</span>
               {renderLockButton("vent", "the vent style")}
             </div>
-            <div className="flex flex-wrap gap-1">
-              {(
-                [
-                  ["Rectangular", !isRoundPort(portStyle), "slots"],
-                  ["Round tubes", isRoundPort(portStyle), "round2"],
-                ] as const
-              ).map(([label, on, v]) => (
-                <ToggleButton
-                  key={label}
-                  onClick={() => {
-                    if (!on) setPortStyle(v);
-                  }}
-                  on={on}
-                >
-                  {label}
-                </ToggleButton>
-              ))}
-            </div>
-            {!isRoundPort(portStyle) && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {entriesOf(SLOT_LAYOUT_NAMES).map(([v, label]) => {
-                  const on = portStyle === v;
-                  return (
-                    <ToggleButton key={v} onClick={() => setPortStyle(v)} on={on} size="xs">
+            <div className={GAP_Y_TIGHT}>
+              <div className={HEADING_GROUP}>
+                <div className="flex flex-wrap gap-1">
+                  {(
+                    [
+                      ["Rectangular", !isRoundPort(portStyle), "slots"],
+                      ["Round tubes", isRoundPort(portStyle), "round2"],
+                    ] as const
+                  ).map(([label, on, v]) => (
+                    <ToggleButton
+                      key={label}
+                      onClick={() => {
+                        if (!on) setPortStyle(v);
+                      }}
+                      on={on}
+                    >
                       {label}
                     </ToggleButton>
-                  );
-                })}
-              </div>
-            )}
-            <Card className="mt-2">
-              {portStyle === "slots" && (
-                <Slider
-                  label="Slot height"
-                  value={subVentSpec.slotH}
-                  min={PA_SLIDERS.slotH.min}
-                  max={PA_SLIDERS.slotH.max}
-                  step={PA_SLIDERS.slotH.step}
-                  unit="″"
-                  onChange={(v) => setSubVentField("slotH", v)}
-                />
-              )}
-              {(portStyle === "vslots" || portStyle === "vslot1") && (
-                <>
-                  <Slider
-                    label="Duct throat"
-                    value={subVentSpec.throat}
-                    min={PA_SLIDERS.throat.min}
-                    max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
-                    step={PA_SLIDERS.throat.step}
-                    unit="″"
-                    onChange={(v) => setSubVentField("throat", v)}
-                  />
-                  <ToggleGroup
-                    label={<Tooltip tip={UI_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
-                    value={ductDividerPanel}
-                    onChange={setDuctDividerPanel}
-                    options={PANEL_NOMINAL_OPTIONS}
-                  />
-                </>
-              )}
-              {isRoundPort(portStyle) && (
-                <>
-                  <Slider
-                    label="Tubes"
-                    value={subVentSpec.nt}
-                    min={PA_SLIDERS.tubes.min}
-                    max={PA_SLIDERS.tubes.max}
-                    step={PA_SLIDERS.tubes.step}
-                    unit=""
-                    onChange={(v) => setSubVentField("nt", v)}
-                  />
-                  <Slider
-                    label="Tube diameter"
-                    value={subVentSpec.dia}
-                    min={PA_SLIDERS.tubeDia.min}
-                    max={PA_SLIDERS.tubeDia.max}
-                    step={PA_SLIDERS.tubeDia.step}
-                    unit="″"
-                    onChange={(v) => setSubVentField("dia", v)}
-                  />
-                </>
-              )}
-              <Slider
-                label="Duct length"
-                value={subVentSpec.len}
-                min={PA_SLIDERS.ductLen.min}
-                max={ductLenSliderMax(
-                  subBoxDims,
-                  portStyle,
-                  subVentSpec,
-                  wallThicknessIn,
-                  baffleInsetIn,
-                  subDriver,
+                  ))}
+                </div>
+                {!isRoundPort(portStyle) && (
+                  <div className="flex flex-wrap gap-1">
+                    {entriesOf(SLOT_LAYOUT_NAMES).map(([v, label]) => {
+                      const on = portStyle === v;
+                      return (
+                        <ToggleButton key={v} onClick={() => setPortStyle(v)} on={on} size="xs">
+                          {label}
+                        </ToggleButton>
+                      );
+                    })}
+                  </div>
                 )}
-                step={PA_SLIDERS.ductLen.step}
-                unit="″"
-                onChange={(v) => setSubVentField("len", v)}
-                // a bottom slot and round tubes skip the lengths that fit no way, and stop at the longest
-                ranges={
-                  portStyle === "slots" || isRoundPort(portStyle) ? ductLens.spans : undefined
-                }
-              />
-              <Slider
-                label="Port velocity limit, sharp edge"
-                value={maxPortAirSpeedMs}
-                min={12}
-                max={30}
-                step={0.5}
-                unit=" m/s"
-                onChange={setMaxPortAirSpeedMs}
-              />
-              <div className="text-xs text-stone-500">
-                {port.desc}. {port.area.toFixed(1)} in&#178;.
-                {isRoundPort(portStyle) &&
-                  ` Flared tubes run to ${ventSpeedLimit(portStyle, maxPortAirSpeedMs).toFixed(1)} m/s.`}
               </div>
-            </Card>
+              <Card>
+                {portStyle === "slots" && (
+                  <Slider
+                    label="Slot height"
+                    value={subVentSpec.slotH}
+                    min={PA_SLIDERS.slotH.min}
+                    max={PA_SLIDERS.slotH.max}
+                    step={PA_SLIDERS.slotH.step}
+                    unit="″"
+                    onChange={(v) => setSubVentField("slotH", v)}
+                  />
+                )}
+                {(portStyle === "vslots" || portStyle === "vslot1") && (
+                  <>
+                    <Slider
+                      label="Duct throat"
+                      value={subVentSpec.throat}
+                      min={PA_SLIDERS.throat.min}
+                      max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
+                      step={PA_SLIDERS.throat.step}
+                      unit="″"
+                      onChange={(v) => setSubVentField("throat", v)}
+                    />
+                    <ToggleGroup
+                      label={
+                        <Tooltip tip={UI_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>
+                      }
+                      value={ductDividerPanel}
+                      onChange={setDuctDividerPanel}
+                      options={PANEL_NOMINAL_OPTIONS}
+                    />
+                  </>
+                )}
+                {isRoundPort(portStyle) && (
+                  <>
+                    <Slider
+                      label="Tubes"
+                      value={subVentSpec.nt}
+                      min={PA_SLIDERS.tubes.min}
+                      max={PA_SLIDERS.tubes.max}
+                      step={PA_SLIDERS.tubes.step}
+                      unit=""
+                      onChange={(v) => setSubVentField("nt", v)}
+                    />
+                    <Slider
+                      label="Tube diameter"
+                      value={subVentSpec.dia}
+                      min={PA_SLIDERS.tubeDia.min}
+                      max={PA_SLIDERS.tubeDia.max}
+                      step={PA_SLIDERS.tubeDia.step}
+                      unit="″"
+                      onChange={(v) => setSubVentField("dia", v)}
+                    />
+                  </>
+                )}
+                <Slider
+                  label="Duct length"
+                  value={subVentSpec.len}
+                  min={PA_SLIDERS.ductLen.min}
+                  max={ductLenSliderMax(
+                    subBoxDims,
+                    portStyle,
+                    subVentSpec,
+                    wallThicknessIn,
+                    baffleInsetIn,
+                    subDriver,
+                  )}
+                  step={PA_SLIDERS.ductLen.step}
+                  unit="″"
+                  onChange={(v) => setSubVentField("len", v)}
+                  // a bottom slot and round tubes skip the lengths that fit no way, and stop at the longest
+                  ranges={
+                    portStyle === "slots" || isRoundPort(portStyle) ? ductLens.spans : undefined
+                  }
+                />
+                <Slider
+                  label="Port velocity limit, sharp edge"
+                  value={maxPortAirSpeedMs}
+                  min={12}
+                  max={30}
+                  step={0.5}
+                  unit=" m/s"
+                  onChange={setMaxPortAirSpeedMs}
+                />
+                <div className="text-xs text-stone-500">
+                  {port.desc}. {port.area.toFixed(1)} in&#178;.
+                  {isRoundPort(portStyle) &&
+                    ` Flared tubes run to ${ventSpeedLimit(portStyle, maxPortAirSpeedMs).toFixed(1)} m/s.`}
+                </div>
+              </Card>
+            </div>
           </div>
         </div>,
       )}
       {section(
         "mid",
-        <div className={tabClass("mid")}>
+        <div className={`${tabClass("mid")} ${BLOCK_GAP_Y}`}>
           <ToggleGroup
             label="Mid-bass size"
             value={midSize}
             onChange={setMidSize}
             options={([12, 15] as const).map((n) => [n, `${n}″`] as const)}
             wrap={false}
-            className="mb-2"
           />
           <SelectField
             label={`Mid-bass ${midSize}″`}
@@ -508,7 +520,7 @@ export function SettingsPanel({ planner }: Props) {
             onChange={setMidDriver}
             extra={renderLockButton("mid", "the mid-bass driver")}
           />
-          <div className="mb-5">
+          <div>
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
             <Card>
               {layout === "tower" ? (
@@ -556,7 +568,7 @@ export function SettingsPanel({ planner }: Props) {
       )}
       {section(
         "horn",
-        <div className={tabClass("horn")}>
+        <div className={`${tabClass("horn")} ${BLOCK_GAP_Y}`}>
           <SelectField
             label="Compression driver"
             options={CD_OPTIONS}
@@ -572,7 +584,7 @@ export function SettingsPanel({ planner }: Props) {
             extra={renderLockButton("horn", "the horn")}
           />
           {hornExitMismatch && (
-            <div className="text-sm text-red-700 mb-4">
+            <div className="text-sm text-red-700">
               {UI_TEXT.hornExitMismatch(
                 formatInches(hornOption.exit),
                 formatInches(compressionDriver.exit),
@@ -583,9 +595,9 @@ export function SettingsPanel({ planner }: Props) {
       )}
       {section(
         "xo",
-        <>
+        <div className={BLOCK_GAP_Y_MD_UP}>
           <div className={tabClass("mid")}>
-            <div className="mb-5">
+            <div>
               <div className="text-sm text-stone-500 mb-1">Crossovers</div>
               <Card>
                 <Slider
@@ -622,7 +634,7 @@ export function SettingsPanel({ planner }: Props) {
             </div>
           </div>
           <div className={tabClass("sub")}>
-            <div className="mb-5">
+            <div>
               <div className="text-sm text-stone-500 mb-1">Sub highpass and amp</div>
               <Card>
                 <Slider
@@ -635,7 +647,7 @@ export function SettingsPanel({ planner }: Props) {
                   onChange={setSubHighpassHz}
                   extra={renderLockButton("hpf", "the highpass")}
                 />
-                <div className="flex flex-wrap gap-1 -mt-1 mb-3">
+                <div className="flex flex-wrap gap-1">
                   {keysOf(HIGHPASS_ALIGNMENTS).map((t) => (
                     <ToggleButton
                       key={t}
@@ -661,7 +673,7 @@ export function SettingsPanel({ planner }: Props) {
             </div>
           </div>
           <div className={tabClass("mid")}>
-            <div className="mb-5">
+            <div>
               <div className="text-sm text-stone-500 mb-1">{UI_TEXT.midBass} amp</div>
               <Card>
                 <Slider
@@ -691,7 +703,7 @@ export function SettingsPanel({ planner }: Props) {
             </div>
           </div>
           <div className={tabClass("horn")}>
-            <div className="mb-5">
+            <div>
               <div className="text-sm text-stone-500 mb-1">Horn amp</div>
               <Card>
                 <Slider
@@ -716,12 +728,12 @@ export function SettingsPanel({ planner }: Props) {
               </Card>
             </div>
           </div>
-        </>,
+        </div>,
       )}
       {section(
         "build",
-        <div className={tabClass("build")}>
-          <div className="mb-5">
+        <div className={`${tabClass("build")} ${BLOCK_GAP_Y}`}>
+          <div className={GAP_Y}>
             <ToggleGroup
               label={
                 <span className="flex items-center justify-between gap-2">
@@ -734,7 +746,7 @@ export function SettingsPanel({ planner }: Props) {
               onChange={setWallPanel}
               options={PANEL_NOMINAL_OPTIONS}
             />
-            <div className="mt-3">
+            <div>
               <ToggleGroup
                 label="Back panel"
                 value={backJoint}
@@ -744,7 +756,7 @@ export function SettingsPanel({ planner }: Props) {
                 )}
               />
             </div>
-            <div className="mt-3">
+            <div>
               <ToggleGroup
                 label="Bracing"
                 value={effectiveBraceStyle}
@@ -760,7 +772,7 @@ export function SettingsPanel({ planner }: Props) {
                 </div>
               ))}
             </div>
-            <div className="mt-3">
+            <div>
               <Slider
                 label="Baffle inset"
                 value={baffleInsetIn}
@@ -771,15 +783,13 @@ export function SettingsPanel({ planner }: Props) {
                 onChange={setBaffleInsetIn}
               />
             </div>
-            {mountChoice && (
-              <HornMountField choice={mountChoice} onChange={setHornMount} className="mt-3" />
-            )}
+            {mountChoice && <HornMountField choice={mountChoice} onChange={setHornMount} />}
             <HardwareSettings planner={planner} />
           </div>
           <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
           <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
           <HornColorPicker value={hornColor} onChange={setHornColor} horn={hornOption} />
-          <div className="mb-5">
+          <div className={GAP_Y}>
             <ToggleGroup
               label="Layout"
               value={layout}
@@ -787,7 +797,7 @@ export function SettingsPanel({ planner }: Props) {
               options={entriesOf(PA_LAYOUT_NAMES)}
             />
             {layout === "pole" && (
-              <div className="mt-3">
+              <div>
                 <Slider
                   label="Spacer height"
                   value={spacerHeightIn}

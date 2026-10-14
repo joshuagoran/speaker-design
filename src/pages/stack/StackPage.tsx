@@ -31,7 +31,7 @@ import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { formatHz } from "../../lib/format";
 import { DEFAULT_PA } from "../../lib/defaults";
-import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
+import { READING_WIDTH, RESULT_MAX_WIDTH, GAP_Y } from "../../styles/layout";
 import {
   FREQ_AXIS_MAX_HZ,
   FREQ_AXIS_MIN_HZ,
@@ -201,8 +201,8 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
           />
           {summary && <SummaryStrip items={summary} />}
           <StackOptimizerResults optimizer={optimizer} />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-3">{STACK_TEXT.views}</SectionHeading>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+            <SectionHeading>{STACK_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
               <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
                 {(cutaway) => (
@@ -213,7 +213,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   />
                 )}
               </Viewer3DCard>
-              <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
+              <Card gapY={false} className={`flex flex-col ${VIEW_HEIGHT}`}>
                 <div className="flex-1 min-h-0">
                   <StackFront
                     stack={design.stack}
@@ -226,7 +226,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             </div>
             {members.length > 0 && (
               <>
-                <StatTileGrid tiles={totalTiles} className="mt-5 mb-3" />
+                <StatTileGrid tiles={totalTiles} />
                 {totals.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
                 <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.totalsNote}</p>
               </>
@@ -234,8 +234,8 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             {members.length === 0 && <Notice>{STACK_TEXT.noMembers}</Notice>}
             {response.members.some((m) => m === null) && <Notice>{STACK_TEXT.missing}</Notice>}
           </section>
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-3">{STACK_TEXT.response}</SectionHeading>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+            <SectionHeading>{STACK_TEXT.response}</SectionHeading>
             <ResponseChart
               fmin={FREQ_AXIS_MIN_HZ}
               fmax={FREQ_AXIS_MAX_HZ}
@@ -268,12 +268,12 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
               marks={marks}
             />
             {gaps && <Notice>{STACK_TEXT.gaps}</Notice>}
-            <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
+            <StatTileGrid tiles={tiles} />
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.modelNote}</p>
           </section>
           {limits.sum.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
-              <SectionHeading className="mb-3">{STACK_TEXT.maxOutput}</SectionHeading>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
+              <SectionHeading>{STACK_TEXT.maxOutput}</SectionHeading>
               <ResponseChart
                 fmin={FREQ_AXIS_MIN_HZ}
                 fmax={FREQ_AXIS_MAX_HZ}
@@ -307,7 +307,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 marks={marks}
               />
               {keepUps.length > 0 && (
-                <div className={`${READING_WIDTH} flex flex-col gap-3 mt-3`}>
+                <div className={`${READING_WIDTH} flex flex-col gap-3`}>
                   {keepUps.map(({ heading, chips }) => (
                     <div key={heading}>
                       <h4 className="text-xs font-semibold text-stone-500 mb-1">{heading}</h4>
@@ -316,12 +316,12 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   ))}
                 </div>
               )}
-              <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>{STACK_TEXT.maxNote}</p>
+              <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.maxNote}</p>
             </section>
           )}
           {dispersion && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
-              <SectionHeading className="mb-3">{DISPERSION_HEADING}</SectionHeading>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
+              <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
               <DispersionBlock
                 map={dispersion}
                 plane={plane}
@@ -369,11 +369,9 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                     }}
                     group={(o) => OLD_SAVE_GROUP_NAMES[o.kind]}
                   />
-                  <Button className="mb-2" onClick={() => openOldSave(oldPicked)}>
-                    {STACK_TEXT.openOldSave}
-                  </Button>
+                  <Button onClick={() => openOldSave(oldPicked)}>{STACK_TEXT.openOldSave}</Button>
                   {oldSaveBad && <Notice>{STACK_TEXT.oldSaveBad}</Notice>}
-                  <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.oldSaveHint}</p>
+                  <p className="text-xs text-stone-500">{STACK_TEXT.oldSaveHint}</p>
                 </>
               )}
             </>,
@@ -402,7 +400,6 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   />
                   <Button
                     variant="primary"
-                    className="mb-2"
                     onClick={() => {
                       const speaker: SpeakerSpec = {
                         ...picked.spec,
@@ -416,11 +413,10 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   </Button>
                 </>
               ) : (
-                <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.noLibrary}</p>
+                <p className="text-xs text-stone-500">{STACK_TEXT.noLibrary}</p>
               )}
               {members.length > 0 && (
                 <AutoBalanceButton
-                  className="mt-4 mb-3"
                   balance={stack.balance}
                   onApply={stack.applyBalance}
                   mode={stack.balanceMode}
@@ -434,10 +430,10 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
           {section(
             "crossovers",
             <>
-              <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.crossoverHint}</p>
+              <p className="text-xs text-stone-500">{STACK_TEXT.crossoverHint}</p>
               {members.map((member, k) => (
-                <Card key={k} className="mb-3">
-                  <h4 className="font-semibold mb-1 min-w-0 truncate">{names[k]}</h4>
+                <Card key={k}>
+                  <h4 className="font-semibold min-w-0 truncate">{names[k]}</h4>
                   <FilterFields
                     filters={member.crossover}
                     // a new corner at the PA's crossover to its subs
@@ -450,7 +446,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 </Card>
               ))}
               {members.length === 0 && (
-                <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.noMembers}</p>
+                <p className="text-xs text-stone-500">{STACK_TEXT.noMembers}</p>
               )}
             </>,
           )}

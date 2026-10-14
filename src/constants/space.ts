@@ -52,8 +52,8 @@ export const SPACE_HOME_MARGIN_FT = 4;
  */
 export const PAIR_SIDE = { left: "L", right: "R" } as const;
 
-/** The level a living room should get, dB SPL: loud music at home. */
-export const SPACE_HOME_TARGET_DB = 90;
+/** The Target level a new space starts with (and Start empty, and a fill or Hi-fi preset that names none), dB SPL: as the PA planner. */
+export const SPACE_HOME_TARGET_DB = 105;
 
 /** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
 export const DRIVER_PART = {
@@ -261,7 +261,9 @@ export const SPACE_DETAILS = {
   flat: "With Flat, every band has the same target.",
   headroom: "The box with the least headroom sets the level.",
   turnDown:
-    "Then the space is turned down until Measured at gets the target, never past the limit.",
+    "Then the space is turned down once, until the lowest band gets the target at Measured at, never past the limit. The band on show does not change it.",
+  perBand:
+    "The map, the audience figures, Floor and Spread are for the band on show. Listener is in the lowest band.",
   bandLevel: "Each band plays at its Level and its box's level.",
   audience: (clearanceFt: number) =>
     `Audience average: the mean over the floor, except ${clearanceFt} ft around every box.`,

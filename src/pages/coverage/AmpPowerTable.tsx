@@ -15,6 +15,7 @@ import {
 } from "../../lib/pa/ampPower";
 import type { BalancedLevels } from "../../types";
 import type { CoverageInputs } from "./useCoverageMap";
+import { GAP_Y } from "../../styles/layout";
 
 /** Each channel's name in the table. */
 const CHANNEL_NAMES: Record<AmpChannel, string> = {
@@ -93,13 +94,13 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
   ]);
   if (!rows.length) return null;
   return (
-    <div>
-      <SectionHeading className="mb-1">{AMP_POWER_TEXT.heading}</SectionHeading>
+    <div className={GAP_Y}>
+      <SectionHeading>{AMP_POWER_TEXT.heading}</SectionHeading>
       <AmpPowerRows
         firstColumn={AMP_POWER_TEXT.driver}
         rows={rows.map((r) => ({ key: r.channel, name: CHANNEL_NAMES[r.channel], power: r }))}
       />
-      <p className="text-xs text-stone-500 mt-1">{AMP_POWER_TEXT.crestNote}</p>
+      <p className="text-xs text-stone-500">{AMP_POWER_TEXT.crestNote}</p>
     </div>
   );
 }

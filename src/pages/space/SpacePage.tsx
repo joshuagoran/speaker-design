@@ -26,7 +26,14 @@ import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
 import { entriesOf, keysOf } from "../../lib/records";
 import { formatHz, formatSigned } from "../../lib/format";
-import { MD_UP, RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
+import {
+  FIELD_ROW,
+  HEADING_GROUP,
+  MD_UP,
+  READING_WIDTH,
+  RESULT_MAX_WIDTH,
+  GAP_Y,
+} from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE_LABEL, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
@@ -172,7 +179,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
     space.band === "one"
       ? `${formatHz(space.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[space.band].name} band, ${formatHz(COVERAGE_BANDS[space.band].lo)}–${formatHz(COVERAGE_BANDS[space.band].hi)}`;
-  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.refTarget : null;
+  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.turn.target : null;
   const { audienceDb, audienceAtLimit } = space;
   const tiles: StatTileItem[] = [
     ...(audienceDb !== null
@@ -227,11 +234,13 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             saveName={name}
             manage
           />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-1">{SPACE_TEXT.coverage}</SectionHeading>
-            <p className="text-sm text-stone-500 mb-3">
-              {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
-            </p>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+            <div className={HEADING_GROUP}>
+              <SectionHeading>{SPACE_TEXT.coverage}</SectionHeading>
+              <p className="text-sm text-stone-500">
+                {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
+              </p>
+            </div>
             <CoverageMap
               view={view}
               room={venue.room}
@@ -255,16 +264,14 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             />
             {space.error && <Notice>Map failed: {space.error}</Notice>}
             {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
-            <div className="mt-3">
-              <CoverageBandPicker
-                band={space.band}
-                freqHz={space.freqHz}
-                onBand={space.setBand}
-                onFreqHz={space.setFreqHz}
-                oneNote={SPACE_TEXT.oneNote}
-              />
-            </div>
-            <div className={`${READING_WIDTH} mt-3`}>
+            <CoverageBandPicker
+              band={space.band}
+              freqHz={space.freqHz}
+              onBand={space.setBand}
+              onFreqHz={space.setFreqHz}
+              oneNote={SPACE_TEXT.oneNote}
+            />
+            <div className={READING_WIDTH}>
               <SpaceAssumptions
                 venue={venue}
                 levelRef={space.levelRef}
@@ -274,24 +281,24 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             </div>
           </section>
           {placements.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-              <SectionHeading className="mb-3">{SPACE_TEXT.levels}</SectionHeading>
-              {tiles.length > 0 && <StatTileGrid tiles={tiles} className="mb-2" />}
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+              <SectionHeading>{SPACE_TEXT.levels}</SectionHeading>
+              {tiles.length > 0 && <StatTileGrid tiles={tiles} />}
               {view && (
                 <p className="text-sm text-stone-500 tabular-nums">
-                  {view.atLimit !== null && view.atLimit < view.target + view.gain - 0.05
-                    ? SPACE_TEXT.cannotReach(view.target + view.gain, view.atLimit)
-                    : SPACE_TEXT.turnedDown(-view.gain, view.target + view.gain)}
+                  {space.turn.atLimit !== null && space.turn.atLimit < space.turn.target - 0.05
+                    ? SPACE_TEXT.cannotReach(space.turn.target, space.turn.atLimit)
+                    : SPACE_TEXT.turnedDown(-space.turn.gain, space.turn.target)}
                 </p>
               )}
               {view && listenerRel !== null && (
-                <p className="text-sm text-stone-500 tabular-nums mt-1">
+                <p className="text-sm text-stone-500 tabular-nums">
                   {SPACE_TEXT.listenerVs}{" "}
                   <span className={relClass(listenerRel)}>{formatSigned(listenerRel)} dB</span>.
                 </p>
               )}
               {space.bandLevels.length > 0 && (
-                <p className="text-sm text-stone-500 tabular-nums mt-2">
+                <p className="text-sm text-stone-500 tabular-nums">
                   {SPACE_TEXT.bandLevels}{" "}
                   {space.bandLevels.map((b, k) => (
                     <span key={b.band} className={relClass(b.db - b.target)}>
@@ -307,8 +314,8 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               )}
             </section>
           )}
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-3">
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+            <SectionHeading>
               <Tooltip tip={SPACE_TEXT.sideTip}>{SPACE_TEXT.side}</Tooltip>
             </SectionHeading>
             <Card>
@@ -318,12 +325,12 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                 listener={venue.listener}
                 earFt={venue.earFt}
               />
-              <p className="text-xs text-stone-500 mt-2">{SPACE_TEXT.sideNote}</p>
+              <p className="text-xs text-stone-500">{SPACE_TEXT.sideNote}</p>
             </Card>
           </section>
           {space.response.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-              <SectionHeading className="mb-3">{SPACE_TEXT.response}</SectionHeading>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+              <SectionHeading>{SPACE_TEXT.response}</SectionHeading>
               <ResponseChart
                 fmax={FREQ_AXIS_MAX_HZ}
                 H={240}
@@ -406,19 +413,17 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               />
               <ToggleGroup
                 label={SPACE_TEXT.measuredAt}
-                className="mb-3"
                 value={space.levelRef}
                 onChange={(levelRef) => space.editVenue((v) => ({ ...v, levelRef }))}
                 options={SPACE_LEVEL_REFS}
               />
               <ToggleGroup
                 label={<Tooltip tip={BAND_BALANCE_TIP}>{AUTO_BALANCE_TEXT.label}</Tooltip>}
-                className="mb-3"
                 value={space.balance}
                 onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}
                 options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
               />
-              <div className="flex flex-wrap gap-x-3 gap-y-3 mb-3">
+              <div className={FIELD_ROW}>
                 <NumberField
                   label={SPACE_TEXT.ear}
                   value={venue.earFt}
@@ -428,7 +433,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                   onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
                 />
               </div>
-              <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.listenerHint}</p>
+              <p className="text-xs text-stone-500">{SPACE_TEXT.listenerHint}</p>
             </>,
           )}
           {section(
@@ -443,7 +448,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               />
               <Button
                 variant="primary"
-                className="mb-3"
                 onClick={() => {
                   space.place(picked.item());
                   pickNew();
@@ -452,7 +456,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                 {SPACE_TEXT.addPlacement}
               </Button>
               {stacks.length === 0 && speakers.length === 0 && (
-                <p className="text-xs text-stone-500 mb-2">
+                <p className="text-xs text-stone-500">
                   {signedIn ? SPACE_TEXT.noLibrarySaved : SPACE_TEXT.noLibrary}
                 </p>
               )}

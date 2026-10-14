@@ -18,7 +18,8 @@ import {
   frontChamber,
   throatCones,
 } from "../../lib/speaker/hornThroat";
-import { FIELD_ROW, shownIn } from "./speakerFields";
+import { shownIn } from "./speakerFields";
+import { FIELD_ROW, HEADING_GROUP, GAP_Y, GAP_Y_TIGHT } from "../../styles/layout";
 import { hornText } from "./speakerText";
 import {
   joinsNext,
@@ -97,9 +98,11 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
       return next ? { ...h, segments: next } : h;
     });
   return (
-    <section className="border-t border-stone-300 pt-3 mb-3">
-      <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
-      <p className="text-xs text-stone-500 mb-2">{hornText(horn)}</p>
+    <section className={`border-t border-stone-300 pt-3 ${GAP_Y}`}>
+      <div className={HEADING_GROUP}>
+        <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
+        <p className="text-xs text-stone-500">{hornText(horn)}</p>
+      </div>
       <div className={FIELD_ROW}>
         {ratio !== null && (
           <NumberField
@@ -136,88 +139,84 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
           />
         )}
       </div>
-      <div className="text-sm font-label text-stone-500 mb-1">
-        <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
-      </div>
-      {segments.map((s, i) => (
-        <div key={i} className="rounded border border-stone-300 px-3 pt-2 mb-2">
-          <CardHeading
-            sub
-            className="mb-2"
-            action={
-              segments.length > 1 && (
-                <Button
-                  size="xs"
-                  onClick={() => editSegments((list) => withSectionRemoved(list, i))}
-                >
-                  {SPEAKER_TEXT.removeSection}
-                </Button>
-              )
-            }
-          >
-            {SPEAKER_TEXT.hornSection(i + 1)}
-          </CardHeading>
-          <ToggleGroup
-            label={<Tooltip tip={SPEAKER_TEXT.hornProfileTip}>{SPEAKER_TEXT.hornProfile}</Tooltip>}
-            className="mb-2"
-            value={s.profile}
-            onChange={(profile) => editSegments((list) => withSectionProfile(list, i, profile))}
-            options={entriesOf(HORN_PROFILE_NAMES)}
-          />
-          <div className={FIELD_ROW}>
-            {/* a smooth horn's starts follow the previous ends: only the throat's shows */}
-            {SECTION_FIELDS.filter(({ size }) => stepsOn || i === 0 || size !== "s1").map(
-              ({ size, label, tip, step }) => (
-                // `contents`: the wrapper only hears the field's focus, the row lays out the field
-                <div
-                  key={size}
-                  className="contents"
-                  onFocus={() => {
-                    joinedAtFocus.current = size === "s2" ? joinsNext(segments, i) : null;
-                  }}
-                  onBlur={() => {
-                    joinedAtFocus.current = null;
-                  }}
-                >
-                  <NumberField
-                    label={<Tooltip tip={tip}>{label}</Tooltip>}
-                    value={shownSize(s, size)}
-                    min={0}
-                    step={step}
-                    onChange={(v) =>
-                      editSegments((list) =>
-                        withSectionSize(
-                          list,
-                          i,
-                          size,
-                          v,
-                          // smooth: the next start always follows
-                          !stepsOn || (joinedAtFocus.current ?? joinsNext(list, i)),
-                        ),
-                      )
-                    }
-                  />
-                </div>
-              ),
+      <div className={GAP_Y_TIGHT}>
+        <div className="text-sm font-label text-stone-500">
+          <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
+        </div>
+        {segments.map((s, i) => (
+          <div key={i} className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${GAP_Y}`}>
+            <CardHeading
+              sub
+              action={
+                segments.length > 1 && (
+                  <Button
+                    size="xs"
+                    onClick={() => editSegments((list) => withSectionRemoved(list, i))}
+                  >
+                    {SPEAKER_TEXT.removeSection}
+                  </Button>
+                )
+              }
+            >
+              {SPEAKER_TEXT.hornSection(i + 1)}
+            </CardHeading>
+            <ToggleGroup
+              label={
+                <Tooltip tip={SPEAKER_TEXT.hornProfileTip}>{SPEAKER_TEXT.hornProfile}</Tooltip>
+              }
+              value={s.profile}
+              onChange={(profile) => editSegments((list) => withSectionProfile(list, i, profile))}
+              options={entriesOf(HORN_PROFILE_NAMES)}
+            />
+            <div className={FIELD_ROW}>
+              {/* a smooth horn's starts follow the previous ends: only the throat's shows */}
+              {SECTION_FIELDS.filter(({ size }) => stepsOn || i === 0 || size !== "s1").map(
+                ({ size, label, tip, step }) => (
+                  // `contents`: the wrapper only hears the field's focus, the row lays out the field
+                  <div
+                    key={size}
+                    className="contents"
+                    onFocus={() => {
+                      joinedAtFocus.current = size === "s2" ? joinsNext(segments, i) : null;
+                    }}
+                    onBlur={() => {
+                      joinedAtFocus.current = null;
+                    }}
+                  >
+                    <NumberField
+                      label={<Tooltip tip={tip}>{label}</Tooltip>}
+                      value={shownSize(s, size)}
+                      min={0}
+                      step={step}
+                      onChange={(v) =>
+                        editSegments((list) =>
+                          withSectionSize(
+                            list,
+                            i,
+                            size,
+                            v,
+                            // smooth: the next start always follows
+                            !stepsOn || (joinedAtFocus.current ?? joinsNext(list, i)),
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                ),
+              )}
+            </div>
+            {stepsIn(segments, i) && (
+              <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornStep(i + 1)}</p>
             )}
           </div>
-          {stepsIn(segments, i) && (
-            <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.hornStep(i + 1)}</p>
-          )}
-        </div>
-      ))}
-      <Button
-        variant="primary"
-        size="xs"
-        className="mb-3"
-        onClick={() => editSegments(withSectionAdded)}
-      >
-        {SPEAKER_TEXT.addSection}
-      </Button>
+        ))}
+        <Button variant="primary" size="xs" onClick={() => editSegments(withSectionAdded)}>
+          {SPEAKER_TEXT.addSection}
+        </Button>
+      </div>
       <SettingsFold title={SPEAKER_TEXT.advanced} summary={SPEAKER_TEXT.hornSteps(steps)}>
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.hornStepsTip}>{SPEAKER_TEXT.hornStepsSetting}</Tooltip>}
-          className="mb-1"
           value={stepsOn}
           onChange={(on) => {
             setStepsOn(on);
@@ -229,14 +228,12 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
       </SettingsFold>
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
-        className="mb-3"
         value={horn.path}
         onChange={(path) => onEdit((h) => ({ ...h, path }))}
         options={entriesOf(HORN_PATH_NAMES)}
       />
       <ToggleGroup
         label={SPEAKER_TEXT.hornDrive}
-        className="mb-1"
         value={horn.drive.kind}
         // only a front-loaded horn can be picked: the engine takes no other drive yet
         onChange={(kind) => {
@@ -245,7 +242,7 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
         options={entriesOf(HORN_DRIVE_NAMES)}
         disabled={{ values: DRIVES_NOT_MODELED, why: SPEAKER_TEXT.hornDriveNote }}
       />
-      <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.hornDriveNote}</p>
+      <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornDriveNote}</p>
     </section>
   );
 }

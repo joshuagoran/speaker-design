@@ -78,9 +78,12 @@ import type { Dims3 } from "../../types";
 import { entriesOf, keysOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
 import {
+  FLEX_GAP_Y,
+  HEADING_GROUP,
   PAGE_WIDTH,
-  RESULT_MAX_WIDTH,
   RESULTS_TWO_COLUMN_PX,
+  RESULT_MAX_WIDTH,
+  GAP_Y,
   resultsCellClass,
   resultsGridClass,
 } from "../../styles/layout";
@@ -298,10 +301,10 @@ export function HifiPage({ hifi }: Props) {
     />
   );
   const optimizerPanel = isOptimizerOn && (
-    <Card pad="lg" className="mt-3">
+    <Card pad="lg">
       <SectionHeading>{OPTIMIZER_PANEL_TEXT.heading}</SectionHeading>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-        <div className="mt-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+        <div>
           <NumberField
             label={
               <>
@@ -317,7 +320,6 @@ export function HifiPage({ hifi }: Props) {
             step={25}
             unit="$"
             onChange={setOptimizerBudget}
-            className=""
           />
         </div>
         <GoalPicker
@@ -381,7 +383,7 @@ export function HifiPage({ hifi }: Props) {
         !isOptimizing &&
         !optimizerResult.cards.length &&
         !optimizerResult.goalMissing && (
-          <div className="mt-3 text-sm text-orange-900">
+          <div className="text-sm text-orange-900">
             {OPTIMIZER_PANEL_TEXT.noFit}. Raise the budget or remove locks.
           </div>
         )}
@@ -391,7 +393,7 @@ export function HifiPage({ hifi }: Props) {
     <SettingsLayout
       results={
         <>
-          <div className={`${RESULT_MAX_WIDTH} min-w-0 mb-8`}>
+          <div className={`${RESULT_MAX_WIDTH} min-w-0 mb-8 ${GAP_Y}`}>
             <SavedConfigs
               bare
               store={store}
@@ -401,7 +403,7 @@ export function HifiPage({ hifi }: Props) {
             {optimizerBar}
             {optimizerPanel}
             {designPreview && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-stone-900 text-stone-50 border-t-4 border-cmy-y px-3 py-2 text-sm font-semibold">
+              <div className="flex flex-wrap items-center gap-2 rounded bg-stone-900 text-stone-50 border-t-4 border-cmy-y px-3 py-2 text-sm font-semibold">
                 <span className="flex-1">Previewing “{designPreview.label}”</span>
                 <button
                   onClick={() => loadOptimizerResult(designPreview.card)}
@@ -454,8 +456,8 @@ export function HifiPage({ hifi }: Props) {
               <div className={cell("col-start-2 row-start-1")}>
                 <WarningChips chips={warningChips} />
               </div>
-              <section className={cell("col-start-1 row-start-2")}>
-                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.response}</SectionHeading>
+              <section className={`${cell("col-start-1 row-start-2")} ${GAP_Y}`}>
+                <SectionHeading>{HIFI_RESULT_HEADINGS.response}</SectionHeading>
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
                   fmax={FREQ_AXIS_MAX_HZ}
@@ -484,8 +486,8 @@ export function HifiPage({ hifi }: Props) {
                   ]}
                 />
               </section>
-              <section className={cell("col-start-2 row-start-2")}>
-                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.maxOutput}</SectionHeading>
+              <section className={`${cell("col-start-2 row-start-2")} ${GAP_Y}`}>
+                <SectionHeading>{HIFI_RESULT_HEADINGS.maxOutput}</SectionHeading>
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
                   fmax={FREQ_AXIS_MAX_HZ}
@@ -511,8 +513,8 @@ export function HifiPage({ hifi }: Props) {
                 />
               </section>
               {/* beside the dispersion map, the map sets the row's height and the room view fills the rest */}
-              <section className={cell("col-start-2 row-start-3 self-stretch flex flex-col")}>
-                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.seat}</SectionHeading>
+              <section className={`${cell("col-start-2 row-start-3 self-stretch")} ${FLEX_GAP_Y}`}>
+                <SectionHeading>{HIFI_RESULT_HEADINGS.seat}</SectionHeading>
                 <div
                   className={
                     wide
@@ -563,8 +565,10 @@ export function HifiPage({ hifi }: Props) {
                   </div>
                 </div>
               </section>
-              <section className={`${RESULT_MAX_WIDTH} ${cell("col-start-1 row-start-3")}`}>
-                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.dispersion}</SectionHeading>
+              <section
+                className={`${RESULT_MAX_WIDTH} ${cell("col-start-1 row-start-3")} ${GAP_Y}`}
+              >
+                <SectionHeading>{HIFI_RESULT_HEADINGS.dispersion}</SectionHeading>
                 <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
                 <DispersionMap
                   map={dispersion}
@@ -672,7 +676,7 @@ export function HifiPage({ hifi }: Props) {
           {section(
             "box",
             <>
-              <div className="grid grid-cols-[5.5rem_1fr] items-center gap-x-2 gap-y-2 mb-3 text-sm">
+              <div className="grid grid-cols-[5.5rem_1fr] items-center gap-x-2 gap-y-2 text-sm">
                 <span className="text-stone-500">Material</span>
                 <ToggleGroup
                   value={panelMaterial}
@@ -686,7 +690,7 @@ export function HifiPage({ hifi }: Props) {
                   options={PANEL_NOMINAL_OPTIONS}
                 />
               </div>
-              <Card className="mb-4">
+              <Card>
                 <Slider
                   label={HIFI_BOX_LABELS.w}
                   value={boxDims.w}
@@ -717,32 +721,34 @@ export function HifiPage({ hifi }: Props) {
                   onChange={(v) => setBoxDim("d", v)}
                   extra={renderDimensionLock("dim", "d", "Depth")}
                 />
-                <div className="flex items-center justify-between gap-2 mb-1 mt-1">
-                  <span className="text-sm text-stone-500">Ports</span>
-                  {renderLockButton("box", "sealed, ported or radiator")}
-                </div>
-                <div className="grid grid-cols-3 gap-1 mb-3">
-                  {PORT_CHOICES.map((choice) => {
-                    const [l, v, n, tip] = choice;
-                    const on = isPortChoiceOn(choice);
-                    return (
-                      <ToggleButton
-                        key={l}
-                        size="xs"
-                        className="min-w-0 whitespace-nowrap"
-                        title={tip}
-                        aria-label={tip}
-                        on={on}
-                        onClick={() => {
-                          setBoxType(v);
-                          if (v === "vented") togglePort(n);
-                          if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n }));
-                        }}
-                      >
-                        {l}
-                      </ToggleButton>
-                    );
-                  })}
+                <div className={HEADING_GROUP}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-stone-500">Ports</span>
+                    {renderLockButton("box", "sealed, ported or radiator")}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {PORT_CHOICES.map((choice) => {
+                      const [l, v, n, tip] = choice;
+                      const on = isPortChoiceOn(choice);
+                      return (
+                        <ToggleButton
+                          key={l}
+                          size="xs"
+                          className="min-w-0 whitespace-nowrap"
+                          title={tip}
+                          aria-label={tip}
+                          on={on}
+                          onClick={() => {
+                            setBoxType(v);
+                            if (v === "vented") togglePort(n);
+                            if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n }));
+                          }}
+                        >
+                          {l}
+                        </ToggleButton>
+                      );
+                    })}
+                  </div>
                 </div>
                 {boxType === "vented" && (
                   <>
@@ -814,25 +820,27 @@ export function HifiPage({ hifi }: Props) {
                   .
                 </div>
               </Card>
-              <Card className="mb-4">
-                <div className="text-sm text-stone-500 mb-1">Edge roundover</div>
-                <div className="grid grid-cols-6 gap-1 mb-3">
-                  {HIFI_ROUNDOVER_CHOICES.map((r) => (
-                    <ToggleButton
-                      key={r}
-                      size="xs"
-                      className="min-w-0 whitespace-nowrap"
-                      title={
-                        r
-                          ? `${formatInches(r)} roundover on the baffle edges`
-                          : "Sharp baffle edges"
-                      }
-                      on={roundoverIn === r}
-                      onClick={() => setRoundoverIn(r)}
-                    >
-                      {r ? formatInches(r) : "Sharp"}
-                    </ToggleButton>
-                  ))}
+              <Card>
+                <div className={HEADING_GROUP}>
+                  <div className="text-sm text-stone-500">Edge roundover</div>
+                  <div className="grid grid-cols-6 gap-1">
+                    {HIFI_ROUNDOVER_CHOICES.map((r) => (
+                      <ToggleButton
+                        key={r}
+                        size="xs"
+                        className="min-w-0 whitespace-nowrap"
+                        title={
+                          r
+                            ? `${formatInches(r)} roundover on the baffle edges`
+                            : "Sharp baffle edges"
+                        }
+                        on={roundoverIn === r}
+                        onClick={() => setRoundoverIn(r)}
+                      >
+                        {r ? formatInches(r) : "Sharp"}
+                      </ToggleButton>
+                    ))}
+                  </div>
                 </div>
                 <Slider
                   label="Tweeter offset (+ inward)"
@@ -870,7 +878,7 @@ export function HifiPage({ hifi }: Props) {
           {section(
             "xo",
             <>
-              <Card className="mb-4">
+              <Card>
                 <Slider
                   label="Crossover"
                   value={crossoverHz}
@@ -921,13 +929,12 @@ export function HifiPage({ hifi }: Props) {
           {section(
             "room",
             <>
-              <Card className="mb-4">
+              <Card>
                 <ToggleGroup
                   label="Placement"
                   value={placement}
                   onChange={setPlacement}
                   options={entriesOf(HIFI_PLACES).map(([k, p]) => [k, p.name] as const)}
-                  className="mb-3"
                 />
                 {placement !== "free" && (
                   <Slider

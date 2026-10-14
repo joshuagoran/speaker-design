@@ -21,7 +21,7 @@ import { useCoverageLayout } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { AmpPowerTable } from "./AmpPowerTable";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
-import { RESULT_MAX_WIDTH } from "../../styles/layout";
+import { HEADING_GROUP, RESULT_MAX_WIDTH, GAP_Y } from "../../styles/layout";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { formatHz } from "../../lib/format";
@@ -89,7 +89,7 @@ export function CoveragePage({ planner }: Props) {
       : `${COVERAGE_BANDS[layout.band].name} band, ${formatHz(COVERAGE_BANDS[layout.band].lo)}–${formatHz(COVERAGE_BANDS[layout.band].hi)}`;
   const [left, right] = layout.stacks;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
-  const label = "text-sm text-stone-500 mb-1";
+  const label = "text-sm text-stone-500";
   const delay = (ms: number) =>
     ms < 0 ? `the tops wait ${(-ms).toFixed(1)} ms` : `${ms.toFixed(1)} ms on the sub`;
 
@@ -98,13 +98,15 @@ export function CoveragePage({ planner }: Props) {
       className={settingsSheetRoomClass(sheetOpen)}
       results={
         <div className="min-w-0 flex flex-col gap-5">
-          <section>
-            <SectionHeading className="mb-1">Audience coverage</SectionHeading>
-            <p className="text-sm text-stone-500 mb-3">
-              {bandName}, {map.target.toFixed(0)} dB target at{" "}
-              {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. Drag a stack to move it, its dot to toe
-              it in, or the listener (tap the floor to put them there).
-            </p>
+          <section className={GAP_Y}>
+            <div className={HEADING_GROUP}>
+              <SectionHeading>Audience coverage</SectionHeading>
+              <p className="text-sm text-stone-500">
+                {bandName}, {map.target.toFixed(0)} dB target at{" "}
+                {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. Drag a stack to move it, its dot to toe
+                it in, or the listener (tap the floor to put them there).
+              </p>
+            </div>
             {map.stack && map.levels ? (
               <CoverageMap
                 view={map.view}
@@ -141,7 +143,7 @@ export function CoveragePage({ planner }: Props) {
               <Notice>No sub in the map: the planner cannot model it.</Notice>
             )}
             {rel != null && map.stats && (
-              <div className="md:hidden flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-stone-500 tabular-nums">
+              <div className="md:hidden flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500 tabular-nums">
                 <span>
                   Listener <b className="text-stone-900">{map.listenerDb?.toFixed(1)} dB</b>{" "}
                   <span className={relClass}>({signed(rel)})</span>
@@ -170,7 +172,8 @@ export function CoveragePage({ planner }: Props) {
         <SettingsColumn
           label="Coverage settings"
           className={SETTINGS_SHEET_CLASS}
-          bodyClassName={`flex flex-col gap-6 md:pb-4 max-md:gap-0 ${settingsSheetBodyClass(sheetOpen)}`}
+          gapY="flex flex-col gap-6 max-md:gap-0"
+          bodyClassName={`md:pb-4 ${settingsSheetBodyClass(sheetOpen)}`}
           top={
             <SettingsSheetTabs
               tabs={TABS}
@@ -184,25 +187,28 @@ export function CoveragePage({ planner }: Props) {
             />
           }
         >
-          <div className={tabClass("listener")}>
-            <div className={label}>Listener</div>
-            {rel != null ? (
-              <div className="flex items-baseline flex-wrap gap-x-3 tabular-nums">
-                <span className="text-3xl font-bold">{map.listenerDb?.toFixed(1)} dB</span>
-                <span className={`text-lg font-semibold ${relClass}`}>
-                  {signed(rel)} against the target
-                </span>
+          <div className={`${tabClass("listener")} ${GAP_Y}`}>
+            <div className={HEADING_GROUP}>
+              <div className={label}>Listener</div>
+              {rel != null ? (
+                <div className="flex items-baseline flex-wrap gap-x-3 tabular-nums">
+                  <span className="text-3xl font-bold">{map.listenerDb?.toFixed(1)} dB</span>
+                  <span className={`text-lg font-semibold ${relClass}`}>
+                    {signed(rel)} against the target
+                  </span>
+                </div>
+              ) : (
+                <div className="text-stone-500">—</div>
+              )}
+              <div className="text-sm text-stone-500">
+                {layout.listener.y.toFixed(1)} ft from the front wall,{" "}
+                {Math.abs(layout.listener.x).toFixed(1)} ft{" "}
+                {layout.listener.x < 0 ? "left of" : layout.listener.x > 0 ? "right of" : "on"}{" "}
+                center
               </div>
-            ) : (
-              <div className="text-stone-500">—</div>
-            )}
-            <div className="text-sm text-stone-500 mt-1">
-              {layout.listener.y.toFixed(1)} ft from the front wall,{" "}
-              {Math.abs(layout.listener.x).toFixed(1)} ft{" "}
-              {layout.listener.x < 0 ? "left of" : layout.listener.x > 0 ? "right of" : "on"} center
             </div>
             {map.stats && (
-              <div className="grid grid-cols-3 gap-3 mt-3 tabular-nums">
+              <div className="grid grid-cols-3 gap-3 tabular-nums">
                 {(
                   [
                     [pct(map.stats.within3), "of the floor ≥ −3 dB"],
@@ -218,13 +224,13 @@ export function CoveragePage({ planner }: Props) {
               </div>
             )}
             {map.pads && (
-              <p className="text-xs text-stone-500 mt-3 tabular-nums">
+              <p className="text-xs text-stone-500 tabular-nums">
                 Turned down to balance: sub {signed(map.pads.sub)} dB, mid {signed(map.pads.mid)}{" "}
                 dB, horn {signed(map.pads.horn)} dB.
               </p>
             )}
             {map.response.length > 0 && (
-              <div className="mt-4">
+              <div>
                 <ResponseChart
                   fmax={FREQ_AXIS_MAX_HZ}
                   H={240}
@@ -258,7 +264,7 @@ export function CoveragePage({ planner }: Props) {
             )}
           </div>
 
-          <div className={tabClass("band")}>
+          <div className={`${tabClass("band")} ${GAP_Y}`}>
             <Slider
               label="Target level, sub band"
               value={layout.targetDb}
@@ -273,9 +279,8 @@ export function CoveragePage({ planner }: Props) {
               value={layout.levelRef}
               onChange={state.setLevelRef}
               options={COVERAGE_LEVEL_REFS}
-              className="mb-1"
             />
-            <p className="text-xs text-stone-500 mb-4 tabular-nums">
+            <p className="text-xs text-stone-500 tabular-nums">
               {map.refDb == null ? (
                 <>
                   Calculating the level
@@ -296,11 +301,11 @@ export function CoveragePage({ planner }: Props) {
             />
           </div>
 
-          <div className={tabClass("room")}>
+          <div className={`${tabClass("room")} ${GAP_Y}`}>
             <RoomFields room={room} actions={state} />
           </div>
 
-          <div className={tabClass("stacks")}>
+          <div className={`${tabClass("stacks")} ${GAP_Y}`}>
             <ToggleGroup
               label="Stacks"
               value={map.subs}
@@ -315,15 +320,14 @@ export function CoveragePage({ planner }: Props) {
                       ),
                     }
               }
-              className="mb-3"
             />
-            <div className="flex flex-wrap gap-1 mb-3">
+            <div className="flex flex-wrap gap-1">
               <ToggleButton on={layout.mirror} onClick={() => state.setMirror(!layout.mirror)}>
                 Move the pair as a mirror image
               </ToggleButton>
             </div>
             {map.subDelayMs != null && (
-              <p className="text-sm text-stone-500 tabular-nums mb-3">
+              <p className="text-sm text-stone-500 tabular-nums">
                 Sub delay: {delay(map.subDelayMs)}, in phase with the mid at{" "}
                 {formatHz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set
                 it.
@@ -338,7 +342,7 @@ export function CoveragePage({ planner }: Props) {
               unit=" ft"
               onChange={state.setEarFt}
             />
-            <p className="text-sm text-stone-500 tabular-nums mb-3">
+            <p className="text-sm text-stone-500 tabular-nums">
               {Math.hypot(left.x - right.x, left.y - right.y).toFixed(1)} ft apart · toe-in L{" "}
               {left.aim}°, R {-right.aim}°
             </p>

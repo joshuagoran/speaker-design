@@ -15,7 +15,8 @@ import {
 } from "../src/components/stack-view/buildSpeakerScene";
 import { HORN_MESH_NAME } from "../src/components/stack-view/buildHorn";
 import { HIFI_MESH_NAMES } from "../src/components/stack-view/buildHifiScene";
-import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
+import { BRACE_MESH_NAME, VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
+import { NO_BRACING } from "../src/constants/bracing";
 import { ROUNDOVER_IN } from "../src/components/stack-view/stackHeights";
 import {
   driverSpots,
@@ -508,6 +509,46 @@ test("the 3D view's key changes with what the scene draws, not with the model's 
   expect(key({ ...tower.spec, look: { ...tower.spec.look, baffleColor: "#000000" } })).not.toBe(
     base,
   );
+});
+
+test("the cutaway shows the bracing, and the key and the scene change with its style and target", () => {
+  const sub = CASES.find((c) => c.name === "PA sub (letterbox)");
+  if (!sub) throw new Error("no sub case");
+  const withBracing = (edit: Partial<SpeakerSpec["cabinet"]>): SpeakerSpec => ({
+    ...sub.spec,
+    cabinet: { ...sub.spec.cabinet, ...edit },
+  });
+  const key = (spec: SpeakerSpec, cutaway = true) => speakerSceneKey({ spec, cutaway });
+  /** the braces and ribs in the cutaway, by size and place */
+  const braces = (spec: SpeakerSpec) =>
+    named(buildSpeakerScene({ spec, cutaway: true }), BRACE_MESH_NAME)
+      .map((o) => worldOf(o).toArray().map(Math.round).join(","))
+      .sort();
+  const none = withBracing({ braceStyle: NO_BRACING });
+  const braced = withBracing({ braceStyle: "both" });
+  const tighter = withBracing({
+    braceStyle: braced.cabinet.braceStyle,
+    braceTargetHz: braced.cabinet.braceTargetHz * 2,
+  });
+  // none draws no brace; a style does, and the target moves them
+  expect(braces(none)).toEqual([]);
+  expect(braces(braced).length).toBeGreaterThan(0);
+  expect(braces(tighter)).not.toEqual(braces(braced));
+  // they stand inside the box
+  const { size } = speakerLayout(braced.cabinet);
+  const inside = boxOf(
+    ...named(buildSpeakerScene({ spec: braced, cutaway: true }), BRACE_MESH_NAME),
+  );
+  expect(inside.min.x).toBeGreaterThanOrEqual(-size.w / 2);
+  expect(inside.max.x).toBeLessThanOrEqual(size.w / 2);
+  expect(inside.min.y).toBeGreaterThanOrEqual(0);
+  expect(inside.max.y).toBeLessThanOrEqual(size.h);
+  expect(inside.min.z).toBeGreaterThanOrEqual(-size.d / 2);
+  expect(inside.max.z).toBeLessThanOrEqual(size.d / 2);
+  // the key follows the scene: each change above rebuilds it; the closed box doesn't draw them, so it needn't
+  expect(key(none)).not.toBe(key(braced));
+  expect(key(tighter)).not.toBe(key(braced));
+  expect(key(none, false)).toBe(key(braced, false));
 });
 
 test("every geometry a build makes is in the scene, so the view frees it (three-memory pattern)", () => {
