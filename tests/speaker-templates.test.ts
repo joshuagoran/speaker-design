@@ -55,7 +55,7 @@ import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { TOWER_MID_HEIGHT_IN } from "../src/constants/paLayouts";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { PANEL } from "../src/constants/cutParts";
-import { CM_PER_IN, LITERS_PER_CUBIC_IN, MM_PER_IN } from "../src/constants/units";
+import { CM_PER_IN, CM2_PER_IN2, LITERS_PER_CUBIC_IN, MM_PER_IN } from "../src/constants/units";
 import type { DriverKind, SpeakerChamber, SpeakerSpec } from "../src/types";
 import { DRAFT_SPEAKER_ID } from "../src/pages/speaker/useSpeakerPage";
 
@@ -205,10 +205,19 @@ test("speaker templates: the PA v2 sub bin's drivers share one throat, and the h
     assert.equal(design.drivers, count);
     assert.equal(design.driver, PA_V2_SUB_BIN.sub.ts);
     assert.equal(design.rear.liters, PA_V2_SUB_BIN.rearLiters * count);
-    assert.equal(design.segments.length, PA_V2_SUB_BIN.flareSteps);
-    assert.ok(design.segments.every((s) => s.profile === HORN_PROFILE.conical));
-    assert.equal(design.segments[0].s1, PA_V2_SUB_BIN.sub.ts.Sd * count);
-    assert.equal(design.segments[design.segments.length - 1].s2, PA_V2_SUB_BIN.mouthCm2 * count);
+    // one straight-sided (parabolic) flare at the box's inside height: from the drivers' bay, as wide as the plan's
+    // throat, to the face between the slots
+    assert.equal(design.segments.length, 1);
+    const [flareSegment] = design.segments;
+    assert.equal(flareSegment.profile, HORN_PROFILE.parabolic);
+    assert.equal(flareSegment.length, PA_V2_SUB_BIN.flareCm);
+    const insideH = chamber.dims.h - 2 * spec.cabinet.panel.thicknessIn;
+    const throatIn = PA_V2_SUB_BIN.throatWidthMm / MM_PER_IN;
+    assert.ok(Math.abs(flareSegment.s1 / CM2_PER_IN2 - throatIn * insideH) < 1e-9, "throat");
+    assert.ok(
+      flare && Math.abs(flareSegment.s2 / CM2_PER_IN2 - flare.mouth.w * flare.mouth.h) < 1e-9,
+    );
+    assert.ok(flare && Math.abs(flare.mouth.h - insideH) < 1e-9, "the mouth is the inside height");
     const model = hornModel(design, hornGrid(), 2.83);
     assert.ok(model, "the engine takes it");
     // tuned to ~35 Hz, as the plan's model

@@ -6,7 +6,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { hornPath, type HornPath, type HornPathInput } from "../src/lib/speaker/hornGeometry";
 import { hornFlare, slotOpeningsAt, speakerLayout } from "../src/lib/speaker/speakerLayout";
-import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { CHAMBER_LOAD, PORT_SHAPE, SLOT_PLACE } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
@@ -51,6 +51,11 @@ const DESIGNS: Record<string, HornSegment[]> = {
     seg(HORN_PROFILE.conical, 400, 400, 8),
     seg(HORN_PROFILE.conical, 400, MOUTH_CM2, 20),
   ],
+  "one parabolic": [seg(HORN_PROFILE.parabolic, 200, MOUTH_CM2, 40)],
+  "parabolic with a kink": [
+    seg(HORN_PROFILE.parabolic, 200, 300, 20),
+    seg(HORN_PROFILE.parabolic, 300, MOUTH_CM2, 20),
+  ],
 };
 
 const input = (segments: HornSegment[], extra: Partial<HornPathInput> = {}): HornPathInput => ({
@@ -74,6 +79,7 @@ const lawArea = (s: HornSegment, u: number) => {
   const [a, b] = [s.s1 / CM2_PER_IN2, s.s2 / CM2_PER_IN2];
   if (Math.abs(a / b - 1) < 1e-4) return a;
   if (s.profile === HORN_PROFILE.exponential) return a * (b / a) ** u;
+  if (s.profile === HORN_PROFILE.parabolic) return a + (b - a) * u;
   return (Math.sqrt(a) + (Math.sqrt(b) - Math.sqrt(a)) * u) ** 2;
 };
 
@@ -149,7 +155,7 @@ test("horn geometry: the areas are the model's, at the throat, the mouth and eve
   }
 });
 
-test("horn geometry: the path is the segments' length, the mouth is on the baffle and the walls are flat panels", () => {
+test("horn geometry: the path is the segments' length, the mouth is on the baffle and the axis runs through its center", () => {
   for (const [name, segments] of Object.entries(DESIGNS)) {
     const i = input(segments);
     const path = pathOf(i);
@@ -164,21 +170,98 @@ test("horn geometry: the path is the segments' length, the mouth is on the baffl
     );
     // a section's place along the path is its place along the depth, one for one
     for (const s of sections) assert.ok(Math.abs(s.z - (sum - s.s)) < EPS, name);
-    // the top and the bottom are flat, the mouth's height apart; the axis is through the mouth's middle
     for (const s of sections) {
-      assert.ok(Math.abs(s.h - i.mouth.h) < EPS, `${name}: constant height`);
       assert.ok(Math.abs(s.cy - (i.mouth.y + i.mouth.h / 2)) < EPS, `${name}: axis`);
       assert.ok(Math.abs(s.cx - (i.mouth.x + i.mouth.w / 2)) < EPS, `${name}: axis`);
     }
-    // a conical segment is straight panels between its ends: two sections, no steps between
     sections.forEach((s, k) => {
-      if (k > 0) assert.ok(s.s >= sections[k - 1].s - EPS, `${name}: sections run throat to mouth`);
+      if (k === 0) return;
+      const before = sections[k - 1];
+      assert.ok(s.s >= before.s - EPS, `${name}: sections run throat to mouth`);
+      // where two segments meet the walls kink, never step: one shape on both sides of the joint
+      if (Math.abs(s.s - before.s) < 1e-9)
+        assert.ok(
+          Math.abs(s.w - before.w) < EPS && Math.abs(s.h - before.h) < EPS,
+          `${name}: no step at ${s.s} in`,
+        );
     });
   }
   const conical = pathOf(input(DESIGNS["one conical"])).legs[0].sections.length;
   assert.equal(conical > 2, true, "a flaring segment is sampled, so its walls follow the law");
   const straight = pathOf(input([seg(HORN_PROFILE.conical, 400, 400, 20)])).legs[0].sections;
   assert.equal(straight.length, 2, "a straight duct is one panel between its ends");
+});
+
+/** Whether `ys` lie on one straight line against `xs` (a flat wall drawn in a section view), to `EPS`. */
+const onALine = (xs: readonly number[], ys: readonly number[]) => {
+  const n = xs.length - 1;
+  const slope = (ys[n] - ys[0]) / (xs[n] - xs[0]);
+  return ys.every((y, k) => Math.abs(y - (ys[0] + slope * (xs[k] - xs[0]))) < EPS);
+};
+
+test("horn geometry: each law is drawn as it is built, flat straight sides only where the law has them", () => {
+  const sectionsOf = (segments: HornSegment[]) => pathOf(input(segments)).legs[0].sections;
+  // parabolic: a parallel top and bottom the mouth's height apart, flat side walls that angle out (the width linear)
+  for (const name of ["one parabolic", "parabolic with a kink"]) {
+    const segments = DESIGNS[name];
+    const sections = sectionsOf(segments);
+    for (const s of sections)
+      assert.ok(Math.abs(s.h - BOX.mouth.h) < EPS, `${name}: flat top and bottom`);
+    const starts = startsOf(segments);
+    segments.forEach((g, k) => {
+      const end = starts[k] + g.length / CM_PER_IN;
+      const own = sections.filter((s) => s.s >= starts[k] - 1e-9 && s.s <= end + 1e-9);
+      assert.ok(
+        onALine(
+          own.map((s) => s.s),
+          own.map((s) => s.w),
+        ),
+        `${name}: segment ${k + 1}'s side walls are straight`,
+      );
+    });
+  }
+  // the kink: the two segments' walls angle differently
+  const kinked = sectionsOf(DESIGNS["parabolic with a kink"]);
+  assert.ok(
+    !onALine(
+      kinked.map((s) => s.s),
+      kinked.map((s) => s.w),
+    ),
+    "a kink where two parabolic segments meet",
+  );
+  // exponential: the same parallel top and bottom; the side walls curve (never one straight line)
+  const exp = sectionsOf(DESIGNS["one exponential"]);
+  for (const s of exp)
+    assert.ok(Math.abs(s.h - BOX.mouth.h) < EPS, "exponential: flat top and bottom");
+  assert.ok(
+    !onALine(
+      exp.map((s) => s.s),
+      exp.map((s) => s.w),
+    ),
+    "exponential: curved side walls",
+  );
+  // conical: both sides grow together, in the mouth's proportion, each linearly (a pyramid's four flat walls)
+  const con = sectionsOf(DESIGNS["one conical"]);
+  const aspect = BOX.mouth.w / BOX.mouth.h;
+  for (const s of con) assert.ok(Math.abs(s.w / s.h - aspect) < EPS, "conical: in proportion");
+  assert.ok(con[0].h < BOX.mouth.h - 1, "conical: never a constant height");
+  for (const side of ["w", "h"] as const)
+    assert.ok(
+      onALine(
+        con.map((s) => s.s),
+        con.map((s) => s[side]),
+      ),
+      `conical: flat walls (${side})`,
+    );
+  // conical then exponential: the exponential keeps the mouth's height, the cone grows in the joint's proportion
+  const mixed = DESIGNS["conical then exponential"];
+  const mixedSections = sectionsOf(mixed);
+  const joint = mixed[0].length / CM_PER_IN;
+  const after = mixedSections.filter((s) => s.s >= joint - 1e-9);
+  for (const s of after) assert.ok(Math.abs(s.h - BOX.mouth.h) < EPS, "exponential part");
+  const atJoint = after[0];
+  for (const s of mixedSections.filter((x) => x.s <= joint + 1e-9))
+    assert.ok(Math.abs(s.w / s.h - atJoint.w / atJoint.h) < EPS, "conical part");
 });
 
 test("horn geometry: the path fits the box's inside, and the bay of the drivers sits behind the throat", () => {
@@ -330,5 +413,67 @@ test("horn geometry: the PA v2 boxes draw their settings' areas, with the side s
     );
     // the mouth is the settings' (the sub bins' fills the face beside the slots), never the whole clear face
     assert.ok(flare.mouth.w < placed.clear.w, template);
+  }
+});
+
+test("horn geometry: every template horn draws the model's area at the throat, the mouth and each segment end, within 1%", () => {
+  let horns = 0;
+  for (const template of SPEAKER_TEMPLATES) {
+    const spec = templateSpeaker(template);
+    for (const placed of speakerLayout(spec.cabinet).chambers) {
+      const { load } = placed.chamber;
+      if (load.kind !== CHAMBER_LOAD.horn) continue;
+      horns++;
+      const flare = hornFlare(spec.cabinet, placed);
+      assert.ok(flare, template);
+      // the mouth fits the horn's face: nothing is cut to fit
+      assert.equal(flare.mouthClipped, false, `${template}: the mouth fits the face`);
+      const sections = flare.path.legs.flatMap((leg) => leg.sections);
+      const { segments } = load.horn;
+      const starts = startsOf(segments);
+      segments.forEach((g, k) => {
+        for (const [at, cm2, what] of [
+          [starts[k], g.s1, "start"],
+          [starts[k] + g.length / CM_PER_IN, g.s2, "end"],
+        ] as const) {
+          const area = cm2 / CM2_PER_IN2;
+          assert.ok(
+            sections.some(
+              (s) => Math.abs(s.s - at) < 1e-6 && Math.abs(s.w * s.h - area) <= 0.01 * area,
+            ),
+            `${template}: segment ${k + 1}'s ${what} (${area.toFixed(1)} in²)`,
+          );
+        }
+      });
+      const [throat, mouth] = [sections[0], sections[sections.length - 1]];
+      const mouthArea = segments[segments.length - 1].s2 / CM2_PER_IN2;
+      assert.ok(
+        Math.abs((throat.w * throat.h * CM2_PER_IN2) / segments[0].s1 - 1) <= 0.01,
+        template,
+      );
+      assert.ok(Math.abs((mouth.w * mouth.h) / mouthArea - 1) <= 0.01, `${template}: mouth`);
+    }
+  }
+  assert.ok(horns >= 3, "the PA v2 boxes have horns");
+});
+
+test("horn geometry: the PA v2 sub bins are straight-sided horns at the box's inside height", () => {
+  for (const template of [SPEAKER_TEMPLATE.paV2SubBinOne, SPEAKER_TEMPLATE.paV2SubBinTwo]) {
+    const spec = templateSpeaker(template);
+    const [placed] = speakerLayout(spec.cabinet).chambers;
+    const flare = hornFlare(spec.cabinet, placed);
+    assert.ok(flare, template);
+    const sections = flare.path.legs[0].sections;
+    // a parallel top and bottom: the box's own, its inside height apart
+    for (const s of sections)
+      assert.ok(Math.abs(s.h - placed.clear.h) < EPS, `${template}: height`);
+    // flat side walls: the width grows on one straight line from the throat to the mouth
+    assert.ok(
+      onALine(
+        sections.map((s) => s.s),
+        sections.map((s) => s.w),
+      ),
+      `${template}: straight side walls`,
+    );
   }
 });

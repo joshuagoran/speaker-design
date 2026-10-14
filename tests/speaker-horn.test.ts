@@ -41,8 +41,26 @@ import { CM_PER_IN } from "../src/constants/units";
 import type { HornSegment, SpeakerHorn, SpeakerSpec } from "../src/types";
 import type * as THREE from "three";
 
-/** The two-18″ PA v2 sub bin: the template the Horn settings were built on. */
-const BIN = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+/** How many sections the tests cut the bin's flare into. */
+const BIN_SECTIONS = 4;
+
+/**
+ * The two-18″ PA v2 sub bin (the template the Horn settings were built on), its one straight-sided flare cut into four
+ * parabolic sections of equal length: the same horn (its area grows linearly), with sections to edit.
+ */
+const BIN = withHorn(templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo), (h) => {
+  const [flare] = h.segments;
+  const areaAt = (i: number) => flare.s1 + ((flare.s2 - flare.s1) * i) / BIN_SECTIONS;
+  return {
+    ...h,
+    segments: Array.from({ length: BIN_SECTIONS }, (_, i) => ({
+      profile: flare.profile,
+      s1: areaAt(i),
+      s2: areaAt(i + 1),
+      length: flare.length / BIN_SECTIONS,
+    })),
+  };
+});
 
 /** The spec's one horn. */
 function hornOf(spec: SpeakerSpec): SpeakerHorn {
@@ -145,10 +163,10 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
   assert.ok(Math.abs(foldedPath.pathIn - lengthIn(BIN)) < 1e-9, "the path is as long");
 });
 
-test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.1 in²)", () => {
+test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 830.6 in²)", () => {
   const segments = hornOf(BIN).segments;
   const shown = shownIn2(segments[0].s2);
-  assert.equal(shown, 630.1, "the bin's first joint as the field shows it, to the tenth");
+  assert.equal(shown, 830.6, "the bin's first joint as the field shows it, to the tenth");
   // typed into the second section's start: no step, and it snaps to the first section's end
   const start = withSectionSize(segments, 1, "s1", shown);
   assert.ok(!stepsIn(start, 1));

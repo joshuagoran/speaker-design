@@ -211,10 +211,12 @@ Each PR stands alone. Lowest risk first.
     - The cabinet's construction sets the style (L3e): the PA frame, or the Hi-fi box and its roundover.
     - A horn-loaded chamber shows its mouth on the baffle and the path behind it, from one geometry
       (`lib/speaker/hornGeometry`, by `hornFlare`) that the 3D view, the front view, the side and top sections and the
-      bracing's keep-out all read. Each section is as high as the mouth and as wide as the segment's flare law needs
-      (a conical segment's walls are straight panels, an exponential one's curve), the areas at the throat, the mouth
-      and every segment's end are the model's, and the path is the segments' length. The drivers stand in a bay behind
-      the throat.
+      bracing's keep-out all read. Each section's shape comes from its segment's flare law and how that law is
+      built, from the mouth back: a parabolic segment keeps its height (a parallel top and bottom) and its flat side
+      walls angle out in straight lines; an exponential one keeps its height and its side walls curve; a conical one
+      grows on both sides together, as a pyramid. Each segment starts with the shape the one before it ends with, so
+      the walls kink at a joint and never step. The areas at the throat, the mouth and every segment's end are the
+      model's, and the path is the segments' length. The drivers stand in a bay behind the throat.
     - A folded path runs in legs along the depth, stacked up the box, as few folds as fit. A path that does not fit
       (folded or not) is drawn as it is, past the walls, and a note gives what it needs and what the chamber has.
     - A mouth larger than the face its chamber leaves it (the clear face, less the columns of side slots) is drawn at that
@@ -247,9 +249,12 @@ Each PR stands alone. Lowest risk first.
         driver on a small 90° horn in the baffle, crossed at 2.5 kHz. Both have the input range's 70 Hz LR24
         high-pass. A pair, hung or on pedestals, is the Space page's (no field for it).
       - PA v2 sub bin (`PA_V2_SUB_BIN`, one or two 18″): one front-loaded horn chamber, the drivers stacked in one
-        throat (the engine's `drivers`), a straight conical flare, net rear air set (~324 L for two), a slot on each
-        front side, folded, tuned to ~35 Hz, a 30 Hz BW24 subsonic.
-      - PA v2 mid box (`PA_V2_MID_BOX`): two 10″ in one throat with a 1 L throat chamber and an exponential flare,
+        throat (the engine's `drivers`), a straight-sided flare: the box's own top and bottom, two flat side walls
+        that angle out from the drivers' bay (450 mm wide) to a mouth that fills the face between the slots. Its area
+        grows linearly: one parabolic section, at the box's inside height. Net rear air set (~324 L for two), a slot
+        on each front side, folded, tuned to ~35 Hz, a 30 Hz BW24 subsonic.
+      - PA v2 mid box (`PA_V2_MID_BOX`): two 10″ in one throat with a 1 L throat chamber and an exponential flare
+        (flat top and bottom, curved side walls), its mouth the face between the slots at the box's inside height,
         ~34 L rear air, side slots, tuned to ~95 Hz, crossed at the R-OSSE's lowest crossover.
       - The PA v2 slots store their narrow size as the height and their long side as the width, in sizes of ⅛″. The
         model reads only the area and the rectangle. The slot settings show the count, the narrow side, the long side
@@ -781,8 +786,8 @@ Each PR stands alone. Lowest risk first.
       lowpass, and the PA and the model do not.
   - **Horn settings (done).** A horn-loaded chamber shows a "Horn" section in its chamber settings, with a one-line
     summary (drive, sections, path length, path):
-    - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The areas
-      show to 0.1 in² and the lengths to 0.01 in; two areas at most 0.05 in² apart are the same joint. The spec
+    - The flare sections: profile (conical, exponential or parabolic), start area, end area and length, in in² and
+      in. The areas show to 0.1 in² and the lengths to 0.01 in; two areas at most 0.05 in² apart are the same joint. The spec
       keeps the engine's cm² and cm; `src/pages/speaker/hornSections.ts` converts in one place. Add and remove
       sections (at least one stays). The sections chain: a new section starts at the last end area, a new end area
       moves the next start with it, and a removed section's next one starts where the removed one did. A start area

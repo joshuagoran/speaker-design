@@ -90,6 +90,12 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 
 - **Ports.** Sub: ~600 cm² per driver, ~680 mm long, folded once along the back wall. Mid: ~120 cm² per driver,
   ~165 mm, straight. Smaller ports limit the output. Flare their ends.
+- **Sub flare.** Straight-sided. The box's own top and bottom are the flare's top and bottom. Two flat side walls
+  angle out from the drivers' bay (~450 mm wide) to the mouth (the face between the slots, ~980 mm), ~500 mm deep.
+  The height stays the same, so the area grows linearly along the flare: Hornresp's parabolic (PAR) flare, not a
+  conical one.
+- **Mid flare.** Flat top and bottom (the box's own), two curved side walls: an exponential flare (see
+  [Mid horn](#mid-horn)). Its mouth fills the face between the slots, at the box's inside height.
 - **Front chamber.** Start the flare at the cone. Leave no cavity in front of it.
 - **Drivers.** The 18NBX100, 4018LF and 3012HO suit vented chambers. The 10MB600 (Qts 0.22) suits sealed or horn
   loading. Vented, it gives a small chamber and a bump near tuning. A fixed shelf flattens the bump.
@@ -106,19 +112,21 @@ is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). T
 
 | Frequency | Sub bin, 2 × 18NBX100 | Same, plain vented | Mid box, 2 × 10MB600 | Same, plain vented | 2 mid boxes |
 | --------- | --------------------- | ------------------ | -------------------- | ------------------ | ----------- |
-| 35 Hz     | 128 dB                | 128 dB             | —                    | —                  | —           |
-| 40 Hz     | 130 dB                | 130 dB             | —                    | —                  | —           |
-| 60 Hz     | 132 dB (Xmax)         | 131 dB (Xmax)      | 107 dB (Xmax)        | 109 dB (Xmax)      | 113 dB      |
-| 100 Hz    | 137 dB                | 133 dB             | 129 dB (vent)        | 129 dB (vent)      | 135 dB      |
-| 120 Hz    | 138 dB                | 133 dB             | 132 dB               | 130 dB             | 137 dB      |
-| 150 Hz    | 138 dB                | 133 dB             | 134 dB               | 130 dB             | 139 dB      |
-| 200 Hz    | 136 dB                | 134 dB             | 136 dB               | 130 dB             | 139 dB      |
+| 35 Hz     | 129 dB                | 128 dB             | —                    | —                  | —           |
+| 40 Hz     | 131 dB                | 130 dB             | —                    | —                  | —           |
+| 60 Hz     | 133 dB (Xmax)         | 131 dB (Xmax)      | 107 dB (Xmax)        | 109 dB (Xmax)      | 113 dB      |
+| 100 Hz    | 138 dB                | 133 dB             | 129 dB (vent)        | 129 dB (vent)      | 135 dB      |
+| 120 Hz    | 139 dB                | 133 dB             | 132 dB               | 130 dB             | 137 dB      |
+| 150 Hz    | 137 dB                | 133 dB             | 134 dB               | 130 dB             | 139 dB      |
+| 200 Hz    | 135 dB                | 134 dB             | 136 dB               | 130 dB             | 139 dB      |
 | 500 Hz    | —                     | —                  | 136 dB               | 131 dB             | 142 dB      |
 | 950 Hz    | —                     | —                  | 132 dB               | 127 dB             | 138 dB      |
 
-The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures.
+The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures. The sub bin is modeled as built: one
+straight-sided (parabolic) flare from the drivers' bay to the mouth. The first model took four conical segments from
+the cones' area. For 2 × 18″ it gave 0.3–0.8 dB less from 60 to 120 Hz and 0.9–1.3 dB more at 150 and 200 Hz.
 
-- **Horn gain.** On axis, the sub bin gains 4–5 dB from 100 to 150 Hz. The mid box gains 4–6 dB from 150 to 950 Hz.
+- **Horn gain.** On axis, the sub bin gains 4–6 dB from 100 to 150 Hz. The mid box gains 4–6 dB from 150 to 950 Hz.
 - **On axis vs power.** The table is on axis, each mouth a point source. Hornresp shows the power response, which
   leaves out directivity. Above ~300 Hz it reads lower: the mid box gives 130 dB at 500 Hz and 121 dB at 950 Hz. The
   real on-axis level lies between and depends on the horn's coverage. Above ~500 Hz the mid horn's gain is mostly

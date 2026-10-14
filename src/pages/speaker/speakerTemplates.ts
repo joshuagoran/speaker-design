@@ -3,6 +3,8 @@
 // template or role (docs/speaker-designer-plan.md, owner decisions). Pure.
 import type {
   AdapterBandId,
+  ChamberLoad,
+  Dims2,
   HifiDesignState,
   HornSegment,
   PaLayout,
@@ -18,7 +20,8 @@ import type {
 import { layersFromPa } from "../../lib/speaker/paSpec";
 import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerFromFill } from "../../lib/speaker/fillSpec";
-import { lrFilter, speakerIdentity } from "../../lib/speaker/specParts";
+import { DIRECT_LOAD, lrFilter, speakerIdentity } from "../../lib/speaker/specParts";
+import { hornFace, speakerLayout } from "../../lib/speaker/speakerLayout";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
 import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
 import { defaultBraceStyleNear } from "../../lib/bracing";
@@ -39,7 +42,7 @@ import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { HORN_PROFILE } from "../../constants/hornEngine";
-import { MM_PER_IN } from "../../constants/units";
+import { CM2_PER_IN2, MM_PER_IN } from "../../constants/units";
 import {
   CABINET_CONSTRUCTION,
   CABINET_TOP,
@@ -248,6 +251,18 @@ const paV2Cabinet = (chamber: SpeakerChamber): SpeakerCabinet => ({
   hardware: null,
 });
 
+/** A PA v2 box's horn load: front-loaded on a straight path, its throat chamber and segments. */
+const paV2Horn = (throatChamber: number, segments: HornSegment[]): ChamberLoad => ({
+  kind: CHAMBER_LOAD.horn,
+  horn: {
+    throatChamber,
+    segments,
+    portOffset: 0,
+    drive: { kind: HORN_DRIVE.front },
+    path: HORN_PATH.straight,
+  },
+});
+
 /** An active band on the PA's DSP. */
 const paV2Band = (
   id: AdapterBandId,
@@ -288,22 +303,26 @@ const sideSlots = (
 });
 
 /**
- * The PA v2 sub bin with `count` 18″ stacked in its one throat (Hornresp's Nd): each driver's share of the opening,
- * flare, rear air and slots; the sub's subsonic in its band, its input range below the PA's crossover to the mids.
+ * The face a PA v2 box's horn has, in: its chamber's clear face less the side slots' columns, as the layout sets it
+ * (lib/speaker/speakerLayout hornFace), so the mouth the template sets fills it exactly.
+ */
+function paV2HornFace(chamber: SpeakerChamber): Dims2 {
+  const cabinet = paV2Cabinet(chamber);
+  const [placed] = speakerLayout(cabinet).chambers;
+  const face = hornFace(placed, cabinet.panel.thicknessIn);
+  return { w: face.w, h: face.h };
+}
+
+/**
+ * The PA v2 sub bin with `count` 18″ stacked in its one throat (Hornresp's Nd): one straight-sided (parabolic) flare from
+ * the drivers' bay to a mouth that fills the face between the slots, both at the box's inside height; each driver's
+ * share of the opening, rear air and slots; the sub's subsonic in its band, its input range below the PA's crossover
+ * to the mids.
  */
 function paV2SubBin(count: 1 | 2, identity: SpecIdentity): SpeakerSpec {
   const bin = PA_V2_SUB_BIN;
   const t = DEFAULT_PA.wall;
   const openingIn = inches(bin.openingMm) * count;
-  const throat = bin.sub.ts.Sd * count;
-  const mouth = bin.mouthCm2 * count;
-  const area = (step: number) => throat + ((mouth - throat) * step) / bin.flareSteps;
-  const segments: HornSegment[] = Array.from({ length: bin.flareSteps }, (_, i) => ({
-    profile: HORN_PROFILE.conical,
-    s1: area(i),
-    s2: area(i + 1),
-    length: bin.flareCm / bin.flareSteps,
-  }));
   const chamber: SpeakerChamber = {
     at: { xIn: 0, yIn: 0 },
     dims: {
@@ -315,16 +334,7 @@ function paV2SubBin(count: 1 | 2, identity: SpecIdentity): SpeakerSpec {
     netLiters: bin.rearLiters * count,
     stuffingPct: 0,
     vent: sideSlots(bin.slotWidthMm, openingIn, bin.slotLengthMm, true),
-    load: {
-      kind: CHAMBER_LOAD.horn,
-      horn: {
-        throatChamber: 0,
-        segments,
-        portOffset: 0,
-        drive: { kind: HORN_DRIVE.front },
-        path: HORN_PATH.straight,
-      },
-    },
+    load: DIRECT_LOAD,
     // stacked up the throat, each in its share of the opening
     drivers: Array.from({ length: count }, (_, i) => ({
       kind: DRIVER_KIND.sub,
@@ -335,9 +345,18 @@ function paV2SubBin(count: 1 | 2, identity: SpecIdentity): SpeakerSpec {
       horn: null,
     })),
   };
+  const face = paV2HornFace(chamber);
+  const segments: HornSegment[] = [
+    {
+      profile: HORN_PROFILE.parabolic,
+      s1: inches(bin.throatWidthMm) * face.h * CM2_PER_IN2,
+      s2: face.w * face.h * CM2_PER_IN2,
+      length: bin.flareCm,
+    },
+  ];
   return {
     ...identity,
-    cabinet: paV2Cabinet(chamber),
+    cabinet: paV2Cabinet({ ...chamber, load: paV2Horn(0, segments) }),
     bands: [paV2Band(SPEAKER_BAND.low, { highpass: bin.subsonic, lowpass: null }, DEFAULT_PA.ampW)],
     input: { highpass: null, lowpass: lrFilter(DEFAULT_PA.xoLo, DEFAULT_PA.xoLoOrder) },
     look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
@@ -364,23 +383,7 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
     netLiters: box.rearLiters,
     stuffingPct: 0,
     vent: sideSlots(box.slotWidthMm, openingIn, box.slotLengthMm, false),
-    load: {
-      kind: CHAMBER_LOAD.horn,
-      horn: {
-        throatChamber: box.throatChamberL,
-        segments: [
-          {
-            profile: HORN_PROFILE.exponential,
-            s1: box.throatCm2,
-            s2: box.mouthCm2,
-            length: box.flareCm,
-          },
-        ],
-        portOffset: 0,
-        drive: { kind: HORN_DRIVE.front },
-        path: HORN_PATH.straight,
-      },
-    },
+    load: DIRECT_LOAD,
     // one above the other, `coneSpacingMm` apart about the opening's center
     drivers: Array.from({ length: box.drivers }, (_, i) => ({
       kind: DRIVER_KIND.mid,
@@ -395,9 +398,19 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
     })),
   };
   const hfHz = box.hfHorn.hf?.minXo ?? DEFAULT_PA.xoHi;
+  // the mouth fills the face between the slots, at the box's inside height
+  const face = paV2HornFace(chamber);
+  const segments: HornSegment[] = [
+    {
+      profile: HORN_PROFILE.exponential,
+      s1: box.throatCm2,
+      s2: face.w * face.h * CM2_PER_IN2,
+      length: box.flareCm,
+    },
+  ];
   return {
     ...identity,
-    cabinet: paV2Cabinet(chamber),
+    cabinet: paV2Cabinet({ ...chamber, load: paV2Horn(box.throatChamberL, segments) }),
     bands: [
       paV2Band(
         SPEAKER_BAND.mid,

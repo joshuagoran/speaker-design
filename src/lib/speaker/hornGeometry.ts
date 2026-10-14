@@ -3,11 +3,19 @@
 // the front drawing and the bracing's keep-out all read. Pure.
 //
 // What it keeps of the model: the area at the throat, at the mouth and at each segment's ends, every segment's length
-// along the path, and its flare law (`segmentAreaAt`). A section is a rectangle as high as the mouth, its width the
-// horn's area there over that height: the top and the bottom are flat panels the mouth's height apart, the side walls
-// flare with the area (a run of short conical segments whose areas step evenly is a straight angled wall, a kink where
-// two segments meet; an exponential segment's walls curve). A folded path's legs are as wide as the mouth instead, so
-// that they stack. The path's axis is straight through the mouth's center.
+// along the path, and its flare law (`segmentAreaAt`). A section is a rectangle that holds the horn's area there. On a
+// straight path its shape comes from the mouth back, segment by segment, each from its shape at its mouth end and the
+// way its law is built:
+// - parabolic (the area grows linearly): a parallel top and bottom, as high as at its mouth end (the mouth's height for
+//   the last segment), and flat, straight side walls that angle out: the width grows linearly;
+// - exponential: the same parallel top and bottom (the 1-D horn: flat top and bottom, two curved side walls), its side
+//   walls curving out as the area grows;
+// - conical (the radius grows linearly): both sides grow together, in proportion, as a pyramid's: four flat walls
+//   that meet at one apex, never a constant height (that would curve the side walls).
+// Each segment starts with the shape the one before it ends with, so the walls meet at a joint (a kink, never a step).
+// A section is never wider than the face: past it, the face's width and the height the area needs. A folded path's
+// legs are as wide as the mouth instead, so that they stack: their top and bottom take the area's law (flat for a
+// parabolic segment, curved for the others). The path's axis is straight through the mouth's center.
 //
 // A folded path runs in legs along the box's depth, one more than it has folds, stacked up the box; each leg is as long
 // along the depth as it is along the path, so the legs' lengths add up to the path. A turn joins two legs through a gap
@@ -16,10 +24,11 @@
 //
 // Coordinates are inches in the front view's (across from the cabinet's center line, up from its bottom) with `z` the
 // distance back from the baffle's inside face, where the mouth is.
-import type { HornSegment } from "../../types";
+import type { Dims2, HornSegment } from "../../types";
 import type { FaceRect } from "./speakerLayout";
 import { isStraightSegment, segmentAreaAt } from "../acoustics/hornSegments";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
+import { HORN_PROFILE } from "../../constants/hornEngine";
 import {
   HORN_DRIVER_ROOM_IN,
   HORN_FIT_TOLERANCE_IN,
@@ -149,6 +158,20 @@ export function hornPath(input: HornPathInput): HornPath | null {
   return best;
 }
 
+/**
+ * The section where a segment holds `area` on a straight path, from its shape at the segment's mouth end (`end`), by how
+ * its law is built (see the header): a conical segment scales both sides alike, as a pyramid; a parabolic or an
+ * exponential one keeps its end's height and takes the width the area needs. A straight duct keeps its end's shape.
+ */
+function lawShape(segment: HornSegment, end: Dims2, area: number): Dims2 {
+  if (segment.profile === HORN_PROFILE.conical && !isStraightSegment(segment)) {
+    /** each side's share of its end's: the square root of the areas' ratio */
+    const ratio = Math.sqrt(area / (end.w * end.h));
+    return { w: end.w * ratio, h: end.h * ratio };
+  }
+  return { w: area / end.h, h: end.h };
+}
+
 /** How far a path overflows its room, in (0 when it fits): its depth and its height over what the box gives. */
 const overflow = (p: HornPath) =>
   Math.max(0, p.needs.depthIn - p.room.depthIn) + Math.max(0, p.needs.heightIn - p.room.heightIn);
@@ -161,26 +184,33 @@ function hornPathWithFolds(
   n: number,
 ): HornPath | null {
   const { segments, areaScale, mouth, drivers, clear, depthIn, wallIn } = input;
-  /**
-   * a section's size by its area, in²: as high as the mouth and as wide as the area needs, never wider than the face (the
-   * height takes the rest); a folded path as wide as the mouth, as high as the area needs
-   */
-  const sizeOf = (area: number) => {
-    if (n > 0) return { w: mouth.w, h: area / mouth.w };
-    const w = Math.min(clear.w, area / mouth.h);
-    return { w, h: area / w };
-  };
   /** the area at path distance `s` along segment `i`, in² */
   const areaIn = (i: number, s: number) =>
     (segmentAreaAt(segments[i], (s - starts[i]) * CM_PER_IN) / CM2_PER_IN2) * areaScale;
+  /** a shape kept inside the face's width: past it, the face's width and the height its area needs */
+  const inFace = (size: Dims2): Dims2 =>
+    size.w <= clear.w ? size : { w: clear.w, h: (size.w * size.h) / clear.w };
+  /** each segment's section at its mouth end on a straight path, from the mouth back (see the header) */
+  const ends: Dims2[] = [];
+  let end: Dims2 = { w: areaIn(segments.length - 1, total) / mouth.h, h: mouth.h };
+  for (let i = segments.length - 1; i >= 0; i--) {
+    ends[i] = end;
+    end = inFace(lawShape(segments[i], end, areaIn(i, starts[i])));
+  }
+  /**
+   * the section at path distance `s` along segment `i`, in: on a straight path by its law from its mouth end's shape; a
+   * folded path's as wide as the mouth, as high as the area needs
+   */
+  const sizeAt = (i: number, s: number): Dims2 =>
+    n > 0
+      ? { w: mouth.w, h: areaIn(i, s) / mouth.w }
+      : inFace(lawShape(segments[i], ends[i], areaIn(i, s)));
   /** the height of the duct at path distance `s`, in: the taller side of a step */
   const heightAt = (s: number) =>
     Math.max(
       0,
       ...segments.flatMap((_, i) =>
-        s >= starts[i] - 1e-9 && s <= (starts[i + 1] ?? total) + 1e-9
-          ? [sizeOf(areaIn(i, s)).h]
-          : [],
+        s >= starts[i] - 1e-9 && s <= (starts[i + 1] ?? total) + 1e-9 ? [sizeAt(i, s).h] : [],
       ),
     );
 
@@ -199,7 +229,7 @@ function hornPathWithFolds(
       const steps = isStraightSegment(segments[i]) ? 1 : HORN_PATH_STEPS;
       for (let j = 0; j <= steps; j++) {
         const s = a + ((b - a) * j) / steps;
-        const { w, h } = sizeOf(areaIn(i, s));
+        const { w, h } = sizeAt(i, s);
         const last = out[out.length - 1];
         // a joint where two segments' areas meet is one section; a step is two
         if (last && Math.abs(last.s - s) < 1e-9 && Math.abs(last.w * last.h - w * h) < 1e-9)
