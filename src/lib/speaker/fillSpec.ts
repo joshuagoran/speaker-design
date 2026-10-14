@@ -34,14 +34,15 @@ import {
   stuffingPctOf,
 } from "./specParts";
 import { SEATED_EAR_FT, SPACE_HOME_ROOM } from "../../constants/space";
-import { STUFFING_VOLUME_GAIN } from "../pa/calc";
+import { fillHfPadDb, STUFFING_VOLUME_GAIN } from "../pa/calc";
 import { DEFAULT_HIFI } from "../defaults";
 
 /**
  * A band of the coaxial's passive network: the cone below its HF section's recommended crossover (`hf.xo`) and the HF
  * section above it, at the Hi-fi page's slope, as the coaxial monitor template crosses it (the maker's own network
- * isn't published). A coaxial without HF data or a crossover keeps both bands open. Both bands share the fill's one
- * amp channel.
+ * isn't published). A coaxial without HF data or a crossover keeps both bands open. The HF band carries the network's
+ * pad (`fillHfPadDb`, the one the Fills page's limits use), so the HF section plays at the woofer's level. Both bands
+ * share the fill's one amp channel.
  */
 function networkBand(id: AdapterBandId, state: FillDesignState): SpeakerBand {
   const xo = state.driver.hf?.xo;
@@ -51,7 +52,7 @@ function networkBand(id: AdapterBandId, state: FillDesignState): SpeakerBand {
     name: SPEAKER_BAND_NAMES[id],
     highpass: id === SPEAKER_BAND.high ? filter : null,
     lowpass: id === SPEAKER_BAND.low ? filter : null,
-    levelDb: 0,
+    levelDb: id === SPEAKER_BAND.high ? -fillHfPadDb(state.driver.hf, state.driver.lfSens) : 0,
     drive: HIFI_DRIVE.passive,
     ampW: state.ampWatts,
   };
