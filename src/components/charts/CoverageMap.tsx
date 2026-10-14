@@ -65,6 +65,9 @@ interface Props {
   listener: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
+  /** the box picked (its index) and the pick of one by a press on it or its aim dot; both absent, the map has no pick */
+  selected?: number | null;
+  onSelect?: (i: number) => void;
   /** the most height the map may take, px */
   maxHeight: number;
   /** whether a finer or newer grid is on its way: aria-busy only, no badge (the fine pass is quick) */
@@ -76,7 +79,17 @@ interface Props {
  * coverage edge and every 3 dB step. Drag a stack to move it, its dot to turn it, the center subs, or the listener (or tap
  * the floor to put the listener there).
  */
-export function CoverageMap({ view, room, listener, actions, boxes, maxHeight, busy }: Props) {
+export function CoverageMap({
+  view,
+  room,
+  listener,
+  actions,
+  boxes,
+  selected = null,
+  onSelect,
+  maxHeight,
+  busy,
+}: Props) {
   const pal = usePalette();
   const [box, cw] = useElementWidth(560);
   const k = Math.max(
@@ -163,8 +176,11 @@ export function CoverageMap({ view, room, listener, actions, boxes, maxHeight, b
       return b.turnable && near(hp.x, hp.y, 16);
     });
     const onBox = boxes.findIndex((b) => near(px(b.x), py(b.y), boxPx(b) / 2 + 8));
-    if (aimAt >= 0) d = { kind: "aim", i: aimAt };
-    else if (onBox >= 0) {
+    if (aimAt >= 0) {
+      d = { kind: "aim", i: aimAt };
+      onSelect?.(aimAt);
+    } else if (onBox >= 0) {
+      onSelect?.(onBox);
       const b = boxes[onBox];
       d = { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
     } else if (near(px(listener.x), py(listener.y), 18)) d = { kind: "listener" };
@@ -382,8 +398,8 @@ export function CoverageMap({ view, room, listener, actions, boxes, maxHeight, b
                   height={bh}
                   rx="3"
                   fill={ON_DATA.ink}
-                  stroke={ON_DATA.white}
-                  strokeWidth="1.5"
+                  stroke={i === selected ? ON_DATA.cyan : ON_DATA.white}
+                  strokeWidth={i === selected ? 3 : 1.5}
                 />
               </g>
               <text
