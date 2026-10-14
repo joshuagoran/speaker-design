@@ -7,6 +7,7 @@ import type {
   DriverKind,
   Horn,
   SpeakerDriver,
+  SubDriver,
   ThieleSmall,
 } from "../../types";
 import {
@@ -71,6 +72,20 @@ export function coneParts(driver: SpeakerDriver): ConeParts | null {
     case DRIVER_KIND.tweeter:
       return null;
   }
+}
+
+/**
+ * A PA cone driver's surround width and cone (dish) depth from its maker's dimension drawing, in; empty for a driver
+ * whose drawing gives neither, or another kind.
+ */
+export function coneShape(driver: SpeakerDriver): Pick<SubDriver, "surroundIn" | "dishDepthIn"> {
+  const part =
+    driver.kind === DRIVER_KIND.sub
+      ? byId(SUB_OPTIONS, driver.driverId)
+      : driver.kind === DRIVER_KIND.mid
+        ? byId(MID_OPTIONS, driver.driverId)
+        : undefined;
+  return { surroundIn: part?.surroundIn, dishDepthIn: part?.dishDepthIn };
 }
 
 /**

@@ -207,6 +207,13 @@ export interface SubDriver {
   sens?: number;
   /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
   depthIn?: number;
+  /** the surround's width, in, from the maker's dimension drawing; absent where it gives none (the front chamber estimates it) */
+  surroundIn?: number;
+  /**
+   * the cone's depth, in: its dish, from the mounting plane to the dust cap, from the maker's dimension drawing; absent
+   * where it gives none (the front chamber estimates it)
+   */
+  dishDepthIn?: number;
   note: string;
 }
 
@@ -222,6 +229,8 @@ export interface MidDriver {
   ts: ThieleSmall;
   /** mounting depth in inches, from the maker's datasheet; absent where not entered (MID_DEPTH_FALLBACK_IN stands in) */
   depthIn?: number;
+  surroundIn?: SubDriver["surroundIn"];
+  dishDepthIn?: SubDriver["dishDepthIn"];
   note: string;
 }
 

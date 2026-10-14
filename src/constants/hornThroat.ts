@@ -7,6 +7,9 @@
  */
 export const CONE_SURROUND_RISE_SHARE = 0.06;
 
+/** How far a half-roll surround rises, as a share of its width: where the catalog gives the width. */
+export const SURROUND_RISE_PER_WIDTH = 0.5;
+
 /**
  * How far the walls' back edges stay clear of the cone's front, as a multiple of its Xmax: the cone can go past its
  * linear travel before it stops.

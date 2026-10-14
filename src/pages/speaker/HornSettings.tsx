@@ -120,7 +120,13 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
         {front && (
           <NumberField
             label={
-              <Tooltip tip={SPEAKER_TEXT.hornFrontChamberTip}>
+              <Tooltip
+                tip={
+                  front.estimated
+                    ? `${SPEAKER_TEXT.hornFrontChamberTip} ${SPEAKER_TEXT.hornFrontChamberEstimate}`
+                    : SPEAKER_TEXT.hornFrontChamberTip
+                }
+              >
                 {SPEAKER_TEXT.hornFrontChamber}
               </Tooltip>
             }

@@ -340,6 +340,9 @@ export const SPEAKER_TEXT = {
   hornCompressionTip:
     "How much of the cone the horn walls cover. A higher ratio loads the cone more. It gives more output low in the band but less at the top, and faster air at the throat.",
   hornFrontChamber: "Front chamber",
+  /** added to the front chamber's tip when the catalog gives no surround width or cone depth */
+  hornFrontChamberEstimate:
+    "The datasheet does not give the surround width or the cone depth, so this value uses estimates.",
   hornFrontChamberTip:
     "The air between the cones and the back edges of the horn walls. The edges stay clear of full cone travel. The drivers set this value.",
   hornPath: "Path",

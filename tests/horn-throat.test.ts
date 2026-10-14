@@ -26,6 +26,7 @@ import {
   CONE_DISH_PER_DEPTH,
   CONE_SURROUND_RISE_SHARE,
   CONE_TRAVEL_MARGIN,
+  SURROUND_RISE_PER_WIDTH,
 } from "../src/constants/hornThroat";
 import { CM_PER_IN, MM_PER_IN } from "../src/constants/units";
 import type { SpeakerSpec } from "../src/types";
@@ -153,4 +154,32 @@ test("horn throat: the throat's air speed at full power is a limit against the b
     cabinet: { ...base.cabinet, chambers: [{ ...chamber, load: { kind: CHAMBER_LOAD.direct } }] },
   };
   assert.equal(limitsOf(direct).chambers[0]?.throat, null);
+});
+
+test("horn throat: the catalog's surround width and cone depth win over the estimates", () => {
+  const cone = { Sd: 1210, Xmax: 10, depthIn: 8.19 };
+  const estimated = frontChamber(cone, 1);
+  assert.equal(estimated.estimated, true, "no catalog figures: estimates");
+  const travelCm = (10 * CONE_TRAVEL_MARGIN) / 10;
+  // both from the catalog: the rise is half the surround's width, the dish its own depth
+  const catalog = frontChamber({ ...cone, surroundIn: 1.5, dishDepthIn: 4 }, 1);
+  assert.equal(catalog.estimated, false);
+  const riseCm = 1.5 * SURROUND_RISE_PER_WIDTH * CM_PER_IN;
+  assert.ok(near(catalog.clearanceIn, (riseCm + travelCm) / CM_PER_IN));
+  assert.ok(near(catalog.liters, (1210 * (riseCm + travelCm + (4 * CM_PER_IN) / 3)) / 1000));
+  assert.notEqual(catalog.liters, estimated.liters);
+  // one figure from the catalog: it wins, the other stays an estimate
+  const dishOnly = frontChamber({ ...cone, dishDepthIn: 4 }, 1);
+  assert.equal(dishOnly.estimated, true);
+  assert.equal(dishOnly.clearanceIn, estimated.clearanceIn, "the surround stays estimated");
+  assert.ok(dishOnly.liters !== estimated.liters, "the dish is the catalog's");
+  const surroundOnly = frontChamber({ ...cone, surroundIn: 1.5 }, 1);
+  assert.equal(surroundOnly.estimated, true);
+  assert.ok(near(surroundOnly.clearanceIn, catalog.clearanceIn), "the surround is the catalog's");
+  // the PA v2 drivers' drawings give neither figure: their front chambers are estimates
+  for (const template of [SPEAKER_TEMPLATE.paV2SubBinTwo, SPEAKER_TEMPLATE.paV2MidBox]) {
+    const cones = throatCones(templateSpeaker(template).cabinet.chambers[0].drivers);
+    assert.ok(cones);
+    assert.equal(frontChamber(cones.cone, cones.count).estimated, true, template);
+  }
 });
