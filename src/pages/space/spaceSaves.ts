@@ -11,8 +11,11 @@ import type {
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
 import { paVenue } from "../../lib/speaker/paSpec";
+import { followedLead, resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
+import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
+import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import { SPACE_TEXT } from "../../constants/space";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
@@ -43,8 +46,9 @@ export const itemName = (
 
 /** The space in one line, as the library lists it: what it places. */
 export const spaceSummary = (design: SpaceDesign) =>
-  design.space.placements.map((p) => itemName(design, p.item)).join(" + ") ||
-  SPACE_TEXT.noPlacements;
+  design.space.placements
+    .map((_, k) => itemName(design, resolvedPlacement(design.space.placements, k).item))
+    .join(" + ") || SPACE_TEXT.noPlacements;
 
 /** The stacks and speakers a space places: the stacks its placements name, and the speakers those or they name. */
 export function usedParts(design: SpaceDesign): Pick<SpaceDesign, "stacks" | "speakers"> {
@@ -83,12 +87,21 @@ const isStack = (value: unknown): value is StackSpec =>
   hasFields(value, { id: "string", name: "string", notes: "string" }) &&
   Array.isArray(Reflect.get(value, "members"));
 
-/** Whether a value reads as a list of placements: each names an item and has a spot and an aim. */
+/**
+ * Whether a value reads as a list of placements: each names an item and has a spot and an aim, and follows nothing or an
+ * earlier placement that follows nothing (a chain of copies, or a copy of a later one, has no meaning, so it is not read).
+ */
 const isPlacements = (value: unknown): value is SpacePlacement[] =>
   Array.isArray(value) &&
-  value.every((p: unknown) =>
-    hasFields(p, { x: "number", y: "number", liftIn: "number", item: "object", aim: "object" }),
+  value.every(
+    (p: unknown, k) =>
+      hasFields(p, { x: "number", y: "number", liftIn: "number", item: "object", aim: "object" }) &&
+      (Reflect.get(p, "follows") === null || followedLead(value, k) !== null),
   );
+
+/** Whether a value is one of a const record's values (a saved string that names an id the app has). */
+const isOneOf = (ids: Record<string, string>, value: unknown) =>
+  Object.values(ids).some((id) => id === value);
 
 /** Whether a value reads as a venue: its room, listener, ear height, target, where it is measured and balance. */
 const isVenue = (value: unknown): value is SpaceVenue =>
@@ -99,7 +112,9 @@ const isVenue = (value: unknown): value is SpaceVenue =>
     targetDb: "number",
     levelRef: "string",
     balance: "string",
-  });
+  }) &&
+  isOneOf(COVERAGE_LEVEL_REF, Reflect.get(value, "levelRef")) &&
+  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance"));
 
 /**
  * A saved space opened: the document's id and name, its placements and venue, and its stacks and speakers;

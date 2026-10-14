@@ -54,6 +54,20 @@ export function yawToward(from: FloorPoint, to: FloorPoint): number {
 }
 
 /**
+ * The placement that placement `k` follows: an earlier one that stands on its own. Null for one on its own, and for one
+ * that names anything else (a later placement, or one that follows too: a mirror of a mirror is not a copy, so no chain
+ * stands), which then stands on its own.
+ */
+export function followedLead(
+  placements: readonly Pick<SpacePlacement, "follows">[],
+  k: number,
+): number | null {
+  const j = placements[k]?.follows;
+  if (j === null || j === undefined || !Number.isInteger(j) || j < 0 || j >= k) return null;
+  return placements[j].follows === null ? j : null;
+}
+
+/**
  * The placement as it stands: one that follows an earlier one (a mirrored copy) takes that one's item, spot, lift, aim,
  * level and delay, x and yaw turned over and the image mirrored. It has no settings of its own.
  */
@@ -62,9 +76,9 @@ export function resolvedPlacement(
   k: number,
 ): SpacePlacement {
   const p = placements[k];
-  const j = p.follows;
-  if (j === null || j < 0 || j >= k) return p;
-  const lead = resolvedPlacement(placements, j);
+  const j = followedLead(placements, k);
+  if (j === null) return p;
+  const lead = placements[j];
   return {
     ...p,
     item: lead.item,

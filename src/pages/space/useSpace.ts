@@ -17,7 +17,12 @@ import {
   spaceResponse,
   type SpaceGridRequest,
 } from "../../lib/speaker/spaceCoverage";
-import { resolvedPlacement, wrapYawDeg, yawToward } from "../../lib/speaker/spaceLayout";
+import {
+  followedLead,
+  resolvedPlacement,
+  wrapYawDeg,
+  yawToward,
+} from "../../lib/speaker/spaceLayout";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { startLayers } from "../stack/stackPresets";
@@ -91,9 +96,10 @@ export function fittedSpace(space: SpaceSpec): SpaceSpec {
 }
 
 /**
- * The placements with placement `k` set to follow placement `follows` (an earlier one), or to stand on its own (null).
- * Either way it keeps where it stands as it stands: on its own, where its lead put it; following, its lead's item, spot,
- * lift and aim mirrored.
+ * The placements with placement `k` set to follow placement `follows` (an earlier one that stands on its own: a mirror of
+ * a mirror is not a copy, so any other is refused and the placements stay), or to stand on its own (null). Either way it
+ * keeps where it stands as it stands: on its own, where its lead put it; following, its lead's item, spot, lift and aim
+ * mirrored. Copies of its own then stand on their own, where they stood.
  */
 export function withFollows(
   placements: readonly SpacePlacement[],
@@ -102,9 +108,14 @@ export function withFollows(
 ): SpacePlacement[] {
   const before = resolvedPlacement(placements, k);
   const set = placements.map((p, i) => (i === k ? { ...p, follows } : p));
-  // on its own it stays as it stood; following, it stands as its lead puts it
-  const after = follows === null ? before : resolvedPlacement(set, k);
-  return set.map((p, i) => (i === k ? { ...after, follows } : p));
+  if (follows === null) return set.map((p, i) => (i === k ? { ...before, follows } : p));
+  if (followedLead(set, k) !== follows) return [...placements];
+  // following, it stands as its lead puts it; the copies of its own were its (now they would chain)
+  const after = resolvedPlacement(set, k);
+  return set.map((p, i) => {
+    if (i === k) return { ...after, follows };
+    return p.follows === k ? { ...resolvedPlacement(placements, i), follows: null } : p;
+  });
 }
 
 /**
@@ -168,10 +179,14 @@ export function spaceFromStart(start: StackStart, pa: PaPlannerDesign): SpaceDes
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
 
-/** One grid for the worker: the request, and the frequency its band's target is read at, Hz. */
+/**
+ * One grid for the worker: the request, the frequency its band's target is read at (Hz), and the boxes' spots it was
+ * asked for (the audience average and the stats leave the floor in front of them out, whatever the boxes are by then).
+ */
 interface GridJob {
   req: Omit<SpaceGridRequest, "cols">;
   centerHz: number;
+  spots: readonly FloorPoint[];
 }
 
 /**
@@ -258,6 +273,8 @@ export function useSpace() {
   const [design, setDesign] = usePageDraft(spaceDraft);
   const [band, setBand] = useState<CoverageBand>("mid");
   const [freqHz, setFreqHz] = useState(63);
+  /** how many times the design was replaced whole (a start, a clear, an opened save): a page's picks into it end then */
+  const [replaced, setReplaced] = useState(0);
   const { space } = design;
   const { venue } = space;
   // the model reads the placements, the room, the stacks and the speakers, a step behind the typing
@@ -313,7 +330,7 @@ export function useSpace() {
   const placed = model.scene.sources.length > 0;
   useEffect(() => {
     if (!placed) return;
-    want.current = { req, centerHz: bandCenterHz(band, freqHz) };
+    want.current = { req, centerHz: bandCenterHz(band, freqHz), spots };
     pump();
   }, [req, placed]);
 
@@ -349,10 +366,11 @@ export function useSpace() {
     // the reference reads these
     [placed, req, levelRef, refListener, meterSpots],
   );
-  // the grid on show: the audience's average at the limit, and the gain that brings the reference to the target
+  // the grid on show: the audience's average at the limit (over the spots it was computed with), and the gain that
+  // brings the reference to the target
   const audienceAtLimit = useMemo(
-    () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, spots) : null),
-    [shown, placed, spots],
+    () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, shown.spots) : null),
+    [shown, placed],
   );
   const fromGrid = levelRef === COVERAGE_LEVEL_REF.audience;
   // the grid on show with the target and gain of the band it belongs to (an older band's while the next computes)
@@ -385,8 +403,8 @@ export function useSpace() {
   const currentAtLimit = fromGrid ? (view ? view.atLimit : null) : refAtLimit;
   const refTarget = fromGrid && view ? view.target + view.gain : target;
   const stats = useMemo(
-    () => (view ? coverageStats(view.grid, view.room, spots, view.target) : null),
-    [view, spots],
+    () => (view && shown ? coverageStats(view.grid, view.room, shown.spots, view.target) : null),
+    [view, shown],
   );
   const gain = fromGrid ? (view ? view.gain : 0) : systemGain(target, currentAtLimit);
   /** each band's level at the listener at the space's level, and its target */
@@ -454,9 +472,16 @@ export function useSpace() {
   const isFollower = (k: number) => leadOf(k) !== k;
   const editVenue = (edit: (v: SpaceVenue) => SpaceVenue) =>
     editSpace((s) => ({ ...s, venue: edit(s.venue) }));
+  const replaceDesign = (d: SpaceDesign) => {
+    setDesign(d);
+    setReplaced((n) => n + 1);
+  };
   return {
     design,
     setDesign,
+    replaced,
+    /** replaces the design whole: a start, a clear or an opened save */
+    replaceDesign,
     model,
     view,
     stats,
@@ -486,7 +511,7 @@ export function useSpace() {
     /** opens a saved space: the document's id and name, its placements, venue, stacks and speakers */
     restore: (c: SavedConfig) => {
       const saved = spaceFromSaved(c);
-      if (saved) setDesign(saved);
+      if (saved) replaceDesign(saved);
       else store.flash(MISSING_SPACE_TEXT);
     },
     setName: (name: string) => editSpace((s) => ({ ...s, name })),
@@ -497,7 +522,12 @@ export function useSpace() {
     place: (item: PlaceItem) => setDesign((d) => withItemPlaced(d, item)),
     /** adds placement `k`'s mirror image across the center line, following it */
     addMirrorPair: (k: number) =>
-      editPlacements((list) => withFollows([...list, list[k]], list.length, k)),
+      editPlacements((list) =>
+        // a copy has no copy of its own (it is already half of a pair)
+        followedLead(list, k) === null
+          ? withFollows([...list, list[k]], list.length, k)
+          : [...list],
+      ),
     /** sets placement `k` to follow placement `follows`, or to stand on its own (null), where it stands */
     setFollows: (k: number, follows: SpacePlacement["follows"]) =>
       editPlacements((list) => withFollows(list, k, follows)),

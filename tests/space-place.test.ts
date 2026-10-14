@@ -12,7 +12,7 @@ import { emptySpeaker } from "../src/pages/speaker/useSpeakerPage";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { STACK_START_DESIGN_NAMES } from "../src/constants/stackPresets";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
-import { SPACE_TEXT } from "../src/constants/space";
+import { PLACE_ID, PLACE_ID_PREFIX, SPACE_TEXT } from "../src/constants/space";
 import type { SpaceDesign } from "../src/types";
 
 /** Nothing open and nothing saved: what a signed-out visitor has. */
@@ -60,7 +60,7 @@ test("place list: every stack preset places its stack with all its speakers", ()
   const options = placeOptions(NOTHING);
   for (const preset of STACK_PRESETS) {
     const layers = presetOf(preset);
-    const { next, placement } = placed(options, `stack-preset:${preset}`);
+    const { next, placement } = placed(options, `${PLACE_ID_PREFIX.stackPreset}${preset}`);
     assert.equal(next.space.placements.length, 1, preset);
     assert.deepEqual(placement.item, { kind: SPACE_ITEM.stack, id: layers.stack.id }, preset);
     assert.equal(next.stacks.length, 1, preset);
@@ -76,7 +76,7 @@ test("place list: every stack preset places its stack with all its speakers", ()
 test("place list: every speaker template places its speaker alone", () => {
   const options = placeOptions(NOTHING);
   for (const template of SPEAKER_TEMPLATES.filter((t) => t !== SPEAKER_TEMPLATE.empty)) {
-    const { next, placement } = placed(options, `speaker-template:${template}`);
+    const { next, placement } = placed(options, `${PLACE_ID_PREFIX.speakerTemplate}${template}`);
     assert.deepEqual(placement.item, { kind: SPACE_ITEM.speaker, id: template }, template);
     assert.equal(next.stacks.length, 0, template);
     assert.equal(next.speakers.length, 1, template);
@@ -93,13 +93,13 @@ test("place list: the stack and the speaker open now are listed, and each places
     open.map((o) => o.name),
     [SPACE_TEXT.openStack(openStack.stack.name), SPACE_TEXT.openSpeaker(openSpeaker.name)],
   );
-  const stackPlaced = placed(options, "open-stack");
+  const stackPlaced = placed(options, PLACE_ID.openStack);
   assert.deepEqual(stackPlaced.placement.item, {
     kind: SPACE_ITEM.stack,
     id: openStack.stack.id,
   });
   assert.equal(stackPlaced.next.speakers.length, openStack.speakers.length);
-  const speakerPlaced = placed(options, "open-speaker");
+  const speakerPlaced = placed(options, PLACE_ID.openSpeaker);
   assert.deepEqual(speakerPlaced.placement.item, {
     kind: SPACE_ITEM.speaker,
     id: openSpeaker.id,
@@ -115,17 +115,17 @@ test("place list: saved stacks and speakers are listed under the ids of their do
     savedStacks: [{ id: "doc1", name: "My stack", design: stackDesign }],
     savedSpeakers: [{ id: "doc2", name: "My fill", spec }],
   });
-  const stack = placed(options, "saved-stack:doc1");
+  const stack = placed(options, `${PLACE_ID_PREFIX.savedStack}doc1`);
   assert.deepEqual(stack.placement.item, { kind: SPACE_ITEM.stack, id: "doc1" });
-  const speaker = placed(options, "saved-speaker:doc2");
+  const speaker = placed(options, `${PLACE_ID_PREFIX.savedSpeaker}doc2`);
   assert.deepEqual(speaker.placement.item, { kind: SPACE_ITEM.speaker, id: "doc2" });
   assert.equal(speaker.next.speakers[0].name, "My fill");
 });
 
 test("place list: placing again adds another placement and reuses the speakers it holds", () => {
   const options = placeOptions(NOTHING);
-  const once = placed(options, "stack-preset:paStack").next;
-  const twice = placed(options, "stack-preset:paStack", once).next;
+  const once = placed(options, `${PLACE_ID_PREFIX.stackPreset}paStack`).next;
+  const twice = placed(options, `${PLACE_ID_PREFIX.stackPreset}paStack`, once).next;
   assert.equal(twice.space.placements.length, 2);
   assert.equal(twice.stacks.length, 1);
   assert.equal(twice.speakers.length, once.speakers.length);

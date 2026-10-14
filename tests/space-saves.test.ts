@@ -7,9 +7,15 @@ import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { homeVenue } from "../src/lib/speaker/specParts";
 import { resolvedPlacement } from "../src/lib/speaker/spaceLayout";
+import { placementGroup, placementLead } from "../src/lib/speaker/fillAlign";
 import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
 import { ampPowerGroups, channelGroups, withAmpPower } from "../src/lib/speaker/spaceHardware";
-import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
+import {
+  emptySpace,
+  spaceDraft,
+  spaceFromSaved,
+  spaceSnapshot,
+} from "../src/pages/space/spaceSaves";
 import { fittedSpace, withFollows, withStack, withoutPlacement } from "../src/pages/space/useSpace";
 import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { SEATED_EAR_FT } from "../src/constants/space";
@@ -172,4 +178,71 @@ test("space edits: a smaller room keeps the placements, and the listener inside"
 test("space: a design that names no room gets one 20 ft wide, 30 ft long and 12 ft high", () => {
   const { room } = homeVenue(6, { x: 0, y: 15 }, SEATED_EAR_FT);
   assert.deepEqual([room.widthFt, room.lengthFt, room.ceilingFt], [20, 30, 12]);
+});
+
+test("space edits: a copy of a copy is refused, and a stored chain reads as a placement on its own", () => {
+  const { placements } = paSpace().space;
+  const [lead, copy] = placements;
+  const third = { ...lead, follows: null, x: 2 };
+  const three = [lead, copy, third];
+  // placement 1 is a copy: placement 2 cannot follow it, only a placement on its own
+  assert.deepEqual(withFollows(three, 2, 1), three);
+  assert.equal(withFollows(three, 2, 0)[2].follows, 0);
+  // a later placement is no lead either
+  assert.deepEqual(withFollows(three, 1, 2), three);
+  // a placement with a copy of its own follows: its copy stands on its own, where it stood
+  const pair = [lead, third, { ...copy, follows: 1 }];
+  const stood = resolvedPlacement(pair, 2);
+  const moved = withFollows(pair, 1, 0);
+  assert.equal(moved[1].follows, 0);
+  assert.equal(moved[2].follows, null);
+  assert.deepEqual([moved[2].x, moved[2].aim, moved[2].mirror], [stood.x, stood.aim, stood.mirror]);
+  // a chain that is stored anyway: the copy of a copy is on its own (a lead, as the map's drag reads it)
+  const chain = [lead, copy, { ...copy, follows: 1, x: 7 }];
+  assert.equal(resolvedPlacement(chain, 2).x, 7);
+  assert.equal(resolvedPlacement(chain, 2).mirror, chain[2].mirror);
+  assert.equal(placementLead(chain, 2), 2);
+  assert.deepEqual(placementGroup(chain, 0), [0, 1]);
+  // a save or a draft that holds one is not read
+  const saved = (placements: SpaceDesign["space"]["placements"]) => {
+    const design = paSpace();
+    return asDoc({ ...design, space: { ...design.space, placements } }, "doc1", "Club");
+  };
+  assert.ok(spaceFromSaved(saved(three)));
+  assert.equal(spaceFromSaved(saved(chain)), null);
+  // nor one that follows a later placement, or has no follows at all
+  assert.equal(spaceFromSaved(saved([{ ...lead, follows: 1 }, third])), null);
+  const unset = JSON.parse(JSON.stringify(saved(three)).replace(/"follows":null,?/, ""));
+  assert.equal(spaceFromSaved(unset), null);
+});
+
+test("space hardware: a mirrored copy places its lead's item, not the one it stores", () => {
+  const design = paSpace();
+  const [sub, top] = design.speakers;
+  const [lead, copy] = design.space.placements;
+  // the lead is the sub alone; the copy stores the whole stack (both speakers), which the model does not read
+  const placements = [{ ...lead, item: { kind: SPACE_ITEM.speaker, id: sub.id } }, copy];
+  const power = ampPowerGroups({ ...design, space: { ...design.space, placements } });
+  assert.deepEqual(
+    power.map((s) => s.speaker.id),
+    [sub.id],
+  );
+  assert.ok(!power.some((s) => s.speaker.id === top.id));
+});
+
+test("space saves: a venue whose level reference or balance is not a known one is not read", () => {
+  const design = paSpace();
+  const withVenue = (over: Record<string, unknown>) =>
+    asDoc(
+      { ...design, space: { ...design.space, venue: { ...design.space.venue, ...over } } },
+      "doc1",
+      "Club",
+    );
+  assert.ok(spaceFromSaved(withVenue({})));
+  // an old balance id, and a reference that is only a string
+  assert.equal(spaceFromSaved(withVenue({ balance: "paMusic" })), null);
+  assert.equal(spaceFromSaved(withVenue({ levelRef: "somewhere" })), null);
+  // a draft in the browser reads the same way: dropped
+  assert.ok(spaceDraft.fromDraft(withVenue({})));
+  assert.equal(spaceDraft.fromDraft(withVenue({ balance: "paMusic" })), null);
 });

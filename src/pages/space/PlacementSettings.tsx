@@ -80,8 +80,14 @@ export function PlacementSettings({
     .map((g) => ({ id: String(g[0]), name: SPACE_TEXT.pairName(g.map((i) => names[i] ?? "")) }));
   const alignTo = (alignPick !== null ? byId(targets, alignPick) : undefined) ?? targets[0];
   const alone: SelectOption = { id: ALONE_ID, name: SPACE_TEXT.followsNone };
-  // it can follow an earlier placement only
-  const leads = [alone, ...names.slice(0, index).map((name, i) => ({ id: String(i), name }))];
+  // it can follow an earlier placement that stands on its own only (a mirror of a mirror is not a copy): a group's lead
+  const leads = [
+    alone,
+    ...groups
+      .map((g) => g[0])
+      .filter((i) => i < index)
+      .map((i) => ({ id: String(i), name: names[i] ?? "" })),
+  ];
   const follows = placement.follows !== null;
   /** how far either side of the center line its spot may go, ft */
   const half = room.widthFt / 2;

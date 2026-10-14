@@ -2,7 +2,7 @@
 // the signed-in user's saved stacks and speakers. Pure.
 import type { SpeakerSpec, StackDesign } from "../../types";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
-import { SPACE_TEXT } from "../../constants/space";
+import { PLACE_ID, PLACE_ID_PREFIX, SPACE_TEXT } from "../../constants/space";
 import { SPEAKER_TEMPLATE, SPEAKER_START_NAMES } from "../../constants/speakerStarts";
 import { STACK_START_DESIGN_NAMES, STACK_START_NAMES } from "../../constants/stackPresets";
 import { STACK_PRESETS, presetLayers } from "../stack/stackPresets";
@@ -71,17 +71,22 @@ export function placeOptions(sources: PlaceSources): PlaceOption[] {
   const groups = SPACE_TEXT.placeGroups;
   return [
     ...STACK_PRESETS.map((preset) =>
-      stackOption(`stack-preset:${preset}`, STACK_START_NAMES[preset], groups.stackPresets, () => {
-        const { stack, speakers } = presetLayers(preset, {
-          id: preset,
-          name: STACK_START_DESIGN_NAMES[preset],
-        });
-        return { stack, speakers };
-      }),
+      stackOption(
+        `${PLACE_ID_PREFIX.stackPreset}${preset}`,
+        STACK_START_NAMES[preset],
+        groups.stackPresets,
+        () => {
+          const { stack, speakers } = presetLayers(preset, {
+            id: preset,
+            name: STACK_START_DESIGN_NAMES[preset],
+          });
+          return { stack, speakers };
+        },
+      ),
     ),
     ...PLACE_TEMPLATES.map((template) =>
       speakerOption(
-        `speaker-template:${template}`,
+        `${PLACE_ID_PREFIX.speakerTemplate}${template}`,
         SPEAKER_START_NAMES[template],
         groups.speakerTemplates,
         () => ({ ...templateSpeaker(template), id: template }),
@@ -90,7 +95,7 @@ export function placeOptions(sources: PlaceSources): PlaceOption[] {
     ...(openStack.stack.members.length
       ? [
           stackOption(
-            "open-stack",
+            PLACE_ID.openStack,
             SPACE_TEXT.openStack(openStack.stack.name),
             groups.open,
             () => openStack,
@@ -100,7 +105,7 @@ export function placeOptions(sources: PlaceSources): PlaceOption[] {
     ...(openSpeaker.cabinet.chambers.some((c) => c.drivers.length)
       ? [
           speakerOption(
-            "open-speaker",
+            PLACE_ID.openSpeaker,
             SPACE_TEXT.openSpeaker(openSpeaker.name),
             groups.open,
             () => openSpeaker,
@@ -108,13 +113,13 @@ export function placeOptions(sources: PlaceSources): PlaceOption[] {
         ]
       : []),
     ...savedStacks.map((s) =>
-      stackOption(`saved-stack:${s.id}`, s.name, groups.savedStacks, () => ({
+      stackOption(`${PLACE_ID_PREFIX.savedStack}${s.id}`, s.name, groups.savedStacks, () => ({
         ...s.design,
         stack: { ...s.design.stack, id: s.id },
       })),
     ),
     ...savedSpeakers.map((s) =>
-      speakerOption(`saved-speaker:${s.id}`, s.name, groups.savedSpeakers, () => ({
+      speakerOption(`${PLACE_ID_PREFIX.savedSpeaker}${s.id}`, s.name, groups.savedSpeakers, () => ({
         ...s.spec,
         id: s.id,
         name: s.name,

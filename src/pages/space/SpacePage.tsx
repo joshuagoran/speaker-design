@@ -117,6 +117,15 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   /** the placement picked on the map (an index), and which placements show their controls: none at first */
   const [selected, setSelected] = useState<number | null>(null);
   const [openItems, setOpenItems] = useState<readonly number[]>([]);
+  // the design replaced whole (a start, a clear, an opened save, another space): the numbers no longer mean the same
+  // placements, so none is picked or open (reset while rendering, so no render holds a stale number)
+  const designKey = `${space.replaced}:${design.space.id}`;
+  const [seenKey, setSeenKey] = useState(designKey);
+  if (seenKey !== designKey) {
+    setSeenKey(designKey);
+    setSelected(null);
+    setOpenItems([]);
+  }
   /** the placement to bring into view after the next render, and whether to scroll (a count tells repeats apart) */
   const [reveal, setReveal] = useState<{ k: number; scroll: boolean; n: number } | null>(null);
   /** picks placement `k`: opens its item (and the Placements section), and scrolls it into view when `scroll` */
@@ -143,7 +152,9 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   };
   const picked = byId(placeList, placePick) ?? placeList[0];
   /** each placement's name: its number and what it places */
-  const names = placements.map((p, k) => `${k + 1}. ${itemName(design, p.item)}`);
+  const names = placements.map(
+    (_, k) => `${k + 1}. ${itemName(design, resolvedPlacement(placements, k).item)}`,
+  );
   const groups = placementGroups(placements);
   const boxes: MapBox[] = model.placements.map(({ item }, k) => {
     const sizes = item.boxes.map((b) => speakerLayout(b.speaker.cabinet).size);
@@ -364,10 +375,10 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(o.id)}
                 group={(o) => o.group}
-                onStart={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
+                onStart={() => space.replaceDesign(spaceFromStart(start, paPlannerDesign(planner)))}
                 secondary={{
                   label: SPACE_TEXT.clear,
-                  onClick: () => space.setDesign(emptySpace()),
+                  onClick: () => space.replaceDesign(emptySpace()),
                 }}
                 hint={SPACE_TEXT.startHint}
               />

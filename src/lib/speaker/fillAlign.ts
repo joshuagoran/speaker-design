@@ -10,6 +10,7 @@
 // fill is there for), at the space's input.
 import type { SpacePlacement, SpaceVenue } from "../../types";
 import { spaceGridRequest, spaceLevelAt, type SpaceModel } from "./spaceCoverage";
+import { followedLead } from "./spaceLayout";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { METERS_PER_FOOT } from "../../constants/units";
 import { FILL_ALIGN_BAND, FILL_PRECEDENCE_MS } from "../../constants/space";
@@ -17,13 +18,12 @@ import { FILL_ALIGN_BAND, FILL_PRECEDENCE_MS } from "../../constants/space";
 /** Milliseconds in a second. */
 const MS_PER_S = 1000;
 
-/** The placement that placement `k` follows at the end of its chain of mirror partners (itself when it is on its own). */
+/** The placement placement `k` is a mirrored copy of, or `k` itself when it is on its own (`followedLead`). */
 export function placementLead(
   placements: readonly Pick<SpacePlacement, "follows">[],
   k: number,
 ): number {
-  const j = placements[k]?.follows;
-  return j !== null && j !== undefined && j >= 0 && j < k ? placementLead(placements, j) : k;
+  return followedLead(placements, k) ?? k;
 }
 
 /** The placements that play with placement `k` as one: itself and its mirrored copies (one lead and its followers). */

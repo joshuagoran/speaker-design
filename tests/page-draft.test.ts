@@ -172,3 +172,20 @@ test("clearing the drafts brings back each page's default design, and storage th
   useStorage({}, true);
   clearPageDrafts();
 });
+
+test("a Space draft with a balance id from before is dropped, and the page starts on the empty space", () => {
+  const { space, stack, speakers } = paLayers();
+  const kept = JSON.stringify(spaceDraft.toDraft({ space, stacks: [stack], speakers }));
+  const old = kept.replace('"balance":"moreBass"', '"balance":"paMusic"');
+  assert.notEqual(old, kept, "the draft carries the old id");
+  const items: Record<string, string> = { [PAGE_DRAFT_KEYS.space]: old };
+  useStorage(items);
+  assert.deepEqual(readDraft(spaceDraft), spaceDraft.empty());
+  let read: unknown;
+  runSteps(useSpace, [
+    (page) => {
+      read = page.design;
+    },
+  ]);
+  assert.deepEqual(read, spaceDraft.empty());
+});

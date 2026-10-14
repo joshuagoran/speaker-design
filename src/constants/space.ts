@@ -34,6 +34,20 @@ export const DRIVER_PART = {
   hf: "hf",
 } as const;
 
+/** The Place list's fixed choice ids: the stack and the speaker open now. */
+export const PLACE_ID = {
+  openStack: "open-stack",
+  openSpeaker: "open-speaker",
+} as const;
+
+/** The Place list's id prefixes: a choice's id is its prefix and the preset, template or saved document it names. */
+export const PLACE_ID_PREFIX = {
+  stackPreset: "stack-preset:",
+  speakerTemplate: "speaker-template:",
+  savedStack: "saved-stack:",
+  savedSpeaker: "saved-speaker:",
+} as const;
+
 /** The ear's height of a seated listener, ft. */
 export const SEATED_EAR_FT = 3.5;
 
