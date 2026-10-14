@@ -17,7 +17,7 @@ import {
   spaceResponse,
   type SpaceGridRequest,
 } from "../../lib/speaker/spaceCoverage";
-import { resolvedPlacement } from "../../lib/speaker/spaceLayout";
+import { resolvedPlacement, wrapYawDeg, yawToward } from "../../lib/speaker/spaceLayout";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { startLayers } from "../stack/stackPresets";
@@ -30,7 +30,6 @@ import { fromStored, type StoredCoverageLayout } from "../coverage/useCoverageLa
 import { COVERAGE_LAYOUT_KEY } from "../../constants/coverageTestIds";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
-import { SPACE_YAW_DEG } from "../../constants/space";
 import type { PlaceItem } from "./placeOptions";
 import { DRAFT_SPACE_ID, emptySpace, spaceFromSaved, spaceSnapshot } from "./spaceSaves";
 import type {
@@ -512,12 +511,11 @@ export function useSpace() {
     /** turns a placement to face `p` on the floor (a follower turns the one it follows, mirrored) */
     aimPlacement: (k: number, p: FloorPoint) => {
       const at = resolvedPlacement(space.placements, k);
-      const deg = (Math.atan2(p.x - at.x, p.y - at.y) * 180) / Math.PI;
-      const yawDeg = Math.round(Math.max(-SPACE_YAW_DEG, Math.min(SPACE_YAW_DEG, deg)));
+      const yawDeg = yawToward(at, p);
       const j = leadOf(k);
       editPlacement(j, (o) => ({
         ...o,
-        aim: { ...o.aim, yawDeg: j === k ? yawDeg : -yawDeg },
+        aim: { ...o.aim, yawDeg: j === k ? yawDeg : wrapYawDeg(-yawDeg) },
       }));
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),

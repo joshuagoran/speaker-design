@@ -8,12 +8,8 @@ import { SelectField, type SelectOption } from "../../components/ui/SelectField"
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { byId } from "../../lib/tables";
-import {
-  SPACE_LIFT_MAX_IN,
-  SPACE_PITCH_DEG,
-  SPACE_TEXT,
-  SPACE_YAW_DEG,
-} from "../../constants/space";
+import { wrapYawDeg } from "../../lib/speaker/spaceLayout";
+import { SPACE_LIFT_MAX_IN, SPACE_PITCH_DEG, SPACE_TEXT } from "../../constants/space";
 import { INCHES_PER_FOOT } from "../../constants/units";
 import { FIELD_ROW, shownIn } from "../speaker/speakerFields";
 
@@ -130,10 +126,10 @@ export function PlacementSettings({
             <NumberField
               label={<Tooltip tip={SPACE_TEXT.yawTip}>{SPACE_TEXT.yaw}</Tooltip>}
               value={placement.aim.yawDeg}
-              min={-SPACE_YAW_DEG}
-              max={SPACE_YAW_DEG}
               step={1}
-              onChange={(yawDeg) => onEdit((p) => ({ ...p, aim: { ...p.aim, yawDeg } }))}
+              onChange={(yawDeg) =>
+                onEdit((p) => ({ ...p, aim: { ...p.aim, yawDeg: wrapYawDeg(yawDeg) } }))
+              }
             />
             <NumberField
               label={<Tooltip tip={SPACE_TEXT.pitchTip}>{SPACE_TEXT.pitch}</Tooltip>}

@@ -37,8 +37,9 @@ export const DRIVER_PART = {
 /** The ear's height of a seated listener, ft. */
 export const SEATED_EAR_FT = 3.5;
 
-/** How far a placement may turn either way on the floor, and tilt up or down, degrees. */
-export const SPACE_YAW_DEG = 90;
+/** A placement turns freely on the floor: its yaw wraps within this half turn either way (never clamps), degrees. */
+export const SPACE_YAW_DEG = 180;
+/** How far a placement may tilt up or down, degrees. */
 export const SPACE_PITCH_DEG = 30;
 
 /** The highest lift under a placement, in (a tall stand, a fly bar). */

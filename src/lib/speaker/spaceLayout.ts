@@ -12,6 +12,7 @@
 import type {
   BandId,
   DriverPart,
+  FloorPoint,
   SpaceDesign,
   SpacePlacement,
   SpeakerChamber,
@@ -33,13 +34,23 @@ import {
 import { stackMember } from "./specParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { INCHES_PER_FOOT, RAD } from "../../constants/units";
-import { DRIVER_PART } from "../../constants/space";
+import { DRIVER_PART, SPACE_YAW_DEG } from "../../constants/space";
 
 /** A point in the room, ft: across, down the room, up. */
 export interface RoomPoint {
   x: number;
   y: number;
   z: number;
+}
+
+/** A yaw wrapped into -180..180 (the half turn either way): 190 is -170, and a turn past 180 carries on smoothly. */
+export function wrapYawDeg(deg: number): number {
+  return deg - 360 * Math.ceil((deg - SPACE_YAW_DEG) / 360) + 0;
+}
+
+/** The yaw that faces point `to` from point `from` on the floor (ft), whole degrees in -180..180; 0 is straight down the room. */
+export function yawToward(from: FloorPoint, to: FloorPoint): number {
+  return wrapYawDeg(Math.round(Math.atan2(to.x - from.x, to.y - from.y) / RAD));
 }
 
 /**
@@ -60,7 +71,7 @@ export function resolvedPlacement(
     x: -lead.x,
     y: lead.y,
     liftIn: lead.liftIn,
-    aim: { yawDeg: -lead.aim.yawDeg, pitchDeg: lead.aim.pitchDeg },
+    aim: { yawDeg: wrapYawDeg(-lead.aim.yawDeg), pitchDeg: lead.aim.pitchDeg },
     mirror: !lead.mirror,
     levelDb: lead.levelDb,
     delayMs: lead.delayMs,
