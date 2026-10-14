@@ -13,6 +13,7 @@ import {
   type AmpChannel,
   type ChannelPower,
 } from "../../lib/pa/ampPower";
+import { AMP_RATING, ohmsOf } from "../../lib/power";
 import type { BalancedLevels } from "../../types";
 import type { CoverageInputs } from "./useCoverageMap";
 
@@ -92,6 +93,10 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
     gain,
   ]);
   if (!rows.length) return null;
+  // no amp model is chosen: below 8 Ω its rating is the ideal amp's (lib/power), an estimate
+  const lowImpedance = [subDriver.ts, midDriver.ts, ...(hornModel ? [hornModel] : [])].some(
+    (part) => ohmsOf(part) < AMP_RATING.imp,
+  );
   return (
     <div>
       <SectionHeading className="mb-1">{AMP_POWER_TEXT.heading}</SectionHeading>
@@ -100,6 +105,9 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
         rows={rows.map((r) => ({ key: r.channel, name: CHANNEL_NAMES[r.channel], power: r }))}
       />
       <p className="text-xs text-stone-500 mt-1">{AMP_POWER_TEXT.crestNote}</p>
+      {lowImpedance && (
+        <p className="text-xs text-stone-500 mt-1">{AMP_POWER_TEXT.lowImpedanceNote}</p>
+      )}
     </div>
   );
 }

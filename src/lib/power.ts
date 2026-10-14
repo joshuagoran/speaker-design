@@ -1,6 +1,8 @@
 // Watts and volts at a driver's nominal impedance: the one rule every engine (PA, Hi-fi, Speaker, Stack, Space and the
 // optimizers) uses to turn a power rating into a drive voltage and back. A driver takes `volts² / imp` watts; an amp is
-// a voltage ceiling, its watts rated into 8 Ω (`AMP_RATING`), so a 4 Ω driver takes twice an amp's rated watts.
+// a voltage ceiling, its watts rated into 8 Ω (`AMP_RATING`), so a 4 Ω driver takes twice an amp's rated watts. That is
+// an ideal amp, and an estimate: real amps list about 1.5× their 8 Ω watts into 4 Ω (src/data/catalog/amps.ts `w4`),
+// some less, but no design names its amp model yet, so there is no listed rating to read.
 // Pure.
 import type { NominalImpedance } from "../types";
 

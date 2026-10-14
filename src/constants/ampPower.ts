@@ -30,4 +30,7 @@ export const AMP_POWER_TEXT = {
   headroom: "Peak headroom",
   limit: "Limit",
   crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. Max peak is the power at the first limit.`,
+  /** shown when a driver is below 8 Ω: no amp model is chosen, so its rating there is an ideal amp's */
+  lowImpedanceNote:
+    "Below 8 Ω the amp rating is an estimate: an ideal amp, twice its 8 Ω watts into 4 Ω. Real amps list about 1.5×; check yours.",
 } as const;

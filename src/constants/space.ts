@@ -190,7 +190,8 @@ export const SPACE_TEXT = {
     "Cannot align: this placement and the one you pick must each hold a modeled stack or speaker.",
   feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
   ampPower: "Amp power",
-  ampPowerHint: "The power of the amp for each band, in watts into 8 Ω.",
+  ampPowerHint:
+    "The power of the amp for each band, in watts into 8 Ω. Into a 4 Ω driver the space takes twice that (an ideal amp, an estimate: real amps list about 1.5×).",
   ampPowerTip:
     "The space finds each speaker's limit from it. A mirrored pair, and a speaker placed twice, share one figure.",
   /** a band's amp power field: the band (or a passive network's bands) it is for */
