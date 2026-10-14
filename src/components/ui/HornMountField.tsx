@@ -12,11 +12,10 @@ import type { HornMountId } from "../../types";
 interface Props {
   choice: HornMountChoice;
   onChange: (mount: HornMountId) => void;
-  className?: string;
 }
 
 /** The horn mount setting (aluminum plate or plywood), the ply shown off where the driver's bolts don't fit it. */
-export function HornMountField({ choice, onChange, className }: Props) {
+export function HornMountField({ choice, onChange }: Props) {
   return (
     <ToggleGroup
       label={HORN_MOUNT_LABEL}
@@ -28,7 +27,6 @@ export function HornMountField({ choice, onChange, className }: Props) {
       options={keysOf(HORN_MOUNT_NAMES).map(
         (id) => [id, HORN_MOUNT_NAMES[id], choice.tips[id]] as const,
       )}
-      className={className}
     />
   );
 }

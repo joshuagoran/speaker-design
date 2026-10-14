@@ -17,7 +17,8 @@ import {
 } from "../../constants/space";
 import { formatSigned } from "../../lib/format";
 import { INCHES_PER_FOOT } from "../../constants/units";
-import { FIELD_ROW, shownIn } from "../speaker/speakerFields";
+import { shownIn } from "../speaker/speakerFields";
+import { FIELD_ROW, STACK } from "../../styles/layout";
 
 interface Props {
   index: number;
@@ -84,7 +85,7 @@ export function PlacementSettings({
       open={open}
       onOpenChange={onOpenChange}
     >
-      <div className="flex justify-end mb-3">
+      <div className="flex justify-end">
         <Button size="xs" onClick={onRemove}>
           {SPACE_TEXT.remove}
         </Button>
@@ -138,7 +139,7 @@ export function PlacementSettings({
           onChange={(pitchDeg) => onEdit((p) => ({ ...p, aim: { ...p.aim, pitchDeg } }))}
         />
       </div>
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="flex flex-wrap gap-2">
         <ToggleButton
           on={placement.mirror}
           title={SPACE_TEXT.mirrorTip}
@@ -170,7 +171,7 @@ export function PlacementSettings({
         />
       </div>
       {alignTo && (
-        <div className="mb-3">
+        <div className={STACK}>
           <div className={FIELD_ROW}>
             <SelectField
               label={<Tooltip tip={SPACE_TEXT.alignToTip}>{SPACE_TEXT.alignTo}</Tooltip>}
@@ -185,11 +186,7 @@ export function PlacementSettings({
           <Button size="xs" onClick={() => setAlignFailed(!onAlign(Number(alignTo.id)))}>
             {SPACE_TEXT.align}
           </Button>
-          {alignFailed && (
-            <div className="mt-2">
-              <Notice>{SPACE_TEXT.alignFillNone}</Notice>
-            </div>
-          )}
+          {alignFailed && <Notice>{SPACE_TEXT.alignFillNone}</Notice>}
         </div>
       )}
     </CardFold>

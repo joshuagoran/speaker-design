@@ -11,6 +11,7 @@ import {
   handleOffsetTip,
 } from "../../constants/hardware";
 import { keysOf } from "../../lib/records";
+import { STACK } from "../../styles/layout";
 import type { BoxHandles } from "../../types";
 
 interface Props {
@@ -18,16 +19,15 @@ interface Props {
   label: React.ReactNode;
   handles: BoxHandles;
   onChange: (change: Partial<BoxHandles>) => void;
-  className?: string;
 }
 
 /**
  * A box's handles: the model (or none), and with a model its two offsets from the preset place. The PA page's Build
  * settings and the Speaker page's Construction fold both show it.
  */
-export function HandleFields({ label, handles, onChange, className = "mb-3" }: Props) {
+export function HandleFields({ label, handles, onChange }: Props) {
   return (
-    <div className={className}>
+    <div className={STACK}>
       <ToggleGroup
         label={label}
         value={handles.model}
@@ -43,17 +43,16 @@ export function HandleFields({ label, handles, onChange, className = "mb-3" }: P
       />
       {handles.model !== NO_HANDLES &&
         keysOf(HANDLE_AXIS_NAMES).map((k) => (
-          <div key={k} className="mt-2">
-            <Slider
-              label={<Tooltip tip={handleOffsetTip(k)}>{handleOffsetLabel(k)}</Tooltip>}
-              value={handles[k]}
-              min={HANDLE_OFFSET_SLIDER.min}
-              max={HANDLE_OFFSET_SLIDER.max}
-              step={HANDLE_OFFSET_SLIDER.step}
-              unit="″"
-              onChange={(v) => onChange({ [k]: v })}
-            />
-          </div>
+          <Slider
+            key={k}
+            label={<Tooltip tip={handleOffsetTip(k)}>{handleOffsetLabel(k)}</Tooltip>}
+            value={handles[k]}
+            min={HANDLE_OFFSET_SLIDER.min}
+            max={HANDLE_OFFSET_SLIDER.max}
+            step={HANDLE_OFFSET_SLIDER.step}
+            unit="″"
+            onChange={(v) => onChange({ [k]: v })}
+          />
         ))}
     </div>
   );

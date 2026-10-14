@@ -10,6 +10,7 @@ import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES } from "../../../constants/limits";
 import { FONT } from "../../../styles/fonts";
 import { UI_TEXT } from "../../../constants/uiText";
+import { FLEX_STACK, STACK } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<
@@ -59,15 +60,14 @@ export function MidSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className="mt-2" style={{ fontFamily: FONT }}>
+      <section className={`mt-2 ${FLEX_STACK}`} style={{ fontFamily: FONT }}>
         <FoldHeading
           id="mid"
           title={UI_TEXT.midBass}
           folds={expandedSections}
           toggle={toggleSection}
-          className="mb-3"
         />
-        <FoldBody open={expandedSections.mid}>
+        <FoldBody open={expandedSections.mid} className={STACK}>
           {midModeled ? (
             <>
               <StatTileGrid
@@ -144,7 +144,6 @@ export function MidSection({ planner }: Props) {
                       ? nearestPoint(midModeled.max, subMidCrossoverHz)
                       : null,
                 })}
-                className="mt-4"
               />
             </>
           ) : (

@@ -65,10 +65,7 @@ export function SavedConfigs({
   const Wrap = bare ? "div" : "section";
   const namePrompt = "Name this setup";
   return (
-    <Wrap
-      className={bare ? `${RESULT_MAX_WIDTH} mb-3` : `${PAGE_WIDTH} pb-2`}
-      style={{ fontFamily: FONT }}
-    >
+    <Wrap className={bare ? RESULT_MAX_WIDTH : `${PAGE_WIDTH} pb-2`} style={{ fontFamily: FONT }}>
       <Card pad="lg" tone="tint">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
@@ -122,7 +119,7 @@ export function SavedConfigs({
           )}
         </div>
         {saved.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={cur ? cur.id : ""}
               aria-label="Load a saved configuration"

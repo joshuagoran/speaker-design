@@ -56,7 +56,6 @@ export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {
           ] as const
         }
         wrap={false}
-        className="mb-3"
       />
       <Slider
         label={room.outdoors ? "Area width" : "Width"}
@@ -87,7 +86,7 @@ export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {
             unit=" ft"
             onChange={actions.setCeilingFt}
           />
-          <div className="grid grid-cols-2 gap-x-3">
+          <div className="grid grid-cols-2 gap-3">
             {surfaces.map(([surface, name]) => (
               <SelectField
                 key={surface}
@@ -113,7 +112,6 @@ export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {
           ] as const
         }
         wrap={false}
-        className="mb-3"
       />
     </>
   );

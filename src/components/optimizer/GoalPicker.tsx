@@ -13,7 +13,7 @@ interface Props<G extends string> {
 /** Row of goal toggles for an optimizer. */
 export function GoalPicker<G extends string>({ defs, selected, onTap }: Props<G>) {
   return (
-    <div className="mt-3">
+    <div>
       <div className="text-sm text-stone-500 mb-1">
         Goal <span className="text-xs">(choose one or more, in priority order)</span>
       </div>

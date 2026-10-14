@@ -103,7 +103,7 @@ export function Slider({
   // pointer's position.
   const dragFrom = useRef<number | null>(null);
   return (
-    <div className="mb-3">
+    <div>
       <div className="flex justify-between items-center gap-3 mb-1">
         <span className="flex items-center gap-2">
           <label htmlFor={id} className="text-sm font-label text-stone-500">

@@ -9,6 +9,7 @@ import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES, SUB_LIMIT_NAMES } from "../../../constants/limits";
 import { FONT } from "../../../styles/fonts";
 import { UI_TEXT } from "../../../constants/uiText";
+import { FLEX_STACK, STACK } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<
@@ -54,15 +55,9 @@ export function SubSection({ planner, summary }: Props) {
   } = planner;
   return (
     <>
-      <section className="mt-2" style={{ fontFamily: FONT }}>
-        <FoldHeading
-          id="sub"
-          title={UI_TEXT.sub}
-          folds={expandedSections}
-          toggle={toggleSection}
-          className="mb-3"
-        />
-        <FoldBody open={expandedSections.sub}>
+      <section className={`mt-2 ${FLEX_STACK}`} style={{ fontFamily: FONT }}>
+        <FoldHeading id="sub" title={UI_TEXT.sub} folds={expandedSections} toggle={toggleSection} />
+        <FoldBody open={expandedSections.sub} className={STACK}>
           {summary}
           {subModeled ? (
             <StatRowGrid
@@ -132,7 +127,6 @@ export function SubSection({ planner, summary }: Props) {
                 aes: subDriver.ts.aes,
                 ampW: subAmpWatts,
               })}
-              className="mt-4"
             />
           )}
         </FoldBody>

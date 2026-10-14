@@ -39,7 +39,7 @@ export function FilterFields({ filters, newCornerHz, offName, onEdit }: Props) {
     return (
       // one grid for every row: the select spans both columns when there is no corner, so each row has the same width
       // and the select and the corner field sit on one line
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 items-start mb-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 items-start">
         <SelectField
           label={label}
           className={filter ? "" : "col-span-2"}

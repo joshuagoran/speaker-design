@@ -9,6 +9,7 @@ import { subBassLevel } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { UI_TEXT } from "../../../constants/uiText";
+import { STACK } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<
@@ -30,7 +31,7 @@ interface Props {
  * The system's summary: the sub's headline tiles and the system response chart (sub, mid-bass and horn together). Nothing
  * while the sub can't be modeled (the Sub section says why).
  */
-export function SystemSummary({ planner, className = "" }: Props) {
+export function SystemSummary({ planner }: Props) {
   const pal = usePalette();
   const {
     subMidCrossoverHz,
@@ -45,7 +46,7 @@ export function SystemSummary({ planner, className = "" }: Props) {
   } = planner;
   if (!subModeled) return null;
   return (
-    <section className={`min-w-0 ${className}`} style={{ fontFamily: FONT }}>
+    <section className={`min-w-0 ${STACK}`} style={{ fontFamily: FONT }}>
       <StatTileGrid
         tiles={[
           [STATS.netVolume, subNetLiters.toFixed(0), "L"],
@@ -55,7 +56,7 @@ export function SystemSummary({ planner, className = "" }: Props) {
           [isTower ? "Tower weight" : "Sub weight", subLiftLb.toFixed(0), "lb"],
         ]}
       />
-      <SectionHeading className="mb-3">{UI_TEXT.systemResponse}</SectionHeading>
+      <SectionHeading>{UI_TEXT.systemResponse}</SectionHeading>
       <ResponseChart
         fmax={FREQ_AXIS_MAX_HZ}
         series={[

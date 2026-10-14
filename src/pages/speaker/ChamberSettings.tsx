@@ -78,7 +78,8 @@ import {
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./speakerPlaces";
 import { PlaceFields } from "./PlaceFields";
 import { HornSettings } from "./HornSettings";
-import { FIELD_ROW, onFieldStep, shownIn, shownTenth } from "./speakerFields";
+import { onFieldStep, shownIn, shownTenth } from "./speakerFields";
+import { FIELD_ROW, STACK } from "../../styles/layout";
 import { hornRoom, startingHorn, withChamberLoad } from "./chamberLoad";
 import {
   defaultHornPlacement,
@@ -165,9 +166,8 @@ export function ChamberSettings({
    */
   const [driverRound, setDriverRound] = useState(0);
   return (
-    <Card className="mb-3">
+    <Card>
       <CardHeading
-        className="mb-3"
         action={
           onRemove && (
             <Button size="xs" onClick={onRemove}>
@@ -213,7 +213,6 @@ export function ChamberSettings({
       </SettingsFold>
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.netAirTip}>Net air</Tooltip>}
-        className="mb-2"
         value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
         onChange={(v) =>
           onEdit((c) => ({
@@ -231,7 +230,6 @@ export function ChamberSettings({
         min={0.5}
         step={SPEAKER_STEPS.netL}
         onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
-        className="mb-3"
       />
       <NumberField
         label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>Stuffing, %</Tooltip>}
@@ -239,11 +237,9 @@ export function ChamberSettings({
         min={0}
         step={5}
         onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
-        className="mb-3"
       />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.loadTip}>{SPEAKER_TEXT.load}</Tooltip>}
-        className="mb-3"
         value={chamber.load.kind}
         onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
         options={entriesOf(CHAMBER_LOAD_NAMES)}
@@ -277,7 +273,6 @@ export function ChamberSettings({
       )}
       <ToggleGroup
         label="Vent"
-        className="mb-3"
         value={vent.kind}
         onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
         options={entriesOf(VENT_KIND_NAMES)}
@@ -286,7 +281,6 @@ export function ChamberSettings({
         <>
           <ToggleGroup
             label="Port"
-            className="mb-3"
             value={vent.port.shape ?? PORT_SHAPE.round}
             onChange={(shape) =>
               setPort(
@@ -303,7 +297,7 @@ export function ChamberSettings({
             clearH={placed?.clear.h ?? chamber.dims.h - 2 * cabinet.panel.thicknessIn}
             onChange={setPort}
           />
-          {!vents && <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.ventFixed}</p>}
+          {!vents && <p className="text-xs text-stone-500">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
             label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
             value={vent.maxSpeedMs}
@@ -311,7 +305,6 @@ export function ChamberSettings({
             step={0.5}
             unit="m/s"
             onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
-            className="mb-3"
           />
         </>
       )}
@@ -354,7 +347,6 @@ export function ChamberSettings({
           {vents.position && (
             <ToggleGroup
               label={SPEAKER_TEXT.panel}
-              className="mb-2"
               value={vents.position.panel}
               onChange={(panel) =>
                 onEdit((c) => ({
@@ -367,9 +359,7 @@ export function ChamberSettings({
           )}
         </PlaceFields>
       )}
-      <CardHeading sub className="mt-1 mb-2">
-        Drivers
-      </CardHeading>
+      <CardHeading sub>Drivers</CardHeading>
       {chamber.drivers.map((driver, i) => (
         <DriverFields
           key={`${driverRound}:${i}`}
@@ -411,7 +401,7 @@ export function ChamberSettings({
         </Button>
       )}
       {result && result.gaps.length > 0 && (
-        <p className="text-sm text-orange-900 mt-3">
+        <p className="text-sm text-orange-900">
           Not modeled: {result.gaps.map((g) => MODEL_GAP_TEXT[g]).join("; ")}.
         </p>
       )}
@@ -459,7 +449,6 @@ export function PortFields({
       <>
         <ToggleGroup
           label="Ducts"
-          className="mb-3"
           value={port.n}
           onChange={(n) => onChange({ ...port, n })}
           options={[
@@ -478,7 +467,6 @@ export function PortFields({
         </div>
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
-          className="mb-3"
           value={port.divider}
           onChange={(divider) => onChange(withDuctDivider(port, divider, walls))}
           options={PANEL_NOMINAL_OPTIONS}
@@ -533,13 +521,12 @@ function SlotFields({
   const kind = (
     <ToggleGroup
       label={<Tooltip tip={SPEAKER_TEXT.slotKindTip}>{SPEAKER_TEXT.slotKind}</Tooltip>}
-      className="mb-1"
       value={letterbox ? SLOT_KIND.letterbox : SLOT_KIND.plain}
       onChange={(k) => onChange(withSlotKind(port, k))}
       options={entriesOf(SLOT_KIND_NAMES).map(([k, name]) => [k, name, SLOT_KIND_TIPS[k]] as const)}
     />
   );
-  const resets = <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.slotKindResets}</p>;
+  const resets = <p className="text-xs text-stone-500">{SPEAKER_TEXT.slotKindResets}</p>;
   if (letterbox)
     return (
       <>
@@ -569,7 +556,7 @@ function SlotFields({
           />
           <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
         </div>
-        <p className="text-xs text-stone-500 mb-3">
+        <p className="text-xs text-stone-500">
           {slotFolds(chamber.dims, { slotH: h, len }, t)
             ? SPEAKER_TEXT.slotFolds
             : SPEAKER_TEXT.slotStraight}
@@ -597,14 +584,12 @@ function SlotFields({
       </div>
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.slotPlaceTip}>{SPEAKER_TEXT.slotPlace}</Tooltip>}
-        className="mb-3"
         value={port.place ?? SLOT_PLACE.floor}
         onChange={(place) => onChange(withSlotPlace(port, place))}
         options={entriesOf(SLOT_PLACE_NAMES)}
       />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.slotLongSetByTip}>{SPEAKER_TEXT.slotLongSetBy}</Tooltip>}
-        className="mb-2"
         value={port.w === undefined ? SET_BY.auto : SET_BY.custom}
         onChange={(v) => {
           const { w: _w, ...rest } = port;
@@ -619,11 +604,9 @@ function SlotFields({
         disabled={port.w === undefined}
         min={0.25}
         onChange={(w) => onChange({ ...port, w })}
-        className="mb-3"
       />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.slotFoldTip}>{SPEAKER_TEXT.slotFold}</Tooltip>}
-        className="mb-3"
         value={!!port.folded}
         onChange={(folded) => {
           const { folded: _f, ...rest } = port;
@@ -673,7 +656,6 @@ function RoundFields({
       </div>
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.tubeEndsTip}>{SPEAKER_TEXT.tubeEnds}</Tooltip>}
-        className="mb-3"
         value={port.flared ? TUBE_ENDS.flared : TUBE_ENDS.plain}
         onChange={(ends) =>
           onChange(ends === TUBE_ENDS.flared ? { ...base, flared: true, corners: false } : base)
@@ -681,12 +663,11 @@ function RoundFields({
         options={entriesOf(TUBE_ENDS_NAMES)}
       />
       {port.flared && !hasSub && (
-        <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.tubeEndsNoSub}</p>
+        <p className="text-xs text-stone-500">{SPEAKER_TEXT.tubeEndsNoSub}</p>
       )}
       {port.flared && (
         <ToggleGroup
           label={SPEAKER_TEXT.tubeLayout}
-          className="mb-3"
           value={port.corners ? TUBE_LAYOUT.corners : TUBE_LAYOUT.row}
           onChange={(at) =>
             onChange({ ...base, flared: true, corners: at === TUBE_LAYOUT.corners })
@@ -696,7 +677,6 @@ function RoundFields({
       )}
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.elbowsTip}>{SPEAKER_TEXT.elbows}</Tooltip>}
-        className="mb-3"
         value={elbowCountOf(elbows ?? 0)}
         onChange={(e) => onChange({ ...port, elbows: e })}
         options={ELBOW_COUNTS.map((e) => [e, ELBOW_COUNT_NAMES[e]] as const)}
@@ -767,11 +747,11 @@ function DriverFields({
       bands: coaxial ? (slot === 0 ? [band, d.bands[1] ?? band] : [d.bands[0], band]) : [band],
     }));
   return (
-    <div className="border-t border-stone-300 pt-3 mb-3">
-      <div className="grid grid-cols-2 gap-x-3">
+    <div className={`border-t border-stone-300 pt-3 ${STACK}`}>
+      <div className="grid grid-cols-2 gap-3">
         <SelectField
           label="Type"
-          className={woofer ? undefined : "col-span-2 mb-4"}
+          className={woofer ? undefined : "col-span-2"}
           options={TYPE_OPTIONS}
           value={byId(TYPE_OPTIONS, type)}
           onChange={(o) => {
@@ -821,7 +801,6 @@ function DriverFields({
         min={1}
         step={1}
         onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
-        className="mb-3"
       />
       <div className={FIELD_ROW}>
         {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
@@ -843,7 +822,6 @@ function DriverFields({
       </div>
       <ToggleGroup
         label={coaxial ? "Cone's band" : "Band"}
-        className="mb-3"
         value={lowBand ?? null}
         onChange={(b) => setBand(0, b)}
         options={bandOptions}
@@ -851,7 +829,6 @@ function DriverFields({
       {coaxial && (
         <ToggleGroup
           label="HF section's band"
-          className="mb-3"
           value={highBand ?? null}
           onChange={(b) => setBand(1, b)}
           options={bandOptions}
@@ -876,19 +853,16 @@ function DriverFields({
         />
       )}
       {exitGap && (
-        <div className="mb-3">
-          <Notice>
-            {UI_TEXT.hornExitMismatch(
-              formatInches(exitGap.horn.exit),
-              formatInches(exitGap.driver.exit),
-            )}
-          </Notice>
-        </div>
+        <Notice>
+          {UI_TEXT.hornExitMismatch(
+            formatInches(exitGap.horn.exit),
+            formatInches(exitGap.driver.exit),
+          )}
+        </Notice>
       )}
       {driver.horn && (
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.hornMountTip}>Horn mounting</Tooltip>}
-          className="mb-3"
           value={driver.horn.placement}
           onChange={(placement) =>
             onEdit((d) =>
@@ -907,7 +881,6 @@ function DriverFields({
         <HornMountField
           choice={mountChoice}
           onChange={(mount) => onEdit((d) => (d.horn ? { ...d, horn: { ...d.horn, mount } } : d))}
-          className="mb-3"
         />
       )}
       <Button size="xs" onClick={onRemove}>

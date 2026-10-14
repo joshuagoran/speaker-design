@@ -1,6 +1,7 @@
 import { AnimatedDetails } from "./AnimatedDetails";
 import { Card } from "./Card";
 import { HOVER_TRANSITION } from "./buttonStyles";
+import { STACK } from "../../styles/layout";
 
 interface Props {
   /** the DOM id, to scroll it into view */
@@ -12,24 +13,15 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
-  className?: string;
 }
 
 /**
  * A card that folds, for a list of like items (a placement): its row shows the name and a one-line summary and opens to
  * the item's controls. The parent says which items are open.
  */
-export function CardFold({
-  id,
-  title,
-  summary,
-  open,
-  onOpenChange,
-  children,
-  className = "mb-3",
-}: Props) {
+export function CardFold({ id, title, summary, open, onOpenChange, children }: Props) {
   return (
-    <Card id={id} pad="none" className={className}>
+    <Card id={id} pad="none">
       <AnimatedDetails
         open={open}
         onOpenChange={onOpenChange}
@@ -49,7 +41,7 @@ export function CardFold({
         }
         summaryClassName={`flex items-center gap-3 min-h-11 px-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden group rounded ${HOVER_TRANSITION}`}
       >
-        <div className="px-3 pb-3">{children}</div>
+        <div className={`px-3 pb-3 ${STACK}`}>{children}</div>
       </AnimatedDetails>
     </Card>
   );

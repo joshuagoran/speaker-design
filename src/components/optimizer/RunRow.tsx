@@ -1,6 +1,7 @@
 import { Button } from "../ui/Button";
 import { Ellipsis } from "../ui/Ellipsis";
 import type { OptimizerProgress, PaOptimizerResult } from "../../types";
+import { STACK_TIGHT } from "../../styles/layout";
 
 interface Props {
   busy: boolean;
@@ -37,7 +38,7 @@ export function RunRow({
   children,
 }: Props) {
   return (
-    <div className="mt-3">
+    <div className={STACK_TIGHT}>
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">
           {runLabel}
@@ -87,7 +88,7 @@ function SearchProgress({
       ? Math.min(100, Math.max(0, (100 * progress.done) / progress.total))
       : 0;
   return (
-    <div className="mt-2 w-full max-w-md" data-testid="search-progress">
+    <div className="w-full max-w-md" data-testid="search-progress">
       <div
         className="h-1.5 w-full overflow-hidden rounded bg-stone-300"
         role="progressbar"

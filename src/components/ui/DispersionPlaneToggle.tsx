@@ -10,7 +10,7 @@ interface Props {
 /** Horizontal / Vertical buttons above a dispersion map. */
 export function DispersionPlaneToggle({ value, onChange }: Props) {
   return (
-    <div className="flex gap-1 mb-2" role="group" aria-label="Dispersion plane">
+    <div className="flex gap-1" role="group" aria-label="Dispersion plane">
       {DISPERSION_PLANES.map(([p, name]) => (
         <ToggleButton key={p} onClick={() => onChange(p)} on={value === p}>
           {name}
