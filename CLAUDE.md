@@ -56,6 +56,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Never attach session links (e.g. `Claude-Session:` trailers or claude.ai/code URLs) to commit messages, PR descriptions or comments.
 - Two layers enforce this: `.claude/settings.json` (`attribution.sessionUrl: false`) turns the links off in cloud sessions, and `.github/workflows/no-session-links.yml` strips them from PR bodies and fails a PR whose commits carry one.
 - A PR that finishes an issue says `Closes #N` so merging closes it.
+- PR titles and descriptions are short and in STE. The title names what changes for the user (e.g. "Space: add speakers or stacks, kept drafts"). The description has two sections: "What changes" (short bullets by area, written for the user, no internal names or code unless the change is internal) and "Tests" (one or two lines). Keep the description current: rewrite it when the PR changes, do not append.
 
 ## Agents and usage
 
