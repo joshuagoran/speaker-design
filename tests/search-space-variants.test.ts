@@ -25,15 +25,23 @@ test("every variant names a standard entry of the same maker and size", () => {
   }
 });
 
-test("no optimizer search space holds a variant: PA (quick and exact), Speaker and Stack", () => {
+test("no optimizer search space holds a variant but your own: PA (quick and exact), Speaker and Stack", () => {
   for (const cur of SUB_OPTIONS)
     for (const allSizes of [false, true]) {
       const ids = paSearchSubs(cur.id, false, Infinity, allSizes).map((s) => s.id);
       assert.ok(ids.length > 0, cur.id);
-      assert.deepEqual(ids.filter(isVariant), [], `PA, from ${cur.id}`);
+      assert.deepEqual(
+        ids.filter((id) => id !== cur.id && isVariant(id)),
+        [],
+        `PA, from ${cur.id}`,
+      );
     }
-  // a locked sub stays your own, a variant included
-  for (const v of variants) assert.deepEqual(paSearchSubs(v.id, true, Infinity, false), [v]);
+  // your own sub always joins its search, a variant included: locked alone, unlocked with the others
+  for (const v of variants) {
+    assert.deepEqual(paSearchSubs(v.id, true, Infinity, false), [v]);
+    for (const allSizes of [false, true])
+      assert.ok(paSearchSubs(v.id, false, Infinity, allSizes).includes(v), `PA keeps ${v.id}`);
+  }
   // the Speaker and Stack optimizers' units (the Stack runs each speaker's search): your part, and no other variant
   const base = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
   for (const cur of SUB_OPTIONS) {
@@ -50,6 +58,9 @@ test("no optimizer search space holds a variant: PA (quick and exact), Speaker a
       },
     };
     const units = searchUnits(spec, {}, SPEAKER_OPTIMIZER_CATALOG);
+    for (const u of units)
+      if (u.kind === "cone" && u.driverKind === DRIVER_KIND.sub)
+        assert.ok(u.drivers.includes(cur.id), `Speaker keeps ${cur.id}`);
     for (const u of units)
       if (u.kind === "cone")
         assert.deepEqual(

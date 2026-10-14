@@ -784,10 +784,11 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       aes: 1000,
       disp: 10.5,
     },
-    // Ciare gives no reference for this version (US Speaker labels it 1 W/1 m). The T/S give 100.5 dB at 2.83 V (2.6 %
-    // efficiency, 2.67 W into Re 3.0 Ω), the reference the 8 Ω sheet states, so it is about 97.5 dB at 1 W (4 Ω
-    // nominal). Stored as the 2.83 V figure: the Notes page compares `sens` with the T/S sensitivity at 2.83 V.
+    // Ciare's 100.5 dB, with no reference stated for this version (US Speaker labels it 1 W/1 m). Derived: the T/S give
+    // 100.5 dB at 2.83 V (2.6 % efficiency, 2.67 W into Re 3.0 Ω), the reference the 8 Ω sheet states, so it is about
+    // 97.5 dB at 1 W (4 Ω nominal). The Notes page's check against the T/S skips a derived figure.
     sens: 100.5,
+    sensDerived: true,
     // Ciare product page: depth 208 mm (US Speaker lists 207 mm)
     depthIn: 8.19,
     note: "[ciare.com product page, Oct 2026] 4 Ω version. Neo, 1000 W nominal (taken as the AES rating) / 2000 W continuous, 100.5 dB (reference not stated; the T/S say 2.83 V, about 97.5 dB at 1 W), 4 in (100 mm) coil, 30 mm winding, 14 mm gap, 8 kg (17.6 lb; US Speaker lists 19.8 lb). Gaps: other copies of the Ciare sheet give Fs 37\u201339 Hz, not 31 Hz; Ciare does not state how its 11.5 mm Xmax is defined (it equals (Hvc \u2212 Hg)/2 + Hg/4). Ciare lists a 354 mm cutout and 388 mm overall diameter, which look like 15 in figures; US Speaker lists 416 mm and 460 mm, so check the cutout on the part. Ciare recommends 90 L vented. Displacement not published; 10.5 L assumed.",

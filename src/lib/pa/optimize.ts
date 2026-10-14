@@ -691,7 +691,7 @@ export const paSearchAmps = (cur: PaDesignConfig, locks: PaOptimizerLocks) => ({
 /**
  * The subs a PA search tries: yours alone when it is locked (none when the tables don't have it); else every sub with
  * T/S that the budget allows, of your size class or of every size (`allSizes`, the exact search), each driver once
- * (`inSearchSpace`: no other impedance version of it).
+ * (`inSearchSpace`: no other impedance version of it), yours always, a variant included.
  */
 export function paSearchSubs(
   curId: string,
@@ -702,7 +702,7 @@ export function paSearchSubs(
   const curSub = byId(SUB_OPTIONS, curId);
   if (locked) return curSub ? [curSub] : [];
   const table = allSizes ? SUB_OPTIONS : subDriversOfSize(curSub ? curSub.size : 18);
-  return table.filter((o) => inSearchSpace(o) && !!o.ts && o.price <= budget);
+  return table.filter((o) => (o.id === curId || inSearchSpace(o)) && !!o.ts && o.price <= budget);
 }
 
 /**
@@ -1497,10 +1497,9 @@ export function optimizePaStack(
   }
   // the designs inside the limits that come closest to every goal, for the closest card when none keeps them
   const gapSum = (x: Score) => goals.reduce((sum, g) => sum + goalGap(g, x), 0);
-  add(
-    combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b)),
-    PA_FINALISTS.closest,
-  );
+  /** the designs inside the limits by how close they come to every goal: the closest finalists, and their batches */
+  const closestRanked = combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b));
+  add(closestRanked, PA_FINALISTS.closest);
   if (also.length && curM) {
     const cm = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
     const ranked = combos
@@ -1645,8 +1644,6 @@ export function optimizePaStack(
   const boxesOf = ({ c }: Combo) =>
     JSON.stringify([c.sub, c.cDim, c.portStyle, c.cVent, c.wall, c.mid, c.mDim, c.layout]);
   const pooledBoxes = new Set([...finalists.values()].map(boxesOf));
-  // the designs inside the limits by how close they come to every goal, for the closest card's batches
-  const closestCandidates = combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b));
   for (let batch = 0; batch < PA_FINALIST_BATCHES; batch++) {
     const r = chooseFrom(lim, target);
     if (r && r.cards[0].slot.kind === "first") break;
@@ -1666,7 +1663,7 @@ export function optimizePaStack(
     takeFrom(firstCandidates, PA_FINALISTS.cards);
     // with no card at all, the next closest designs too: the rule's weights can put every closest finalist the
     // estimate let in over a limit, which leaves nothing that passes to show
-    if (!r) takeFrom(closestCandidates, PA_FINALISTS.closest);
+    if (!r) takeFrom(closestRanked, PA_FINALISTS.closest);
     if (!next.length) break;
     for (const x of next) {
       finalists.set(JSON.stringify(x.c), x);

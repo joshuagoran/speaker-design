@@ -513,24 +513,39 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under a $900 budget and 80 lb, with the vent kept to its bottom slot, nothing that passes keeps the F3
-  // (the closest reaches 42 Hz against 41 Hz); 88 lb does. (Before datasheet Le this was $750 and 95 lb, offering $825;
-  // then 82 lb, offering 91 lb, until the lighter Ciare NDH18-4S data: from 81 lb its closest design keeps the goals
-  // once on the sliders, so it is the fix.)
-  const out = optimizePaStack({
-    ...base,
-    cur: pick(SEED_NAMES.blocky),
-    maxLb: 80,
-    budget: 900,
-    goal: "cheaper",
-    locks: { vent: true },
-  });
+  // "blocky" under a $900 budget, with the vent kept to its bottom slot. The weight limit comes from the search itself,
+  // so catalog edits move it with them: the lightest whole-lb limit at which a design that passes keeps the goals (the
+  // goal's card or a fix), found by halving. One lb under it only a closest card is left, and the near miss offers the
+  // 10 % more weight that reaches the goals again.
+  const run = (maxLb: number) =>
+    optimizePaStack({
+      ...base,
+      cur: pick(SEED_NAMES.blocky),
+      maxLb,
+      budget: 900,
+      goal: "cheaper",
+      locks: { vent: true },
+    });
+  const answers = (maxLb: number) => {
+    const kind = run(maxLb).cards[0]?.slot.kind;
+    return kind === "first" || kind === "fix";
+  };
+  let lo = 60,
+    hi = 125;
+  assert.ok(!answers(lo) && answers(hi), "the halving brackets the limit");
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (answers(mid)) hi = mid;
+    else lo = mid;
+  }
+  const maxLb = hi - 1;
+  const out = run(maxLb);
   assert.ok((out.goalMissing ?? "").startsWith(OUT_OF_REACH_LEAD), out.goalMissing ?? "no notice");
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];
   assert.ok(
-    opts.some((o) => o.set.maxLb === 88),
-    JSON.stringify(opts.map((o) => o.text)),
+    opts.some((o) => o.set.maxLb === Math.ceil(maxLb * 1.1)),
+    `${maxLb} lb: ${JSON.stringify(opts.map((o) => o.text))}`,
   );
 });
 

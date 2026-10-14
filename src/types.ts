@@ -128,7 +128,8 @@ export interface XmaxBand {
 /**
  * A driver's nominal impedance, Ω, from its datasheet: one field for every driver kind (a cone driver's T/S, a
  * compression driver's, a tweeter's or a coaxial's HF section). Every engine turns watts into volts at it (lib/power).
- * Absent where not entered: the engines then take 8 Ω (`FALLBACK_OHMS`), a gap the entry's note names.
+ * Absent where not entered yet: the absent field is the gap itself (no note needed), and the engines take 8 Ω
+ * (`FALLBACK_OHMS`).
  */
 export interface NominalImpedance {
   imp?: number;
@@ -211,8 +212,13 @@ export interface SubDriver {
   src: string;
   size: SubSize;
   ts: SubTS;
-  /** the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered */
+  /**
+   * the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered. A
+   * figure whose reference the maker doesn't state, worked out from the T/S, carries `sensDerived`.
+   */
   sens?: number;
+  /** `sens` is derived (its reference worked out from the T/S): the Notes page's check against the T/S skips it */
+  sensDerived?: true;
   /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
   depthIn?: number;
   /**

@@ -86,7 +86,8 @@ function subTsSensitivity(): number {
 export const DEFAULT_SUB = {
   name: d.sub.name,
   maker: MAKER_NAMES[d.sub.maker],
-  sens: d.sub.sens,
+  // a derived figure is no published claim to check against the T/S
+  sens: d.sub.sensDerived ? undefined : d.sub.sens,
   depthIn: d.sub.depthIn,
   tsSens: subTsSensitivity(),
 };
