@@ -179,7 +179,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
     space.band === "one"
       ? `${formatHz(space.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[space.band].name} band, ${formatHz(COVERAGE_BANDS[space.band].lo)}–${formatHz(COVERAGE_BANDS[space.band].hi)}`;
-  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.refTarget : null;
+  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.turn.target : null;
   const { audienceDb, audienceAtLimit } = space;
   const tiles: StatTileItem[] = [
     ...(audienceDb !== null
@@ -286,9 +286,9 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               {tiles.length > 0 && <StatTileGrid tiles={tiles} />}
               {view && (
                 <p className="text-sm text-stone-500 tabular-nums">
-                  {view.atLimit !== null && view.atLimit < view.target + view.gain - 0.05
-                    ? SPACE_TEXT.cannotReach(view.target + view.gain, view.atLimit)
-                    : SPACE_TEXT.turnedDown(-view.gain, view.target + view.gain)}
+                  {space.turn.atLimit !== null && space.turn.atLimit < space.turn.target - 0.05
+                    ? SPACE_TEXT.cannotReach(space.turn.target, space.turn.atLimit)
+                    : SPACE_TEXT.turnedDown(-space.turn.gain, space.turn.target)}
                 </p>
               )}
               {view && listenerRel !== null && (
