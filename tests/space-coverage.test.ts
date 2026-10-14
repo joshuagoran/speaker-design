@@ -132,7 +132,8 @@ function bandGapsDb(layout: CoverageLayout, model: SpaceModel) {
     const v = coverageSlots(scene, req.levels, [f], true)[0].out[page];
     const own = spaceOutputs(model, f);
     const sum = model.feeds
-      .filter((x) => x.placement === 0 && x.band === band)
+      // the left stack is the first box (a feed's id starts with its box's number)
+      .filter((x) => x.id.startsWith("0/") && x.band === band)
       .reduce((acc, x) => add(acc, own[x.id] ?? complex(0)), complex(0));
     assert.ok(v, page);
     out[page] = 20 * Math.log10(abs(sum) / abs(v));

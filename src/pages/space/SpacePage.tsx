@@ -58,8 +58,6 @@ import { placeOptions } from "./placeOptions";
 import { STACK_STARTS, startGroup } from "../stack/stackPresets";
 import { STACK_START, STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
 import { byId } from "../../lib/tables";
-import { placementGroups } from "../../lib/speaker/fillAlign";
-import { resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { spaceAlignment } from "../../lib/speaker/spaceAlignment";
 import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
 
@@ -81,7 +79,7 @@ const relClass = (rel: number) =>
 
 /**
  * The Space page (docs/speaker-designer-plan.md, L4b): stacks and speakers placed in a room, each at its spot, lift and
- * aim, a mirror pair following its partner; their amp power and alignment; the coverage across the floor on the fixed
+ * aim, a mirrored pair as one placement; their amp power and alignment; the coverage across the floor on the fixed
  * scale, the levels at the reference, a side view of the heights and tilts, and the response at the listener.
  */
 export function SpacePage({ space, stack, speakerPage, planner }: Props) {
@@ -152,18 +150,16 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   };
   const picked = byId(placeList, placePick) ?? placeList[0];
   /** each placement's name: its number and what it places */
-  const names = placements.map(
-    (_, k) => `${k + 1}. ${itemName(design, resolvedPlacement(placements, k).item)}`,
-  );
-  const groups = placementGroups(placements);
-  const boxes: MapBox[] = model.placements.map(({ item }, k) => {
+  const names = placements.map((p, k) => `${k + 1}. ${itemName(design, p.item)}`);
+  /** the boxes the map draws: a mirrored placement is two, labeled with its number and its side ("1L", "1R") */
+  const boxes: MapBox[] = model.placements.map(({ item }) => {
     const sizes = item.boxes.map((b) => speakerLayout(b.speaker.cabinet).size);
     const horn = item.drivers.map(driverPattern).find((p) => p.horn)?.horn;
     return {
       x: item.placement.x,
       y: item.placement.y,
       aim: item.placement.aim.yawDeg,
-      label: String(k + 1),
+      label: `${item.placement.source + 1}${item.placement.side ?? ""}`,
       footprint: {
         w: Math.max(0, ...sizes.map((s) => s.w)),
         d: Math.max(0, ...sizes.map((s) => s.d)),
@@ -196,7 +192,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
         ] satisfies StatTileItem[])
       : []),
   ];
-  const alignment = spaceAlignment(design, model);
+  const alignment = spaceAlignment(model);
   const powers = ampPowerGroups(design).reduce((n, s) => n + s.groups.length, 0);
   const delays = alignment.filter((r) => r.delayMs >= NO_DELAY_MS).length;
   const summaries: Record<SpaceSettingsSection, string> = {
@@ -245,11 +241,16 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 room={venue.room}
                 listener={venue.listener}
                 boxes={boxes}
-                selected={selected}
-                onSelect={pickOnMap}
+                selected={model.placements.flatMap((p, i) =>
+                  p.item.placement.source === selected ? [i] : [],
+                )}
+                onSelect={(i) => {
+                  const box = model.placements[i];
+                  if (box) pickOnMap(box.item.placement.source);
+                }}
                 actions={{
-                  moveBox: space.movePlacement,
-                  aimBox: space.aimPlacement,
+                  moveBox: space.moveBox,
+                  aimBox: space.aimBox,
                   moveListener: space.moveListener,
                 }}
                 busy={space.isPending}
@@ -454,7 +455,6 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                   key={k}
                   index={k}
                   placement={p}
-                  resolved={resolvedPlacement(placements, k)}
                   open={openItems.includes(k)}
                   onOpenChange={(open) =>
                     setOpenItems((o) => (open ? [...o, k] : o.filter((i) => i !== k)))
@@ -462,16 +462,10 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                   names={names}
                   room={venue.room}
                   onEdit={(edit) => space.editPlacement(k, edit)}
-                  onFollows={(follows) => space.setFollows(k, follows)}
                   onRemove={() => {
                     space.removePlacement(k);
                     afterRemoved(k);
                   }}
-                  onMirrorPair={() => {
-                    space.addMirrorPair(k);
-                    pickNew();
-                  }}
-                  groups={groups}
                   onAlign={(to) => space.alignTo(k, to)}
                 />
               ))}

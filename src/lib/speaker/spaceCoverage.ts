@@ -98,7 +98,7 @@ export function driverPattern(d: Pick<PlacedDriver, "driver" | "part" | "mouth">
   return piston(tweeter ? tweeter.domeIn : COAX_HF_EXIT_IN);
 }
 
-/** One placement in the model: laid out, its stack's response and limits, and its headroom. */
+/** One box in the model (a mirrored pair is two, `expandPlacements`): laid out, its stack's response and limits, and its headroom. */
 export interface SpacePlacementModel {
   item: PlacedItem;
   response: StackResponse | null;
@@ -109,7 +109,7 @@ export interface SpacePlacementModel {
 
 /** What a voice plays: its band's pressure at 1 m (one per speaker-model frequency), its level, delay, baffle and share. */
 interface VoiceFeed extends CoverageVoice {
-  /** the placement it belongs to, and the band it plays */
+  /** the placement it belongs to (its index in the space, shared by a mirrored pair's boxes), and the band it plays */
   placement: number;
   band: BandId;
   pressure: readonly Complex[];
@@ -125,6 +125,7 @@ interface VoiceFeed extends CoverageVoice {
 
 /** The space worked out: each placement, the scene to sum, what each voice plays, and the space's headroom. */
 export interface SpaceModel {
+  /** each box placed, in the placements' order, a mirrored pair as two */
   placements: SpacePlacementModel[];
   scene: CoverageScene;
   feeds: VoiceFeed[];
@@ -173,7 +174,7 @@ function placementModel(
 ): SpacePlacementModel {
   if (!item.stack) return { item, response: null, limits: null, headroomDb: null };
   const { placement } = item;
-  // what moves the model: the item (a mirror pair's placements share it)
+  // what moves the model: the item (a mirrored pair's boxes share it)
   const key = JSON.stringify(placement.item);
   let run = cache.get(key);
   if (!run) {
@@ -212,7 +213,7 @@ export function spaceModel(design: SpaceDesign): SpaceModel {
       const id = `${k}/${d.member}/${d.band}/${JSON.stringify(pattern)}`;
       if (!feeds.has(id))
         feeds.set(id, {
-          placement: k,
+          placement: placement.source,
           band: d.band,
           id,
           pattern,

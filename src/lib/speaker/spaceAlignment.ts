@@ -1,11 +1,10 @@
 // What a space asks of the processing ahead of its amps (docs/speaker-designer-plan.md, L4b): for each box and band, the
 // crossover filters, the level and the delay to set. Read from the model (the stack's crossovers, levels and worked-out
-// delays, and each placement's own level and delay). A lead and its mirrored copy are one entry: the copy plays what
-// its lead plays. Pure.
-import type { BandFilter, BandId, SpaceDesign, SpeakerBand } from "../../types";
+// delays, and each placement's own level and delay). A mirrored pair is one entry: its two boxes share the settings.
+// Pure.
+import type { BandFilter, BandId, SpeakerBand } from "../../types";
 import type { SpaceModel } from "./spaceCoverage";
 import { channelGroups } from "./spaceHardware";
-import { placementGroups } from "./fillAlign";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { NO_DELAY_MS, SPACE_TEXT } from "../../constants/space";
@@ -25,8 +24,8 @@ export const delayText = (ms: number) =>
 
 /** One box's band (or passive network) in the list: what to set for it. */
 export interface AlignmentRow {
-  /** the placements that play it: a lead and its mirrored copy (the lead first), or one on its own */
-  placements: readonly number[];
+  /** the placement that plays it (its index in the space; a mirrored pair is one placement) */
+  placement: number;
   /** the member's number in its stack (0 for a speaker alone) and its speaker's name */
   member: number;
   box: string;
@@ -52,20 +51,16 @@ function stricter(
 }
 
 /**
- * The alignment list: each placed box's bands in turn, in the placements' order. A mirrored copy follows its lead, so
- * the lead and its copy are one entry per band.
+ * The alignment list: each placed box's bands in turn, in the placements' order. A mirrored pair's boxes share their
+ * settings, so a pair is one entry per band.
  */
-export function spaceAlignment(
-  design: Pick<SpaceDesign, "space">,
-  model: Pick<SpaceModel, "placements">,
-): AlignmentRow[] {
-  /** the rows of a group, as the model plays its lead */
-  const rowsOf = (group: readonly number[]): AlignmentRow[] => {
-    const placed = model.placements[group[0]];
-    const response = placed?.response;
-    if (!placed?.item.stack || !response) return [];
+export function spaceAlignment(model: Pick<SpaceModel, "placements">): AlignmentRow[] {
+  return model.placements.flatMap((placed): AlignmentRow[] => {
+    const { image, source, levelDb, delayMs: placementDelayMs } = placed.item.placement;
+    const response = placed.response;
+    // the image box plays what the box as set plays
+    if (image || !placed.item.stack || !response) return [];
     const { stack } = placed.item.stack;
-    const { levelDb, delayMs: placementDelayMs } = placed.item.placement;
     return stack.members.flatMap((member, k) => {
       const fed = response.members[k];
       if (!fed) return [];
@@ -75,7 +70,7 @@ export function spaceAlignment(
         const bands = ids.flatMap((id) => speaker.bands.filter((b) => b.id === id));
         const active = bands.length === 1 && bands[0].drive === HIFI_DRIVE.active ? bands[0] : null;
         return {
-          placements: group,
+          placement: source,
           member: k,
           box: speaker.name,
           bands: bands.map(({ id, name }) => ({ id, name })),
@@ -88,6 +83,5 @@ export function spaceAlignment(
         };
       });
     });
-  };
-  return placementGroups(design.space.placements).flatMap(rowsOf);
+  });
 }

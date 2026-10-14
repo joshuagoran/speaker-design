@@ -17,18 +17,13 @@ import {
   spaceResponse,
   type SpaceGridRequest,
 } from "../../lib/speaker/spaceCoverage";
-import {
-  followedLead,
-  resolvedPlacement,
-  wrapYawDeg,
-  yawToward,
-} from "../../lib/speaker/spaceLayout";
+import { aimedPlacement, movedPlacement } from "../../lib/speaker/spaceLayout";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { startLayers } from "../stack/stackPresets";
 import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
-import { fillAlignment, placementLead } from "../../lib/speaker/fillAlign";
+import { fillAlignment } from "../../lib/speaker/fillAlign";
 import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
 import { fromStored, type StoredCoverageLayout } from "../coverage/useCoverageLayout";
@@ -46,6 +41,7 @@ import type {
   CoverageLevelRef,
   FloorPoint,
   PaPlannerDesign,
+  PlacedSource,
   SavedConfig,
   SpaceDesign,
   SpacePlacement,
@@ -62,6 +58,9 @@ const MISSING_SPACE_TEXT = "That save holds no space";
 /** Where a new placement stands: a little off the front wall, in the middle, ft. */
 const NEW_SPOT: FloorPoint = { x: 0, y: 3 };
 
+/** The room's floor: its width and length, ft. */
+type RoomFloor = Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
+
 /** Snaps to a quarter foot. */
 const snap = (v: number) => Math.round(v * 4) / 4;
 
@@ -69,20 +68,17 @@ const snap = (v: number) => Math.round(v * 4) / 4;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** A point kept on the room's floor, ft. */
-const inRoom = <P extends FloorPoint>(p: P, room: SpaceVenue["room"]): P => ({
+const inRoom = <P extends FloorPoint>(p: P, room: RoomFloor): P => ({
   ...p,
   x: clamp(p.x, -room.widthFt / 2, room.widthFt / 2),
   y: clamp(p.y, 0, room.lengthFt),
 });
 
 /** A point snapped to a quarter foot and kept on the room's floor, ft (a drag). */
-const onFloor = (p: FloorPoint, room: SpaceVenue["room"]): FloorPoint =>
+const onFloor = (p: FloorPoint, room: RoomFloor): FloorPoint =>
   inRoom({ x: snap(p.x), y: snap(p.y) }, room);
 
-/**
- * A space kept inside its room (after the room changes size): each placement's spot on the floor (a follower's stored
- * spot too, so it lands inside when it goes on its own) and the listener.
- */
+/** A space kept inside its room (after the room changes size): each placement's spot on the floor and the listener. */
 export function fittedSpace(space: SpaceSpec): SpaceSpec {
   const { room } = space.venue;
   return {
@@ -95,42 +91,33 @@ export function fittedSpace(space: SpaceSpec): SpaceSpec {
   };
 }
 
+/** The box a map drag names, as the model places it (an index into its boxes): which placement it is and where it stands. */
+export type DraggedBox = Pick<PlacedSource, "source" | "image" | "x" | "y">;
+
 /**
- * The placements with placement `k` set to follow placement `follows` (an earlier one that stands on its own: a mirror of
- * a mirror is not a copy, so any other is refused and the placements stay), or to stand on its own (null). Either way it
- * keeps where it stands as it stands: on its own, where its lead put it; following, its lead's item, spot, lift and aim
- * mirrored. Copies of its own then stand on their own, where they stood.
+ * The placements after a map drag moved a box to `p`, snapped and kept on the floor: the box as set moves its placement
+ * there; the mirror image of a pair moves it to the mirror image of the spot, so the other box follows as its mirror.
  */
-export function withFollows(
+export function withBoxMoved(
   placements: readonly SpacePlacement[],
-  k: number,
-  follows: SpacePlacement["follows"],
+  box: DraggedBox,
+  p: FloorPoint,
+  room: RoomFloor,
 ): SpacePlacement[] {
-  const before = resolvedPlacement(placements, k);
-  const set = placements.map((p, i) => (i === k ? { ...p, follows } : p));
-  if (follows === null) return set.map((p, i) => (i === k ? { ...before, follows } : p));
-  if (followedLead(set, k) !== follows) return [...placements];
-  // following, it stands as its lead puts it; the copies of its own were its (now they would chain)
-  const after = resolvedPlacement(set, k);
-  return set.map((p, i) => {
-    if (i === k) return { ...after, follows };
-    return p.follows === k ? { ...resolvedPlacement(placements, i), follows: null } : p;
-  });
+  const to = onFloor(p, room);
+  return placements.map((o, i) => (i === box.source ? movedPlacement(o, box.image, to) : o));
 }
 
 /**
- * The placements left when placement `k` goes: one that followed it keeps where it stood, on its own; the later ones'
- * references move down one.
+ * The placements after a map drag turned a box to face `p` on the floor: the box as set turns its placement; the image
+ * of a pair turns it the other way, so the other box follows as its mirror.
  */
-export function withoutPlacement(
+export function withBoxAimed(
   placements: readonly SpacePlacement[],
-  k: number,
+  box: DraggedBox,
+  p: FloorPoint,
 ): SpacePlacement[] {
-  return placements.flatMap((p, i) => {
-    if (i === k) return [];
-    if (p.follows === k) return [{ ...resolvedPlacement(placements, i), follows: null }];
-    return [{ ...p, follows: p.follows !== null && p.follows > k ? p.follows - 1 : p.follows }];
-  });
+  return placements.map((o, i) => (i === box.source ? aimedPlacement(o, box, p) : o));
 }
 
 /**
@@ -467,9 +454,8 @@ export function useSpace() {
     editSpace((s) => ({ ...s, placements: edit(s.placements) }));
   const editPlacement = (k: number, edit: (p: SpacePlacement) => SpacePlacement) =>
     editPlacements((list) => list.map((p, i) => (i === k ? edit(p) : p)));
-  /** the placement a map drag moves: the one a mirrored copy follows */
-  const leadOf = (k: number) => placementLead(space.placements, k);
-  const isFollower = (k: number) => leadOf(k) !== k;
+  /** the box the model places at index `i` (what the map draws; a mirrored pair is two boxes) */
+  const boxAt = (i: number): DraggedBox | undefined => model.placements[i]?.item.placement;
   const editVenue = (edit: (v: SpaceVenue) => SpaceVenue) =>
     editSpace((s) => ({ ...s, venue: edit(s.venue) }));
   const replaceDesign = (d: SpaceDesign) => {
@@ -517,42 +503,24 @@ export function useSpace() {
     setName: (name: string) => editSpace((s) => ({ ...s, name })),
     editVenue,
     editPlacement,
-    isFollower,
     /** places a Place choice's item at the new spot, its speakers copied into the space */
     place: (item: PlaceItem) => setDesign((d) => withItemPlaced(d, item)),
-    /** adds placement `k`'s mirror image across the center line, following it */
-    addMirrorPair: (k: number) =>
-      editPlacements((list) =>
-        // a copy has no copy of its own (it is already half of a pair)
-        followedLead(list, k) === null
-          ? withFollows([...list, list[k]], list.length, k)
-          : [...list],
-      ),
-    /** sets placement `k` to follow placement `follows`, or to stand on its own (null), where it stands */
-    setFollows: (k: number, follows: SpacePlacement["follows"]) =>
-      editPlacements((list) => withFollows(list, k, follows)),
     /** removes a placement; a stack or speaker nothing places any more stays (the save keeps only what is placed) */
-    removePlacement: (k: number) => editPlacements((list) => withoutPlacement(list, k)),
-    /** moves a placement on the floor (a follower moves the one it follows, mirrored) */
-    movePlacement: (k: number, p: FloorPoint) => {
-      const j = leadOf(k);
-      const to = onFloor(j === k ? p : { x: -p.x, y: p.y }, venue.room);
-      editPlacement(j, (o) => ({ ...o, ...to }));
+    removePlacement: (k: number) => editPlacements((list) => list.filter((_, i) => i !== k)),
+    /** moves a box of the map (an index into the model's boxes) on the floor; its placement's other box follows */
+    moveBox: (i: number, p: FloorPoint) => {
+      const box = boxAt(i);
+      if (box) editPlacements((list) => withBoxMoved(list, box, p, venue.room));
     },
-    /** turns a placement to face `p` on the floor (a follower turns the one it follows, mirrored) */
-    aimPlacement: (k: number, p: FloorPoint) => {
-      const at = resolvedPlacement(space.placements, k);
-      const yawDeg = yawToward(at, p);
-      const j = leadOf(k);
-      editPlacement(j, (o) => ({
-        ...o,
-        aim: { ...o.aim, yawDeg: j === k ? yawDeg : wrapYawDeg(-yawDeg) },
-      }));
+    /** turns a box of the map to face `p` on the floor; its placement's other box follows */
+    aimBox: (i: number, p: FloorPoint) => {
+      const box = boxAt(i);
+      if (box) editPlacements((list) => withBoxAimed(list, box, p));
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /**
-     * sets the delay and level of placement `k` (its lead, with its mirrored copy following) to play with placement `to`
-     * and its copy at the listener, a little after them (lib/speaker/fillAlign); false when there is nothing to align to
+     * sets the delay and level of placement `k` (a mirrored pair is one placement) to play with placement `to` at the
+     * listener, a little after it (lib/speaker/fillAlign); false when there is nothing to align to
      */
     alignTo: (k: number, to: number) => {
       const aligned = fillAlignment(model, venue, space.placements, k, to);

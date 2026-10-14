@@ -33,7 +33,7 @@ import type {
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
-import type { DRIVER_PART } from "./constants/space";
+import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
@@ -2242,15 +2242,29 @@ export interface SpacePlacement extends FloorPoint {
   aim: SpaceAim;
   mirror: boolean;
   /**
-   * a left and right pair: the earlier placement (an index) this one is the mirror image of across the room's center
-   * line; its item, spot, lift, aim, level and delay follow that one's, x and yaw turned over, the image mirrored (its
-   * own `levelDb` and `delayMs` are not read). Null: placed on its own.
+   * a left and right pair: the placement stands twice, as set and as its mirror image across the room's center line
+   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level and delay
+   * (`expandPlacements`)
    */
-  follows: number | null;
+  mirrored: boolean;
   /** the front end's level on its feed, against the space's other placements, dB (a fill under the mains) */
   levelDb: number;
   /** the front end's delay on its feed, ms (a fill waiting for the mains) */
   delayMs: number;
+}
+
+/** Which side of the center line a box of a mirrored pair stands on, seen from the listener, by id (`PAIR_SIDE`). */
+export type PairSide = (typeof PAIR_SIDE)[keyof typeof PAIR_SIDE];
+
+/**
+ * One box the model places: a placement as it stands (`expandPlacements`). `source` is the placement's index in the
+ * space; `image` is set for the mirror image of a mirrored pair; `side` is the box's side of the center line in a
+ * pair, null for a placement on its own.
+ */
+export interface PlacedSource extends SpacePlacement {
+  source: number;
+  image: boolean;
+  side: PairSide | null;
 }
 
 /** Which part of a driver entry radiates, by id (`DRIVER_PART`): its cone or its HF section. */

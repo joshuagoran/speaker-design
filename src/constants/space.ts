@@ -25,6 +25,12 @@ export const SPACE_HOME_ROOM: CoverageRoom = {
 /** The room is at least this much wider than a pair of speakers, and longer than its seat is from the front wall, ft. */
 export const SPACE_HOME_MARGIN_FT = 4;
 
+/**
+ * The side of the center line each box of a mirrored pair stands on, seen from the listener (+x is right): the map
+ * labels the box with it after the placement's number ("1L", "1R").
+ */
+export const PAIR_SIDE = { left: "L", right: "R" } as const;
+
 /** The level a living room should get, dB SPL: loud music at home. */
 export const SPACE_HOME_TARGET_DB = 90;
 
@@ -130,13 +136,11 @@ export const SPACE_TEXT = {
   /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its level, dB */
   placementSummary: (fromCenter: string, fromFront: string, level: string) =>
     `${fromCenter} ft from the center line · ${fromFront} ft from the front wall · ${level} dB`,
-  addPair: "Add a mirrored copy",
-  addPairTip:
-    "Adds a copy on the other side of the room's center line. The copy follows this placement: its position, aim, level, delay and amp power.",
-  follows: "Mirror of",
-  followsNone: "None (placed on its own)",
-  followsTip:
-    "A left and right pair: this placement follows the one you pick. It takes that placement's position, aim, level and delay, mirrored across the room's center line.",
+  mirrored: "Mirrored pair",
+  mirroredTip:
+    "Adds a copy on the other side of the center line. It mirrors this box's position and rotation.",
+  /** a mirrored placement's folded row says it stands twice */
+  pairSummary: "pair",
   fromCenter: "From the center line, ft",
   fromCenterTip:
     "Its front center from the room's center line. + is to the right, seen from the listener.",
@@ -157,14 +161,12 @@ export const SPACE_TEXT = {
     "The placement to line this one up with, for a fill that plays after it. Move the listener to the area this placement covers first. The Align button sets this placement's Delay and Level.",
   align: "Align",
   delayTip: `The Align button lines this placement up with the one you pick, plus ${FILL_PRECEDENCE_MS} ms. Adding ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms more than the path difference makes people hear the sound from the main speakers.`,
-  /** a mirror pair in the "Align to" list: its placements' names */
-  pairName: (names: readonly string[]) => names.join(" + "),
   alignFillNone:
     "Cannot align: this placement and the one you pick must each hold a modeled stack or speaker.",
   feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
   ampPower: "Amp power",
   ampPowerHint:
-    "The power of the amp for each band, in watts into 8 Ω. The model finds each speaker's limit from it. A mirrored copy, and a speaker placed twice, share one figure.",
+    "The power of the amp for each band, in watts into 8 Ω. The model finds each speaker's limit from it. A mirrored pair, and a speaker placed twice, share one figure.",
   /** a band's amp power field: the band (or a passive network's bands) it is for */
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
   alignment: "Alignment",

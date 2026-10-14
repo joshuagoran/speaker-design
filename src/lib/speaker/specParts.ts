@@ -79,8 +79,8 @@ export const stackMember = (
 ): StackMember => ({ speakerId, pose, mirror: false, crossover, levelDb: 0, delayMs: 0 });
 
 /**
- * A placement at `spot`, `liftIn` up, turned `yawDeg` on the floor: no tilt, level or delay of its own; a mirror image
- * of placement `follows` where one is named (a left and right pair).
+ * A placement at `spot`, `liftIn` up, turned `yawDeg` on the floor: no tilt, level or delay of its own; `mirrored`
+ * stands it twice, the second a mirror image across the center line (a left and right pair).
  */
 export const spacePlacement = (
   spot: FloorPoint,
@@ -89,8 +89,8 @@ export const spacePlacement = (
   {
     yawDeg = 0,
     mirror = false,
-    follows = null,
-  }: Partial<Pick<SpaceAim, "yawDeg">> & Partial<Pick<SpacePlacement, "mirror" | "follows">> = {},
+    mirrored = false,
+  }: Partial<Pick<SpaceAim, "yawDeg">> & Partial<Pick<SpacePlacement, "mirror" | "mirrored">> = {},
 ): SpacePlacement => ({
   x: spot.x,
   y: spot.y,
@@ -98,7 +98,7 @@ export const spacePlacement = (
   liftIn,
   aim: { yawDeg, pitchDeg: 0 },
   mirror,
-  follows,
+  mirrored,
   levelDb: 0,
   delayMs: 0,
 });

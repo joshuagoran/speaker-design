@@ -255,21 +255,19 @@ export function layersFromHifi(
     highpass: subHighpass ? lrFilter(subHighpass.hz, subHighpass.order) : null,
     lowpass: null,
   };
-  /** the speaker's stack at `side` -1 (left) or 1 (right) of the middle; the right one follows the left */
-  const placement = (side: -1 | 1): SpacePlacement =>
-    spacePlacement(
-      { x: (side * state.speakerSpacingFt) / 2, y: state.distanceToWallFt },
-      { kind: SPACE_ITEM.stack, id: design.id },
-      state.standHeightIn,
-      // toed in: the left one turns toward +x, the right one toward −x
-      { yawDeg: -side * state.toeInDeg, mirror: side === 1, follows: side === 1 ? 0 : null },
-    );
+  /** the speaker's stack left of the middle, toed in (turned toward +x); mirrored, the right one is its image */
+  const placement: SpacePlacement = spacePlacement(
+    { x: -state.speakerSpacingFt / 2, y: state.distanceToWallFt },
+    { kind: SPACE_ITEM.stack, id: design.id },
+    state.standHeightIn,
+    { yawDeg: state.toeInDeg, mirrored: true },
+  );
   return {
     speakers: [speaker],
     stack: { ...design, members: [stackMember(speaker.id, crossover)], notes: "" },
     space: {
       ...design,
-      placements: [placement(-1), placement(1)],
+      placements: [placement],
       // the seat is `listeningSeat.y` back from the speakers
       venue: homeVenue(
         state.speakerSpacingFt,

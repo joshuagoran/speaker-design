@@ -65,8 +65,11 @@ interface Props {
   listener: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
-  /** the box picked (its index) and the pick of one by a press on it or its aim dot; both absent, the map has no pick */
-  selected?: number | null;
+  /**
+   * the boxes picked (their indexes; a mirrored pair's two boxes are one pick) and the pick of one by a press on it or
+   * its aim dot; both absent, the map has no pick
+   */
+  selected?: readonly number[];
   onSelect?: (i: number) => void;
   /** the most height the map may take, px */
   maxHeight: number;
@@ -85,7 +88,7 @@ export function CoverageMap({
   listener,
   actions,
   boxes,
-  selected = null,
+  selected = [],
   onSelect,
   maxHeight,
   busy,
@@ -398,8 +401,8 @@ export function CoverageMap({
                   height={bh}
                   rx="3"
                   fill={ON_DATA.ink}
-                  stroke={i === selected ? ON_DATA.cyan : ON_DATA.white}
-                  strokeWidth={i === selected ? 3 : 1.5}
+                  stroke={selected.includes(i) ? ON_DATA.cyan : ON_DATA.white}
+                  strokeWidth={selected.includes(i) ? 3 : 1.5}
                 />
               </g>
               <text

@@ -41,11 +41,12 @@ interface Props {
  */
 export function HardwareSettings({ design, alignment, names, space }: Props) {
   const speakers = ampPowerGroups(design);
-  /** the alignment rows by the placements that play them (a mirrored copy with its lead, once), in order */
-  const cards = [...new Set(alignment.map((r) => r.placements.join()))].map((key) => {
-    const rows = alignment.filter((r) => r.placements.join() === key);
-    return { key, rows, title: SPACE_TEXT.pairName(rows[0].placements.map((k) => names[k])) };
-  });
+  /** the alignment rows by the placement that plays them (a mirrored pair is one), in order */
+  const cards = [...new Set(alignment.map((r) => r.placement))].map((placement) => ({
+    placement,
+    rows: alignment.filter((r) => r.placement === placement),
+    title: names[placement] ?? "",
+  }));
   return (
     <>
       <h4 className="font-semibold mb-1">{SPACE_TEXT.ampPower}</h4>
@@ -70,8 +71,8 @@ export function HardwareSettings({ design, alignment, names, space }: Props) {
       ))}
       <h4 className="font-semibold mt-2 mb-1">{SPACE_TEXT.alignment}</h4>
       <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.alignmentHint}</p>
-      {cards.map(({ key, rows, title }) => (
-        <Card key={key} className="mb-3">
+      {cards.map(({ placement, rows, title }) => (
+        <Card key={placement} className="mb-3">
           <CardHeading className="mb-2 min-w-0 truncate">{title}</CardHeading>
           <StatRowGrid
             rows={rows.map((r) => [

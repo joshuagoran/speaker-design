@@ -9,7 +9,7 @@
 import type { FloorPoint, SpaceDesign, SpaceVenue } from "../../types";
 import { oneMeterSpot } from "../pa/coverage";
 import { AUTO_BALANCE_TILT, tiltAt } from "./autoBalance";
-import { placementStack, resolvedPlacement } from "./spaceLayout";
+import { expandPlacements, placementStack } from "./spaceLayout";
 import { stackCrossoversHz } from "./stackResponse";
 import type { AutoBalanceMode } from "../../constants/autoBalance";
 
@@ -18,10 +18,8 @@ import type { AutoBalanceMode } from "../../constants/autoBalance";
  * between placements (a sub alone and the tops on their stands cross between their input ranges).
  */
 export function spaceCrossoversHz(design: Pick<SpaceDesign, "space" | "stacks" | "speakers">) {
-  const members = design.space.placements.flatMap(
-    (_, k) =>
-      placementStack(design, resolvedPlacement(design.space.placements, k).item)?.stack.members ??
-      [],
+  const members = expandPlacements(design.space.placements).flatMap(
+    (p) => placementStack(design, p.item)?.stack.members ?? [],
   );
   return stackCrossoversHz({ members }, design.speakers);
 }
@@ -49,9 +47,8 @@ export function oneMeterSpots(
   design: Pick<SpaceDesign, "space">,
   room: Pick<SpaceVenue["room"], "widthFt" | "lengthFt">,
 ): FloorPoint[] {
-  return design.space.placements.map((_, k) => {
-    const p = resolvedPlacement(design.space.placements, k);
+  return expandPlacements(design.space.placements).map((p) =>
     // its spot is its front: no depth to step past
-    return oneMeterSpot({ x: p.x, y: p.y, aim: p.aim.yawDeg }, FRONT_SPOT, room);
-  });
+    oneMeterSpot({ x: p.x, y: p.y, aim: p.aim.yawDeg }, FRONT_SPOT, room),
+  );
 }

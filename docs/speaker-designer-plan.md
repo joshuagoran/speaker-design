@@ -883,8 +883,9 @@ Each PR stands alone. Lowest risk first.
     - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
     - **Done (L4b).**
       - **Types.** A `SpacePlacement` has a spot (its base's front center), a lift, an aim (`SpaceAim`: yaw and pitch), a
-        mirror image, `follows` (a mirrored copy: it takes an earlier placement's item, spot, lift, aim, level and delay, x and yaw turned
-        over), and its level and delay on its feed. `StackPose.pitchDeg` tilts a member in
+        mirror image, `mirrored` (a left and right pair as one placement: the model stands it twice, as set and as its mirror
+        image across the center line, `expandPlacements`; the two share item, lift, level and delay), and its level and
+        delay on its feed. `StackPose.pitchDeg` tilts a member in
         its stack. The venue is the room (`CoverageRoom`), the listener, the ear height and the target.
       - **One aim model** (`lib/speaker/spaceLayout`). A member tilts about its bottom front edge by its cabinet's kick-back
         and its tilt in the stack; the placement tilts the whole stack about its base's front center, lifts it, turns it

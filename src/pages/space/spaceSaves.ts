@@ -11,7 +11,6 @@ import type {
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
 import { paVenue } from "../../lib/speaker/paSpec";
-import { followedLead, resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
@@ -46,9 +45,8 @@ export const itemName = (
 
 /** The space in one line, as the library lists it: what it places. */
 export const spaceSummary = (design: SpaceDesign) =>
-  design.space.placements
-    .map((_, k) => itemName(design, resolvedPlacement(design.space.placements, k).item))
-    .join(" + ") || SPACE_TEXT.noPlacements;
+  design.space.placements.map((p) => itemName(design, p.item)).join(" + ") ||
+  SPACE_TEXT.noPlacements;
 
 /** The stacks and speakers a space places: the stacks its placements name, and the speakers those or they name. */
 export function usedParts(design: SpaceDesign): Pick<SpaceDesign, "stacks" | "speakers"> {
@@ -88,15 +86,21 @@ const isStack = (value: unknown): value is StackSpec =>
   Array.isArray(Reflect.get(value, "members"));
 
 /**
- * Whether a value reads as a list of placements: each names an item and has a spot and an aim, and follows nothing or an
- * earlier placement that follows nothing (a chain of copies, or a copy of a later one, has no meaning, so it is not read).
+ * Whether a value reads as a list of placements: each names an item and has a spot, an aim and whether it is a mirrored
+ * pair. (A draft or save from the time a placement could follow another has `follows` and no `mirrored`: not read.)
  */
 const isPlacements = (value: unknown): value is SpacePlacement[] =>
   Array.isArray(value) &&
   value.every(
-    (p: unknown, k) =>
-      hasFields(p, { x: "number", y: "number", liftIn: "number", item: "object", aim: "object" }) &&
-      (Reflect.get(p, "follows") === null || followedLead(value, k) !== null),
+    (p: unknown) =>
+      hasFields(p, {
+        x: "number",
+        y: "number",
+        liftIn: "number",
+        item: "object",
+        aim: "object",
+        mirrored: "boolean",
+      }) && !("follows" in p),
   );
 
 /** Whether a value is one of a const record's values (a saved string that names an id the app has). */

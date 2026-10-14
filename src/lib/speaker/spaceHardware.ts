@@ -1,7 +1,7 @@
 // The amp power a space's speakers have (docs/speaker-designer-plan.md, L4b): one figure per band, or per passive network,
 // kept in the space's own copy of each speaker (`SpeakerBand.ampW`), which the model reads. Pure.
 import type { BandId, SpaceDesign, SpeakerSpec } from "../../types";
-import { placementStack, resolvedPlacement } from "./spaceLayout";
+import { expandPlacements, placementStack } from "./spaceLayout";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 
 /**
@@ -32,14 +32,12 @@ export interface AmpPowerGroup {
 
 /**
  * The amp power figures to set, for each speaker the space places (a stack's members, or a speaker alone), in the order
- * the placements first use them. A mirror pair and a speaker placed twice share the speaker, so share its figures.
+ * the placements first use them. A mirrored pair and a speaker placed twice share the speaker, so share its figures.
  */
 export function ampPowerGroups(design: Pick<SpaceDesign, "space" | "stacks" | "speakers">) {
   const seen = new Set<SpeakerSpec["id"]>();
-  const { placements } = design.space;
-  return placements.flatMap((_, k) => {
-    // a mirrored copy places its lead's item, whatever item it stores
-    const placed = placementStack(design, resolvedPlacement(placements, k).item);
+  return expandPlacements(design.space.placements).flatMap((p) => {
+    const placed = placementStack(design, p.item);
     return (placed?.stack.members ?? []).flatMap((m): AmpPowerGroup[] => {
       const speaker = placed?.speakers.find((s) => s.id === m.speakerId);
       if (!speaker || seen.has(speaker.id)) return [];

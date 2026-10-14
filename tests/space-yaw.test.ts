@@ -1,8 +1,8 @@
 // A placement on the Space page turns a full circle: its yaw wraps within -180..180 (never clamps), a drag across the
-// back of the room stays continuous, and a mirrored copy mirrors at any angle.
+// back of the room stays continuous, and a mirrored pair's image turns the other way at any angle.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { resolvedPlacement, wrapYawDeg, yawToward } from "../src/lib/speaker/spaceLayout";
+import { expandPlacements, wrapYawDeg, yawToward } from "../src/lib/speaker/spaceLayout";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
 import type { SpacePlacement } from "../src/types";
 
@@ -13,7 +13,7 @@ const placement = (over: Partial<SpacePlacement>): SpacePlacement => ({
   liftIn: 0,
   aim: { yawDeg: 0, pitchDeg: 0 },
   mirror: false,
-  follows: null,
+  mirrored: false,
   levelDb: 0,
   delayMs: 0,
   ...over,
@@ -44,17 +44,18 @@ test("a drag across 180 degrees stays continuous", () => {
   assert.ok(Math.abs(seam) <= 2, `seam jump ${seam}`);
 });
 
-test("a mirrored copy mirrors the yaw at any angle", () => {
-  for (const [lead, copy] of [
+test("a mirrored pair's image mirrors the yaw at any angle", () => {
+  for (const [yaw, image] of [
     [135, -135],
     [-135, 135],
     [90, -90],
     [0, 0],
     [180, 180],
   ]) {
-    const list = [placement({ aim: { yawDeg: lead, pitchDeg: 5 } }), placement({ follows: 0 })];
-    const r = resolvedPlacement(list, 1);
-    assert.equal(r.aim.yawDeg, copy);
+    const [, r] = expandPlacements([
+      placement({ aim: { yawDeg: yaw, pitchDeg: 5 }, mirrored: true }),
+    ]);
+    assert.equal(r.aim.yawDeg, image);
     assert.equal(r.x, -6);
     assert.equal(r.aim.pitchDeg, 5);
   }

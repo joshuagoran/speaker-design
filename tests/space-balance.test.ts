@@ -15,7 +15,7 @@ import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import { oneMeterSpots, spaceCrossoversHz, spaceTargetAt } from "../src/lib/speaker/spaceBalance";
-import { resolvedPlacement } from "../src/lib/speaker/spaceLayout";
+import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { AUTO_BALANCE_MODE } from "../src/constants/autoBalance";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
@@ -88,11 +88,12 @@ test("Space levels: a design with no room of its own measures at the audience av
   expect(venue.balance).toBe(AUTO_BALANCE_MODE.flat);
 });
 
-test("Space levels: 1 m from each placement, along its aim (a mirror pair mirrored)", () => {
+test("Space levels: 1 m from each box, along its aim (a mirrored pair's boxes mirrored)", () => {
   const design = presetSpace(STACK_PRESET.paStack, "stack");
   const spots = oneMeterSpots(design, design.space.venue.room);
-  design.space.placements.forEach((_, k) => {
-    const p = resolvedPlacement(design.space.placements, k);
+  const boxes = expandPlacements(design.space.placements);
+  expect(spots).toHaveLength(boxes.length);
+  boxes.forEach((p, k) => {
     const a = p.aim.yawDeg * RAD;
     expect(spots[k].x).toBeCloseTo(p.x + Math.sin(a) * ONE_METER_FT, 9);
     expect(spots[k].y).toBeCloseTo(p.y + Math.cos(a) * ONE_METER_FT, 9);

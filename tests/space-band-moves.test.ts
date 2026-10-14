@@ -11,7 +11,7 @@ import type { CoverageBand, CoverageGrid, FloorPoint, SpaceDesign } from "../src
 /** A coarse grid: enough to compare the maps, quick to compute. */
 const COLS = 20;
 
-/** The PA satellites space: the sub (placement 0) midway, the tops (1, and its mirrored copy 2) on their stands. */
+/** The PA satellites space: the sub (placement 0) midway, the tops (1, a mirrored pair) on their stands. */
 const layers = presetLayers(STACK_PRESET.paSatellite, { id: "sat", name: "sat" });
 const DESIGN: SpaceDesign = {
   space: layers.space,
@@ -21,7 +21,7 @@ const DESIGN: SpaceDesign = {
 const SUB = 0,
   TOP = 1;
 
-/** The space with placement `k` moved by `by`, ft (a lead moves its mirrored copy with it). */
+/** The space with placement `k` moved by `by`, ft (a mirrored pair moves both boxes, mirrored). */
 const moved = (k: number, by: FloorPoint): SpaceDesign => ({
   ...DESIGN,
   space: {

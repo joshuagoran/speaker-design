@@ -10,6 +10,7 @@ import { layersFromFill } from "../src/lib/speaker/fillSpec";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
+import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { paSearchDesign } from "../src/lib/pa/optimize";
 import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
 import { boxInternalLiters, midGrossLiters, slotFolds } from "../src/lib/pa/calc";
@@ -121,9 +122,13 @@ const PA_PORT_SHAPE: Record<PortStyle, SpeakerPort["shape"]> = {
   round2: PORT_SHAPE.round,
   round4: PORT_SHAPE.round,
 };
-/** How many speakers each layout's stack holds, and how many placements its space has. */
+/**
+ * How many speakers each layout's stack holds, how many placements its space has (the left and right are one mirrored
+ * placement), and how many boxes the model stands from them.
+ */
 const PA_MEMBER_COUNT: Record<PaLayout, number> = { stack: 2, pole: 2, satellite: 2, tower: 1 };
-const PA_PLACEMENT_COUNT: Record<PaLayout, number> = { stack: 2, pole: 2, satellite: 3, tower: 2 };
+const PA_PLACEMENT_COUNT: Record<PaLayout, number> = { stack: 1, pole: 1, satellite: 2, tower: 1 };
+const PA_BOX_COUNT: Record<PaLayout, number> = { stack: 2, pole: 2, satellite: 3, tower: 2 };
 
 /** Whether the design's horn arches the tower's top (lib/pa/tower `towerSpec`). */
 const towerArches = (cfg: PaPlannerDesign) =>
@@ -144,6 +149,7 @@ test("speaker spec: every golden PA design reads into a stack with its boxes, dr
     const tower = cfg.layout === "tower";
     assert.equal(stack.members.length, PA_MEMBER_COUNT[cfg.layout], c.name);
     assert.equal(space.placements.length, PA_PLACEMENT_COUNT[cfg.layout], c.name);
+    assert.equal(expandPlacements(space.placements).length, PA_BOX_COUNT[cfg.layout], c.name);
     for (const m of stack.members)
       assert.ok(
         speakers.some((sp) => sp.id === m.speakerId),
@@ -310,9 +316,9 @@ test("speaker spec: each PA layout stands the tops where the planner draws them,
   assert.ok(top.pose.on !== null);
   assert.equal(stack.stack.members[top.pose.on].speakerId, speakerOf(stack, SPEAKER_PART.sub).id);
   assert.equal(top.pose.yIn, MID_GAP_IN);
-  // the stack at both spots, the right one a mirror image
+  // the stack at both spots: one mirrored placement, the right box its mirror image
   assert.deepEqual(
-    stack.space.placements.map((p) => [p.item, p.x, p.mirror]),
+    expandPlacements(stack.space.placements).map((p) => [p.item, p.x, p.mirror]),
     [
       [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, PA_FLOOR.stacks[0].x, false],
       [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, PA_FLOOR.stacks[1].x, true],
@@ -327,7 +333,7 @@ test("speaker spec: each PA layout stands the tops where the planner draws them,
   assert.equal(sat.pose.yIn, SATELLITE_COLUMN_H_IN - PLINTH_HEIGHT_IN);
   const topId = speakerOf(satRead, SPEAKER_PART.top).id;
   assert.deepEqual(
-    satRead.space.placements
+    expandPlacements(satRead.space.placements)
       .filter((p) => p.item.id === topId)
       .map((p) => [p.item.kind, p.liftIn, p.x, p.mirror]),
     [
@@ -502,25 +508,37 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
     );
     assert.equal(spec.cabinet.tiltDeg, state.tiltDeg ?? 0, name);
 
-    // the pair: mirrored, toed in, the sub highpass as the stack's crossover, a channel per band when active
+    // the pair: one mirrored placement, toed in, the sub highpass as the stack's crossover, a channel per band when active
     const read = layersFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
     const { space, stack } = read;
     assert.deepEqual(
-      space.placements.map((p) => [p.x, p.y, p.aim, p.mirror, p.follows]),
+      space.placements.map((p) => [p.x, p.y, p.aim, p.mirror, p.mirrored]),
       [
         [
           -state.speakerSpacingFt / 2,
           state.distanceToWallFt,
           { yawDeg: state.toeInDeg, pitchDeg: 0 },
           false,
-          null,
+          true,
+        ],
+      ],
+      name,
+    );
+    // the model's two boxes: the right one the mirror image of the left
+    assert.deepEqual(
+      expandPlacements(space.placements).map((p) => [p.x, p.y, p.aim, p.mirror]),
+      [
+        [
+          -state.speakerSpacingFt / 2,
+          state.distanceToWallFt,
+          { yawDeg: state.toeInDeg, pitchDeg: 0 },
+          false,
         ],
         [
           state.speakerSpacingFt / 2,
           state.distanceToWallFt,
           { yawDeg: -state.toeInDeg, pitchDeg: 0 },
           true,
-          0,
         ],
       ],
       name,

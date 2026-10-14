@@ -1,5 +1,5 @@
 // What a space asks of the processing ahead of its amps (lib/speaker/spaceAlignment, spaceHardware): the alignment list
-// against the delays and levels the model plays, a mirror pair's rows, a fill's delay, the amp power figures, the texts.
+// against the delays and levels the model plays, a mirrored pair's rows, a fill's delay, the amp power figures, the texts.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
@@ -15,7 +15,7 @@ import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { NO_DELAY_MS, SPACE_TEXT } from "../src/constants/space";
 import type { SpaceDesign } from "../src/types";
 
-/** The PA design's space: a mirror pair (placements 0 and 1) of one stack, nothing set on either placement. */
+/** The PA design's space: one mirrored placement (0) of one stack, nothing set on it. */
 function paSpace(): SpaceDesign {
   const read = layersFromPa(paDesign(configs[0]), { id: "draft", name: "PA design" }, PA_FLOOR);
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
@@ -34,7 +34,7 @@ const withFeed = (
   },
 });
 
-/** The PA space with a fill speaker placed down the room (placement 2), playing `delayMs` later. */
+/** The PA space with a fill speaker placed down the room (placement 1), playing `delayMs` later. */
 function withFill(delayMs: number): SpaceDesign {
   const design = paSpace();
   const fill = speakerFromFill(DEFAULT_FILL, { id: "fill", name: "Fill" });
@@ -48,7 +48,7 @@ function withFill(delayMs: number): SpaceDesign {
         placements: [...design.space.placements, spacePlacement({ x: 0, y: 30 }, item, 60)],
       },
     },
-    2,
+    1,
     { delayMs },
   );
 }
@@ -59,19 +59,20 @@ function withFill(delayMs: number): SpaceDesign {
  */
 function assertListMatchesModel(design: SpaceDesign) {
   const model = spaceModel(design);
-  const rows = spaceAlignment(design, model);
+  const rows = spaceAlignment(model);
   assert.ok(model.feeds.length > 0);
   for (const feed of model.feeds) {
     const member = Number(feed.id.split("/")[1]);
     const mine = rows.filter(
       (r) =>
-        r.placements.includes(feed.placement) &&
+        r.placement === feed.placement &&
         r.member === member &&
         r.bands.some((b) => b.id === feed.band),
     );
     assert.equal(mine.length, 1, `${feed.id} is in ${mine.length} rows`);
     const [row] = mine;
-    const speaker = model.placements[feed.placement].response?.members[member]?.speaker;
+    const box = model.placements.find((p) => p.item.placement.source === feed.placement);
+    const speaker = box?.response?.members[member]?.speaker;
     assert.ok(speaker);
     const band = row.bands.length === 1 ? speaker.bands.find((b) => b.id === feed.band) : undefined;
     assert.ok(
@@ -86,10 +87,13 @@ function assertListMatchesModel(design: SpaceDesign) {
   return rows;
 }
 
-test("space alignment: a mirror pair that sets the same is one row per band, in the stack's order", () => {
+test("space alignment: a mirrored pair is one placement: one row per band, in the stack's order", () => {
   const design = paSpace();
+  const model = spaceModel(design);
+  // two boxes in the model, one placement in the list
+  assert.equal(model.placements.length, 2);
   const rows = assertListMatchesModel(design);
-  assert.ok(rows.every((r) => r.placements.join() === "0,1"));
+  assert.ok(rows.every((r) => r.placement === 0));
   assert.deepEqual(
     rows.map((r) => [r.member, r.bands.map((b) => b.id)]),
     [
@@ -106,45 +110,44 @@ test("space alignment: a mirror pair that sets the same is one row per band, in 
   assert.ok(rows.every((r) => r.delayMs === r.crossoverDelayMs));
 });
 
-test("space alignment: a mirrored copy plays what its lead plays: one row per band, whatever the copy holds", () => {
+test("space alignment: a mirrored pair's two boxes share one delay and level: one row per band", () => {
   const base = paSpace();
-  const same = spaceAlignment(base, spaceModel(base));
-  // the lead later and down 2 dB: the copy follows, still one row per band
+  const same = spaceAlignment(spaceModel(base));
+  // the placement later and down 2 dB: both boxes play so, still one row per band
   const set = withFeed(base, 0, { delayMs: 0.5, levelDb: -2 });
   const rows = assertListMatchesModel(set);
   assert.equal(rows.length, same.length);
-  assert.ok(rows.every((r) => r.placements.join() === "0,1"));
+  assert.ok(rows.every((r) => r.placement === 0));
   rows.forEach((r, i) => {
     assert.ok(Math.abs(r.delayMs - 0.5 - same[i].delayMs) < 1e-9);
     assert.ok(Math.abs(r.levelDb + 2 - same[i].levelDb) < 1e-9);
     assert.ok(Math.abs(r.delayMs - r.crossoverDelayMs - 0.5) < 1e-9);
   });
-  // a level or delay stored on the copy is not read
-  const stray = assertListMatchesModel(withFeed(set, 1, { delayMs: 3, levelDb: 6 }));
-  assert.deepEqual(stray, rows);
+  // the feeds of both boxes carry the shared settings
+  const model = spaceModel(set);
+  const [first, second] = model.placements.map((p) => p.item.placement);
+  assert.deepEqual([first.levelDb, first.delayMs], [second.levelDb, second.delayMs]);
 });
 
 test("space alignment: a fill's placement delay adds to its box's rows, apart from the crossover delay", () => {
   const design = withFill(12);
   const rows = assertListMatchesModel(design);
-  const fill = rows.filter((r) => r.placements.join() === "2");
+  const fill = rows.filter((r) => r.placement === 1);
   assert.ok(fill.length > 0);
   for (const r of fill) {
     assert.ok(Math.abs(r.delayMs - r.crossoverDelayMs - 12) < 1e-9);
     assert.ok(r.delayMs >= 12);
   }
   // the mains' rows carry no placement delay
-  const mains = rows.filter((r) => r.placements.join() === "0,1");
+  const mains = rows.filter((r) => r.placement === 0);
   assert.ok(mains.length > 0);
   assert.ok(mains.every((r) => r.delayMs === r.crossoverDelayMs));
   // a fill with no delay of its own has none of its own in its rows
-  const none = spaceAlignment(withFill(0), spaceModel(withFill(0))).filter(
-    (r) => r.placements.join() === "2",
-  );
+  const none = spaceAlignment(spaceModel(withFill(0))).filter((r) => r.placement === 1);
   assert.ok(none.every((r) => r.delayMs === r.crossoverDelayMs));
 });
 
-test("space hardware: amp power per speaker in placement order, shared by a mirror pair and a speaker placed twice", () => {
+test("space hardware: amp power per speaker in placement order, shared by a mirrored pair and a speaker placed twice", () => {
   const design = withFill(0);
   const [sub, top, fill] = design.speakers;
   const power = ampPowerGroups(design);
