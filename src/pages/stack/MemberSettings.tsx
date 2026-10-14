@@ -13,7 +13,8 @@ import { AUTO_DELAY } from "../../constants/speakerSpec";
 import { STACK_STEPS } from "../../constants/speakerSteps";
 import { STACK_TEXT } from "../../constants/stack";
 import { SPACE_PITCH_DEG } from "../../constants/space";
-import { FIELD_ROW, shownIn } from "../speaker/speakerFields";
+import { shownIn } from "../speaker/speakerFields";
+import { FIELD_ROW } from "../../styles/layout";
 
 interface Props {
   index: number;
@@ -39,8 +40,8 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
   const setPose = (edit: Partial<StackMember["pose"]>) =>
     onEdit((m) => ({ ...m, pose: { ...m.pose, ...edit } }));
   return (
-    <Card className="mb-3">
-      <div className="flex items-center justify-between gap-2 mb-3">
+    <Card>
+      <div className="flex items-center justify-between gap-2">
         <h4 className="font-semibold min-w-0 truncate">{names[index]}</h4>
         <Button size="xs" onClick={onRemove}>
           {STACK_TEXT.remove}
@@ -80,11 +81,7 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
           onChange={(pitchDeg) => setPose({ pitchDeg })}
         />
       </div>
-      <ToggleButton
-        className="mb-3"
-        on={member.mirror}
-        onClick={() => onEdit((m) => ({ ...m, mirror: !m.mirror }))}
-      >
+      <ToggleButton on={member.mirror} onClick={() => onEdit((m) => ({ ...m, mirror: !m.mirror }))}>
         {STACK_TEXT.mirror}
       </ToggleButton>
       <NumberField
@@ -96,7 +93,6 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
       />
       <ToggleGroup
         label={STACK_TEXT.delay}
-        className="mb-2"
         value={auto ? SET_BY.auto : SET_BY.custom}
         onChange={(v) =>
           onEdit((m) => ({
@@ -108,7 +104,7 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
         options={entriesOf(SET_BY_NAMES)}
       />
       {auto ? (
-        <p className="text-xs text-stone-500 mb-2">
+        <p className="text-xs text-stone-500">
           {delayMs === null ? "—" : `${delayMs.toFixed(2)} ms`}
         </p>
       ) : (

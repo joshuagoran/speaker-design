@@ -24,9 +24,8 @@ interface Props {
 /** One band's settings: its name, highpass and lowpass, level, drive and amp power. */
 export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
   return (
-    <Card className="mb-3">
+    <Card>
       <CardHeading
-        className="mb-3"
         action={
           onRemove && (
             <Button size="xs" onClick={onRemove}>
@@ -56,14 +55,12 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         step={SPEAKER_STEPS.levelDb}
         unit="dB"
         onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
-        className="mb-4"
       />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Crossover</Tooltip>}
         value={band.drive}
         onChange={(drive) => onEdit((b) => ({ ...b, drive }))}
         options={entriesOf(DRIVE_NAMES)}
-        className="mb-4"
       />
       <NumberField
         // passive: the channel it shares

@@ -121,7 +121,6 @@ export function FillsPage({ fills }: Props) {
             </Tooltip>
           </p>
           <StatTileGrid
-            className=""
             tiles={[
               [STATS.netVolume, netLiters.toFixed(0), "L"],
               ventedModel
@@ -207,9 +206,8 @@ export function FillsPage({ fills }: Props) {
               ] as const
             }
             wrap={false}
-            className="mb-2"
           />
-          <Card className="mb-4">
+          <Card>
             <Slider
               label="Width"
               value={boxDims.w}

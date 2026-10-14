@@ -7,7 +7,7 @@ interface Props {
 }
 
 /** Labeled form row: the label is a real <label> tied to its control, so screen readers name the control */
-export function FormField({ label, htmlFor, extra, className = "mb-4", children }: Props) {
+export function FormField({ label, htmlFor, extra, className = "", children }: Props) {
   return (
     <div className={className}>
       <label

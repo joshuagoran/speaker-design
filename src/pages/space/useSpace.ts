@@ -6,6 +6,7 @@ import {
   coverageStats,
   COVERAGE_BANDS,
   COVERAGE_GRID_COLS,
+  SINGLE_FREQ_RANGE,
 } from "../../lib/pa/coverage";
 import { oneMeterSpots, spaceCrossoversHz, spaceTargetAt } from "../../lib/speaker/spaceBalance";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
@@ -50,6 +51,13 @@ import type {
 
 /** What the library's row says when a document holds no space. */
 const MISSING_SPACE_TEXT = "That save holds no space";
+
+/**
+ * The band the space's turn-down is set in: the lowest. The space is turned down once, so that this band reaches the
+ * Target level at the reference; the band on show never changes it (it changes only which band the map and the
+ * per-band figures are about).
+ */
+const TURN_DOWN_BAND = "sub" satisfies CoverageBand;
 
 /** Where a new placement stands: a little off the front wall, in the middle, ft. */
 const NEW_SPOT: FloorPoint = { x: 0, y: 3 };
@@ -156,14 +164,21 @@ export function spaceFromStart(start: StackPreset): SpaceDesign {
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
 
+/** Whether a job needs the turn-down band's grid: not at all, or it is the job's own, or it is another grid. */
+const ANCHOR_GRID = { none: "none", own: "own", other: "other" } as const;
+
 /**
  * One grid for the worker: the request, the frequency its band's target is read at (Hz), and the boxes' spots it was
  * asked for (the audience average and the stats leave the floor in front of them out, whatever the boxes are by then).
+ * `anchor` is the same space's request in the turn-down band; `anchorGrid` says whether the turn-down reads the
+ * audience average, which needs that band's grid too.
  */
 interface GridJob {
   req: Omit<SpaceGridRequest, "cols">;
   centerHz: number;
   spots: readonly FloorPoint[];
+  anchor: Omit<SpaceGridRequest, "cols">;
+  anchorGrid: (typeof ANCHOR_GRID)[keyof typeof ANCHOR_GRID];
 }
 
 /**
@@ -246,9 +261,9 @@ export const withItemPlaced = (d: SpaceDesign, item: PlaceItem): SpaceDesign =>
  * The Space page's state: the space and the stacks and speakers it places, its model and floor map, the edits the
  * settings make and the library (the signed-in user's `spaces`). Held in App, so the space survives switching pages.
  */
-export function useSpace() {
+export function useSpace(initialBand: CoverageBand = "mid") {
   const [design, setDesign] = usePageDraft(spaceDraft);
-  const [band, setBand] = useState<CoverageBand>("mid");
+  const [band, setBand] = useState<CoverageBand>(initialBand);
   const [freqHz, setFreqHz] = useState(63);
   /** how many times the design was replaced whole (a start, a clear, an opened save): a page's picks into it end then */
   const [replaced, setReplaced] = useState(0);
@@ -273,6 +288,18 @@ export function useSpace() {
     () => spaceGridRequest(model, { room, earFt: venue.earFt }, band, freqHz, COVERAGE_GRID_COLS),
     [model, room, venue.earFt, band, freqHz],
   );
+  /** the space in the turn-down band: what sets the turn-down, whatever band is on show (no frequency is read) */
+  const anchorReq = useMemo<Omit<SpaceGridRequest, "cols">>(
+    () =>
+      spaceGridRequest(
+        model,
+        { room, earFt: venue.earFt },
+        TURN_DOWN_BAND,
+        SINGLE_FREQ_RANGE[0],
+        COVERAGE_GRID_COLS,
+      ),
+    [model, room, venue.earFt],
+  );
   /** the boxes' spots: the stats leave the floor right in front of them out */
   const spots = useMemo(
     () => model.placements.map((p) => ({ x: p.item.placement.x, y: p.item.placement.y })),
@@ -281,19 +308,34 @@ export function useSpace() {
 
   // the worker queue: one job at a time, and only the newest waiting job is kept (as the coverage page's)
   // each job carries the frequency its band's target is read at, so a grid on show keeps its own band's target
-  const [shown, setShown] = useState<(GridJob & { grid: CoverageGrid }) | null>(null);
+  const [shown, setShown] = useState<
+    (GridJob & { grid: CoverageGrid; anchorOf: CoverageGrid | null }) | null
+  >(null);
   const [failed, setFailed] = useState<{ req: typeof req; message: string } | null>(null);
   const busy = useRef(false);
   const want = useRef<GridJob | null>(null);
+  /** the turn-down band's last grid, by its request: a change of band on show doesn't compute it again */
+  const anchorCache = useRef<{ req: GridJob["anchor"]; grid: CoverageGrid } | null>(null);
   const pump = () => {
     if (busy.current || !want.current) return;
     const next = want.current;
     want.current = null;
     busy.current = true;
+    /** the turn-down band's grid for the grid just computed: the same grid, a kept one or a new one */
+    const anchorOf = async (grid: CoverageGrid): Promise<CoverageGrid | null> => {
+      if (next.anchorGrid === ANCHOR_GRID.none) return null;
+      if (next.anchorGrid === ANCHOR_GRID.own) return grid;
+      const kept = anchorCache.current;
+      if (kept && kept.req === next.anchor) return kept.grid;
+      const made = await runSpaceGrid({ ...next.anchor, cols: COVERAGE_GRID_COLS });
+      anchorCache.current = { req: next.anchor, grid: made };
+      return made;
+    };
     runSpaceGrid({ ...next.req, cols: COVERAGE_GRID_COLS })
+      .then(async (grid) => ({ grid, anchor: await anchorOf(grid) }))
       .then(
-        (grid) => {
-          setShown({ ...next, grid });
+        ({ grid, anchor }) => {
+          setShown({ ...next, grid, anchorOf: anchor });
           setFailed(null);
         },
         (e: unknown) =>
@@ -305,24 +347,45 @@ export function useSpace() {
       });
   };
   const placed = model.scene.sources.length > 0;
-  useEffect(() => {
-    if (!placed) return;
-    want.current = { req, centerHz: bandCenterHz(band, freqHz), spots };
-    pump();
-  }, [req, placed]);
-
   // where the target is measured, and the music balance it follows across the bands (lib/speaker/spaceBalance)
   const { levelRef, balance } = venue;
+  const fromGrid = levelRef === COVERAGE_LEVEL_REF.audience;
+  /** what the job needs of the turn-down band: only the audience average reads a grid there */
+  const anchorGrid = !fromGrid
+    ? ANCHOR_GRID.none
+    : band === TURN_DOWN_BAND
+      ? ANCHOR_GRID.own
+      : ANCHOR_GRID.other;
+  useEffect(() => {
+    if (!placed) return;
+    want.current = {
+      req,
+      centerHz: bandCenterHz(band, freqHz),
+      spots,
+      anchor: anchorReq,
+      anchorGrid,
+    };
+    pump();
+  }, [req, placed, anchorReq, anchorGrid]);
+
   const crossovers = useMemo(
     () => spaceCrossoversHz({ space: { ...space, placements }, stacks, speakers }),
     // the crossovers read only these
     [placements, stacks, speakers],
   );
-  /** the target in the band on show */
+  /** the target in the band on show: what the map is compared with */
   const target = spaceTargetAt(venue.targetDb, bandCenterHz(band, freqHz), crossovers, balance);
+  /** the target in the turn-down band: what the reference is turned down to, whatever band is on show */
+  const turnDownTarget = spaceTargetAt(
+    venue.targetDb,
+    bandCenterHz(TURN_DOWN_BAND, freqHz),
+    crossovers,
+    balance,
+  );
+  /** the listener's level at the limit in the turn-down band, the same in every band on show */
   const listenerAtLimit = useMemo(
-    () => (placed ? spaceLevelAt(req, venue.listener) : null),
-    [placed, req, venue.listener],
+    () => (placed ? spaceLevelAt(anchorReq, venue.listener) : null),
+    [placed, anchorReq, venue.listener],
   );
   /** the spots 1 m in front of each placement that holds a modeled stack or speaker */
   const meterSpots = useMemo(
@@ -338,52 +401,60 @@ export function useSpace() {
   /** a request's level at the limit at the reference, when points alone give it (not the audience average) */
   const pointRefAtLimit = (r: Omit<SpaceGridRequest, "cols">) =>
     referenceAtLimit(levelRef, r, { listener: refListener, meterSpots, boxes: spots }, null);
-  const refAtLimit = useMemo(
-    () => (placed ? pointRefAtLimit(req) : null),
+  /** the reference's level at the limit in the turn-down band (points alone; the audience average comes from its grid) */
+  const anchorAtLimit = useMemo(
+    () => (placed ? pointRefAtLimit(anchorReq) : null),
     // the reference reads these
-    [placed, req, levelRef, refListener, meterSpots],
+    [placed, anchorReq, levelRef, refListener, meterSpots],
   );
-  // the grid on show: the audience's average at the limit (over the spots it was computed with), and the gain that
-  // brings the reference to the target
+  // the grid on show: the audience's average at the limit in its band (over the spots it was computed with)
   const audienceAtLimit = useMemo(
     () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, shown.spots) : null),
     [shown, placed],
   );
-  const fromGrid = levelRef === COVERAGE_LEVEL_REF.audience;
-  // the grid on show with the target and gain of the band it belongs to (an older band's while the next computes)
-  const view = useMemo<CoverageGridView | null>(() => {
+  /** the reference's level at the limit in the turn-down band, for the grid on show (an older space's while the next computes) */
+  const shownAnchorAtLimit = useMemo(() => {
     if (!shown || !placed) return null;
-    const atLimit = fromGrid
-      ? audienceAtLimit
-      : shown.req === req
-        ? refAtLimit
-        : pointRefAtLimit(shown.req);
+    if (!fromGrid)
+      return shown.anchor === anchorReq ? anchorAtLimit : pointRefAtLimit(shown.anchor);
+    return shown.anchorOf ? audienceAverage(shown.anchorOf, shown.req.room, shown.spots) : null;
+    // the reference reads these (an older space's, the listener or the 1 m spots too)
+  }, [shown, placed, fromGrid, anchorReq, anchorAtLimit, refListener, meterSpots]);
+  // the grid on show with the target of its band and the one turn-down (an older space's while the next computes); the
+  // audience average needs the turn-down band's grid, so the view waits for it rather than mix two spaces
+  const view = useMemo<CoverageGridView | null>(() => {
+    if (!shown || !placed || (fromGrid && !shown.anchorOf)) return null;
+    const g = systemGain(turnDownTarget, shownAnchorAtLimit);
     const t = spaceTargetAt(venue.targetDb, shown.centerHz, crossovers, balance);
-    const g = systemGain(t, atLimit);
-    return { grid: shown.grid, room: shown.req.room, target: t - g, gain: g, atLimit };
-    // the reference reads these (an older grid's, the listener or the 1 m spots too)
+    return {
+      grid: shown.grid,
+      room: shown.req.room,
+      target: t - g,
+      gain: g,
+      atLimit: shownAnchorAtLimit,
+    };
   }, [
     shown,
     placed,
     fromGrid,
-    audienceAtLimit,
-    req,
-    refAtLimit,
-    refListener,
-    meterSpots,
+    shownAnchorAtLimit,
+    turnDownTarget,
     venue.targetDb,
     crossovers,
     balance,
   ]);
-  // the audience average needs the grid, so its gain and target follow the grid on show, never mixing that grid's
-  // average with the current band's target (as the coverage page's)
-  const currentAtLimit = fromGrid ? (view ? view.atLimit : null) : refAtLimit;
-  const refTarget = fromGrid && view ? view.target + view.gain : target;
   const stats = useMemo(
     () => (view && shown ? coverageStats(view.grid, view.room, shown.spots, view.target) : null),
     [view, shown],
   );
-  const gain = fromGrid ? (view ? view.gain : 0) : systemGain(target, currentAtLimit);
+  /** the space's one turn-down, dB: the turn-down band reaches the Target at the reference, never past the limit */
+  const gain = fromGrid ? (view ? view.gain : 0) : systemGain(turnDownTarget, anchorAtLimit);
+  /** the turn-down: its gain, the target it reaches for (in the turn-down band) and the reference's level at the limit */
+  const turn = {
+    gain,
+    target: turnDownTarget,
+    atLimit: fromGrid ? (view ? view.atLimit : null) : anchorAtLimit,
+  };
   /** each band's level at the listener at the space's level, and its target */
   const bandLevels = useMemo(
     () =>
@@ -466,19 +537,22 @@ export function useSpace() {
     setBand,
     freqHz,
     setFreqHz,
-    isPending: placed && !(failed && failed.req === req) && (!shown || shown.req !== req),
+    isPending:
+      placed &&
+      !(failed && failed.req === req) &&
+      (!shown || shown.req !== req || (fromGrid && !shown.anchorOf)),
     error: failed ? failed.message : "",
+    /** the listener's level in the turn-down band at the space's level: the same in every band on show */
     listenerDb: listenerAtLimit !== null ? listenerAtLimit + gain : null,
     /** the audience's average at the space's level (null until a grid arrives) */
     audienceDb: audienceAtLimit !== null ? audienceAtLimit + gain : null,
     audienceAtLimit,
-    /** the target in the band on show, where it is measured, and the reference's level at the space's level */
+    /** the target in the band on show, and where it is measured */
     target,
     levelRef,
     balance,
-    /** the target the reference's level is held to: the shown grid's band's, for the audience average */
-    refTarget,
-    refDb: currentAtLimit !== null ? currentAtLimit + gain : null,
+    /** the one turn-down (the same in every band on show) and what it reaches for */
+    turn,
     bandLevels,
     response,
     targetCurve,

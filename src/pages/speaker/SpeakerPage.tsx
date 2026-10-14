@@ -56,9 +56,11 @@ import { handlePart } from "../../lib/pa/hardware";
 import { HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_PRESET_WORDS, NO_HANDLES_LABEL, hardwareNote } from "../../constants/hardware";
 import {
-  RESULT_MAX_WIDTH,
+  HEADING_GROUP,
   READING_WIDTH,
   RESULTS_TWO_COLUMN_PX,
+  RESULT_MAX_WIDTH,
+  GAP_Y,
   resultsCellClass,
   resultsGridClass,
 } from "../../styles/layout";
@@ -315,8 +317,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             manage
           />
           <SpeakerOptimizerResults optimizer={optimizer} />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-3">{SPEAKER_TEXT.views}</SectionHeading>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+            <SectionHeading>{SPEAKER_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
               <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
                 {(cutaway) => (
@@ -326,14 +328,14 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   />
                 )}
               </Viewer3DCard>
-              <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
+              <Card gapY={false} className={`flex flex-col ${VIEW_HEIGHT}`}>
                 <div className="flex-1 min-h-0">
                   <SpeakerFront spec={spec} />
                 </div>
                 <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.front}</p>
               </Card>
               {flares.length > 0 && (
-                <Card className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
+                <Card gapY={false} className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
                   <div className="flex-1 min-h-0">
                     <SpeakerSection spec={spec} />
                   </div>
@@ -368,8 +370,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
           </section>
           {/* Response beside Maximum output (and Price, weight and bracing under Response) once the pane is wide enough */}
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} mt-5 ${resultsGridClass(wide)}`}>
-            <section className={cell("col-start-1 row-start-1")}>
-              <SectionHeading className="mb-3">{SPEAKER_TEXT.response}</SectionHeading>
+            <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
+              <SectionHeading>{SPEAKER_TEXT.response}</SectionHeading>
               <ResponseChart
                 fmin={FREQ_AXIS_MIN_HZ}
                 fmax={FREQ_AXIS_MAX_HZ}
@@ -409,21 +411,21 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   {[...new Set(response.gaps)].map((g) => MODEL_GAP_TEXT[g]).join("; ")}.
                 </Notice>
               )}
-              <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
+              <StatTileGrid tiles={tiles} />
               <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.modelNote}</p>
             </section>
             <section
-              className={cell(
+              className={`${cell(
                 limits.bands.length > 0 ? "col-start-1 row-start-2" : "col-start-2 row-start-1",
-              )}
+              )} ${GAP_Y}`}
             >
-              <SectionHeading className="mb-3">{SPEAKER_TEXT.build}</SectionHeading>
-              <StatTileGrid tiles={buildTiles} className="mb-3" />
+              <SectionHeading>{SPEAKER_TEXT.build}</SectionHeading>
+              <StatTileGrid tiles={buildTiles} />
               {price.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
               {unbraced ? (
                 <Notice>{SPEAKER_TEXT.notBraced}</Notice>
               ) : (
-                <ul className="text-sm mb-3">
+                <ul className="text-sm">
                   {build.chambers.map((c, i) => (
                     <li key={c.box}>
                       {SPEAKER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
@@ -444,7 +446,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                     : [];
                 })}
               {fitChips.some((chips) => chips.length > 0) && (
-                <div className={`${READING_WIDTH} flex flex-col gap-3 my-3`}>
+                <div className={`${READING_WIDTH} flex flex-col gap-3`}>
                   {fitChips.map(
                     (chips, i) =>
                       chips.length > 0 && (
@@ -458,7 +460,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   )}
                 </div>
               )}
-              <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
+              <p className={`${READING_WIDTH} text-sm text-stone-500`}>
                 {SPEAKER_TEXT.priceNote}{" "}
                 {unbraced
                   ? SPEAKER_TEXT.buildNoteUnbraced
@@ -466,8 +468,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               </p>
             </section>
             {limits.bands.length > 0 && (
-              <section className={cell("col-start-2 row-start-1 row-span-2")}>
-                <SectionHeading className="mb-3">{SPEAKER_TEXT.maxOutput}</SectionHeading>
+              <section className={`${cell("col-start-2 row-start-1 row-span-2")} ${GAP_Y}`}>
+                <SectionHeading>{SPEAKER_TEXT.maxOutput}</SectionHeading>
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
                   fmax={FREQ_AXIS_MAX_HZ}
@@ -497,8 +499,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   ]}
                   marks={fbMarks}
                 />
-                <StatTileGrid tiles={maxTiles} className="mt-5 mb-3" />
-                <div className={`${READING_WIDTH} flex flex-col gap-3 mb-3`}>
+                <StatTileGrid tiles={maxTiles} />
+                <div className={`${READING_WIDTH} flex flex-col gap-3`}>
                   {bandChips(spec, limits, response).map(({ id, chips }) => (
                     <div key={id}>
                       <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
@@ -522,8 +524,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             )}
           </div>
           {dispersion && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
-              <SectionHeading className="mb-3">{DISPERSION_HEADING}</SectionHeading>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
+              <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
               <DispersionBlock
                 map={dispersion}
                 plane={plane}
@@ -561,7 +563,6 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             <>
               <ToggleGroup
                 label={SPEAKER_TEXT.construction}
-                className="mb-3"
                 value={construction}
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, construction: v }))}
                 options={entriesOf(CABINET_CONSTRUCTION_NAMES)}
@@ -573,7 +574,6 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   min={0}
                   step={0.125}
                   onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, insetIn: v }))}
-                  className="mb-3"
                 />
               )}
               <ToggleGroup
@@ -582,7 +582,6 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                     {SPEAKER_TEXT.wallPanel}
                   </Tooltip>
                 }
-                className="mb-3"
                 value={panel.nominal}
                 onChange={(nominal) =>
                   speakerPage.editCabinet((c) => ({ ...c, panel: withWallPanel(c.panel, nominal) }))
@@ -591,21 +590,17 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               />
               <ToggleGroup
                 label={SPEAKER_TEXT.top}
-                className="mb-2"
                 value={top}
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, top: v }))}
                 options={entriesOf(CABINET_TOP_NAMES)}
               />
               {top === CABINET_TOP.arched && arch !== null && (
-                <div className="mb-3">
-                  <Notice>
-                    {SPEAKER_TEXT.archFlat} {ARCH_BLOCK_TEXT[arch]}
-                  </Notice>
-                </div>
+                <Notice>
+                  {SPEAKER_TEXT.archFlat} {ARCH_BLOCK_TEXT[arch]}
+                </Notice>
               )}
               <ToggleGroup
                 label={SPEAKER_TEXT.backJoint}
-                className="mb-3"
                 value={backJoint}
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, backJoint: v }))}
                 options={keysOf(BACK_JOINT_NAMES).map(
@@ -614,7 +609,6 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               />
               <ToggleGroup
                 label={SPEAKER_TEXT.braceStyle}
-                className="mb-3"
                 value={braceStyle}
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, braceStyle: v }))}
                 options={keysOf(SPEAKER_BRACE_STYLE_NAMES).map(
@@ -643,12 +637,10 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                       ),
                     }))
                   }
-                  className="mb-3"
                 />
               )}
               <ToggleGroup
                 label={<Tooltip tip={SPEAKER_TEXT.hardwareTip}>{SPEAKER_TEXT.hardware}</Tooltip>}
-                className="mb-3"
                 value={hardware !== null}
                 onChange={(on) =>
                   speakerPage.editCabinet((c) => ({
@@ -671,7 +663,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                       }))
                     }
                   />
-                  <p className="text-xs text-stone-500 mb-3">
+                  <p className="text-xs text-stone-500">
                     {hardwareNote(
                       {
                         box: SPEAKER_TEXT.hardwareDishBox,
@@ -708,7 +700,6 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               ))}
               <Button
                 variant="primary"
-                className="mb-2"
                 onClick={() =>
                   speakerPage.editChambers((list) => {
                     // stacked on the highest chamber
@@ -724,11 +715,13 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
           {section(
             "bands",
             <>
-              <Card className="mb-3">
-                <CardHeading className="mb-1">
-                  <Tooltip tip={SPEAKER_TEXT.inputTip}>{SPEAKER_TEXT.inputRange}</Tooltip>
-                </CardHeading>
-                <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.inputHint}</p>
+              <Card>
+                <div className={HEADING_GROUP}>
+                  <CardHeading>
+                    <Tooltip tip={SPEAKER_TEXT.inputTip}>{SPEAKER_TEXT.inputRange}</Tooltip>
+                  </CardHeading>
+                  <p className="text-xs text-stone-500">{SPEAKER_TEXT.inputHint}</p>
+                </div>
                 <FilterFields
                   filters={spec.input}
                   // a new corner at the PA's crossover to its subs
@@ -748,11 +741,10 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   }
                 />
               ))}
-              <Button variant="primary" className="mb-3" onClick={speakerPage.addBand}>
+              <Button variant="primary" onClick={speakerPage.addBand}>
                 Add band
               </Button>
               <AutoBalanceButton
-                className="mb-2"
                 balance={speakerPage.balance}
                 onApply={speakerPage.applyBalance}
                 mode={speakerPage.balanceMode}

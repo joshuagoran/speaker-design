@@ -51,7 +51,7 @@ export function DriverCompare({ rows, onUse }: Props) {
   return (
     <AnimatedDetails
       summary="Compare drivers"
-      className="mt-4 text-sm rounded border border-stone-300 bg-stone-50 px-3 py-2"
+      className="text-sm rounded border border-stone-300 bg-stone-50 px-3 py-2"
       summaryClassName="cursor-pointer py-1"
     >
       {(open) =>

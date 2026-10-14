@@ -33,6 +33,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
         balance === AUTO_BALANCE_MODE.moreBass ? SPACE_DETAILS.moreBass : SPACE_DETAILS.flat,
         SPACE_DETAILS.headroom,
         SPACE_DETAILS.turnDown,
+        SPACE_DETAILS.perBand,
         SPACE_DETAILS.bandLevel,
         SPACE_DETAILS.audience(STATS_CLEARANCE_FT),
         SPACE_DETAILS.oneMeter(SPACE_LEVEL_REF_PLACE.stacks),

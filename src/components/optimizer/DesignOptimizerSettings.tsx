@@ -15,6 +15,7 @@ import {
 } from "../../lib/optimizer/goalKeeps";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import type { OptimizerProgress, SpeakerGoal } from "../../types";
+import { GAP_Y_TIGHT } from "../../styles/layout";
 
 /** The words the fold takes from a page's optimizer text. */
 export interface OptimizerFoldText {
@@ -92,24 +93,25 @@ export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limit
       <KeepDetails
         lines={keepLinesFrom(SPEAKER_GOAL_KEEPS, o.goals, goalDefs, SPEAKER_KEEP_WORDS, modeled)}
       />
-      <NumberField
-        label={T.target}
-        value={o.targetDb}
-        step={1}
-        unit={T.targetUnit}
-        onChange={o.setTarget}
-        className="mt-3 mb-1"
-      />
-      {modeled && (
-        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-stone-500">
-          {T.targetYours(Math.round(o.yoursDb ?? 0).toString())}
-          {!o.targetIsYours && (
-            <Button size="xs" onClick={o.useYoursForTarget}>
-              {T.targetUseYours}
-            </Button>
-          )}
-        </div>
-      )}
+      <div className={GAP_Y_TIGHT}>
+        <NumberField
+          label={T.target}
+          value={o.targetDb}
+          step={1}
+          unit={T.targetUnit}
+          onChange={o.setTarget}
+        />
+        {modeled && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
+            {T.targetYours(Math.round(o.yoursDb ?? 0).toString())}
+            {!o.targetIsYours && (
+              <Button size="xs" onClick={o.useYoursForTarget}>
+                {T.targetUseYours}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
       {limits.map((l) => (
         <LimitField
           key={l.key}
@@ -127,8 +129,8 @@ export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limit
         title={T.keep}
         summary={keep.lockBar.nLocks ? T.summaryKeeps(keep.lockBar.nLocks) : undefined}
       >
-        <p className="text-xs text-stone-500 mb-2">{T.keepHint}</p>
-        <div className="flex items-center gap-2 mb-3">
+        <p className="text-xs text-stone-500">{T.keepHint}</p>
+        <div className="flex items-center gap-2">
           <LockBarButtons {...keep.lockBar} />
         </div>
         <KeepList groups={keep.groups} />

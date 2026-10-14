@@ -10,25 +10,20 @@ import { HOVER_TRANSITION } from "./buttonStyles";
 export type FoldsAt = "phone" | "desktop" | "always";
 
 /** Tailwind classes that apply a class only at the widths a section folds at. */
-const AT: Record<
-  FoldsAt,
-  { hidden: string; mb0: string; minH: string; only: string; inert: string }
-> = {
+const AT: Record<FoldsAt, { hidden: string; minH: string; only: string; inert: string }> = {
   phone: {
     hidden: "max-md:hidden",
-    mb0: "max-md:mb-0",
     minH: "max-md:min-h-11",
     only: "md:hidden",
     inert: "md:pointer-events-none md:cursor-default",
   },
   desktop: {
     hidden: "md:hidden",
-    mb0: "md:mb-0",
     minH: "md:min-h-11",
     only: "max-md:hidden",
     inert: "max-md:pointer-events-none max-md:cursor-default",
   },
-  always: { hidden: "hidden", mb0: "mb-0", minH: "min-h-11", only: "", inert: "" },
+  always: { hidden: "hidden", minH: "min-h-11", only: "", inert: "" },
 };
 
 /** The class that hides a section's body while it is folded, at the widths it folds at. */
@@ -90,7 +85,7 @@ export function FoldHeading<Id extends string>({
   const Tag = level === 2 ? "h2" : "h3";
   return (
     <Tag
-      className={`${level === 2 ? "text-xl" : "text-base"} ${className} ${open ? "" : at.mb0}`}
+      className={`${level === 2 ? "text-xl" : "text-base"} ${className}`}
       style={{ fontFamily: FONT, fontWeight: 700 }}
     >
       <button

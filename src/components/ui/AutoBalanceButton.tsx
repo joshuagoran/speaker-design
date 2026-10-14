@@ -11,6 +11,7 @@ import {
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
+import { GAP_Y_TIGHT } from "../../styles/layout";
 
 interface Props<L> {
   /** the balance the design takes now, for the picked option (lib/speaker/autoBalance): whether it can balance, and why not */
@@ -24,7 +25,6 @@ interface Props<L> {
   tipExtra?: string;
   /** what the page adds when the button is on (the Stack page: a speaker that members share with different crossovers) */
   notes?: readonly string[];
-  className?: string;
 }
 
 /** The toggle's options, flat first (the default). */
@@ -46,11 +46,10 @@ export function AutoBalanceButton<L>({
   onMode,
   tipExtra,
   notes = [],
-  className = "",
 }: Props<L>) {
   return (
-    <div className={className}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+    <div className={GAP_Y_TIGHT}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-sm font-label text-stone-500">
           <Tooltip tip={tipExtra ? `${BAND_BALANCE_TIP} ${tipExtra}` : BAND_BALANCE_TIP}>
             {AUTO_BALANCE_TEXT.label}
@@ -66,12 +65,12 @@ export function AutoBalanceButton<L>({
         {AUTO_BALANCE_TEXT.button}
       </Button>
       {balance.status === AUTO_BALANCE_STATUS.balanced && mode === AUTO_BALANCE_MODE.moreBass && (
-        <p className="text-xs text-stone-500 mt-1">{AUTO_BALANCE_TEXT.levels(balance.bands)}</p>
+        <p className="text-xs text-stone-500">{AUTO_BALANCE_TEXT.levels(balance.bands)}</p>
       )}
       {balance.status === AUTO_BALANCE_STATUS.balanced &&
         notes.map((note) => <Notice key={note}>{note}</Notice>)}
       {balance.status === AUTO_BALANCE_STATUS.oneBand && (
-        <p className="text-xs text-stone-500 mt-1">{AUTO_BALANCE_TEXT.oneBand}</p>
+        <p className="text-xs text-stone-500">{AUTO_BALANCE_TEXT.oneBand}</p>
       )}
       {balance.status === AUTO_BALANCE_STATUS.unmodeled && (
         <Notice>{AUTO_BALANCE_TEXT.unmodeled(balance.names)}</Notice>

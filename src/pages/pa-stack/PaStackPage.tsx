@@ -77,7 +77,7 @@ export function PaStackPage({ planner }: Props) {
               <div className={cell("col-start-1 row-start-2")}>
                 <SubSection
                   planner={planner}
-                  summary={!besideView && <SystemSummary planner={planner} className="mb-4" />}
+                  summary={!besideView && <SystemSummary planner={planner} />}
                 />
               </div>
               <div className={cell("col-start-2 row-start-2")}>

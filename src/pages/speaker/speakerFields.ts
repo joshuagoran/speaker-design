@@ -1,8 +1,5 @@
-// What the Speaker page's settings share: the row their number fields wrap in, and how a size or position shows.
+// What the Speaker page's settings share: how a size or position shows.
 import { onStep } from "../../lib/speaker/optimize/space";
-
-/** A row of number fields that wraps onto more lines where the pane is narrow. */
-export const FIELD_ROW = "flex flex-wrap gap-x-3 gap-y-3 mb-3";
 
 /**
  * A size or position in inches as a field shows it, or any value a field shows to the hundredth (a horn's lengths and

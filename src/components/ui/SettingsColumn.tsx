@@ -4,6 +4,13 @@ import type { FoldsAt } from "./FoldHeading";
 import type { Folds } from "../../hooks/useFolds";
 import { FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
+import {
+  FLEX_GAP_Y,
+  SECTION_GAP_Y,
+  SECTION_GAP_Y_MD_UP,
+  GAP_Y,
+  GAP_Y_MD_UP,
+} from "../../styles/layout";
 
 interface Props<Id extends string> {
   /** the column's name for screen readers */
@@ -18,6 +25,11 @@ interface Props<Id extends string> {
   className?: string;
   /** extra classes on the scrolling part */
   bodyClassName?: string;
+  /**
+   * how the column spaces its children when it has no fold sections (default `GAP_Y`); a column whose children are
+   * tab groups, some hidden on phones, passes a flex rule, which leaves no gap at a hidden child
+   */
+  gapY?: string;
   children: React.ReactNode;
 }
 
@@ -32,6 +44,7 @@ export function SettingsColumn<Id extends string>({
   top,
   className = "",
   bodyClassName = "",
+  gapY = GAP_Y,
   children,
 }: Props<Id>) {
   return (
@@ -57,7 +70,7 @@ export function SettingsColumn<Id extends string>({
         </div>
       )}
       <div
-        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 ${folds ? "" : "md:pt-3"} ${bodyClassName}`}
+        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 ${folds ? (foldsAt === "desktop" ? SECTION_GAP_Y_MD_UP : SECTION_GAP_Y) : `md:pt-3 ${gapY}`} ${bodyClassName}`}
       >
         {children}
       </div>
@@ -86,7 +99,8 @@ export function SettingsSection<Id extends string>({
   children,
 }: SectionProps<Id>) {
   return (
-    <section className={`mb-4 last:mb-0 ${foldsAt === "desktop" ? "max-md:mb-0" : ""}`}>
+    // the section bleeds to the panel edges (the column pads its body), so the heading bar spans the panel; the body pads itself
+    <section className={`md:-mx-4 ${FLEX_GAP_Y}`}>
       <FoldHeading
         id={id}
         title={title}
@@ -96,10 +110,14 @@ export function SettingsSection<Id extends string>({
         summary={summary}
         level={3}
         // a light gray bar across the panel under a black rule, so each section starts clearly
-        className={`mb-3 md:-mx-4 bg-stone-300 border-t-2 border-stone-900 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
+        className={`bg-stone-300 border-t-2 border-stone-900 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
         buttonClassName="px-3 md:px-4"
       />
-      <FoldBody open={folds.open[id]} foldsAt={foldsAt} className="pb-1">
+      <FoldBody
+        open={folds.open[id]}
+        foldsAt={foldsAt}
+        className={`pb-1 md:px-4 ${foldsAt === "desktop" ? GAP_Y_MD_UP : GAP_Y}`}
+      >
         {children}
       </FoldBody>
     </section>

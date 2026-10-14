@@ -114,8 +114,8 @@ export function OptimizerPanel({
     <section className={`${RESULT_MAX_WIDTH} pb-4`} style={{ fontFamily: FONT }}>
       <Card pad="lg">
         <SectionHeading>{OPTIMIZER_PANEL_TEXT.heading}</SectionHeading>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-          <div className="mt-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+          <div>
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
             <div className="flex flex-wrap gap-1">
               {/* the cast below is a boundary: Object.entries types the keys as string; they are the rooms in ROOMS */}
@@ -131,18 +131,15 @@ export function OptimizerPanel({
               ))}
             </div>
           </div>
-          <div className="mt-3">
-            <NumberField
-              label="Max per box"
-              value={optIn.maxLb}
-              min={30}
-              max={250}
-              unit="lb"
-              onChange={(n) => setOpt({ maxLb: n })}
-              className=""
-            />
-          </div>
-          <div className="mt-3">
+          <NumberField
+            label="Max per box"
+            value={optIn.maxLb}
+            min={30}
+            max={250}
+            unit="lb"
+            onChange={(n) => setOpt({ maxLb: n })}
+          />
+          <div>
             <NumberField
               label={
                 <>
@@ -155,7 +152,6 @@ export function OptimizerPanel({
               step={25}
               unit="$"
               onChange={(n) => setOpt({ budget: n })}
-              className=""
             />
           </div>
           <GoalPicker defs={OPTIMIZER_GOALS} selected={goals} onTap={tapGoal} />
@@ -169,7 +165,7 @@ export function OptimizerPanel({
             ]}
           />
         </div>
-        <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">
+        <div className="text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">
           Target: {tgtText}
           {curOut != null && (
             <div className="text-xs text-stone-500 mt-0.5">

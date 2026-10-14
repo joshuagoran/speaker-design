@@ -27,7 +27,7 @@ export function SwatchPicker({
   const preset = presets && Object.hasOwn(presets, value) ? presets[value] : undefined;
   const ring = (on: boolean) => (on ? "border-stone-900" : "border-stone-300");
   return (
-    <div className="mb-5">
+    <div>
       <div id={id} className="text-sm font-label text-stone-500 mb-1">
         {label}
       </div>

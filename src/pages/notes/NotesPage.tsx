@@ -21,7 +21,7 @@ import {
 import { STATS } from "../../components/optimizer/StatRow";
 import { AMP_SERIES, GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { FONT } from "../../styles/fonts";
-import { PAGE_WIDTH, READING_WIDTH } from "../../styles/layout";
+import { FLEX_GAP_Y, PAGE_WIDTH, READING_WIDTH, GAP_Y } from "../../styles/layout";
 import type { AmpColumn, AmpModel, AmpSeries, DspColumn, DspUnit, DspUnitId } from "../../types";
 import { DSP_COLUMNS } from "../../constants/dspColumns";
 import { AMP_CLASSES, AMP_COLUMNS } from "../../constants/ampColumns";
@@ -149,12 +149,12 @@ export function NotesPage() {
           })}
         </section>
 
-        <section className="mt-2" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-2">Signal path (mains rack)</SectionHeading>
+        <section className={`mt-2 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>Signal path (mains rack)</SectionHeading>
           <div className="max-w-4xl">
             <SignalPath />
           </div>
-          <p className="text-sm text-stone-900 max-w-3xl mt-3">
+          <p className="text-sm text-stone-900 max-w-3xl">
             <Tooltip
               tip={`${DSP}: EQ, crossovers, delay. Amp limiters; ${HORN_AMP_SAFETY_HPF_HZ} Hz horn safety highpass.`}
             >
@@ -162,8 +162,8 @@ export function NotesPage() {
             </Tooltip>
           </p>
         </section>
-        <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">
+        <section className={`mt-8 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>
             {`Amp DSP: ${QSC_GXD.brand} ${GXD.map((m) => m.model).join(" / ")}`}
           </SectionHeading>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
@@ -192,38 +192,41 @@ export function NotesPage() {
               </li>
             ))}
           </ul>
-          <h3 className="text-base font-medium mt-5 mb-2">
-            Protecting an excursion-limited sub with the amp limiter
-          </h3>
-          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
-            {[
-              ["1. Highpass", "LR24 at or slightly above the tuning. Match it in your design."],
-              [
-                "2. Limiter power",
-                `The lower of the sub's \u201c${STATS.firstLimit.label}\u201d power (when Xmax limits first) and the driver's rating; Medium or Aggressive. ${GXD8.model} maximum: ${GXD8.limiterW[1]} W.`,
-              ],
-              [
-                "3. Check it",
-                `Play a sine at the sub's \u201c${STATS.peakExcursion.label}\u201d frequency until the limit lights. The terminal AC volts should be \u221a(W \u00d7 8).`,
-              ],
-              [
-                "4. Steeper or in volts",
-                `Use the ${DSP}; keep the amp limiter as a backup. Not yet checked against its manual.`,
-              ],
-              [
-                "Horns",
-                `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Set its limiter to the driver's rating, and the HF amp power in your design to match.`,
-              ],
-            ].map(([t, d]) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
-                <span>
-                  <span className="font-medium">{t}.</span> {d}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-stone-500 mt-3 max-w-3xl">
+          {/* a subheading and its list, with extra room above (pt-2 on top of the section's gap): a new topic in the section */}
+          <div className={`${FLEX_GAP_Y} pt-2`}>
+            <h3 className="text-base font-medium">
+              Protecting an excursion-limited sub with the amp limiter
+            </h3>
+            <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
+              {[
+                ["1. Highpass", "LR24 at or slightly above the tuning. Match it in your design."],
+                [
+                  "2. Limiter power",
+                  `The lower of the sub's \u201c${STATS.firstLimit.label}\u201d power (when Xmax limits first) and the driver's rating; Medium or Aggressive. ${GXD8.model} maximum: ${GXD8.limiterW[1]} W.`,
+                ],
+                [
+                  "3. Check it",
+                  `Play a sine at the sub's \u201c${STATS.peakExcursion.label}\u201d frequency until the limit lights. The terminal AC volts should be \u221a(W \u00d7 8).`,
+                ],
+                [
+                  "4. Steeper or in volts",
+                  `Use the ${DSP}; keep the amp limiter as a backup. Not yet checked against its manual.`,
+                ],
+                [
+                  "Horns",
+                  `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Set its limiter to the driver's rating, and the HF amp power in your design to match.`,
+                ],
+              ].map(([t, d]) => (
+                <li key={t} className="flex gap-3">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
+                  <span>
+                    <span className="font-medium">{t}.</span> {d}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-xs text-stone-500 max-w-3xl">
             Xmax marks distortion, not damage (usually 2–3× further). After listening, 1.2–1.4× the
             Xmax voltage is common. Sources:{" "}
             {QSC_GXD.src.map((d, i) => (
@@ -238,9 +241,9 @@ export function NotesPage() {
           </p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">Amps</SectionHeading>
-          <p className="text-sm text-stone-900 mb-3 max-w-3xl">
+        <section className={`mt-8 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>Amps</SectionHeading>
+          <p className="text-sm text-stone-900 max-w-3xl">
             Power is per channel, continuous, all channels driven, as each maker rates it; two
             figures are channel 1 / channel 2, and a dash is a load the maker does not rate. Weight
             is the net weight, or the one figure a maker prints. Hover an amp for its filters and
@@ -284,7 +287,7 @@ export function NotesPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-stone-500 mt-2 max-w-3xl">
+          <p className="text-xs text-stone-500 max-w-3xl">
             Sources:{" "}
             {AMP_SERIES.flatMap((s): AmpSeries["src"] => s.src).map((d, i) => (
               <Fragment key={d.url}>
@@ -298,9 +301,9 @@ export function NotesPage() {
           </p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHeading>
-          <p className="text-sm text-stone-900 mb-3 max-w-3xl">
+        <section className={`mt-8 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>Crossover / DSP: PA2 and alternatives</SectionHeading>
+          <p className="text-sm text-stone-900 max-w-3xl">
             Each output: 48 dB/oct highpass, peak limiter in volts or dBu with attack and release,
             slower RMS limiter, PEQ, delay. Balanced inputs at ~15 ft from the mixer.
           </p>
@@ -334,7 +337,7 @@ export function NotesPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-sm text-stone-900 mt-2 max-w-3xl">
+          <p className="text-sm text-stone-900 max-w-3xl">
             Pick: a used {dspName("driverack260")} on a budget; new, the {dspName("aqm408")}{" "}
             (limiters in dBu with attack and release, 4×8) or the {dspName("venu360")} (front panel
             plus app). Keep the amp limiters as a backup.{" "}
@@ -344,9 +347,9 @@ export function NotesPage() {
           </p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">Home inputs: Gemini MXR-01BT</SectionHeading>
-          <p className="text-sm text-stone-900 mb-3 max-w-3xl">
+        <section className={`mt-8 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>Home inputs: Gemini MXR-01BT</SectionHeading>
+          <p className="text-sm text-stone-900 max-w-3xl">
             Turntable, line and phone into one DSP and amps, with one master volume: a 2-channel DJ
             mixer.
           </p>
@@ -382,7 +385,7 @@ export function NotesPage() {
               </li>
             ))}
           </ul>
-          <p className="text-xs text-stone-500 mt-3 max-w-3xl">
+          <p className="text-xs text-stone-500 max-w-3xl">
             Source:{" "}
             <a className="underline" href="https://www.geminisound.com/products/mxr-01bt">
               Gemini MXR-01BT
@@ -391,9 +394,9 @@ export function NotesPage() {
           </p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">Passive crossover: calibrate and build</SectionHeading>
-          <p className="text-sm text-stone-900 mb-3 max-w-3xl">
+        <section className={`mt-8 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>Passive crossover: calibrate and build</SectionHeading>
+          <p className="text-sm text-stone-900 max-w-3xl">
             For fills with no maker network (see each fill's note). 2nd-order 2-way: 6–8 parts,
             $40–80 per box. Tune all values, not only the pad.
           </p>
@@ -432,15 +435,15 @@ export function NotesPage() {
               </li>
             ))}
           </ul>
-          <p className="text-sm text-stone-900 mt-3 max-w-3xl">
+          <p className="text-sm text-stone-900 max-w-3xl">
             <Tooltip tip="A weekend to measure and design, an evening to build.">
               About 1 weekend
             </Tooltip>
           </p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">Materials</SectionHeading>
+        <section className={`mt-8 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>Materials</SectionHeading>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               [
@@ -463,8 +466,8 @@ export function NotesPage() {
           </ul>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">Still to decide</SectionHeading>
+        <section className={`mt-8 ${GAP_Y}`} style={{ fontFamily: FONT }}>
+          <SectionHeading>Still to decide</SectionHeading>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               [
