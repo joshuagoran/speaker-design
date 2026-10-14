@@ -21,7 +21,7 @@ import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { SpaceSide } from "../../components/drawings/SpaceSide";
-import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
+import { COVERAGE_BANDS } from "../../lib/pa/coverage";
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -41,22 +41,27 @@ import {
   NO_DELAY_MS,
   placementDomId,
   SPACE_LEVEL_REF_PLACE,
+  SPACE_LEFT_WALL_TIP,
   SPACE_LEVEL_REFS,
+  SPACE_SURFACE_NAMES,
   SPACE_TEXT,
 } from "../../constants/space";
 import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
-import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { stackFromSaved } from "../stack/stackSaves";
 import type { StackPlanner } from "../stack/useStack";
-import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { PlacementSettings } from "./PlacementSettings";
 import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
 import { emptySpace, itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
 import { placeOptions } from "./placeOptions";
-import { STACK_STARTS, startGroup } from "../stack/stackPresets";
-import { STACK_START, STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
+import { STACK_PRESETS } from "../stack/stackPresets";
+import {
+  STACK_PRESET,
+  STACK_START_GROUPS,
+  STACK_START_NAMES,
+  type StackPreset,
+} from "../../constants/stackPresets";
 import { byId } from "../../lib/tables";
 import { spaceAlignment } from "../../lib/speaker/spaceAlignment";
 import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
@@ -67,7 +72,6 @@ interface Props {
   stack: Pick<StackPlanner, "store" | "design">;
   /** the speaker library: the Speaker page's store */
   speakerPage: Pick<SpeakerPageState, "store" | "spec">;
-  planner: PaPlanner;
 }
 
 /** A share as a whole percentage. */
@@ -82,7 +86,7 @@ const relClass = (rel: number) =>
  * aim, a mirrored pair as one placement; their amp power and alignment; the coverage across the floor on the fixed
  * scale, the levels at the reference, a side view of the heights and tilts, and the response at the listener.
  */
-export function SpacePage({ space, stack, speakerPage, planner }: Props) {
+export function SpacePage({ space, stack, speakerPage }: Props) {
   const pal = usePalette();
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
@@ -99,12 +103,8 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
   });
   /** signed in: the libraries are the person's (the stores hold a database) */
   const signedIn = Boolean(stack.store.db || speakerPage.store.db);
-  const startOptions = STACK_STARTS.map((id) => ({
-    id,
-    name: STACK_START_NAMES[id],
-    group: startGroup(id),
-  }));
-  const [start, setStart] = useState<StackStart>(STACK_START.paStack);
+  const startOptions = STACK_PRESETS.map((id) => ({ id, name: STACK_START_NAMES[id] }));
+  const [start, setStart] = useState<StackPreset>(STACK_PRESET.paStack);
   const placeList = placeOptions({
     openStack: stack.design,
     openSpeaker: speakerPage.spec,
@@ -230,33 +230,29 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-1">{SPACE_TEXT.coverage}</SectionHeading>
             <p className="text-sm text-stone-500 mb-3">
-              {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}{" "}
-              {SPACE_TEXT.mapHint}
+              {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
             </p>
-            {placements.length === 0 ? (
-              <Notice>{SPACE_TEXT.noPlacements}</Notice>
-            ) : (
-              <CoverageMap
-                view={view}
-                room={venue.room}
-                listener={venue.listener}
-                boxes={boxes}
-                selected={model.placements.flatMap((p, i) =>
-                  p.item.placement.source === selected ? [i] : [],
-                )}
-                onSelect={(i) => {
-                  const box = model.placements[i];
-                  if (box) pickOnMap(box.item.placement.source);
-                }}
-                actions={{
-                  moveBox: space.moveBox,
-                  aimBox: space.aimBox,
-                  moveListener: space.moveListener,
-                }}
-                busy={space.isPending}
-                maxHeight={maxHeight}
-              />
-            )}
+            <CoverageMap
+              view={view}
+              room={venue.room}
+              listener={venue.listener}
+              boxes={boxes}
+              selected={model.placements.flatMap((p, i) =>
+                p.item.placement.source === selected ? [i] : [],
+              )}
+              onSelect={(i) => {
+                const box = model.placements[i];
+                if (box) pickOnMap(box.item.placement.source);
+              }}
+              actions={{
+                moveBox: space.moveBox,
+                aimBox: space.aimBox,
+                moveListener: space.moveListener,
+              }}
+              busy={space.isPending}
+              maxHeight={maxHeight}
+              quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
+            />
             {space.error && <Notice>Map failed: {space.error}</Notice>}
             {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
             <div className="mt-3">
@@ -265,7 +261,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 freqHz={space.freqHz}
                 onBand={space.setBand}
                 onFreqHz={space.setFreqHz}
-                oneNote={SPACE_TEXT.oneNote(SINGLE_FREQ_RANGE[1])}
+                oneNote={SPACE_TEXT.oneNote}
               />
             </div>
             <div className={`${READING_WIDTH} mt-3`}>
@@ -278,57 +274,53 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
             </div>
           </section>
           {placements.length > 0 && (
-            <>
-              <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-                <SectionHeading className="mb-3">{SPACE_TEXT.levels}</SectionHeading>
-                {tiles.length > 0 && <StatTileGrid tiles={tiles} className="mb-2" />}
-                {view && (
-                  <p className="text-sm text-stone-500 tabular-nums">
-                    {view.atLimit !== null && view.atLimit < view.target + view.gain - 0.05
-                      ? SPACE_TEXT.cannotReach(refPlace, view.target + view.gain, view.atLimit)
-                      : SPACE_TEXT.turnedDown(-view.gain, refPlace, view.target + view.gain)}
-                    {listenerRel !== null && (
-                      <>
-                        {" "}
-                        {SPACE_TEXT.listenerVs}{" "}
-                        <span className={relClass(listenerRel)}>
-                          {formatSigned(listenerRel)} dB
-                        </span>
-                        .
-                      </>
-                    )}
-                  </p>
-                )}
-                {space.bandLevels.length > 0 && (
-                  <p className="text-sm text-stone-500 tabular-nums mt-2">
-                    {SPACE_TEXT.bandLevels}{" "}
-                    {space.bandLevels.map((b, k) => (
-                      <span key={b.band} className={relClass(b.db - b.target)}>
-                        {SPACE_TEXT.bandLevel(
-                          COVERAGE_BANDS[b.band].name,
-                          b.db.toFixed(1),
-                          b.target.toFixed(0),
-                        )}
-                        {k < space.bandLevels.length - 1 ? ", " : "."}
-                      </span>
-                    ))}
-                  </p>
-                )}
-              </section>
-              <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-                <SectionHeading className="mb-3">{SPACE_TEXT.side}</SectionHeading>
-                <Card>
-                  <SpaceSide
-                    items={model.placements.map((p) => p.item)}
-                    room={venue.room}
-                    listener={venue.listener}
-                    earFt={venue.earFt}
-                  />
-                  <p className="text-xs text-stone-500 mt-2">{SPACE_TEXT.sideNote}</p>
-                </Card>
-              </section>
-            </>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
+              <SectionHeading className="mb-3">{SPACE_TEXT.levels}</SectionHeading>
+              {tiles.length > 0 && <StatTileGrid tiles={tiles} className="mb-2" />}
+              {view && (
+                <p className="text-sm text-stone-500 tabular-nums">
+                  {view.atLimit !== null && view.atLimit < view.target + view.gain - 0.05
+                    ? SPACE_TEXT.cannotReach(view.target + view.gain, view.atLimit)
+                    : SPACE_TEXT.turnedDown(-view.gain, view.target + view.gain)}
+                </p>
+              )}
+              {view && listenerRel !== null && (
+                <p className="text-sm text-stone-500 tabular-nums mt-1">
+                  {SPACE_TEXT.listenerVs}{" "}
+                  <span className={relClass(listenerRel)}>{formatSigned(listenerRel)} dB</span>.
+                </p>
+              )}
+              {space.bandLevels.length > 0 && (
+                <p className="text-sm text-stone-500 tabular-nums mt-2">
+                  {SPACE_TEXT.bandLevels}{" "}
+                  {space.bandLevels.map((b, k) => (
+                    <span key={b.band} className={relClass(b.db - b.target)}>
+                      {SPACE_TEXT.bandLevel(
+                        COVERAGE_BANDS[b.band].name,
+                        b.db.toFixed(1),
+                        b.target.toFixed(0),
+                      )}
+                      {k < space.bandLevels.length - 1 ? ", " : "."}
+                    </span>
+                  ))}
+                </p>
+              )}
+            </section>
           )}
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
+            <SectionHeading className="mb-3">
+              <Tooltip tip={SPACE_TEXT.sideTip}>{SPACE_TEXT.side}</Tooltip>
+            </SectionHeading>
+            <Card>
+              <SpaceSide
+                items={model.placements.map((p) => p.item)}
+                room={venue.room}
+                listener={venue.listener}
+                earFt={venue.earFt}
+              />
+              <p className="text-xs text-stone-500 mt-2">{SPACE_TEXT.sideNote}</p>
+            </Card>
+          </section>
           {space.response.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
               <SectionHeading className="mb-3">{SPACE_TEXT.response}</SectionHeading>
@@ -362,7 +354,6 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
               />
             </section>
           )}
-          <p className={`${READING_WIDTH} text-sm text-stone-500 mt-5`}>{SPACE_TEXT.modelNote}</p>
         </>
       }
       settings={
@@ -375,27 +366,42 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(o.id)}
-                group={(o) => o.group}
-                onStart={() => space.replaceDesign(spaceFromStart(start, paPlannerDesign(planner)))}
+                group={() => STACK_START_GROUPS.presets}
+                onStart={() => space.replaceDesign(spaceFromStart(start))}
                 secondary={{
                   label: SPACE_TEXT.clear,
                   onClick: () => space.replaceDesign(emptySpace()),
                 }}
-                hint={SPACE_TEXT.startHint}
+                hint={<Tooltip tip={SPACE_TEXT.startTip}>{SPACE_TEXT.startHint}</Tooltip>}
               />
             </>,
           )}
           {section(
             "room",
             <>
-              <RoomFields room={venue.room} actions={space.room} />
+              <RoomFields
+                room={venue.room}
+                actions={space.room}
+                surfaces={SPACE_SURFACE_NAMES}
+                surfaceTips={{ left: SPACE_LEFT_WALL_TIP }}
+              />
               <Slider
-                label={SPACE_TEXT.target}
+                label={<Tooltip tip={SPACE_TEXT.targetTip}>{SPACE_TEXT.target}</Tooltip>}
                 value={venue.targetDb}
                 min={COVERAGE_TARGET_DB[0]}
                 max={COVERAGE_TARGET_DB[1]}
                 step={1}
                 unit=" dB SPL"
+                note={
+                  space.bandLevels.length > 0
+                    ? AUTO_BALANCE_TEXT.levels(
+                        space.bandLevels.map((b) => ({
+                          name: COVERAGE_BANDS[b.band].name,
+                          levelDb: b.target,
+                        })),
+                      )
+                    : undefined
+                }
                 onChange={(targetDb) => space.editVenue((v) => ({ ...v, targetDb }))}
               />
               <ToggleGroup

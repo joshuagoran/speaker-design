@@ -20,14 +20,11 @@ import {
 import { aimedPlacement, movedPlacement } from "../../lib/speaker/spaceLayout";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
-import { startLayers } from "../stack/stackPresets";
-import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
+import { presetLayers } from "../stack/stackPresets";
+import { STACK_START_DESIGN_NAMES, type StackPreset } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
 import { fillAlignment } from "../../lib/speaker/fillAlign";
-import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
-import { fromStored, type StoredCoverageLayout } from "../coverage/useCoverageLayout";
-import { COVERAGE_LAYOUT_KEY } from "../../constants/coverageTestIds";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
 import type { PlaceItem } from "./placeOptions";
@@ -40,7 +37,6 @@ import type {
   CoverageGridView,
   CoverageLevelRef,
   FloorPoint,
-  PaPlannerDesign,
   PlacedSource,
   SavedConfig,
   SpaceDesign,
@@ -152,17 +148,11 @@ export function withStack(
 }
 
 /**
- * A start read in as a space: a preset (a PA layout on the PA floor's starting layout, or the Hi-fi pair in its room), or
- * the current PA design on the Coverage page's floor (as that page last left it). A PA design takes its music balance
- * in its band Levels.
+ * A preset read in as a space: a PA layout on the PA floor's starting layout, or the Hi-fi pair in its room. A PA preset
+ * takes its music balance in its band Levels.
  */
-export function spaceFromStart(start: StackStart, pa: PaPlannerDesign): SpaceDesign {
-  const floor = fromStored(readStoredJson<StoredCoverageLayout>(COVERAGE_LAYOUT_KEY, {}));
-  const read = startLayers(
-    start,
-    { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] },
-    { pa, floor },
-  );
+export function spaceFromStart(start: StackPreset): SpaceDesign {
+  const read = presetLayers(start, { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] });
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
 

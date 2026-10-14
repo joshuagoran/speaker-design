@@ -10,12 +10,11 @@ import type {
   StackSpec,
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
-import { paVenue } from "../../lib/speaker/paSpec";
-import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
+import { homeVenue } from "../../lib/speaker/specParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
-import { SPACE_TEXT } from "../../constants/space";
+import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import type { PageDraft } from "../../hooks/usePageDraft";
@@ -23,13 +22,16 @@ import type { PageDraft } from "../../hooks/usePageDraft";
 /** The id a space has until the library saves it (then it takes the document's). */
 export const DRAFT_SPACE_ID = "draft";
 
-/** A space with nothing placed, named as a new one, on the coverage page's default floor. */
+/**
+ * A space with nothing placed, named as a new one, in the default living room (20 × 30 × 12 ft) with a seated listener
+ * two thirds down it: the page opens on a quiet, empty room.
+ */
 export const emptySpace = (): SpaceDesign => ({
   space: {
     id: DRAFT_SPACE_ID,
     name: SPACE_TEXT.newName,
     placements: [],
-    venue: paVenue(DEFAULT_COVERAGE_LAYOUT),
+    venue: homeVenue(0, SPACE_HOME_SEAT, SEATED_EAR_FT),
   },
   stacks: [],
   speakers: [],

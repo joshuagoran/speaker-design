@@ -35,6 +35,20 @@ const HANDLE_FT = 5;
 const EDGE_FT = 30;
 const PAD = { l: 30, r: 10, t: 24, b: 24 };
 
+/** The quiet line's font size and the width of one of its characters, px (the map's font). */
+const QUIET_FONT_PX = 12;
+const QUIET_CHAR_PX = 7;
+
+/** The quiet line as one line, or as two at the space nearest its middle when the floor is too narrow for one. */
+function quietLines(text: string, widthPx: number): string[] {
+  if (text.length * QUIET_CHAR_PX <= widthPx - 16) return [text];
+  const mid = text.length / 2;
+  const cut = [...text.matchAll(/ /g)]
+    .map((m) => m.index)
+    .reduce((a, b) => (Math.abs(b - mid) < Math.abs(a - mid) ? b : a), 0);
+  return [text.slice(0, cut), text.slice(cut + 1)];
+}
+
 type Drag =
   | { kind: "box"; i: number; dx: number; dy: number }
   | { kind: "aim"; i: number }
@@ -73,6 +87,11 @@ interface Props {
   onSelect?: (i: number) => void;
   /** the most height the map may take, px */
   maxHeight: number;
+  /**
+   * a room with no sound in it: its line, centered on the floor, which is drawn in a neutral fill (the palette's edge
+   * gray, not a level on the scale); absent, the floor shows the grid's levels
+   */
+  quiet?: string;
   /** whether a finer or newer grid is on its way: aria-busy only, no badge (the fine pass is quick) */
   busy: boolean;
 }
@@ -92,6 +111,7 @@ export function CoverageMap({
   onSelect,
   maxHeight,
   busy,
+  quiet,
 }: Props) {
   const pal = usePalette();
   const [box, cw] = useElementWidth(560);
@@ -286,7 +306,7 @@ export function CoverageMap({
             <rect x={PAD.l} y={PAD.t} width={w} height={h} />
           </clipPath>
         </defs>
-        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={ON_DATA.edge} />
+        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={quiet ? pal.edge : ON_DATA.edge} />
         <g clipPath="url(#coverage-room)">
           {image && (
             <image
@@ -331,6 +351,27 @@ export function CoverageMap({
               : [],
           )}
         </g>
+        {quiet && (
+          <text
+            x={PAD.l + w / 2}
+            y={PAD.t + h / 2}
+            textAnchor="middle"
+            fill={pal.muted}
+            {...font}
+            fontSize={QUIET_FONT_PX}
+            pointerEvents="none"
+          >
+            {quietLines(quiet, w).map((line, i, all) => (
+              <tspan
+                key={line}
+                x={PAD.l + w / 2}
+                dy={i === 0 ? `${-(all.length - 1) * 0.6}em` : "1.2em"}
+              >
+                {line}
+              </tspan>
+            ))}
+          </text>
+        )}
         {sides.map(([side, x1, y1, x2, y2]) => (
           <line
             key={side}

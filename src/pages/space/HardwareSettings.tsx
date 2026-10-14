@@ -1,5 +1,6 @@
 import type { SpaceDesign } from "../../types";
 import { Card } from "../../components/ui/Card";
+import { Tooltip } from "../../components/ui/Tooltip";
 import { CardHeading } from "../../components/ui/CardHeading";
 import { NumberField } from "../../components/ui/NumberField";
 import { StatRowGrid } from "../../components/stats/StatRowGrid";
@@ -49,7 +50,9 @@ export function HardwareSettings({ design, alignment, names, space }: Props) {
   }));
   return (
     <>
-      <h4 className="font-semibold mb-1">{SPACE_TEXT.ampPower}</h4>
+      <h4 className="font-semibold mb-1">
+        <Tooltip tip={SPACE_TEXT.ampPowerTip}>{SPACE_TEXT.ampPower}</Tooltip>
+      </h4>
       <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.ampPowerHint}</p>
       {speakers.map(({ speaker, groups }) => (
         <Card key={speaker.id} className="mb-3">
@@ -69,7 +72,9 @@ export function HardwareSettings({ design, alignment, names, space }: Props) {
           ))}
         </Card>
       ))}
-      <h4 className="font-semibold mt-2 mb-1">{SPACE_TEXT.alignment}</h4>
+      <h4 className="font-semibold mt-2 mb-1">
+        <Tooltip tip={SPACE_TEXT.alignmentTip}>{SPACE_TEXT.alignment}</Tooltip>
+      </h4>
       <p className="text-xs text-stone-500 mb-2">{SPACE_TEXT.alignmentHint}</p>
       {cards.map(({ placement, rows, title }) => (
         <Card key={placement} className="mb-3">

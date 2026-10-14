@@ -25,7 +25,9 @@ import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
 import { ThemeSwitch } from "./components/ui/ThemeSwitch";
 import { PageTabs } from "./components/ui/PageTabs";
 import { entriesOf } from "./lib/records";
+import { pageAt } from "./lib/pageRoute";
 import {
+  NOTES_PAGE,
   PAGE_HASHES,
   PROJECT_NAMES,
   PROJECT_NAV_LABELS,
@@ -34,10 +36,8 @@ import {
   type ProjectId,
 } from "./constants/pages";
 
-/** The page at the address's hash; the PA Design page for an unknown or empty one. */
-const viewOf = (): AppPage =>
-  entriesOf(PAGE_HASHES).find(([v, h]) => v !== "planner" && h === window.location.hash)?.[0] ??
-  "planner";
+/** The page at the address (`pageAt`). */
+const viewOf = (): AppPage => pageAt(window.location.pathname, window.location.hash);
 
 /** The project a page belongs to. */
 const projectOf = (v: AppPage): ProjectId =>
@@ -123,8 +123,8 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
             <Notice>{DRAFT_FAILED_TEXT}</Notice>
           </div>
         )}
-        {/* the PA project's Notes and the Space project's are one static page (the PA page goes at L3f) */}
-        {view === "notes" || view === "spaceNotes" ? (
+        {/* Notes has no tab: it opens only at the path /notes */}
+        {view === NOTES_PAGE ? (
           <NotesPage />
         ) : view === "fills" ? (
           <FillsPage fills={fills} />
@@ -143,7 +143,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
         ) : view === "stackCutlist" ? (
           <StackCutlistPage stack={stack} />
         ) : view === "space" ? (
-          <SpacePage space={space} stack={stack} speakerPage={speakerPage} planner={planner} />
+          <SpacePage space={space} stack={stack} speakerPage={speakerPage} />
         ) : view === "coverage" ? (
           <CoveragePage planner={planner} />
         ) : (

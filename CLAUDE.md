@@ -2,6 +2,7 @@
 
 DIY speaker planner: PA stack, cutlist, fills and hi-fi tabs, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `build/build.sh` (`vp build` + `build/inline.mjs`); sources in `src/`, strict TypeScript (`tsconfig.json`), shared types in `src/types.ts`;
 checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without the global CLI); phone layout check in `tests/mobile-check.mjs` (CI).
+The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`, `src/lib/pageRoute.ts`; the Pages build also writes `notes/index.html`).
 
 ## UI rules
 

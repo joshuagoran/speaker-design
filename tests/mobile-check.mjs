@@ -9,7 +9,7 @@
 // only while it is chosen: switching back brings the box back (the size the user set is kept).
 // On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { GOAL_SHORT_NAMES, PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
 import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds.ts";
@@ -46,13 +46,11 @@ const views = [
   "#fills",
   "#hifi",
   "#hifi-cutlist",
-  "#notes",
   "#speaker",
   "#speaker-cutlist",
   "#stack",
   "#stack-cutlist",
   "#space",
-  "#space-notes",
 ];
 const failures = [];
 
@@ -187,6 +185,32 @@ for (const size of sizes) {
     await check("#planner, optimizer results");
   }
   for (const e of errs) failures.push(`${size.name}: page error: ${e}`);
+  await ctx.close();
+}
+
+// The Notes page has no tab and no hash: it opens at the path /notes. Serve the page at that path and check it as the
+// views are checked, and that no tab leads to it.
+for (const size of sizes) {
+  const ctx = await browser.newContext({ ...size });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on("pageerror", (e) => errs.push(e.message));
+  await p.route("https://speaknow.test/**", (r) =>
+    r.fulfill({ path: fileURLToPath(page), contentType: "text/html" }),
+  );
+  await p.goto("https://speaknow.test/notes/");
+  await p.waitForFunction(() => document.querySelector("nav a"), null, { timeout: 30000 });
+  await p.waitForTimeout(600);
+  const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
+  if (m.sw > m.iw)
+    failures.push(`${size.name} /notes: page scrolls sideways (${m.sw} > ${m.iw} px)`);
+  for (const t of m.small) failures.push(`${size.name} /notes: small touch target ${t}`);
+  for (const t of m.captions) failures.push(`${size.name} /notes: detail caption ${t}`);
+  if (!(await p.locator("h2").count()))
+    failures.push(`${size.name} /notes: the Notes page is not shown`);
+  if (await p.locator("nav a", { hasText: /^Notes$/ }).count())
+    failures.push(`${size.name}: a tab leads to Notes`);
+  for (const e of errs) failures.push(`${size.name} /notes: page error: ${e}`);
   await ctx.close();
 }
 
