@@ -27,6 +27,7 @@ import type {
   HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
+  SLOT_PLACE,
   SPACE_ITEM,
   SPEAKER_BAND,
   SPEAKER_MODEL_GAP,
@@ -205,6 +206,13 @@ export interface SubDriver {
   sens?: number;
   /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
   depthIn?: number;
+  /** the surround's width, in, from the maker's dimension drawing; absent where it gives none (the front chamber estimates it) */
+  surroundIn?: number;
+  /**
+   * the cone's depth, in: its dish, from the mounting plane to the dust cap, from the maker's dimension drawing; absent
+   * where it gives none (the front chamber estimates it)
+   */
+  dishDepthIn?: number;
   note: string;
 }
 
@@ -220,6 +228,8 @@ export interface MidDriver {
   ts: ThieleSmall;
   /** mounting depth in inches, from the maker's datasheet; absent where not entered (MID_DEPTH_FALLBACK_IN stands in) */
   depthIn?: number;
+  surroundIn?: SubDriver["surroundIn"];
+  dishDepthIn?: SubDriver["dishDepthIn"];
   note: string;
 }
 
@@ -808,7 +818,7 @@ export interface DriverLayout {
 
 /** What stops a level, by id (`LIMIT_NAMES` holds the word a chart label shows for it). */
 export type LimitId = keyof typeof LIMIT_NAMES;
-/** What limits the woofer's output at a frequency: any limit, a radiator's travel included. */
+/** What limits a woofer's output at a frequency: any limit (a radiator's travel, and a horn throat's air speed). */
 export type WooferLimit = LimitId;
 
 /** The woofer's response at one frequency, with the baffle step, placement, EQ and low-pass applied. */
@@ -1288,7 +1298,8 @@ export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, Pane
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
  * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them. `div` is the side ducts'
  * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/panel); absent,
- * as in saves from before the choice, they are ½″ (`ductDividerIn`).
+ * as in saves from before the choice, they are ½″ (`ductDividerIn`). `fins` is how many fins split the bottom slot;
+ * absent, as the PA page always leaves it, its two (`PA_SLOT_FINS`, lib/pa/calc `slotFinsOf`); the Speaker page sets it.
  */
 export interface VentSpec {
   slotH: number;
@@ -1297,6 +1308,7 @@ export interface VentSpec {
   throat: number;
   len: number;
   div?: number;
+  fins?: number;
 }
 
 /** A set of round port tubes from stock pipe: how many, and each one's inside diameter in inches. */
@@ -1499,7 +1511,7 @@ export interface Complex {
  */
 export type Matrix2 = readonly [Complex, Complex, Complex, Complex];
 
-/** A horn segment's flare law: "con" conical, "exp" exponential (constants/hornEngine HORN_PROFILE). */
+/** A horn segment's flare law: "con" conical, "exp" exponential, "par" parabolic (constants/hornEngine HORN_PROFILE). */
 export type HornProfile = (typeof HORN_PROFILE)[keyof typeof HORN_PROFILE];
 
 /** The solid angle a horn mouth radiates into, in units of π (constants/hornEngine RADIATION_ANGLE_NAMES). */
@@ -1603,8 +1615,8 @@ export interface HornModel {
   fb: number | null;
 }
 
-/** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator). */
-export type SubLimitWho = Exclude<LimitId, "radiator">;
+/** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator, no horn throat). */
+export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
 
 /** The sub's music limit: the drive level (volts and watts into 8 ohm) where the first of port, cone, driver and amp gives out. */
 export interface SubLimits {
@@ -1640,8 +1652,8 @@ export interface VentGeometry {
   desc: string;
 }
 
-/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches). */
-export interface PaPortGeometry {
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches), and the bottom slot's fins (absent: the PA page's two). */
+export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
   ductH: number;
   nPorts: number;
   portR: number;
@@ -1958,14 +1970,21 @@ export type SpeakerRoundPort = RoundPort &
     | { flared: true; corners?: boolean; position?: never }
   );
 
+/** Where a Hi-fi rule slot's openings are on the baffle (`SLOT_PLACE`). */
+export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
+
 /**
- * A slot, with the PA sub's letterbox details where it is one: `fins` dividers of the wall's thickness across it, its
- * mouth on the floor, running from the frame front, `folded` up the back wall when too long to run straight (the PA
- * slot rule: lib/pa/calc ventGeometry). Without `fins`, the Hi-fi slot rule.
+ * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (the PA page's two), its
+ * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
+ * (the PA slot rule: lib/pa/calc ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
+ * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
+ * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
+ * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width and its long side `w` its height.
  */
 export interface SpeakerSlotPort extends SlotPort {
   fins?: number;
   folded?: boolean;
+  place?: SlotPlace;
 }
 
 /**
@@ -2015,10 +2034,12 @@ export type HornDrive =
 export type HornPath = (typeof HORN_PATH)[keyof typeof HORN_PATH];
 
 /**
- * A horn built into the box: the horn engine's throat chamber, segments and vent offset (`HornDesign`). The chamber's
- * own net air and vent are the horn's rear chamber.
+ * A horn built into the box: the horn engine's segments and vent offset (`HornDesign`). The chamber's own net air and
+ * vent are the horn's rear chamber. Its front chamber is not a setting: it comes from the walls over the cones
+ * (lib/speaker/hornThroat); an older save's `throatChamber` is not read. The first segment's start area is the throat,
+ * which the compression ratio shows.
  */
-export interface SpeakerHorn extends Pick<HornDesign, "throatChamber" | "segments" | "portOffset"> {
+export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset"> {
   drive: HornDrive;
   path: HornPath;
   /**
@@ -2350,10 +2371,15 @@ export interface SpeakerChamberResponse {
 }
 
 /**
- * A chamber's cones at one frequency (sine peaks): each cone's excursion, mm, the vent's air speed, m/s, and the
- * radiators' travel, mm, where the box has a vent or radiators.
+ * A chamber's cones at one frequency (sine peaks): each cone's excursion, mm, the vent's air speed, m/s, the
+ * radiators' travel, mm, and the air speed at a horn's throat, m/s, where the box has a vent, radiators or a horn.
  */
-export type ChamberDrivePoint = Pick<WooferPoint, "xmm"> & { vel?: number; prx?: number };
+export type ChamberDrivePoint = Pick<WooferPoint, "xmm"> & {
+  vel?: number;
+  prx?: number;
+  /** the air speed at a horn's throat, m/s, peak; absent without a horn */
+  throat?: number;
+};
 
 /**
  * A speaker's response (lib/speaker/speakerResponse `speakerResponse`): on axis at 1 m in half space, at
@@ -2410,6 +2436,8 @@ export interface SpeakerChamberLimits {
   port: LimitPeak | null;
   /** null without radiators */
   radiator: LimitPeak | null;
+  /** the air speed at a horn's throat against the box's air speed limit; null without a horn */
+  throat: LimitPeak | null;
   /** the drive's power into 8 Ω, W, and the cones' program rating (2 × AES), W */
   driveW: number;
   programW: number;

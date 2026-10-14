@@ -72,6 +72,7 @@ export const CHIP_IDS = {
     "speakerHfPower",
     "speakerExcursion",
     "speakerPortSpeed",
+    "speakerThroatSpeed",
     "speakerRadiatorTravel",
     "speakerPower",
     "speakerDuctFit",

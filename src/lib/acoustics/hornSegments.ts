@@ -9,6 +9,8 @@
 // - "flow" (U) is volume velocity, m³/s; "impedance" is acoustic impedance, Pa·s/m³; p is pressure, Pa.
 // - ω is the angular frequency 2πf, rad/s; k = ω/c is the wave number, rad/m; ρ is air's density, c the speed of sound.
 // - m is an exponential horn's flare constant, 1/m: its area grows as S = S₁·e^(m·x).
+// - A parabolic horn's area grows linearly, S = S₁ + (S₂ − S₁)·x/L; its solutions are exact Bessel functions of kξ
+//   (ξ measured from where the area would be zero), not a run of short steps.
 // - A transfer matrix [[A, B], [C, D]] gives p₁ = A·p₂ + B·U₂ and U₁ = C·p₂ + D·U₂ (stored row by row as Matrix2).
 import type { Complex, HornSegment, Matrix2 } from "../../types";
 import { AIR_DENSITY, SPEED_OF_SOUND } from "../../constants/acoustics";
@@ -24,8 +26,11 @@ import {
   scale,
   IDENTITY,
 } from "./complex";
+import { besselPair } from "./bessel";
 
-/** Areas within this ratio of each other make a straight duct: the conical law divides by the flare there. */
+/**
+ * Areas within this ratio of each other make a straight duct: the conical and parabolic laws divide by the flare there.
+ */
 const STRAIGHT_RATIO = 1e-4;
 /**
  * Whether a segment's sizes can be modeled and drawn: both areas and its length positive and finite (a zero, negative
@@ -33,6 +38,32 @@ const STRAIGHT_RATIO = 1e-4;
  */
 export const isSizedSegment = (segment: HornSegment) =>
   [segment.s1, segment.s2, segment.length].every((v) => Number.isFinite(v) && v > 0);
+
+/** Whether a segment's two areas are equal (within `STRAIGHT_RATIO`): a straight duct, whatever its profile. */
+export const isStraightSegment = (segment: HornSegment) =>
+  Math.abs(segment.s2 / segment.s1 - 1) < STRAIGHT_RATIO;
+
+/**
+ * The area of a segment `x` cm along it from its start, cm², by its flare law, as the transfer matrix takes it
+ * (`segmentMatrix`): an exponential's grows as S₁·e^(m·x), a conical's radius (so the square root of its area) grows
+ * linearly, a parabolic's area grows linearly, and a segment with equal areas is straight. `x` is held to the segment's
+ * length. The drawings read it, so they follow the model's flare.
+ */
+export function segmentAreaAt(segment: HornSegment, x: number): number {
+  const along = Math.min(Math.max(x, 0), segment.length) / segment.length;
+  if (isStraightSegment(segment)) return segment.s1;
+  switch (segment.profile) {
+    case HORN_PROFILE.exponential:
+      return segment.s1 * (segment.s2 / segment.s1) ** along;
+    case HORN_PROFILE.parabolic:
+      return segment.s1 + (segment.s2 - segment.s1) * along;
+    case HORN_PROFILE.conical: {
+      const radius =
+        Math.sqrt(segment.s1) + (Math.sqrt(segment.s2) - Math.sqrt(segment.s1)) * along;
+      return radius * radius;
+    }
+  }
+}
 
 /** Below this |(γx)²| the exponential solutions use their series form (see expSolutions). */
 const SERIES_LIMIT = 1e-8;
@@ -120,6 +151,23 @@ function conSolutions(k: number, x: number): SolutionPair {
   };
 }
 
+/**
+ * Parabolic flare, ξ the signed distance from where the area would be zero (S ∝ ξ: the area grows linearly). Webster's
+ * equation p'' + p'/ξ + k²p = 0 is Bessel's of order 0 in kξ, so its exact solutions are J₀(k|ξ|) and Y₀(k|ξ|), with
+ * slopes −k·J₁ and −k·Y₁ (times the sign of ξ: negative where the segment narrows, the zero past its end). The two stay
+ * independent at every kξ > 0 (their Wronskian is 2/(π·k|ξ|)); the travelling-wave pair, the Hankel functions
+ * H₀ = J₀ ∓ jY₀, is the same mix of them.
+ */
+function parSolutions(k: number, xi: number): SolutionPair {
+  const { j0, j1, y0, y1 } = besselPair(k * Math.abs(xi));
+  /** d(k|ξ|)/dx */
+  const rate = k * Math.sign(xi);
+  return {
+    pressure: [complex(j0), complex(y0)],
+    slope: [complex(-rate * j1), complex(-rate * y1)],
+  };
+}
+
 /** The segment's transfer matrix at frequency `f` (Hz): [p₁, U₁] = M·[p₂, U₂], in SI acoustic units. */
 export function segmentMatrix(segment: HornSegment, f: number): Matrix2 {
   /** ω and k (see the header) */
@@ -139,6 +187,13 @@ export function segmentMatrix(segment: HornSegment, f: number): Matrix2 {
     const m = straight ? 0 : Math.log(endArea / startArea) / length;
     atStart = waveMatrix(expSolutions(k, m, 0), startArea, omega);
     atEnd = waveMatrix(expSolutions(k, m, length), endArea, omega);
+  } else if (segment.profile === HORN_PROFILE.parabolic) {
+    // the area is zero L·S₁/(S₂ − S₁) before the start; when the segment narrows that distance is negative (the zero
+    // lies past the end). S ∝ ξ holds either way.
+    /** the signed distance from the zero to the segment's start, m */
+    const zeroDistance = (length * startArea) / (endArea - startArea);
+    atStart = waveMatrix(parSolutions(k, zeroDistance), startArea, omega);
+    atEnd = waveMatrix(parSolutions(k, zeroDistance + length), endArea, omega);
   } else {
     // the radius grows linearly, so the apex sits L·r₁/(r₂ − r₁) before the start. When the cone narrows that distance
     // is negative (the apex lies past the end); S ∝ x² holds either way.

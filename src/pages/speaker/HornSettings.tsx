@@ -1,15 +1,23 @@
 import { CardHeading } from "../../components/ui/CardHeading";
 import { useRef, useState } from "react";
-import type { HornSegment, SpeakerHorn } from "../../types";
+import type { HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
 import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
+import { ReadOnlyField } from "../../components/ui/ReadOnlyField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
 import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/speakerPage";
 import { HORN_DRIVE } from "../../constants/speakerSpec";
+import { COMPRESSION_RATIO } from "../../constants/hornThroat";
+import {
+  compressionRatio,
+  conesAreaCm2,
+  frontChamber,
+  throatCones,
+} from "../../lib/speaker/hornThroat";
 import { FIELD_ROW, shownIn } from "./speakerFields";
 import { hornText } from "./speakerText";
 import {
@@ -23,6 +31,7 @@ import {
   withSectionProfile,
   withSectionRemoved,
   withSectionSize,
+  withCompressionRatio,
   withStepsSmoothed,
   type HornSectionSize,
 } from "./hornSections";
@@ -54,17 +63,25 @@ const shownSize = (s: HornSegment, size: HornSectionSize) =>
 
 interface Props {
   horn: SpeakerHorn;
+  /** the chamber's drivers: their cones set the compression ratio's area and the front chamber */
+  drivers: readonly SpeakerDriver[];
   onEdit: (edit: (horn: SpeakerHorn) => SpeakerHorn) => void;
 }
 
 /**
- * A horn-loaded chamber's horn: its flare sections (profile, start and end area, length), throat chamber, path and
- * drive. The chamber's own net air and vent are the horn's rear chamber. The sections are smooth: each starts at the
- * previous section's end area, and only the first shows its start area. With Steps on (in the Advanced fold, and
- * always while the horn has a step) every section shows its start area, so a step can be made; Steps off smooths them.
+ * A horn-loaded chamber's horn: its compression ratio (the throat: the first section's start area, the one figure both
+ * fields edit), its flare sections (profile, start and end area, length), its front chamber (from the drivers, shown
+ * only), path and drive. The chamber's own net air and vent are the horn's rear chamber. The sections are smooth: each
+ * starts at the previous section's end area, and only the first shows its start area. With Steps on (in the Advanced
+ * fold, and always while the horn has a step) every section shows its start area, so a step can be made; Steps off
+ * smooths them.
  */
-export function HornSettings({ horn, onEdit }: Props) {
+export function HornSettings({ horn, drivers, onEdit }: Props) {
   const { segments } = horn;
+  const conesCm2 = conesAreaCm2(drivers);
+  const ratio = compressionRatio(conesCm2, segments);
+  const cones = throatCones(drivers);
+  const front = cones && frontChamber(cones.cone, cones.count);
   /**
    * whether the section whose end area is being typed met the next one when its field took focus: the chain follows
    * that, not each keystroke's value (null: no end area field has focus)
@@ -83,6 +100,42 @@ export function HornSettings({ horn, onEdit }: Props) {
     <section className="border-t border-stone-300 pt-3 mb-3">
       <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
       <p className="text-xs text-stone-500 mb-2">{hornText(horn)}</p>
+      <div className={FIELD_ROW}>
+        {ratio !== null && (
+          <NumberField
+            label={
+              <Tooltip tip={SPEAKER_TEXT.hornCompressionTip}>
+                {SPEAKER_TEXT.hornCompression}
+              </Tooltip>
+            }
+            value={shownIn(ratio)}
+            min={COMPRESSION_RATIO.min}
+            max={COMPRESSION_RATIO.max}
+            step={COMPRESSION_RATIO.step}
+            unit=": 1"
+            onChange={(r) => {
+              if (r > 0) editSegments((list) => withCompressionRatio(list, conesCm2, r));
+            }}
+          />
+        )}
+        {front && (
+          <ReadOnlyField
+            label={
+              <Tooltip
+                tip={
+                  front.estimated
+                    ? `${SPEAKER_TEXT.hornFrontChamberTip} ${SPEAKER_TEXT.hornFrontChamberEstimate}`
+                    : SPEAKER_TEXT.hornFrontChamberTip
+                }
+              >
+                {SPEAKER_TEXT.hornFrontChamber}
+              </Tooltip>
+            }
+            value={shownIn(front.liters)}
+            unit="L"
+          />
+        )}
+      </div>
       <div className="text-sm font-label text-stone-500 mb-1">
         <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
       </div>
@@ -174,15 +227,6 @@ export function HornSettings({ horn, onEdit }: Props) {
           options={STEPS_OPTIONS}
         />
       </SettingsFold>
-      <NumberField
-        label={<Tooltip tip={SPEAKER_TEXT.hornThroatTip}>{SPEAKER_TEXT.hornThroat}</Tooltip>}
-        value={shownIn(horn.throatChamber)}
-        min={0}
-        step={0.1}
-        unit="L"
-        onChange={(throatChamber) => onEdit((h) => ({ ...h, throatChamber }))}
-        className="mb-3"
-      />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
         className="mb-3"

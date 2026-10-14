@@ -101,7 +101,7 @@ export const SPEAKER_GOAL_MISSING = {
 } as const;
 
 /** The notice when your design has no band the model runs: there is nothing to score. */
-export const SPEAKER_UNMODELED = "Cannot model your design: it has no band to score.";
+export const SPEAKER_UNMODELED = "Cannot calculate your design: it has no band that plays.";
 
 /** The notice when no goal is picked: the search waits for one. */
 export const SPEAKER_NO_GOAL = "Pick a goal to search.";
@@ -122,7 +122,7 @@ export const SPEAKER_PROBLEM = {
 
 /** Each problem in words, as the near miss lists them. */
 export const SPEAKER_PROBLEM_TEXT = {
-  unmodeled: "the model can't run a chamber or band your design runs",
+  unmodeled: "the app cannot calculate a chamber or band in your design",
   driverFit: "a driver or horn no longer fits its chamber",
   ventFit: "a port doesn't fit its chamber",
   fitChip: "a duct, tube or hardware fit check fails",

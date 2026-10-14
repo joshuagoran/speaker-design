@@ -27,6 +27,7 @@ import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
 import { SpeakerFront } from "../../components/drawings/SpeakerFront";
+import { SpeakerSection } from "../../components/drawings/SpeakerSection";
 import {
   BaffleColorPicker,
   CabinetFinishPicker,
@@ -129,6 +130,9 @@ const SUM_LINE_PX = 4;
 
 /** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
+
+/** The sections' height: the top and the side section, side by side across the pane. */
+const SECTION_HEIGHT = "h-[260px] md:h-[clamp(280px,42vh,440px)]";
 
 /** The hardware setting's choices: none, or the PA boxes' handles, input dish and horn posts. */
 const HARDWARE_OPTIONS = [
@@ -328,8 +332,31 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 </div>
                 <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.front}</p>
               </Card>
+              {flares.length > 0 && (
+                <Card className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
+                  <div className="flex-1 min-h-0">
+                    <SpeakerSection spec={spec} />
+                  </div>
+                  <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.sectionNote}</p>
+                </Card>
+              )}
             </div>
-            {flares.some((f) => f.placeholder) && <Notice>{SPEAKER_TEXT.hornPlaceholder}</Notice>}
+            {flares
+              .filter((f) => !f.path.fits)
+              .map((f, i) => (
+                <Notice key={i}>
+                  {SPEAKER_TEXT.hornNoRoom(
+                    {
+                      depth: formatInches(f.path.needs.depthIn),
+                      height: formatInches(f.path.needs.heightIn),
+                    },
+                    {
+                      depth: formatInches(f.path.room.depthIn),
+                      height: formatInches(f.path.room.heightIn),
+                    },
+                  )}
+                </Notice>
+              ))}
             {flares.some((f) => f.mouthClipped) && <Notice>{SPEAKER_TEXT.hornMouthClipped}</Notice>}
             {flares.some((f) => f.mouthMoved) && <Notice>{SPEAKER_TEXT.hornMouthMoved}</Notice>}
             {layout.chambers.some((c) =>

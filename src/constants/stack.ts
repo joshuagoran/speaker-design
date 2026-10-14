@@ -17,19 +17,19 @@ export const STACK_TEXT = {
   totalsNote:
     "The price is the total of the boxes' purchased parts on the Cutlist tab, without the plywood. The weight is the total of the boxes' weights, each as the Speaker page shows it. The height is from the stack's base to its highest point, with each box's tilt. The weight and the height do not include the plinth or a stand. These go under the stack on the Space page.",
   listenHeight: "Listening axis",
-  modelNote: `Each box is its speaker in the Speaker page's model, fed through its crossover, then its level and delay. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay puts a box in phase with the box it crosses, at their crossover. If that box would have to play early, the others wait instead, so no delay is less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
+  modelNote: `Each box plays as its speaker does on the Speaker page, fed through its crossover, then its level and delay. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay puts a box in phase with the box it crosses, at their crossover. If that box would have to play early, the others wait instead, so no delay is less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
   maxNote:
     "One input drives the whole stack. At each frequency, the box with the least headroom sets the level, and every box plays at that input. The crossovers are in the front end, ahead of the amps.",
   noMembers: "Add a saved speaker, or start from a preset.",
   /** a crossover between two boxes: the lower and the upper box by name */
   crossing: (lower: string, upper: string) => `${lower} to ${upper}`,
-  missing: "A box's speaker is missing from this stack, so the model leaves it out.",
-  gaps: "The model leaves out part of a box's speaker. Open that speaker on the Speaker page to see which part.",
+  missing: "A box's speaker is missing from this stack, so the response leaves it out.",
+  gaps: "The response leaves out part of a box's speaker. Open that speaker on the Speaker page to see which part.",
   fullRange: "full range",
   startHint:
     "Both replace this stack. A PA start sets each band's level to the More bass band balance. Open a saved stack from the library above.",
   clear: "Start empty",
-  oldSave: "PA or Hi-fi page save",
+  oldSave: "Old PA or Hi-fi save",
   oldSaveBad: "This save does not open. Some of its fields are not valid.",
   openOldSave: "Open as a stack",
   oldSaveHint:
@@ -64,6 +64,6 @@ export const STACK_TEXT = {
 
 /** The heading each page's old saves are listed under on the Stack page. */
 export const OLD_SAVE_GROUP_NAMES = {
-  pa: "PA page saves",
-  hifi: "Hi-fi page saves",
+  pa: "Old PA saves",
+  hifi: "Old Hi-fi saves",
 } as const satisfies Record<OldSaveKind, string>;

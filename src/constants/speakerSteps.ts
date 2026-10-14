@@ -7,10 +7,12 @@ export const SPEAKER_STEPS = {
   sizeIn: 0.25,
   /** a port's path length */
   portLenIn: 0.5,
-  /** a slot's narrow side */
-  slotHIn: 0.125,
+  /** a slot's narrow side (the PA page's slot height step) */
+  slotHIn: 0.25,
   /** a slot's long side, a duct's throat, a tube's diameter */
   portSizeIn: 0.25,
+  /** a port's count (tubes, stacked slots) and a letterbox's fins */
+  count: 1,
   /** a set net air, L */
   netL: 0.5,
   /** a radiator's added mass, g */

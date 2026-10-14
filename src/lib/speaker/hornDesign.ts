@@ -1,5 +1,6 @@
 // A speaker spec's chamber as the horn engine (lib/acoustics/hornModel) takes it: a front-loaded horn, or a direct
-// radiator (no segments), with the chamber's own net air and vent as the rear chamber. Pure.
+// radiator (no segments), with the chamber's own net air and vent as the rear chamber. A horn's front chamber comes
+// from its walls (lib/speaker/hornThroat). Pure.
 import type {
   ChamberVent,
   HornDesign,
@@ -7,9 +8,8 @@ import type {
   HornEngineGap,
   HornPort,
   SpeakerChamber,
-  SpeakerDriver,
 } from "../../types";
-import { coneParts } from "./driverParts";
+import { frontChamber, throatCones } from "./hornThroat";
 import { stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
@@ -21,21 +21,6 @@ import {
   PORT_SHAPE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-
-/**
- * The chamber's drivers as the engine takes them: one driver's Thiele/Small parameters and how many share the throat
- * (Hornresp's Nd; the engine wires them in parallel, each on the full voltage, as the PA plans wire two 8 Ω subs to
- * one 4 Ω channel). Null: no driver, drivers of more than one kind or id, or no Thiele/Small parameters.
- */
-function throatDrivers(
-  drivers: readonly SpeakerDriver[],
-): Pick<HornDesign, "driver" | "drivers"> | null {
-  if (drivers.length === 0) return null;
-  const [first] = drivers;
-  if (drivers.some((d) => d.kind !== first.kind || d.driverId !== first.driverId)) return null;
-  const ts = coneParts(first)?.ts;
-  return ts ? { driver: ts, drivers: drivers.reduce((sum, d) => sum + d.count, 0) } : null;
-}
 
 /** A free (inner) end's correction over a flanged (outer) one's: 0.61 r over 0.85 r. */
 const INNER_END_RATIO = BOTH_ENDS_CORRECTION_RATIO - 1;
@@ -82,8 +67,8 @@ const gap = (why: HornEngineGap): HornDesignResult => ({ ok: false, gap: why });
 /**
  * The chamber as a horn design, `at.count` boxes side by side radiating into `at.angle`, or the first gap that stops
  * it: a tapped or back-loaded horn; drivers of more than one kind, or none with Thiele/Small parameters; no net air
- * set; a vent the engine doesn't take. Several alike drivers share the throat (`throatDrivers`). A direct chamber is
- * a design with no segments.
+ * set; a vent the engine doesn't take. Several alike drivers share the throat (`throatCones`), and the front chamber is
+ * their air under the walls' back edges (`frontChamber`). A direct chamber is a design with no segments.
  */
 export function hornDesignOf(
   chamber: SpeakerChamber,
@@ -92,8 +77,11 @@ export function hornDesignOf(
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
   if (horn?.drive.kind === HORN_DRIVE.tapped) return gap(HORN_ENGINE_GAP.tapped);
   if (horn?.drive.kind === HORN_DRIVE.back) return gap(HORN_ENGINE_GAP.backLoaded);
-  /** the drivers on the throat */
-  const throat = throatDrivers(chamber.drivers);
+  /**
+   * the drivers on the throat: one driver's Thiele/Small parameters and how many share it (Hornresp's Nd; the engine
+   * wires them in parallel, each on the full voltage, as the PA plans wire two 8 Ω subs to one 4 Ω channel)
+   */
+  const throat = throatCones(chamber.drivers);
   if (!throat) return gap(HORN_ENGINE_GAP.driver);
   const { netLiters } = chamber;
   if (netLiters === null) return gap(HORN_ENGINE_GAP.netLiters);
@@ -103,9 +91,11 @@ export function hornDesignOf(
   return {
     ok: true,
     design: {
-      ...throat,
+      driver: throat.parts.ts,
+      drivers: throat.count,
       count: at.count,
-      throatChamber: horn?.throatChamber ?? 0,
+      // the air between the cones and the walls' back edges; a direct radiator has none
+      throatChamber: horn ? frontChamber(throat.cone, throat.count).liters : 0,
       segments: horn?.segments ?? [],
       // the rear chamber's air with its stuffing, as a direct chamber's
       rear: { liters: stuffedLiters(chamber, netLiters), port: rear.port },

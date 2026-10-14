@@ -7,6 +7,7 @@ import type {
   DriverKind,
   Horn,
   SpeakerDriver,
+  SubDriver,
   ThieleSmall,
 } from "../../types";
 import {
@@ -20,6 +21,8 @@ import {
 import { byId } from "../tables";
 import { midDisplacementL } from "../pa/calc";
 import { hifiWooferDisplacementL } from "../hifi/hifi";
+import { subDriverDepthIn } from "../pa/tubes";
+import { HIFI_DEPTH_PER_SIZE, MID_DEPTH_FALLBACK_IN } from "../../data/catalog/driver-cutouts";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 
 /**
@@ -64,6 +67,49 @@ export function coneParts(driver: SpeakerDriver): ConeParts | null {
     case DRIVER_KIND.coaxial: {
       const coax = byId(FILL_OPTIONS, driver.driverId);
       return coax ? { ts: coax.ts, dispL: hifiWooferDisplacementL(coax) } : null;
+    }
+    case DRIVER_KIND.compression:
+    case DRIVER_KIND.tweeter:
+      return null;
+  }
+}
+
+/**
+ * A PA cone driver's surround width and cone (dish) depth from its maker's dimension drawing, in; empty for a driver
+ * whose drawing gives neither, or another kind.
+ */
+export function coneShape(driver: SpeakerDriver): Pick<SubDriver, "surroundIn" | "dishDepthIn"> {
+  const part =
+    driver.kind === DRIVER_KIND.sub
+      ? byId(SUB_OPTIONS, driver.driverId)
+      : driver.kind === DRIVER_KIND.mid
+        ? byId(MID_OPTIONS, driver.driverId)
+        : undefined;
+  return { surroundIn: part?.surroundIn, dishDepthIn: part?.dishDepthIn };
+}
+
+/**
+ * A cone driver's depth behind the baffle's front, in: its catalog's, or the fallback for its kind and size (a sub's
+ * and a mid's by size class, a Hi-fi woofer's and a coaxial's by the Hi-fi estimate); null for another kind or an id
+ * its table doesn't have.
+ */
+export function coneDepthIn(driver: SpeakerDriver): number | null {
+  switch (driver.kind) {
+    case DRIVER_KIND.sub: {
+      const sub = byId(SUB_OPTIONS, driver.driverId);
+      return sub ? subDriverDepthIn(sub) : null;
+    }
+    case DRIVER_KIND.mid: {
+      const mid = byId(MID_OPTIONS, driver.driverId);
+      return mid ? (mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size]) : null;
+    }
+    case DRIVER_KIND.woofer: {
+      const woofer = hifiDriverById("woofer", driver.driverId);
+      return woofer ? woofer.size * HIFI_DEPTH_PER_SIZE : null;
+    }
+    case DRIVER_KIND.coaxial: {
+      const coax = byId(FILL_OPTIONS, driver.driverId);
+      return coax ? coax.size * HIFI_DEPTH_PER_SIZE : null;
     }
     case DRIVER_KIND.compression:
     case DRIVER_KIND.tweeter:

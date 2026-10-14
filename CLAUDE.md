@@ -6,6 +6,8 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 
 ## UI rules
 
+- UI text never mentions another page by name when that page may go away (today: the PA, Hi-fi, Coverage and Fills pages). Say what is true instead.
+- UI text never names internal rules, models or code. Say what is true for the user.
 - **Charts use fixed axes.** Never autoscale a chart to its data; give it a fixed range for its purpose so designs compare
   by eye as settings change.
 - **Charts on the same view share the same scales**, x and y. Frequency charts use the PA stack's x axis (15 Hz–20 kHz);
@@ -51,6 +53,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - Never push straight to `main` (it deploys via GitHub Actions). Every change goes through a PR; don't ask.
 - Feature branches: merge `main` into a feature branch with a merge commit pushed straight to that branch, with no
   PR. Only changes to `main` go through a PR.
+- Every setting a template or preset can set is also a setting on its page. No design is reachable only from a template.
 
 ## Commits and PRs
 

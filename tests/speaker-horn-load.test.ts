@@ -11,8 +11,8 @@ import {
 } from "../src/pages/speaker/chamberLoad";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
-import { coneParts } from "../src/lib/speaker/driverParts";
-import { coneDepthIn } from "../src/lib/speaker/speakerBuild";
+import { coneDepthIn, coneParts } from "../src/lib/speaker/driverParts";
+import { wallClearanceIn } from "../src/lib/speaker/hornThroat";
 import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speakerStarts";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
@@ -55,7 +55,6 @@ test("speaker horn load: Horn starts one conical section from the cones to the c
     assert.equal(horn.segments.length, 1);
     const [s] = horn.segments;
     assert.equal(s.profile, HORN_PROFILE.conical);
-    assert.equal(horn.throatChamber, 0);
     assert.equal(horn.path, HORN_PATH.straight);
     assert.equal(horn.drive.kind, HORN_DRIVE.front);
     assert.equal(horn.mouthPosition, undefined, "the mouth centered");
@@ -69,11 +68,12 @@ test("speaker horn load: Horn starts one conical section from the cones to the c
     const flare = hornFlare(horned.cabinet, placed);
     assert.ok(flare, `${template}: the flare draws`);
     assert.equal(flare.mouthClipped, false);
-    assert.equal(flare.placeholder, false);
-    // the length: the clear depth less the deepest cone
+    assert.ok(flare.path.fits, `${template}: the path fits the chamber`);
+    // the length: the clear depth less the deepest cone and the walls' clearance in front of it
     const room = hornRoom(spec.cabinet, chamber, placed);
     const cone = Math.max(...chamber.drivers.map((d) => coneDepthIn(d) ?? 0));
-    assert.ok(Math.abs(s.length / CM_PER_IN - (room.depthIn - cone)) < 1e-9, template);
+    const clearance = wallClearanceIn(chamber.drivers);
+    assert.ok(Math.abs(s.length / CM_PER_IN - (room.depthIn - cone - clearance)) < 1e-9, template);
     // the net air: the rear chamber, the flare's air taken off
     const before = responseOf(spec).chambers[i].netLiters;
     assert.ok(after.netLiters !== null);
@@ -121,15 +121,21 @@ test("speaker horn load: the flare's air follows each section's flare law", () =
   const section = { s1: 100, s2: 400, length: 50 };
   const con = flareLiters({ segments: [{ ...section, profile: HORN_PROFILE.conical }] });
   const exp = flareLiters({ segments: [{ ...section, profile: HORN_PROFILE.exponential }] });
-  // conical: (50/3)(100 + 400 + 200) cm³; exponential: 300 · 50 / ln 4 cm³
+  const par = flareLiters({ segments: [{ ...section, profile: HORN_PROFILE.parabolic }] });
+  // conical: (50/3)(100 + 400 + 200) cm³; exponential: 300 · 50 / ln 4 cm³; parabolic: 50 (100 + 400) / 2 cm³
   assert.ok(Math.abs(con - ((50 / 3) * 700) / 1000) < 1e-3, `${con}`);
   assert.ok(Math.abs(exp - (300 * 50) / Math.log(4) / 1000) < 1e-3, `${exp}`);
+  assert.ok(Math.abs(par - (50 * 500) / 2 / 1000) < 1e-3, `${par}`);
+  assert.ok(
+    par > con,
+    "a straight-sided flare holds more air than a conical one between the same areas",
+  );
   assert.ok(
     exp < con,
     "an exponential flare holds less air than a conical one between the same areas",
   );
   // equal areas: a straight duct either way
   const duct = { s1: 200, s2: 200, length: 30 };
-  for (const profile of [HORN_PROFILE.conical, HORN_PROFILE.exponential])
+  for (const profile of Object.values(HORN_PROFILE))
     assert.ok(Math.abs(flareLiters({ segments: [{ ...duct, profile }] }) - 6) < 1e-3, profile);
 });

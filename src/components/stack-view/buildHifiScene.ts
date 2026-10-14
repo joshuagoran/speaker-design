@@ -369,6 +369,51 @@ export function addSlotShelf(
 }
 
 /**
+ * A slot up a front side's wall (the PA v2 boxes'): the plate that closes it on the inside, a wall thick, as tall as the
+ * opening, running back `len` from the baffle's inside face (`shellFrontZ`). It stops at the back panel (`backZ`, its
+ * inside face); a slot longer than the box is deep turns in along the back panel for the rest, `opening.w` from it.
+ * `side` is the wall it stands against (-1 left, 1 right).
+ */
+export function addSlotWall(
+  ctx: SceneContext,
+  {
+    opening,
+    side,
+    len,
+    shellFrontZ,
+    backZ,
+  }: {
+    opening: { x: number; y: number; w: number; h: number };
+    side: -1 | 1;
+    len: number;
+    shellFrontZ: number;
+    backZ: number;
+  },
+) {
+  const T = ctx.wall;
+  const run = Math.min(len, shellFrontZ - backZ);
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(T, opening.h, run), ctx.materials.inner);
+  plate.position.set(
+    opening.x - (side * (opening.w + T)) / 2,
+    opening.y + opening.h / 2,
+    shellFrontZ - run / 2,
+  );
+  plate.name = HIFI_MESH_NAMES.slotShelf;
+  ctx.group.add(plate);
+  const rest = len - run;
+  if (rest <= 1e-9) return;
+  // the fold: along the back panel, inward from the side wall
+  const fold = new THREE.Mesh(new THREE.BoxGeometry(rest, opening.h, T), ctx.materials.inner);
+  fold.position.set(
+    opening.x + (side * opening.w) / 2 - (side * rest) / 2,
+    opening.y + opening.h / 2,
+    backZ + opening.w + T / 2,
+  );
+  fold.name = HIFI_MESH_NAMES.slotShelf;
+  ctx.group.add(fold);
+}
+
+/**
  * The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/tubeFold). `fold`, for
  * a port placed elsewhere (the Speaker page's set position): the room its tubes have and whether the riser heads down;
  * absent, the Hi-fi box's room (`hifiTubeRoom`), rising.

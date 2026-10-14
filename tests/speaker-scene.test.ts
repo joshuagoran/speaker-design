@@ -6,6 +6,7 @@
 import { PA_FLOOR } from "./speaker-cases";
 import { describe, expect, test, vi } from "vite-plus/test";
 import * as THREE from "three";
+import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
 import {
   buildSpeakerScene,
   speakerSceneKey,
@@ -338,21 +339,22 @@ describe("horns", () => {
     expect(worldOf(hf).x).toBeCloseTo(0, 6);
   });
 
-  test("a horn-loaded chamber has its mouth on the baffle and its flare behind it; a folded path is a placeholder", () => {
+  test("a horn-loaded chamber has its mouth on the baffle and its flare behind it; a folded path draws in legs", () => {
     const sub = paSpeaker(defaultPa, SPEAKER_PART.sub);
     const [base] = sub.cabinet.chambers;
     const segments = [
-      { profile: HORN_PROFILE.exponential, s1: 500, s2: 1500, length: 20 },
-      { profile: HORN_PROFILE.conical, s1: 1500, s2: 2000, length: 10 },
+      { profile: HORN_PROFILE.exponential, s1: 100, s2: 300, length: 15 },
+      { profile: HORN_PROFILE.conical, s1: 300, s2: 450, length: 12 },
     ];
+    // deep enough for the path, the walls' clearance and the 18″ at its catalog depth behind them
     const hornChamber = (path: (typeof HORN_PATH)[keyof typeof HORN_PATH]): SpeakerChamber => ({
       ...base,
+      dims: { ...base.dims, d: 28 },
       netLiters: 40,
       vent: { kind: VENT_KIND.sealed },
       load: {
         kind: CHAMBER_LOAD.horn,
         horn: {
-          throatChamber: 2,
           segments,
           portOffset: 0,
           drive: { kind: HORN_DRIVE.front },
@@ -364,17 +366,25 @@ describe("horns", () => {
       const spec = { ...sub, cabinet: { ...sub.cabinet, chambers: [hornChamber(path)] } };
       const solid = buildSpeakerScene({ spec, cutaway: false });
       const flare = named(solid, SPEAKER_MESH_NAMES.hornFlare);
-      expect(flare).toHaveLength(segments.length);
+      const [placedChamber] = speakerLayout(spec.cabinet).chambers;
+      const drawn = hornFlare(spec.cabinet, placedChamber);
+      // one duct per leg of the path: a straight path is one
+      expect(flare).toHaveLength(drawn?.path.legs.length ?? -1);
+      expect(drawn?.path.legs.length).toBe(path === HORN_PATH.folded ? 2 : 1);
       const box = boxOf(...flare);
-      expect(box.max.z).toBeCloseTo(frontZ(spec) - spec.cabinet.insetIn, 6);
+      // the mouth is at the baffle's inside face, the path inside the walls
+      expect(box.max.z).toBeCloseTo(frontZ(spec) - spec.cabinet.insetIn - BAFFLE_THICKNESS_IN, 6);
       expect(box.min.z).toBeGreaterThan(-base.dims.d / 2);
+      expect(drawn?.path.fits).toBe(true);
       // the front-loaded horn's driver sits at its throat, inside: drawn only in the cutaway
       expect(named(solid, SPEAKER_MESH_NAMES.hornDriver)).toHaveLength(0);
       expect(
         named(buildSpeakerScene({ spec, cutaway: true }), SPEAKER_MESH_NAMES.hornDriver),
       ).toHaveLength(1);
       const [placed] = speakerLayout(spec.cabinet).chambers;
-      expect(hornFlare(spec.cabinet, placed)?.placeholder).toBe(path === HORN_PATH.folded);
+      expect((hornFlare(spec.cabinet, placed)?.path.folds ?? 0) > 0).toBe(
+        path === HORN_PATH.folded,
+      );
       expect(hornFlare(spec.cabinet, placed)?.mouthClipped).toBe(false);
     }
     // a mouth larger than the clear face: cut to it, flagged, the flare shrunk to meet it
@@ -393,7 +403,7 @@ describe("horns", () => {
     expect(flare?.mouthClipped).toBe(true);
     expect(flare?.mouth.w).toBeLessThanOrEqual(placed.clear.w + EPS);
     expect(flare?.mouth.h).toBeLessThanOrEqual(placed.clear.h + EPS);
-    const end = flare?.segments[0].mouth;
+    const end = flare?.path.legs[0].sections.at(-1);
     expect((end?.w ?? 0) * (end?.h ?? 0)).toBeCloseTo(
       (flare?.mouth.w ?? 0) * (flare?.mouth.h ?? 0),
       6,
@@ -838,7 +848,6 @@ describe("vent and mouth positions", () => {
             load: {
               kind: CHAMBER_LOAD.horn,
               horn: {
-                throatChamber: 2,
                 segments: [{ profile: HORN_PROFILE.exponential, s1: 100, s2: 400, length: 20 }],
                 portOffset: 0,
                 drive: { kind: HORN_DRIVE.back },
@@ -857,8 +866,10 @@ describe("vent and mouth positions", () => {
     expect(flare.mouth.x + flare.mouth.w / 2).toBeCloseTo(placed.cx + 1, 9);
     expect(flare.mouth.y + flare.mouth.h / 2).toBeCloseTo(placed.y0 + 6, 9);
     const [mesh] = named(buildSpeakerScene({ spec, cutaway: false }), SPEAKER_MESH_NAMES.hornFlare);
-    expect(worldOf(mesh).x).toBeCloseTo(placed.cx + 1, 6);
-    expect(worldOf(mesh).y).toBeCloseTo(placed.y0 + 6, 6);
+    // the duct is as drawn in the group: its middle is the mouth's
+    const middle = boxOf(mesh).getCenter(new THREE.Vector3());
+    expect(middle.x).toBeCloseTo(placed.cx + 1, 6);
+    expect(middle.y).toBeCloseTo(placed.y0 + 6, 6);
     // set past the corner: moved into it
     const out = hornAt({ xIn: -placed.dims.w, yIn: placed.dims.h * 2 });
     const moved = hornFlare(out.cabinet, speakerLayout(out.cabinet).chambers[0]);

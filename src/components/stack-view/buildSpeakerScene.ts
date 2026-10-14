@@ -19,6 +19,7 @@ import {
   addRadiator,
   addRoundPorts,
   addSlotShelf,
+  addSlotWall,
   addTweeter,
   addWoofer,
   ellipsePath,
@@ -26,8 +27,10 @@ import {
   plateHole,
   wooferCutoutR,
 } from "./buildHifiScene";
-import { circlePath, flareGeometry, roundedRectPath } from "./geometry";
+import { circlePath, ductGeometry, roundedRectPath, type DuctSection } from "./geometry";
 import { ROUNDOVER_IN } from "./stackHeights";
+import { HORN_DRIVER_ROOM_IN } from "../../constants/hornPath";
+import { PARTS_3D } from "../../styles/palette";
 import {
   driverHorn,
   drawsArchedTop,
@@ -59,7 +62,8 @@ import {
 } from "../../lib/data";
 import { byId } from "../../lib/tables";
 import { DEFAULT_PA } from "../../lib/defaults";
-import { driverKeepOut } from "../../lib/pa/calc";
+import { driverKeepOut, slotFolds } from "../../lib/pa/calc";
+import { PORT_STYLE } from "../../constants/portStyles";
 import { subDriverDepthIn } from "../../lib/pa/tubes";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 import { hornBodyColor } from "../../lib/pa/hornColor";
@@ -81,8 +85,12 @@ import type { BoxRegion, Horn, RadiatorPanel, SpeakerDriver, SpeakerSpec } from 
 export const SPEAKER_MESH_NAMES = {
   /** a wall two chambers share: inside one shell, or the lower (or left) chamber's in a stepped shell */
   partition: "chamberPartition",
-  /** a horn-loaded chamber's flare, one mesh per segment */
+  /** a horn-loaded chamber's flare, one mesh per leg of its path (one for a straight path) */
   hornFlare: "chamberHornFlare",
+  /** the gap where a folded path turns from one leg to the next */
+  hornTurn: "chamberHornTurn",
+  /** the bay the drivers stand in behind the throat */
+  hornBay: "chamberHornBay",
   /** a front-loaded or tapped horn's driver inside the chamber, drawn in the cutaway */
   hornDriver: "chamberHornDriver",
   /** a chamber's own panel in a stepped shell: an outside wall, its back or its baffle */
@@ -97,10 +105,10 @@ export const SPEAKER_GROUP_NAMES = {
   driver: "speakerDriver",
 } as const;
 
-/** The squareness of a horn-loaded chamber's flare sections: a rounded rectangle (`flareGeometry`). */
-const HORN_FLARE_SQUARENESS = 6;
-/** A front-loaded horn's driver body drawn at its throat in the cutaway: its depth, in. */
-const HORN_DRIVER_DEPTH_IN = 3;
+/** How far a horn driver's face stands back from the cones' plane, in. */
+const HORN_DRIVER_GAP_IN = 0.02;
+/** The angle two panels of a horn's flare make before the view draws a line along their edge, degrees. */
+const HORN_EDGE_DEG = 3;
 /** The corner radius of a horn-loaded chamber's mouth in the baffle, in. */
 const HORN_MOUTH_CORNER_IN = 0.25;
 /** The corner radius of a slot's opening, in (as the Hi-fi box cuts it). */
@@ -118,8 +126,8 @@ export interface SpeakerSceneProps {
  * What the scene reads of its props, as a key that changes exactly when the scene does: the construction, the top, the
  * panels' thickness, inset and roundover; each chamber's place, size, vent (a port's sizes and position, the radiators'
  * part, count and position), drivers (part, count, position, horn) and horn path (its drive, path, segments' areas and
- * lengths, and mouth position); the look and the cutaway.
- * The model's own inputs (stuffing, net air, bands, a port's elbows, a horn's profiles and throat chamber) are left out.
+ * lengths and flare laws, and mouth position); the look and the cutaway.
+ * The model's own inputs (stuffing, net air, bands, a port's elbows and a horn's throat chamber) are left out.
  */
 export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
   const { cabinet, look } = spec;
@@ -162,7 +170,12 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
           ? {
               drive: load.horn.drive.kind,
               path: load.horn.path,
-              segments: load.horn.segments.map(({ s1, s2, length }) => [s1, s2, length]),
+              segments: load.horn.segments.map(({ profile, s1, s2, length }) => [
+                profile,
+                s1,
+                s2,
+                length,
+              ]),
               mouth: load.horn.mouthPosition,
             }
           : null,
@@ -173,10 +186,14 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
 /** A chamber's holes in a panel, drawn once its origin (center line, bottom) is known in the panel's coordinates. */
 type Holes = (x: number, y: number) => THREE.Path[];
 
-/** Where a chamber's baffle is, once its shell is built: the face at `zf`, the inside face at `innerZ`. */
+/**
+ * Where a chamber's baffle is, once its shell is built: the face at `zf`, the inside face at `innerZ`; `banded`, whether
+ * its lower edge starts above the chamber's slot band (`ChamberParts.slotBand`) rather than the band being cut in it.
+ */
 interface BaffleAt {
   zf: number;
   innerZ: number;
+  banded: boolean;
 }
 
 /** A chamber's openings in its shell's baffle and back, and its parts, built once the baffle's place is known. */
@@ -184,8 +201,9 @@ interface ChamberParts {
   baffle: Holes[];
   back: Holes[];
   /**
-   * a PA letterbox's band and its opening: a frame's baffle starts above the band where the chamber spans its shell's
-   * bottom (as the PA sub's does), else the opening is cut in the baffle
+   * a slot band and its openings, its height up from the chamber's clear face: the PA letterbox's, or a plain slot stack
+   * the clear face's width. A frame's baffle starts above the band where the chamber spans its shell's bottom (as the
+   * PA sub's does) or stands in a stepped shell, else the openings are cut in the baffle
    */
   slotBand: { h: number; hole: Holes } | null;
   build: (at: BaffleAt) => void;
@@ -245,15 +263,14 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       group.add(g);
       return { placed, g, parts: chamberParts({ ...ctx, group: g }, placed, cabinet, look) };
     });
-    const band =
-      frame && !shell.stepped
-        ? members.find(
-            ({ placed, parts }) =>
-              parts.slotBand &&
-              Math.abs(placed.y0 - shell.y0) < SAME_IN &&
-              Math.abs(placed.dims.w - dims.w) < SAME_IN,
-          )
-        : undefined;
+    const band = frame
+      ? members.find(
+          ({ placed, parts }) =>
+            parts.slotBand &&
+            Math.abs(placed.y0 - shell.y0) < SAME_IN &&
+            Math.abs(placed.dims.w - dims.w) < SAME_IN,
+        )
+      : undefined;
     const baffleBottom = band?.parts.slotBand?.h ?? 0;
     /** every chamber's holes in a panel whose origin is `y0` up from the shell's bottom, on its center line */
     const holes = (y0: number, panel: typeof PANEL.baffle | typeof PANEL.back) =>
@@ -271,6 +288,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
         placed,
         { baffle: holes(0, PANEL.baffle), back: holes(0, PANEL.back) },
         frame,
+        baffleBottom,
       );
     } else if (frame) {
       // the frame's baffle holes are centered on the baffle, its back's on the box
@@ -286,7 +304,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           baffleBottom,
         },
       ).baffleZ;
-      at = { zf, innerZ: zf - BAFFLE_THICKNESS_IN };
+      at = { zf, innerZ: zf - BAFFLE_THICKNESS_IN, banded: band !== undefined };
     } else {
       const built = buildHifiCabinet(
         { ...ctx, group },
@@ -300,7 +318,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           },
         },
       );
-      at = { zf: built.frontZ, innerZ: built.shellFrontZ };
+      at = { zf: built.frontZ, innerZ: built.shellFrontZ, banded: false };
     }
     for (const { parts } of members) parts.build(at);
     if (!layout.oneShell) continue;
@@ -328,13 +346,15 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
  * A chamber's own panels in a stepped shell (`ctx.group`: its center line at x = 0, its bottom at y = 0): the walls it
  * builds (lib/speaker/speakerLayout `PlacedChamber.walls`: a partition where another chamber stands on it or right of it,
  * none where another gives it one), each the chamber's depth; its back and its baffle over its clear face, the baffle set
- * back by the frame's inset, ¾″ in the PA's frame and a wall thick in the Hi-fi box. Returns where its baffle is.
+ * back by the frame's inset, ¾″ in the PA's frame and a wall thick in the Hi-fi box, its lower edge `bottom` above the
+ * clear face's (a slot band's). Returns where its baffle is.
  */
 function buildSteppedPanels(
   ctx: SceneContext,
   placed: PlacedChamber,
   holes: { baffle: THREE.Path[]; back: THREE.Path[] },
   frame: boolean,
+  bottom: number,
 ): BaffleAt {
   const T = ctx.wall;
   const { d } = placed.dims;
@@ -354,11 +374,17 @@ function buildSteppedPanels(
   }
   const { clear } = placed;
   const c = local(clear);
-  /** a panel over the clear face, `depth` thick from `z` back, with its holes */
-  const panel = (cut: THREE.Path[], depth: number, z: number, materials: THREE.Material[]) => {
+  /** a panel over the clear face above `lo`, `depth` thick from `z` back, with its holes */
+  const panel = (
+    cut: THREE.Path[],
+    depth: number,
+    z: number,
+    materials: THREE.Material[],
+    lo = 0,
+  ) => {
     const shape = new THREE.Shape([
-      new THREE.Vector2(c.x - clear.w / 2, c.y - clear.h / 2),
-      new THREE.Vector2(c.x + clear.w / 2, c.y - clear.h / 2),
+      new THREE.Vector2(c.x - clear.w / 2, c.y - clear.h / 2 + lo),
+      new THREE.Vector2(c.x + clear.w / 2, c.y - clear.h / 2 + lo),
       new THREE.Vector2(c.x + clear.w / 2, c.y + clear.h / 2),
       new THREE.Vector2(c.x - clear.w / 2, c.y + clear.h / 2),
     ]);
@@ -375,11 +401,14 @@ function buildSteppedPanels(
   const thick = frame ? BAFFLE_THICKNESS_IN : T;
   const zf = d / 2 - ctx.inset;
   // its faces painted, its cut edges bare ply (as the PA's baffle)
-  panel(holes.baffle, thick, zf, [
-    ctx.materials.baffle,
-    ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner,
-  ]);
-  return { zf, innerZ: zf - thick };
+  panel(
+    holes.baffle,
+    thick,
+    zf,
+    [ctx.materials.baffle, ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner],
+    bottom,
+  );
+  return { zf, innerZ: zf - thick, banded: bottom > 0 };
 }
 
 /**
@@ -441,7 +470,6 @@ function chamberParts(
   const frame = cabinet.construction === CABINET_CONSTRUCTION.frameInset;
   /** a horn built into the box, and how far its throat is behind the baffle's face */
   const flare = hornFlare(cabinet, placed);
-  const flareIn = flare ? flare.segments.reduce((sum, s) => sum + s.length, 0) : 0;
   const baffle: Holes[] = [],
     back: Holes[] = [],
     builds: ((at: BaffleAt) => void)[] = [];
@@ -601,7 +629,23 @@ function chamberParts(
         y = spot.yIn - placed.y0;
       // a horn that no longer fits where it is set isn't built (the page says so)
       if ((onBaffle || onTop(driver)) && hornFitsWhereSet(placed, driver)) addDriver(driver, x, y);
-      else builds.push(({ zf }) => addHornDriver(ctx, placed, driver, { x, y, z: zf - flareIn }));
+      else
+        builds.push(({ innerZ }) => {
+          // a front-loaded horn's drivers stand in the bay at its throat: where the spec sets them, moved to the throat
+          const shift = flare?.path.driverShift ?? { x: 0, y: 0 };
+          const { bay } = flare?.path ?? { bay: null };
+          addHornDriver(
+            ctx,
+            placed,
+            driver,
+            { x: x + shift.x, y: y + shift.y },
+            // the bay's z range is back from the baffle's inside face; the cone faces the throat, its face the walls'
+            // clearance behind their back edges, its body behind it
+            bay
+              ? { front: innerZ - bay.coneZ, back: innerZ - bay.bodyZ }
+              : { front: innerZ, back: innerZ - HORN_DRIVER_ROOM_IN },
+          );
+        });
     }
 
   // the port, by its engine's rule
@@ -613,9 +657,17 @@ function chamberParts(
     if (plan.bandH > 0)
       slotBand = {
         h: plan.bandH,
-        hole: (ox, oy) => [
-          roundedRectPath(ox, oy + T + plan.ductH / 2, plan.innerW, plan.ductH, SLOT_CORNER_IN),
-        ],
+        // each opening between the fins
+        hole: (ox, oy) =>
+          plan.fins.openings.map((x) =>
+            roundedRectPath(
+              ox + x,
+              oy + T + plan.ductH / 2,
+              plan.fins.open,
+              plan.ductH,
+              SLOT_CORNER_IN,
+            ),
+          ),
       };
     builds.push(({ zf }) => {
       buildSubVent(ctx, plan, {
@@ -632,16 +684,50 @@ function chamberParts(
     if (port.shape === PORT_SHAPE.slot) {
       // each of the stacked slots, under its own shelf
       const openings = slotOpeningsAt(placed, port, T);
-      baffle.push((ox, oy) =>
+      const cut: Holes = (ox, oy) =>
         openings.map((o) =>
           roundedRectPath(ox + o.x, oy + o.y + o.h / 2, o.w, o.h, SLOT_CORNER_IN),
-        ),
-      );
-      builds.push(({ innerZ }) =>
+        );
+      const top = openings[openings.length - 1];
+      const fullWidth = top.w >= placed.clear.w - SAME_IN;
+      // the frame's baffle sits between the walls, on the clear face, so a slot its full width can't be a hole in it:
+      // the baffle starts above the stack's top shelf, as it does above the letterbox's band
+      if (frame && fullWidth)
+        slotBand = { h: top.y + top.h + T - (placed.clear.y - placed.y0), hole: cut };
+      else baffle.push(cut);
+      // a folded slot too long to run straight: the PA slot's fold up the back wall, its one full-width slot (the
+      // length the fit check takes: lib/speaker/speakerBuild hifiSlotFits)
+      const fold =
+        port.folded &&
+        openings.length === 1 &&
+        fullWidth &&
+        slotFolds(dims, { slotH: port.h, len: port.len }, T);
+      builds.push(({ zf, innerZ, banded }) => {
+        if (fold) {
+          const plan = subVentPlan(
+            DEFAULT_PA.sub,
+            dims,
+            PORT_STYLE.slot,
+            { ductH: port.h, tubeLen: port.len, fins: 0 },
+            T,
+          );
+          buildSubSlotShelf(ctx, plan, { box: dims, plinth: 0, parent: ctx.group });
+          return;
+        }
+        // above a band, each shelf's front edge is the baffle between the slots: from the baffle's face
+        const front = banded ? zf : innerZ;
         openings.forEach((opening) =>
-          addSlotShelf(ctx, { opening, len: port.len, shellFrontZ: innerZ }),
-        ),
-      );
+          opening.side
+            ? addSlotWall(ctx, {
+                opening,
+                side: opening.side,
+                len: port.len + front - innerZ,
+                shellFrontZ: front,
+                backZ: -dims.d / 2 + T,
+              })
+            : addSlotShelf(ctx, { opening, len: port.len + front - innerZ, shellFrontZ: front }),
+        );
+      });
     } else {
       // on the baffle, or on the back: there the tubes run in from the back's outer face (a group turned to face back,
       // so across is mirrored)
@@ -716,25 +802,65 @@ function chamberParts(
     baffle.push((ox, oy) => [
       roundedRectPath(ox + mx, oy + my, mouth.w, mouth.h, HORN_MOUTH_CORNER_IN),
     ]);
-    builds.push(({ zf }) => {
+    const { path } = flare;
+    builds.push(({ innerZ }) => {
       const material = ctx.materials.inner.clone();
       material.side = THREE.DoubleSide;
-      // throat first, from the back: each segment grows toward the mouth on the baffle
-      let z = zf - flareIn;
-      for (const s of flare.segments) {
-        const m = new THREE.Mesh(
-          flareGeometry({
-            throat: s.throat,
-            mouth: s.mouth,
-            depth: s.length,
-            squareness: () => HORN_FLARE_SQUARENESS,
-          }),
-          material,
+      const line = new THREE.LineBasicMaterial({ color: PARTS_3D.black });
+      /** a duct of flat panels with a line along each edge, named for the check that finds it */
+      const duct = (
+        name: string,
+        sections: readonly DuctSection[],
+        look: THREE.Material = material,
+      ) => {
+        const geometry = ductGeometry(sections);
+        const mesh = new THREE.Mesh(geometry, look);
+        mesh.name = name;
+        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, HORN_EDGE_DEG), line));
+        ctx.group.add(mesh);
+      };
+      /** a rectangle of the path in the group's coordinates: z measured back from the baffle's inside face */
+      const at = (c: { cx: number; cy: number; z: number; w: number; h: number }): DuctSection => ({
+        x: c.cx - placed.cx,
+        y: c.cy - placed.y0,
+        z: innerZ - c.z,
+        w: c.w,
+        h: c.h,
+      });
+      for (const leg of path.legs) duct(SPEAKER_MESH_NAMES.hornFlare, leg.sections.map(at));
+      for (const t of path.turns) {
+        const rect = { cx: t.cx, cy: (t.y0 + t.y1) / 2, w: t.w, h: t.y1 - t.y0 };
+        duct(SPEAKER_MESH_NAMES.hornTurn, [at({ ...rect, z: t.z0 }), at({ ...rect, z: t.z1 })]);
+      }
+      // the drivers' bay behind the throat (the front chamber): its sides, and the walls' back edges returning to them
+      // along the throat's plane, round the throat (narrower than the cones where the walls cover them)
+      const { bay } = path;
+      if (bay) {
+        const rect = { cx: bay.x + bay.w / 2, cy: bay.y + bay.h / 2, w: bay.w, h: bay.h };
+        duct(
+          SPEAKER_MESH_NAMES.hornBay,
+          [at({ ...rect, z: bay.z0 }), at({ ...rect, z: bay.z1 })],
+          ctx.materials.shell,
         );
-        m.position.set(mx, my, z);
-        m.name = SPEAKER_MESH_NAMES.hornFlare;
-        ctx.group.add(m);
-        z += s.length;
+        const [throat] = path.legs[0].sections;
+        const plateZ = innerZ - (path.folds % 2 === 0 ? bay.z0 : bay.z1);
+        const plate = new THREE.Shape();
+        plate.moveTo(-bay.w / 2, -bay.h / 2);
+        plate.lineTo(bay.w / 2, -bay.h / 2);
+        plate.lineTo(bay.w / 2, bay.h / 2);
+        plate.lineTo(-bay.w / 2, bay.h / 2);
+        plate.closePath();
+        const opening = new THREE.Path();
+        opening.moveTo(throat.cx - rect.cx - throat.w / 2, throat.cy - rect.cy - throat.h / 2);
+        opening.lineTo(throat.cx - rect.cx - throat.w / 2, throat.cy - rect.cy + throat.h / 2);
+        opening.lineTo(throat.cx - rect.cx + throat.w / 2, throat.cy - rect.cy + throat.h / 2);
+        opening.lineTo(throat.cx - rect.cx + throat.w / 2, throat.cy - rect.cy - throat.h / 2);
+        opening.closePath();
+        plate.holes.push(opening);
+        const face = new THREE.Mesh(new THREE.ShapeGeometry(plate), ctx.materials.shell);
+        face.name = SPEAKER_MESH_NAMES.hornBay;
+        face.position.set(rect.cx - placed.cx, rect.cy - placed.y0, plateZ);
+        ctx.group.add(face);
       }
     });
   }
@@ -743,28 +869,29 @@ function chamberParts(
 }
 
 /**
- * A front-loaded or tapped horn's driver inside its chamber, in the cutaway: a body of its cone's cutout facing the
- * throat at (x, y, z), behind it (a placeholder until the horn's fold layout places it), kept off the back panel.
+ * A front-loaded or tapped horn's driver inside its chamber, in the cutaway: a body of its cone's cutout at (x, y), its
+ * cone at `front` (the cones' plane behind the walls' back edges, z in the group) and its body behind it to `back`,
+ * kept off the back panel.
  */
 function addHornDriver(
   ctx: SceneContext,
   placed: PlacedChamber,
   driver: SpeakerDriver,
-  { x, y, z: throatZ }: { x: number; y: number; z: number },
+  { x, y }: { x: number; y: number },
+  { front, back }: { front: number; back: number },
 ) {
   const size = coneSize(driver);
   if (!ctx.cutaway || size === undefined) return;
   const backZ = -placed.dims.d / 2 + ctx.wall;
   const r = wooferCutoutR(size);
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(r, r, HORN_DRIVER_DEPTH_IN, 32),
-    ctx.materials.black,
-  );
+  const depth = Math.abs(front - back);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, depth, 32), ctx.materials.black);
   body.rotation.x = Math.PI / 2; // its axis along z
+  // a hair behind the cones' plane, so the cone's face doesn't fight the bay's sides
   body.position.set(
     x,
     y,
-    Math.max(backZ, throatZ - HORN_DRIVER_DEPTH_IN) + HORN_DRIVER_DEPTH_IN / 2,
+    Math.max(backZ + depth / 2, (front + back) / 2 + Math.sign(back - front) * HORN_DRIVER_GAP_IN),
   );
   body.name = SPEAKER_MESH_NAMES.hornDriver;
   ctx.group.add(body);

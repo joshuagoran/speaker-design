@@ -10,8 +10,8 @@ export interface CutlistProject {
 
 /** What the Cutlist page says for each project that has one (the Space has none). */
 export const CUTLIST_PROJECTS = {
-  pa: { set: "stack", setsLabel: "Stacks", sets: [1, 2, 4], source: "the Design page's boxes" },
-  hifi: { set: "speaker", setsLabel: "Speakers", sets: [1, 2, 4], source: "the Hi-fi page's box" },
+  pa: { set: "stack", setsLabel: "Stacks", sets: [1, 2, 4], source: "the stack's boxes" },
+  hifi: { set: "speaker", setsLabel: "Speakers", sets: [1, 2, 4], source: "the speaker's box" },
   speaker: {
     set: "speaker",
     setsLabel: "Speakers",

@@ -291,23 +291,31 @@ export const DEFAULT_MONITOR = {
 };
 
 /**
- * The PA v2 sub bin (docs/pa-v2-plan.md, the lead option and its mock-up; the horn engine's Hornresp case
- * tests/hornresp/sub-bin-vented holds one driver's share): 18″ subs stacked in one throat, front-loaded on a straight
- * 1-D flare from the cones, a vented rear chamber with one slot on each front side, folded once along the back wall,
- * tuned to ~35 Hz with a 30 Hz BW24 subsonic, on the PA's 800 W. The sizes are each driver's share; the template takes
- * them once per driver.
+ * The PA v2 sub bin (docs/pa-v2-plan.md, the lead option and its mock-up docs/pa-v2-boxes.svg): 18″ subs stacked in one
+ * throat, front-loaded on a straight-sided 1-D flare (the box's own top and bottom, two flat side walls that angle out:
+ * a parabolic flare, its area growing linearly), a vented rear chamber with one slot on each front side, folded once
+ * along the back wall, tuned to ~35 Hz with a 30 Hz BW24 subsonic, on the PA's 800 W. The sizes are each driver's
+ * share; the template takes them once per driver. Its mouth is the face between the side slots (~980 mm in the mock-up,
+ * the template's eighth-inch box ~978 mm).
  */
 export const PA_V2_SUB_BIN = {
   sub: BC18NBX,
-  /** the box's outside width and depth, mm (its height: the drivers' openings and two walls) */
+  /**
+   * the box's outside width and depth, mm (its height: the drivers' openings and two walls). The depth is the
+   * mock-up's 766 mm made 3/8″ deeper (the template's 30 1/2″): the smallest 1/8″ step that holds the flare, the
+   * walls' clearance and the drivers at their catalog depth.
+   */
   widthMm: 1182,
-  depthMm: 766,
+  depthMm: 775,
   /** each driver's share of the throat's and the mouth's height, mm: two 18″ fill the 920 mm mouth */
   openingMm: 460,
-  /** the flare: from the cone's area to each driver's share of the mouth, cm², over its length, cm, in conical steps */
-  mouthCm2: 4500,
+  /**
+   * the flare: its compression ratio (the cones' area over the throat's: the side walls' back edges cover the cones'
+   * outer parts, lib/speaker/hornThroat; the owner's pick from the sweep of 1 to 3 in quarter steps, for the flatter
+   * band, docs/pa-v2-plan.md), and its length, cm
+   */
+  compression: 2,
   flareCm: 50,
-  flareSteps: 4,
   /** each driver's share of the rear chamber's net air, L: the wedges beside the flare join it (~324 L for two) */
   rearLiters: 162,
   /** the slots: this wide and the mouth's height, mm (~600 cm² per driver), and their folded length */
@@ -322,23 +330,33 @@ export const PA_V2_SUB_BIN = {
 
 /**
  * The PA v2 mid box (docs/pa-v2-plan.md, the lead option and its mock-up; the Hornresp case tests/hornresp/mid-pair):
- * two 10″ in one throat, ~280 mm apart, a 1 L throat chamber, an exponential 1-D flare, a vented rear chamber (~34 L,
- * the wedges sealed) with a straight slot on each front side, tuned to ~95 Hz, on 450 W per driver. It crosses to the
- * HF (the N314T on the DIY R-OSSE, its own box) at the R-OSSE's lowest crossover.
+ * two 10″ in one throat, ~280 mm apart, the side walls' back edges over the cones' outer parts (the front chamber
+ * follows them), an exponential 1-D flare (the box's own top and bottom, two curved side walls), a vented rear chamber
+ * (~34 L, the wedges sealed) with a straight slot on each front side, tuned to ~95 Hz, on 450 W per driver. It crosses
+ * to the HF (the N314T on the DIY R-OSSE, its own box) at the R-OSSE's lowest crossover. The Hornresp case keeps the
+ * mock-up's 800 cm² throat and 1 L throat chamber.
  */
 export const PA_V2_MID_BOX = {
   mid: byIdOrThrow(MID_OPTIONS, "es10mb600", CATALOG_TABLE_NAMES.mids),
   drivers: 2,
   hfHorn: byIdOrThrow(HORN_OPTIONS, "diy_rosse110x50", CATALOG_TABLE_NAMES.horns),
-  /** the box's outside width and depth, mm (its height: the opening and two walls) */
+  /**
+   * the box's outside width and depth, mm (its height: the opening and two walls). The depth is the mock-up's 526 mm
+   * made 1/4″ deeper (the template's 21″): the smallest 1/8″ step that holds the flare, the walls' clearance and the
+   * drivers at their depth.
+   */
   widthMm: 614,
-  depthMm: 526,
+  depthMm: 533,
   /** the throat's and the mouth's height, mm, and the cones' spacing in it */
   openingMm: 560,
   coneSpacingMm: 280,
-  throatChamberL: 1,
-  throatCm2: 800,
-  mouthCm2: 2800,
+  /**
+   * the flare's compression ratio (the cones' area over the throat's: the side walls' back edges cover the cones' outer
+   * parts, lib/speaker/hornThroat; the best of 1 to 3 in quarter steps, docs/pa-v2-plan.md) and its length, cm; the
+   * mouth is the face between the side slots at the box's inside height (~500 × 560 mm, 2800 cm², in the mock-up; the
+   * template's eighth-inch box gives ~2750 cm²)
+   */
+  compression: 2,
   flareCm: 35,
   rearLiters: 34,
   slotWidthMm: 21,

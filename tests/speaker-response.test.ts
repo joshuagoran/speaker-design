@@ -364,7 +364,6 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
     load: {
       kind: CHAMBER_LOAD.horn,
       horn: {
-        throatChamber: 2,
         segments: [
           { profile: HORN_PROFILE.exponential, s1: 600, s2: 2400, length: 60 },
           { profile: HORN_PROFILE.conical, s1: 2400, s2: 6000, length: 50 },
@@ -569,7 +568,6 @@ test("speaker model: a chamber's stuffing reaches a horn's rear chamber as it do
       load: {
         kind: CHAMBER_LOAD.horn,
         horn: {
-          throatChamber: 0,
           segments: [],
           portOffset: 0,
           drive: { kind: HORN_DRIVE.front },
@@ -599,7 +597,6 @@ test("speaker model: a stuffed horn chamber reports its own net air and plays on
     load: {
       kind: CHAMBER_LOAD.horn,
       horn: {
-        throatChamber: 0.5,
         segments: [{ profile: HORN_PROFILE.exponential, s1: 150, s2: 600, length: 40 }],
         portOffset: 0,
         drive: { kind: HORN_DRIVE.front },

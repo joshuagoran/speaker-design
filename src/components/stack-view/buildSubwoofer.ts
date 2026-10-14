@@ -12,6 +12,8 @@ import {
   foldedRearWallIn,
   foldedShelfIn,
   slotFinIn,
+  slotFinLayout,
+  slotFinsOf,
   isRoundPort,
   maxStraightSlotIn,
   slotFolds,
@@ -50,8 +52,9 @@ export function subVentPlan(
   const pg = portGeom || {}; // explicit vent geometry when the cabinet is custom
   // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
   const ductH = pg.ductH != null ? pg.ductH : 3,
-    innerW = s.w - 2 * T,
-    ductW = (innerW - 2 * T) / 3;
+    innerW = s.w - 2 * T;
+  // the bottom slot's fins and the openings between them (the PA page's two fins: three openings)
+  const fins = slotFinLayout(innerW, T, slotFinsOf({ fins: pg.fins, slotH: ductH }, innerW, T));
   const round = isRoundPort(portStyle); // round-tube ports only
   const corners = portStyle === "round4";
   const nPorts = pg.nPorts != null ? pg.nPorts : portStyle === "round1" ? 1 : corners ? 4 : 2;
@@ -78,7 +81,7 @@ export function subVentPlan(
     sides,
     ductH,
     innerW,
-    ductW,
+    fins,
     round,
     portR,
     tubeVent,
@@ -241,7 +244,7 @@ export function buildSubVent(
     sides,
     ductH,
     innerW,
-    ductW,
+    fins,
     round,
     portR,
     tubeVent,
@@ -301,8 +304,8 @@ export function buildSubVent(
   } else if (!round) {
     // duct mouths sit flush with the frame face; the box bottom is the duct floor
     const band = roundedRectShape(innerW, bandH, 0.12);
-    for (let k = -1; k <= 1; k++)
-      band.holes.push(roundedRectPath(k * (ductW + T), -T / 2, ductW, ductH, 0.25));
+    for (const x of fins.openings)
+      band.holes.push(roundedRectPath(x, -T / 2, fins.open, ductH, 0.25));
     if (REVEAL > 0) {
       const nose = new THREE.Mesh(
         new THREE.ExtrudeGeometry(band, { depth: REVEAL, bevelEnabled: false }),
@@ -375,8 +378,8 @@ export function buildSubSlotShelf(
 ) {
   const plyIn = ctx.materials.inner;
   const T = ctx.wall;
-  const { portStyle, pg, ductH, innerW, ductW } = plan;
-  // duct structure inside: top shelf, two fins (slot version only)
+  const { portStyle, pg, ductH, innerW, fins } = plan;
+  // duct structure inside: top shelf and its fins (slot version only)
   const wantLen = pg.tubeLen != null ? pg.tubeLen : s.d - T - 3;
   const ductLen = Math.max(2, Math.min(wantLen, maxStraightSlotIn(s, ductH, T))); // from the frame face back, open gap behind
   // a slot longer than the straight run holds folds up the back wall, as the model and the cutlist take it
@@ -391,9 +394,9 @@ export function buildSubSlotShelf(
     roof.position.set(0, pl + T + ductH + T / 2, roofZ);
     roof.name = VENT_MESH_NAME;
     subGroup.add(roof);
-    [-1, 1].forEach((k) => {
+    fins.centers.forEach((x) => {
       const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, roofLen), plyIn);
-      fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, roofZ);
+      fin.position.set(x, pl + T + ductH / 2, roofZ);
       fin.name = VENT_MESH_NAME;
       subGroup.add(fin);
     });
@@ -414,9 +417,9 @@ export function buildSubSlotShelf(
     subGroup.add(shelf);
     // the fins run on to the back panel past the shelf, as the cutlist's
     const finLen = slotFinIn(s, T);
-    [-1, 1].forEach((k) => {
+    fins.centers.forEach((x) => {
       const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, finLen), plyIn);
-      fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, s.d / 2 - finLen / 2);
+      fin.position.set(x, pl + T + ductH / 2, s.d / 2 - finLen / 2);
       fin.name = VENT_MESH_NAME;
       subGroup.add(fin);
     });

@@ -16,6 +16,7 @@ import {
   foldedRearWallIn,
   foldedShelfIn,
   slotFinIn,
+  slotFinsOf,
   slotInnerEndCorrection,
   midGrossLiters,
   logGridCount,
@@ -425,14 +426,16 @@ export function ventShape(
       ec: sideDuctEndCorrection(box, v, t, inset, n, most),
     };
   }
-  if (style === "slots")
+  if (style === "slots") {
+    const fins = slotFinsOf(v, iw, t);
     return {
       n: 1,
-      area: v.slotH * (iw - 2 * t),
+      area: v.slotH * (iw - fins * t),
       ec:
-        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) +
+        rectangleEndCorrection(2 * v.slotH, iw - fins * t) +
         slotInnerEndCorrection(box, v, t, inset, folded, most),
     };
+  }
   const r = v.dia / 2;
   return {
     n: v.nt,
@@ -473,7 +476,7 @@ export function subWoodIn3(
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
     // a straight slot's fins run on to the back (slotFinIn)
-    in3 += iw * len * t + v.slotH * (folded ? len : slotFinIn(box, t)) * t * 2;
+    in3 += iw * len * t + v.slotH * (folded ? len : slotFinIn(box, t)) * t * slotFinsOf(v, iw, t);
     if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;

@@ -31,7 +31,7 @@ import type {
 } from "../../types";
 import { HORN_OPTIONS, SUB_OPTIONS } from "../data";
 import { byIdOrThrow } from "../tables";
-import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter, ventSpeedLimit } from "../pa/calc";
+import { STUFFING_VOLUME_GAIN, slotFinsOf, subDriverCenter, ventSpeedLimit } from "../pa/calc";
 import { modelTubeElbows } from "../pa/tubes";
 import { towerMidDims, towerSpec } from "../pa/tower";
 import { takesHornMount } from "../pa/hornMount";
@@ -49,7 +49,6 @@ import {
   CABINET_TOP,
   DRIVER_KIND,
   HORN_PLACEMENT,
-  PA_SLOT_FINS,
   PORT_SHAPE,
   SPACE_ITEM,
   SPEAKER_BAND,
@@ -91,14 +90,13 @@ const sideDucts = (cfg: PaPlannerDesign, n: 1 | 2): SpeakerPort => ({
 
 /** The sub's vent as a chamber's port, by port style. */
 const PA_PORTS: Record<PortStyle, (cfg: PaPlannerDesign, sub: SubDriver) => SpeakerPort> = {
-  // the letterbox: split by its fins, folded up the back wall when too long to run straight
+  // the letterbox: split by its fins (the PA rule folds it up the back wall when too long to run straight)
   slots: (cfg) => ({
     shape: PORT_SHAPE.slot,
     n: 1,
     h: cfg.cVent.slotH,
     len: cfg.cVent.len,
-    fins: PA_SLOT_FINS,
-    folded: slotFolds(cfg.cDim, cfg.cVent, cfg.wall),
+    fins: slotFinsOf(cfg.cVent, cfg.cDim.w - 2 * cfg.wall, cfg.wall),
   }),
   vslots: (cfg) => sideDucts(cfg, 2),
   vslot1: (cfg) => sideDucts(cfg, 1),

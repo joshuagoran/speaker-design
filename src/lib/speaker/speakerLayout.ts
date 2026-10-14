@@ -48,9 +48,11 @@ import {
 import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
+import { CM2_PER_IN2 } from "../../constants/units";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
+import { hornPath, type HornPath } from "./hornGeometry";
+import { driverBodyIn, wallClearanceIn } from "./hornThroat";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
   ARCH_BLOCK,
@@ -62,6 +64,7 @@ import {
   HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
+  SLOT_PLACE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
 
@@ -376,7 +379,7 @@ export function portRule(chamber: SpeakerChamber): PortRule | null {
       });
     case PORT_SHAPE.slot:
       return port.fins !== undefined
-        ? pa(PORT_STYLE.slot, { ductH: port.h, tubeLen: port.len })
+        ? pa(PORT_STYLE.slot, { ductH: port.h, tubeLen: port.len, fins: port.fins })
         : { rule: PORT_RULE.hifi, port };
     default:
       return port.flared && sub
@@ -396,24 +399,71 @@ export function portRule(chamber: SpeakerChamber): PortRule | null {
   }
 }
 
+/** A slot's opening on the baffle: its center across and its bottom up (the chamber's own coordinates), and its size. */
+export interface SlotOpening extends Dims2 {
+  x: number;
+  y: number;
+  /** the side wall it stands against (-1 left, 1 right seen from the front); absent for a slot along the floor */
+  side?: -1 | 1;
+}
+
 /**
- * A Hi-fi slot's openings on its chamber's baffle: `n` alike stacked from the clear face's floor up, each under its
- * own shelf a wall thick, each its own width where set (else the clear face's) and centered across the clear face. In
- * the chamber's own coordinates: `x` from its center line, `y` (an opening's bottom) up from its bottom.
+ * A Hi-fi slot's openings on its chamber's baffle, in the chamber's own coordinates: `x` from its center line, `y` (an
+ * opening's bottom) up from its bottom. Along the floor (the default): `n` alike stacked from the clear face's floor up,
+ * each under its own shelf a wall thick, each its own width where set (else the clear face's) and centered across the clear
+ * face. Up the sides (`SLOT_PLACE`): `n` alike standing on the floor, alternately against the left and the right wall and
+ * a wall apart across, each as wide as the slot's narrow side and as tall as its long side (at most the clear face).
  */
 export function slotOpeningsAt(
   placed: Pick<PlacedChamber, "clear" | "cx" | "y0">,
-  port: Pick<SpeakerSlotPort, "n" | "h" | "w">,
+  port: Pick<SpeakerSlotPort, "n" | "h" | "w" | "place">,
   t: number,
-): { x: number; y: number; w: number; h: number }[] {
+): SlotOpening[] {
   const { clear } = placed;
+  const n = Math.max(1, port.n);
+  if (port.place === SLOT_PLACE.sides) {
+    const h = Math.min(port.w ?? clear.h, clear.h);
+    return Array.from({ length: n }, (_, k) => {
+      const left = k % 2 === 0;
+      const inset = port.h / 2 + Math.floor(k / 2) * (port.h + t);
+      return {
+        x: left ? clear.x - placed.cx + inset : clear.x + clear.w - placed.cx - inset,
+        y: clear.y - placed.y0,
+        w: port.h,
+        h,
+        side: left ? -1 : 1,
+      };
+    });
+  }
   const w = port.w ?? clear.w;
-  return Array.from({ length: Math.max(1, port.n) }, (_, k) => ({
+  return Array.from({ length: n }, (_, k) => ({
     x: clear.x + clear.w / 2 - placed.cx,
     y: clear.y - placed.y0 + k * (port.h + t),
     w,
     h: port.h,
   }));
+}
+
+/**
+ * The face a horn has: the chamber's clear face less the columns its side slots take, each a slot and a wall wide (the
+ * slots stand beside the mouth, never over it).
+ */
+export function hornFace(
+  placed: Pick<PlacedChamber, "chamber" | "clear" | "cx" | "y0">,
+  t: number,
+): FaceRect {
+  const { clear, chamber } = placed;
+  const rule = portRule(chamber);
+  if (rule?.rule !== PORT_RULE.hifi) return clear;
+  const { port } = rule;
+  if (port.shape !== PORT_SHAPE.slot) return clear;
+  const sides = slotOpeningsAt(placed, port, t).flatMap((o) => (o.side ? [o.side] : []));
+  const columns = (side: -1 | 1) => sides.filter((x) => x === side).length * (port.h + t);
+  return {
+    ...clear,
+    x: clear.x + columns(-1),
+    w: Math.max(0, clear.w - columns(-1) - columns(1)),
+  };
 }
 
 /** How far a set position may be off before the layout counts it as moved, in. */
@@ -575,34 +625,41 @@ export const archBlock = (
 
 /** A horn-loaded chamber's flare as the views draw it, inches. */
 export interface HornFlare {
-  /** the mouth on the baffle, centered at the horn's `mouthPosition` (absent: on the chamber's clear face) */
+  /** the mouth on the baffle, centered at the horn's `mouthPosition` (absent: on the horn's face) */
   mouth: FaceRect;
-  /** each segment's throat and mouth, of the mouth's shape, and its length back from the front */
-  segments: { throat: Dims2; mouth: Dims2; length: number }[];
   /**
-   * the path is drawn straight as a placeholder: a folded path (its fold layout comes later), or one longer than the
-   * chamber is deep, shortened to fit
+   * the path from the throat to the mouth (lib/speaker/hornGeometry): one geometry for every view. Its `fits` is false
+   * where the path, folded or not, does not fit the chamber: the views then draw it as it is, past the walls
    */
-  placeholder: boolean;
-  /** the mouth is larger than the clear face: drawn at the clear face, every section shrunk alike */
+  path: HornPath;
+  /** the mouth is larger than the horn's face: drawn at the face, every section shrunk alike */
   mouthClipped: boolean;
-  /** the horn's `mouthPosition` would put the mouth past the clear face: drawn moved inside it */
+  /** the horn's `mouthPosition` would put the mouth past the face: drawn moved inside it */
   mouthMoved: boolean;
 }
 
-/** An area of `areaIn2` in the shape of `like` (its width over its height), in. */
-const shaped = (areaIn2: number, like: Dims2): Dims2 => {
-  const aspect = like.w / like.h;
-  return { w: Math.sqrt(areaIn2 * aspect), h: Math.sqrt(areaIn2 / aspect) };
-};
+/** The box round a chamber's drivers as the spec sets them, or null for none that have a size. */
+function driverBox(placed: PlacedChamber): FaceRect | null {
+  const spots = placed.chamber.drivers.flatMap((d) =>
+    driverAcrossIn(d) > 0
+      ? driverSpots(placed, d).map((s) => ({ x: s.xIn, y: s.yIn, r: driverAcrossIn(d) / 2 }))
+      : [],
+  );
+  if (!spots.length) return null;
+  const x0 = Math.min(...spots.map((s) => s.x - s.r)),
+    x1 = Math.max(...spots.map((s) => s.x + s.r)),
+    y0 = Math.min(...spots.map((s) => s.y - s.r)),
+    y1 = Math.max(...spots.map((s) => s.y + s.r));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
 
 /**
- * The flare of a chamber's horn (its segments' areas and lengths, Hornresp's cm² and cm), throat at the back, mouth on
- * the baffle: the mouth as square as its area allows inside the clear face (wider than square where a square would be
- * taller than the face, the clear width at most; cut to the clear face when larger than it), each section the mouth's shape; the mouth centered at the
- * horn's `mouthPosition` (kept inside the clear face), else on the clear face; the path at most the chamber's clear
- * depth (as the model takes it: less the back, the baffle and the baffle's inset). Null for a chamber with no horn, no
- * segments, or a segment with a size that is not positive and finite.
+ * The flare of a chamber's horn (its segments' areas and lengths, Hornresp's cm² and cm), throat at the back, mouth on the
+ * baffle: the mouth as square as its area allows inside the horn's face (the clear face less its side slots; wider than
+ * square where a square would be taller than the face, the face's width at most; cut to the face when larger than it), the
+ * mouth centered at the horn's `mouthPosition` (kept inside the face), else on the face. The path is
+ * `hornPath`'s, from the segments and the chamber's clear depth (as the model takes it: less the back, the baffle and the
+ * baffle's inset). Null for a chamber with no horn, no segments, or a segment with a size that is not positive and finite.
  */
 export function hornFlare(
   cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
@@ -613,38 +670,37 @@ export function hornFlare(
   // a zero, negative or missing size draws nothing (the model names it a gap), never a NaN flare
   if (!load.horn.segments.every(isSizedSegment)) return null;
   const horn: SpeakerHorn = load.horn;
-  const areaIn2 = (cm2: number) => cm2 / CM2_PER_IN2;
-  const { clear } = placed;
-  const mouthArea = areaIn2(horn.segments[horn.segments.length - 1].s2);
-  // as square as it fits: wider than square where a square would be taller than the clear face
-  const w = Math.min(clear.w, Math.max(Math.sqrt(mouthArea), mouthArea / clear.h));
-  const h = Math.min(clear.h, mouthArea / w);
-  /** what the clear face leaves of the mouth's area: every section is drawn that much smaller */
+  const t = cabinet.panel.thicknessIn;
+  const face = hornFace(placed, t);
+  const mouthArea = horn.segments[horn.segments.length - 1].s2 / CM2_PER_IN2;
+  // as square as it fits: wider than square where a square would be taller than the face
+  const w = Math.min(face.w, Math.max(Math.sqrt(mouthArea), mouthArea / face.h));
+  const h = Math.min(face.h, mouthArea / w);
+  /** what the face leaves of the mouth's area: every section is drawn that much smaller */
   const fit = (w * h) / mouthArea;
   const set = horn.mouthPosition
     ? intoFace(
         [{ x: placed.cx + horn.mouthPosition.xIn, y: placed.y0 + horn.mouthPosition.yIn }],
         () => ({ w: w / 2, h: h / 2 }),
-        clear,
+        face,
       )
     : null;
-  const [center] = set?.spots ?? [{ x: clear.x + clear.w / 2, y: clear.y + clear.h / 2 }];
+  const [center] = set?.spots ?? [{ x: face.x + face.w / 2, y: face.y + face.h / 2 }];
   const mouth = { x: center.x - w / 2, y: center.y - h / 2, w, h };
-  const pathIn = horn.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
-  const depthIn = clearDepthIn(cabinet, placed.dims);
-  const placeholder = horn.path === HORN_PATH.folded || pathIn > depthIn;
-  const scale = placeholder && pathIn > 0 ? Math.min(1, depthIn / pathIn) : 1;
-  return {
+  const path = hornPath({
+    segments: horn.segments,
+    areaScale: fit,
     mouth,
-    segments: horn.segments.map((s) => ({
-      throat: shaped(areaIn2(s.s1) * fit, mouth),
-      mouth: shaped(areaIn2(s.s2) * fit, mouth),
-      length: (s.length / CM_PER_IN) * scale,
-    })),
-    placeholder,
-    mouthClipped: fit < 1 - 1e-9,
-    mouthMoved: set?.moved ?? false,
-  };
+    drivers: driverBox(placed),
+    clear: face,
+    depthIn: clearDepthIn(cabinet, placed.dims),
+    wallIn: t,
+    frontIn: wallClearanceIn(placed.chamber.drivers),
+    bodyIn: driverBodyIn(placed.chamber.drivers),
+    folded: horn.path === HORN_PATH.folded,
+  });
+  if (!path) return null;
+  return { mouth, path, mouthClipped: fit < 1 - 1e-9, mouthMoved: set?.moved ?? false };
 }
 
 /**

@@ -2,6 +2,7 @@ import type { Horn, SpeakerDriver, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { AmtPlate, RibbonPlate } from "./HifiFront";
 import {
+  driverAcrossIn,
   driverHorn,
   driverSpots,
   driversOnBaffle,
@@ -13,6 +14,7 @@ import {
   roundPortsAt,
   speakerBounds,
   type PlacedChamber,
+  type HornFlare,
   slotOpeningsAt,
   hornFitsWhereSet,
   hornCutoutBox,
@@ -20,6 +22,8 @@ import {
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
+import { coneParts } from "../../lib/speaker/driverParts";
+import { CM2_PER_IN2 } from "../../constants/units";
 import { byId } from "../../lib/tables";
 import { isAmt, isRibbon } from "../../lib/hifi/hifi";
 import { PANEL } from "../../constants/cutParts";
@@ -143,7 +147,7 @@ export function SpeakerFront({ spec }: Props) {
       );
     }
     // the PA's, as the 3D view cuts them (stack-view/buildSubwoofer): the tubes' or the side ducts' openings, and the
-    // letterbox's mouth under its shelf
+    // letterbox's mouths under its shelf, between its fins
     const plan = subVentPlan(rule.sub, dims, rule.portStyle, rule.portGeom, t);
     const holes = subVentHoles(plan, dims, t, { x: cx, plinth: y0, baffleCy: 0 }).map((h, j) => (
       <path
@@ -155,9 +159,21 @@ export function SpeakerFront({ spec }: Props) {
         {...opening}
       />
     ));
-    return plan.bandH > 0
-      ? [...holes, rect(`v${i}`, cx, y0 + t + plan.ductH / 2, plan.innerW, plan.ductH, opening)]
-      : holes;
+    // the letterbox's openings between its fins (lib/pa/calc slotFinLayout)
+    const band =
+      plan.bandH > 0
+        ? plan.fins.openings.map((x, j) =>
+            rect(
+              `v${i}.s${j}`,
+              cx + x,
+              y0 + t + plan.ductH / 2,
+              plan.fins.open,
+              plan.ductH,
+              opening,
+            ),
+          )
+        : [];
+    return [...holes, ...band];
   };
 
   /** one driver at (x, y): on the baffle, or its horn standing on the top */
@@ -261,6 +277,73 @@ export function SpeakerFront({ spec }: Props) {
     }
   };
 
+  /** a horn-loaded chamber's drawing: see where it is used */
+  const hornParts = (placed: PlacedChamber, flare: HornFlare, i: number) => {
+    const { mouth, path } = flare;
+    const { clear } = placed;
+    // the path's last leg ends at the mouth: its sections are what shows through it, nested
+    const seen = path.legs[path.legs.length - 1].sections;
+    /** where a segment starts or ends: the outlines drawn (the steps between are the flare's walls) */
+    const joints = seen.filter((sec) => sec.joint);
+    const corner = (n: number) =>
+      seen
+        .map((sec) => {
+          const x = sec.cx + ((n % 2 ? 1 : -1) * sec.w) / 2,
+            y = sec.cy + ((n < 2 ? -1 : 1) * sec.h) / 2;
+          return `${px(x)},${py(y)}`;
+        })
+        .join(" ");
+    const line = { fill: "none", stroke: pal.muted, strokeWidth: 0.8 };
+    const out: React.JSX.Element[] = [
+      // the walls' inside edges: the clear face the horn, the vents and the drivers stand in
+      rect(`e${i}`, clear.x + clear.w / 2, clear.y + clear.h / 2, clear.w, clear.h, {
+        fill: "none",
+        stroke: pal.muted,
+        strokeWidth: 0.8,
+      }),
+      rect(`m${i}`, mouth.x + mouth.w / 2, mouth.y + mouth.h / 2, mouth.w, mouth.h, {
+        rx: 2,
+        fill: pal.panel,
+        stroke: pal.ink,
+        strokeWidth: 1.2,
+      }),
+      ...joints.map((sec, j) =>
+        rect(`s${i}.${j}`, sec.cx, sec.cy, sec.w, sec.h, { ...line, strokeWidth: 0.6 }),
+      ),
+      ...[0, 1, 2, 3].map((n) => <polyline key={`w${i}.${n}`} points={corner(n)} {...line} />),
+    ];
+    // a straight path shows its drivers through the throat (their frames dashed, their cones' outlines solid), and the
+    // walls' back edges across them; a folded one has them out of sight
+    if (path.folds === 0) {
+      placed.chamber.drivers.forEach((d, j) =>
+        driverSpots(placed, d).forEach((spot, n) => {
+          const across = driverAcrossIn(d);
+          const x = spot.xIn + path.driverShift.x,
+            y = spot.yIn + path.driverShift.y;
+          if (across > 0) out.push(circle(`b${i}.${j}.${n}`, x, y, across / 2, behind));
+          const sd = coneParts(d)?.ts.Sd;
+          if (sd)
+            out.push(circle(`c${i}.${j}.${n}`, x, y, Math.sqrt(sd / CM2_PER_IN2 / Math.PI), line));
+        }),
+      );
+      // the throat: the walls' back edges, over the cones where the horn loads them
+      const [throat] = path.legs[0].sections;
+      for (const side of [-1, 1])
+        out.push(
+          <line
+            key={`t${i}.${side}`}
+            x1={px(throat.cx + (side * throat.w) / 2)}
+            x2={px(throat.cx + (side * throat.w) / 2)}
+            y1={py(throat.cy - throat.h / 2)}
+            y2={py(throat.cy + throat.h / 2)}
+            stroke={pal.ink}
+            strokeWidth={1.2}
+          />,
+        );
+    }
+    return out;
+  };
+
   const ro = cabinet.roundoverIn;
   const shells = layout.oneShell
     ? [{ x0: -layout.size.w / 2, y0: 0, w: layout.size.w, h: layout.size.h }]
@@ -303,20 +386,10 @@ export function SpeakerFront({ spec }: Props) {
       {layout.chambers.flatMap((placed, i) => {
         const { chamber } = placed;
         const parts = vent(placed, i);
-        // a horn built into the box: its mouth in the baffle
+        // a horn built into the box: the panel edges inside the face, its mouth in the baffle with the flare's sections
+        // seen through it (each segment's end, the straight walls between), and the drivers behind its throat
         const flare = hornFlare(cabinet, placed);
-        if (flare)
-          parts.push(
-            <rect
-              key={`m${i}`}
-              x={px(flare.mouth.x)}
-              y={py(flare.mouth.y + flare.mouth.h)}
-              width={flare.mouth.w * k}
-              height={flare.mouth.h * k}
-              rx={2}
-              fill={pal.ink}
-            />,
-          );
+        if (flare) parts.push(...hornParts(placed, flare, i));
         // the passive radiators: on the baffle as a cone, on the back dashed
         radiatorsAt(cabinet, placed).spots.forEach((s, j) =>
           parts.push(

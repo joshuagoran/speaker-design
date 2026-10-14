@@ -16,9 +16,11 @@ import {
   withSectionAdded,
   withSectionProfile,
   withSectionRemoved,
+  withCompressionRatio,
   withSectionSize,
   withStepsSmoothed,
 } from "../src/pages/speaker/hornSections";
+import { compressionRatio, conesAreaCm2 } from "../src/lib/speaker/hornThroat";
 import { SPEAKER_TEXT } from "../src/constants/speakerPage";
 import { hornText } from "../src/pages/speaker/speakerText";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -41,8 +43,26 @@ import { CM_PER_IN } from "../src/constants/units";
 import type { HornSegment, SpeakerHorn, SpeakerSpec } from "../src/types";
 import type * as THREE from "three";
 
-/** The two-18″ PA v2 sub bin: the template the Horn settings were built on. */
-const BIN = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+/** How many sections the tests cut the bin's flare into. */
+const BIN_SECTIONS = 4;
+
+/**
+ * The two-18″ PA v2 sub bin (the template the Horn settings were built on), its one straight-sided flare cut into four
+ * parabolic sections of equal length: the same horn (its area grows linearly), with sections to edit.
+ */
+const BIN = withHorn(templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo), (h) => {
+  const [flare] = h.segments;
+  const areaAt = (i: number) => flare.s1 + ((flare.s2 - flare.s1) * i) / BIN_SECTIONS;
+  return {
+    ...h,
+    segments: Array.from({ length: BIN_SECTIONS }, (_, i) => ({
+      profile: flare.profile,
+      s1: areaAt(i),
+      s2: areaAt(i + 1),
+      length: flare.length / BIN_SECTIONS,
+    })),
+  };
+});
 
 /** The spec's one horn. */
 function hornOf(spec: SpeakerSpec): SpeakerHorn {
@@ -114,40 +134,53 @@ test("speaker horn: the PA v2 templates still model", () => {
 test("speaker horn: editing a section changes the response, the 3D flare and the cutlist", () => {
   const segments = hornOf(BIN).segments;
   const last = segments.length - 1;
-  // a mouth 25% larger: the last section's end area
-  const bigger = withSegments(BIN, (s) =>
-    withSectionSize(s, last, "s2", shownIn2(s[last].s2) * 1.25),
+  // a mouth 25% smaller (the bin's mouth already fills the face beside its slots): the last section's end area
+  const smaller = withSegments(BIN, (s) =>
+    withSectionSize(s, last, "s2", shownIn2(s[last].s2) * 0.75),
   );
-  assert.ok(maxDiff(BIN, bigger) > 0.1, "the response changes");
-  const [before, after] = [flareOf(BIN), flareOf(bigger)];
+  assert.ok(maxDiff(BIN, smaller) > 0.1, "the response changes");
+  const [before, after] = [flareOf(BIN), flareOf(smaller)];
   assert.ok(before && after);
-  assert.ok(after.mouth.w * after.mouth.h > before.mouth.w * before.mouth.h, "the mouth grows");
-  assert.notEqual(mouthNote(bigger), mouthNote(BIN), "the cutlist's mouth opening follows");
+  assert.ok(after.mouth.w * after.mouth.h < before.mouth.w * before.mouth.h, "the mouth shrinks");
+  assert.notEqual(mouthNote(smaller), mouthNote(BIN), "the cutlist's mouth opening follows");
   // a longer first section: the path grows, and so does the 3D flare
   const longer = withSegments(BIN, (s) =>
     withSectionSize(s, 0, "length", shownInOfCm(s[0].length) + 4),
   );
   assert.ok(maxDiff(BIN, longer) > 0.1);
-  const lengthIn = (spec: SpeakerSpec) =>
-    (flareOf(spec)?.segments ?? []).reduce((sum, s) => sum + s.length, 0);
+  const lengthIn = (spec: SpeakerSpec) => flareOf(spec)?.path.pathIn ?? 0;
   assert.ok(Math.abs(lengthIn(longer) - lengthIn(BIN) - 4) < 0.01, "4 in more flare");
   // a profile change reaches the engine too
   const exp = withSegments(BIN, (s) => withSectionProfile(s, 0, HORN_PROFILE.exponential));
   assert.equal(hornOf(exp).segments[0].profile, HORN_PROFILE.exponential);
   assert.ok(maxDiff(BIN, exp) > 0);
-  // the throat chamber
-  const throat = withHorn(BIN, (h) => ({ ...h, throatChamber: 5 }));
-  assert.ok(maxDiff(BIN, throat) > 0.1);
-  // a folded path: the same sound, the flare drawn as a placeholder
+  // the compression ratio: it sets the throat (the first section's start), the one figure both fields edit
+  const drivers = BIN.cabinet.chambers[0].drivers;
+  const cones = conesAreaCm2(drivers);
+  assert.ok(Math.abs((compressionRatio(cones, segments) ?? 0) - 2) < 1e-9, "the bin starts at 2:1");
+  const loaded = withSegments(BIN, (s) => withCompressionRatio(s, cones, 4));
+  assert.ok(Math.abs((compressionRatio(cones, hornOf(loaded).segments) ?? 0) - 4) < 1e-9);
+  assert.equal(hornOf(loaded).segments[0].s1, cones / 4, "a quarter of the cones' area");
+  assert.deepEqual(hornOf(loaded).segments.slice(1), segments.slice(1), "the other sections stay");
+  assert.ok(maxDiff(BIN, loaded) > 0.1, "the response changes");
+  const [wide, narrow] = [flareOf(BIN), flareOf(loaded)];
+  assert.ok(wide && narrow);
+  assert.ok(
+    Math.abs(narrow.path.legs[0].sections[0].w * 2 - wide.path.legs[0].sections[0].w) < 1e-9,
+    "the walls start half as far apart",
+  );
+  // a folded path: the same sound, the flare drawn in legs that add up to the same path
   const folded = withHorn(BIN, (h) => ({ ...h, path: HORN_PATH.folded }));
   assert.equal(maxDiff(BIN, folded), 0);
-  assert.equal(flareOf(folded)?.placeholder, true);
+  const foldedPath = flareOf(folded)?.path;
+  assert.ok(foldedPath && foldedPath.folds >= 1, "the path folds");
+  assert.ok(Math.abs(foldedPath.pathIn - lengthIn(BIN)) < 1e-9, "the path is as long");
 });
 
-test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.1 in²)", () => {
+test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 489.6 in²)", () => {
   const segments = hornOf(BIN).segments;
   const shown = shownIn2(segments[0].s2);
-  assert.equal(shown, 630.1, "the bin's first joint as the field shows it, to the tenth");
+  assert.equal(shown, 489.6, "the bin's first joint as the field shows it, to the tenth");
   // typed into the second section's start: no step, and it snaps to the first section's end
   const start = withSectionSize(segments, 1, "s1", shown);
   assert.ok(!stepsIn(start, 1));
@@ -202,8 +235,20 @@ test("speaker horn: sections chain as they are edited, added and removed", () =>
   assert.equal(withSectionAdded([]), null);
   const addedSpec = withSegments(BIN, () => added);
   assert.deepEqual(responseOf(addedSpec).chambers[0].gaps, []);
-  assert.equal(flareOf(addedSpec)?.segments.length, n + 1);
-  assert.equal(flareMeshes(addedSpec).length, n + 1, "the 3D view draws the new section");
+  const jointsOf = (spec: SpeakerSpec) =>
+    new Set(flareOf(spec)?.path.legs.flatMap((l) => l.sections.map((sec) => sec.s.toFixed(6))));
+  const ends = [
+    0,
+    ...segments.map(
+      (_, i) => segments.slice(0, i + 1).reduce((a, g) => a + g.length, 0) / CM_PER_IN,
+    ),
+  ];
+  assert.ok(
+    ends.every((e) => jointsOf(BIN).has(e.toFixed(6))),
+    "the path has a section at every segment's end",
+  );
+  assert.equal(jointsOf(addedSpec).size > jointsOf(BIN).size, true, "the new section is drawn");
+  assert.equal(flareMeshes(addedSpec).length, 1, "the 3D view draws the straight path as one duct");
   assert.ok(maxDiff(BIN, addedSpec) > 0.1);
   // removed: the next section starts where the removed one did, so the path stays joined
   const removedFirst = withSectionRemoved(segments, 0);
@@ -213,7 +258,7 @@ test("speaker horn: sections chain as they are edited, added and removed", () =>
   assert.equal(removedMid[1].s1, segments[0].s2);
   assert.ok(removedMid.every((_, i) => !stepsIn(removedMid, i)));
   const removedSpec = withSegments(BIN, (s) => withSectionRemoved(s, n - 1));
-  assert.equal(flareMeshes(removedSpec).length, n - 1);
+  assert.equal(flareMeshes(removedSpec).length, 1);
   assert.ok(finiteResponse(removedSpec));
 });
 
@@ -252,11 +297,6 @@ test("speaker horn: a size that is not positive and finite is a named gap, never
     assert.equal(flareOf(spec), null, `${what}: no flare drawn`);
     assert.equal(flareMeshes(spec).length, 0, what);
     assert.ok(!(mouthNote(spec) ?? "").includes("NaN"), what);
-  }
-  for (const throatChamber of [-1, Infinity, Number.NaN]) {
-    const spec = withHorn(BIN, (h) => ({ ...h, throatChamber }));
-    assert.deepEqual(responseOf(spec).chambers[0].gaps, [SPEAKER_MODEL_GAP.noModel]);
-    assert.ok(finiteResponse(spec));
   }
 });
 

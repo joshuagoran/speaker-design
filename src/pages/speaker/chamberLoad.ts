@@ -8,9 +8,10 @@ import type {
   SpeakerChamber,
   SpeakerHorn,
 } from "../../types";
-import { coneParts } from "../../lib/speaker/driverParts";
+import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { clearDepthIn } from "../../lib/speaker/chamberAir";
-import { coneDepthIn, MIN_NET_L } from "../../lib/speaker/speakerBuild";
+import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
+import { wallClearanceIn } from "../../lib/speaker/hornThroat";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -45,7 +46,8 @@ export const hornRoom = (
 
 /**
  * A starting horn for the chamber: one conical section from its cones' total area (every cone's Sd times its count) to
- * a mouth the size of the clear face, as long as the clear depth less the deepest cone; no throat chamber, a straight
+ * a mouth the size of the clear face, as long as the clear depth less the deepest cone and the walls' clearance in
+ * front of the cones (lib/speaker/hornThroat); a 1:1 compression ratio, a straight
  * path, front-loaded, its mouth centered. Null when the chamber has no cone with Thiele/Small parameters.
  */
 export function startingHorn(
@@ -59,9 +61,12 @@ export function startingHorn(
   if (cones.length === 0) return null;
   const throat = cones.reduce((sum, c) => sum + c.sd, 0);
   const mouth = Math.max(throat, room.clear.w * room.clear.h * CM2_PER_IN2);
-  const pathIn = Math.max(MIN_PATH_IN, room.depthIn - Math.max(...cones.map((c) => c.depthIn)));
+  // the walls' back edges stand their clearance in front of the cones
+  const pathIn = Math.max(
+    MIN_PATH_IN,
+    room.depthIn - Math.max(...cones.map((c) => c.depthIn)) - wallClearanceIn(chamber.drivers),
+  );
   return {
-    throatChamber: 0,
     segments: [
       { profile: HORN_PROFILE.conical, s1: throat, s2: mouth, length: pathIn * CM_PER_IN },
     ],
@@ -73,13 +78,16 @@ export function startingHorn(
 
 /**
  * The air inside one section, in³, by its flare law: a conical section is a cone's frustum, L/3 (S1 + S2 + √(S1 S2));
- * an exponential one, S1 e^(mx) along its length, holds (S2 − S1) L / ln(S2 / S1) (S1 L where the two are equal).
+ * an exponential one, S1 e^(mx) along its length, holds (S2 − S1) L / ln(S2 / S1) (S1 L where the two are equal); a
+ * parabolic one, its area growing linearly, holds L (S1 + S2) / 2.
  */
 function sectionIn3(s: HornSegment): number {
   const [a, b, len] = [s.s1 / CM2_PER_IN2, s.s2 / CM2_PER_IN2, s.length / CM_PER_IN];
   switch (s.profile) {
     case HORN_PROFILE.conical:
       return (len / 3) * (a + b + Math.sqrt(a * b));
+    case HORN_PROFILE.parabolic:
+      return (len * (a + b)) / 2;
     case HORN_PROFILE.exponential: {
       const ratio = Math.log(b / a);
       return Math.abs(ratio) < 1e-9 ? a * len : ((b - a) * len) / ratio;
