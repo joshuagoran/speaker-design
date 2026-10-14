@@ -4,13 +4,13 @@ import type { ToggleOption } from "../components/ui/ToggleGroup";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 
 /**
- * A living room for a design that names no room (the Hi-fi pair, a fill): 16 × 22 ft, a 9 ft ceiling, drywall all
+ * A living room for a design that names no room (the Hi-fi pair, a fill): 20 × 30 ft, a 12 ft ceiling, drywall all
  * round, an empty floor. A wider or longer layout grows it (lib/speaker/spaceLayout `homeVenue`).
  */
 export const SPACE_HOME_ROOM: CoverageRoom = {
-  widthFt: 16,
-  lengthFt: 22,
-  ceilingFt: 9,
+  widthFt: 20,
+  lengthFt: 30,
+  ceilingFt: 12,
   materials: {
     front: "drywall",
     back: "drywall",
@@ -55,10 +55,11 @@ export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
 
 /**
  * How much later than the mains a fill arrives at the listener, ms, so the sound still seems to come from the mains (the
- * precedence effect): the "Delay after the mains" field's starting value and its range (5 to 15 ms are usual).
+ * precedence effect): what the Align action adds to the path difference. 5 to 15 ms are usual: `FILL_PRECEDENCE_MS` is the
+ * first, `FILL_PRECEDENCE_MAX_MS` the last.
  */
 export const FILL_PRECEDENCE_MS = 5;
-export const FILL_PRECEDENCE_MAX_MS = 20;
+export const FILL_PRECEDENCE_MAX_MS = 15;
 
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
 const SPACE_ONE_METER = "1 m from the speakers";
@@ -93,7 +94,7 @@ export const SPACE_TEXT = {
   missing:
     "A placement names a stack or speaker that is not in this space. The model leaves it out.",
   startHint:
-    "Both replace this space. A PA preset stands on the PA floor's starting layout, the current PA design on the Coverage page's floor, and the Hi-fi pair in its room. A PA start sets each band's level to the PA page's music balance. Open a saved space from the library above.",
+    "Both replace this space. A start from a design or a preset stands in a room made for it. A PA start also sets the music balance to PA music tilt. Open a saved space from the library above.",
   clear: "Start empty",
   place: "Place",
   /** the Place list's groups */
@@ -111,32 +112,33 @@ export const SPACE_TEXT = {
   noLibrary: "Sign in to place your saved stacks and speakers here too.",
   noLibrarySaved: "Save a stack or speaker to place it here.",
   remove: "Remove",
-  addPair: "Add the mirror pair",
+  addPair: "Add a mirrored copy",
+  addPairTip:
+    "Adds a copy on the other side of the room's center line. The copy follows this placement: its position, aim, level, delay and amp power.",
   follows: "Mirror of",
   followsNone: "None (placed on its own)",
   followsTip:
-    "A left and right pair: this placement follows the one you pick, turned over the room's center line.",
-  across: "Across, ft",
-  acrossTip:
-    "Its front center from the room's center line. + is to the right, seen from the audience.",
+    "A left and right pair: this placement follows the one you pick. It takes that placement's position, aim, level and delay, mirrored across the room's center line.",
+  fromCenter: "From the center line, ft",
+  fromCenterTip:
+    "Its front center from the room's center line. + is to the right, seen from the listener.",
   down: "From the front wall, ft",
-  lift: "Lift, in",
-  liftTip: "The gap under it: a plinth, a stand, a fly bar.",
+  height: "Height above the floor, ft",
+  heightTip: "The gap under it: a plinth, a stand, a fly bar.",
   yaw: "Yaw, °",
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
   pitch: "Pitch, °",
-  pitchTip:
-    "Its tilt, + up. A box's tilt in the stack and its cabinet's kick-back add to it (set those on the Stack and Speaker pages).",
-  mirror: "Mirror image",
+  pitchTip: "Its tilt, + up. A box's tilt in the stack and its cabinet's kick-back add to it.",
+  mirror: "Flip left and right",
+  mirrorTip:
+    "Turns the box over, so its left and right sides swap. Use it for a speaker made as a left or right model.",
   level: "Level, dB",
   delay: "Delay, ms",
   alignTo: "Align to",
   alignToTip:
-    "For a fill: the placement it plays after. Align sets the delay and level of this placement and its mirror pair for the listener. The sound arrives just after the placement you pick and its mirror pair, at their level in the mid band. Move the listener to the area the fill covers first.",
+    "The placement to line this one up with, for a fill that plays after it. Move the listener to the area this placement covers first. The Align button sets this placement's Delay and Level.",
   align: "Align",
-  alignAfter: "Delay after the mains, ms",
-  alignAfterTip:
-    "How much later the fill plays than the placement it is aligned to, at the listener. People hear the sound as coming from the mains when the fill plays a few milliseconds later (the precedence effect). Common values are 5 to 15 ms. The alignment is exact at the listener. Across the room, it changes.",
+  delayTip: `The Align button lines this placement up with the one you pick, plus ${FILL_PRECEDENCE_MS} ms. Adding ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms more than the path difference makes people hear the sound from the main speakers.`,
   /** a mirror pair in the "Align to" list: its placements' names */
   pairName: (names: readonly string[]) => names.join(" + "),
   alignFillNone:
@@ -144,7 +146,7 @@ export const SPACE_TEXT = {
   feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
   ampPower: "Amp power",
   ampPowerHint:
-    "The power of the amp for each band, in watts into 8 Ω. The model finds each speaker's limit from it. A mirror pair, and a speaker placed twice, share one figure.",
+    "The power of the amp for each band, in watts into 8 Ω. The model finds each speaker's limit from it. A mirrored copy, and a speaker placed twice, share one figure.",
   /** a band's amp power field: the band (or a passive network's bands) it is for */
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
   alignment: "Alignment",
@@ -173,7 +175,7 @@ export const SPACE_TEXT = {
     `${band}, ${target} dB target at ${place}. The dashed box is the listening area.`,
   balance: "Music balance",
   balanceTip:
-    "The target in each band. Flat: the same target in every band. PA music tilt: as the PA page, each band above a crossover is lower (the auto balance steps).",
+    "Flat: each band plays at the same level. PA music tilt: each higher band plays a little lower, so the bass is stronger, as many PA systems are set.",
   /** the band levels' heading: each band at the middle of the listening area */
   bandLevels: "Each band at the middle of the listening area, at this level:",
   /** one band's level and target there, dB (already formatted) */
@@ -199,5 +201,5 @@ export const SPACE_TEXT = {
     `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
   listenerVs: "The listener against the target:",
   modelNote:
-    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
+    "Each placement plays its stack's response (each box's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
 } as const;

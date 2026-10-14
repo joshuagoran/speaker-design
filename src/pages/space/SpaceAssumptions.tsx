@@ -31,7 +31,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
     [
       "Stacks and speakers",
       [
-        `Each box's speaker in the Speaker page's model, through its crossover, with the stack's delays (in phase at the crossovers ${STACK_LISTEN_DISTANCE_M} m out).`,
+        `Each box's speaker in its own model, through its crossover, with the stack's delays (in phase at the crossovers ${STACK_LISTEN_DISTANCE_M} m out).`,
         "Each driver at its own place in its speaker, on its box's aim: its cabinet's kick-back, its tilt in the stack and the placement's.",
         "Each cone band: a first-order baffle-step shelf. Each placement's level and delay.",
         `Cones and horn mouths: rigid pistons, behind the box −3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB/octave above.`,

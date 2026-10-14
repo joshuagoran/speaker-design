@@ -5,12 +5,14 @@ import assert from "node:assert";
 import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
+import { homeVenue } from "../src/lib/speaker/specParts";
 import { resolvedPlacement } from "../src/lib/speaker/spaceLayout";
 import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
 import { ampPowerGroups, channelGroups, withAmpPower } from "../src/lib/speaker/spaceHardware";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
 import { fittedSpace, withFollows, withStack, withoutPlacement } from "../src/pages/space/useSpace";
 import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
+import { SEATED_EAR_FT } from "../src/constants/space";
 import type { SavedConfig, SpaceDesign } from "../src/types";
 
 /** A PA design's space, with a tilt, a lift, a level and a delay set, so every field goes round. */
@@ -21,8 +23,8 @@ function paSpace(): SpaceDesign {
     space: {
       ...read.space,
       placements: [
-        { ...left, liftIn: 12, aim: { yawDeg: 15, pitchDeg: -5 }, delayMs: 0.5 },
-        { ...right, levelDb: -2 },
+        { ...left, liftIn: 12, aim: { yawDeg: 15, pitchDeg: -5 }, levelDb: -2, delayMs: 0.5 },
+        right,
       ],
     },
     stacks: [read.stack],
@@ -77,8 +79,14 @@ test("space edits: a mirror pair follows its lead; removing the lead leaves it w
     [right.x, right.y, right.liftIn, right.aim, right.mirror],
     [-placements[0].x, placements[0].y, 12, { yawDeg: -15, pitchDeg: -5 }, true],
   );
-  // its own feed stays
-  assert.equal(right.levelDb, -2);
+  // it plays at its lead's level and delay, and has no feed of its own
+  assert.deepEqual([right.levelDb, right.delayMs], [-2, 0.5]);
+  // a level or delay stored on the copy is not read
+  const strayed = resolvedPlacement(
+    placements.map((p, i) => (i === 1 ? { ...p, levelDb: 6, delayMs: 9 } : p)),
+    1,
+  );
+  assert.deepEqual([strayed.levelDb, strayed.delayMs], [-2, 0.5]);
   const [alone] = withoutPlacement(placements, 0);
   assert.equal(alone.follows, null);
   assert.deepEqual([alone.x, alone.aim], [right.x, right.aim]);
@@ -163,4 +171,9 @@ test("space edits: a smaller room keeps the placements, the listener and the lis
   assert.ok(area.widthFt <= 16 && area.lengthFt <= 20);
   assert.ok(Math.abs(area.x) + area.widthFt / 2 <= 8 + 1e-9);
   assert.ok(area.y - area.lengthFt / 2 >= 0 && area.y + area.lengthFt / 2 <= 20 + 1e-9);
+});
+
+test("space: a design that names no room gets one 20 ft wide, 30 ft long and 12 ft high", () => {
+  const { room } = homeVenue(6, { x: 0, y: 15 }, SEATED_EAR_FT);
+  assert.deepEqual([room.widthFt, room.lengthFt, room.ceilingFt], [20, 30, 12]);
 });

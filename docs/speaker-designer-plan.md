@@ -349,7 +349,7 @@ Each PR stands alone. Lowest risk first.
       | Bought parts                                                       | Speaker Cutlist parts table (#150)                                                             | With #150                                            |
       | Fills page (coaxial fill box)                                      | Speaker "Fill" template                                                                        | Done                                                 |
       | Fill chips (HF pad and power limit)                                | Speaker band chips                                                                             | Done: the HF pad chip (`tests/speaker-fill-chips`)   |
-      | Fill delay and level to the mains                                  | Space: "Align to" a placement, "Delay after the mains" 0–20 ms (5 to start)                    | Done (`tests/fill-align`)                            |
+      | Fill delay and level to the mains                                  | Space: "Align to" a placement; the Delay is the path difference plus 5 ms                      | Done (`tests/fill-align`)                            |
       | Notes: racks, signal path, amps, DSP, passive crossover, materials | Space "Notes" tab (static); rich text later                                                    | Done: the Space "Notes" tab                          |
 
     - **Totals** (`lib/speaker/speakerTotals`, `tests/stack-totals.test.ts`). The Speaker page shows the price and
@@ -883,7 +883,7 @@ Each PR stands alone. Lowest risk first.
     - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
     - **Done (L4b).**
       - **Types.** A `SpacePlacement` has a spot (its base's front center), a lift, an aim (`SpaceAim`: yaw and pitch), a
-        mirror image, `follows` (a mirror pair: it takes an earlier placement's item, spot, lift and aim, x and yaw turned
+        mirror image, `follows` (a mirrored copy: it takes an earlier placement's item, spot, lift, aim, level and delay, x and yaw turned
         over), and its level and delay on its feed. `StackPose.pitchDeg` tilts a member in
         its stack. The venue is the room (`CoverageRoom`), the listener, the ear height, a listening area and the target.
       - **One aim model** (`lib/speaker/spaceLayout`). A member tilts about its bottom front edge by its cabinet's kick-back

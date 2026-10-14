@@ -106,35 +106,22 @@ test("space alignment: a mirror pair that sets the same is one row per band, in 
   assert.ok(rows.every((r) => r.delayMs === r.crossoverDelayMs));
 });
 
-test("space alignment: a follower with its own level or delay has its own rows, as the model plays it", () => {
+test("space alignment: a mirrored copy plays what its lead plays: one row per band, whatever the copy holds", () => {
   const base = paSpace();
   const same = spaceAlignment(base, spaceModel(base));
-  // the lead later and the follower down 2 dB: neither matches the other
-  const apart = withFeed(withFeed(base, 0, { delayMs: 0.5 }), 1, { levelDb: -2 });
-  const rows = assertListMatchesModel(apart);
-  assert.equal(rows.length, 2 * same.length);
-  assert.deepEqual(
-    rows.map((r) => r.placements.join()),
-    [...same.map(() => "0"), ...same.map(() => "1")],
-  );
-  rows.slice(0, same.length).forEach((r, i) => {
+  // the lead later and down 2 dB: the copy follows, still one row per band
+  const set = withFeed(base, 0, { delayMs: 0.5, levelDb: -2 });
+  const rows = assertListMatchesModel(set);
+  assert.equal(rows.length, same.length);
+  assert.ok(rows.every((r) => r.placements.join() === "0,1"));
+  rows.forEach((r, i) => {
     assert.ok(Math.abs(r.delayMs - 0.5 - same[i].delayMs) < 1e-9);
-    assert.ok(Math.abs(r.levelDb - same[i].levelDb) < 1e-9);
+    assert.ok(Math.abs(r.levelDb + 2 - same[i].levelDb) < 1e-9);
     assert.ok(Math.abs(r.delayMs - r.crossoverDelayMs - 0.5) < 1e-9);
   });
-  rows.slice(same.length).forEach((r, i) => {
-    assert.ok(Math.abs(r.delayMs - same[i].delayMs) < 1e-9);
-    assert.ok(Math.abs(r.levelDb + 2 - same[i].levelDb) < 1e-9);
-  });
-  // only the follower's delay differs: still two sets of rows
-  const delayed = assertListMatchesModel(withFeed(base, 1, { delayMs: 3 }));
-  assert.equal(delayed.length, 2 * same.length);
-  // both set the same: one row each again
-  const both = assertListMatchesModel(
-    withFeed(withFeed(base, 0, { delayMs: 3 }), 1, { delayMs: 3 }),
-  );
-  assert.equal(both.length, same.length);
-  assert.ok(both.every((r) => r.placements.join() === "0,1"));
+  // a level or delay stored on the copy is not read
+  const stray = assertListMatchesModel(withFeed(set, 1, { delayMs: 3, levelDb: 6 }));
+  assert.deepEqual(stray, rows);
 });
 
 test("space alignment: a fill's placement delay adds to its box's rows, apart from the crossover delay", () => {

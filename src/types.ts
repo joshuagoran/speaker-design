@@ -2243,8 +2243,8 @@ export interface SpacePlacement extends FloorPoint {
   mirror: boolean;
   /**
    * a left and right pair: the earlier placement (an index) this one is the mirror image of across the room's center
-   * line; its item, spot, lift and aim follow that one's, x and yaw turned over, the image mirrored. Null: placed on its
-   * own.
+   * line; its item, spot, lift, aim, level and delay follow that one's, x and yaw turned over, the image mirrored (its
+   * own `levelDb` and `delayMs` are not read). Null: placed on its own.
    */
   follows: number | null;
   /** the front end's level on its feed, against the space's other placements, dB (a fill under the mains) */

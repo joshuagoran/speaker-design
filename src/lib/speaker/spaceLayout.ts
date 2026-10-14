@@ -43,8 +43,8 @@ export interface RoomPoint {
 }
 
 /**
- * The placement as it stands: one that follows an earlier one (a mirror pair) takes that one's item, spot, lift and aim,
- * x and yaw turned over and the image mirrored; its own level, delay and channels stay.
+ * The placement as it stands: one that follows an earlier one (a mirrored copy) takes that one's item, spot, lift, aim,
+ * level and delay, x and yaw turned over and the image mirrored. It has no settings of its own.
  */
 export function resolvedPlacement(
   placements: readonly SpacePlacement[],
@@ -62,6 +62,8 @@ export function resolvedPlacement(
     liftIn: lead.liftIn,
     aim: { yawDeg: -lead.aim.yawDeg, pitchDeg: lead.aim.pitchDeg },
     mirror: !lead.mirror,
+    levelDb: lead.levelDb,
+    delayMs: lead.delayMs,
   };
 }
 

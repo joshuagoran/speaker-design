@@ -57,21 +57,20 @@ function withFills(
   };
 }
 
-/** The design with an alignment's delays and levels set. */
-const applied = (design: SpaceDesign, set: readonly FillSetting[]): SpaceDesign => ({
+/** The design with an alignment's delay and level set on the placement it names. */
+const applied = (design: SpaceDesign, set: FillSetting): SpaceDesign => ({
   ...design,
   space: {
     ...design.space,
-    placements: design.space.placements.map((p, i) => {
-      const s = set.find((a) => a.placement === i);
-      return s ? { ...p, delayMs: s.delayMs, levelDb: s.levelDb } : p;
-    }),
+    placements: design.space.placements.map((p, i) =>
+      i === set.placement ? { ...p, delayMs: set.delayMs, levelDb: set.levelDb } : p,
+    ),
   },
 });
 
-/** Placement `k` and its partners aligned to the mains, `afterMs` after them (the field's starting value). */
-const align = (d: SpaceDesign, k: number, afterMs = FILL_PRECEDENCE_MS) =>
-  fillAlignment(spaceModel(d), d.space.venue, d.space.placements, k, MAINS, afterMs);
+/** Placement `k` and its mirrored copy aligned to the mains. */
+const align = (d: SpaceDesign, k: number) =>
+  fillAlignment(spaceModel(d), d.space.venue, d.space.placements, k, MAINS);
 
 /** Placement `i`'s first arrival at the listener, ms, with every delay (its members' and its own). */
 function arrivalMs(model: SpaceModel, d: SpaceDesign, i: number): number {
@@ -112,10 +111,9 @@ function levelOf(model: SpaceModel, d: SpaceDesign, group: readonly number[]): n
 test("fill alignment: a fill closer to the listener waits for the mains, then plays at their level", () => {
   const design = withFills([{ x: 0, y: 30 }], 40);
   const k = design.space.placements.length - 1;
-  const first = align(design, k);
-  assert.ok(first);
-  assert.equal(first.length, 1);
-  const [set] = first;
+  const set = align(design, k);
+  assert.ok(set);
+  assert.equal(set.placement, k);
   // the mains are about 37 ft from the listener, the fill 10 ft: about 24 ms later, and the precedence margin
   const [main] = design.space.placements;
   const pathMs = (dy: number, dx: number) =>
@@ -123,28 +121,22 @@ test("fill alignment: a fill closer to the listener waits for the mains, then pl
   const rough = pathMs(40 - main.y, main.x) - pathMs(10, 0) + FILL_PRECEDENCE_MS;
   assert.ok(Math.abs(set.delayMs - rough) < 3, `${set.delayMs} ms, about ${rough} ms`);
   // aligned, the fill plays at the mains' level: a second alignment changes nothing
-  const again = align(applied(design, first), k);
+  const again = align(applied(design, set), k);
   assert.ok(again);
-  assert.ok(
-    Math.abs(again[0].levelDb - set.levelDb) < 0.01,
-    `${again[0].levelDb} vs ${set.levelDb}`,
-  );
-  assert.ok(Math.abs(again[0].delayMs - set.delayMs) < 1e-9);
+  assert.ok(Math.abs(again.levelDb - set.levelDb) < 0.01, `${again.levelDb} vs ${set.levelDb}`);
+  assert.ok(Math.abs(again.delayMs - set.delayMs) < 1e-9);
 });
 
-test("fill alignment: a mirrored fill pair arrives just after the mains on both sides, at their level as a pair", () => {
+test("fill alignment: a mirrored fill copy follows its lead: both arrive just after the mains, at their level as a pair", () => {
   const design = withFills([{ x: 8, y: 30, pair: true }], 40);
   const lead = design.space.placements.length - 2;
   const pair = placementGroup(design.space.placements, lead);
   assert.deepEqual(pair, [lead, lead + 1]);
-  // aligned from either side, the pair gets the same settings, on both placements
+  // aligned from either side, the lead gets the setting and the copy follows it
   const fromLead = align(design, lead);
   assert.ok(fromLead);
   assert.deepEqual(align(design, lead + 1), fromLead);
-  assert.deepEqual(
-    fromLead.map((s) => s.placement),
-    pair,
-  );
+  assert.equal(fromLead.placement, lead);
   const done = applied(design, fromLead);
   const model = spaceModel(done);
   const mains = placementGroup(done.space.placements, MAINS);
@@ -161,20 +153,21 @@ test("fill alignment: a mirrored fill pair arrives just after the mains on both 
   assert.ok(Math.abs(pairDb - mainsDb) < 0.01, `pair ${pairDb} dB, mains ${mainsDb} dB`);
 });
 
-test("fill alignment: the delay after the mains sets how much later the fill arrives at the listener", () => {
+test("fill alignment: the one delay is the path difference plus the precedence margin", () => {
   const design = withFills([{ x: 0, y: 30 }], 40);
   const k = design.space.placements.length - 1;
-  for (const afterMs of [0, 10]) {
-    const set = align(design, k, afterMs);
-    assert.ok(set);
-    const done = applied(design, set);
-    const model = spaceModel(done);
-    const mainsMs = Math.min(
-      ...placementGroup(done.space.placements, MAINS).map((i) => arrivalMs(model, done, i)),
-    );
-    const late = arrivalMs(model, done, k) - mainsMs;
-    assert.ok(Math.abs(late - afterMs) < 1e-6, `${afterMs} ms asked, ${late} ms after the mains`);
-  }
+  const set = align(design, k);
+  assert.ok(set);
+  const done = applied(design, set);
+  const model = spaceModel(done);
+  const mainsMs = Math.min(
+    ...placementGroup(done.space.placements, MAINS).map((i) => arrivalMs(model, done, i)),
+  );
+  const late = arrivalMs(model, done, k) - mainsMs;
+  assert.ok(
+    Math.abs(late - FILL_PRECEDENCE_MS) < 1e-6,
+    `${FILL_PRECEDENCE_MS} ms asked, ${late} ms after the mains`,
+  );
 });
 
 test("fill alignment: two fills come out the same aligned in either order", () => {
@@ -205,7 +198,7 @@ test("fill alignment: a fill farther than the mains never plays early", () => {
   const design = withFills([{ x: 0, y: 30 }], 10);
   const aligned = align(design, design.space.placements.length - 1);
   assert.ok(aligned);
-  assert.equal(aligned[0].delayMs, 0);
+  assert.equal(aligned.delayMs, 0);
 });
 
 test("fill alignment: nothing to align to without another placement", () => {
@@ -215,28 +208,14 @@ test("fill alignment: nothing to align to without another placement", () => {
     space: { ...design.space, placements: design.space.placements.slice(-1) },
   };
   assert.equal(
-    fillAlignment(
-      spaceModel(alone),
-      alone.space.venue,
-      alone.space.placements,
-      0,
-      0,
-      FILL_PRECEDENCE_MS,
-    ),
+    fillAlignment(spaceModel(alone), alone.space.venue, alone.space.placements, 0, 0),
     null,
   );
   // nor to its own pair
   const paired = withFills([{ x: 8, y: 30, pair: true }], 40);
   const k = paired.space.placements.length - 1;
   assert.equal(
-    fillAlignment(
-      spaceModel(paired),
-      paired.space.venue,
-      paired.space.placements,
-      k,
-      k - 1,
-      FILL_PRECEDENCE_MS,
-    ),
+    fillAlignment(spaceModel(paired), paired.space.venue, paired.space.placements, k, k - 1),
     null,
   );
 });

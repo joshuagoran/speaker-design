@@ -41,7 +41,7 @@ interface Props {
  */
 export function HardwareSettings({ design, alignment, names, space }: Props) {
   const speakers = ampPowerGroups(design);
-  /** the alignment rows by the placements that play them (a mirror pair once), in order */
+  /** the alignment rows by the placements that play them (a mirrored copy with its lead, once), in order */
   const cards = [...new Set(alignment.map((r) => r.placements.join()))].map((key) => {
     const rows = alignment.filter((r) => r.placements.join() === key);
     return { key, rows, title: SPACE_TEXT.pairName(rows[0].placements.map((k) => names[k])) };

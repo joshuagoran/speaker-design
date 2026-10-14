@@ -438,7 +438,7 @@ export function useSpace() {
     editSpace((s) => ({ ...s, placements: edit(s.placements) }));
   const editPlacement = (k: number, edit: (p: SpacePlacement) => SpacePlacement) =>
     editPlacements((list) => list.map((p, i) => (i === k ? edit(p) : p)));
-  /** the placement a map drag moves: the one a mirror pair's follower follows */
+  /** the placement a map drag moves: the one a mirrored copy follows */
   const leadOf = (k: number) => placementLead(space.placements, k);
   const isFollower = (k: number) => leadOf(k) !== k;
   const editVenue = (edit: (v: SpaceVenue) => SpaceVenue) =>
@@ -511,18 +511,17 @@ export function useSpace() {
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /**
-     * sets the delay and level of placement `k` and its mirror partners to play with placement `to` and its partners at
-     * the listener, `afterMs` after them (lib/speaker/fillAlign); false when there is nothing to align to
+     * sets the delay and level of placement `k` (its lead, with its mirrored copy following) to play with placement `to`
+     * and its copy at the listener, a little after them (lib/speaker/fillAlign); false when there is nothing to align to
      */
-    alignTo: (k: number, to: number, afterMs: number) => {
-      const aligned = fillAlignment(model, venue, space.placements, k, to, afterMs);
+    alignTo: (k: number, to: number) => {
+      const aligned = fillAlignment(model, venue, space.placements, k, to);
       if (aligned)
-        editPlacements((list) =>
-          list.map((p, i) => {
-            const set = aligned.find((a) => a.placement === i);
-            return set ? { ...p, levelDb: set.levelDb, delayMs: set.delayMs } : p;
-          }),
-        );
+        editPlacement(aligned.placement, (p) => ({
+          ...p,
+          levelDb: aligned.levelDb,
+          delayMs: aligned.delayMs,
+        }));
       return aligned !== null;
     },
     /** the room's settings (`RoomFields`) */
