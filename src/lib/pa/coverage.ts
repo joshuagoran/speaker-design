@@ -744,8 +744,11 @@ export function sceneSlots(
  * In a band view, a point below the top of the room's modal crossfade (`modalCrossoverHz`, null outdoors) splits into
  * M frequencies, log-spaced across the point's share of the band (a ratio of one point to the next, centered on the
  * point), each weighing 1/M of it: one point near a room mode then doesn't draw a lobe pattern of its own, and the
- * band's weight per point stays 1. M is `subpoints`, else `MODAL_SUBPOINTS`, or `MODAL_SUBPOINTS_WHOLE_BAND` for a band
- * that lies wholly below the top of the crossfade. The one-frequency view never splits.
+ * band's weight per point stays 1. The first and last points' shares would reach past the band's edges, so each share
+ * is clamped to the band's range (the sub-points then space evenly across the clamped share, still weighing 1/M each,
+ * and the point's total weight stays 1): no frequency falls below the band's bottom or above its top. M is `subpoints`,
+ * else `MODAL_SUBPOINTS`, or `MODAL_SUBPOINTS_WHOLE_BAND` for a band that lies wholly below the top of the crossfade.
+ * The one-frequency view never splits.
  */
 export function coverageFrequencies(
   band: CoverageBand,
@@ -763,12 +766,15 @@ export function coverageFrequencies(
   const freqs: number[] = [],
     shares: number[] = [];
   for (const f of logSpacedFrequencies(b.lo, b.hi, BAND_POINTS)) {
-    if (split > 1 && f < modalTop)
+    if (split > 1 && f < modalTop) {
+      /** the point's share of the band, Hz: a ratio either side of it, clamped to the band's edges */
+      const from = Math.max(b.lo, f / Math.sqrt(pointRatio)),
+        to = Math.min(b.hi, f * Math.sqrt(pointRatio));
       for (let j = 0; j < split; j++) {
-        freqs.push(f * Math.pow(pointRatio, (j + 0.5) / split - 0.5));
+        freqs.push(from * Math.pow(to / from, (j + 0.5) / split));
         shares.push(1 / split);
       }
-    else {
+    } else {
       freqs.push(f);
       shares.push(1);
     }

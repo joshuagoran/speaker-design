@@ -1442,9 +1442,9 @@ export const MID_RAW: readonly RawDriver<MidDriver>[] = [
       aes: 450,
       disp: null,
     },
-    // depthIn is the overall depth, 126 mm / 25.4. surroundIn, dishDepthIn: not given. The maker's datasheet drawing (page 1 of
-    // https://www.eighteensound.it/en/products/lf-driver/10-0/8/10MB600.pdf, read Oct 2026) gives only 260 mm across,
-    // 230 mm cutout, 126 mm overall depth and a 4.5 mm flange.
+    // depthIn is the overall depth, 126 mm / 25.4. surroundIn, dishDepthIn: not given. The maker's datasheet drawing
+    // (page 1 of https://www.eighteensound.it/en/products/lf-driver/10-0/8/10MB600.pdf, read Oct 2026) gives only
+    // 260 mm across, 230 mm cutout, 126 mm overall depth and a 4.5 mm flange.
     depthIn: 4.96,
     note: "[usspeaker.com; Mms from the 18Sound datasheet] Ferrite, 450 W AES, 98 dB. Displacement not published; 2.5 L assumed.",
   },

@@ -55,9 +55,10 @@ test("modal smoothing: a split keeps each point's weight, and the band's total",
 test("modal smoothing: sub-points are log-spaced across their point's share of the band", () => {
   const band = COVERAGE_BANDS.mid;
   const ratio = Math.pow(band.hi / band.lo, 1 / (BAND_POINTS - 1));
-  const [f0] = coverageFrequencies("mid", 0, null).freqs;
+  // an inner point: the first and last points' shares are clamped to the band's edges
+  const f0 = coverageFrequencies("mid", 0, null).freqs[1];
   const { freqs } = coverageFrequencies("mid", 0, 200, 4);
-  const sub = freqs.slice(0, 4);
+  const sub = freqs.slice(4, 8);
   assert.ok(sub.every((f) => f > f0 / Math.sqrt(ratio) && f < f0 * Math.sqrt(ratio)));
   for (let i = 1; i < sub.length; i++)
     assert.ok(Math.abs(sub[i] / sub[i - 1] - Math.pow(ratio, 1 / 4)) < 1e-9);
