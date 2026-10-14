@@ -68,7 +68,11 @@ function valueOf(lines: ReturnType<typeof recordLines>, key: string) {
 }
 
 /** Hornresp's segment profile keys, as the record names a segment's length. */
-const PROFILE_KEYS = { Con: HORN_PROFILE.conical, Exp: HORN_PROFILE.exponential } as const;
+const PROFILE_KEYS = {
+  Con: HORN_PROFILE.conical,
+  Exp: HORN_PROFILE.exponential,
+  Par: HORN_PROFILE.parabolic,
+} as const;
 
 /** The horn's segments: four rows of (start area, end area, profile = length, flare cutoff); length 0 ends the horn. */
 function segmentsOf(lines: ReturnType<typeof recordLines>): HornSegment[] {

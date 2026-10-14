@@ -73,13 +73,16 @@ export function startingHorn(
 
 /**
  * The air inside one section, in³, by its flare law: a conical section is a cone's frustum, L/3 (S1 + S2 + √(S1 S2));
- * an exponential one, S1 e^(mx) along its length, holds (S2 − S1) L / ln(S2 / S1) (S1 L where the two are equal).
+ * an exponential one, S1 e^(mx) along its length, holds (S2 − S1) L / ln(S2 / S1) (S1 L where the two are equal); a
+ * parabolic one, its area growing linearly, holds L (S1 + S2) / 2.
  */
 function sectionIn3(s: HornSegment): number {
   const [a, b, len] = [s.s1 / CM2_PER_IN2, s.s2 / CM2_PER_IN2, s.length / CM_PER_IN];
   switch (s.profile) {
     case HORN_PROFILE.conical:
       return (len / 3) * (a + b + Math.sqrt(a * b));
+    case HORN_PROFILE.parabolic:
+      return (len * (a + b)) / 2;
     case HORN_PROFILE.exponential: {
       const ratio = Math.log(b / a);
       return Math.abs(ratio) < 1e-9 ? a * len : ((b - a) * len) / ratio;

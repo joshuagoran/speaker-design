@@ -27,6 +27,7 @@ The chain multiplies them per frequency.
 | Straight duct              | Plane-wave tube: cos(kL), j·Z0·sin(kL), Z0 = ρc/S                                                              |
 | Conical segment            | Wave solution of the horn (Webster) equation, spherical waves                                                  |
 | Exponential segment        | Wave solution of the horn equation; exact at and near its cutoff                                               |
+| Parabolic segment (PAR)    | Exact wave solution for an area that grows linearly: Bessel J₀ and Y₀ of k·ξ, ξ from where the area is zero    |
 | Hyperbolic-exponential (T) | Later, if a design needs it                                                                                    |
 | Curved walls, tractrix     | Several short conical segments                                                                                 |
 | Throat (front) chamber     | Shunt compliance V/(ρc²), between the cone and the throat                                                      |
@@ -38,6 +39,11 @@ The chain multiplies them per frequency.
   mouth reflects. The model gives both.
 - **Radiation impedance.** A baffled piston needs the Bessel J₁ and Struve H₁ functions. The engine computes both
   from their integral forms. They stay accurate up to 2ka ≈ 60.
+- **Parabolic segment.** A horn with flat, straight side walls between a parallel top and bottom (the PA v2 sub bin)
+  keeps its height, so its area grows linearly: S = S₁ + (S₂ − S₁)·x/L. With S ∝ ξ, the horn equation is Bessel's
+  of order 0, so the segment is exact, not a run of short steps. `besselPair` gives J₀, J₁, Y₀ and Y₁ from their
+  series below 15 and Hankel's expansion above, fast enough for every frequency. A run of short conical segments on
+  the same law converges to it: 64 of them come within 0.05 dB on a sub bin.
 - **Solid angle.** The piston formula is half space (2π). Quarter and eighth space (π, π/2) use mirror images: an
   approximation. Free air (4π) is not modeled.
 - **Losses.** Leakage (QL) and vent loss (Qp), as options. The defaults are the box models' 7 and 50. Hornresp's
@@ -96,6 +102,8 @@ box models keep their own grids.
    - A duct driven at one end and closed at the other: input-impedance zeros at c(2n − 1)/(4L).
    - An exponential horn ended in its own forward wave: the endless horn's throat impedance, at and near the cutoff.
    - A conical horn ended in its forward wave: the spherical wave's impedance.
+   - A parabolic horn ended in its forward wave (Hankel functions); with equal areas, the straight duct; a run of
+     short conical segments on its law converges to it as 1/n².
    - Power conservation through a lossless chain; mutual coupling against the piston formula.
 3. **Published designs.** Skipped: the forums that post Hornresp inputs and plots block automated access. Step 4
    replaces it.
@@ -105,18 +113,18 @@ box models keep their own grids.
 
 ### Hornresp results
 
-| Case                | Checks                                                   | SPL       | Ze, excursion |
-| ------------------- | -------------------------------------------------------- | --------- | ------------- |
-| `sub-sealed-exp`    | Exponential horn, throat chamber, sealed rear            | < 0.01 dB | < 0.1 %       |
-| `sub-bin-vented`    | Four conical segments, vented rear (the sub bin)         | < 0.01 dB | < 0.1 %       |
-| `sub-bin-eighth`    | The same in eighth space (images)                        | < 0.01 dB | < 0.1 %       |
-| `sub-direct-vented` | Direct radiator, vented box, QL 7                        | < 0.6 dB  | < 0.1 %       |
-| `mid-vented`        | Exponential mid horn, throat chamber, vented rear        | < 0.01 dB | < 0.1 %       |
-| `mid-pair`          | Two boxes side by side (count 2) vs Hornresp's composite | < 0.01 dB | < 0.1 %       |
-| `mid-pair`          | Two drivers on one throat (`drivers: 2`), same record    | < 0.01 dB | < 0.1 %       |
-| `sub-bin-le`        | The sub bin with Le 1.6 mH                               | < 0.01 dB | < 0.1 %       |
-| `mid-le`            | The mid horn with Le 0.6 mH                              | < 0.01 dB | < 0.1 %       |
-| `mid-pair-le`       | Two drivers with Le, on one throat and as two boxes      | < 0.01 dB | < 0.1 %       |
+| Case                | Checks                                                         | SPL       | Ze, excursion |
+| ------------------- | -------------------------------------------------------------- | --------- | ------------- |
+| `sub-sealed-exp`    | Exponential horn, throat chamber, sealed rear                  | < 0.01 dB | < 0.1 %       |
+| `sub-bin-vented`    | Four conical segments, vented rear (the sub bin's first model) | < 0.01 dB | < 0.1 %       |
+| `sub-bin-eighth`    | The same in eighth space (images)                              | < 0.01 dB | < 0.1 %       |
+| `sub-direct-vented` | Direct radiator, vented box, QL 7                              | < 0.6 dB  | < 0.1 %       |
+| `mid-vented`        | Exponential mid horn, throat chamber, vented rear              | < 0.01 dB | < 0.1 %       |
+| `mid-pair`          | Two boxes side by side (count 2) vs Hornresp's composite       | < 0.01 dB | < 0.1 %       |
+| `mid-pair`          | Two drivers on one throat (`drivers: 2`), same record          | < 0.01 dB | < 0.1 %       |
+| `sub-bin-le`        | The sub bin with Le 1.6 mH                                     | < 0.01 dB | < 0.1 %       |
+| `mid-le`            | The mid horn with Le 0.6 mH                                    | < 0.01 dB | < 0.1 %       |
+| `mid-pair-le`       | Two drivers with Le, on one throat and as two boxes            | < 0.01 dB | < 0.1 %       |
 
 The first run found three differences. The engine now follows Hornresp in the first two:
 

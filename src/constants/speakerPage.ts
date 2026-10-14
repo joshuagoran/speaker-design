@@ -357,7 +357,7 @@ export const SPEAKER_TEXT = {
   hornStepsTip:
     "Off: each section starts at the end area of the section before it, so the horn is smooth. On: each section after the first shows its start area, so you can make a step. When you set Off, each start area goes back to the end area before it.",
   hornProfileTip:
-    "The shape of the flare in this section: how its area grows from the start to the end.",
+    "The shape of the flare in this section: how its area grows from the start to the end. Conical: both sides grow together. Exponential: a flat top and bottom, curved sides. Parabolic: a flat top and bottom, straight sides.",
   hornStartTip: "The area of the section at its throat end.",
   hornEndTip: "The area of the section at its mouth end.",
   hornLengthTip: "The length of the section along the horn path.",

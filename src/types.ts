@@ -1503,7 +1503,7 @@ export interface Complex {
  */
 export type Matrix2 = readonly [Complex, Complex, Complex, Complex];
 
-/** A horn segment's flare law: "con" conical, "exp" exponential (constants/hornEngine HORN_PROFILE). */
+/** A horn segment's flare law: "con" conical, "exp" exponential, "par" parabolic (constants/hornEngine HORN_PROFILE). */
 export type HornProfile = (typeof HORN_PROFILE)[keyof typeof HORN_PROFILE];
 
 /** The solid angle a horn mouth radiates into, in units of π (constants/hornEngine RADIATION_ANGLE_NAMES). */
