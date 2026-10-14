@@ -17,6 +17,7 @@ import {
   audienceAverage,
   coverageScene,
   coverageSlots,
+  COVERAGE_BANDS,
   COVERAGE_GRID_COLS,
 } from "../src/lib/pa/coverage";
 import { abs, add, complex } from "../src/lib/acoustics/complex";
@@ -352,9 +353,15 @@ test("space model: with Measured at the audience average, moving only the listen
     x: p.item.placement.x,
     y: p.item.placement.y,
   }));
-  const meterSpots = oneMeterSpots(design, venue.room);
+  const meterSpots = oneMeterSpots(design, venue.room).map((spot) => ({ at: spot, passbands: [] }));
   const at = (listener: { x: number; y: number } | null) =>
-    referenceAtLimit(COVERAGE_LEVEL_REF.audience, req, { listener, meterSpots, boxes }, grid);
+    referenceAtLimit(
+      COVERAGE_LEVEL_REF.audience,
+      req,
+      { listener, meterSpots, boxes },
+      grid,
+      COVERAGE_BANDS.mid,
+    );
   // the map's request holds the room and the ear, not the listener, so its grid is the same wherever one stands
   // and so is the audience average, as the coverage page counts it (the whole floor but the boxes' clearance)
   const average = audienceAverage(grid, req.room, boxes);
@@ -364,6 +371,12 @@ test("space model: with Measured at the audience average, moving only the listen
   assert.equal(at(null), average);
   // only the listener's own reference follows the listener
   const atListener = (listener: { x: number; y: number }) =>
-    referenceAtLimit(COVERAGE_LEVEL_REF.listener, req, { listener, meterSpots, boxes }, grid);
+    referenceAtLimit(
+      COVERAGE_LEVEL_REF.listener,
+      req,
+      { listener, meterSpots, boxes },
+      grid,
+      COVERAGE_BANDS.mid,
+    );
   assert.notEqual(atListener({ x: 0, y: 5 }), atListener({ x: -6, y: 18 }));
 });

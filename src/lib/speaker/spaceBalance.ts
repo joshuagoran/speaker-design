@@ -6,11 +6,12 @@
 // sub crossover, the horn below the mid above it), so the PA presets' targets are the PA page's. A band's target is the
 // target at its center (or at the one frequency). The reference the space is turned down to: the audience's
 // average (as the coverage page counts it), the listener, or the mean of the levels 1 m in front of each placement, on its aim.
-import type { FloorPoint, SpaceDesign, SpaceVenue } from "../../types";
-import { oneMeterSpot } from "../pa/coverage";
+import type { FloorPoint, SpaceDesign, SpaceVenue, SpeakerBand } from "../../types";
+import { oneMeterSpot, type COVERAGE_BANDS } from "../pa/coverage";
 import { AUTO_BALANCE_TILT, tiltAt } from "./autoBalance";
 import { expandPlacements, placementStack } from "./spaceLayout";
 import { stackCrossoversHz } from "./stackResponse";
+import type { SpaceModel } from "./spaceCoverage";
 import type { AutoBalanceMode } from "../../constants/autoBalance";
 
 /**
@@ -51,4 +52,67 @@ export function oneMeterSpots(
     // its spot is its front: no depth to step past
     oneMeterSpot({ x: p.x, y: p.y, aim: p.aim.yawDeg }, FRONT_SPOT, room),
   );
+}
+
+/** A frequency range, Hz: a band's (`COVERAGE_BANDS`), or one frequency as `lo` = `hi`. */
+export type BandRange = Pick<(typeof COVERAGE_BANDS)["sub"], "lo" | "hi">;
+
+/** A box's passband corners, Hz; null where it has no such filter (open on that side). */
+export interface PassbandCorners {
+  highpassHz: number | null;
+  lowpassHz: number | null;
+}
+
+/** A spot 1 m in front of a placement, with the corners of every band its boxes play (`placementPassbands`). */
+export interface MeterSpot {
+  at: FloorPoint;
+  passbands: readonly PassbandCorners[];
+}
+
+/**
+ * The passband of each band of each box of a placement: the band's own filters and the box's crossover (a speaker
+ * alone: its input range), the higher highpass and the lower lowpass of each pair. Empty where the design lacks what
+ * the placement places.
+ */
+export function placementPassbands(stack: ReturnType<typeof placementStack>): PassbandCorners[] {
+  if (!stack) return [];
+  const highest = (a: number | undefined, b: number | undefined) =>
+    a === undefined || b === undefined ? (a ?? b ?? null) : Math.max(a, b);
+  const lowest = (a: number | undefined, b: number | undefined) =>
+    a === undefined || b === undefined ? (a ?? b ?? null) : Math.min(a, b);
+  const hz = (f: Pick<SpeakerBand, "highpass">["highpass"]) => f?.hz;
+  return stack.stack.members.flatMap((member) => {
+    const speaker = stack.speakers.find((s) => s.id === member.speakerId);
+    return (speaker?.bands ?? []).map((band) => ({
+      highpassHz: highest(hz(band.highpass), hz(member.crossover.highpass)),
+      lowpassHz: lowest(hz(band.lowpass), hz(member.crossover.lowpass)),
+    }));
+  });
+}
+
+/**
+ * Whether a placement plays in a band: one of its box bands has a passband that overlaps the band's range (its
+ * highpass is below the range's top and its lowpass above the range's bottom; a missing corner is open). A sub
+ * lowpassed at 120 Hz doesn't play in the High band; a top highpassed at 120 Hz doesn't play in the Sub band.
+ */
+export const playsInBand = (passbands: readonly PassbandCorners[], range: BandRange): boolean =>
+  passbands.some(
+    ({ highpassHz, lowpassHz }) =>
+      (highpassHz === null || highpassHz < range.hi) &&
+      (lowpassHz === null || lowpassHz > range.lo),
+  );
+
+/**
+ * The 1 m spots of the placements the model holds a stack or speaker for, each with the bands its boxes play (the
+ * Space page's reference reads them). The model's placements are in the space's order, as `oneMeterSpots` are.
+ */
+export function meterSpotsOf(
+  design: Pick<SpaceDesign, "space">,
+  model: Pick<SpaceModel, "placements">,
+  room: Pick<SpaceVenue["room"], "widthFt" | "lengthFt">,
+): MeterSpot[] {
+  return oneMeterSpots(design, room).flatMap((at, k) => {
+    const box = model.placements[k];
+    return box?.response ? [{ at, passbands: placementPassbands(box.item.stack) }] : [];
+  });
 }

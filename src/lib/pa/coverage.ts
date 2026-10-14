@@ -494,6 +494,13 @@ export const balancedTarget = (target: number, f: number, b: MusicBalance) =>
 export const bandCenterHz = (band: CoverageBand, freqHz: number) =>
   band === "one" ? freqHz : Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi);
 
+/** A band's frequency range, Hz (the one frequency for "one": `lo` = `hi`). */
+export const bandRangeHz = (
+  band: CoverageBand,
+  freqHz: number,
+): Pick<(typeof COVERAGE_BANDS)["sub"], "lo" | "hi"> =>
+  band === "one" ? { lo: freqHz, hi: freqHz } : COVERAGE_BANDS[band];
+
 /** A band's target: the balanced target at the band's center (or at the one frequency). */
 export const bandTarget = (target: number, band: CoverageBand, freqHz: number, b: MusicBalance) =>
   balancedTarget(target, bandCenterHz(band, freqHz), b);

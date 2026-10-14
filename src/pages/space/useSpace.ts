@@ -3,12 +3,20 @@ import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import {
   audienceAverage,
   bandCenterHz,
+  bandRangeHz,
   coverageStats,
   COVERAGE_BANDS,
   COVERAGE_GRID_COLS,
   SINGLE_FREQ_RANGE,
 } from "../../lib/pa/coverage";
-import { oneMeterSpots, spaceCrossoversHz, spaceTargetAt } from "../../lib/speaker/spaceBalance";
+import {
+  meterSpotsOf,
+  playsInBand,
+  spaceCrossoversHz,
+  spaceTargetAt,
+  type BandRange,
+  type MeterSpot,
+} from "../../lib/speaker/spaceBalance";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { keysOf } from "../../lib/records";
 import {
@@ -182,11 +190,19 @@ interface GridJob {
 }
 
 /**
- * The mean of a request's levels at the spots, dB, skipping levels that aren't finite; null when none is (no spots, or
- * nothing reaches them).
+ * The mean of a request's levels at the 1 m spots of the placements that play in the band, dB, skipping levels that
+ * aren't finite; where no placement plays in the band, of all the spots. Null when none is (no spots, or nothing
+ * reaches them).
  */
-function oneMeterAverage(req: Omit<SpaceGridRequest, "cols">, spots: readonly FloorPoint[]) {
-  const levels = spots.map((p) => spaceLevelAt(req, p)).filter(Number.isFinite);
+function oneMeterAverage(
+  req: Omit<SpaceGridRequest, "cols">,
+  spots: readonly MeterSpot[],
+  band: BandRange,
+) {
+  const playing = spots.filter((s) => playsInBand(s.passbands, band));
+  const levels = (playing.length ? playing : spots)
+    .map((s) => spaceLevelAt(req, s.at))
+    .filter(Number.isFinite);
   return levels.length ? levels.reduce((a, b) => a + b, 0) / levels.length : null;
 }
 
@@ -194,25 +210,26 @@ function oneMeterAverage(req: Omit<SpaceGridRequest, "cols">, spots: readonly Fl
 interface ReferenceSpots {
   /** the listener's spot; null when the reference is not the listener (so moving the listener moves nothing else) */
   listener: FloorPoint | null;
-  meterSpots: readonly FloorPoint[];
+  meterSpots: readonly MeterSpot[];
   /** the boxes' spots: the audience average leaves the floor right in front of them out (as on the coverage page) */
   boxes: readonly FloorPoint[];
 }
 
 /**
  * A request's level at the limit at the reference, as the coverage page reads it, dB: the audience average over the
- * grid's floor (needs `grid`; null without it), the level at the listener, or the mean of the 1 m spots. Null when
- * nothing reaches it. Only the listener's own reference reads the listener.
+ * grid's floor (needs `grid`; null without it), the level at the listener, or the mean of the 1 m spots of the
+ * placements that play in `band`. Null when nothing reaches it. Only the listener's own reference reads the listener.
  */
 export function referenceAtLimit(
   levelRef: CoverageLevelRef,
   req: Omit<SpaceGridRequest, "cols">,
   spots: ReferenceSpots,
   grid: CoverageGrid | null,
+  band: BandRange,
 ): number | null {
   if (levelRef === COVERAGE_LEVEL_REF.listener)
     return spots.listener && spaceLevelAt(req, spots.listener);
-  if (levelRef === COVERAGE_LEVEL_REF.stacks) return oneMeterAverage(req, spots.meterSpots);
+  if (levelRef === COVERAGE_LEVEL_REF.stacks) return oneMeterAverage(req, spots.meterSpots, band);
   return grid ? audienceAverage(grid, req.room, spots.boxes) : null;
 }
 
@@ -387,12 +404,9 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     () => (placed ? spaceLevelAt(anchorReq, venue.listener) : null),
     [placed, anchorReq, venue.listener],
   );
-  /** the spots 1 m in front of each placement that holds a modeled stack or speaker */
+  /** the spots 1 m in front of each placement that holds a modeled stack or speaker, with the bands its boxes play */
   const meterSpots = useMemo(
-    () =>
-      oneMeterSpots({ space: { ...space, placements } }, room).filter(
-        (_, k) => model.placements[k]?.response,
-      ),
+    () => meterSpotsOf({ space: { ...space, placements } }, model, room),
     // the spots read the placements, the room and which placements the model holds
     [placements, room, model],
   );
@@ -400,7 +414,13 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   const refListener = levelRef === COVERAGE_LEVEL_REF.listener ? venue.listener : null;
   /** a request's level at the limit at the reference, when points alone give it (not the audience average) */
   const pointRefAtLimit = (r: Omit<SpaceGridRequest, "cols">) =>
-    referenceAtLimit(levelRef, r, { listener: refListener, meterSpots, boxes: spots }, null);
+    referenceAtLimit(
+      levelRef,
+      r,
+      { listener: refListener, meterSpots, boxes: spots },
+      null,
+      bandRangeHz(TURN_DOWN_BAND, SINGLE_FREQ_RANGE[0]),
+    );
   /** the reference's level at the limit in the turn-down band (points alone; the audience average comes from its grid) */
   const anchorAtLimit = useMemo(
     () => (placed ? pointRefAtLimit(anchorReq) : null),
