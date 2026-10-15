@@ -16,11 +16,13 @@ import { hfBandOf, speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { frontChamber, throatCones } from "../src/lib/speaker/hornThroat";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
+import { roomOf } from "./horn-room";
 import { baffleInsetIn } from "../src/lib/speaker/chamberAir";
 import {
   drawsArchedTop,
   hornFlare,
   roundPortsAt,
+  slotOpeningsAt,
   speakerLayout,
 } from "../src/lib/speaker/speakerLayout";
 import { hornGrid, hornModel } from "../src/lib/acoustics/hornModel";
@@ -218,9 +220,14 @@ test("speaker templates: the PA v2 sub bin's drivers share one throat, and the h
     assert.equal(chamber.netLiters, PA_V2_SUB_BIN.rearLiters * count, "~324 L for two");
     assert.ok(chamber.vent.kind === VENT_KIND.vented);
     const { port } = chamber.vent;
-    assert.ok(port.shape === PORT_SHAPE.slot && port.w !== undefined && port.folded);
-    // ~600 cm² of slot per driver (the sizes in eighths of an inch)
-    const slotCm2 = port.n * port.h * port.w * CM_PER_IN * CM_PER_IN;
+    assert.ok(port.shape === PORT_SHAPE.slot && port.folded);
+    // each slot runs the clear face's height (an open slot always runs it): ~600 cm² of slot per driver (the sizes in
+    // eighths of an inch)
+    const [placed] = speakerLayout(spec.cabinet).chambers;
+    const openings = slotOpeningsAt(placed, port, spec.cabinet.panel.thicknessIn);
+    assert.equal(openings.length, port.n);
+    assert.ok(openings.every((o) => Math.abs(o.h - placed.clear.h) < 1e-9));
+    const slotCm2 = openings.reduce((sum, o) => sum + o.w * o.h, 0) * CM_PER_IN * CM_PER_IN;
     assert.ok(Math.abs(slotCm2 / count / 600 - 1) < 0.05, `${slotCm2.toFixed(0)} cm²`);
     // the mouth fits the clear face: wider than square, not clipped
     const flare = hornFlare(spec.cabinet, speakerLayout(spec.cabinet).chambers[0]);
@@ -233,9 +240,9 @@ test("speaker templates: the PA v2 sub bin's drivers share one throat, and the h
         { ...spec, cabinet: { ...spec.cabinet, chambers: [c] } },
         { feed: spec.input },
       ).chambers[0].netLiters;
-    const slotL = port.h * port.w * port.len * LITERS_PER_CUBIC_IN;
+    const slotL = port.h * placed.clear.h * port.len * LITERS_PER_CUBIC_IN;
     assert.ok(airOf(oneSlot) - airOf(auto) > slotL, "the second slot takes its air");
-    const result = hornDesignOf(chamber, { count: 1, angle: 2 });
+    const result = hornDesignOf(chamber, { count: 1, angle: 2 }, roomOf(chamber, placed.clear));
     assert.ok(result.ok, template);
     const { design } = result;
     assert.equal(design.drivers, count);
@@ -276,7 +283,11 @@ test("speaker templates: the PA v2 sub bin's drivers share one throat, and the h
 test("speaker templates: the PA v2 mid box has two 10″ in one throat, tuned to ~95 Hz, crossed at the R-OSSE", () => {
   const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2MidBox);
   const chamber = onlyChamber(spec);
-  const result = hornDesignOf(chamber, { count: 1, angle: 2 });
+  const result = hornDesignOf(
+    chamber,
+    { count: 1, angle: 2 },
+    roomOf(chamber, speakerLayout(spec.cabinet).chambers[0].clear),
+  );
   assert.ok(result.ok);
   assert.equal(result.design.drivers, PA_V2_MID_BOX.drivers);
   // the throat from the compression ratio, the front chamber from the cones under the walls

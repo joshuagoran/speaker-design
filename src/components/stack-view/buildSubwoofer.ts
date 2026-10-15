@@ -5,21 +5,19 @@ import { buildCone, paConeRadius } from "./buildCone";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
 import { towerSpec } from "../../lib/pa/tower";
-import { modelTubeElbows, subTubeLegs, tubeLayout } from "../../lib/pa/tubes";
+import { modelTubeElbows, subTubeLegs } from "../../lib/pa/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import {
   ductDividerIn,
   foldedRearWallIn,
   foldedShelfIn,
   slotFinIn,
-  slotFinLayout,
-  slotFinsOf,
-  isRoundPort,
   maxStraightSlotIn,
   slotFolds,
 } from "../../lib/pa/calc";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
+import { subVentOpenings, subVentPlan, type SubVentPlan } from "../../lib/pa/subVentPlan";
 import type {
   BoxBracing,
   BoxHardwarePlan,
@@ -35,90 +33,21 @@ import { buildHardware } from "./buildHardware";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 
 /**
- * The sub's vent as the scene builds it, from the port style and the design's vent geometry (defaults where a custom
- * cabinet leaves one out): the side ducts, the round tubes where the model and the cutlist place them (lib/pa/tubes), or
- * the bottom slot's band, and the duct sizes the parts behind the baffle read.
- */
-export function subVentPlan(
-  sub: Pick<SubDriver, "size">,
-  box: Dims3,
-  portStyle: PortStyle,
-  portGeom: Props["portGeom"],
-  T: number,
-) {
-  const vSlot = portStyle === "vslots" || portStyle === "vslot1";
-  const sides = portStyle === "vslot1" ? [1] : [-1, 1]; // side ducts: one wall or both
-  const s = box;
-  const pg = portGeom || {}; // explicit vent geometry when the cabinet is custom
-  // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
-  const ductH = pg.ductH != null ? pg.ductH : 3,
-    innerW = s.w - 2 * T;
-  // the bottom slot's fins and the openings between them (the PA page's two fins: three openings)
-  const fins = slotFinLayout(innerW, T, slotFinsOf({ fins: pg.fins, slotH: ductH }, innerW, T));
-  const round = isRoundPort(portStyle); // round-tube ports only
-  const corners = portStyle === "round4";
-  const nPorts = pg.nPorts != null ? pg.nPorts : portStyle === "round1" ? 1 : corners ? 4 : 2;
-  const portR =
-    pg.portR != null
-      ? pg.portR
-      : (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
-  // round tubes: where they sit on the baffle and how they fold, as the model and the cutlist take them (lib/pa/tubes)
-  const tubeVent = {
-    nt: nPorts,
-    dia: 2 * portR,
-    len: pg.tubeLen != null ? pg.tubeLen : portStyle === "round1" ? 11 : corners ? 11.5 : 9.8,
-  };
-  const tubes = round ? tubeLayout(s, portStyle, tubeVent, T, sub.size) : null;
-  const bandH = round || vSlot ? 0 : ductH + T; // slots: baffle starts above the duct shelf
-  const vThroat =
-    pg.throat != null
-      ? pg.throat
-      : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * (s.h - 2 * T))) * 100) / 100;
-  return {
-    portStyle,
-    pg,
-    vSlot,
-    sides,
-    ductH,
-    innerW,
-    fins,
-    round,
-    portR,
-    tubeVent,
-    tubes,
-    bandH,
-    vThroat,
-  };
-}
-
-/** What `subVentPlan` returns. */
-export type SubVentPlan = ReturnType<typeof subVentPlan>;
-
-/**
  * The sub vent's openings in the baffle: the round tubes' mouths, or the side ducts' full-height mouths against the side
  * walls; in the baffle's coordinates, the box's center line at `x`, its bottom at `plinth` and the baffle's center at
  * `baffleCy`. (The bottom slot leaves the baffle's bottom edge open instead: `bandH`.)
  */
 export function subVentHoles(
-  { tubes, portR, vSlot, vThroat, innerW, sides }: SubVentPlan,
+  plan: SubVentPlan,
   s: Dims3,
   T: number,
   { x, plinth: pl, baffleCy }: { x: number; plinth: number; baffleCy: number },
 ): THREE.Path[] {
-  const holes: THREE.Path[] = [];
-  if (tubes)
-    tubes.tubes.forEach((p) => holes.push(circlePath(x + p.x, pl + T + p.y - baffleCy, portR)));
-  if (vSlot) {
-    // full-height ducts using the side walls as their outer face
-    const slotH = s.h - 2 * T;
-    const throat = vThroat;
-    const mouth = throat + 0.43; // flat strip set at 20 deg: 0.43 in rise
-    const sx = innerW / 2 - mouth / 2;
-    sides.forEach((k) =>
-      holes.push(roundedRectPath(x + k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)),
-    );
-  }
-  return holes;
+  return subVentOpenings(plan, s, T).map((o) =>
+    o.shape === "circle"
+      ? circlePath(x + o.x, pl + o.y - baffleCy, o.r)
+      : roundedRectPath(x + o.x, pl + o.y - baffleCy, o.w, o.h, o.corner),
+  );
 }
 
 /**

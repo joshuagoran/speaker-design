@@ -110,8 +110,11 @@ import {
   hifiDriverById,
 } from "../data";
 import { byId } from "../tables";
-import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls } from "./chamberAir";
+import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls, slotRunIn } from "./chamberAir";
 import { coneDepthIn, driverListing, sourceOf } from "./driverParts";
+import { conesAreaCm2, frontChamber, throatCones } from "./hornThroat";
+import { chamberSetbackIn, driverBoardPieces } from "./driverBoard";
+import { segmentsAirLiters } from "../acoustics/hornSegments";
 import {
   PORT_RULE,
   driverAcrossIn,
@@ -138,7 +141,7 @@ import {
 } from "../../data/catalog/driver-cutouts";
 import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
-import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
+import { CM2_PER_IN2, KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
 import { SPEAKER_TEXT, DRIVER_KIND_NAMES } from "../../constants/speakerPage";
 import { HARDWARE_BOX } from "../../constants/hardware";
@@ -152,6 +155,7 @@ import {
   CABINET_CONSTRUCTION,
   CHAMBER_LOAD,
   DRIVER_KIND,
+  HORN_DRIVE,
   PORT_SHAPE,
   SLOT_PLACE,
   VENT_KIND,
@@ -183,9 +187,11 @@ export interface ChamberBuild {
   /** its PA sub and port with its box, where the PA sub box's rules apply (its duct-fit check reads them); else null */
   paSub: (PaSub & { box: Dims3 }) | null;
   inside: ChamberInside;
-  /** its clear volume, the vent's air in it, the wood inside it and the hardware's recesses, L */
+  /** its clear volume, the vent's air in it, the horn's own air, the wood inside it and the hardware's recesses, L */
   clearL: number;
   ventL: number;
+  /** the air of the horn built into it, its flare and its front chamber; 0 for a direct chamber */
+  hornL: number;
   woodL: number;
   recessL: number;
   /** what it weighs, lb: its wood (panels and braces) with the fixings, its drivers and radiators, its hardware */
@@ -562,8 +568,10 @@ function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
     };
     /** the bodies run behind the cones' faces: back along z on an even path, toward the baffle on an odd one */
     const way = path.folds % 2 === 0 ? 1 : -1;
-    // the front chamber, then the deepest driver from its cone's face
+    // the front chamber
     room(rect, rect, bay.z0, bay.z1);
+    // the driver board behind it, then the deepest driver from its cone's face
+    if (bay.boardIn > 0 && bay.coneZ !== bay.boardZ) room(rect, rect, bay.boardZ, bay.coneZ);
     if (coneIn > 0) room(deep, deep, bay.coneZ, bay.coneZ + way * coneIn);
   }
   // the flare's lines are read from the mouth back
@@ -799,6 +807,9 @@ function woodLb(
         (right ? inside.ih * inside.inD : sideH * d)) *
         wallRate;
   const braces = (braceWoodIn3(bracing) * wallRate) / SQ_IN_PER_SQ_FT / t;
+  const board = driverBoardOf(cabinet, f);
+  /** the driver board's panels, in², of the walls' plywood */
+  const boardIn2 = board ? board.netIn2 * board.pieces : 0;
   const cones = placed.chamber.drivers.filter((dr) => coneBuild(dr) !== null);
   const fixings = isFrame(cabinet)
     ? placed.chamber.drivers.some((dr) => dr.kind === DRIVER_KIND.sub)
@@ -809,7 +820,7 @@ function woodLb(
     : isBase
       ? HIFI_FIXINGS_LB
       : 0;
-  return panels / SQ_IN_PER_SQ_FT + braces + fixings;
+  return (panels + boardIn2 * wallRate) / SQ_IN_PER_SQ_FT + braces + fixings;
 }
 
 /** The chamber's radiators' weight, lb (none for another vent, or a radiator the catalog doesn't have). */
@@ -892,7 +903,13 @@ function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]
       : port.folded
         ? SPEAKER_TEXT.slotTooLongFolded
         : SPEAKER_TEXT.slotTooLong;
-    const shelf = slotShelfPart(box, { ...port, w: port.w ?? f.inside.iw }, t, tooLong);
+    // the slot runs the whole clear face (`slotRunIn`)
+    const shelf = slotShelfPart(
+      box,
+      { ...port, w: slotRunIn({ w: f.inside.iw, h: f.inside.ih }, port) },
+      t,
+      tooLong,
+    );
     return {
       // slots up the sides: the same plate, a wall of each slot instead of a roof
       parts: [
@@ -939,7 +956,8 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
       inside: f.inside,
       clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
       ventL: vent ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
-      woodL: insideWoodL(cabinet, f, bracing),
+      hornL: hornAirL(cabinet, chamber),
+      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f),
       recessL: hardware?.liters ?? 0,
       lb: { wood, drivers, hardware: hardwareLb, total: wood + drivers + hardwareLb },
     };
@@ -950,9 +968,81 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
 }
 
 /**
+ * The air of a horn built into the chamber, L: its flare (each section by its flare law) and the front chamber under the
+ * walls' back edges, with the cutouts a doubled driver board leaves in front of the cones (lib/speaker/hornThroat); it
+ * is the horn's, not the rear chamber's. 0 for a direct chamber.
+ */
+function hornAirL(cabinet: Pick<SpeakerCabinet, "panel">, chamber: SpeakerChamber): number {
+  if (chamber.load.kind !== CHAMBER_LOAD.horn) return 0;
+  const throat = throatCones(chamber.drivers);
+  return (
+    segmentsAirLiters(chamber.load.horn.segments) +
+    (throat
+      ? frontChamber(throat.cone, throat.count, chamberSetbackIn(cabinet.panel, chamber)).liters
+      : 0)
+  );
+}
+
+/**
+ * A horn chamber's driver board as the build counts it: its face (the bay's size) less the cones' cutouts, in², and how
+ * many pieces of the walls' plywood it is. Null for a chamber with no horn, a back-loaded horn (its drivers are on the
+ * baffle: no board), or no bay (no cone sizes it).
+ */
+function driverBoardOf(
+  cabinet: SpeakerCabinet,
+  f: ChamberFrame,
+): { bay: { w: number; h: number }; netIn2: number; pieces: number } | null {
+  const { chamber } = f.placed;
+  if (chamber.load.kind !== CHAMBER_LOAD.horn || chamber.load.horn.drive.kind === HORN_DRIVE.back)
+    return null;
+  const bay = hornFlare(cabinet, f.placed)?.path.bay;
+  if (!bay) return null;
+  /** the cutouts, as the front chamber takes them: each cone's area */
+  const cutoutsIn2 = conesAreaCm2(chamber.drivers) / CM2_PER_IN2;
+  return {
+    bay,
+    netIn2: Math.max(0, bay.w * bay.h - cutoutsIn2),
+    pieces: driverBoardPieces(chamber.load.horn),
+  };
+}
+
+/** The wood of a horn chamber's driver board, L (0 for none): its cutouts are front chamber air (`hornAirL`). */
+function driverBoardL(cabinet: SpeakerCabinet, f: ChamberFrame): number {
+  const board = driverBoardOf(cabinet, f);
+  return board ? board.netIn2 * board.pieces * cabinet.panel.thicknessIn * LITERS_PER_CUBIC_IN : 0;
+}
+
+/** A horn chamber's driver board as a cutlist row, `qty` pieces (two when doubled) of the walls' plywood; null for none. */
+function driverBoardPart(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart | null {
+  const board = driverBoardOf(cabinet, f);
+  if (!board) return null;
+  const cutouts = f.placed.chamber.drivers.flatMap((driver) => {
+    const cone = coneBuild(driver);
+    return cone
+      ? [
+          SPEAKER_TEXT.driverBoardCutout(
+            driver.count,
+            kindWord(driver),
+            cutoutNote(cone.body.cutoutIn),
+          ),
+        ]
+      : [];
+  });
+  return {
+    box: chamberCutBox(f.index),
+    part: "driverBoard",
+    qty: board.pieces,
+    a: board.bay.w,
+    b: board.bay.h,
+    t: cabinet.panel.thicknessIn,
+    note: joinNotes([SPEAKER_TEXT.driverBoardNote(board.pieces), ...cutouts]),
+  };
+}
+
+/**
  * The chamber's air as the box models take it, L: its `netLiters` where set; else its clear volume less the cones'
- * displacement (`displacementL`), the vent's air, the wood inside it and the hardware's recesses (`cabinetBuild`), and
- * at least 1 L.
+ * displacement (`displacementL`), the vent's air, a horn's own air, the wood inside it and the hardware's recesses
+ * (`cabinetBuild`), and at least 1 L.
  */
 export function chamberNetLiters(
   cabinet: SpeakerCabinet,
@@ -964,7 +1054,7 @@ export function chamberNetLiters(
   if (!build) return MIN_NET_L;
   return Math.max(
     MIN_NET_L,
-    build.clearL - displacementL - build.ventL - build.woodL - build.recessL,
+    build.clearL - displacementL - build.ventL - build.hornL - build.woodL - build.recessL,
   );
 }
 
@@ -1105,7 +1195,7 @@ function chamberNotes(
               formatInches(slotOpeningsAt(placed, port, t)[0].h),
             )
           : slotOpeningNote(
-              { ...port, w: port.w ?? f.inside.iw },
+              { ...port, w: f.inside.iw },
               slotOpeningsAt(placed, port, t).map((o) => marks.up(placed.y0 + o.y)),
             ),
       );
@@ -1321,7 +1411,7 @@ export function speakerCutParts(
           ),
         });
       }
-      parts.push(...insideParts(f));
+      parts.push(...insideParts(f), ...driverBoardParts(f));
     }
     return { parts, also, vent: ventLines };
   }
@@ -1362,8 +1452,15 @@ export function speakerCutParts(
     // a frame's own box already carries its braces (boxParts)
     if (frame) parts.push(...ventPartsOf(f));
     else parts.push(...insideParts(f));
+    parts.push(...driverBoardParts(f));
   }
   return { parts, also, vent: ventLines };
+
+  /** a horn chamber's driver board: its own row, a piece or two of the walls' plywood */
+  function driverBoardParts(f: ChamberFrame): CutPart[] {
+    const board = driverBoardPart(cabinet, f);
+    return board ? [board] : [];
+  }
 
   function ventPartsOf(f: ChamberFrame) {
     const vent = ventParts(cabinet, f);

@@ -31,13 +31,7 @@ import {
   SPEAKER_MESH_NAMES,
 } from "../src/components/stack-view/buildSpeakerScene";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import {
-  CHAMBER_LOAD,
-  HORN_DRIVE,
-  HORN_ENGINE_GAP,
-  HORN_PATH,
-  SPEAKER_MODEL_GAP,
-} from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD, HORN_DRIVE, HORN_ENGINE_GAP, HORN_PATH } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { CM_PER_IN } from "../src/constants/units";
 import type { HornSegment, SpeakerHorn, SpeakerSpec } from "../src/types";
@@ -292,7 +286,7 @@ test("speaker horn: a size that is not positive and finite is a named gap, never
   for (const [what, edit] of bad) {
     const spec = withSegments(BIN, edit);
     const r = responseOf(spec);
-    assert.deepEqual(r.chambers[0].gaps, [SPEAKER_MODEL_GAP.noModel], what);
+    assert.deepEqual(r.chambers[0].gaps, [HORN_ENGINE_GAP.segment], what);
     assert.ok(finiteResponse(spec), `${what}: no NaN`);
     assert.equal(flareOf(spec), null, `${what}: no flare drawn`);
     assert.equal(flareMeshes(spec).length, 0, what);

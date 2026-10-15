@@ -83,6 +83,7 @@ import { FIELD_ROW, GAP_Y } from "../../styles/layout";
 import { hornRoom, startingHorn, withChamberLoad } from "./chamberLoad";
 import {
   defaultHornPlacement,
+  driversOnBaffle,
   hornFits,
   onTop,
   type PlacedChamber,
@@ -253,6 +254,7 @@ export function ChamberSettings({
         <HornSettings
           horn={chamber.load.horn}
           drivers={chamber.drivers}
+          wallIn={cabinet.panel.thicknessIn}
           onEdit={(edit) =>
             onEdit((c) =>
               c.load.kind === CHAMBER_LOAD.horn
@@ -294,7 +296,6 @@ export function ChamberSettings({
             walls={cabinet.panel}
             chamber={chamber}
             clearW={placed?.clear.w ?? chamber.dims.w - 2 * cabinet.panel.thicknessIn}
-            clearH={placed?.clear.h ?? chamber.dims.h - 2 * cabinet.panel.thicknessIn}
             onChange={setPort}
           />
           {!vents && <p className="text-xs text-stone-500">{SPEAKER_TEXT.ventFixed}</p>}
@@ -367,6 +368,7 @@ export function ChamberSettings({
           widthIn={chamber.dims.w}
           clearIn={clearIn}
           placed={placed}
+          inBay={!driversOnBaffle(chamber)}
           bandOptions={bandOptions}
           onEdit={(edit) => editDriver(i, edit)}
           onRemove={() => {
@@ -400,26 +402,24 @@ export function ChamberSettings({
           Add driver
         </Button>
       )}
-      {result && result.gaps.length > 0 && (
-        <p className="text-sm text-orange-900">
-          Not modeled: {result.gaps.map((g) => MODEL_GAP_TEXT[g]).join("; ")}.
-        </p>
-      )}
+      {result &&
+        [...new Set(result.gaps)].map((g) => (
+          <Notice key={g}>{SPEAKER_TEXT.speakerGap(MODEL_GAP_TEXT[g])}</Notice>
+        ))}
     </Card>
   );
 }
 
 /**
  * A port's settings: round tubes (plain, or the PA sub's flared tubes in a row or the corners, and their elbows), a slot
- * (the PA sub's letterbox with its fins, or a plain slot: its opening's narrow side, its long side, Auto the chamber's
- * clear width, and whether it folds up the back) or side ducts. Everything a template sets on a port is set here too.
+ * (the PA sub's letterbox with its fins, or a plain slot: its opening's narrow side, and whether it folds up the back;
+ * it always runs the chamber's whole clear face) or side ducts. Everything a template sets on a port is set here too.
  */
 export function PortFields({
   port,
   walls,
   chamber,
   clearW,
-  clearH,
   onChange,
 }: {
   port: SpeakerPort;
@@ -427,10 +427,8 @@ export function PortFields({
   walls: Pick<SpeakerPanel, "nominal" | "thicknessIn">;
   /** the chamber: its size folds a letterbox, its drivers take flared tubes */
   chamber: Pick<SpeakerChamber, "dims" | "drivers">;
-  /** the chamber's clear width, in: a plain slot's long side when Auto */
+  /** the chamber's clear width, in: a letterbox's fins fit it */
   clearW: number;
-  /** the chamber's clear height, in: a plain slot's long side when Auto, up the front sides */
-  clearH: number;
   onChange: (p: SpeakerPort) => void;
 }) {
   if (port.shape === PORT_SHAPE.slot)
@@ -440,7 +438,6 @@ export function PortFields({
         t={walls.thicknessIn}
         chamber={chamber}
         clearW={clearW}
-        clearH={clearH}
         onChange={onChange}
       />
     );
@@ -496,28 +493,24 @@ function PortLengthField({
 
 /**
  * A slot: the PA sub's letterbox (its fins, its height and length; it folds up the back by the PA rule when too long to
- * run straight) or a plain slot (stacked, its sides, and whether it may fold up the back).
+ * run straight) or a plain slot (stacked, its narrow side, and whether it may fold up the back). A plain slot runs the
+ * whole clear face: it has no long side to set.
  */
 function SlotFields({
   port,
   t,
   chamber,
   clearW,
-  clearH,
   onChange,
 }: {
   port: SpeakerSlotPort;
   t: SpeakerPanel["thicknessIn"];
   chamber: Pick<SpeakerChamber, "dims">;
   clearW: number;
-  clearH: number;
   onChange: (p: SpeakerPort) => void;
 }) {
   const letterbox = port.fins !== undefined;
   const { h, len } = port;
-  const sides = port.place === SLOT_PLACE.sides;
-  /** a plain slot's long side when Auto: the clear width, or the clear height up the front sides */
-  const autoLong = sides ? clearH : clearW;
   const kind = (
     <ToggleGroup
       label={<Tooltip tip={SPEAKER_TEXT.slotKindTip}>{SPEAKER_TEXT.slotKind}</Tooltip>}
@@ -575,7 +568,7 @@ function SlotFields({
           onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
         />
         <NumberField
-          label={SPEAKER_TEXT.slotNarrow}
+          label={<Tooltip tip={SPEAKER_TEXT.slotNarrowTip}>{SPEAKER_TEXT.slotNarrow}</Tooltip>}
           {...onFieldStep(h, SPEAKER_STEPS.slotHIn)}
           min={0.25}
           onChange={(slotH) => onChange({ ...port, h: slotH })}
@@ -587,23 +580,6 @@ function SlotFields({
         value={port.place ?? SLOT_PLACE.floor}
         onChange={(place) => onChange(withSlotPlace(port, place))}
         options={entriesOf(SLOT_PLACE_NAMES)}
-      />
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.slotLongSetByTip}>{SPEAKER_TEXT.slotLongSetBy}</Tooltip>}
-        value={port.w === undefined ? SET_BY.auto : SET_BY.custom}
-        onChange={(v) => {
-          const { w: _w, ...rest } = port;
-          onChange(v === SET_BY.auto ? rest : { ...rest, w: shownIn(autoLong) });
-        }}
-        options={entriesOf(SET_BY_NAMES)}
-      />
-      <NumberField
-        label={SPEAKER_TEXT.slotLong}
-        // Auto: the chamber's clear width (its clear height up the sides), read-only
-        {...onFieldStep(port.w ?? autoLong, SPEAKER_STEPS.portSizeIn)}
-        disabled={port.w === undefined}
-        min={0.25}
-        onChange={(w) => onChange({ ...port, w })}
       />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.slotFoldTip}>{SPEAKER_TEXT.slotFold}</Tooltip>}
@@ -693,6 +669,8 @@ interface DriverProps {
   clearIn: number;
   /** its chamber as the layout places it: which places its horn fits */
   placed: PlacedChamber | undefined;
+  /** its chamber's horn holds it in the bay behind the throat: the layout places it, with no position to set */
+  inBay: boolean;
   bandOptions: readonly (readonly [BandId, string])[];
   onEdit: (edit: (d: SpeakerDriver) => SpeakerDriver) => void;
   onRemove: () => void;
@@ -707,6 +685,7 @@ function DriverFields({
   widthIn,
   clearIn,
   placed,
+  inBay,
   bandOptions,
   onEdit,
   onRemove,
@@ -802,24 +781,29 @@ function DriverFields({
         step={1}
         onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
       />
-      <div className={FIELD_ROW}>
-        {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
-        <NumberField
-          label={SPEAKER_TEXT.fromLeft}
-          value={shownIn(driver.position.xIn + widthIn / 2)}
-          step={SPEAKER_STEPS.sizeIn}
-          onChange={(v) =>
-            onEdit((d) => ({ ...d, position: { ...d.position, xIn: v - widthIn / 2 } }))
-          }
-        />
-        <NumberField
-          // a horn on the top: back from the baffle's front
-          label={onTop(driver) ? SPEAKER_TEXT.backFromFront : SPEAKER_TEXT.fromBottom}
-          value={shownIn(driver.position.yIn)}
-          step={SPEAKER_STEPS.sizeIn}
-          onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
-        />
-      </div>
+      {inBay && !onTop(driver) ? (
+        // in a horn's bay the layout stacks and centers the drivers: no position to set
+        <p className="text-xs text-stone-500">{SPEAKER_TEXT.driversInBay}</p>
+      ) : (
+        <div className={FIELD_ROW}>
+          {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
+          <NumberField
+            label={SPEAKER_TEXT.fromLeft}
+            value={shownIn(driver.position.xIn + widthIn / 2)}
+            step={SPEAKER_STEPS.sizeIn}
+            onChange={(v) =>
+              onEdit((d) => ({ ...d, position: { ...d.position, xIn: v - widthIn / 2 } }))
+            }
+          />
+          <NumberField
+            // a horn on the top: back from the baffle's front
+            label={onTop(driver) ? SPEAKER_TEXT.backFromFront : SPEAKER_TEXT.fromBottom}
+            value={shownIn(driver.position.yIn)}
+            step={SPEAKER_STEPS.sizeIn}
+            onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
+          />
+        </div>
+      )}
       <ToggleGroup
         label={coaxial ? "Cone's band" : "Band"}
         value={lowBand ?? null}

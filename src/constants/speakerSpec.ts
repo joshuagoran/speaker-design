@@ -198,9 +198,9 @@ export const HORN_ENGINE_GAP = {
   backLoaded: "backLoaded",
   /** no driver, drivers of more than one kind or id, or a driver with no Thiele/Small parameters */
   driver: "driver",
-  /** no net air set for the rear chamber */
-  netLiters: "netLiters",
-  /** a vent the engine doesn't take yet: side ducts, radiators, or a slot whose width the box sets */
+  /** a horn section with an area or a length that is not positive */
+  segment: "segment",
+  /** a vent the engine doesn't take yet: side ducts or radiators */
   vent: "vent",
 } as const;
 

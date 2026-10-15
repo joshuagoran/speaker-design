@@ -176,20 +176,53 @@ export const ARCH_BLOCK_TEXT = {
   height: "An arch needs the top chamber to be at least half as tall as the cabinet is wide.",
 } as const satisfies Record<ArchBlock, string>;
 
-/** Why the model leaves a chamber or driver out, in words. */
+/**
+ * Why the model leaves a chamber or driver out, and what to change, in words: the notices name the chamber, the reason
+ * (`why`) and the change (`fix`).
+ */
 export const MODEL_GAP_TEXT = {
-  unknownDriver: "a driver is not in its catalog",
-  mixedDrivers: "cone drivers of different models, or on different bands, share its air",
-  noHf: "a driver has no published HF sensitivity",
-  unknownRadiator: "the passive radiator is not in the catalog",
-  noModel: "the box cannot be calculated from these sizes (air, port, counts)",
-  badFilter: "a band filter has a corner that is not a positive frequency",
-  tapped: "a tapped horn (only a front-loaded horn is calculated)",
-  backLoaded: "a back-loaded horn (only a front-loaded horn is calculated)",
-  driver: "the horn needs one kind of cone driver with Thiele/Small parameters",
-  netLiters: "the horn's rear chamber needs its net air set",
-  vent: "a horn with this vent is not calculated yet",
-} as const satisfies Record<SpeakerModelGap, string>;
+  unknownDriver: { why: "a driver is not in its catalog", fix: "Choose the driver again." },
+  mixedDrivers: {
+    why: "cone drivers of different models, or on different bands, share its air",
+    fix: "Use one driver model on one band in a chamber, or give each model its own chamber.",
+  },
+  noHf: {
+    why: "a driver has no published HF sensitivity",
+    fix: "Choose a driver that has one.",
+  },
+  unknownRadiator: {
+    why: "the passive radiator is not in the catalog",
+    fix: "Choose the radiator again.",
+  },
+  noModel: {
+    why: "the box cannot be calculated from these sizes (air, port, counts)",
+    fix: "Set the air, the port size and the driver counts above zero.",
+  },
+  badFilter: {
+    why: "a band filter has a corner that is not a positive frequency",
+    fix: "Set each filter corner above 0 Hz.",
+  },
+  tapped: {
+    why: "a tapped horn is not calculated",
+    fix: "Use a front-loaded horn.",
+  },
+  backLoaded: {
+    why: "a back-loaded horn is not calculated",
+    fix: "Use a front-loaded horn.",
+  },
+  driver: {
+    why: "the horn needs one kind of cone driver with Thiele/Small data",
+    fix: "Use one cone driver model that lists them in this chamber.",
+  },
+  segment: {
+    why: "a horn section has an area or a length that is not above zero",
+    fix: "Set each section's start area, end area and length above zero.",
+  },
+  vent: {
+    why: "a horn with this vent is not calculated",
+    fix: "Use a sealed chamber, round tubes or a slot.",
+  },
+} as const satisfies Record<SpeakerModelGap, { why: string; fix: string }>;
 
 /** The Speaker page's results headings and chart labels. */
 export const SPEAKER_TEXT = {
@@ -215,6 +248,11 @@ export const SPEAKER_TEXT = {
   modelNote:
     "On axis at 1 m in half space. Every band gets 2.83 V. The response does not include the baffle step, the room or the driver positions yet. The Space page adds them.",
   noBands: "No band has a modeled driver. Add a driver to a chamber and select its band.",
+  /** a chamber the model leaves out: its number, why, and what to change */
+  chamberGap: (n: number, gap: { why: string; fix: string }) =>
+    `Chamber ${n}: ${gap.why}. ${gap.fix}`,
+  /** a part of the speaker the model leaves out that no chamber owns (a band filter): why, and what to change */
+  speakerGap: (gap: { why: string; fix: string }) => `${gap.why}. ${gap.fix}`,
   maxOutput: "Maximum output",
   maxYLabel: "max dB SPL, 1 m",
   speakerMax: "Speaker max",
@@ -243,6 +281,13 @@ export const SPEAKER_TEXT = {
     "The net air of each chamber subtracts the vent walls, the baffle cleats and the hardware. The weight includes the panels, the drivers with their horns, the radiators and the hardware. The Cutlist tab lists every part.",
   hornNoFit:
     "A horn does not fit where it is mounted. Another chamber is on its top, or its mouth is larger than the baffle of its chamber. Select the other mounting in the driver settings. Until you do, the views and the cutlist do not show the horn.",
+  /** the driver board's cutlist note: where the drivers mount, how a doubled board is glued, and each cone's cutout */
+  driverBoardNote: (pieces: number) =>
+    pieces > 1
+      ? "the drivers mount on its back; glue the pieces face to face"
+      : "the drivers mount on its back",
+  driverBoardCutout: (count: number, kind: string, cutout: string) =>
+    `${count} × ${kind.toLowerCase()} cutout, ${cutout}`,
   hornNoFitNote:
     "the horn does not fit where it is mounted; no cutout until you change the mounting",
   portTooLong: "too long for this chamber: make it shorter",
@@ -294,6 +339,7 @@ export const SPEAKER_TEXT = {
   fromLeft: "From left, in",
   fromBottom: "From bottom, in",
   backFromFront: "Back from front, in",
+  driversInBay: "The horn places the drivers in the bay behind the throat, stacked and centered.",
   placeTip:
     "Seen from the front. The position of the center, from the left side and the bottom of the chamber.",
   portPlace: "Port position",
@@ -301,10 +347,8 @@ export const SPEAKER_TEXT = {
   mouthPlace: "Horn mouth position",
   panel: "Panel",
   slotNarrow: "Opening, narrow side, in",
-  slotLong: "Opening, long side, in",
-  slotLongSetBy: "Long side",
-  slotLongSetByTip:
-    "Auto: the slot has the full clear width of the chamber, or the full clear height on the front sides. Custom: you type the size.",
+  slotNarrowTip:
+    "An open slot always runs the full inside width of the chamber, or the full inside height on the front sides. This size sets its area.",
   slotHeight: "Slot height, in",
   portLength: "Length, in",
   slotKind: "Slot type",
@@ -316,8 +360,7 @@ export const SPEAKER_TEXT = {
   slotFins: "Fins",
   slotFinsTip:
     "Fins split a divided slot into equal openings. Each fin is as thick as the walls. Default: two. Most: each opening stays at least half the slot height wide.",
-  slotKindResets:
-    "Switching the type resets the other type's settings: fins, or count, long side and fold.",
+  slotKindResets: "Switching the type resets the other type's settings: fins, or count and fold.",
   slotFolds: "The slot is too long to run straight. It folds up the back.",
   slotStraight: "The slot runs straight along the floor.",
   slotFold: "Fold",
@@ -352,7 +395,11 @@ export const SPEAKER_TEXT = {
   hornFrontChamberEstimate:
     "The datasheet does not give the surround width or the cone depth, so this value uses estimates.",
   hornFrontChamberTip:
-    "The air between the cones and the back edges of the horn walls. The edges stay clear of full cone travel. The drivers set this value.",
+    "The air between the cones and the back edges of the horn walls, with the cutouts in the driver board. The edges stay clear of full cone travel. The drivers and the board set this value.",
+  hornBoard: "Driver board thickness",
+  hornBoardWall: "Wall",
+  hornBoardDouble: "Double",
+  hornBoardTip: "The board the drivers mount on. Double it for large drivers.",
   hornPath: "Path",
   hornPathTip:
     "Only the sections set the response. The views draw a folded path straight for now. The fold layout comes later.",

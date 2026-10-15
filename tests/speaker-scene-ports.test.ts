@@ -12,7 +12,8 @@ import {
 import { HIFI_MESH_NAMES } from "../src/components/stack-view/buildHifiScene";
 import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
 import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
-import { subVentHoles, subVentPlan } from "../src/components/stack-view/buildSubwoofer";
+import { subVentHoles } from "../src/components/stack-view/buildSubwoofer";
+import { subVentPlan } from "../src/lib/pa/subVentPlan";
 import {
   portRule,
   PORT_RULE,
@@ -48,7 +49,6 @@ function withPort(template: SpeakerTemplate, port: SpeakerPort): { spec: Speaker
 const PORTS: [string, SpeakerPort][] = [
   ["plain slot", { shape: PORT_SHAPE.slot, n: 1, h: 2, len: 6 }],
   ["two stacked plain slots", { shape: PORT_SHAPE.slot, n: 2, h: 1.5, len: 6 }],
-  ["plain slot, set long side", { shape: PORT_SHAPE.slot, n: 1, h: 1.5, w: 5, len: 6 }],
   [
     "plain slot, folded up the back",
     { shape: PORT_SHAPE.slot, n: 1, h: 1.5, len: 24, folded: true },

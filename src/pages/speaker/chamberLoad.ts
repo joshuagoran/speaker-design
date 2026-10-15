@@ -16,6 +16,7 @@ import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
+import { segmentsAirLiters } from "../../lib/acoustics/hornSegments";
 import { CM_PER_IN, CM2_PER_IN2, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { shownTenth } from "./speakerFields";
 
@@ -76,28 +77,9 @@ export function startingHorn(
   };
 }
 
-/**
- * The air inside one section, in³, by its flare law: a conical section is a cone's frustum, L/3 (S1 + S2 + √(S1 S2));
- * an exponential one, S1 e^(mx) along its length, holds (S2 − S1) L / ln(S2 / S1) (S1 L where the two are equal); a
- * parabolic one, its area growing linearly, holds L (S1 + S2) / 2.
- */
-function sectionIn3(s: HornSegment): number {
-  const [a, b, len] = [s.s1 / CM2_PER_IN2, s.s2 / CM2_PER_IN2, s.length / CM_PER_IN];
-  switch (s.profile) {
-    case HORN_PROFILE.conical:
-      return (len / 3) * (a + b + Math.sqrt(a * b));
-    case HORN_PROFILE.parabolic:
-      return (len * (a + b)) / 2;
-    case HORN_PROFILE.exponential: {
-      const ratio = Math.log(b / a);
-      return Math.abs(ratio) < 1e-9 ? a * len : ((b - a) * len) / ratio;
-    }
-  }
-}
-
-/** The air inside a horn's flare, L: every section's, each by its flare law (`sectionIn3`). */
+/** The air inside a horn's flare, L: every section's, each by its flare law (lib/acoustics/hornSegments). */
 export const flareLiters = (horn: Pick<SpeakerHorn, "segments">) =>
-  horn.segments.reduce((sum, s) => sum + sectionIn3(s) * LITERS_PER_CUBIC_IN, 0);
+  segmentsAirLiters(horn.segments);
 
 /**
  * The chamber with its load switched to `kind`. Horn: a starting horn (`startingHorn`), and its net air set to the rear
