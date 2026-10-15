@@ -301,6 +301,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
   const fitChips = chamberFitChips(spec.cabinet, build);
   const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   const cell = (place: string) => resultsCellClass(wide, place);
+  /** the model left a chamber or a filter out: its notices say which and why (the empty-chart notice stays quiet) */
+  const hasGaps = response.gaps.length > 0 || response.chambers.some((c) => c.gaps.length > 0);
   const fbMarks = response.chambers.flatMap((c, i) =>
     c.fb !== null ? [{ f: c.fb, label: one ? "Fb" : `Fb ${i + 1}` }] : [],
   );
@@ -404,13 +406,18 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 ]}
                 marks={fbMarks}
               />
-              {response.bands.length === 0 && <Notice>{SPEAKER_TEXT.noBands}</Notice>}
-              {response.gaps.length > 0 && (
-                <Notice>
-                  Not modeled:{" "}
-                  {[...new Set(response.gaps)].map((g) => MODEL_GAP_TEXT[g]).join("; ")}.
-                </Notice>
+              {/* a chamber the model leaves out is named with its reason, never dropped silently */}
+              {response.chambers.flatMap((c, i) =>
+                [...new Set(c.gaps)].map((g) => (
+                  <Notice key={`gap${i}.${g}`}>
+                    {SPEAKER_TEXT.chamberGap(i + 1, MODEL_GAP_TEXT[g])}
+                  </Notice>
+                )),
               )}
+              {[...new Set(response.gaps)].map((g) => (
+                <Notice key={`gap.${g}`}>{SPEAKER_TEXT.speakerGap(MODEL_GAP_TEXT[g])}</Notice>
+              ))}
+              {response.bands.length === 0 && !hasGaps && <Notice>{SPEAKER_TEXT.noBands}</Notice>}
               <StatTileGrid tiles={tiles} />
               <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.modelNote}</p>
             </section>

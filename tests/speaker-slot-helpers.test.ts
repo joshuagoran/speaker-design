@@ -120,7 +120,6 @@ const slot = (extra: Partial<SpeakerSlotPort> = {}): SpeakerSlotPort => ({
   shape: PORT_SHAPE.slot,
   n: 2,
   h: 1.5,
-  w: 7,
   len: 9,
   folded: true,
   ...extra,
@@ -151,7 +150,7 @@ test("slot position: Floor and Front sides round-trip and survive a kind switch"
   expect({ ...sides, n: 3 }.place).toBe(SLOT_PLACE.sides);
 });
 
-test("slot position: the settings show the toggle for an open slot, set to the slot's position", () => {
+test("slot position: the settings show the toggle for an open slot, set to the slot's position, and no long side", () => {
   const render = (port: SpeakerSlotPort) =>
     renderToStaticMarkup(
       createElement(PortFields, {
@@ -159,7 +158,6 @@ test("slot position: the settings show the toggle for an open slot, set to the s
         walls: { nominal: "3/4", thicknessIn: T },
         chamber: { dims: { w: 24, h: 32, d: 18 }, drivers: [] },
         clearW: 22.5,
-        clearH: 30.5,
         onChange: () => {},
       }),
     );
@@ -168,15 +166,18 @@ test("slot position: the settings show the toggle for an open slot, set to the s
   expect(onFloor).toContain(floor);
   expect(onFloor).toContain(sides);
   expect(onFloor).toMatch(/aria-pressed="true"[^>]*>Floor|Floor<\/button>/);
-  // up the sides, Auto takes the clear height
-  const up = render({ ...slot({ place: SLOT_PLACE.sides }), w: undefined });
-  expect(up).toContain('value="30.5"');
-  expect(render({ ...slot(), w: undefined })).toContain('value="22.5"');
+  // an open slot runs the whole clear face: the settings have no long side to set
+  const up = render(slot({ place: SLOT_PLACE.sides }));
+  for (const html of [onFloor, up]) {
+    expect(html).not.toContain("long side");
+    expect(html).not.toContain('value="30.5"');
+    expect(html).not.toContain('value="22.5"');
+  }
   // a divided slot has no position
   expect(render(slot({ fins: 2, folded: undefined }))).not.toContain(sides);
 });
 
-test("slot position: the model reads an open slot's long side as its height up the sides; a divided slot ignores it", () => {
+test("slot position: an open slot runs the clear face, its height up the sides; a divided slot is always on the floor", () => {
   const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne);
   const chamber = spec.cabinet.chambers.find(
     (c) => c.vent.kind === VENT_KIND.vented && c.vent.port.shape === PORT_SHAPE.slot,
@@ -191,12 +192,11 @@ test("slot position: the model reads an open slot's long side as its height up t
   });
   const model = (p: SpeakerSlotPort) => chamberVentModel(spec.cabinet, withPort(p));
 
-  // Auto up the sides: the clear height; a size past the face is held to it
-  const auto = { ...port, place: SLOT_PLACE.sides, w: undefined };
-  expect(model(auto)?.areaIn2).toBeCloseTo(port.n * port.h * face.h, 8);
-  expect(model({ ...auto, w: face.h + 10 })?.areaIn2).toBeCloseTo(port.n * port.h * face.h, 8);
+  // up the sides: the clear height
+  const up = { ...port, place: SLOT_PLACE.sides };
+  expect(model(up)?.areaIn2).toBeCloseTo(port.n * port.h * face.h, 8);
   // on the floor: the clear width
-  const onFloor = { ...port, place: undefined, w: undefined };
+  const onFloor = { ...port, place: undefined };
   expect(model(onFloor)?.areaIn2).toBeCloseTo(port.n * port.h * face.w, 8);
   // a divided slot is on the floor whatever its position
   const divided = { ...onFloor, n: 1, fins: 2 };

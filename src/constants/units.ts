@@ -31,6 +31,9 @@ export const LITERS_PER_CUBIC_M = 1000;
 /** Grams in one kilogram: datasheet moving masses (Mms) are in grams. */
 export const GRAMS_PER_KG = 1000;
 
+/** Cubic centimeters in one liter: the horn engine's volumes (areas in cm², lengths in cm) are in cm³. */
+export const CM3_PER_LITER = 1000;
+
 /** Liters in one cubic inch (the box models' 16.387 cm³). */
 export const LITERS_PER_CUBIC_IN = 16.387 / 1000;
 

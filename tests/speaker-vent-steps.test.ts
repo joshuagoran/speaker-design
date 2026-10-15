@@ -17,14 +17,9 @@ const CASES: [string, SpeakerPort, number[]][] = [
     [SPEAKER_STEPS.count, SPEAKER_STEPS.slotHIn, SPEAKER_STEPS.portLenIn],
   ],
   [
-    "plain slot: count, narrow side, length, long side",
-    { shape: PORT_SHAPE.slot, n: 2, h: 1.13, w: 7.1, len: 9.3 },
-    [SPEAKER_STEPS.count, SPEAKER_STEPS.slotHIn, SPEAKER_STEPS.portLenIn, SPEAKER_STEPS.portSizeIn],
-  ],
-  [
-    "plain slot, long side Auto: the clear width on the step",
-    { shape: PORT_SHAPE.slot, n: 1, h: 2, len: 9 },
-    [SPEAKER_STEPS.count, SPEAKER_STEPS.slotHIn, SPEAKER_STEPS.portLenIn, SPEAKER_STEPS.portSizeIn],
+    "plain slot: count, narrow side, length (it runs the clear face: no long side)",
+    { shape: PORT_SHAPE.slot, n: 2, h: 1.13, len: 9.3 },
+    [SPEAKER_STEPS.count, SPEAKER_STEPS.slotHIn, SPEAKER_STEPS.portLenIn],
   ],
   [
     "side ducts: throat, length",
@@ -51,7 +46,6 @@ function numberFields(port: SpeakerPort) {
       walls: { nominal: "3/4", thicknessIn: 0.75 },
       chamber: { dims: { w: 24, h: 32, d: 18 }, drivers: [] },
       clearW: 22.37,
-      clearH: 30.5,
       onChange: () => {},
     }),
   );

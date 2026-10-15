@@ -1992,9 +1992,11 @@ export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
  * (the PA slot rule: lib/pa/calc ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
  * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
  * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
- * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width and its long side `w` its height.
+ * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width. An open slot always runs the whole
+ * clear face and uses the box walls (lib/speaker/chamberAir `slotRunIn`): its `h` sets the area, it has no width of its
+ * own (the Hi-fi page's `w` is set by `hifiSystem`).
  */
-export interface SpeakerSlotPort extends SlotPort {
+export interface SpeakerSlotPort extends Omit<SlotPort, "w"> {
   fins?: number;
   folded?: boolean;
   place?: SlotPlace;
@@ -2002,8 +2004,7 @@ export interface SpeakerSlotPort extends SlotPort {
 
 /**
  * A vented chamber's port: round tubes or slots (the Hi-fi kinds, with the PA's details where set), or side ducts.
- * `len` is the path length: a folded port is its path. A slot's `w` is its width; absent, the box sets it (the slot
- * runs the full width).
+ * `len` is the path length: a folded port is its path.
  */
 export type SpeakerPort = SpeakerRoundPort | SpeakerSlotPort | SideDuctPort;
 

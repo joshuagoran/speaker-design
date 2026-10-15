@@ -21,7 +21,7 @@ import { layersFromPa } from "../../lib/speaker/paSpec";
 import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerFromFill } from "../../lib/speaker/fillSpec";
 import { DIRECT_LOAD, lrFilter, speakerIdentity } from "../../lib/speaker/specParts";
-import { hornFace, speakerLayout } from "../../lib/speaker/speakerLayout";
+import { hornFace, settledCabinet, speakerLayout } from "../../lib/speaker/speakerLayout";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
 import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
 import { defaultBraceStyleNear } from "../../lib/bracing";
@@ -278,23 +278,17 @@ const paV2Band = (
 });
 
 /**
- * A slot on each front side of a PA v2 box: `widthMm` wide, the opening's height (`longIn`) tall, `lengthMm` long. The
- * spec takes the slot's narrow size as its height and its long size as its width: the model reads only the area and the
+ * A slot on each front side of a PA v2 box: `widthMm` wide, `lengthMm` long, as tall as the box's clear face (an open
+ * slot always runs it). The spec takes the slot's narrow size as its height: the model reads only the area and the
  * opening's rectangle. `place` puts the openings up the front sides, beside the horn mouth, where the views draw them
  * (lib/speaker/speakerLayout slotOpeningsAt), a column of the horn's face each.
  */
-const sideSlots = (
-  widthMm: number,
-  longIn: number,
-  lengthMm: number,
-  folded: boolean,
-): SpeakerChamber["vent"] => ({
+const sideSlots = (widthMm: number, lengthMm: number, folded: boolean): SpeakerChamber["vent"] => ({
   kind: VENT_KIND.vented,
   port: {
     shape: PORT_SHAPE.slot,
     n: 2,
     h: stepped(inches(widthMm)),
-    w: stepped(longIn),
     len: stepped(inches(lengthMm)),
     folded,
     place: SLOT_PLACE.sides,
@@ -333,7 +327,7 @@ function paV2SubBin(count: 1 | 2, identity: SpecIdentity): SpeakerSpec {
     // the rear chamber and the wedges beside the flare: a shape the box models cannot work out
     netLiters: bin.rearLiters * count,
     stuffingPct: 0,
-    vent: sideSlots(bin.slotWidthMm, openingIn, bin.slotLengthMm, true),
+    vent: sideSlots(bin.slotWidthMm, bin.slotLengthMm, true),
     load: DIRECT_LOAD,
     // stacked up the throat, each in its share of the opening
     drivers: Array.from({ length: count }, (_, i) => ({
@@ -382,7 +376,7 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
     // the rear chamber, the sealed wedges left out
     netLiters: box.rearLiters,
     stuffingPct: 0,
-    vent: sideSlots(box.slotWidthMm, openingIn, box.slotLengthMm, false),
+    vent: sideSlots(box.slotWidthMm, box.slotLengthMm, false),
     load: DIRECT_LOAD,
     // one above the other, `coneSpacingMm` apart about the opening's center
     drivers: Array.from({ length: box.drivers }, (_, i) => ({
@@ -442,6 +436,14 @@ const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec
 /** The templates in the picker's order. */
 export const SPEAKER_TEMPLATES: readonly SpeakerTemplate[] = Object.values(SPEAKER_TEMPLATE);
 
-/** A template's speaker, as a draft under the template's name. */
-export const templateSpeaker = (template: SpeakerTemplate): SpeakerSpec =>
-  TEMPLATES[template]({ id: DRAFT_SPEAKER_ID, name: SPEAKER_START_SPEAKER_NAMES[template] });
+/**
+ * A template's speaker, as a draft under the template's name, its drivers settled on their baffles (lib/speaker/
+ * speakerLayout `settledCabinet`: off every port and slot, and each other).
+ */
+export function templateSpeaker(template: SpeakerTemplate): SpeakerSpec {
+  const spec = TEMPLATES[template]({
+    id: DRAFT_SPEAKER_ID,
+    name: SPEAKER_START_SPEAKER_NAMES[template],
+  });
+  return { ...spec, cabinet: settledCabinet(spec.cabinet) };
+}

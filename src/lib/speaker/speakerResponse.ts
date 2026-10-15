@@ -28,7 +28,7 @@ import { boxModel, closedBox } from "../pa/calc";
 import { logSpacedFrequencies, passiveRadiatorBox } from "../hifi/hifi";
 import { HIFI_PASSIVES, HIFI_WAVEGUIDES, HORN_OPTIONS, passiveRadiatorMassMax } from "../data";
 import { byId } from "../tables";
-import { chamberVentModel, stuffedLiters } from "./chamberAir";
+import { chamberClearFace, chamberVentModel, stuffedLiters } from "./chamberAir";
 import { chamberNetLiters } from "./speakerBuild";
 import { hornDesignOf } from "./hornDesign";
 import { coneParts, hfParts, isConeKind, type ConeParts } from "./driverParts";
@@ -167,7 +167,11 @@ function modelChamber(
     },
   });
   if (chamber.load.kind === CHAMBER_LOAD.horn) {
-    const read = hornDesignOf(chamber, { count: 1, angle: 2 });
+    const read = hornDesignOf(
+      chamber,
+      { count: 1, angle: 2 },
+      { netLiters, face: chamberClearFace(cabinet, chamber) },
+    );
     if (!read.ok) return empty([read.gap]);
     const model = hornModel(read.design, grid.freqs, volts);
     if (!model) return empty([SPEAKER_MODEL_GAP.noModel]);

@@ -7,6 +7,9 @@ import type { Dims3 } from "../../types";
 /** The baffle's thickness, in: ¾″ ply, whatever the walls are. */
 export const BAFFLE_THICKNESS_IN = 0.75;
 
+/** The radius of the frame's baffle's corners, in: an opening that reaches a corner has at least this one. */
+export const BAFFLE_CORNER_IN = 0.12;
+
 /**
  * A cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back, a 3/4" baffle set back by the inset on
  * cleats, painted, and a back panel. With `archTop` the top is a semicircle the full width of the cabinet. `baffleHoles`
@@ -93,7 +96,7 @@ export function buildCabinet(
     const frame = new THREE.Mesh(geo, shell);
     frame.position.set(x, y + h / 2, -d / 2 + RO);
     parent.add(frame);
-    const bshape = roundedRectShape(iw, ih, 0.12);
+    const bshape = roundedRectShape(iw, ih, BAFFLE_CORNER_IN);
     baffleHoles.forEach((hp) => bshape.holes.push(hp));
     const baffle = new THREE.Mesh(
       new THREE.ExtrudeGeometry(bshape, { depth: BT, bevelEnabled: false }),

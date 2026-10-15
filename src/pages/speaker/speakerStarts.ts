@@ -23,6 +23,7 @@ import {
 import { SPEAKER_PART } from "../../constants/speakerSpec";
 import { START_PICKER_GROUPS } from "../../constants/startPicker";
 import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useSpeakerPage";
+import { settledCabinet } from "../../lib/speaker/speakerLayout";
 import { SPEAKER_TEMPLATES, templateSpeaker } from "./speakerTemplates";
 
 /** What a start reads: the PA design as the planner holds it, the Hi-fi design and its look. */
@@ -77,6 +78,12 @@ function currentSpeaker(start: SpeakerCurrentStart, sources: StartSources): Spea
   }
 }
 
-/** The speaker a start gives, as a draft under the start's name. */
-export const startSpeaker = (start: SpeakerStart, sources: StartSources): SpeakerSpec =>
-  isTemplate(start) ? templateSpeaker(start) : currentSpeaker(start, sources);
+/**
+ * The speaker a start gives, as a draft under the start's name; a current design's drivers are settled on their baffles
+ * (a template's already are).
+ */
+export const startSpeaker = (start: SpeakerStart, sources: StartSources): SpeakerSpec => {
+  if (isTemplate(start)) return templateSpeaker(start);
+  const spec = currentSpeaker(start, sources);
+  return { ...spec, cabinet: settledCabinet(spec.cabinet) };
+};

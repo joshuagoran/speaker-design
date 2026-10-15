@@ -8,6 +8,7 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi, speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromFill } from "../src/lib/speaker/fillSpec";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
+import { roomOf } from "./horn-room";
 import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
@@ -614,7 +615,7 @@ function hornOf(chamber: SpeakerChamber) {
 }
 
 test("speaker spec: a horn chamber reads into a horn design the engine models", () => {
-  const result = hornDesignOf(bassBin, { count: 1, angle: 2 });
+  const result = hornDesignOf(bassBin, { count: 1, angle: 2 }, roomOf(bassBin));
   assert.ok(result.ok, "a front-loaded horn with one driver, net air and round ports");
   const { design } = result;
   assert.equal(design.driver, DEFAULT_PA.sub.ts);
@@ -634,6 +635,7 @@ test("speaker spec: a horn chamber reads into a horn design the engine models", 
   const direct = hornDesignOf(
     { ...bassBin, load: { kind: CHAMBER_LOAD.direct } },
     { count: 1, angle: 2 },
+    roomOf(bassBin),
   );
   assert.ok(direct.ok && direct.design.segments.length === 0);
   assert.ok(hornModel(direct.design, hornGrid(), 2.83));
@@ -651,7 +653,7 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
     stuffingPct: 0,
     vent: {
       kind: VENT_KIND.vented,
-      port: { shape: PORT_SHAPE.slot, n: 2, h: slotH, w: slotW, len: 680 / (10 * CM_PER_IN) },
+      port: { shape: PORT_SHAPE.slot, n: 2, h: slotH, len: 680 / (10 * CM_PER_IN) },
       maxSpeedMs: HIFI_PORT_MAX_MS,
     },
     load: {
@@ -668,7 +670,8 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
     },
     drivers: subs(2),
   };
-  const result = hornDesignOf(bin, { count: 1, angle: 2 });
+  // the slots run the clear face: as wide as the box's inside, here the width that gives ~600 cm² of slot per driver
+  const result = hornDesignOf(bin, { count: 1, angle: 2 }, roomOf(bin, { w: slotW, h: 32 - 1.5 }));
   assert.ok(result.ok);
   const { design } = result;
   // two of one driver on the throat: the engine wires them in parallel, each cone with its own air load
@@ -695,7 +698,7 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
 test("speaker spec: chambers the horn engine can't take yet say why", () => {
   const at = { count: 1, angle: 2 } as const;
   const gapOf = (chamber: SpeakerChamber) => {
-    const result = hornDesignOf(chamber, at);
+    const result = hornDesignOf(chamber, at, roomOf(chamber));
     return result.ok ? null : result.gap;
   };
   const horn = hornOf(bassBin);
@@ -709,7 +712,19 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
   );
   // a back-loaded horn: the cone's front on the baffle, its rear into the throat chamber and the horn
   assert.equal(gapOf(withDrive({ kind: HORN_DRIVE.back })), HORN_ENGINE_GAP.backLoaded);
-  assert.equal(gapOf({ ...bassBin, netLiters: null }), HORN_ENGINE_GAP.netLiters);
+  // an Auto net air is the page's to work out (lib/speaker/speakerBuild chamberNetLiters), never a gap here
+  assert.equal(gapOf({ ...bassBin, netLiters: null }), null);
+  assert.equal(
+    gapOf({
+      ...bassBin,
+      load: {
+        kind: CHAMBER_LOAD.horn,
+        horn: { ...hornOf(bassBin), segments: [{ ...hornOf(bassBin).segments[0], length: 0 }] },
+      },
+    }),
+    HORN_ENGINE_GAP.segment,
+    "a section with no length",
+  );
   assert.equal(
     gapOf({
       ...bassBin,
@@ -734,19 +749,15 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
   });
   assert.equal(
     gapOf(vented({ shape: PORT_SHAPE.slot, n: 1, h: 2, len: 10 })),
-    HORN_ENGINE_GAP.vent,
-    "a slot whose width the box sets",
+    null,
+    "a slot runs the face",
   );
   assert.equal(
     gapOf(vented({ shape: PORT_SHAPE.duct, n: 2, throat: 2, len: 10, div: 0.5, divider: "1/2" })),
     HORN_ENGINE_GAP.vent,
   );
-  // today's PA boxes: the box models work out their net air; the mid/high box holds two kinds of driver
+  // today's PA boxes: the mid/high box holds two kinds of driver
   const read = layersFromPa(paDesign(configs[0]), { id: "pa", name: "gaps" }, PA_FLOOR);
-  assert.equal(
-    gapOf(chamberOf(speakerOf(read, SPEAKER_PART.sub), DRIVER_KIND.sub)),
-    HORN_ENGINE_GAP.netLiters,
-  );
   assert.equal(
     gapOf(chamberOf(speakerOf(read, SPEAKER_PART.top), DRIVER_KIND.mid)),
     HORN_ENGINE_GAP.driver,

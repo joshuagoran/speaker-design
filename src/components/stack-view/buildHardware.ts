@@ -54,6 +54,49 @@ function faceOf(p: PlacedHardware, box: Dims3, y: number, x: number) {
   }
 }
 
+/** How far a part stands off its face with no CAD model, in: its flange, its opening's rim and its grip or posts. */
+const PLAIN_STANDOFF_IN = FLANGE_T_IN + PROUD_IN + 0.4;
+
+/** A part's mark in the front view: the part seen edge-on, a rectangle by its center and size, in. */
+export interface HardwareFrontMark {
+  kind: PlacedHardware["kind"];
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The parts of a box's `plan` that the front view shows, as rectangles, on the same faces `buildHardware` puts them on
+ * (`faceOf`), for the cabinet `box` whose bottom is at `y` and center at `x`: a handle on a side stands out of it, a
+ * part on the lid stands up from it, each by its flange's height and its standoff (its CAD model's, else a plain one's).
+ * The back's parts (the input dish) face away and are left out.
+ */
+export function hardwareFrontMarks(
+  plan: BoxHardwarePlan,
+  box: Dims3,
+  y: number,
+  x = 0,
+): HardwareFrontMark[] {
+  return plan.parts.flatMap((p): HardwareFrontMark[] => {
+    const flange = mountedFlange(p.part);
+    if (!flange || p.panel === "back") return [];
+    const model = HARDWARE_MESHES[p.part.id];
+    const standoff = model ? model.max[2] * MM_IN : PLAIN_STANDOFF_IN;
+    const face = faceOf(p, box, y, x).at;
+    switch (p.panel) {
+      case "sideL":
+        return [{ kind: p.kind, x: face.x - standoff / 2, y: face.y, w: standoff, h: flange.up }];
+      case "sideR":
+        return [{ kind: p.kind, x: face.x + standoff / 2, y: face.y, w: standoff, h: flange.up }];
+      case "top":
+        return [
+          { kind: p.kind, x: face.x, y: face.y + standoff / 2, w: flange.across, h: standoff },
+        ];
+    }
+  });
+}
+
 /** Each panel's up direction for a part on it (on the lid: front to back), scene axes. */
 const UP: Record<PlacedHardware["panel"], THREE.Vector3> = {
   sideL: new THREE.Vector3(0, 1, 0),

@@ -20,9 +20,11 @@
 // The walls start at the throat, just in front of the cones: the throat is the opening between the side walls' back
 // edges (lib/speaker/hornThroat), narrower than the cones where the horn loads them, so the edges cover the cones'
 // outer parts. The drivers' bay behind it is the front chamber: as deep as the walls' clearance (`frontIn`), the box
-// round the cones across, its sides closing it off from the wedges beside the flare, each wall's back edge returning
-// to them along the throat's plane. The drivers' bodies stand behind the bay, as deep as the deepest driver's catalog
-// depth, and the path fits only with them inside the box.
+// round the cones and the throat across (never smaller than the throat), its sides closing it off from the wedges
+// beside the flare, each wall's back edge returning to them along the throat's plane as a strip (`HornBay.strips`):
+// the bay's face less the throat. The strips are the only wood in that plane; the throat's opening stays clear from the
+// cones' faces to the mouth. The drivers' bodies stand behind the bay, as deep as the deepest driver's catalog depth,
+// and the path fits only with them inside the box.
 //
 // A folded path runs in legs along the box's depth, one more than it has folds, stacked up the box; each leg is as long
 // along the depth as it is along the path, so the legs' lengths add up to the path. A turn joins two legs through a gap
@@ -70,12 +72,19 @@ export interface HornTurn {
 }
 
 /**
- * The bay the drivers stand in behind the throat: the front chamber, the box round the cones from `z0` to `z1` (the
- * walls' back edges at one end, the cones' faces at the other), and the drivers' bodies behind it.
+ * The bay the drivers stand in behind the throat: the front chamber, the box round the cones and the throat from `z0` to
+ * `z1` (the walls' back edges at one end, the cones' faces at the other), and the drivers' bodies behind it.
  */
 export interface HornBay extends FaceRect {
   z0: number;
   z1: number;
+  /**
+   * the walls' back edges at the throat's plane: the bay's face less the throat's opening, as up to four rectangles in
+   * the front view (the sides, full height; the top and bottom, over the throat's width), each `stripIn` deep from the
+   * throat's plane toward the cones
+   */
+  strips: FaceRect[];
+  stripIn: number;
   /** where the cones' faces (their frames' fronts) stand, in: the bay's end away from the throat */
   coneZ: number;
   /** where the drivers' bodies end behind the cones, in */
@@ -94,8 +103,6 @@ export interface HornPath {
   pathIn: number;
   /** the drivers' bay at the throat; null when the chamber has no cone to size it */
   bay: HornBay | null;
-  /** how far the drivers move from where the spec sets them to stand in the bay, in the front view, in */
-  driverShift: { x: number; y: number };
   /** what the path takes of the box: its depth along z and its height, in (the stack of legs, or the tallest section) */
   needs: { depthIn: number; heightIn: number };
   /** what the box gives it: its clear depth, and its clear height */
@@ -111,8 +118,8 @@ export interface HornPathInput {
   areaScale: number;
   /** the mouth on the baffle, in the front view */
   mouth: FaceRect;
-  /** the box round the drivers as the spec sets them (the bay's size); null for none */
-  drivers: FaceRect | null;
+  /** the box round the drivers (the bay's size, at least the throat's); null for none */
+  drivers: Dims2 | null;
   /** the room the horn has: the chamber's clear face less the vents beside the mouth, and its clear depth */
   clear: FaceRect;
   depthIn: number;
@@ -311,23 +318,30 @@ function hornPathWithFolds(
   /** the bay's center along one axis: at the throat's, kept inside the face (centered where the bay is larger) */
   const within = (at: number, size: number, lo: number, span: number) =>
     size >= span ? lo + span / 2 : Math.min(lo + span - size / 2, Math.max(lo + size / 2, at));
-  const bayAt = drivers && {
-    x: within(throat.cx, drivers.w, clear.x, clear.w),
-    y: within(throat.cy, drivers.h, clear.y, clear.h),
+  /** the bay holds the cones and the throat's opening: never smaller than it (its strips are the face less the throat) */
+  const bayBox = drivers && { w: Math.max(drivers.w, throat.w), h: Math.max(drivers.h, throat.h) };
+  const bayAt = bayBox && {
+    x: within(throat.cx, bayBox.w, clear.x, clear.w),
+    y: within(throat.cy, bayBox.h, clear.y, clear.h),
   };
   /** the drivers face the throat: behind it on an even path (its first leg starts at the back), ahead on an odd one */
   const way = n % 2 === 0 ? 1 : -1;
   const coneZ = throat.z + way * frontIn;
-  const bay: HornBay | null = drivers &&
+  const bay: HornBay | null = bayBox &&
     bayAt && {
-      x: bayAt.x - drivers.w / 2,
-      y: bayAt.y - drivers.h / 2,
-      w: drivers.w,
-      h: drivers.h,
+      x: bayAt.x - bayBox.w / 2,
+      y: bayAt.y - bayBox.h / 2,
+      w: bayBox.w,
+      h: bayBox.h,
       z0: Math.min(throat.z, coneZ),
       z1: Math.max(throat.z, coneZ),
       coneZ,
       bodyZ: coneZ + way * bodyIn,
+      strips: throatStrips(
+        { x: bayAt.x - bayBox.w / 2, y: bayAt.y - bayBox.h / 2, ...bayBox },
+        { x: throat.cx - throat.w / 2, y: throat.cy - throat.h / 2, w: throat.w, h: throat.h },
+      ),
+      stripIn: Math.min(wallIn, frontIn),
     };
   const depthNeed = Math.max(plan.backZ + plan.backGap, bay ? Math.max(bay.z1, bay.bodyZ) : 0);
   const heightNeed =
@@ -353,14 +367,30 @@ function hornPathWithFolds(
     folds: n,
     pathIn: total,
     bay,
-    driverShift: {
-      x: drivers && bayAt ? bayAt.x - (drivers.x + drivers.w / 2) : 0,
-      y: drivers && bayAt ? bayAt.y - (drivers.y + drivers.h / 2) : 0,
-    },
     needs: { depthIn: depthNeed, heightIn: heightNeed },
     room: { depthIn, heightIn: heightRoom },
     fits,
   };
+}
+
+/** The least a strip is wide or tall, in: a smaller one is no wood at all. */
+const MIN_STRIP_IN = 1e-6;
+
+/**
+ * The bay's face less the throat's opening, as rectangles: the two sides over the bay's whole height, then the top and the
+ * bottom over the throat's width. A throat as wide (or as tall) as the bay leaves no strip there.
+ */
+function throatStrips(bay: FaceRect, throat: FaceRect): FaceRect[] {
+  const bayRight = bay.x + bay.w,
+    bayTop = bay.y + bay.h,
+    throatRight = throat.x + throat.w,
+    throatTop = throat.y + throat.h;
+  return [
+    { x: bay.x, y: bay.y, w: throat.x - bay.x, h: bay.h },
+    { x: throatRight, y: bay.y, w: bayRight - throatRight, h: bay.h },
+    { x: throat.x, y: throatTop, w: throat.w, h: bayTop - throatTop },
+    { x: throat.x, y: bay.y, w: throat.w, h: throat.y - bay.y },
+  ].filter((strip) => strip.w > MIN_STRIP_IN && strip.h > MIN_STRIP_IN);
 }
 
 /**

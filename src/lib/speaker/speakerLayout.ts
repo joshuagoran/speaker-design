@@ -1,7 +1,9 @@
 // Where a speaker spec's parts sit in its cabinet's front view, inches: the chambers at their `at` positions and the
 // walls two of them share (`sharedWalls`, the lower or left chamber's), each driver entry's drivers, the port by the
 // rule of the engine it comes from (a Hi-fi round port or radiators at their own position where set), and a
-// horn-loaded chamber's mouth (at its own position where set). The 3D view (stack-view/buildSpeakerScene) and
+// horn-loaded chamber's mouth (at its own position where set). Where the drivers stand is settled here, once, for every
+// reader: on a baffle, at the spec's position kept on the baffle and off every other opening; in a horn-loaded chamber,
+// stacked and centered in the bay behind the throat (`driverSpots`). The 3D view (stack-view/buildSpeakerScene) and
 // the front drawing (drawings/SpeakerFront) both read it. x is across from the cabinet's center line (+ to the right
 // seen from the front), y up from the cabinet's bottom. Both views draw the left speaker of a pair, so a driver's
 // `xIn` (+ toward the pair's inside) is + to the right, as the Hi-fi page draws it. Pure.
@@ -37,8 +39,9 @@ import {
 import { byId } from "../tables";
 import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
-import { clearDepthIn, sharedWalls, TOUCH_IN } from "./chamberAir";
+import { clearDepthIn, sharedWalls, slotRunIn, TOUCH_IN } from "./chamberAir";
 import { RADIATOR_PANEL } from "../hifi/hifi";
+import { subVentOpenings, subVentPlan } from "../pa/subVentPlan";
 import {
   radiatorSpots,
   roundPortSpots,
@@ -46,7 +49,8 @@ import {
   type RoundSpot,
 } from "../hifi/boxLayout";
 import { PANEL } from "../../constants/cutParts";
-import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
+import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
+import { DRIVER_CUTOUT_IN, HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { CM2_PER_IN2 } from "../../constants/units";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
@@ -103,6 +107,11 @@ export interface PlacedChamber {
   walls: ChamberWall[];
   /** another chamber touches it (shares a wall with it) */
   touches: boolean;
+  /**
+   * where each of its driver entries' drivers stand (`placeDrivers`, read through `driverSpots`); an entry's spots stay
+   * out of it where the spec sets a place the layout does not keep (a horn on the top)
+   */
+  spots: Map<SpeakerDriver, FacePoint[]>;
 }
 
 /** A cabinet's chambers placed, and the walls they share. */
@@ -142,8 +151,11 @@ function splitSpan(span: Span, marks: readonly Span[]): { span: Span; marked: bo
   return out;
 }
 
+/** What the layout reads of a cabinet: its chambers and panels, and the frame a horn's path is cut for. */
+type LayoutCabinet = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
+
 /** The cabinet's chambers placed in its front view, with the walls they build and share. */
-export function speakerLayout(cabinet: Pick<SpeakerCabinet, "chambers" | "panel">): SpeakerLayout {
+export function speakerLayout(cabinet: LayoutCabinet): SpeakerLayout {
   const t = cabinet.panel.thicknessIn;
   const list = cabinet.chambers;
   if (!list.length)
@@ -203,8 +215,11 @@ export function speakerLayout(cabinet: Pick<SpeakerCabinet, "chambers" | "panel"
       clear: { x: x0 + lo.x, y: y0 + lo.y, w: w - lo.x - t, h: h - lo.y - t },
       walls,
       touches: above.length + under.length + right.length + leftOf.length > 0,
+      spots: new Map(),
     };
   });
+  // the drivers' places, once every chamber's face and walls are known (a horn's path reads them)
+  for (const placed of chambers) placed.spots = placeDrivers(cabinet, placed);
   const area = list.reduce((sum, c) => sum + c.dims.w * c.dims.h, 0);
   const disjoint = boxes.every((a, i) =>
     boxes
@@ -318,17 +333,33 @@ export function driverAcrossIn(driver: SpeakerDriver): number {
 }
 
 /**
- * Where an entry's `count` drivers sit: side by side across its position, a driver's width and a gap apart. On the
- * baffle, each center (`position` from the chamber's center line and its bottom); a horn on the top stands on the
- * chamber's top, at its `xIn`.
+ * Where an entry's `count` drivers sit as the spec sets them: side by side across its position, a driver's width and a
+ * gap apart. On the baffle, each center (`position` from the chamber's center line and its bottom); a horn on the top
+ * stands on the chamber's top, at its `xIn`. The layout keeps these only for a horn on the top (`driverSpots`).
+ */
+function specSpots(placed: PlacedChamber, driver: SpeakerDriver): FacePoint[] {
+  const y = onTop(driver) ? placed.y0 + placed.dims.h : placed.y0 + driver.position.yIn;
+  return groupOffsets(driver).map((dx) => ({ xIn: placed.cx + driver.position.xIn + dx, yIn: y }));
+}
+
+/** How far apart an entry's alike drivers' centers are, in: a driver's width and a gap. */
+const groupPitch = (driver: SpeakerDriver) => driverAcrossIn(driver) + DRIVER_GAP_IN;
+
+/** Each of an entry's drivers' center across from the entry's own center, in. */
+const groupOffsets = (driver: SpeakerDriver): number[] =>
+  Array.from(
+    { length: Math.max(1, driver.count) },
+    (_, i) => (i - (Math.max(1, driver.count) - 1) / 2) * groupPitch(driver),
+  );
+
+/**
+ * Where an entry's `count` drivers stand, as the layout settles them (`placeDrivers`): on a baffle, the spec's position
+ * kept inside the baffle and off the other drivers and openings; in a horn-loaded chamber, stacked and centered in the
+ * bay behind the throat; a horn on the top stands as the spec sets it. The front drawing, the 3D view, the cutlist and
+ * the Space page all read these.
  */
 export function driverSpots(placed: PlacedChamber, driver: SpeakerDriver): FacePoint[] {
-  const pitch = driverAcrossIn(driver) + DRIVER_GAP_IN;
-  const y = onTop(driver) ? placed.y0 + placed.dims.h : placed.y0 + driver.position.yIn;
-  return Array.from({ length: Math.max(1, driver.count) }, (_, i) => ({
-    xIn: placed.cx + driver.position.xIn + (i - (driver.count - 1) / 2) * pitch,
-    yIn: y,
-  }));
+  return placed.spots.get(driver) ?? specSpots(placed, driver);
 }
 
 /**
@@ -410,19 +441,19 @@ export interface SlotOpening extends Dims2 {
 /**
  * A Hi-fi slot's openings on its chamber's baffle, in the chamber's own coordinates: `x` from its center line, `y` (an
  * opening's bottom) up from its bottom. Along the floor (the default): `n` alike stacked from the clear face's floor up,
- * each under its own shelf a wall thick, each its own width where set (else the clear face's) and centered across the clear
- * face. Up the sides (`SLOT_PLACE`): `n` alike standing on the floor, alternately against the left and the right wall and
- * a wall apart across, each as wide as the slot's narrow side and as tall as its long side (at most the clear face).
+ * each under its own shelf a wall thick, each the clear face's whole width (`slotRunIn`). Up the sides (`SLOT_PLACE`): `n`
+ * alike standing on the floor, alternately against the left and the right wall and a wall apart across, each as wide as
+ * the slot's narrow side and as tall as the clear face.
  */
 export function slotOpeningsAt(
   placed: Pick<PlacedChamber, "clear" | "cx" | "y0">,
-  port: Pick<SpeakerSlotPort, "n" | "h" | "w" | "place">,
+  port: Pick<SpeakerSlotPort, "n" | "h" | "place">,
   t: number,
 ): SlotOpening[] {
   const { clear } = placed;
   const n = Math.max(1, port.n);
   if (port.place === SLOT_PLACE.sides) {
-    const h = Math.min(port.w ?? clear.h, clear.h);
+    const h = slotRunIn(clear, port);
     return Array.from({ length: n }, (_, k) => {
       const left = k % 2 === 0;
       const inset = port.h / 2 + Math.floor(k / 2) * (port.h + t);
@@ -435,7 +466,7 @@ export function slotOpeningsAt(
       };
     });
   }
-  const w = port.w ?? clear.w;
+  const w = slotRunIn(clear, port);
   return Array.from({ length: n }, (_, k) => ({
     x: clear.x + clear.w / 2 - placed.cx,
     y: clear.y - placed.y0 + k * (port.h + t),
@@ -638,19 +669,22 @@ export interface HornFlare {
   mouthMoved: boolean;
 }
 
-/** The box round a chamber's drivers as the spec sets them, or null for none that have a size. */
-function driverBox(placed: PlacedChamber): FaceRect | null {
-  const spots = placed.chamber.drivers.flatMap((d) =>
-    driverAcrossIn(d) > 0
-      ? driverSpots(placed, d).map((s) => ({ x: s.xIn, y: s.yIn, r: driverAcrossIn(d) / 2 }))
-      : [],
+/**
+ * The box round a chamber's drivers, or null for none that have a size: where they stand stacked in a horn's bay
+ * (`hornStack`), or as the spec sets them on a baffle (a back-loaded horn's).
+ */
+function driverBox(placed: PlacedChamber): Dims2 | null {
+  const drivers = placed.chamber.drivers.filter((d) => !onTop(d) && driverAcrossIn(d) > 0);
+  if (!drivers.length) return null;
+  if (!driversOnBaffle(placed.chamber)) return hornStack(drivers, placed.clear).box;
+  const spots = drivers.flatMap((d) =>
+    specSpots(placed, d).map((s) => ({ x: s.xIn, y: s.yIn, r: driverAcrossIn(d) / 2 })),
   );
-  if (!spots.length) return null;
   const x0 = Math.min(...spots.map((s) => s.x - s.r)),
     x1 = Math.max(...spots.map((s) => s.x + s.r)),
     y0 = Math.min(...spots.map((s) => s.y - s.r)),
     y1 = Math.max(...spots.map((s) => s.y + s.r));
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  return { w: x1 - x0, h: y1 - y0 };
 }
 
 /**
@@ -703,13 +737,421 @@ export function hornFlare(
   return { mouth, path, mouthClipped: fit < 1 - 1e-9, mouthMoved: set?.moved ?? false };
 }
 
+/** A box in the front view by its edges, in. */
+export interface EdgeBox {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+
+/** The box of width `w` and height `h` centered at (x, y). */
+const boxAt = (x: number, y: number, w: number, h: number): EdgeBox => ({
+  x0: x - w / 2,
+  x1: x + w / 2,
+  y0: y - h / 2,
+  y1: y + h / 2,
+});
+
+/** How far two boxes may overlap before they count as overlapping, in: a shared edge is no overlap. */
+const OVERLAP_IN = 1e-9;
+/** The step the search for a free place moves by, in. */
+const SCAN_STEP_IN = 0.25;
+
+const overlapping = (a: EdgeBox, b: EdgeBox) =>
+  a.x0 < b.x1 - OVERLAP_IN &&
+  b.x0 < a.x1 - OVERLAP_IN &&
+  a.y0 < b.y1 - OVERLAP_IN &&
+  b.y0 < a.y1 - OVERLAP_IN;
+
+/**
+ * What a driver covers on its baffle, in, across and up: a cone's nominal size or frame, a tweeter's plate or horn, a
+ * compression driver's horn. A baffle horn the cutout trims to the clear face (a rectangular or meshed horn: `hornFits`)
+ * is no wider than `clear`. No other driver, port or slot may overlap it.
+ */
+export function driverFrame(driver: SpeakerDriver, clear: Dims2): Dims2 {
+  const horn = driverHorn(driver);
+  const across = driverAcrossIn(driver);
+  switch (driver.kind) {
+    case DRIVER_KIND.tweeter: {
+      if (horn) return { w: horn.size.w, h: horn.size.h };
+      const tweeter = hifiDriverById("tweeter", driver.driverId);
+      const face = tweeter && (tweeter.ownGuide ?? tweeter.faceplate);
+      return { w: face?.w ?? 0, h: face?.h ?? 0 };
+    }
+    case DRIVER_KIND.compression: {
+      if (!horn) return { w: across, h: across };
+      const trimmed = !!horn.rect || MESHED_HORN_IDS.has(horn.id);
+      return { w: trimmed ? Math.min(horn.size.w, clear.w) : horn.size.w, h: horn.size.h };
+    }
+    default:
+      return { w: across, h: across };
+  }
+}
+
+/**
+ * A driver's cutout in its baffle, in, across and up: a cone's round hole (the cutlist's), a plate's or a horn's own.
+ * It stays inside the baffle's panel (the frame round it may reach the panel's edge).
+ */
+export function driverFootprint(driver: SpeakerDriver, clear: Dims2): Dims2 {
+  const round = (diameter: number): Dims2 => ({ w: diameter, h: diameter });
+  const hifiCutout = (size: number) =>
+    round(HIFI_DRIVER_CUTOUT_IN[size] ?? size * HIFI_GENERIC_BODIES.cutoutPerSize);
+  switch (driver.kind) {
+    case DRIVER_KIND.sub: {
+      const sub = byId(SUB_OPTIONS, driver.driverId);
+      return sub ? round(DRIVER_CUTOUT_IN[sub.size]) : round(0);
+    }
+    case DRIVER_KIND.mid: {
+      const mid = byId(MID_OPTIONS, driver.driverId);
+      return mid ? round(DRIVER_CUTOUT_IN[mid.size]) : round(0);
+    }
+    case DRIVER_KIND.woofer: {
+      const woofer = hifiDriverById("woofer", driver.driverId);
+      return woofer ? hifiCutout(woofer.size) : round(0);
+    }
+    case DRIVER_KIND.coaxial: {
+      const coax = byId(FILL_OPTIONS, driver.driverId);
+      return coax ? hifiCutout(coax.size) : round(0);
+    }
+    default:
+      return driverFrame(driver, clear);
+  }
+}
+
+/**
+ * One driver entry's drivers as a group on the baffle: each driver's center from the group's own, and the group's size
+ * by what it covers (`frame`) and by its cutouts (`cutout`).
+ */
+function driverGroup(driver: SpeakerDriver, clear: Dims2) {
+  const offsets = groupOffsets(driver);
+  const span = offsets[offsets.length - 1] - offsets[0];
+  const sized = ({ w, h }: Dims2): Dims2 => ({ w: span + w, h });
+  return {
+    offsets,
+    frame: sized(driverFrame(driver, clear)),
+    cutout: sized(driverFootprint(driver, clear)),
+  };
+}
+
+/**
+ * The drivers of a horn-loaded chamber stacked and centered, as the bay holds them: each entry's drivers side by side
+ * (as on a baffle), the entries one above the other, the first at the bottom, a gap (`DRIVER_GAP_IN`, less where the
+ * clear face is not tall enough for it) apart. Each driver's center from the stack's own, and the box round the stack.
+ */
+function hornStack(drivers: readonly SpeakerDriver[], clear: Dims2) {
+  const groups = drivers.map((d) => {
+    const { offsets, frame } = driverGroup(d, clear);
+    return { driver: d, offsets, size: frame };
+  });
+  const total = groups.reduce((sum, g) => sum + g.size.h, 0);
+  const gap =
+    groups.length > 1
+      ? Math.min(DRIVER_GAP_IN, Math.max(0, (clear.h - total) / (groups.length - 1)))
+      : 0;
+  const height = total + gap * Math.max(0, groups.length - 1);
+  let y = -height / 2;
+  const rows = groups.map((g) => {
+    const row = { driver: g.driver, dy: y + g.size.h / 2, offsets: g.offsets };
+    y += g.size.h + gap;
+    return row;
+  });
+  return { rows, box: { w: Math.max(0, ...groups.map((g) => g.size.w)), h: height } };
+}
+
+/**
+ * The openings in a chamber's baffle that no driver may overlap, as boxes in the front view: the Hi-fi slots (the stack
+ * along the floor with its shelves, or each column up the sides), the Hi-fi round ports and the radiators on the baffle,
+ * the PA port's openings (its tubes, its side ducts, its letterbox's band), and a back-loaded horn's mouth.
+ */
+export function baffleOpenings(cabinet: LayoutCabinet, placed: PlacedChamber): EdgeBox[] {
+  const t = cabinet.panel.thicknessIn;
+  const { clear, cx, y0, chamber } = placed;
+  const boxes: EdgeBox[] = [];
+  const rule = portRule(chamber);
+  if (rule?.rule === PORT_RULE.pa) {
+    const plan = subVentPlan(rule.sub, placed.dims, rule.portStyle, rule.portGeom, t);
+    for (const o of subVentOpenings(plan, placed.dims, t))
+      boxes.push(
+        o.shape === "circle"
+          ? boxAt(cx + o.x, y0 + o.y, 2 * o.r, 2 * o.r)
+          : boxAt(cx + o.x, y0 + o.y, o.w, o.h),
+      );
+    // the letterbox's band along the floor, under its shelf
+    if (plan.bandH > 0)
+      boxes.push({ x0: clear.x, x1: clear.x + clear.w, y0: clear.y, y1: clear.y + plan.bandH });
+  } else if (rule?.rule === PORT_RULE.hifi) {
+    const { port } = rule;
+    if (port.shape === PORT_SHAPE.slot) {
+      const openings = slotOpeningsAt(placed, port, t);
+      if (port.place === SLOT_PLACE.sides) {
+        // a column of each side's slots and their walls, from the wall in
+        for (const side of [-1, 1] as const) {
+          const n = openings.filter((o) => o.side === side).length;
+          if (n === 0) continue;
+          const width = n * (port.h + t);
+          boxes.push({
+            x0: side < 0 ? clear.x : clear.x + clear.w - width,
+            x1: side < 0 ? clear.x + width : clear.x + clear.w,
+            y0: clear.y,
+            y1: clear.y + clear.h,
+          });
+        }
+      } else {
+        // the stack along the floor, with the shelf over its top slot
+        const top = openings[openings.length - 1];
+        boxes.push({
+          x0: clear.x,
+          x1: clear.x + clear.w,
+          y0: clear.y,
+          y1: y0 + top.y + top.h + t,
+        });
+      }
+    } else {
+      const { panel, spots } = roundPortsAt(placed, port);
+      if (panel === PANEL.baffle)
+        for (const s of spots) {
+          const d = 2 * (s.r + HIFI_BOX_LAYOUT.portTubeWallIn);
+          boxes.push(boxAt(cx + s.x, y0 + s.y, d, d));
+        }
+    }
+  }
+  for (const s of radiatorsAt(cabinet, placed).spots)
+    if (s.panel === PANEL.baffle) boxes.push(boxAt(cx + s.x, y0 + s.y, s.shape.w, s.shape.h));
+  // a back-loaded horn's mouth is on the baffle, apart from its drivers
+  if (chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.back) {
+    const flare = hornFlare(cabinet, placed);
+    if (flare)
+      boxes.push({
+        x0: flare.mouth.x,
+        x1: flare.mouth.x + flare.mouth.w,
+        y0: flare.mouth.y,
+        y1: flare.mouth.y + flare.mouth.h,
+      });
+  }
+  return boxes;
+}
+
+/** The most entries whose every order is tried when one leaves another no room (`orders`). */
+const MAX_PERMUTED = 5;
+
+/**
+ * The orders to place `items` in: as they are, then the other orders (every one for a few items, else only the reverse),
+ * so a place found for one never has to leave another none.
+ */
+function* orders<T>(items: readonly T[]): Generator<readonly T[]> {
+  yield items;
+  if (items.length < 2) return;
+  if (items.length > MAX_PERMUTED) {
+    yield [...items].reverse();
+    return;
+  }
+  const permute = function* (rest: readonly T[], head: readonly T[]): Generator<readonly T[]> {
+    if (rest.length === 0) {
+      yield head;
+      return;
+    }
+    for (let i = 0; i < rest.length; i++)
+      yield* permute([...rest.slice(0, i), ...rest.slice(i + 1)], [...head, rest[i]]);
+  };
+  // the spec's own order came first; skip it here
+  let skipped = false;
+  for (const order of permute(items, [])) {
+    if (!skipped && order.every((item, i) => item === items[i])) {
+      skipped = true;
+      continue;
+    }
+    yield order;
+  }
+}
+
+/** A center along one axis kept so that a part of `size` stays inside [lo, lo + span] (centered where it is larger). */
+const keptIn = (at: number, size: number, lo: number, span: number) =>
+  size >= span ? lo + span / 2 : Math.min(lo + span - size / 2, Math.max(lo + size / 2, at));
+
+/**
+ * The place nearest `want` for a part whose cutouts are `size` across and up inside `face`, and that covers `frame`
+ * clear of every box in `taken`: `want` kept inside the face, else the nearest place beside a box it meets (or, failing
+ * that, the nearest free place on a grid). Where no free place exists (the face is too full), `want` kept inside the
+ * face, and `free` is false.
+ */
+function nearestFree(
+  face: FaceRect,
+  { size, frame }: { size: Dims2; frame: Dims2 },
+  want: { x: number; y: number },
+  taken: readonly EdgeBox[],
+): { x: number; y: number; free: boolean } {
+  const kept = {
+    x: keptIn(want.x, size.w, face.x, face.w),
+    y: keptIn(want.y, size.h, face.y, face.h),
+  };
+  const free = (c: { x: number; y: number }) =>
+    !taken.some((b) => overlapping(boxAt(c.x, c.y, frame.w, frame.h), b));
+  const inside = (c: { x: number; y: number }) =>
+    c.x - size.w / 2 >= face.x - OVERLAP_IN &&
+    c.x + size.w / 2 <= face.x + face.w + OVERLAP_IN &&
+    c.y - size.h / 2 >= face.y - OVERLAP_IN &&
+    c.y + size.h / 2 <= face.y + face.h + OVERLAP_IN;
+  if (free(kept)) return { ...kept, free: true };
+  const near = (list: { x: number; y: number }[]) =>
+    list
+      .filter((c) => inside(c) && free(c))
+      .sort(
+        (a, b) => Math.hypot(a.x - want.x, a.y - want.y) - Math.hypot(b.x - want.x, b.y - want.y),
+      )[0];
+  // beside each box in the way: touching its edge across, up, or both
+  const beside = taken.flatMap((b) => {
+    const xs = [b.x1 + frame.w / 2, b.x0 - frame.w / 2],
+      ys = [b.y1 + frame.h / 2, b.y0 - frame.h / 2];
+    return [
+      ...xs.map((x) => ({ x, y: kept.y })),
+      ...ys.map((y) => ({ x: kept.x, y })),
+      ...xs.flatMap((x) => ys.map((y) => ({ x, y }))),
+    ];
+  });
+  const found = near(beside);
+  if (found) return { ...found, free: true };
+  const grid: { x: number; y: number }[] = [];
+  for (
+    let x = face.x + size.w / 2;
+    x <= face.x + face.w - size.w / 2 + OVERLAP_IN;
+    x += SCAN_STEP_IN
+  )
+    for (
+      let y = face.y + size.h / 2;
+      y <= face.y + face.h - size.h / 2 + OVERLAP_IN;
+      y += SCAN_STEP_IN
+    )
+      grid.push({ x, y });
+  const onGrid = near(grid);
+  return onGrid ? { ...onGrid, free: true } : { ...kept, free: false };
+}
+
+/**
+ * Where a chamber's drivers stand (see `driverSpots`):
+ * - on a baffle (a direct chamber's, a back-loaded horn's): each entry's drivers as one group at the spec's position,
+ *   kept inside the clear face (their footprints, cutouts and frames) and off the drivers before it and every opening
+ *   in the baffle (`baffleOpenings`), at the nearest place where that holds;
+ * - in a front-loaded or tapped horn's chamber: stacked and centered in the bay behind the throat (`hornStack`), at the
+ *   bay the horn's path gives them (lib/speaker/hornGeometry), else at the center of the horn's face.
+ * A horn on the top, and a horn that no longer fits where it is set, stay as the spec has them (the views leave the
+ * second out).
+ */
+function placeDrivers(
+  cabinet: LayoutCabinet,
+  placed: PlacedChamber,
+): Map<SpeakerDriver, FacePoint[]> {
+  const spots = new Map<SpeakerDriver, FacePoint[]>();
+  const drivers = placed.chamber.drivers.filter(
+    (d) => !onTop(d) && driverAcrossIn(d) > 0 && hornFitsWhereSet(placed, d),
+  );
+  if (!drivers.length) return spots;
+  if (driversOnBaffle(placed.chamber)) {
+    const openings = baffleOpenings(cabinet, placed);
+    /** the drivers placed one after the other in `order`, each at the nearest free place; whether every one found one */
+    const placeIn = (order: readonly SpeakerDriver[]) => {
+      const taken = [...openings];
+      const out = new Map<SpeakerDriver, FacePoint[]>();
+      let allFree = true;
+      for (const d of order) {
+        const { offsets, frame, cutout } = driverGroup(d, placed.clear);
+        const c = nearestFree(
+          placed.clear,
+          { size: cutout, frame },
+          { x: placed.cx + d.position.xIn, y: placed.y0 + d.position.yIn },
+          taken,
+        );
+        allFree &&= c.free;
+        taken.push(boxAt(c.x, c.y, frame.w, frame.h));
+        out.set(
+          d,
+          offsets.map((dx) => ({ xIn: c.x + dx, yIn: c.y })),
+        );
+      }
+      return { spots: out, allFree };
+    };
+    // a driver placed first can leave a later one no room: another order may fit them all (the spec's order first)
+    let first: Map<SpeakerDriver, FacePoint[]> | null = null;
+    for (const order of orders(drivers)) {
+      const placedIn = placeIn(order);
+      first ??= placedIn.spots;
+      if (placedIn.allFree) return placedIn.spots;
+    }
+    return first ?? spots;
+  }
+  const stack = hornStack(drivers, placed.clear);
+  const bay = hornFlare(cabinet, placed)?.path.bay;
+  const face = hornFace(placed, cabinet.panel.thicknessIn);
+  const center = bay
+    ? { x: bay.x + bay.w / 2, y: bay.y + bay.h / 2 }
+    : {
+        x: keptIn(face.x + face.w / 2, stack.box.w, face.x, face.w),
+        y: keptIn(face.y + face.h / 2, stack.box.h, face.y, face.h),
+      };
+  for (const row of stack.rows)
+    spots.set(
+      row.driver,
+      row.offsets.map((dx) => ({ xIn: center.x + dx, yIn: center.y + row.dy })),
+    );
+  return spots;
+}
+
+/**
+ * The cabinet with every baffle driver's position set to where the layout stands it (`placeDrivers`): a typed position
+ * that would leave the baffle, or overlap another driver or opening, is kept at the nearest place that does not. A
+ * horn-loaded chamber's drivers have no position to set (the bay places them) and stay as they are. The same cabinet
+ * back when nothing moves.
+ */
+export function settledCabinet(cabinet: SpeakerCabinet): SpeakerCabinet {
+  const layout = speakerLayout(cabinet);
+  let moved = false;
+  const chambers = cabinet.chambers.map((chamber, i) => {
+    const placed = layout.chambers[i];
+    if (!driversOnBaffle(chamber)) return chamber;
+    const drivers = chamber.drivers.map((d) => {
+      const at = placed.spots.get(d);
+      if (!at?.length) return d;
+      const xIn = at.reduce((sum, s) => sum + s.xIn, 0) / at.length - placed.cx;
+      const yIn = at[0].yIn - placed.y0;
+      if (Math.abs(xIn - d.position.xIn) < MOVED_IN && Math.abs(yIn - d.position.yIn) < MOVED_IN)
+        return d;
+      moved = true;
+      return { ...d, position: { xIn, yIn } };
+    });
+    return { ...chamber, drivers };
+  });
+  return moved ? { ...cabinet, chambers } : cabinet;
+}
+
+/**
+ * The box a chamber's hardware is placed on, in the front view: the chamber's own box with a wall added where another
+ * chamber gives it one (so the box is whole, as the cutlist and the weights place the hardware on it), its center line
+ * `cx` across and its bottom `y0` up from the cabinet's bottom.
+ */
+export function chamberHardwareBox(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel">,
+  placed: Pick<PlacedChamber, "chamber" | "cx" | "y0" | "dims">,
+): { box: Dims3; cx: number; y0: number } {
+  const t = cabinet.panel.thicknessIn;
+  const { below, left } = sharedWalls(cabinet, placed.chamber);
+  return {
+    box: {
+      w: placed.dims.w + (left ? t : 0),
+      h: placed.dims.h + (below ? t : 0),
+      d: placed.dims.d,
+    },
+    cx: placed.cx - (left ? t / 2 : 0),
+    y0: placed.y0 - (below ? t : 0),
+  };
+}
+
 /**
  * A speaker's extent, in: its layout, across from the cabinet's center line (`minX`, `maxX`) and up from its bottom
  * (`maxY`), the horns standing on its top included. Each such horn's box (`topHorns`) is its mouth's width and height
  * and its body's depth, `HORN_LIFT_IN` above its lid and back from the front by its position's `yIn`, as the 3D view
  * sets it (x and y its box's bottom center at the mouth, z its mouth's distance back from the front).
  */
-export function speakerBounds(cabinet: Pick<SpeakerCabinet, "chambers" | "panel">) {
+export function speakerBounds(cabinet: LayoutCabinet) {
   const layout = speakerLayout(cabinet);
   const topHorns = layout.chambers.flatMap((placed) =>
     placed.chamber.drivers.flatMap((d) => {

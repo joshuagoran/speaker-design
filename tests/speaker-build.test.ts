@@ -363,7 +363,7 @@ test("speaker build: every slot of a chamber is cut and takes its air", () => {
           ...chamberAt({ xIn: 0, yIn: 0 }, { w: 14, h: 20, d: 14 }),
           vent: {
             kind: VENT_KIND.vented,
-            port: { shape: PORT_SHAPE.slot, n, h: 1, w: 10, len: 6 },
+            port: { shape: PORT_SHAPE.slot, n, h: 1, len: 6 },
             maxSpeedMs: 17,
           },
         },
@@ -382,7 +382,7 @@ test("speaker build: every slot of a chamber is cut and takes its air", () => {
   );
   // stacked from the floor, a slot and a shelf apart, as the cutlist, the 3D view and the front drawing all take them
   const [placed] = speakerLayout(two.cabinet).chambers;
-  const port = { n: 2, h: 1, w: 10 };
+  const port = { n: 2, h: 1 };
   const tw = two.cabinet.panel.thicknessIn;
   assert.deepEqual(
     slotOpeningsAt(placed, port, tw).map((o) => o.y - (placed.clear.y - placed.y0)),
@@ -394,7 +394,11 @@ test("speaker build: every slot of a chamber is cut and takes its air", () => {
   const t = one.cabinet.panel.thicknessIn;
   const L = 16.387 / 1000;
   assert.ok(Math.abs(b2.ventL - 2 * b1.ventL) < 1e-9, "both slots' air");
-  assert.ok(Math.abs(b2.woodL - b1.woodL - 10 * 6 * t * L) < 1e-9, "both shelves' wood");
+  // each shelf runs the whole clear width
+  assert.ok(
+    Math.abs(b2.woodL - b1.woodL - placed.clear.w * 6 * t * L) < 1e-9,
+    "both shelves' wood",
+  );
 });
 
 test("speaker build: a horn sits in the baffle or on the top wherever it fits, whatever its catalog shape", () => {

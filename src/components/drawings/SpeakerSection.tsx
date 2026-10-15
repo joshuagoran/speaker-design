@@ -192,20 +192,22 @@ export function SpeakerSection({ spec }: Props) {
           />
         )}
         {path.bay &&
-          placed.chamber.drivers.flatMap((d, j) =>
-            driverSpots(placed, d).map((spot, i) => {
-              const r = driverAcrossIn(d) / 2;
-              if (r <= 0 || !path.bay) return null;
-              const x = spot.xIn + path.driverShift.x;
-              return (
-                <rect
-                  key={`td${j}.${i}`}
-                  {...box(0, vTop, path.bay.coneZ, path.bay.bodyZ, x - r, x + r)}
-                  fill={pal.muted}
-                />
-              );
-            }),
-          )}
+          placed.chamber.drivers
+            .filter((d) => placed.spots.has(d))
+            .flatMap((d, j) =>
+              driverSpots(placed, d).map((spot, i) => {
+                const r = driverAcrossIn(d) / 2;
+                if (r <= 0 || !path.bay) return null;
+                const x = spot.xIn;
+                return (
+                  <rect
+                    key={`td${j}.${i}`}
+                    {...box(0, vTop, path.bay.coneZ, path.bay.bodyZ, x - r, x + r)}
+                    fill={pal.muted}
+                  />
+                );
+              }),
+            )}
         {/* the side section */}
         <rect {...box(1, vSide, -zero, dims.d - zero, y0, y0 + dims.h)} {...wall} />
         <rect {...box(1, vSide, 0, clearDepth, y0 + t, y0 + dims.h - t)} {...inner} />
@@ -241,20 +243,22 @@ export function SpeakerSection({ spec }: Props) {
           />
         )}
         {path.bay &&
-          placed.chamber.drivers.flatMap((d, j) =>
-            driverSpots(placed, d).map((spot, i) => {
-              const r = driverAcrossIn(d) / 2;
-              if (r <= 0 || !path.bay) return null;
-              const y = spot.yIn + path.driverShift.y;
-              return (
-                <rect
-                  key={`sd${j}.${i}`}
-                  {...box(1, vSide, path.bay.coneZ, path.bay.bodyZ, y - r, y + r)}
-                  fill={pal.muted}
-                />
-              );
-            }),
-          )}
+          placed.chamber.drivers
+            .filter((d) => placed.spots.has(d))
+            .flatMap((d, j) =>
+              driverSpots(placed, d).map((spot, i) => {
+                const r = driverAcrossIn(d) / 2;
+                if (r <= 0 || !path.bay) return null;
+                const y = spot.yIn;
+                return (
+                  <rect
+                    key={`sd${j}.${i}`}
+                    {...box(1, vSide, path.bay.coneZ, path.bay.bodyZ, y - r, y + r)}
+                    fill={pal.muted}
+                  />
+                );
+              }),
+            )}
       </g>
     );
   });

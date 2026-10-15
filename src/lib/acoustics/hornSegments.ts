@@ -15,7 +15,7 @@
 import type { Complex, HornSegment, Matrix2 } from "../../types";
 import { AIR_DENSITY, SPEED_OF_SOUND } from "../../constants/acoustics";
 import { HORN_PROFILE } from "../../constants/hornEngine";
-import { CM_PER_M, SQ_CM_PER_SQ_M } from "../../constants/units";
+import { CM_PER_M, CM3_PER_LITER, SQ_CM_PER_SQ_M } from "../../constants/units";
 import {
   add,
   complex,
@@ -64,6 +64,30 @@ export function segmentAreaAt(segment: HornSegment, x: number): number {
     }
   }
 }
+
+/**
+ * The air inside one segment, cm³, by its flare law: a conical segment is a cone's frustum, L/3 (S1 + S2 + √(S1 S2));
+ * an exponential one, S1 e^(mx) along its length, holds (S2 − S1) L / ln(S2 / S1) (S1 L where the two are equal); a
+ * parabolic one, its area growing linearly, holds L (S1 + S2) / 2.
+ */
+function segmentAirCm3(segment: HornSegment): number {
+  const { s1, s2, length } = segment;
+  if (isStraightSegment(segment)) return s1 * length;
+  switch (segment.profile) {
+    case HORN_PROFILE.conical:
+      return (length / 3) * (s1 + s2 + Math.sqrt(s1 * s2));
+    case HORN_PROFILE.parabolic:
+      return (length * (s1 + s2)) / 2;
+    case HORN_PROFILE.exponential:
+      return ((s2 - s1) * length) / Math.log(s2 / s1);
+  }
+}
+
+/** The air inside a horn's segments, L: every sized segment's, each by its flare law (`segmentAirCm3`). */
+export const segmentsAirLiters = (segments: readonly HornSegment[]) =>
+  segments
+    .filter(isSizedSegment)
+    .reduce((sum, segment) => sum + segmentAirCm3(segment) / CM3_PER_LITER, 0);
 
 /** Below this |(γx)²| the exponential solutions use their series form (see expSolutions). */
 const SERIES_LIMIT = 1e-8;

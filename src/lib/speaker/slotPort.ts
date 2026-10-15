@@ -3,7 +3,7 @@ import type { SlotPlace, SpeakerSlotPort } from "../../types";
 import { PA_SLOT_FINS, PORT_SHAPE, SLOT_KIND, SLOT_PLACE } from "../../constants/speakerSpec";
 
 /**
- * The slot as another kind: a divided slot (fins, one slot) or an open slot (stacked, its long side and fold). The
+ * The slot as another kind: a divided slot (fins, one slot) or an open slot (stacked, its fold). The
  * sizes the kinds share (narrow side, length) and the position stay; the rest is the new kind's own.
  */
 export function withSlotKind(port: SpeakerSlotPort, kind: keyof typeof SLOT_KIND): SpeakerSlotPort {

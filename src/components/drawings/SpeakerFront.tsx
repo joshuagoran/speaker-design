@@ -18,7 +18,10 @@ import {
   slotOpeningsAt,
   hornFitsWhereSet,
   hornCutoutBox,
+  chamberHardwareBox,
 } from "../../lib/speaker/speakerLayout";
+import { cabinetBuild } from "../../lib/speaker/speakerBuild";
+import { hardwareFrontMarks } from "../stack-view/buildHardware";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
@@ -27,7 +30,8 @@ import { CM2_PER_IN2 } from "../../constants/units";
 import { byId } from "../../lib/tables";
 import { isAmt, isRibbon } from "../../lib/hifi/hifi";
 import { PANEL } from "../../constants/cutParts";
-import { subVentHoles, subVentPlan } from "../stack-view/buildSubwoofer";
+import { subVentHoles } from "../stack-view/buildSubwoofer";
+import { subVentPlan } from "../../lib/pa/subVentPlan";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { HORN_CUTOUT_SHAPE, TOWER_HORN_WALL_GAP_IN, towerHornCutout } from "../../lib/pa/tower";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
@@ -55,7 +59,9 @@ const mouthShape = (horn: Horn) =>
  * What the front drawing spans, in: the speaker's extent (lib/speaker/speakerLayout `speakerBounds`, the horns on its
  * top included), and its margin at the drawing's scale (a drawing placed among others lines up with them).
  */
-export function speakerFrontFrame(cabinet: Pick<SpeakerSpec["cabinet"], "chambers" | "panel">) {
+export function speakerFrontFrame(
+  cabinet: Pick<SpeakerSpec["cabinet"], "chambers" | "panel" | "construction" | "insetIn">,
+) {
   const { layout, minX, maxX, maxY } = speakerBounds(cabinet);
   /** px per inch */
   const k = (VIEW_PX - 2 * PAD_PX) / Math.max(maxX - minX, maxY);
@@ -318,8 +324,8 @@ export function SpeakerFront({ spec }: Props) {
       placed.chamber.drivers.forEach((d, j) =>
         driverSpots(placed, d).forEach((spot, n) => {
           const across = driverAcrossIn(d);
-          const x = spot.xIn + path.driverShift.x,
-            y = spot.yIn + path.driverShift.y;
+          const x = spot.xIn,
+            y = spot.yIn;
           if (across > 0) out.push(circle(`b${i}.${j}.${n}`, x, y, across / 2, behind));
           const sd = coneParts(d)?.ts.Sd;
           if (sd)
@@ -344,6 +350,21 @@ export function SpeakerFront({ spec }: Props) {
     return out;
   };
 
+  // the handles and posts the build plans, seen edge-on where they stand out of the sides and the lid (the same parts and
+  // faces the 3D view draws: stack-view/buildHardware)
+  const build = cabinetBuild(cabinet);
+  const hardware = layout.chambers.flatMap((placed, i) => {
+    const plan = build.chambers[i]?.hardware;
+    if (!plan) return [];
+    const on = chamberHardwareBox(cabinet, placed);
+    return hardwareFrontMarks(plan, on.box, on.y0, on.cx).map((m, j) =>
+      rect(`hw${i}.${j}`, m.x, m.y, m.w, m.h, {
+        fill: pal.muted,
+        stroke: pal.ink,
+        strokeWidth: 0.6,
+      }),
+    );
+  });
   const ro = cabinet.roundoverIn;
   const shells = layout.oneShell
     ? [{ x0: -layout.size.w / 2, y0: 0, w: layout.size.w, h: layout.size.h }]
@@ -383,6 +404,7 @@ export function SpeakerFront({ spec }: Props) {
             strokeDasharray="2 2"
           />
         ))}
+      {hardware}
       {layout.chambers.flatMap((placed, i) => {
         const { chamber } = placed;
         const parts = vent(placed, i);

@@ -262,12 +262,19 @@ Each PR stands alone. Lowest risk first.
       - PA v2 mid box (`PA_V2_MID_BOX`): two 10″ in one throat at a 2:1 compression ratio and an exponential flare
         (flat top and bottom, curved side walls), its mouth the face between the slots at the box's inside height,
         ~34 L rear air, side slots, tuned to ~95 Hz, crossed at the R-OSSE's lowest crossover.
-      - The PA v2 slots store their narrow size as the height and their long side as the width, in sizes of ⅛″. The
-        model reads only the area and the rectangle. The slot settings show the count, the narrow side, the long side
-        (where the slot sets one) and the length. "Auto" net air counts each slot and its shelf.
-      - The side slots draw up the front sides (`place` on the slot, `SLOT_PLACE`), beside the mouth. A slot's place is
-        not a setting yet. Later, with movable ports: "Auto" net air takes off the air of a horn's flare (today a horn
-        chamber's net air is set).
+      - The PA v2 slots store their narrow size as the height, in sizes of ⅛″. An open slot always runs the whole
+        inside width of its chamber (the inside height on the front sides) and uses the box walls: it has no long side
+        to set. The model reads only the area and the rectangle. The slot settings show the count, the narrow side and
+        the length. "Auto" net air counts each slot and its shelf. In a horn chamber it also takes off the air of the
+        flare and the front chamber.
+      - The side slots draw up the front sides (`place` on the slot, `SLOT_PLACE`), beside the mouth.
+      - The layout places every driver once (`driverSpots`), and the views, the cutlist and the Space page read it. In
+        a horn-loaded chamber the drivers stand stacked and centered in the bay behind the throat: the settings show
+        no position. On a baffle each cutout stays inside the clear face, and off every other driver, port and slot.
+        The page keeps the typed positions so (`settledCabinet`).
+      - The 3D view draws no wood in the horn's air path (cone face, throat, mouth) or over the mouth and slot
+        openings. The walls' back edges at the throat are boards round the throat's opening.
+      - The Speaker views draw the hardware (handles, input dish, horn posts) with the PA page's builder.
       - A horn mouth that a square would make taller than the clear face draws wider than square, up to the clear
         width. The PA v2 bins' mouths then fit the face.
     - **Cabinet settings (done).** A "Construction" fold: the construction, the baffle inset (a frame only) and the

@@ -110,8 +110,10 @@ import {
   hifiDriverById,
 } from "../data";
 import { byId } from "../tables";
-import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls } from "./chamberAir";
+import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls, slotRunIn } from "./chamberAir";
 import { coneDepthIn, driverListing, sourceOf } from "./driverParts";
+import { frontChamber, throatCones } from "./hornThroat";
+import { segmentsAirLiters } from "../acoustics/hornSegments";
 import {
   PORT_RULE,
   driverAcrossIn,
@@ -183,9 +185,11 @@ export interface ChamberBuild {
   /** its PA sub and port with its box, where the PA sub box's rules apply (its duct-fit check reads them); else null */
   paSub: (PaSub & { box: Dims3 }) | null;
   inside: ChamberInside;
-  /** its clear volume, the vent's air in it, the wood inside it and the hardware's recesses, L */
+  /** its clear volume, the vent's air in it, the horn's own air, the wood inside it and the hardware's recesses, L */
   clearL: number;
   ventL: number;
+  /** the air of the horn built into it, its flare and its front chamber; 0 for a direct chamber */
+  hornL: number;
   woodL: number;
   recessL: number;
   /** what it weighs, lb: its wood (panels and braces) with the fixings, its drivers and radiators, its hardware */
@@ -892,7 +896,13 @@ function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]
       : port.folded
         ? SPEAKER_TEXT.slotTooLongFolded
         : SPEAKER_TEXT.slotTooLong;
-    const shelf = slotShelfPart(box, { ...port, w: port.w ?? f.inside.iw }, t, tooLong);
+    // the slot runs the whole clear face (`slotRunIn`)
+    const shelf = slotShelfPart(
+      box,
+      { ...port, w: slotRunIn({ w: f.inside.iw, h: f.inside.ih }, port) },
+      t,
+      tooLong,
+    );
     return {
       // slots up the sides: the same plate, a wall of each slot instead of a roof
       parts: [
@@ -939,6 +949,7 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
       inside: f.inside,
       clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
       ventL: vent ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
+      hornL: hornAirL(chamber),
       woodL: insideWoodL(cabinet, f, bracing),
       recessL: hardware?.liters ?? 0,
       lb: { wood, drivers, hardware: hardwareLb, total: wood + drivers + hardwareLb },
@@ -950,9 +961,22 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
 }
 
 /**
+ * The air of a horn built into the chamber, L: its flare (each section by its flare law) and the front chamber under the
+ * walls' back edges (lib/speaker/hornThroat); it is the horn's, not the rear chamber's. 0 for a direct chamber.
+ */
+function hornAirL(chamber: SpeakerChamber): number {
+  if (chamber.load.kind !== CHAMBER_LOAD.horn) return 0;
+  const throat = throatCones(chamber.drivers);
+  return (
+    segmentsAirLiters(chamber.load.horn.segments) +
+    (throat ? frontChamber(throat.cone, throat.count).liters : 0)
+  );
+}
+
+/**
  * The chamber's air as the box models take it, L: its `netLiters` where set; else its clear volume less the cones'
- * displacement (`displacementL`), the vent's air, the wood inside it and the hardware's recesses (`cabinetBuild`), and
- * at least 1 L.
+ * displacement (`displacementL`), the vent's air, a horn's own air, the wood inside it and the hardware's recesses
+ * (`cabinetBuild`), and at least 1 L.
  */
 export function chamberNetLiters(
   cabinet: SpeakerCabinet,
@@ -964,7 +988,7 @@ export function chamberNetLiters(
   if (!build) return MIN_NET_L;
   return Math.max(
     MIN_NET_L,
-    build.clearL - displacementL - build.ventL - build.woodL - build.recessL,
+    build.clearL - displacementL - build.ventL - build.hornL - build.woodL - build.recessL,
   );
 }
 
@@ -1105,7 +1129,7 @@ function chamberNotes(
               formatInches(slotOpeningsAt(placed, port, t)[0].h),
             )
           : slotOpeningNote(
-              { ...port, w: port.w ?? f.inside.iw },
+              { ...port, w: f.inside.iw },
               slotOpeningsAt(placed, port, t).map((o) => marks.up(placed.y0 + o.y)),
             ),
       );

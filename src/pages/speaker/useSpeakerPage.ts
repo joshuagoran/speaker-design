@@ -3,6 +3,7 @@ import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
+import { settledCabinet } from "../../lib/speaker/speakerLayout";
 import {
   AUTO_BALANCE_TILT,
   autoBalanceSpeaker,
@@ -152,8 +153,10 @@ export function useSpeakerPage() {
     round: chamberRound,
     current: { musicDb: limits.musicDb, price: price.dollars, lb: build.lb },
   });
+  // every edit settles the drivers: a position that would leave the baffle, or overlap another driver or opening, is kept
+  // where the layout stands it (the settings, the views and the cutlist then agree)
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
-    setSpec((s) => ({ ...s, cabinet: edit(s.cabinet) }));
+    setSpec((s) => ({ ...s, cabinet: settledCabinet(edit(s.cabinet)) }));
   const editChambers = (edit: (chambers: readonly SpeakerChamber[]) => SpeakerChamber[]) =>
     editCabinet((c) => ({ ...c, chambers: edit(c.chambers) }));
   const editChamber = (i: number, edit: (chamber: SpeakerChamber) => SpeakerChamber) =>

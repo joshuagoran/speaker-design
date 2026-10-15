@@ -3,7 +3,13 @@
 // speakerBuild). Pure.
 //
 // Symbols kept short are the established ones: t is the wall's thickness, in (as lib/pa/calc and lib/hifi name it).
-import type { Dims2, PortStyle, SpeakerCabinet, SpeakerChamber } from "../../types";
+import type {
+  Dims2,
+  PortStyle,
+  SpeakerCabinet,
+  SpeakerChamber,
+  SpeakerSlotPort,
+} from "../../types";
 import { hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
 import {
   ductDividerIn,
@@ -72,6 +78,14 @@ export function chamberClearFace(
   return { w: dims.w - (left ? 1 : 2) * t, h: dims.h - (below ? 1 : 2) * t };
 }
 
+/**
+ * An open slot's long side, in: it always runs the whole clear face, the walls closing its two ends. Along the floor
+ * that is the face's width; up the front sides (a divided slot is always on the floor), its height. The slot's height
+ * (`h`, its narrow side) sets its area.
+ */
+export const slotRunIn = (face: Dims2, port: Pick<SpeakerSlotPort, "fins" | "place">) =>
+  port.fins === undefined && port.place === SLOT_PLACE.sides ? face.h : face.w;
+
 /** How far the baffle sits behind the cabinet's front, in: the frame's inset; a flush box's baffle is its front. */
 export const baffleInsetIn = (cabinet: Pick<SpeakerCabinet, "construction" | "insetIn">) =>
   cabinet.construction === CABINET_CONSTRUCTION.frameInset ? cabinet.insetIn : 0;
@@ -114,8 +128,8 @@ export interface ChamberVentModel {
  * A vented chamber's vent, null for any other: each port by the rule of the engine it comes from.
  * - Round tubes: the Hi-fi rule (1.46 r and a sharp bend's correction per elbow; absent elbows: straight), or the PA
  *   tube rule for `flared` tubes in a PA sub's chamber (lib/pa/tubes subTubeEndCorrection).
- * - A slot: `n` openings (the PA letterbox one), each as wide as the chamber's clear face unless the slot sets its own
- *   width (their shelves' wood: lib/speaker/speakerBuild). The Hi-fi rule, or the PA letterbox's where it has `fins`.
+ * - A slot: `n` openings (the PA letterbox one), each running the chamber's whole clear face (`slotRunIn`; their
+ *   shelves' wood: lib/speaker/speakerBuild). The Hi-fi rule, or the PA letterbox's where it has `fins`.
  * - Side ducts (PA): `n` ducts up the front edges, the dividers' height off each; their inner walls take air too.
  */
 export function chamberVentModel(
@@ -129,12 +143,8 @@ export function chamberVentModel(
   const { port } = vent;
   switch (port.shape) {
     case PORT_SHAPE.slot: {
-      // an open slot up the front sides: each opening is as tall as the slot's long side, at most the clear face (the
-      // layout cuts it so); a divided slot is always on the floor
-      const w =
-        port.fins === undefined && port.place === SLOT_PLACE.sides
-          ? Math.min(port.w ?? face.h, face.h)
-          : (port.w ?? face.w);
+      // the slot's long side: the whole clear face (`slotRunIn`)
+      const w = slotRunIn(face, port);
       if (port.fins !== undefined) {
         // the PA letterbox (lib/pa/calc ventGeometry): its fins take their thickness off the width; its mouth on the
         // floor (which mirrors it), its inner end as the PA slot's, folded up the back wall when too long to run

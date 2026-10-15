@@ -49,6 +49,7 @@ import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { HIFI_PORT_MAX_MS } from "../src/constants/hifiEngine";
 import { hornModel } from "../src/lib/acoustics/hornModel";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
+import { roomOf } from "./horn-room";
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
@@ -392,7 +393,7 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
     bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
   };
   const response = speakerResponse(binSpec);
-  const read = hornDesignOf(bin, { count: 1, angle: 2 });
+  const read = hornDesignOf(bin, { count: 1, angle: 2 }, roomOf(bin));
   assert.ok(read.ok);
   const model = hornModel(read.design, SPEAKER_RESPONSE_FREQUENCIES, SPEAKER_RESPONSE_VOLTS);
   assert.ok(model);
@@ -577,6 +578,7 @@ test("speaker model: a chamber's stuffing reaches a horn's rear chamber as it do
       },
     },
     { count: 1, angle: 2 },
+    roomOf(set),
   );
   assert.ok(read.ok);
   assert.ok(Math.abs(read.design.rear.liters - 10 * (1 + chamber.stuffingPct / 100)) < 1e-12);
@@ -612,7 +614,7 @@ test("speaker model: a stuffed horn chamber reports its own net air and plays on
   };
   const response = speakerResponse(spec);
   assert.equal(response.chambers[0].netLiters, 10, "the chamber's own net air, as a direct one");
-  const read = hornDesignOf(horn, { count: 1, angle: 2 });
+  const read = hornDesignOf(horn, { count: 1, angle: 2 }, roomOf(horn));
   assert.ok(read.ok);
   assert.ok(Math.abs(read.design.rear.liters - 12) < 1e-12, "the engine's rear chamber: 20% more");
   const model = hornModel(read.design, SPEAKER_RESPONSE_FREQUENCIES, SPEAKER_RESPONSE_VOLTS);
