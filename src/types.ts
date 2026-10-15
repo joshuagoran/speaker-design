@@ -2062,6 +2062,11 @@ export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset">
    * anywhere on it. Absent: centered on the chamber's clear face.
    */
   mouthPosition?: FacePoint;
+  /**
+   * the driver board is two pieces of the walls' plywood glued face to face (Double); absent or false: one piece, as
+   * thick as a wall. The board is the panel at the back of the bay that the drivers mount on.
+   */
+  doubleBoard?: boolean;
 }
 
 /** How a chamber's drivers meet the air (`CHAMBER_LOAD`): straight, or through a horn built into the box. */

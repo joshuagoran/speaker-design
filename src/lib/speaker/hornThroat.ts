@@ -5,7 +5,9 @@
 // top and bottom panels close it). The edges stand just in front of the cones, far enough to clear the cone's full
 // travel (its Xmax with a margin) and its surround. The air between each cone and the edges is the front chamber
 // (Hornresp's Vtc): the cone's area times that clearance, and the air in the cone's dish. The surround and the dish
-// come from the catalog where the maker's drawing gives them, else from estimates (constants/hornThroat).
+// come from the catalog where the maker's drawing gives them, else from estimates (constants/hornThroat). A doubled
+// driver board (lib/speaker/driverBoard) stands the cones one piece further back, in the first piece's cutouts: that air
+// is part of the front chamber too.
 //
 // The compression ratio is the cones' area over the throat's: 1 leaves the cones unloaded; a higher ratio loads them
 // more. The throat's area is the horn's first section's start area (`HornSegment.s1`), the one figure both settings
@@ -45,9 +47,10 @@ export interface FrontChamber {
  * times `CONE_TRAVEL_MARGIN`) and its surround's rise (`SURROUND_RISE_PER_WIDTH` of the catalog's surround width, else
  * `CONE_SURROUND_RISE_SHARE` of the cone's radius, from its area). Each cone holds its area times that clearance, and
  * its dish: a cone as deep as the catalog's dish depth (else `CONE_DISH_PER_DEPTH` of the driver's depth), a third of
- * its depth times its area. A catalog figure always wins over the estimate.
+ * its depth times its area. A catalog figure always wins over the estimate. Each cone also holds its area times
+ * `setbackIn`, how far a doubled driver board stands it behind the bay's end, in: the cutout in front of it (0: none).
  */
-export function frontChamber(cone: FrontChamberCone, count: number): FrontChamber {
+export function frontChamber(cone: FrontChamberCone, count: number, setbackIn = 0): FrontChamber {
   const radiusCm = Math.sqrt(cone.Sd / Math.PI);
   const riseCm =
     cone.surroundIn !== undefined
@@ -55,8 +58,8 @@ export function frontChamber(cone: FrontChamberCone, count: number): FrontChambe
       : CONE_SURROUND_RISE_SHARE * radiusCm;
   const clearanceCm = riseCm + (cone.Xmax * CONE_TRAVEL_MARGIN * CM_PER_IN) / MM_PER_IN;
   const dishCm = (cone.dishDepthIn ?? cone.depthIn * CONE_DISH_PER_DEPTH) * CM_PER_IN;
-  /** cm³ per driver: the slab in front of the cone and its dish */
-  const cc = cone.Sd * (clearanceCm + dishCm / 3);
+  /** cm³ per driver: the slab in front of the cone, its dish and the board's cutout */
+  const cc = cone.Sd * (clearanceCm + dishCm / 3 + setbackIn * CM_PER_IN);
   return {
     clearanceIn: clearanceCm / CM_PER_IN,
     liters: (count * cc) / 1000,

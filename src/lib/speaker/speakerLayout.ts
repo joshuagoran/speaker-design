@@ -57,6 +57,7 @@ import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { hornPath, type HornPath } from "./hornGeometry";
 import { driverBodyIn, wallClearanceIn } from "./hornThroat";
+import { driverBoardIn } from "./driverBoard";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
   ARCH_BLOCK,
@@ -731,6 +732,7 @@ export function hornFlare(
     wallIn: t,
     frontIn: wallClearanceIn(placed.chamber.drivers),
     bodyIn: driverBodyIn(placed.chamber.drivers),
+    boardIn: driverBoardIn(t, horn),
     folded: horn.path === HORN_PATH.folded,
   });
   if (!path) return null;

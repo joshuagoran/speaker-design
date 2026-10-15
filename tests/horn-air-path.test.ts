@@ -1,5 +1,5 @@
 // The horn's air path in the 3D view (stack-view/buildSpeakerScene), checked against the path's own sections
-// (lib/speaker/hornGeometry): nothing solid inside the air from the cones' faces through the throat to the mouth, and
+// (lib/speaker/hornGeometry): nothing solid inside the air from the driver board's front face through the throat to the mouth, and
 // nothing solid over the mouth or the side slots' openings. The wood that must stay (the horn's walls, the walls' back
 // edges round the throat, the slots' walls) stands outside them. Every template horn, folded or not, with and without
 // the cutaway's drivers. (Wood once covered the throat: its plate's hole ran past the bay's outline, so the plate was
@@ -30,6 +30,9 @@ const PLANE_IN = 1e-6;
 /** How far in front of the baffle's inside face the openings are checked, in (the baffle, the frame's inset). */
 const OPENING_DEPTH_IN = 3;
 
+/** How far in front of the driver board's front face the throat's air starts, in: past a part standing in its plane. */
+const BOARD_CLEAR_IN = 1e-3;
+
 /** A rectangle of the air path at a depth: its center and size, and the depth back from the baffle's inside face. */
 interface Section {
   z: number;
@@ -49,7 +52,7 @@ interface Piece {
   closed: boolean;
 }
 
-/** The air path as pieces between two sections each: the legs' steps, the turns, and the throat from the cones' faces. */
+/** The air path as pieces between two sections each: the legs' steps, the turns, and the throat from the driver board. */
 function airPieces(path: HornPath): Piece[] {
   const pieces: Piece[] = [];
   for (const leg of path.legs)
@@ -60,12 +63,14 @@ function airPieces(path: HornPath): Piece[] {
     const rect = { cx: t.cx, cy: (t.y0 + t.y1) / 2, w: t.w, h: t.y1 - t.y0 };
     pieces.push({ from: { z: t.z0, ...rect }, to: { z: t.z1, ...rect }, closed: false });
   }
-  // from the cones' faces to the throat: the throat's opening is the air that passes
+  // from the driver board's front face to the throat: the throat's opening is the air that passes. The board's own front
+  // face, which closes the bay's end round the cones, stands outside it (`BOARD_CLEAR_IN` toward the throat)
   if (path.bay) {
     const [throat] = path.legs[0].sections;
     const rect = { cx: throat.cx, cy: throat.cy, w: throat.w, h: throat.h };
+    const toThroat = path.folds % 2 === 0 ? -1 : 1;
     pieces.push({
-      from: { z: path.bay.coneZ, ...rect },
+      from: { z: path.bay.boardZ + toThroat * BOARD_CLEAR_IN, ...rect },
       to: { z: throat.z, ...rect },
       closed: true,
     });

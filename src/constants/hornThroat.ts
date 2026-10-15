@@ -24,3 +24,9 @@ export const CONE_DISH_PER_DEPTH = 0.4;
 
 /** The compression ratio a starting horn takes, and the most and the least the setting takes. */
 export const COMPRESSION_RATIO = { start: 1, min: 0.25, max: 8, step: 0.25 } as const;
+
+/**
+ * How many pieces of the walls' plywood make the driver board, by setting: one (as thick as a wall), or two glued face to
+ * face (Double). The board is the panel at the back of the bay that the drivers mount on.
+ */
+export const DRIVER_BOARD_PIECES = { wall: 1, double: 2 } as const;

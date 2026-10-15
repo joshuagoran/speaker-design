@@ -254,6 +254,7 @@ export function ChamberSettings({
         <HornSettings
           horn={chamber.load.horn}
           drivers={chamber.drivers}
+          wallIn={cabinet.panel.thicknessIn}
           onEdit={(edit) =>
             onEdit((c) =>
               c.load.kind === CHAMBER_LOAD.horn

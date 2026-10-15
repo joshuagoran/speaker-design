@@ -281,6 +281,13 @@ export const SPEAKER_TEXT = {
     "The net air of each chamber subtracts the vent walls, the baffle cleats and the hardware. The weight includes the panels, the drivers with their horns, the radiators and the hardware. The Cutlist tab lists every part.",
   hornNoFit:
     "A horn does not fit where it is mounted. Another chamber is on its top, or its mouth is larger than the baffle of its chamber. Select the other mounting in the driver settings. Until you do, the views and the cutlist do not show the horn.",
+  /** the driver board's cutlist note: where the drivers mount, how a doubled board is glued, and each cone's cutout */
+  driverBoardNote: (pieces: number) =>
+    pieces > 1
+      ? "the drivers mount on its back; glue the pieces face to face"
+      : "the drivers mount on its back",
+  driverBoardCutout: (count: number, kind: string, cutout: string) =>
+    `${count} × ${kind.toLowerCase()} cutout, ${cutout}`,
   hornNoFitNote:
     "the horn does not fit where it is mounted; no cutout until you change the mounting",
   portTooLong: "too long for this chamber: make it shorter",
@@ -388,7 +395,11 @@ export const SPEAKER_TEXT = {
   hornFrontChamberEstimate:
     "The datasheet does not give the surround width or the cone depth, so this value uses estimates.",
   hornFrontChamberTip:
-    "The air between the cones and the back edges of the horn walls. The edges stay clear of full cone travel. The drivers set this value.",
+    "The air between the cones and the back edges of the horn walls, with the cutouts in the driver board. The edges stay clear of full cone travel. The drivers and the board set this value.",
+  hornBoard: "Driver board thickness",
+  hornBoardWall: "Wall",
+  hornBoardDouble: "Double",
+  hornBoardTip: "The board the drivers mount on. Double it for large drivers.",
   hornPath: "Path",
   hornPathTip:
     "Only the sections set the response. The views draw a folded path straight for now. The fold layout comes later.",

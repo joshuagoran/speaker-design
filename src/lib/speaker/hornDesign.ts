@@ -69,11 +69,14 @@ const gap = (why: HornEngineGap): HornDesignResult => ({ ok: false, gap: why });
 
 /**
  * What the horn engine reads of the chamber's place in its box: its air as the box models take it (the set net air, or
- * the Auto one: lib/speaker/speakerBuild `chamberNetLiters`), before the stuffing, and its clear face (a slot runs it).
+ * the Auto one: lib/speaker/speakerBuild `chamberNetLiters`), before the stuffing, its clear face (a slot runs it) and
+ * the cones' setback on a doubled driver board.
  */
 export interface HornDesignRoom {
   netLiters: number;
   face: Dims2;
+  /** how far the horn's driver board stands the cones behind the bay's end, in (`chamberSetbackIn`): front chamber air */
+  setbackIn: number;
 }
 
 /**
@@ -108,7 +111,7 @@ export function hornDesignOf(
       drivers: throat.count,
       count: at.count,
       // the air between the cones and the walls' back edges; a direct radiator has none
-      throatChamber: horn ? frontChamber(throat.cone, throat.count).liters : 0,
+      throatChamber: horn ? frontChamber(throat.cone, throat.count, room.setbackIn).liters : 0,
       segments: horn?.segments ?? [],
       // the rear chamber's air with its stuffing, as a direct chamber's
       rear: { liters: stuffedLiters(chamber, room.netLiters), port: rear.port },

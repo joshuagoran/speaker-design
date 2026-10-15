@@ -27,7 +27,7 @@ const GAP_PX = 14;
  * the horn's center, the baffle at the left, from the horn geometry the 3D view and the front view read too
  * (lib/speaker/hornGeometry, by `hornFlare`). Each shows the walls and the baffle in section, the horn's legs along the
  * depth (the top section shows the flare of the side walls, the side section the height) with the turns of a folded
- * path, the drivers behind the throat (their front chamber dashed, between the walls' back edges and the cones, the
+ * path, the driver board behind the bay, the drivers behind the throat (their front chamber dashed, between the walls' back edges and the cones, the
  * walls narrower than the cones where the horn loads them), and a slot's channel (up a front side in the top section,
  * along the floor in the side). Null when no chamber has a horn.
  */
@@ -120,6 +120,8 @@ export function SpeakerSection({ spec }: Props) {
     const run = slot ? Math.min(slot.len, dims.d - 2 * t - inset) : 0;
     const rest = slot ? slot.len - run : 0;
     const clearDepth = dims.d - inset - 2 * t;
+    /** the way the driver board runs from the bay's end: back from the baffle on an even path, toward it on an odd one */
+    const way = path.folds % 2 === 0 ? 1 : -1;
     return (
       <g key={n}>
         {/* the top section */}
@@ -191,6 +193,19 @@ export function SpeakerSection({ spec }: Props) {
             strokeDasharray="3 2"
           />
         )}
+        {path.bay && (
+          <rect
+            {...box(
+              0,
+              vTop,
+              path.bay.boardZ,
+              path.bay.boardZ + path.bay.boardIn * way,
+              path.bay.x,
+              path.bay.x + path.bay.w,
+            )}
+            {...wall}
+          />
+        )}
         {path.bay &&
           placed.chamber.drivers
             .filter((d) => placed.spots.has(d))
@@ -202,7 +217,7 @@ export function SpeakerSection({ spec }: Props) {
                 return (
                   <rect
                     key={`td${j}.${i}`}
-                    {...box(0, vTop, path.bay.coneZ, path.bay.bodyZ, x - r, x + r)}
+                    {...box(0, vTop, path.bay.boardZ, path.bay.bodyZ, x - r, x + r)}
                     fill={pal.muted}
                   />
                 );
@@ -242,6 +257,19 @@ export function SpeakerSection({ spec }: Props) {
             strokeDasharray="3 2"
           />
         )}
+        {path.bay && (
+          <rect
+            {...box(
+              1,
+              vSide,
+              path.bay.boardZ,
+              path.bay.boardZ + path.bay.boardIn * way,
+              path.bay.y,
+              path.bay.y + path.bay.h,
+            )}
+            {...wall}
+          />
+        )}
         {path.bay &&
           placed.chamber.drivers
             .filter((d) => placed.spots.has(d))
@@ -253,7 +281,7 @@ export function SpeakerSection({ spec }: Props) {
                 return (
                   <rect
                     key={`sd${j}.${i}`}
-                    {...box(1, vSide, path.bay.coneZ, path.bay.bodyZ, y - r, y + r)}
+                    {...box(1, vSide, path.bay.boardZ, path.bay.bodyZ, y - r, y + r)}
                     fill={pal.muted}
                   />
                 );

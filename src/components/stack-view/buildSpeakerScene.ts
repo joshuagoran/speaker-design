@@ -54,6 +54,7 @@ import {
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
+import { driverBoardPieces } from "../../lib/speaker/driverBoard";
 import { bracingRegions } from "../../lib/bracing";
 import { PANEL } from "../../constants/cutParts";
 import {
@@ -98,6 +99,8 @@ export const SPEAKER_MESH_NAMES = {
   hornBay: "chamberHornBay",
   /** the walls' back edges at the throat's plane: boards round the throat's opening, never over it */
   hornThroat: "chamberHornThroat",
+  /** the driver board behind the bay, one mesh per piece of it: the baffle the drivers mount on (painted as one) */
+  driverBoard: "chamberDriverBoard",
   /** a front-loaded or tapped horn's driver inside the chamber, drawn in the cutaway */
   hornDriver: "chamberHornDriver",
   /** a chamber's own panel in a stepped shell: an outside wall, its back or its baffle */
@@ -154,8 +157,8 @@ export interface SpeakerSceneProps {
 /**
  * What the scene reads of its props, as a key that changes exactly when the scene does: the construction, the top, the
  * panels' thickness, inset and roundover; each chamber's place, size, vent (a port's sizes and position, the radiators'
- * part, count and position), drivers (part, count, position, horn) and horn path (its drive, path, segments' areas and
- * lengths and flare laws, and mouth position), and, in the cutaway, its braces and ribs (so the bracing style and target
+ * part, count and position), drivers (part, count, position, horn) and horn path (its drive, path, driver board,
+ * segments' areas and lengths and flare laws, and mouth position), and, in the cutaway, its braces and ribs (so the bracing style and target
  * rebuild it); the look and the cutaway.
  * The model's own inputs (stuffing, net air, bands, a port's elbows and a horn's throat chamber) are left out.
  */
@@ -204,6 +207,7 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
           ? {
               drive: load.horn.drive.kind,
               path: load.horn.path,
+              doubleBoard: load.horn.doubleBoard === true,
               segments: load.horn.segments.map(({ profile, s1, s2, length }) => [
                 profile,
                 s1,
@@ -306,6 +310,12 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
         )
       : undefined;
     const baffleBottom = band?.parts.slotBand?.h ?? 0;
+    // a horn-loaded chamber's front panel (the frame round its mouth) is cabinet, not baffle: the baffle is its driver
+    // board, which the drivers mount on. A shell with any other chamber keeps its baffle, that chamber's.
+    const hornFront = members.every(({ placed }) => hornFlare(cabinet, placed) !== null);
+    const faceCtx: SceneContext = hornFront
+      ? { ...ctx, materials: { ...ctx.materials, baffle: ctx.materials.shell } }
+      : ctx;
     /** every chamber's holes in a panel whose origin is `y0` up from the shell's bottom, on its center line */
     const holes = (y0: number, panel: typeof PANEL.baffle | typeof PANEL.back) =>
       members.flatMap((m) => {
@@ -318,7 +328,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
     if (shell.stepped) {
       const [placed] = shell.members;
       at = buildSteppedPanels(
-        { ...ctx, group },
+        { ...faceCtx, group },
         placed,
         { baffle: holes(0, PANEL.baffle), back: holes(0, PANEL.back) },
         frame,
@@ -328,7 +338,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       // the frame's baffle holes are centered on the baffle, its back's on the box
       const baffleCy = T + baffleBottom + (dims.h - 2 * T - baffleBottom) / 2;
       const zf = buildCabinet(
-        { ...ctx, group },
+        { ...faceCtx, group },
         {
           dims,
           baffleHoles: holes(baffleCy, PANEL.baffle),
@@ -341,7 +351,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       at = { zf, innerZ: zf - BAFFLE_THICKNESS_IN, banded: band !== undefined };
     } else {
       const built = buildHifiCabinet(
-        { ...ctx, group },
+        { ...faceCtx, group },
         {
           dim: dims,
           roundover: cabinet.roundoverIn,
@@ -926,6 +936,48 @@ function chamberParts(
           [at({ ...rect, z: bay.z0 }), at({ ...rect, z: bay.z1 })],
           ctx.materials.shell,
         );
+        // the driver board behind the bay: the baffle the drivers mount on, painted as one, a piece of the walls' plywood
+        // each (two when doubled), with a hole for every cone; the first piece's front face is the bay's end
+        const toBack = path.folds % 2 === 0 ? 1 : -1;
+        const pieces =
+          chamber.load.kind === CHAMBER_LOAD.horn ? driverBoardPieces(chamber.load.horn) : 1;
+        const pieceIn = bay.boardIn / pieces;
+        const cones = chamber.drivers.flatMap((driver) => {
+          const size = coneSize(driver);
+          return size === undefined
+            ? []
+            : driverSpots(placed, driver).map((spot) => ({
+                x: spot.xIn - placed.cx,
+                y: spot.yIn - placed.y0,
+                r: wooferCutoutR(size),
+              }));
+        });
+        const local = { x: bay.x - placed.cx, y: bay.y - placed.y0 };
+        for (let k = 0; k < pieces; k++) {
+          const shape = new THREE.Shape([
+            new THREE.Vector2(local.x, local.y),
+            new THREE.Vector2(local.x + bay.w, local.y),
+            new THREE.Vector2(local.x + bay.w, local.y + bay.h),
+            new THREE.Vector2(local.x, local.y + bay.h),
+          ]);
+          for (const c of cones) shape.holes.push(circlePath(c.x, c.y, c.r));
+          const piece = new THREE.Mesh(
+            new THREE.ExtrudeGeometry(shape, {
+              depth: pieceIn,
+              bevelEnabled: false,
+              curveSegments: 48,
+            }),
+            [ctx.materials.baffle, ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner],
+          );
+          // this piece's two faces, back from the baffle's inside face; the extrusion runs from its position toward the front
+          const faces = [
+            bay.boardZ + toBack * k * pieceIn,
+            bay.boardZ + toBack * (k + 1) * pieceIn,
+          ];
+          piece.position.z = innerZ - Math.max(...faces);
+          piece.name = SPEAKER_MESH_NAMES.driverBoard;
+          ctx.group.add(piece);
+        }
         /** the throat's plane, back from the baffle's inside face, and the way the cones lie from it (back, or forward) */
         const throatZ = path.folds % 2 === 0 ? bay.z0 : bay.z1;
         const toCones = path.folds % 2 === 0 ? 1 : -1;

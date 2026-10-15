@@ -23,8 +23,11 @@
 // round the cones and the throat across (never smaller than the throat), its sides closing it off from the wedges
 // beside the flare, each wall's back edge returning to them along the throat's plane as a strip (`HornBay.strips`):
 // the bay's face less the throat. The strips are the only wood in that plane; the throat's opening stays clear from the
-// cones' faces to the mouth. The drivers' bodies stand behind the bay, as deep as the deepest driver's catalog depth,
-// and the path fits only with them inside the box.
+// cones' faces to the mouth. The bay ends at the driver board (`HornBay.boardZ`), the panel the drivers mount on: its
+// first piece's front face is the bay's end, where the cones stand with one piece. A doubled board stands them one piece
+// (a wall) further back, in the first piece's cutouts (lib/speaker/driverBoard). The drivers' bodies stand behind the
+// cones' faces, as deep as the deepest driver's catalog depth, and the path fits only with the board and them inside
+// the box.
 //
 // A folded path runs in legs along the box's depth, one more than it has folds, stacked up the box; each leg is as long
 // along the depth as it is along the path, so the legs' lengths add up to the path. A turn joins two legs through a gap
@@ -73,7 +76,8 @@ export interface HornTurn {
 
 /**
  * The bay the drivers stand in behind the throat: the front chamber, the box round the cones and the throat from `z0` to
- * `z1` (the walls' back edges at one end, the cones' faces at the other), and the drivers' bodies behind it.
+ * `z1` (the walls' back edges at one end, the driver board's front face at the other), the driver board behind it
+ * and the drivers' bodies behind that.
  */
 export interface HornBay extends FaceRect {
   z0: number;
@@ -85,7 +89,11 @@ export interface HornBay extends FaceRect {
    */
   strips: FaceRect[];
   stripIn: number;
-  /** where the cones' faces (their frames' fronts) stand, in: the bay's end away from the throat */
+  /** where the driver board's front face stands, in: the bay's end away from the throat */
+  boardZ: number;
+  /** the driver board's thickness, in: it runs from `boardZ` away from the throat */
+  boardIn: number;
+  /** where the cones' faces (their frames' fronts) stand, in: the bay's end, or one wall behind it on a doubled board */
   coneZ: number;
   /** where the drivers' bodies end behind the cones, in */
   bodyZ: number;
@@ -129,6 +137,8 @@ export interface HornPathInput {
   frontIn: number;
   /** how deep the drivers' bodies reach behind the cones' faces, in: the deepest driver's catalog depth */
   bodyIn: number;
+  /** the driver board's thickness, in: as thick as a wall, or two walls when doubled (0 with no cone) */
+  boardIn: number;
   /** the path is folded (a bass bin): at least one fold, as many as it needs to fit */
   folded: boolean;
 }
@@ -203,7 +213,8 @@ function hornPathWithFolds(
   total: number,
   n: number,
 ): HornPath | null {
-  const { segments, areaScale, mouth, drivers, clear, depthIn, wallIn, frontIn, bodyIn } = input;
+  const { segments, areaScale, mouth, drivers, clear, depthIn, wallIn, frontIn, bodyIn, boardIn } =
+    input;
   /** the area at path distance `s` along segment `i`, in² */
   const areaIn = (i: number, s: number) =>
     (segmentAreaAt(segments[i], (s - starts[i]) * CM_PER_IN) / CM2_PER_IN2) * areaScale;
@@ -234,7 +245,14 @@ function hornPathWithFolds(
       ),
     );
 
-  const plan = foldPlan(n, total, drivers ? frontIn + bodyIn : 0, heightAt);
+  /** how far a doubled board stands the cones behind the bay's end: the pieces in front of the one they bolt to */
+  const setbackIn = Math.max(0, boardIn - wallIn);
+  const plan = foldPlan(
+    n,
+    total,
+    drivers ? frontIn + Math.max(boardIn, setbackIn + bodyIn) : 0,
+    heightAt,
+  );
   if (!plan) return null;
   const { legs } = plan;
   const middle = { x: mouth.x + mouth.w / 2, y: mouth.y + mouth.h / 2 };
@@ -326,15 +344,18 @@ function hornPathWithFolds(
   };
   /** the drivers face the throat: behind it on an even path (its first leg starts at the back), ahead on an odd one */
   const way = n % 2 === 0 ? 1 : -1;
-  const coneZ = throat.z + way * frontIn;
+  const boardZ = throat.z + way * frontIn;
+  const coneZ = boardZ + way * setbackIn;
   const bay: HornBay | null = bayBox &&
     bayAt && {
       x: bayAt.x - bayBox.w / 2,
       y: bayAt.y - bayBox.h / 2,
       w: bayBox.w,
       h: bayBox.h,
-      z0: Math.min(throat.z, coneZ),
-      z1: Math.max(throat.z, coneZ),
+      z0: Math.min(throat.z, boardZ),
+      z1: Math.max(throat.z, boardZ),
+      boardZ,
+      boardIn,
       coneZ,
       bodyZ: coneZ + way * bodyIn,
       strips: throatStrips(
@@ -343,7 +364,10 @@ function hornPathWithFolds(
       ),
       stripIn: Math.min(wallIn, frontIn),
     };
-  const depthNeed = Math.max(plan.backZ + plan.backGap, bay ? Math.max(bay.z1, bay.bodyZ) : 0);
+  const depthNeed = Math.max(
+    plan.backZ + plan.backGap,
+    bay ? Math.max(bay.z1, bay.bodyZ, boardZ + way * boardIn) : 0,
+  );
   const heightNeed =
     n > 0
       ? slabs.reduce((sum, h) => sum + h, 0) + n * wallIn

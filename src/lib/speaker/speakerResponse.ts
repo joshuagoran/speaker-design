@@ -31,6 +31,7 @@ import { byId } from "../tables";
 import { chamberClearFace, chamberVentModel, stuffedLiters } from "./chamberAir";
 import { chamberNetLiters } from "./speakerBuild";
 import { hornDesignOf } from "./hornDesign";
+import { chamberSetbackIn } from "./driverBoard";
 import { coneParts, hfParts, isConeKind, type ConeParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
@@ -170,7 +171,11 @@ function modelChamber(
     const read = hornDesignOf(
       chamber,
       { count: 1, angle: 2 },
-      { netLiters, face: chamberClearFace(cabinet, chamber) },
+      {
+        netLiters,
+        face: chamberClearFace(cabinet, chamber),
+        setbackIn: chamberSetbackIn(cabinet.panel, chamber),
+      },
     );
     if (!read.ok) return empty([read.gap]);
     const model = hornModel(read.design, grid.freqs, volts);

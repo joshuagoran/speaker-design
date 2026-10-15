@@ -36,6 +36,8 @@ const DRIVERS = { x: -8.25, y: 8, w: 16.5, h: 8 };
 const FRONT_IN = 0.8;
 /** The drivers' bodies, in behind the cones. */
 const BODY_IN = 4;
+/** the driver board's thickness, in */
+const BOARD_IN = 0.75;
 
 const seg = (
   profile: HornSegment["profile"],
@@ -76,6 +78,7 @@ const input = (segments: HornSegment[], extra: Partial<HornPathInput> = {}): Hor
   drivers: DRIVERS,
   frontIn: FRONT_IN,
   bodyIn: BODY_IN,
+  boardIn: BOARD_IN,
   folded: false,
   ...extra,
 });

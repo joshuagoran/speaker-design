@@ -18,6 +18,7 @@ import {
   frontChamber,
   throatCones,
 } from "../../lib/speaker/hornThroat";
+import { driverSetbackIn } from "../../lib/speaker/driverBoard";
 import { shownIn } from "./speakerFields";
 import { FIELD_ROW, HEADING_GROUP, GAP_Y, GAP_Y_TIGHT } from "../../styles/layout";
 import { hornText } from "./speakerText";
@@ -58,6 +59,12 @@ const STEPS_OPTIONS = [
   [true, SPEAKER_TEXT.hornStepsOn],
 ] as const;
 
+/** The Driver board thickness setting's choices: one wall thick, or doubled. */
+const BOARD_OPTIONS = [
+  [false, SPEAKER_TEXT.hornBoardWall],
+  [true, SPEAKER_TEXT.hornBoardDouble],
+] as const;
+
 /** A section's size as its field shows it: an area in in², a length in in. */
 const shownSize = (s: HornSegment, size: HornSectionSize) =>
   size === "length" ? shownInOfCm(s.length) : shownIn2(s[size]);
@@ -66,23 +73,25 @@ interface Props {
   horn: SpeakerHorn;
   /** the chamber's drivers: their cones set the compression ratio's area and the front chamber */
   drivers: readonly SpeakerDriver[];
+  /** the walls' thickness, in: the driver board is a piece or two of it */
+  wallIn: number;
   onEdit: (edit: (horn: SpeakerHorn) => SpeakerHorn) => void;
 }
 
 /**
  * A horn-loaded chamber's horn: its compression ratio (the throat: the first section's start area, the one figure both
- * fields edit), its flare sections (profile, start and end area, length), its front chamber (from the drivers, shown
- * only), path and drive. The chamber's own net air and vent are the horn's rear chamber. The sections are smooth: each
+ * fields edit), its flare sections (profile, start and end area, length), its front chamber (from the drivers and the
+ * driver board, shown only), the driver board's thickness (a wall, or double), path and drive. The chamber's own net air and vent are the horn's rear chamber. The sections are smooth: each
  * starts at the previous section's end area, and only the first shows its start area. With Steps on (in the Advanced
  * fold, and always while the horn has a step) every section shows its start area, so a step can be made; Steps off
  * smooths them.
  */
-export function HornSettings({ horn, drivers, onEdit }: Props) {
+export function HornSettings({ horn, drivers, wallIn, onEdit }: Props) {
   const { segments } = horn;
   const conesCm2 = conesAreaCm2(drivers);
   const ratio = compressionRatio(conesCm2, segments);
   const cones = throatCones(drivers);
-  const front = cones && frontChamber(cones.cone, cones.count);
+  const front = cones && frontChamber(cones.cone, cones.count, driverSetbackIn(wallIn, horn));
   /**
    * whether the section whose end area is being typed met the next one when its field took focus: the chain follows
    * that, not each keystroke's value (null: no end area field has focus)
@@ -226,6 +235,12 @@ export function HornSettings({ horn, drivers, onEdit }: Props) {
           options={STEPS_OPTIONS}
         />
       </SettingsFold>
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.hornBoardTip}>{SPEAKER_TEXT.hornBoard}</Tooltip>}
+        value={horn.doubleBoard === true}
+        onChange={(doubleBoard) => onEdit((h) => ({ ...h, doubleBoard }))}
+        options={BOARD_OPTIONS}
+      />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
         value={horn.path}
