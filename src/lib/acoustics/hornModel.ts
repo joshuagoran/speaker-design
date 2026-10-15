@@ -44,9 +44,9 @@ import {
 } from "./hornSegments";
 
 /** ρc²: an air volume V has compliance V/(ρc²). */
-const AIR_STIFFNESS = AIR_DENSITY * SPEED_OF_SOUND * SPEED_OF_SOUND;
+export const AIR_STIFFNESS = AIR_DENSITY * SPEED_OF_SOUND * SPEED_OF_SOUND;
 /** The reference pressure for SPL, Pa (0 dB SPL). */
-const SPL_REFERENCE_PA = 2e-5;
+export const SPL_REFERENCE_PA = 2e-5;
 /** Millimeters per meter, and milliseconds per second. */
 const MILLI = 1000;
 /** The vent's tuning search (duct vent): from this frequency, Hz, up in steps of this ratio, to the ceiling. */
@@ -85,8 +85,28 @@ function unwrapFromTop(phases: number[]) {
     phases[i] -= 2 * Math.PI * Math.round((phases[i] - phases[i + 1]) / (2 * Math.PI));
 }
 
+/**
+ * Gives each point of a curve its phase and group delay, from the summed pressure's raw phases (radians, one per point,
+ * unwrapped here in place): the horn engine's and the acoustic network's (lib/acoustics/network).
+ */
+export function setPhaseAndDelay(
+  curve: { f: number; phase: number; delay: number }[],
+  phases: number[],
+) {
+  unwrapFromTop(phases);
+  for (let i = 0; i < curve.length; i++) {
+    curve[i].phase = phases[i];
+    // group delay −dφ/dω, by central differences (one-sided at the ends), ms: the neighbors before and after, and
+    // the angular-frequency span between them
+    const before = Math.max(0, i - 1),
+      after = Math.min(curve.length - 1, i + 1);
+    const omegaSpan = 2 * Math.PI * (curve[after].f - curve[before].f);
+    curve[i].delay = omegaSpan > 0 ? (-(phases[after] - phases[before]) / omegaSpan) * MILLI : 0;
+  }
+}
+
 /** The area (m²) the front radiates from: the last segment's mouth, or the cones themselves with no segments. */
-const mouthAreaOf = (design: HornDesign) =>
+export const mouthAreaOf = (design: HornDesign) =>
   (design.segments.length
     ? design.segments[design.segments.length - 1].s2
     : design.driver.Sd * design.drivers) / SQ_CM_PER_SQ_M;
@@ -122,7 +142,7 @@ function frontLoad(design: HornDesign, f: number, radiationLoad: boolean) {
 }
 
 /** The vent as a straight duct of its area and length (a segment of equal areas). */
-const ventDuct = (area: number, length: number) => ({
+export const ventDuct = (area: number, length: number) => ({
   profile: HORN_PROFILE.conical,
   s1: area,
   s2: area,
@@ -145,10 +165,17 @@ const ventDuct = (area: number, length: number) => ({
  * - `Sp`: the vent's open area, m².
  * - `Fb`: the tuning, Hz: where the vent's reactance cancels the chamber's, 1/(ωCab). Lumped: 1/(2π·√(Map·Cab)).
  * - `Ral`, `Rap`: the leakage and the vent's losses (see VentResistances).
+ * - `exitReactanceRatio`: the exit's reactance over a round exit's of the vent's area (1 for a round vent).
  * - `at(f)`: at frequency f (Hz), the vent's impedance from the chamber (`impedance`, Pa·s/m³), the flow out of its
  *   exit per unit of flow in (`flowOut`), and the exit's radiation impedance (`exitLoad`; zero when lumped).
  */
-function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: number, Qp: number) {
+export function ventOf(
+  design: Pick<HornDesign, "rear" | "angle" | "count">,
+  Cab: number,
+  radiationLoad: boolean,
+  QL: number,
+  Qp: number,
+) {
   const { port } = design.rear;
   if (!port) return null;
   const Sp = port.area / SQ_CM_PER_SQ_M;
@@ -212,6 +239,7 @@ function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: num
     Fb,
     Ral,
     Rap,
+    exitReactanceRatio,
     at: (f: number) => {
       const vent = lossless(f);
       return { ...vent, impedance: add(vent.impedance, complex(Rap)) };
@@ -223,7 +251,7 @@ function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: num
  * How much a source's on-axis pressure scales to give its power-based pressure (Hornresp's SPL): √(c·Ω·R/(ρ·n))/ω for
  * a source of radiation resistance R (Pa·s/m³) at angular frequency ω, n boxes side by side, in a solid angle Ω.
  */
-const powerScale = (resistance: number, omega: number, solidAngle: number, count: number) =>
+export const powerScale = (resistance: number, omega: number, solidAngle: number, count: number) =>
   Math.sqrt((SPEED_OF_SOUND * solidAngle * resistance) / (AIR_DENSITY * count)) / omega;
 
 /**
@@ -371,16 +399,7 @@ export function hornModel(
       ze: abs(electrical),
     });
   }
-  unwrapFromTop(phases);
-  for (let i = 0; i < curve.length; i++) {
-    curve[i].phase = phases[i];
-    // group delay −dφ/dω, by central differences (one-sided at the ends), ms: the neighbors before and after, and
-    // the angular-frequency span between them
-    const before = Math.max(0, i - 1),
-      after = Math.min(curve.length - 1, i + 1);
-    const omegaSpan = 2 * Math.PI * (curve[after].f - curve[before].f);
-    curve[i].delay = omegaSpan > 0 ? (-(phases[after] - phases[before]) / omegaSpan) * MILLI : 0;
-  }
+  setPhaseAndDelay(curve, phases);
   return { curve, fb: vent ? vent.Fb : null };
 }
 
