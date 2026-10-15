@@ -671,21 +671,13 @@ export interface HornFlare {
 }
 
 /**
- * The box round a chamber's drivers, or null for none that have a size: where they stand stacked in a horn's bay
- * (`hornStack`), or as the spec sets them on a baffle (a back-loaded horn's).
+ * The box round a horn chamber's drivers stacked in its bay (`hornStack`), or null for none that have a size. A
+ * back-loaded horn's drivers stand on the baffle, not in a bay behind a throat: null.
  */
 function driverBox(placed: PlacedChamber): Dims2 | null {
+  if (driversOnBaffle(placed.chamber)) return null;
   const drivers = placed.chamber.drivers.filter((d) => !onTop(d) && driverAcrossIn(d) > 0);
-  if (!drivers.length) return null;
-  if (!driversOnBaffle(placed.chamber)) return hornStack(drivers, placed.clear).box;
-  const spots = drivers.flatMap((d) =>
-    specSpots(placed, d).map((s) => ({ x: s.xIn, y: s.yIn, r: driverAcrossIn(d) / 2 })),
-  );
-  const x0 = Math.min(...spots.map((s) => s.x - s.r)),
-    x1 = Math.max(...spots.map((s) => s.x + s.r)),
-    y0 = Math.min(...spots.map((s) => s.y - s.r)),
-    y1 = Math.max(...spots.map((s) => s.y + s.r));
-  return { w: x1 - x0, h: y1 - y0 };
+  return drivers.length ? hornStack(drivers, placed.clear).box : null;
 }
 
 /**
@@ -694,7 +686,8 @@ function driverBox(placed: PlacedChamber): Dims2 | null {
  * square where a square would be taller than the face, the face's width at most; cut to the face when larger than it), the
  * mouth centered at the horn's `mouthPosition` (kept inside the face), else on the face. The path is
  * `hornPath`'s, from the segments and the chamber's clear depth (as the model takes it: less the back, the baffle and the
- * baffle's inset). Null for a chamber with no horn, no segments, or a segment with a size that is not positive and finite.
+ * baffle's inset); it has a bay (and a driver board) only where the drivers stand in the horn (not a back-loaded one's,
+ * which are on the baffle). Null for a chamber with no horn, no segments, or a segment with a size that is not positive and finite.
  */
 export function hornFlare(
   cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
@@ -758,7 +751,7 @@ const boxAt = (x: number, y: number, w: number, h: number): EdgeBox => ({
 /** How far two boxes may overlap before they count as overlapping, in: a shared edge is no overlap. */
 const OVERLAP_IN = 1e-9;
 /** The step the search for a free place moves by, in. */
-const SCAN_STEP_IN = 0.25;
+export const SCAN_STEP_IN = 0.25;
 
 const overlapping = (a: EdgeBox, b: EdgeBox) =>
   a.x0 < b.x1 - OVERLAP_IN &&
@@ -935,13 +928,13 @@ export function baffleOpenings(cabinet: LayoutCabinet, placed: PlacedChamber): E
 }
 
 /** The most entries whose every order is tried when one leaves another no room (`orders`). */
-const MAX_PERMUTED = 5;
+export const MAX_PERMUTED = 5;
 
 /**
  * The orders to place `items` in: as they are, then the other orders (every one for a few items, else only the reverse),
  * so a place found for one never has to leave another none.
  */
-function* orders<T>(items: readonly T[]): Generator<readonly T[]> {
+export function* orders<T>(items: readonly T[]): Generator<readonly T[]> {
   yield items;
   if (items.length < 2) return;
   if (items.length > MAX_PERMUTED) {
@@ -977,7 +970,7 @@ const keptIn = (at: number, size: number, lo: number, span: number) =>
  * that, the nearest free place on a grid). Where no free place exists (the face is too full), `want` kept inside the
  * face, and `free` is false.
  */
-function nearestFree(
+export function nearestFree(
   face: FaceRect,
   { size, frame }: { size: Dims2; frame: Dims2 },
   want: { x: number; y: number },

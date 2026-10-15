@@ -101,6 +101,12 @@ export function newBandId(bands: readonly Pick<SpeakerBand, "id">[]): BandId {
 const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
   list.map((item, k) => (k === i ? edit(item) : item));
 
+/** The spec with its drivers settled where the layout stands them (`settledCabinet`); the same spec back when none moves. */
+const settledSpec = (s: SpeakerSpec): SpeakerSpec => {
+  const cabinet = settledCabinet(s.cabinet);
+  return cabinet === s.cabinet ? s : { ...s, cabinet };
+};
+
 /**
  * The Speaker page's state: the speaker being designed, its response, the edits the settings make and the library (the
  * signed-in user's `speakers`). Held in App, so the design survives switching pages.
@@ -114,7 +120,7 @@ export function useSpeakerPage() {
   const [chamberRound, setChamberRound] = useState(0);
   /** the whole spec replaced: every chamber's settings start again, and the optimizer's cards and Undo are dropped */
   const replaceSpec = (next: SpeakerSpec) => {
-    setSpec(next);
+    setSpec(settledSpec(next));
     setChamberRound((n) => n + 1);
     // called from an event, after `optimizer` below is set
     optimizer.clearResults();
@@ -149,7 +155,7 @@ export function useSpeakerPage() {
   const price = useMemo(() => speakerPrice(spec.cabinet), [spec.cabinet]);
   const optimizer = useSpeakerOptimizer({
     spec,
-    loadSpec: setSpec,
+    loadSpec: (next) => setSpec(settledSpec(next)),
     round: chamberRound,
     current: { musicDb: limits.musicDb, price: price.dollars, lb: build.lb },
   });
@@ -195,7 +201,9 @@ export function useSpeakerPage() {
   const removeBand = (id: BandId) =>
     setSpec((s) => {
       const bands = s.bands.filter((b) => b.id !== id);
-      return bands.length ? { ...s, cabinet: moveDrivers(s, id, bands[0].id), bands } : s;
+      return bands.length
+        ? settledSpec({ ...s, cabinet: moveDrivers(s, id, bands[0].id), bands })
+        : s;
     });
   /** what the library saves: the spec without its id and name, undefined fields dropped (the stores reject them) */
   const snapshot = (): SavedSpeakerData => speakerSnapshot(spec);

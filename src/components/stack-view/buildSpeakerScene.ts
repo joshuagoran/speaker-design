@@ -311,8 +311,11 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       : undefined;
     const baffleBottom = band?.parts.slotBand?.h ?? 0;
     // a horn-loaded chamber's front panel (the frame round its mouth) is cabinet, not baffle: the baffle is its driver
-    // board, which the drivers mount on. A shell with any other chamber keeps its baffle, that chamber's.
-    const hornFront = members.every(({ placed }) => hornFlare(cabinet, placed) !== null);
+    // board, which the drivers mount on. A shell with any other chamber keeps its baffle, that chamber's, and so does
+    // a back-loaded horn (its drivers are on the baffle, no board).
+    const hornFront = members.every(
+      ({ placed }) => !driversOnBaffle(placed.chamber) && hornFlare(cabinet, placed) !== null,
+    );
     const faceCtx: SceneContext = hornFront
       ? { ...ctx, materials: { ...ctx.materials, baffle: ctx.materials.shell } }
       : ctx;

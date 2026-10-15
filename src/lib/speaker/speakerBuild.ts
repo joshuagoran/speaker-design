@@ -155,6 +155,7 @@ import {
   CABINET_CONSTRUCTION,
   CHAMBER_LOAD,
   DRIVER_KIND,
+  HORN_DRIVE,
   PORT_SHAPE,
   SLOT_PLACE,
   VENT_KIND,
@@ -570,7 +571,7 @@ function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
     // the front chamber
     room(rect, rect, bay.z0, bay.z1);
     // the driver board behind it, then the deepest driver from its cone's face
-    if (bay.boardIn > 0) room(rect, rect, bay.boardZ, bay.coneZ);
+    if (bay.boardIn > 0 && bay.coneZ !== bay.boardZ) room(rect, rect, bay.boardZ, bay.coneZ);
     if (coneIn > 0) room(deep, deep, bay.coneZ, bay.coneZ + way * coneIn);
   }
   // the flare's lines are read from the mouth back
@@ -984,14 +985,16 @@ function hornAirL(cabinet: Pick<SpeakerCabinet, "panel">, chamber: SpeakerChambe
 
 /**
  * A horn chamber's driver board as the build counts it: its face (the bay's size) less the cones' cutouts, in², and how
- * many pieces of the walls' plywood it is. Null for a chamber with no horn, or no bay (no cone sizes it).
+ * many pieces of the walls' plywood it is. Null for a chamber with no horn, a back-loaded horn (its drivers are on the
+ * baffle: no board), or no bay (no cone sizes it).
  */
 function driverBoardOf(
   cabinet: SpeakerCabinet,
   f: ChamberFrame,
 ): { bay: { w: number; h: number }; netIn2: number; pieces: number } | null {
   const { chamber } = f.placed;
-  if (chamber.load.kind !== CHAMBER_LOAD.horn) return null;
+  if (chamber.load.kind !== CHAMBER_LOAD.horn || chamber.load.horn.drive.kind === HORN_DRIVE.back)
+    return null;
   const bay = hornFlare(cabinet, f.placed)?.path.bay;
   if (!bay) return null;
   /** the cutouts, as the front chamber takes them: each cone's area */
