@@ -1,0 +1,57 @@
+Comment = hand-written: SKRAM from its FreeCAD model, OD layout; Vrc is a placeholder (unknown)
+
+|RADIATION, SOURCE AND MOUTH PARAMETER VALUES:
+
+Ang = 2.0 x Pi
+Eg = 2.83
+Rg = 0.00
+
+|HORN PARAMETER VALUES:
+
+S1 = 488.00
+S2 = 575.20
+Par = 27.28
+F12 = 0.00
+S2 = 575.20
+S3 = 1195.50
+Par = 100.75
+F23 = 0.00
+S3 = 0.00
+S4 = 0.00
+L34 = 0.00
+F34 = 0.00
+S4 = 0.00
+S5 = 0.00
+L45 = 0.00
+F45 = 0.00
+
+|TRADITIONAL DRIVER PARAMETER VALUES:
+
+Sd = 1680.00
+Bl = 32.57
+Cms = 5.35E-05
+Rms = 13.28
+Mmd = 422.82
+Le = 1.50
+Re = 3.40
+Nd = 1
+
+|CHAMBER PARAMETER VALUES:
+
+Vrc = 100.00
+Lrc = 51.37
+Ap = 732.00
+Lpt = 79.54
+Vtc = 0.00
+Atc = 0.00
+
+Acoustic Path Length = 0.0
+
+|MAXIMUM SPL PARAMETER VALUES:
+
+Pmax = 2000
+Xmax = 15.0
+
+|DRIVER LAYOUT:
+
+OD = 1

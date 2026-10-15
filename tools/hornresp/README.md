@@ -69,6 +69,31 @@ applies them.
 - **End correction.** Set `End Correction Flag = 0`, so Lpt is the vent's length plus its inner end correction.
 - **Path length.** Keep `Acoustic Path Length = 0`: it is not the engine's `portOffset`.
 
+## Tapped and offset-driver reference records
+
+`records/` holds three records for the acoustic network's next check (`tests/hornresp-reader.test.ts`). Their
+results tests are skipped until Hornresp's results exist.
+
+| Record       | Layout | Design                                                              |
+| ------------ | ------ | ------------------------------------------------------------------- |
+| `th-thorn10` | TH     | A Thorn-like 10″ tapped horn, 200 cm conical path                   |
+| `th-15`      | TH     | A 15″ tapped horn, 300 cm conical path                              |
+| `od-skram`   | OD     | SKRAM-like: parabolic, from its FreeCAD model; Vrc 120 L is a guess |
+
+1. Import the record.
+2. Set the driver layout in Hornresp (TH or OD). The records leave it out: the record key is not known yet.
+3. Calculate, then export the results as for any case. Save them as `tests/hornresp/<record>-results.txt`.
+4. Export the record too, and replace the file in `records/`. It then carries Hornresp's own layout key.
+5. Remove the `skip` from the record's results test. If the reader does not know the layout key, add it to
+   `HORNRESP_LAYOUT_KEY` (`src/constants/acousticNetwork.ts`).
+
+Check these points in the run:
+
+- **TH sides.** The reader puts the cone's front at S2 and its rear at S3. The other way round flips the phase only.
+- **TH chambers.** The reader puts Vtc on the front side and Vrc on the rear side.
+- **The mouth key after a Par section.** `make_record.py` writes `Fta`, as for a conical section. Hornresp may want
+  another key.
+
 ## Export names
 
 Hornresp rejects long export file names. `hr_calc_export` saves as `out` and renames.
