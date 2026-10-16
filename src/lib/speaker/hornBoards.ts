@@ -22,7 +22,9 @@ import {
   FOLD_WALL,
 } from "../../constants/hornBoards";
 import { HORN_PROFILE } from "../../constants/hornEngine";
-import { CM2_PER_IN2, CM_PER_IN, CM3_PER_LITER } from "../../constants/units";
+import { coneKeepOut, type ConeBody } from "../pa/calc";
+import { DRIVER_CLEARANCE_IN } from "../pa/bracing";
+import { CM2_PER_IN2, CM_PER_IN, CM3_PER_LITER, LITERS_PER_CUBIC_IN } from "../../constants/units";
 
 /** A point of the side section, in. */
 export interface FoldPoint {
@@ -50,15 +52,48 @@ export interface FoldRoom {
 }
 
 /**
- * The drivers' body, in: the cutout, the motor's diameter, the depth behind the mounting face, one-way excursion; and
- * how many sit side by side across the board.
+ * The drivers' body, in: the cutout; the basket and motor as round steps behind the mounting face (each its radius and
+ * how far back it starts and ends: the same steps the 3D view and the bracing draw, `coneKeepOut`); one-way excursion;
+ * and how many drivers there are.
  */
 export interface FoldDriverBody {
   cutoutIn: number;
-  motorIn: number;
-  depthIn: number;
+  steps: readonly { rIn: number; z0In: number; z1In: number }[];
   xmaxIn: number;
   count: number;
+}
+
+/** A cone's body as the boards read it, from its cutout and motor (`ConeBody`), its depth, excursion and count. */
+export function foldBodyFrom(
+  cone: ConeBody,
+  depthIn: number,
+  xmaxIn: number,
+  count: number,
+): FoldDriverBody {
+  const regions = coneKeepOut({ x: 0, y: 0 }, cone, depthIn);
+  const last = regions.length - 1;
+  return {
+    cutoutIn: cone.cutoutIn,
+    // the keep-out is the body with the bracing's clearance round it: the body itself, as the 3D view draws it
+    steps: regions.map((r, i) => ({
+      rIn: (r.x[1] - r.x[0]) / 2 - DRIVER_CLEARANCE_IN,
+      z0In: r.z[0],
+      z1In: r.z[1] - (i === last ? DRIVER_CLEARANCE_IN : 0),
+    })),
+    xmaxIn,
+    count,
+  };
+}
+
+/**
+ * Where a row of drivers mounts: the point on the cone fronts' face, the way the fronts face (a unit vector), its
+ * distance along the board from the board's `a` corner, and the board's thickness, in.
+ */
+export interface FoldDriverMount {
+  at: FoldPoint;
+  toCone: FoldPoint;
+  alongIn: number;
+  thickIn: number;
 }
 
 /** The taps where the drivers' two sides open into the passage, in along it; null: into the rear chamber. */
@@ -79,6 +114,7 @@ export interface FoldChecks {
   broken: boolean;
   drivers: {
     facesPassage: boolean;
+    widthFits: boolean;
     cutoutFits: boolean;
     magnetClear: boolean;
     coneRoom: boolean;
@@ -96,7 +132,11 @@ export interface FoldLayout {
   /** each board's outline (its line face, then its offset face back), for the views and the checks */
   outlines: FoldPoint[][];
   /** the drivers' basket and motor behind the mounting face, as one outline; null without drivers */
-  driverBody: FoldPoint[] | null;
+  driverBodies: FoldPoint[][];
+  /** each row of drivers' mount: the point on the cone fronts' face and the way they face */
+  driverMounts: FoldDriverMount[];
+  /** how many drivers sit side by side across the chamber in each place along the board (0: not even one fits) */
+  driversAcross: number;
   /** the passage as pieces to draw: each leg, then each turn out to its far corners */
   pieces: FoldPoint[][];
   /** each board's length along its line face, in, and how far each end is cut off square, degrees */
@@ -468,30 +508,65 @@ function tapAt(
 }
 
 /**
- * The drivers' basket and motor as one outline: from the cutout on the board's back face (away from the cone fronts)
- * narrowing to the motor at the drivers' depth.
+ * How the drivers sit: as many side by side across the chamber as fit (each cutout with the margin either side), and
+ * the rest in rows along the board; each row's center along the board from the drivers' place, in.
  */
-function driverOutline(plan: HornBoards, room: FoldRoom, body: FoldDriverBody): FoldPoint[] | null {
+function driverRows(body: Pick<FoldDriverBody, "cutoutIn" | "count">, widthIn: number) {
+  const pitch = body.cutoutIn + FOLD_CUTOUT_MARGIN_IN;
+  const across = Math.max(0, Math.floor((widthIn - FOLD_CUTOUT_MARGIN_IN) / pitch));
+  const rows = across > 0 ? Math.ceil(body.count / across) : body.count;
+  return { across, offsets: Array.from({ length: rows }, (_, j) => (j - (rows - 1) / 2) * pitch) };
+}
+
+/** A row of drivers' mount, `offsetIn` along the board from the drivers' place; null without drivers. */
+function driverMount(
+  plan: HornBoards,
+  room: FoldRoom,
+  offsetIn = 0,
+): (FoldDriverMount & { back: FoldPoint }) | null {
   const drivers = plan.drivers;
   if (!drivers) return null;
   const board = plan.boards[drivers.board];
-  const a = plan.corners[board.a],
-    b = plan.corners[board.b];
-  const along = unit(sub(b, a));
   const t = thicknessOf(plan, board, room.wallIn);
   // the magnet side: past the offset face when the fronts face the line face, else back past the line face
   const towardMagnet = drivers.coneFace === FOLD_FACE.line ? unit(t) : unit({ z: -t.z, y: -t.y });
-  const base =
-    drivers.coneFace === FOLD_FACE.line
-      ? add(onBoard(plan, drivers.board, drivers.alongIn), t)
-      : onBoard(plan, drivers.board, drivers.alongIn);
-  const back = add(base, towardMagnet, body.depthIn);
-  return [
-    add(base, along, -body.cutoutIn / 2),
-    add(base, along, body.cutoutIn / 2),
-    add(back, along, body.motorIn / 2),
-    add(back, along, -body.motorIn / 2),
-  ];
+  const onLine = onBoard(plan, drivers.board, drivers.alongIn + offsetIn);
+  // the cone fronts' face, and the board's other face, where the basket starts
+  const front = drivers.coneFace === FOLD_FACE.line ? onLine : add(onLine, t);
+  const back = drivers.coneFace === FOLD_FACE.line ? add(onLine, t) : onLine;
+  return {
+    at: front,
+    toCone: { z: -towardMagnet.z, y: -towardMagnet.y },
+    alongIn: drivers.alongIn + offsetIn,
+    thickIn: Math.hypot(t.z, t.y),
+    back,
+  };
+}
+
+/**
+ * One row of drivers' basket and motor as outlines, one per step of the body, `offsetIn` along the board from the
+ * drivers' place, each `growIn` larger round its sides and the last at its back (the clearance a check keeps).
+ */
+function driverParts(
+  plan: HornBoards,
+  room: FoldRoom,
+  body: Pick<FoldDriverBody, "steps">,
+  offsetIn = 0,
+  growIn = 0,
+): FoldPoint[][] {
+  const mount = driverMount(plan, room, offsetIn);
+  const drivers = plan.drivers;
+  if (!mount || !drivers) return [];
+  const board = plan.boards[drivers.board];
+  const along = unit(sub(plan.corners[board.b], plan.corners[board.a]));
+  const back = { z: -mount.toCone.z, y: -mount.toCone.y };
+  const last = body.steps.length - 1;
+  return body.steps.map((s, i) => {
+    const r = s.rIn + growIn;
+    const near = add(mount.back, back, s.z0In),
+      far = add(mount.back, back, s.z1In + (i === last ? growIn : 0));
+    return [add(near, along, -r), add(near, along, r), add(far, along, r), add(far, along, -r)];
+  });
 }
 
 // ---- the whole
@@ -537,7 +612,16 @@ export function hornBoardsLayout(
           ),
         }
       : null;
-  const driverBody = body ? driverOutline(plan, room, body) : null;
+  const rows = body ? driverRows(body, room.widthIn) : null;
+  const driverBodies =
+    body && rows ? rows.offsets.flatMap((o) => driverParts(plan, room, body, o)) : [];
+  const driverMounts =
+    body && rows
+      ? rows.offsets.flatMap((o) => {
+          const m = driverMount(plan, room, o);
+          return m ? [{ at: m.at, toCone: m.toCone, alongIn: m.alongIn, thickIn: m.thickIn }] : [];
+        })
+      : [];
   const cuts: FoldLayout["cuts"] = plan.boards.map((board, i) => ({
     lengthIn: dist(plan.corners[board.a], plan.corners[board.b]),
     endCutsDeg: [endCut(plan, i, board.a, room), endCut(plan, i, board.b, room)] as [
@@ -554,8 +638,10 @@ export function hornBoardsLayout(
     airLiters,
     taps,
     outlines,
-    driverBody,
-    checks: checksOf(plan, room, body, { outlines, gates, broken, taps, driverBody }),
+    driverBodies,
+    driverMounts,
+    driversAcross: rows?.across ?? 0,
+    checks: checksOf(plan, room, body, { outlines, gates, broken, taps, driverBodies }),
   };
 }
 
@@ -569,8 +655,8 @@ function checksOf(
     gates,
     broken,
     taps,
-    driverBody,
-  }: Pick<FoldLayout, "outlines" | "gates" | "taps" | "driverBody"> & { broken: boolean },
+    driverBodies,
+  }: Pick<FoldLayout, "outlines" | "gates" | "taps" | "driverBodies"> & { broken: boolean },
 ): FoldChecks {
   const inRoom = (p: FoldPoint) =>
     p.z >= -FOLD_TOUCH_IN &&
@@ -593,13 +679,12 @@ function checksOf(
   const thin = gates.findIndex((g) => g.heightIn < FOLD_MIN_PASSAGE_IN);
   const drivers = plan.drivers;
   let driverChecks: FoldChecks["drivers"] = null;
-  if (drivers && body && driverBody) {
-    // the room the motor needs: its body, deeper and wider by the clearance the air behind the cone flows through
-    const keepOut = driverOutline(plan, room, {
-      ...body,
-      depthIn: body.depthIn + FOLD_MAGNET_CLEARANCE_IN,
-      motorIn: body.motorIn + 2 * FOLD_MAGNET_CLEARANCE_IN,
-    });
+  if (drivers && body && driverBodies.length) {
+    const { across, offsets } = driverRows(body, room.widthIn);
+    // the room each row's motor needs: its body, deeper and wider by the clearance the air behind the cone flows through
+    const keepOuts = offsets.flatMap((o) =>
+      driverParts(plan, room, body, o, FOLD_MAGNET_CLEARANCE_IN),
+    );
     const board = plan.boards[drivers.board];
     const lengthIn = dist(plan.corners[board.a], plan.corners[board.b]);
     const need = body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN;
@@ -616,15 +701,15 @@ function checksOf(
     );
     driverChecks = {
       facesPassage: taps?.front != null,
-      // along the board, and side by side across the chamber's width, each with the margin to spare
+      // at least one cutout across the chamber, with the margin either side
+      widthFits: across > 0,
+      // every row's cutout on the board, with the margin to spare
       cutoutFits:
-        drivers.alongIn >= need &&
-        drivers.alongIn <= lengthIn - need &&
-        body.count * body.cutoutIn + (body.count + 1) * FOLD_CUTOUT_MARGIN_IN <= room.widthIn,
-      magnetClear:
-        keepOut !== null &&
-        keepOut.every(inRoom) &&
-        outlines.every((o, i) => i === drivers.board || !overlaps(o, keepOut)),
+        drivers.alongIn + offsets[0] >= need &&
+        drivers.alongIn + offsets[offsets.length - 1] <= lengthIn - need,
+      magnetClear: keepOuts.every(
+        (k) => k.every(inRoom) && outlines.every((o, i) => i === drivers.board || !overlaps(o, k)),
+      ),
       coneRoom: room0 >= body.xmaxIn + FOLD_CONE_MARGIN_IN,
     };
   }
@@ -665,6 +750,22 @@ function endCut(plan: HornBoards, i: number, c: number, room: FoldRoom): number 
   const cos = dot(unit(way), unit(sub(far, corner)));
   const between = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
   return (180 - between) / 2;
+}
+
+/**
+ * The air in the side section outside the passage and the boards, L: an offset or front-loaded horn's rear chamber
+ * (before the drivers' displacement).
+ */
+export function foldRestLiters(
+  layout: Pick<FoldLayout, "airLiters" | "cuts">,
+  room: FoldRoom,
+): number {
+  const boardsIn3 = layout.cuts.reduce(
+    (sum, c) => sum + c.lengthIn * room.wallIn * room.widthIn,
+    0,
+  );
+  const roomIn3 = room.depthIn * room.heightIn * room.widthIn;
+  return Math.max(0, (roomIn3 - boardsIn3) * LITERS_PER_CUBIC_IN - layout.airLiters);
 }
 
 /** Whether a worked-out layout passes every check. */

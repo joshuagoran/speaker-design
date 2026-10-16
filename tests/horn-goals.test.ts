@@ -249,7 +249,10 @@ test("horn goals: a front-loaded horn keeps its vent and shares the air with its
   assert.ok(found);
   assert.equal(found.chamber.vent, BIN.vent);
   assert.equal(hornOf(found.chamber).segments.length, 1);
-  assert.ok((found.chamber.netLiters ?? 0) > MIN_NET_L);
+  // a straight horn sets its rear chamber's air; a folded one leaves it on Auto, the air outside its boards
+  const horn = hornOf(found.chamber);
+  if (horn.boards) assert.equal(found.chamber.netLiters, null);
+  else assert.ok((found.chamber.netLiters ?? 0) > MIN_NET_L);
   assert.ok(found.fit.spreadDb < 6, `spread ${found.fit.spreadDb} dB`);
 });
 

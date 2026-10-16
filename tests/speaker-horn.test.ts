@@ -3,6 +3,7 @@
 // convert to the spec's cm² and cm and back; a size that is not positive and finite is a named gap, never NaN; the PA
 // v2 templates still model.
 import { straightPath } from "./horn-room";
+import { zigzagBoards } from "../src/lib/speaker/foldLayouts";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
@@ -297,10 +298,12 @@ test("speaker horn: a size that is not positive and finite is a named gap, never
   }
 });
 
-test("speaker horn: taps out of order are the engine's named gap", () => {
+test("speaker horn: a tapped horn whose drivers sit on no board is the engine's named gap", () => {
+  const room = { depthIn: 20, heightIn: 20, wallIn: 0.75, widthIn: 20 };
   const tapped = withHorn(BIN, (h) => ({
     ...h,
-    drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 0 },
+    drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 2 },
+    boards: zigzagBoards(room, 4, false),
   }));
   assert.deepEqual(responseOf(tapped).chambers[0].gaps, [HORN_ENGINE_GAP.taps]);
   assert.ok(finiteResponse(tapped));

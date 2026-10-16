@@ -1,5 +1,6 @@
 // The general speaker model (lib/speaker/speakerResponse) against today's engines: the golden Hi-fi and PA designs,
 // read through the L1 adapters, give the same curves, net air and tuning as the Hi-fi and PA models.
+import { zigzagBoards } from "../src/lib/speaker/foldLayouts";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { ohmsOf } from "../src/lib/power";
@@ -415,13 +416,18 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
           ...bin,
           load: {
             kind: CHAMBER_LOAD.horn,
-            horn: { ...hornOf(bin), drive: { kind: HORN_DRIVE.tapped, frontTap: 0, rearTap: 1 } },
+            // a tapped horn whose boards carry no drivers: no taps
+            horn: {
+              ...hornOf(bin),
+              drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 2 },
+              boards: zigzagBoards({ depthIn: 20, heightIn: 20, wallIn: 0.75 }, 4, false),
+            },
           },
         },
       ],
     },
   });
-  // the fronts at the closed end: not between two sections
+  // no drivers on a board: no taps
   assert.deepEqual(tapped.chambers[0].gaps, [HORN_ENGINE_GAP.taps]);
   assert.deepEqual(tapped.bands, []);
 });

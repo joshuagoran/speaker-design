@@ -258,6 +258,7 @@ export const SPEAKER_TEXT = {
   foldNoLayout: "No folded layout fits these drivers in this box. Make the box deeper or taller.",
   foldBroken: "The boards do not make one passage from the closed end to the mouth.",
   foldNotFacing: "The drivers do not face the passage. Move them to a board along it.",
+  foldWidth: "The drivers' cutout is wider than the inside of the box. Make the box wider.",
   foldCutout:
     "The drivers' cutout runs off their board. Move them along it, or make the board longer.",
   foldMagnet:
@@ -325,7 +326,11 @@ export const SPEAKER_TEXT = {
   hornBoardNote: (n: number) => `board ${n} in the side view`,
   hornBoardCuts: ([a, b]: readonly [number, number]) =>
     a === 0 && b === 0 ? "square ends" : `ends cut ${a}° and ${b}° off square`,
-  hornBoardSpot: (fromEnd: string) => `cutouts centered ${fromEnd}″ from its first end`,
+  /** where the cutouts center: each row's distance from the board's first end, and how many sit side by side across it */
+  hornBoardSpot: (fromEnds: readonly string[], across: number, apart: string | null) =>
+    `cutouts centered ${fromEnds.join("″, ")}″ from its first end${
+      across > 1 && apart ? `, ${across} side by side ${apart}″ apart` : ""
+    }`,
   hornNoFitNote:
     "the horn does not fit where it is mounted; no cutout until you change the mounting",
   portTooLong: "too long for this chamber: make it shorter",
@@ -518,6 +523,8 @@ export const SPEAKER_TEXT = {
   hornLengthTip: "The length of the section along the horn path.",
   hornPathSectionsTip: "The horn is a row of sections, from the throat to the mouth.",
   /** at the fewest sections a drive needs: why no Remove shows */
+  hornStraightNote:
+    "A tapped or offset horn's drivers sit on a board between parts of its path, so its path is folded.",
   hornSectionsNeeded: (n: number) =>
     `This drive needs at least ${n} sections: the cones open between them.`,
   driverHornTip:

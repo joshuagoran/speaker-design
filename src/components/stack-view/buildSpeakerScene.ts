@@ -1020,9 +1020,10 @@ function chamberParts(
 }
 
 /**
- * A folded horn's boards and drivers (lib/speaker/hornBoards): each board its side-section outline run across the
- * horn's face (`mouth` gives its width and center), the drivers' basket and motor run across their cutout, in the
- * cutaway. `innerZ` is the baffle's inside face in the group.
+ * A folded horn's boards and drivers (lib/speaker/hornBoards): each board a panel as long as its line face and as wide
+ * as the horn's face (`mouth` gives its width and center), a wall thick (two when doubled), with a round hole at each
+ * driver's cutout; and in the cutaway each driver as the baffle's drivers are drawn (`buildCone`, its body's round
+ * steps), turned to face along its board. `innerZ` is the baffle's inside face in the group.
  */
 function addFold(
   ctx: SceneContext,
@@ -1032,38 +1033,70 @@ function addFold(
   innerZ: number,
 ) {
   const cx = mouth.x + mouth.w / 2 - placed.cx;
-  /** a side-section outline run `across` wide, centered at `center` (the face's middle), in the group's coordinates */
-  const prism = (
-    outline: readonly FoldPoint[],
-    across: number,
-    look: THREE.Material,
-    name: string,
-    center = cx,
-  ) => {
-    const shape = new THREE.Shape(
-      outline.map((p) => new THREE.Vector2(innerZ - p.z, fold.y0In + p.y - placed.y0)),
-    );
-    const geometry = new THREE.ExtrudeGeometry(shape, { depth: across, bevelEnabled: false });
-    // the shape lies in the z–y plane: its extrusion (local z) runs across the box
-    geometry.rotateY(-Math.PI / 2);
-    const mesh = new THREE.Mesh(geometry, look);
-    // the rotation maps local x to z and local z to −x: shift across so the prism is centered
-    mesh.position.x = center + across / 2;
-    mesh.name = name;
+  const { widthIn } = fold.room;
+  /** a side-section point in the group's coordinates, `x` across */
+  const at3 = (p: FoldPoint, x = cx) =>
+    new THREE.Vector3(x, fold.y0In + p.y - placed.y0, innerZ - p.z);
+  /** a side-section direction in the group's coordinates */
+  const dir3 = (v: FoldPoint) => new THREE.Vector3(0, v.y, -v.z).normalize();
+  const { driverMounts, driversAcross } = fold.layout;
+  const drivers = fold.plan.drivers;
+  const r = (fold.body?.cutoutIn ?? 0) / 2;
+  /** each driver's place across the face, from its middle */
+  const acrossAt = (i: number) => widthIn * ((i + 0.5) / Math.max(1, driversAcross) - 0.5);
+  fold.layout.outlines.forEach((outline, i) => {
+    const [a, b, , oa] = outline;
+    const lengthIn = Math.hypot(b.z - a.z, b.y - a.y);
+    const thickIn = Math.hypot(oa.z - a.z, oa.y - a.y);
+    // the panel in its own plane: along the board from its `a` end, across the face from its middle
+    const shape = new THREE.Shape([
+      new THREE.Vector2(0, -widthIn / 2),
+      new THREE.Vector2(lengthIn, -widthIn / 2),
+      new THREE.Vector2(lengthIn, widthIn / 2),
+      new THREE.Vector2(0, widthIn / 2),
+    ]);
+    if (drivers?.board === i && r > 0)
+      for (const m of driverMounts)
+        for (let k = 0; k < driversAcross; k++)
+          shape.holes.push(circlePath(m.alongIn, acrossAt(k), r));
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: thickIn,
+      bevelEnabled: false,
+      curveSegments: 48,
+    });
+    const ex = dir3({ z: b.z - a.z, y: b.y - a.y });
+    const ez = dir3({ z: oa.z - a.z, y: oa.y - a.y });
+    // across the box, the way that keeps the panel's axes right-handed
+    const ey = new THREE.Vector3().crossVectors(ez, ex);
+    geometry.applyMatrix4(new THREE.Matrix4().makeBasis(ex, ey, ez).setPosition(at3(a)));
+    const mesh = new THREE.Mesh(geometry, ctx.materials.shell);
+    mesh.name = SPEAKER_MESH_NAMES.hornBoard;
     ctx.group.add(mesh);
-  };
-  for (const outline of fold.layout.outlines)
-    prism(outline, fold.room.widthIn, ctx.materials.shell, SPEAKER_MESH_NAMES.hornBoard);
-  const body = fold.layout.driverBody;
-  const count = placed.chamber.drivers.reduce((sum, d) => sum + d.count, 0);
-  if (ctx.cutaway && body && count > 0) {
-    const across = Math.hypot(body[1].z - body[0].z, body[1].y - body[0].y);
-    // the drivers side by side across the board, each in an equal share of its width
-    for (let i = 0; i < count; i++) {
-      const at = cx + fold.room.widthIn * ((i + 0.5) / count - 0.5);
-      prism(body, across, ctx.materials.black, SPEAKER_MESH_NAMES.hornDriver, at);
+  });
+  if (!ctx.cutaway || !fold.body || driversAcross === 0) return;
+  const { steps } = fold.body;
+  for (const m of driverMounts)
+    for (let k = 0; k < driversAcross; k++) {
+      // a group at the cone's face, its z the way the cone fronts face, as a baffle driver's
+      const group = new THREE.Group();
+      group.position.copy(at3(m.at, cx + acrossAt(k)));
+      group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir3(m.toCone));
+      ctx.group.add(group);
+      buildCone({ ...ctx, group }, { r, y: 0, z: 0 });
+      // the body's round steps behind the board's other face
+      for (const s of steps) {
+        const len = s.z1In - s.z0In;
+        if (s.rIn <= 0 || len <= 0) continue;
+        const step = new THREE.Mesh(
+          new THREE.CylinderGeometry(s.rIn, s.rIn, len, 32),
+          ctx.materials.black,
+        );
+        step.rotation.x = Math.PI / 2; // its axis along the group's z
+        step.position.z = -(m.thickIn + (s.z0In + s.z1In) / 2);
+        step.name = SPEAKER_MESH_NAMES.hornDriver;
+        group.add(step);
+      }
     }
-  }
 }
 
 /**

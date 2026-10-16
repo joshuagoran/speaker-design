@@ -22,6 +22,7 @@ import { CARD_LABELS, NEAR_MISS_YOURS } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
 import { driverName } from "./speakerParts";
 import { pathIn } from "./hornSections";
+import { isFolded } from "../../lib/speaker/foldLayouts";
 
 /** "1 chamber", "2 chambers". */
 export const countText = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -35,10 +36,10 @@ export const hornText = (horn: Pick<SpeakerHorn, "drive" | "path" | "segments">)
   [
     `${HORN_DRIVE_NAMES[horn.drive.kind].toLowerCase()} horn`,
     // a folded horn is its boards: its sections set no shape
-    ...(horn.path === HORN_PATH.folded
+    ...(isFolded(horn)
       ? []
       : [countText(horn.segments.length, "section", "sections"), `${pathIn(horn)} in`]),
-    HORN_PATH_NAMES[horn.path].toLowerCase(),
+    HORN_PATH_NAMES[isFolded(horn) ? HORN_PATH.folded : horn.path].toLowerCase(),
   ].join(", ");
 
 /** A chamber in one line: its size, vent, horn and drivers. */

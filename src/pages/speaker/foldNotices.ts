@@ -14,6 +14,7 @@ export function foldNotices(checks: FoldChecks): string[] {
   if (checks.thin !== null) out.push(SPEAKER_TEXT.foldThin(formatInches(FOLD_MIN_PASSAGE_IN)));
   const d = checks.drivers;
   if (d && !d.facesPassage) out.push(SPEAKER_TEXT.foldNotFacing);
+  if (d && !d.widthFits) out.push(SPEAKER_TEXT.foldWidth);
   if (d && !d.cutoutFits) out.push(SPEAKER_TEXT.foldCutout);
   if (d && !d.magnetClear) out.push(SPEAKER_TEXT.foldMagnet);
   if (d && !d.coneRoom) out.push(SPEAKER_TEXT.foldCone);

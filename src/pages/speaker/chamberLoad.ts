@@ -30,11 +30,13 @@ import { DEFAULT_VENTS } from "./speakerParts";
 import { chamberFold, foldRoomOf, zigzagTries } from "../../lib/speaker/speakerLayout";
 import {
   foldPasses,
+  foldRestLiters,
   hornBoardsLayout,
   type FoldDriverBody,
   type FoldRoom,
 } from "../../lib/speaker/hornBoards";
 import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE } from "../../constants/hornBoards";
+import { isFolded } from "../../lib/speaker/foldLayouts";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -167,9 +169,11 @@ export function withGoalHorn(
     load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
     netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
   };
-  if (found.horn.path !== HORN_PATH.folded) return { chamber: designed, fit: found.fit };
+  if (!isFolded(found.horn)) return { chamber: designed, fit: found.fit };
   // a folded result plays as its boards: keep it only where its boards beat the best straight path that fits
-  const boards = withGoalBoards(cabinet, designed, goals, throat.parts.ts);
+  const boards = withGoalBoards(cabinet, designed, goals, throat.parts.ts, displacementLiters);
+  // a tapped or offset horn is always folded
+  if (drive !== HORN_DRIVE.front) return boards;
   const straightFound = goalHorn(
     {
       chamber: searched,
@@ -244,6 +248,7 @@ function withGoalBoards(
   designed: SpeakerChamber,
   goals: HornGoals,
   power: DriverPower,
+  displacementLiters: number,
 ): { chamber: SpeakerChamber; fit: HornGoalFit } | null {
   if (designed.load.kind !== CHAMBER_LOAD.horn) return null;
   const { horn } = designed.load;
@@ -254,19 +259,25 @@ function withGoalBoards(
   const face = chamberClearFace(cabinet, designed);
   let best: { chamber: SpeakerChamber; fit: HornGoalFit; score: number } | null = null;
   const tapped = horn.drive.kind === HORN_DRIVE.tapped;
-  for (const plan of zigzagTries(room, tapped).flatMap((p) =>
+  for (const plan of zigzagTries(room, horn.drive.kind, body).flatMap((p) =>
     tapped ? withDriverSpots(p, room, body) : [p],
   )) {
     const layout = hornBoardsLayout(plan, room, body);
     if (!foldPasses(layout)) continue;
+    // the air outside the passage is the rear chamber: Auto works it out from the boards (a tapped horn keeps the
+    // small air behind its cones that the search set)
+    const rearL = tapped
+      ? (designed.netLiters ?? MIN_NET_L)
+      : Math.max(MIN_NET_L, foldRestLiters(layout, room) - displacementLiters);
     const chamber: SpeakerChamber = {
       ...designed,
       load: { kind: CHAMBER_LOAD.horn, horn: { ...horn, boards: plan } },
+      netLiters: tapped ? designed.netLiters : null,
     };
     const read = hornDesignOf(
       chamber,
       { count: 1, angle: 2 },
-      { netLiters: chamber.netLiters ?? MIN_NET_L, face, setbackIn, fold: layout },
+      { netLiters: rearL, face, setbackIn, fold: layout },
     );
     const fit = read.ok ? hornGoalFit(read.design, goals, power) : null;
     if (!fit) continue;

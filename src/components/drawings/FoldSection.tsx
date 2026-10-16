@@ -20,7 +20,8 @@ const SPOT_PX = 3;
 
 /**
  * A folded horn chamber's side section, to scale, the baffle at the left: its walls, the passage between its boards
- * (from the gates, lib/speaker/hornBoards), the boards, and the drivers' basket and motor behind their board. A board
+ * (from the gates, lib/speaker/hornBoards), the boards with the drivers' cutouts through theirs, and the drivers' basket
+ * and motor behind it, in round steps as the straight horns' drivers are drawn. A board
  * past the chamber or crossing another, and a magnet that hits a board, are drawn in the error color.
  */
 export function FoldSection({ cabinet, placed, fold }: Props) {
@@ -51,7 +52,24 @@ export function FoldSection({ cabinet, placed, fold }: Props) {
   const magnetBad = checks.drivers !== null && !checks.drivers.magnetClear;
   const { gates } = layout;
   const drivers = plan.drivers;
-  const spot = drivers ? layout.driverBody : null;
+  const bodies = drivers ? layout.driverBodies : [];
+  const mounts = drivers ? layout.driverMounts : [];
+  /** each row's cutout through the drivers' board: the board's outline between the cutout's two edges */
+  const cutouts = (() => {
+    const board = drivers ? layout.outlines[drivers.board] : undefined;
+    const r = (fold.body?.cutoutIn ?? 0) / 2;
+    if (!board || r <= 0) return [];
+    const [a, b, ob, oa] = board;
+    const lengthIn = Math.hypot(b.z - a.z, b.y - a.y);
+    const lerp = (p: FoldPoint, q: FoldPoint, u: number) => ({
+      z: p.z + (q.z - p.z) * u,
+      y: p.y + (q.y - p.y) * u,
+    });
+    return mounts.map((m) => {
+      const [u0, u1] = [(m.alongIn - r) / lengthIn, (m.alongIn + r) / lengthIn];
+      return [lerp(a, b, u0), lerp(a, b, u1), lerp(oa, ob, u1), lerp(oa, ob, u0)];
+    });
+  })();
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
@@ -100,23 +118,28 @@ export function FoldSection({ cabinet, placed, fold }: Props) {
           strokeWidth={1}
         />
       ))}
-      {spot && (
+      {/* the drivers' cutouts: openings through their board */}
+      {cutouts.map((hole, i) => (
         <polygon
-          points={points(spot)}
-          fill={alpha(magnetBad ? red : pal.magenta, 0.55)}
-          stroke={magnetBad ? red : pal.magenta}
-          strokeWidth={1}
+          key={`h${i}`}
+          points={points(hole)}
+          fill={pal.panel}
+          stroke={pal.ink}
+          strokeWidth={0.5}
         />
-      )}
-      {spot && (
+      ))}
+      {/* the drivers' bodies, as the straight horns' drivers are drawn: each round step of the basket and motor */}
+      {bodies.map((step, i) => (
+        <polygon key={`d${i}`} points={points(step)} fill={magnetBad ? red : pal.muted} />
+      ))}
+      {mounts.map((m, i) => (
         <circle
-          {...((p) => ({ cx: p.x, cy: p.y }))(
-            at({ z: (spot[0].z + spot[1].z) / 2, y: (spot[0].y + spot[1].y) / 2 }),
-          )}
+          key={`p${i}`}
+          {...((p) => ({ cx: p.x, cy: p.y }))(at(m.at))}
           r={SPOT_PX}
           fill={pal.magenta}
         />
-      )}
+      ))}
     </svg>
   );
 }

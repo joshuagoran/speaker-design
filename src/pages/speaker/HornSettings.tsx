@@ -9,6 +9,7 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
+import { isFolded } from "../../lib/speaker/foldLayouts";
 import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/speakerPage";
 import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { COMPRESSION_RATIO } from "../../constants/hornThroat";
@@ -144,7 +145,7 @@ export function HornSettings({
 }: Props) {
   const { segments, drive } = horn;
   /** a folded horn is its boards: no sections, taps or compression ratio to set */
-  const folded = horn.path === HORN_PATH.folded;
+  const folded = isFolded(horn);
   const conesCm2 = conesAreaCm2(drivers);
   const ratio = compressionRatio(conesCm2, segments);
   const cones = throatCones(drivers);
@@ -353,9 +354,14 @@ export function HornSettings({
       />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
-        value={horn.path}
+        value={folded ? HORN_PATH.folded : horn.path}
         onChange={(path) => onEdit((h) => ({ ...h, path }))}
         options={entriesOf(HORN_PATH_NAMES)}
+        disabled={
+          drive.kind === HORN_DRIVE.tapped || drive.kind === HORN_DRIVE.offset
+            ? { values: [HORN_PATH.straight], why: SPEAKER_TEXT.hornStraightNote }
+            : undefined
+        }
       />
       <HornImportFold onImport={onImport} />
     </section>

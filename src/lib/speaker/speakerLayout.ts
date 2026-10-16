@@ -63,18 +63,20 @@ import {
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { CM2_PER_IN2, CM_PER_IN, MM_PER_IN } from "../../constants/units";
 import {
+  foldBodyFrom,
   foldPasses,
   hornBoardsLayout,
   type FoldDriverBody,
   type FoldLayout,
   type FoldRoom,
 } from "./hornBoards";
-import { zigzagBoards } from "./foldLayouts";
+import { isFolded, offsetZigzagBoards, zigzagBoards } from "./foldLayouts";
 import {
   FOLD_AUTO_GROWTHS,
   FOLD_FACE,
   FOLD_AUTO_MAX_LEGS,
   FOLD_AUTO_TURN_SHARES,
+  FOLD_OFFSET_REAR_SHARES,
 } from "../../constants/hornBoards";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
@@ -89,7 +91,6 @@ import {
   CHAMBER_LOAD,
   DRIVER_KIND,
   HORN_DRIVE,
-  HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
   SLOT_PLACE,
@@ -777,7 +778,7 @@ export function hornFlare(
   const horn: SpeakerHorn = load.horn;
   const t = cabinet.panel.thicknessIn;
   const face = hornFace(placed, t);
-  if (horn.path === HORN_PATH.folded) {
+  if (isFolded(horn)) {
     const fold = chamberFoldIn(cabinet, placed, horn, face);
     const [ga, gb] = fold.layout.gates.length
       ? [
@@ -837,6 +838,8 @@ export interface ChamberFold {
   room: FoldRoom;
   layout: FoldLayout;
   y0In: number;
+  /** the drivers' body the boards were checked with (the 3D view draws it); null without a cone */
+  body: FoldDriverBody | null;
 }
 
 /**
@@ -860,8 +863,7 @@ function chamberFoldIn(
   const cached = FOLD_CACHE.get(placed.chamber);
   if (cached?.key === key) return cached.fold;
   const body = foldBodyOf(placed.chamber);
-  const chosen =
-    horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind === HORN_DRIVE.tapped);
+  const chosen = horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind);
   const plan = withDriverBoardPieces(chosen, horn.doubleBoard ? 2 : 1);
   const fold = {
     plan,
@@ -869,6 +871,7 @@ function chamberFoldIn(
     room,
     layout: hornBoardsLayout(plan, room, body),
     y0In: face.y,
+    body,
   };
   FOLD_CACHE.set(placed.chamber, { key, fold });
   return fold;
@@ -885,13 +888,12 @@ function foldBodyOf(chamber: SpeakerChamber): FoldDriverBody | null {
   });
   const first = cones[0]?.cone;
   return first
-    ? {
-        cutoutIn: first.body.cutoutIn,
-        motorIn: first.body.motorIn,
-        depthIn: first.depthIn,
-        xmaxIn: (first.ts.Xmax ?? 0) / MM_PER_IN,
-        count: cones.reduce((sum, c) => sum + c.count, 0),
-      }
+    ? foldBodyFrom(
+        first.body,
+        first.depthIn,
+        (first.ts.Xmax ?? 0) / MM_PER_IN,
+        cones.reduce((sum, c) => sum + c.count, 0),
+      )
     : null;
 }
 
@@ -924,12 +926,35 @@ export function foldRoomOf(
   };
 }
 
-/** The zigzags the automatic choice and Design from goals try: each even leg count, turn width and growth. */
-export const zigzagTries = (room: FoldRoom, tapped: boolean): HornBoards[] =>
-  zigzagPlans(room, tapped).flatMap((plan) =>
+/**
+ * The layouts the automatic choice and Design from goals try for a drive: zigzags of each leg count, turn width and
+ * growth; a tapped horn's with its drivers on the first board or the last, an offset horn's over a sealed rear chamber
+ * of each height (none without a driver's body to size it), a front-loaded horn's with its throat at the closed end.
+ */
+export const zigzagTries = (
+  room: FoldRoom,
+  kind: SpeakerHorn["drive"]["kind"],
+  body: FoldDriverBody | null,
+): HornBoards[] => {
+  if (kind === HORN_DRIVE.offset) return body ? offsetPlans(room, body.cutoutIn) : [];
+  const tapped = kind === HORN_DRIVE.tapped;
+  return zigzagPlans(room, tapped).flatMap((plan) =>
     // a tapped horn's drivers on the first board, or the last: their backs into the mouth's leg, the tallest
     tapped && plan.drivers && plan.boards.length > 1 ? [plan, onLastBoard(plan)] : [plan],
   );
+};
+
+/** Each odd leg count, rear chamber height (as a share of the height), turn width and growth of the offset zigzag. */
+const offsetPlans = (room: FoldRoom, cutoutIn: number): HornBoards[] =>
+  Array.from({ length: FOLD_AUTO_MAX_LEGS / 2 }, (_, i) =>
+    FOLD_OFFSET_REAR_SHARES.flatMap((rear) =>
+      FOLD_AUTO_TURN_SHARES.flatMap((share) =>
+        FOLD_AUTO_GROWTHS.map((growth) =>
+          offsetZigzagBoards(room, 2 * i + 1, room.heightIn * rear, cutoutIn, share, growth),
+        ),
+      ),
+    ),
+  ).flat();
 
 /** A tapped zigzag with its drivers moved to its last board, midway along it, the fronts down into the leg below. */
 function onLastBoard(plan: HornBoards): HornBoards {
@@ -973,10 +998,12 @@ function autoBoards(
   room: FoldRoom,
   segments: readonly HornSegment[],
   body: FoldDriverBody | null,
-  tapped: boolean,
+  kind: SpeakerHorn["drive"]["kind"],
 ): HornBoards {
   const wantIn = segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
-  const tries = zigzagTries(room, tapped);
+  const found = zigzagTries(room, kind, body);
+  // with nothing to try (an offset horn with no cone), a front-loaded zigzag
+  const tries = found.length ? found : zigzagTries(room, HORN_DRIVE.front, body);
   // a layout that passes every check beats one that does not; then the path nearest the sections'
   const cost = (plan: HornBoards) => {
     const layout = hornBoardsLayout(plan, room, body);

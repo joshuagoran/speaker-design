@@ -5,7 +5,7 @@ import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { shownIn, shownTenth } from "./speakerFields";
 import { throatAreaCm2 } from "../../lib/speaker/hornThroat";
 import { HORN_PROFILE } from "../../constants/hornEngine";
-import { HORN_DRIVE } from "../../constants/speakerSpec";
+import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 
 /** A new section's end area over its start area: it doubles, as a flare step. */
 const NEW_SECTION_AREA_RATIO = 2;
@@ -195,7 +195,10 @@ export function withDriveKind(horn: SpeakerHorn, kind: SpeakerHorn["drive"]["kin
       : kind === HORN_DRIVE.tapped
         ? { kind, frontTap: 1, rearTap: segments.length - 1 }
         : { kind };
-  return { ...horn, segments, drive };
+  // a tapped or offset horn is always folded
+  const path =
+    kind === HORN_DRIVE.offset || kind === HORN_DRIVE.tapped ? HORN_PATH.folded : horn.path;
+  return { ...horn, segments, drive, path };
 }
 
 /** `x` kept from `lo` to `hi`. */

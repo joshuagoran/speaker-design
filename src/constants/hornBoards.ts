@@ -41,3 +41,6 @@ export const FOLD_AUTO_TURN_SHARES = [1, 0.75, 0.5] as const;
 
 /** How much taller each leg is than the one before, in the zigzags tried: alike, or growing toward the mouth. */
 export const FOLD_AUTO_GROWTHS = [1, 1.25, 1.5] as const;
+
+/** The sealed rear chamber heights an offset horn's layouts try, as shares of the chamber's height. */
+export const FOLD_OFFSET_REAR_SHARES = [0.2, 0.3, 0.4] as const;

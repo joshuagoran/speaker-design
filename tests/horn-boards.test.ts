@@ -3,6 +3,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
+  foldBodyFrom,
   foldPasses,
   hornBoardsLayout,
   type FoldDriverBody,
@@ -27,7 +28,8 @@ import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpe
 /** A 30 × 38 in side section, 21 in wide, 3/4 in walls. */
 const ROOM: FoldRoom = { depthIn: 30, heightIn: 38, wallIn: 0.75, widthIn: 21 };
 /** An 18″ sub's body: cutout, motor, depth behind its mounting face, excursion. */
-const SUB18: FoldDriverBody = { cutoutIn: 16.6, motorIn: 9, depthIn: 7.5, xmaxIn: 0.5, count: 1 };
+const SUB18_CONE = { cutoutIn: 16.6, motorIn: 9 };
+const SUB18: FoldDriverBody = foldBodyFrom(SUB18_CONE, 7.5, 0.5, 1);
 /** Each leg's height in the four-leg zigzag, in. */
 const LEG_H = (ROOM.heightIn - 3 * ROOM.wallIn) / 4;
 
@@ -106,7 +108,7 @@ test("horn boards: each check fails when it should", () => {
   assert.equal(offEnd.checks.drivers?.cutoutFits, false);
   // a magnet deeper than the leg above
   assert.equal(
-    layoutOf(ZIGZAG, { ...SUB18, depthIn: LEG_H + 1 }).checks.drivers?.magnetClear,
+    layoutOf(ZIGZAG, foldBodyFrom(SUB18_CONE, LEG_H + 1, 0.5, 1)).checks.drivers?.magnetClear,
     false,
   );
   // an excursion the leg below cannot take

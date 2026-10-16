@@ -1,3 +1,4 @@
+import { isFolded } from "./foldLayouts";
 // A speaker spec's build, chamber by chamber: its braces and ribs by the PA boxes' bracing rule, its hardware, its cut
 // parts, the wood and the vent inside its air, its net air and its weight. Pure.
 //
@@ -115,6 +116,7 @@ import { segmentsAirLiters } from "../acoustics/hornSegments";
 import {
   PORT_RULE,
   coneBuild,
+  chamberFold,
   type ConeBuild,
   driverHorn,
   driverSpots,
@@ -926,8 +928,11 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
  * walls' back edges, with the cutouts a doubled driver board leaves in front of the cones (lib/speaker/hornThroat); it
  * is the horn's, not the rear chamber's. 0 for a direct chamber.
  */
-function hornAirL(cabinet: Pick<SpeakerCabinet, "panel">, chamber: SpeakerChamber): number {
+function hornAirL(cabinet: SpeakerCabinet, chamber: SpeakerChamber): number {
   if (chamber.load.kind !== CHAMBER_LOAD.horn) return 0;
+  // a folded horn's air is the passage between its boards
+  const fold = isFolded(chamber.load.horn) ? chamberFold(cabinet, chamber) : null;
+  if (fold) return fold.layout.airLiters;
   const throat = throatCones(chamber.drivers);
   return (
     segmentsAirLiters(chamber.load.horn.segments) +
@@ -1013,7 +1018,13 @@ function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
       ...(drivers?.board === i
         ? [
             ...cutouts,
-            SPEAKER_TEXT.hornBoardSpot(formatInches(drivers.alongIn)),
+            SPEAKER_TEXT.hornBoardSpot(
+              fold.layout.driverMounts.map((m) => formatInches(m.alongIn)),
+              fold.layout.driversAcross,
+              fold.layout.driversAcross > 1
+                ? formatInches(fold.room.widthIn / fold.layout.driversAcross)
+                : null,
+            ),
             ...((fold.plan.boards[i].pieces ?? 1) > 1 ? [SPEAKER_TEXT.driverBoardNote(2)] : []),
           ]
         : []),

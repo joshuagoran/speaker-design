@@ -202,7 +202,10 @@ export function goalHorn(
       ...base,
       segments: sectionsOf(shape.pathCm, shape.flare, shape.taps, hornL),
       drive: driveOf(drive),
-      path: shape.pathCm > depthCm ? HORN_PATH.folded : HORN_PATH.straight,
+      path:
+        shape.pathCm > depthCm || drive !== HORN_DRIVE.front
+          ? HORN_PATH.folded
+          : HORN_PATH.straight,
       goals,
     };
     const read: HornDesignResult = hornDesignOf(
