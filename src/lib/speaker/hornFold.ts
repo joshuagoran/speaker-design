@@ -28,6 +28,7 @@ import {
   FOLD_SHARED_TOLERANCE_IN,
   FOLD_SHARP_TURN_DEG,
   FOLD_BOARD_END_BOARDS,
+  FOLD_EDGE_FALL_IN,
   FOLD_TURN_MARGIN_IN,
   MAX_FOLD_LEGS,
 } from "../../constants/hornFold";
@@ -81,6 +82,8 @@ export interface FoldMountSpot {
   run: number;
   across: number | null;
   taps: FoldTaps;
+  /** the spot as a mount, inches: what the settings show */
+  mount: MountIn;
 }
 
 /** A folded path laid out in runs. */
@@ -121,10 +124,34 @@ export interface HornFoldInput {
   /** the runs, start to mouth, already fitted to the path's length (`fittedRuns`) */
   runs: readonly RunIn[];
   /** the drivers' spot (lengths in inches), or null */
-  mount: (Omit<HornMount, "alongCm"> & { alongIn: number }) | null;
+  mount: MountIn | null;
+  /** with no `mount`: the taps (inches) the spot should come closest to; the fold then picks that spot */
+  wantTaps?: FoldTaps | null;
 }
 
+/** A drivers' spot in the views' units: its distance along its run in inches. */
+export type MountIn = Omit<HornMount, "alongCm"> & { alongIn: number };
+
 const RAD_PER_DEG = Math.PI / 180;
+
+/**
+ * The duct's height along the path, in, as a function of the path distance (in): its area there (the segments', by
+ * their flare laws, times `areaScale`) over its width (the mouth's).
+ */
+function heightOf(input: Pick<HornFoldInput, "segments" | "areaScale" | "mouth">) {
+  const { segments, areaScale, mouth } = input;
+  const lengths = segments.map((x) => x.length / CM_PER_IN);
+  const starts = lengths.map((_, i) => lengths.slice(0, i).reduce((a, b) => a + b, 0));
+  const pathIn = lengths.reduce((a, b) => a + b, 0);
+  return (sAt: number) => {
+    const at = Math.min(pathIn, Math.max(0, sAt));
+    const i = Math.max(0, starts.filter((start) => start <= at + 1e-9).length - 1);
+    return (
+      ((segmentAreaAt(segments[i], (at - starts[i]) * CM_PER_IN) / CM2_PER_IN2) * areaScale) /
+      mouth.w
+    );
+  };
+}
 
 /** How many steps the drivers' spot takes looking past its board for the run across. */
 const MOUNT_PROBE_STEPS = 8;
@@ -231,17 +258,9 @@ const outline = (run: FoldRun) => [...run.left, ...[...run.right].reverse()];
 export function hornFold(input: HornFoldInput): HornFold | null {
   const { segments, areaScale, mouth, clear, depthIn, wallIn, runs } = input;
   if (runs.length === 0 || segments.length === 0) return null;
-  const lengths = segments.map((s) => s.length / CM_PER_IN);
-  const starts = lengths.map((_, i) => lengths.slice(0, i).reduce((a, b) => a + b, 0));
-  const pathIn = lengths.reduce((a, b) => a + b, 0);
+  const pathIn = segments.reduce((sum, x) => sum + x.length, 0) / CM_PER_IN;
   const widthIn = mouth.w;
-  /** the duct's height at path distance `s`, in: its area over its width */
-  const heightAt = (s: number) => {
-    const i = Math.max(0, starts.filter((start) => start <= s + 1e-9).length - 1);
-    const area =
-      (segmentAreaAt(segments[i], (s - starts[i]) * CM_PER_IN) / CM2_PER_IN2) * areaScale;
-    return area / widthIn;
-  };
+  const heightAt = heightOf(input);
   // the centerline, back from the mouth
   const angles = runs.map((r) => r.angleDeg * RAD_PER_DEG);
   const points: FoldPoint[] = [{ z: 0, y: mouth.y + mouth.h / 2 }];
@@ -266,7 +285,12 @@ export function hornFold(input: HornFoldInput): HornFold | null {
         if (j === steps && k < runs.length - 1) return corner(k, side);
         const along = (run.lengthIn * j) / steps;
         const at = add(points[k], dir(angles[k]), along);
-        return add(at, leftOf(angles[k]), (side * heightAt(s0s[k] + along)) / 2);
+        const point = add(at, leftOf(angles[k]), (side * heightAt(s0s[k] + along)) / 2);
+        // the mouth's run ends on the baffle: its walls stop at the baffle's plane
+        const d = dir(angles[k]);
+        return j === steps && k === runs.length - 1 && Math.abs(d.z) > 1e-6
+          ? add(point, d, -point.z / d.z)
+          : point;
       });
     return {
       start: points[k],
@@ -358,9 +382,72 @@ export function hornFold(input: HornFoldInput): HornFold | null {
     crossing: crossingPair,
     sharpTurn: sharp < 0 ? null : sharp + 1,
     fits: outsideRun < 0 && crossingPair === null && sharp < 0,
-    mount: input.mount ? mountSpot(foldRuns, input.mount, heightAt, wallIn) : null,
+    mount: input.mount
+      ? mountSpot(foldRuns, input.mount, heightAt, wallIn)
+      : input.wantTaps
+        ? closestSpot(foldRuns, input.wantTaps, heightAt, wallIn)
+        : null,
   };
 }
+
+/** How many places along a run the closest spot tries. */
+const SPOT_STEPS = 48;
+
+/**
+ * The spot whose taps come closest to `want` (the sum of the two taps' distances, inches): every run, both walls, both
+ * ways the cones can face, at `SPOT_STEPS` places along the run. A tap that should face the rear chamber (null) only
+ * takes a spot whose side faces no run, and the other way round. Null where no spot can give the taps' kind.
+ */
+function closestSpot(
+  runs: readonly FoldRun[],
+  want: FoldTaps,
+  heightAt: (s: number) => number,
+  wallIn: number,
+): FoldMountSpot | null {
+  let best: FoldMountSpot | null = null,
+    bestMiss = Infinity;
+  const miss = (got: number | null, wanted: number | null) =>
+    (got === null) !== (wanted === null)
+      ? Infinity
+      : got === null || wanted === null
+        ? 0
+        : Math.abs(got - wanted);
+  for (const spot of everySpot(runs, heightAt, wallIn, SPOT_STEPS)) {
+    const m = miss(spot.taps.front, want.front) + miss(spot.taps.rear, want.rear);
+    if (m < bestMiss) {
+      bestMiss = m;
+      best = spot;
+    }
+  }
+  return best;
+}
+
+/** Every spot on every run's two walls, both ways the cones can face, at `steps` + 1 places along each run. */
+function everySpot(
+  runs: readonly FoldRun[],
+  heightAt: (s: number) => number,
+  wallIn: number,
+  steps: number,
+): FoldMountSpot[] {
+  return runs.flatMap((run, k) =>
+    ([1, -1] as const).flatMap((side) =>
+      [true, false].flatMap((frontInRun) =>
+        Array.from({ length: steps + 1 }, (_, j) =>
+          mountSpot(
+            runs,
+            { run: k, side, frontInRun, alongIn: ((run.s1 - run.s0) * j) / steps },
+            heightAt,
+            wallIn,
+          ),
+        ).filter((spot): spot is FoldMountSpot => spot !== null),
+      ),
+    ),
+  );
+}
+
+/** Every spot the fold's runs offer (`everySpot`), at `steps` + 1 places along each run: what a search tries. */
+export const foldSpots = (input: HornFoldInput, fold: HornFold, steps: number) =>
+  everySpot(fold.runs, heightOf(input), input.wallIn, steps);
 
 /**
  * The drivers' spot on their wall and the taps it gives: the run's own tap at the spot, and across the board the run
@@ -370,7 +457,7 @@ export function hornFold(input: HornFoldInput): HornFold | null {
  */
 function mountSpot(
   runs: readonly FoldRun[],
-  mount: NonNullable<HornFoldInput["mount"]>,
+  mount: MountIn,
   heightAt: (s: number) => number,
   wallIn: number,
 ): FoldMountSpot | null {
@@ -404,6 +491,7 @@ function mountSpot(
     run: mount.run,
     across,
     taps: mount.frontInRun ? { front: s, rear: acrossS } : { front: acrossS, rear: s },
+    mount: { ...mount, alongIn: along },
   };
 }
 
@@ -447,9 +535,15 @@ export function squareFolds(input: SquareFoldInput): HornRun[] {
     Math.abs(line.b.z - line.a.z) < 1e-9
       ? line.a.y
       : line.a.y + ((line.b.y - line.a.y) * (z - line.a.z)) / (line.b.z - line.a.z);
-  /** the current leg's outer wall: flat along the mouth's far edge for the mouth's leg */
+  /**
+   * the current leg's outer wall: along the mouth's far edge for the mouth's leg, falling a little away from the box's
+   * wall toward the back, so the tilted leg's corner at the turn stays inside
+   */
   const edge = mouthY - (sign * mouth.h) / 2;
-  let outer: Line = { a: { z: 0, y: edge }, b: { z: depthIn, y: edge } };
+  let outer: Line = {
+    a: { z: 0, y: edge },
+    b: { z: depthIn, y: edge + sign * FOLD_EDGE_FALL_IN },
+  };
   const points: FoldPoint[] = [{ z: 0, y: mouthY }];
   /** the path distance at the point laid out last */
   let s = pathIn;

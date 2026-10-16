@@ -96,7 +96,7 @@ export function hornGoalFit(
 }
 
 /** A fit's score: lower is better. The spread, a low edge under the usual corner, and a shortfall from the target. */
-const scoreOf = (fit: HornGoalFit, goals: HornGoals) =>
+export const scoreOf = (fit: HornGoalFit, goals: HornGoals) =>
   fit.spreadDb +
   2 * Math.max(0, -LOW_EDGE_DB - fit.lowEdgeDb) +
   2 * Math.max(0, goals.targetDb - fit.maxOutDb);

@@ -57,7 +57,14 @@ import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { hornPath, type HornPath } from "./hornGeometry";
-import { fittedRuns, hornFold, squareFolds, type HornFold, type HornFoldInput } from "./hornFold";
+import {
+  fittedRuns,
+  hornFold,
+  squareFolds,
+  type FoldTaps,
+  type HornFold,
+  type HornFoldInput,
+} from "./hornFold";
 import { driverBodyIn, wallClearanceIn } from "./hornThroat";
 import { driverBoardIn } from "./driverBoard";
 import { PORT_STYLE } from "../../constants/portStyles";
@@ -673,6 +680,8 @@ export interface HornFlare {
   fold: HornFold | null;
   /** the runs `fold` lays out, as the horn stores them (cm): the horn's own, or the square folds'; empty when straight */
   runs: readonly HornRun[];
+  /** what `fold` was laid out from (a search over its drivers' spots reads it); null when straight */
+  foldInput: HornFoldInput | null;
   /** the mouth is larger than the horn's face: drawn at the face, every section shrunk alike */
   mouthClipped: boolean;
   /** the horn's `mouthPosition` would put the mouth past the face: drawn moved inside it */
@@ -754,33 +763,59 @@ export function hornFlare(
     wallIn: t,
   };
   const runs = folded ? (horn.runs?.length ? horn.runs : squareFolds(square)) : [];
-  const fold = folded
-    ? hornFold({ ...square, runs: fittedRuns(runs, path.pathIn), mount: mountOf(horn, runs) })
+  const foldInput: HornFoldInput | null = folded
+    ? { ...square, runs: fittedRuns(runs, path.pathIn), ...spotOf(horn) }
     : null;
+  const fold = foldInput && hornFold(foldInput);
   return {
     mouth,
     path,
     fold,
     runs,
+    foldInput,
     mouthClipped: fit < 1 - 1e-9,
     mouthMoved: set?.moved ?? false,
   };
 }
 
 /**
- * An offset or tapped horn's drivers' spot as the fold reads it (inches): the horn's own, else on the first run's right
- * wall (below a run toward the back) at its middle, the cone fronts into the run. Null for another drive.
+ * An offset or tapped horn's drivers' spot as the fold reads it (inches): the horn's own (`mount`), else none and the
+ * taps it should come closest to: the drive's own taps as path distances (an offset horn's backs in the rear chamber).
+ * Null mount and taps for another drive.
  */
-function mountOf(horn: SpeakerHorn, runs: readonly HornRun[]): HornFoldInput["mount"] {
-  if (horn.drive.kind !== HORN_DRIVE.offset && horn.drive.kind !== HORN_DRIVE.tapped) return null;
-  const mount = horn.mount ?? {
-    run: 0,
-    alongCm: (runs[0]?.lengthCm ?? 0) / 2,
-    side: -1,
-    frontInRun: true,
+function spotOf(horn: SpeakerHorn): Pick<HornFoldInput, "mount" | "wantTaps"> {
+  const { drive } = horn;
+  if (drive.kind !== HORN_DRIVE.offset && drive.kind !== HORN_DRIVE.tapped) return { mount: null };
+  if (horn.mount) {
+    const { alongCm, ...rest } = horn.mount;
+    return { mount: { ...rest, alongIn: alongCm / CM_PER_IN } };
+  }
+  /** a section boundary's path distance, in */
+  const at = (boundary: number) =>
+    horn.segments.slice(0, boundary).reduce((sum, x) => sum + x.length, 0) / CM_PER_IN;
+  return {
+    mount: null,
+    wantTaps:
+      drive.kind === HORN_DRIVE.tapped
+        ? { front: at(drive.frontTap), rear: at(drive.rearTap) }
+        : { front: at(drive.tap), rear: null },
   };
-  const { alongCm, ...rest } = mount;
-  return { ...rest, alongIn: alongCm / CM_PER_IN };
+}
+
+/**
+ * A folded offset or tapped horn chamber's taps from its drivers' spot (`hornFlare`'s fold), path distances in inches;
+ * null for any other chamber or one the layout cannot place. Only such a chamber lays the cabinet out.
+ */
+export function chamberFoldTaps(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+): FoldTaps | null {
+  if (chamber.load.kind !== CHAMBER_LOAD.horn) return null;
+  const { horn } = chamber.load;
+  if (horn.path !== HORN_PATH.folded) return null;
+  if (horn.drive.kind !== HORN_DRIVE.offset && horn.drive.kind !== HORN_DRIVE.tapped) return null;
+  const placed = speakerLayout(cabinet).chambers[cabinet.chambers.indexOf(chamber)];
+  return (placed && hornFlare(cabinet, placed)?.fold?.mount?.taps) ?? null;
 }
 
 /** A box in the front view by its edges, in. */

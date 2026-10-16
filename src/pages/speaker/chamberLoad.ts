@@ -18,10 +18,22 @@ import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
 import { withDriveKind } from "./hornSections";
 import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
 import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
-import { goalHorn, hornGoalFit, type GoalDrive } from "../../lib/speaker/hornGoals";
+import {
+  goalHorn,
+  hornGoalFit,
+  scoreOf,
+  type DriverPower,
+  type GoalDrive,
+} from "../../lib/speaker/hornGoals";
+import { foldSpots, type MountIn } from "../../lib/speaker/hornFold";
 import { DEFAULT_VENTS } from "./speakerParts";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
-import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
+import {
+  chamberFoldTaps,
+  hornFlare,
+  speakerLayout,
+  type PlacedChamber,
+} from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { segmentsAirLiters } from "../../lib/acoustics/hornSegments";
@@ -147,13 +159,66 @@ export function withGoalHorn(
     room.depthIn * CM_PER_IN,
   );
   if (!found) return null;
+  const designed: SpeakerChamber = {
+    ...searched,
+    load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
+    netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+  };
+  const spotted = withBestSpot(cabinet, chamber, designed, goals, throat.parts.ts);
+  return spotted ?? { chamber: designed, fit: found.fit };
+}
+
+/** How many places along each run the spot search tries. */
+const SPOT_SEARCH_STEPS = 12;
+
+/**
+ * A folded offset or tapped horn's chamber (`designed`, in `cabinet` in place of `chamber`) with its drivers at the spot
+ * whose taps meet the goals best: every spot the fold offers (`foldSpots`), each scored as the search scores a horn.
+ * Null for a straight path or another drive, or where no spot can be modeled.
+ */
+function withBestSpot(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+  designed: SpeakerChamber,
+  goals: HornGoals,
+  power: DriverPower,
+): { chamber: SpeakerChamber; fit: HornGoalFit } | null {
+  if (designed.load.kind !== CHAMBER_LOAD.horn) return null;
+  const { horn } = designed.load;
+  if (horn.path !== HORN_PATH.folded) return null;
+  if (horn.drive.kind !== HORN_DRIVE.offset && horn.drive.kind !== HORN_DRIVE.tapped) return null;
+  const index = cabinet.chambers.indexOf(chamber);
+  const laid = {
+    ...cabinet,
+    chambers: cabinet.chambers.map((c, i) => (i === index ? designed : c)),
+  };
+  const placed = speakerLayout(laid).chambers[index];
+  const flare = placed && hornFlare(laid, placed);
+  if (!flare?.fold || !flare.foldInput) return null;
+  const room = {
+    netLiters: designed.netLiters ?? MIN_NET_L,
+    face: chamberClearFace(laid, designed),
+    setbackIn: chamberSetbackIn(cabinet.panel, designed),
+  };
+  let best: { mount: MountIn; fit: HornGoalFit; score: number } | null = null;
+  for (const spot of foldSpots(flare.foldInput, flare.fold, SPOT_SEARCH_STEPS)) {
+    const read = hornDesignOf(designed, { count: 1, angle: 2 }, { ...room, foldTaps: spot.taps });
+    const fit = read.ok ? hornGoalFit(read.design, goals, power) : null;
+    if (!fit) continue;
+    const score = scoreOf(fit, goals);
+    if (!best || score < best.score) best = { mount: spot.mount, fit, score };
+  }
+  if (!best) return null;
+  const { alongIn, ...rest } = best.mount;
   return {
     chamber: {
-      ...searched,
-      load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
-      netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+      ...designed,
+      load: {
+        kind: CHAMBER_LOAD.horn,
+        horn: { ...horn, mount: { ...rest, alongCm: alongIn * CM_PER_IN } },
+      },
     },
-    fit: found.fit,
+    fit: best.fit,
   };
 }
 
@@ -214,7 +279,12 @@ export function hornGoalCheck(
       : hornDesignOf(
           chamber,
           { count: 1, angle: 2 },
-          { netLiters, face: chamberClearFace(cabinet, chamber), setbackIn },
+          {
+            netLiters,
+            face: chamberClearFace(cabinet, chamber),
+            setbackIn,
+            foldTaps: chamberFoldTaps(cabinet, chamber),
+          },
         );
   const fit =
     read?.ok && throat

@@ -34,3 +34,6 @@ export const FOLD_MIN_GAP_BOARDS = 0.5;
  * along a partial leg. Farther than this, the drivers' other side is the rear chamber.
  */
 export const FOLD_MOUNT_REACH_IN = 1.5;
+
+/** How far the automatic folds' mouth leg's outer wall falls away from the box's wall at the back, in. */
+export const FOLD_EDGE_FALL_IN = 0.75;

@@ -415,7 +415,12 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
           ...bin,
           load: {
             kind: CHAMBER_LOAD.horn,
-            horn: { ...hornOf(bin), drive: { kind: HORN_DRIVE.tapped, frontTap: 0, rearTap: 1 } },
+            // a straight path keeps the drive's own taps (a folded one takes its drivers' spot's)
+            horn: {
+              ...hornOf(bin),
+              path: HORN_PATH.straight,
+              drive: { kind: HORN_DRIVE.tapped, frontTap: 0, rearTap: 1 },
+            },
           },
         },
       ],
