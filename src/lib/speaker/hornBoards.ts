@@ -117,6 +117,8 @@ export interface FoldChecks {
   thin: number | null;
   /** the first gate under `FOLD_CHOKE_SHARE` of the last leg gate before it (a turn or a leg pinched) */
   choke: number | null;
+  /** two parts of the passage that are not next to each other along it overlap: the sound cuts across a gap */
+  shortcut: boolean;
   broken: boolean;
   drivers: {
     facesPassage: boolean;
@@ -461,6 +463,19 @@ function piecesOf(
   return [...legPieces, ...turnPieces];
 }
 
+/**
+ * Whether two parts of the passage (`piecesOf`: the legs, then the turns) that are not next to each other along it
+ * overlap: boards that stop short of each other leave a gap the sound cuts across.
+ */
+function shortcutOf(pieces: readonly FoldPoint[][], legs: number): boolean {
+  // each piece's place along the passage: leg k at 2k, the turn after it at 2k + 1
+  const placeOf = (i: number) => (i < legs ? 2 * i : 2 * (i - legs) + 1);
+  for (let i = 0; i < pieces.length; i++)
+    for (let j = i + 1; j < pieces.length; j++)
+      if (Math.abs(placeOf(i) - placeOf(j)) > 1 && overlaps(pieces[i], pieces[j])) return true;
+  return false;
+}
+
 /** The sections between consecutive gates: each area the gate's height times the width, growing linearly between. */
 function sectionsOf(gates: readonly FoldGate[], widthIn: number): HornSegment[] {
   const out: HornSegment[] = [];
@@ -692,7 +707,15 @@ export function hornBoardsLayout(
     driverBodies,
     driverMounts,
     driversAcross: rows ? Math.min(rows.across, body?.count ?? 0) : 0,
-    checks: checksOf(plan, room, body, { outlines, gates, broken, taps, driverBodies }),
+    checks: checksOf(plan, room, body, {
+      outlines,
+      gates,
+      broken,
+      taps,
+      driverBodies,
+      pieces,
+      legs: plan.legs.length,
+    }),
   };
 }
 
@@ -707,7 +730,12 @@ function checksOf(
     broken,
     taps,
     driverBodies,
-  }: Pick<FoldLayout, "outlines" | "gates" | "taps" | "driverBodies"> & { broken: boolean },
+    pieces,
+    legs,
+  }: Pick<FoldLayout, "outlines" | "gates" | "taps" | "driverBodies" | "pieces"> & {
+    broken: boolean;
+    legs: number;
+  },
 ): FoldChecks {
   const inRoom = (p: FoldPoint) =>
     p.z >= -FOLD_TOUCH_IN &&
@@ -783,6 +811,7 @@ function checksOf(
     crossing,
     thin: thin < 0 ? null : thin,
     choke: choke < 0 ? null : choke,
+    shortcut: shortcutOf(pieces, legs),
     broken,
     drivers: driverChecks,
   };
@@ -840,5 +869,6 @@ export const foldPasses = ({ checks }: Pick<FoldLayout, "checks">) =>
   checks.crossing === null &&
   checks.thin === null &&
   checks.choke === null &&
+  !checks.shortcut &&
   !checks.broken &&
   (checks.drivers === null || Object.values(checks.drivers).every(Boolean));

@@ -383,3 +383,13 @@ test("horn boards: a turn much narrower than its leg chokes the passage, and fai
   assert.equal(foldPasses(narrow), false);
   assert.equal(layoutOf(zigzagBoards(ROOM, 4, true, 1)).checks.choke, null);
 });
+
+test("horn boards: boards that stop short of each other let the sound cut across, and fail", () => {
+  const plan = zigzagBoards(ROOM, 4, true, 1);
+  assert.equal(layoutOf(plan).checks.shortcut, false);
+  // the first board ends 8 in from the baffle, the second (from the back) 22 in: a gap between their ends
+  const gap = withCorner(withCorner(plan, 1, 8, plan.corners[1].y), 3, 22, plan.corners[3].y);
+  const layout = layoutOf(gap);
+  assert.equal(layout.checks.shortcut, true);
+  assert.equal(foldPasses(layout), false);
+});
