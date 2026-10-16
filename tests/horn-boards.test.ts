@@ -9,7 +9,7 @@ import {
   type FoldDriverBody,
   type FoldRoom,
 } from "../src/lib/speaker/hornBoards";
-import { zigzagBoards } from "../src/lib/speaker/foldLayouts";
+import { mirroredBoards, offsetZigzagBoards, zigzagBoards } from "../src/lib/speaker/foldLayouts";
 import { FOLD_FACE, FOLD_MIN_PASSAGE_IN } from "../src/constants/hornBoards";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import type { HornBoards, HornSegment } from "../src/types";
@@ -265,4 +265,20 @@ test("horn boards: Design from goals gives a folded horn boards that pass, or no
         none.chamber.load.horn.path !== HORN_PATH.folded),
     "no folded design that cannot be built",
   );
+});
+
+test("horn boards: mirrored top to bottom, a zigzag passes the same checks with its mouth at the bottom", () => {
+  const flipped = mirroredBoards(ZIGZAG, ROOM.heightIn);
+  const layout = layoutOf(flipped);
+  assert.ok(foldPasses(layout), JSON.stringify(layout.checks));
+  assert.ok(Math.abs(layout.pathIn - layoutOf(ZIGZAG).pathIn) < 1e-6);
+  const mouth = layout.gates[layout.gates.length - 1];
+  assert.ok(Math.max(mouth.a.y, mouth.b.y) < ROOM.heightIn / 2, "the mouth low on the baffle");
+});
+
+test("horn boards: an offset zigzag over a sealed rear chamber taps its first leg and passes", () => {
+  const plan = offsetZigzagBoards(ROOM, 3, 10, SUB18.cutoutIn);
+  const layout = layoutOf(plan);
+  assert.ok(foldPasses(layout), JSON.stringify(layout.checks));
+  assert.ok(layout.taps && layout.taps.front !== null && layout.taps.rear === null);
 });

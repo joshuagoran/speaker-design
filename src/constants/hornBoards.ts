@@ -44,3 +44,12 @@ export const FOLD_AUTO_GROWTHS = [1, 1.25, 1.5] as const;
 
 /** The sealed rear chamber heights an offset horn's layouts try, as shares of the chamber's height. */
 export const FOLD_OFFSET_REAR_SHARES = [0.2, 0.3, 0.4] as const;
+
+/** Where a folded horn's mouth opens on the baffle. */
+export const FOLD_MOUTH = { top: "top", bottom: "bottom" } as const;
+
+/** What each mouth end shows. */
+export const FOLD_MOUTH_NAMES = { top: "Top", bottom: "Bottom" } as const satisfies Record<
+  keyof typeof FOLD_MOUTH,
+  string
+>;

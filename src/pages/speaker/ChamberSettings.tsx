@@ -1,3 +1,5 @@
+import { isFolded, mouthAtBottom } from "../../lib/speaker/foldLayouts";
+import { FOLD_MOUTH, FOLD_MOUTH_NAMES } from "../../constants/hornBoards";
 import { useMemo, useState } from "react";
 import type {
   BandId,
@@ -156,6 +158,8 @@ export function ChamberSettings({
 }: Props) {
   const { vent } = chamber;
   /** a tapped horn: its cones open into the horn both sides, so its own air is only the space sealed behind them */
+  /** a folded horn's mouth is where its last leg meets the baffle: at the top or the bottom */
+  const foldedHorn = chamber.load.kind === CHAMBER_LOAD.horn && isFolded(chamber.load.horn);
   const tappedHorn =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
   const vents = placed ? ventPlace(cabinet, placed) : null;
@@ -326,7 +330,32 @@ export function ChamberSettings({
           }}
         />
       )}
-      {mouth && (
+      {foldedHorn && (
+        <ToggleGroup
+          label={<Tooltip tip={SPEAKER_TEXT.foldMouthTip}>{SPEAKER_TEXT.foldMouth}</Tooltip>}
+          value={
+            chamber.load.kind === CHAMBER_LOAD.horn &&
+            mouthAtBottom(chamber.load.horn, chamber.dims.h)
+              ? FOLD_MOUTH.bottom
+              : FOLD_MOUTH.top
+          }
+          onChange={(end) =>
+            onEdit((c) =>
+              c.load.kind === CHAMBER_LOAD.horn
+                ? {
+                    ...c,
+                    load: withMouthPosition(c.load, {
+                      xIn: 0,
+                      yIn: end === FOLD_MOUTH.bottom ? 0 : c.dims.h,
+                    }),
+                  }
+                : c,
+            )
+          }
+          options={entriesOf(FOLD_MOUTH_NAMES)}
+        />
+      )}
+      {mouth && !foldedHorn && (
         <PlaceFields
           label={SPEAKER_TEXT.mouthPlace}
           value={mouth.position}

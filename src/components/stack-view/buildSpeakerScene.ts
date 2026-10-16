@@ -1043,7 +1043,7 @@ function addFold(
   const drivers = fold.plan.drivers;
   const r = (fold.body?.cutoutIn ?? 0) / 2;
   /** each driver's place across the face, from its middle */
-  const acrossAt = (i: number) => widthIn * ((i + 0.5) / Math.max(1, driversAcross) - 0.5);
+  const acrossAt = (i: number, n: number) => widthIn * ((i + 0.5) / Math.max(1, n) - 0.5);
   fold.layout.outlines.forEach((outline, i) => {
     const [a, b, , oa] = outline;
     const lengthIn = Math.hypot(b.z - a.z, b.y - a.y);
@@ -1057,8 +1057,8 @@ function addFold(
     ]);
     if (drivers?.board === i && r > 0)
       for (const m of driverMounts)
-        for (let k = 0; k < driversAcross; k++)
-          shape.holes.push(circlePath(m.alongIn, acrossAt(k), r));
+        for (let k = 0; k < m.count; k++)
+          shape.holes.push(circlePath(m.alongIn, acrossAt(k, m.count), r));
     const geometry = new THREE.ExtrudeGeometry(shape, {
       depth: thickIn,
       bevelEnabled: false,
@@ -1076,10 +1076,10 @@ function addFold(
   if (!ctx.cutaway || !fold.body || driversAcross === 0) return;
   const { steps } = fold.body;
   for (const m of driverMounts)
-    for (let k = 0; k < driversAcross; k++) {
+    for (let k = 0; k < m.count; k++) {
       // a group at the cone's face, its z the way the cone fronts face, as a baffle driver's
       const group = new THREE.Group();
-      group.position.copy(at3(m.at, cx + acrossAt(k)));
+      group.position.copy(at3(m.at, cx + acrossAt(k, m.count)));
       group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir3(m.toCone));
       ctx.group.add(group);
       buildCone({ ...ctx, group }, { r, y: 0, z: 0 });

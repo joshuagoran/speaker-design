@@ -94,6 +94,8 @@ export interface FoldDriverMount {
   toCone: FoldPoint;
   alongIn: number;
   thickIn: number;
+  /** how many drivers sit side by side in this row */
+  count: number;
 }
 
 /** The taps where the drivers' two sides open into the passage, in along it; null: into the rear chamber. */
@@ -135,7 +137,7 @@ export interface FoldLayout {
   driverBodies: FoldPoint[][];
   /** each row of drivers' mount: the point on the cone fronts' face and the way they face */
   driverMounts: FoldDriverMount[];
-  /** how many drivers sit side by side across the chamber in each place along the board (0: not even one fits) */
+  /** how many drivers sit side by side across the chamber in a full row (0: not even one fits) */
   driversAcross: number;
   /** the passage as pieces to draw: each leg, then each turn out to its far corners */
   pieces: FoldPoint[][];
@@ -514,8 +516,14 @@ function tapAt(
 function driverRows(body: Pick<FoldDriverBody, "cutoutIn" | "count">, widthIn: number) {
   const pitch = body.cutoutIn + FOLD_CUTOUT_MARGIN_IN;
   const across = Math.max(0, Math.floor((widthIn - FOLD_CUTOUT_MARGIN_IN) / pitch));
-  const rows = across > 0 ? Math.ceil(body.count / across) : body.count;
-  return { across, offsets: Array.from({ length: rows }, (_, j) => (j - (rows - 1) / 2) * pitch) };
+  const perRow = Math.max(1, Math.min(across, body.count));
+  const rows = across > 0 ? Math.ceil(body.count / perRow) : body.count;
+  return {
+    across,
+    offsets: Array.from({ length: rows }, (_, j) => (j - (rows - 1) / 2) * pitch),
+    // each row full but the last, which takes what is left
+    counts: Array.from({ length: rows }, (_, j) => Math.min(perRow, body.count - j * perRow)),
+  };
 }
 
 /** A row of drivers' mount, `offsetIn` along the board from the drivers' place; null without drivers. */
@@ -523,7 +531,7 @@ function driverMount(
   plan: HornBoards,
   room: FoldRoom,
   offsetIn = 0,
-): (FoldDriverMount & { back: FoldPoint }) | null {
+): (Omit<FoldDriverMount, "count"> & { back: FoldPoint }) | null {
   const drivers = plan.drivers;
   if (!drivers) return null;
   const board = plan.boards[drivers.board];
@@ -617,9 +625,19 @@ export function hornBoardsLayout(
     body && rows ? rows.offsets.flatMap((o) => driverParts(plan, room, body, o)) : [];
   const driverMounts =
     body && rows
-      ? rows.offsets.flatMap((o) => {
+      ? rows.offsets.flatMap((o, j) => {
           const m = driverMount(plan, room, o);
-          return m ? [{ at: m.at, toCone: m.toCone, alongIn: m.alongIn, thickIn: m.thickIn }] : [];
+          return m
+            ? [
+                {
+                  at: m.at,
+                  toCone: m.toCone,
+                  alongIn: m.alongIn,
+                  thickIn: m.thickIn,
+                  count: rows.counts[j],
+                },
+              ]
+            : [];
         })
       : [];
   const cuts: FoldLayout["cuts"] = plan.boards.map((board, i) => ({
@@ -640,7 +658,7 @@ export function hornBoardsLayout(
     outlines,
     driverBodies,
     driverMounts,
-    driversAcross: rows?.across ?? 0,
+    driversAcross: rows ? Math.min(rows.across, body?.count ?? 0) : 0,
     checks: checksOf(plan, room, body, { outlines, gates, broken, taps, driverBodies }),
   };
 }

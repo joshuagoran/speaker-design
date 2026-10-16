@@ -1,6 +1,13 @@
 // The layouts a folded horn starts from (docs/folded-horn-plan.md, "Starting a design"): each places its corners and
 // boards to fit the chamber's side section, as `HornBoards`. Pure.
-import type { FoldCorner, FoldLeg, HornBoards, SpeakerHorn } from "../../types";
+import type {
+  FoldCorner,
+  FoldLeg,
+  FoldSurface,
+  FoldWall,
+  HornBoards,
+  SpeakerHorn,
+} from "../../types";
 import type { FoldRoom } from "./hornBoards";
 import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE, FOLD_WALL } from "../../constants/hornBoards";
 import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -143,3 +150,29 @@ export function offsetZigzagBoards(
     },
   };
 }
+
+/**
+ * The boards mirrored top to bottom in a side section `heightIn` high: the mouth at the other end of the baffle. Each
+ * board's thickness, each leg's sides and each turn swap sides with it.
+ */
+export function mirroredBoards(plan: HornBoards, heightIn: number): HornBoards {
+  const wall = (w: FoldWall): FoldWall =>
+    w === FOLD_WALL.top ? FOLD_WALL.bottom : w === FOLD_WALL.bottom ? FOLD_WALL.top : w;
+  const surface = (s: FoldSurface): FoldSurface => ("wall" in s ? { wall: wall(s.wall) } : s);
+  return {
+    corners: plan.corners.map((c) => ({ ...c, y: heightIn - c.y, wall: c.wall && wall(c.wall) })),
+    boards: plan.boards.map((b) => ({ ...b, side: b.side === 1 ? -1 : 1 })),
+    closed: surface(plan.closed),
+    legs: plan.legs.map((l) => ({
+      left: surface(l.right),
+      right: surface(l.left),
+      ...(l.turn ? { turn: l.turn === 1 ? -1 : 1 } : {}),
+    })),
+    mouth: wall(plan.mouth),
+    drivers: plan.drivers,
+  };
+}
+
+/** Whether a horn's mouth is set at the bottom of the baffle (its place below the chamber's middle, `heightIn` high). */
+export const mouthAtBottom = (horn: Pick<SpeakerHorn, "mouthPosition">, heightIn: number) =>
+  horn.mouthPosition !== undefined && horn.mouthPosition.yIn < heightIn / 2;

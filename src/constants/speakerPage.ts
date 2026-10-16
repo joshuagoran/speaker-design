@@ -388,6 +388,11 @@ export const SPEAKER_TEXT = {
   portPlace: "Port position",
   radiatorPlace: "Radiator position",
   mouthPlace: "Horn mouth position",
+  foldMouth: "Horn mouth",
+  /** beside the mouth in the side view */
+  foldMouthLabel: "mouth",
+  foldMouthTip:
+    "A folded horn's mouth opens where its last leg meets the baffle: across the top or the bottom.",
   panel: "Panel",
   slotNarrow: "Opening, narrow side, in",
   slotNarrowTip:

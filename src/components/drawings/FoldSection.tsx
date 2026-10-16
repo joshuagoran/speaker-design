@@ -15,6 +15,8 @@ interface Props {
 /** The drawing's scale, px per inch, and its margin, px (as the straight sections'). */
 const SCALE_PX = 6;
 const PAD_PX = 4;
+/** The mouth label's gap from the baffle, px (its size is 2.5 times it). */
+const MOUTH_LABEL_PX = 4;
 /** The drivers' mounting point's radius, px. */
 const SPOT_PX = 3;
 
@@ -109,6 +111,18 @@ export function FoldSection({ cabinet, placed, fold }: Props) {
           strokeWidth={2}
         />
       )}
+      {gates.length > 0 &&
+        ((g) => (
+          <text
+            x={Math.min(at(g.a).x, at(g.b).x) + MOUTH_LABEL_PX}
+            y={(at(g.a).y + at(g.b).y) / 2}
+            fontSize={MOUTH_LABEL_PX * 2.5}
+            fill={pal.ink}
+            dominantBaseline="middle"
+          >
+            {SPEAKER_TEXT.foldMouthLabel}
+          </text>
+        ))(gates[gates.length - 1])}
       {layout.outlines.map((o, i) => (
         <polygon
           key={`b${i}`}

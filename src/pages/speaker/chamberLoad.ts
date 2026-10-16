@@ -36,7 +36,7 @@ import {
   type FoldRoom,
 } from "../../lib/speaker/hornBoards";
 import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE } from "../../constants/hornBoards";
-import { isFolded } from "../../lib/speaker/foldLayouts";
+import { isFolded, mouthAtBottom } from "../../lib/speaker/foldLayouts";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -259,7 +259,8 @@ function withGoalBoards(
   const face = chamberClearFace(cabinet, designed);
   let best: { chamber: SpeakerChamber; fit: HornGoalFit; score: number } | null = null;
   const tapped = horn.drive.kind === HORN_DRIVE.tapped;
-  for (const plan of zigzagTries(room, horn.drive.kind, body).flatMap((p) =>
+  const bottom = mouthAtBottom(horn, designed.dims.h);
+  for (const plan of zigzagTries(room, horn.drive.kind, body, bottom).flatMap((p) =>
     tapped ? withDriverSpots(p, room, body) : [p],
   )) {
     const layout = hornBoardsLayout(plan, room, body);

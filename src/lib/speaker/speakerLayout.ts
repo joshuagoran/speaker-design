@@ -70,7 +70,13 @@ import {
   type FoldLayout,
   type FoldRoom,
 } from "./hornBoards";
-import { isFolded, offsetZigzagBoards, zigzagBoards } from "./foldLayouts";
+import {
+  isFolded,
+  mirroredBoards,
+  mouthAtBottom,
+  offsetZigzagBoards,
+  zigzagBoards,
+} from "./foldLayouts";
 import {
   FOLD_AUTO_GROWTHS,
   FOLD_FACE,
@@ -863,7 +869,9 @@ function chamberFoldIn(
   const cached = FOLD_CACHE.get(placed.chamber);
   if (cached?.key === key) return cached.fold;
   const body = foldBodyOf(placed.chamber);
-  const chosen = horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind);
+  const chosen =
+    horn.boards ??
+    autoBoards(room, horn.segments, body, horn.drive.kind, mouthAtBottom(horn, placed.dims.h));
   const plan = withDriverBoardPieces(chosen, horn.doubleBoard ? 2 : 1);
   const fold = {
     plan,
@@ -935,6 +943,17 @@ export const zigzagTries = (
   room: FoldRoom,
   kind: SpeakerHorn["drive"]["kind"],
   body: FoldDriverBody | null,
+  bottom = false,
+): HornBoards[] =>
+  bottom
+    ? layoutTries(room, kind, body).map((plan) => mirroredBoards(plan, room.heightIn))
+    : layoutTries(room, kind, body);
+
+/** The layouts for a drive, mouth at the top (`zigzagTries`). */
+const layoutTries = (
+  room: FoldRoom,
+  kind: SpeakerHorn["drive"]["kind"],
+  body: FoldDriverBody | null,
 ): HornBoards[] => {
   if (kind === HORN_DRIVE.offset) return body ? offsetPlans(room, body.cutoutIn) : [];
   const tapped = kind === HORN_DRIVE.tapped;
@@ -999,11 +1018,12 @@ function autoBoards(
   segments: readonly HornSegment[],
   body: FoldDriverBody | null,
   kind: SpeakerHorn["drive"]["kind"],
+  bottom: boolean,
 ): HornBoards {
   const wantIn = segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
-  const found = zigzagTries(room, kind, body);
+  const found = zigzagTries(room, kind, body, bottom);
   // with nothing to try (an offset horn with no cone), a front-loaded zigzag
-  const tries = found.length ? found : zigzagTries(room, HORN_DRIVE.front, body);
+  const tries = found.length ? found : zigzagTries(room, HORN_DRIVE.front, body, bottom);
   // a layout that passes every check beats one that does not; then the path nearest the sections'
   const cost = (plan: HornBoards) => {
     const layout = hornBoardsLayout(plan, room, body);
