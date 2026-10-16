@@ -49,6 +49,7 @@ import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { formatInches } from "../../lib/format";
 import { foldNotices } from "./foldNotices";
+import { foldPasses } from "../../lib/speaker/hornBoards";
 import { PANEL_NOMINAL_OPTIONS, formatThickness } from "../../lib/panel";
 import { withWallPanel } from "../../lib/speaker/cabinetPanels";
 import { BAFFLE_PLY_IN } from "../../lib/pa/calc";
@@ -342,7 +343,11 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   <div className="flex-1 min-h-0">
                     <SpeakerSection spec={spec} />
                   </div>
-                  <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.sectionNote}</p>
+                  <p className="text-xs text-stone-500 mt-2">
+                    {flares.every((f) => f.fold)
+                      ? SPEAKER_TEXT.foldSectionNote
+                      : SPEAKER_TEXT.sectionNote}
+                  </p>
                 </Card>
               )}
             </div>
@@ -363,7 +368,16 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 </Notice>
               ))}
             {flares
-              .flatMap((f) => (f.fold ? foldNotices(f.fold.layout.checks) : []))
+              .flatMap((f) =>
+                f.fold
+                  ? [
+                      ...(f.fold.auto && !foldPasses(f.fold.layout)
+                        ? [SPEAKER_TEXT.foldNoLayout]
+                        : []),
+                      ...foldNotices(f.fold.layout.checks),
+                    ]
+                  : [],
+              )
               .map((text, i) => (
                 <Notice key={`fold${i}`}>{text}</Notice>
               ))}

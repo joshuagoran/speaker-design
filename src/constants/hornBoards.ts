@@ -38,3 +38,6 @@ export const FOLD_AUTO_MAX_LEGS = 10;
 
 /** The turn widths the automatic zigzag tries, as shares of a leg's height: narrower turns leave longer boards. */
 export const FOLD_AUTO_TURN_SHARES = [1, 0.75, 0.5] as const;
+
+/** How much taller each leg is than the one before, in the zigzags tried: alike, or growing toward the mouth. */
+export const FOLD_AUTO_GROWTHS = [1, 1.25, 1.5] as const;

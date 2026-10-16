@@ -9,6 +9,7 @@ import type {
   SpeakerCabinet,
   SpeakerChamber,
   SpeakerHorn,
+  HornBoards,
 } from "../../types";
 import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
@@ -18,9 +19,22 @@ import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
 import { withDriveKind } from "./hornSections";
 import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
 import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
-import { goalHorn, hornGoalFit, type GoalDrive } from "../../lib/speaker/hornGoals";
+import {
+  goalHorn,
+  hornGoalFit,
+  scoreOf,
+  type DriverPower,
+  type GoalDrive,
+} from "../../lib/speaker/hornGoals";
 import { DEFAULT_VENTS } from "./speakerParts";
-import { chamberFold } from "../../lib/speaker/speakerLayout";
+import { chamberFold, foldRoomOf, zigzagTries } from "../../lib/speaker/speakerLayout";
+import {
+  foldPasses,
+  hornBoardsLayout,
+  type FoldDriverBody,
+  type FoldRoom,
+} from "../../lib/speaker/hornBoards";
+import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE } from "../../constants/hornBoards";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -148,14 +162,114 @@ export function withGoalHorn(
     room.depthIn * CM_PER_IN,
   );
   if (!found) return null;
-  return {
+  const designed: SpeakerChamber = {
+    ...searched,
+    load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
+    netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+  };
+  if (found.horn.path !== HORN_PATH.folded) return { chamber: designed, fit: found.fit };
+  // a folded result plays as its boards: keep it only where its boards beat the best straight path that fits
+  const boards = withGoalBoards(cabinet, designed, goals, throat.parts.ts);
+  const straightFound = goalHorn(
+    {
+      chamber: searched,
+      drive,
+      room: {
+        face: chamberClearFace(cabinet, searched),
+        setbackIn: chamberSetbackIn(cabinet.panel, searched),
+      },
+      airLiters,
+      displacementLiters,
+      power: throat.parts.ts,
+      goals,
+    },
+    room.depthIn * CM_PER_IN,
+    true,
+  );
+  const straight = straightFound && {
     chamber: {
       ...searched,
-      load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
-      netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+      load: { kind: CHAMBER_LOAD.horn, horn: straightFound.horn },
+      netLiters: Math.max(MIN_NET_L, shownTenth(straightFound.netLiters)),
     },
-    fit: found.fit,
+    fit: straightFound.fit,
   };
+  if (!boards || !straight) return boards ?? straight;
+  return scoreOf(boards.fit, goals) <= scoreOf(straight.fit, goals) ? boards : straight;
+}
+
+/** How many places along their board, from end to end of where they fit, Design from goals tries the drivers at. */
+const DRIVER_SPOT_STEPS = 5;
+
+/**
+ * The plan with its drivers at each place they fit along their board (`DRIVER_SPOT_STEPS` of them, the cutout and its
+ * margin on the board), each way round: the taps Design from goals tries.
+ */
+function withDriverSpots(
+  plan: HornBoards,
+  room: FoldRoom,
+  body: FoldDriverBody | null,
+): HornBoards[] {
+  const drivers = plan.drivers;
+  if (!drivers || !body) return [plan];
+  const board = plan.boards[drivers.board];
+  const lengthIn = Math.hypot(
+    plan.corners[board.b].z - plan.corners[board.a].z,
+    plan.corners[board.b].y - plan.corners[board.a].y,
+  );
+  const need = body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN;
+  if (lengthIn < 2 * need) return [plan];
+  return Array.from(
+    { length: DRIVER_SPOT_STEPS },
+    (_, i) => need + ((lengthIn - 2 * need) * i) / (DRIVER_SPOT_STEPS - 1),
+  ).flatMap((alongIn) =>
+    [FOLD_FACE.line, FOLD_FACE.offset].map((coneFace) => ({
+      ...plan,
+      drivers: { ...drivers, alongIn, coneFace },
+    })),
+  );
+}
+
+/**
+ * A folded horn's chamber (`designed`) with the boards that meet the goals best among those that pass every check (the
+ * zigzags `zigzagTries` offers), each scored on its own passage and taps; null when none passes (the box is too small
+ * for the drivers folded) or none can be modeled.
+ */
+function withGoalBoards(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  designed: SpeakerChamber,
+  goals: HornGoals,
+  power: DriverPower,
+): { chamber: SpeakerChamber; fit: HornGoalFit } | null {
+  if (designed.load.kind !== CHAMBER_LOAD.horn) return null;
+  const { horn } = designed.load;
+  const where = foldRoomOf(cabinet, designed);
+  if (!where) return null;
+  const { room, body } = where;
+  const setbackIn = chamberSetbackIn(cabinet.panel, designed);
+  const face = chamberClearFace(cabinet, designed);
+  let best: { chamber: SpeakerChamber; fit: HornGoalFit; score: number } | null = null;
+  const tapped = horn.drive.kind === HORN_DRIVE.tapped;
+  for (const plan of zigzagTries(room, tapped).flatMap((p) =>
+    tapped ? withDriverSpots(p, room, body) : [p],
+  )) {
+    const layout = hornBoardsLayout(plan, room, body);
+    if (!foldPasses(layout)) continue;
+    const chamber: SpeakerChamber = {
+      ...designed,
+      load: { kind: CHAMBER_LOAD.horn, horn: { ...horn, boards: plan } },
+    };
+    const read = hornDesignOf(
+      chamber,
+      { count: 1, angle: 2 },
+      { netLiters: chamber.netLiters ?? MIN_NET_L, face, setbackIn, fold: layout },
+    );
+    const fit = read.ok ? hornGoalFit(read.design, goals, power) : null;
+    if (!fit) continue;
+    const score = scoreOf(fit, goals);
+    if (!best || score < best.score) best = { chamber, fit, score };
+  }
+  return best && { chamber: best.chamber, fit: best.fit };
 }
 
 /**

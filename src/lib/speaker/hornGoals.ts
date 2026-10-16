@@ -96,7 +96,7 @@ export function hornGoalFit(
 }
 
 /** A fit's score: lower is better. The spread, a low edge under the usual corner, and a shortfall from the target. */
-const scoreOf = (fit: HornGoalFit, goals: HornGoals) =>
+export const scoreOf = (fit: HornGoalFit, goals: HornGoals) =>
   fit.spreadDb +
   2 * Math.max(0, -LOW_EDGE_DB - fit.lowEdgeDb) +
   2 * Math.max(0, goals.targetDb - fit.maxOutDb);
@@ -171,9 +171,13 @@ const TAP_COUNT: Record<GoalDrive, number> = {
 /**
  * A starting layout for the goals, or null when no try can be modeled (no cone driver with Thiele/Small parameters, a
  * vent the engine doesn't take, no air). The horn keeps the chamber's other horn settings (its driver board, its mouth's
- * place); its path is folded when it is longer than the chamber is deep.
+ * place); its path is folded when it is longer than the chamber is deep (`straightOnly`: only paths that fit straight).
  */
-export function goalHorn(search: GoalSearch, depthCm: number): GoalHorn | null {
+export function goalHorn(
+  search: GoalSearch,
+  depthCm: number,
+  straightOnly = false,
+): GoalHorn | null {
   const { chamber, drive, goals } = search;
   const base: SpeakerHorn =
     chamber.load.kind === CHAMBER_LOAD.horn
@@ -192,6 +196,8 @@ export function goalHorn(search: GoalSearch, depthCm: number): GoalHorn | null {
     const rearL = drive === HORN_DRIVE.tapped ? tappedRear : usable * shape.rearShare;
     const hornL = usable - rearL;
     if (!(hornL > 0) || !(shape.pathCm > 0) || !(shape.flare >= 1)) return null;
+    // a straight path only: no longer than the chamber is deep
+    if (straightOnly && shape.pathCm > depthCm) return null;
     const horn: SpeakerHorn = {
       ...base,
       segments: sectionsOf(shape.pathCm, shape.flare, shape.taps, hornL),

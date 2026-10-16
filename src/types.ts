@@ -2340,11 +2340,15 @@ export interface FoldCorner {
   wall: FoldWall | null;
 }
 
-/** A flat board between corners `a` and `b` (their indexes), one panel thick to `side` of the line a→b: 1 left, −1 right. */
+/**
+ * A flat board between corners `a` and `b` (their indexes), to `side` of the line a→b (1 left, −1 right), one panel
+ * thick, or `pieces` panels glued face to face (the drivers' board doubled).
+ */
 export interface FoldBoard {
   a: number;
   b: number;
   side: 1 | -1;
+  pieces?: 1 | 2;
 }
 
 /** A side of a passage: a board's face, or a wall. */

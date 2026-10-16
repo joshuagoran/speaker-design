@@ -19,7 +19,7 @@ import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { roomOf } from "./horn-room";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { withHornDrive } from "../src/pages/speaker/chamberLoad";
+import { withGoalHorn, withHornDrive } from "../src/pages/speaker/chamberLoad";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
@@ -218,4 +218,49 @@ test("horn boards: a board against a wall at an angle is cut to it; drivers side
   assert.ok(Math.abs(aEnd - tilt) < 1e-6, `${aEnd}°`);
   assert.equal(bEnd, 0);
   assert.equal(layoutOf(ZIGZAG, { ...SUB18, count: 2 }).checks.drivers?.cutoutFits, false);
+});
+
+test("horn boards: Design from goals gives a folded horn boards that pass, or nothing when none fits", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+  const tapped = withHornDrive(spec.cabinet.chambers[0], HORN_DRIVE.tapped);
+  assert.ok(tapped.load.kind === CHAMBER_LOAD.horn);
+  const folded = {
+    ...tapped,
+    load: { ...tapped.load, horn: { ...tapped.load.horn, path: HORN_PATH.folded } },
+  };
+  const cabinet = { ...spec.cabinet, chambers: [folded] };
+  // goals low enough that the search folds the path
+  const goals = { lowHz: 30, highHz: 100, targetDb: 120 };
+  const found = withGoalHorn(
+    cabinet,
+    folded,
+    speakerLayout(cabinet).chambers[0],
+    HORN_DRIVE.tapped,
+    goals,
+  );
+  if (
+    found?.chamber.load.kind === CHAMBER_LOAD.horn &&
+    found.chamber.load.horn.path === HORN_PATH.folded
+  ) {
+    assert.ok(found.chamber.load.horn.boards, "its own boards");
+    const laid = { ...cabinet, chambers: [found.chamber] };
+    const fold = hornFlare(laid, speakerLayout(laid).chambers[0])?.fold;
+    assert.ok(fold && foldPasses(fold.layout), JSON.stringify(fold?.layout.checks));
+  }
+  // a box too small for the drivers folded: no design
+  const small = { ...folded, dims: { w: 24, h: 18, d: 14 } };
+  const smallCab = { ...spec.cabinet, chambers: [small] };
+  const none = withGoalHorn(
+    smallCab,
+    small,
+    speakerLayout(smallCab).chambers[0],
+    HORN_DRIVE.tapped,
+    goals,
+  );
+  assert.ok(
+    none === null ||
+      (none.chamber.load.kind === CHAMBER_LOAD.horn &&
+        none.chamber.load.horn.path !== HORN_PATH.folded),
+    "no folded design that cannot be built",
+  );
 });

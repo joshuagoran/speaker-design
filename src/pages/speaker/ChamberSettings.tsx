@@ -155,6 +155,9 @@ export function ChamberSettings({
   onRemove,
 }: Props) {
   const { vent } = chamber;
+  /** a tapped horn: its cones open into the horn both sides, so its own air is only the space sealed behind them */
+  const tappedHorn =
+    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
   const vents = placed ? ventPlace(cabinet, placed) : null;
   const mouth = placed ? mouthPlace(cabinet, placed) : null;
   const bandOptions = bands.map((b): readonly [BandId, string] => [b.id, b.name]);
@@ -241,7 +244,13 @@ export function ChamberSettings({
         </div>
       </SettingsFold>
       <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.netAirTip}>Net air</Tooltip>}
+        label={
+          tappedHorn ? (
+            <Tooltip tip={SPEAKER_TEXT.tappedAirTip}>{SPEAKER_TEXT.tappedAir}</Tooltip>
+          ) : (
+            <Tooltip tip={SPEAKER_TEXT.netAirTip}>{SPEAKER_TEXT.netAir}</Tooltip>
+          )
+        }
         value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
         onChange={(v) =>
           onEdit((c) => ({

@@ -199,7 +199,8 @@ function thicknessOf(plan: HornBoards, board: FoldBoard, wallIn: number): FoldPo
   const a = plan.corners[board.a],
     b = plan.corners[board.b];
   const n = leftOf(unit(sub(b, a)));
-  return { z: n.z * board.side * wallIn, y: n.y * board.side * wallIn };
+  const thick = wallIn * (board.pieces ?? 1);
+  return { z: n.z * board.side * thick, y: n.y * board.side * thick };
 }
 
 /** A board's face as a segment, from its `a` end to its `b` end. */

@@ -70,7 +70,11 @@ import {
   type FoldRoom,
 } from "./hornBoards";
 import { zigzagBoards } from "./foldLayouts";
-import { FOLD_AUTO_MAX_LEGS, FOLD_AUTO_TURN_SHARES } from "../../constants/hornBoards";
+import {
+  FOLD_AUTO_GROWTHS,
+  FOLD_AUTO_MAX_LEGS,
+  FOLD_AUTO_TURN_SHARES,
+} from "../../constants/hornBoards";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { hornPath, type HornPath } from "./hornGeometry";
@@ -827,6 +831,8 @@ export function hornFlare(
  */
 export interface ChamberFold {
   plan: HornBoards;
+  /** the boards are the automatic choice (the horn has none of its own) */
+  auto: boolean;
   room: FoldRoom;
   layout: FoldLayout;
   y0In: number;
@@ -852,12 +858,32 @@ function chamberFoldIn(
   const key = JSON.stringify([room, face.y]);
   const cached = FOLD_CACHE.get(placed.chamber);
   if (cached?.key === key) return cached.fold;
-  const cones = placed.chamber.drivers.flatMap((d) => {
+  const body = foldBodyOf(placed.chamber);
+  const chosen =
+    horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind === HORN_DRIVE.tapped);
+  const plan = withDriverBoardPieces(chosen, horn.doubleBoard ? 2 : 1);
+  const fold = {
+    plan,
+    auto: !horn.boards,
+    room,
+    layout: hornBoardsLayout(plan, room, body),
+    y0In: face.y,
+  };
+  FOLD_CACHE.set(placed.chamber, { key, fold });
+  return fold;
+}
+
+/**
+ * The drivers' body a chamber's boards must fit: its first cone's cutout, motor, depth and excursion, and how many
+ * cones it has; null without a cone.
+ */
+function foldBodyOf(chamber: SpeakerChamber): FoldDriverBody | null {
+  const cones = chamber.drivers.flatMap((d) => {
     const cone = coneBuild(d);
     return cone ? [{ cone, count: d.count }] : [];
   });
   const first = cones[0]?.cone;
-  const body: FoldDriverBody | null = first
+  return first
     ? {
         cutoutIn: first.body.cutoutIn,
         motorIn: first.body.motorIn,
@@ -866,11 +892,50 @@ function chamberFoldIn(
         count: cones.reduce((sum, c) => sum + c.count, 0),
       }
     : null;
-  const plan =
-    horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind === HORN_DRIVE.tapped);
-  const fold = { plan, room, layout: hornBoardsLayout(plan, room, body), y0In: face.y };
-  FOLD_CACHE.set(placed.chamber, { key, fold });
-  return fold;
+}
+
+/**
+ * The side section a chamber's folded horn lays out in, and the drivers' body its boards must fit, as the chamber
+ * stands in the cabinet (found by its place); null for a chamber that is not in the cabinet.
+ */
+export function foldRoomOf(
+  cabinet: LayoutCabinet & Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+): { room: FoldRoom; body: FoldDriverBody | null } | null {
+  const index = cabinet.chambers.findIndex(
+    (c) => c === chamber || (c.at.xIn === chamber.at.xIn && c.at.yIn === chamber.at.yIn),
+  );
+  const laid = {
+    ...cabinet,
+    chambers: cabinet.chambers.map((c, i) => (i === index ? chamber : c)),
+  };
+  const placed = index >= 0 ? speakerLayout(laid).chambers[index] : undefined;
+  if (!placed) return null;
+  const face = hornFace(placed, cabinet.panel.thicknessIn);
+  return {
+    room: {
+      depthIn: clearDepthIn(cabinet, placed.dims),
+      heightIn: face.h,
+      wallIn: cabinet.panel.thicknessIn,
+      widthIn: face.w,
+    },
+    body: foldBodyOf(chamber),
+  };
+}
+
+/** The zigzags the automatic choice and Design from goals try: each even leg count, turn width and growth. */
+export const zigzagTries = (room: FoldRoom, tapped: boolean): HornBoards[] =>
+  Array.from({ length: FOLD_AUTO_MAX_LEGS / 2 }, (_, i) =>
+    FOLD_AUTO_TURN_SHARES.flatMap((share) =>
+      FOLD_AUTO_GROWTHS.map((growth) => zigzagBoards(room, 2 * (i + 1), tapped, share, growth)),
+    ),
+  ).flat();
+
+/** The boards with the drivers' board `pieces` panels thick (the horn's Double setting). */
+function withDriverBoardPieces(plan: HornBoards, pieces: 1 | 2): HornBoards {
+  const at = plan.drivers?.board;
+  if (at === undefined) return plan;
+  return { ...plan, boards: plan.boards.map((b, i) => (i === at ? { ...b, pieces } : b)) };
 }
 
 /** Each folded chamber's boards worked out, with the room they were worked out in (`chamberFoldIn`). */
@@ -891,9 +956,7 @@ function autoBoards(
   tapped: boolean,
 ): HornBoards {
   const wantIn = segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
-  const tries = Array.from({ length: FOLD_AUTO_MAX_LEGS / 2 }, (_, i) =>
-    FOLD_AUTO_TURN_SHARES.map((share) => zigzagBoards(room, 2 * (i + 1), tapped, share)),
-  ).flat();
+  const tries = zigzagTries(room, tapped);
   // a layout that passes every check beats one that does not; then the path nearest the sections'
   const cost = (plan: HornBoards) => {
     const layout = hornBoardsLayout(plan, room, body);
@@ -913,16 +976,17 @@ export function chamberFold(
   cabinet: LayoutCabinet & Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
   chamber: SpeakerChamber,
 ): ChamberFold | null {
-  // the chamber itself, or (an edited copy) the one at its place
-  const same = cabinet.chambers.indexOf(chamber);
-  const index =
-    same >= 0
-      ? same
-      : cabinet.chambers.findIndex(
-          (c) => c.at.xIn === chamber.at.xIn && c.at.yIn === chamber.at.yIn,
-        );
-  const placed = index >= 0 ? speakerLayout(cabinet).chambers[index] : undefined;
-  return (placed && hornFlare(cabinet, placed)?.fold) ?? null;
+  // the chamber itself, or an edited copy of the one at its place: laid out in that place
+  const index = cabinet.chambers.findIndex(
+    (c) => c === chamber || (c.at.xIn === chamber.at.xIn && c.at.yIn === chamber.at.yIn),
+  );
+  if (index < 0) return null;
+  const laid =
+    cabinet.chambers[index] === chamber
+      ? cabinet
+      : { ...cabinet, chambers: cabinet.chambers.map((c, i) => (i === index ? chamber : c)) };
+  const placed = speakerLayout(laid).chambers[index];
+  return (placed && hornFlare(laid, placed)?.fold) ?? null;
 }
 
 /** A box in the front view by its edges, in. */

@@ -224,7 +224,9 @@ test("horn goals: a tapped horn sized for 40–100 Hz plays flat in the box and 
   assert.ok(horn.segments.every((s) => s.profile === HORN_PROFILE.parabolic && s.s2 >= s.s1));
   assert.equal(found.chamber.vent.kind, VENT_KIND.sealed);
   assert.deepEqual(horn.goals, HORN_GOALS_DEFAULT);
-  assert.ok(found.fit.spreadDb < 6, `spread ${found.fit.spreadDb} dB`);
+  // folded, it plays as boards that can be built (legs growing toward the mouth, the drivers slid along their
+  // board): a little less flat than free sections were
+  assert.ok(found.fit.spreadDb < 8, `spread ${found.fit.spreadDb} dB`);
   assert.ok(found.fit.lowEdgeDb > -3, `low edge ${found.fit.lowEdgeDb} dB`);
   // the page's check reads the same horn, and the horn fits the chamber's air
   const check = hornGoalCheck(

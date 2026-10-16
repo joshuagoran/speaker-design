@@ -17,7 +17,7 @@ import {
   PORT_SHAPE_NAMES,
   VENT_KIND_NAMES,
 } from "../../constants/speakerPage";
-import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, HORN_PATH, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { CARD_LABELS, NEAR_MISS_YOURS } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
 import { driverName } from "./speakerParts";
@@ -29,12 +29,15 @@ export const countText = (n: number, one: string, many: string) => `${n} ${n ===
 /** A filter in words: its type and corner. */
 export const filterText = (f: BandFilter) => `${f.type} ${formatHz(f.hz)}`;
 
-/** A horn in a few words: its drive, sections, path length and path, e.g. "front-loaded horn, 2 sections, 40 in, straight". */
+/** A horn in a few words: its drive, sections, path length and path, e.g. "front-loaded horn, 2 sections, 40 in, straight"; a
+ * folded one its drive and path. */
 export const hornText = (horn: Pick<SpeakerHorn, "drive" | "path" | "segments">) =>
   [
     `${HORN_DRIVE_NAMES[horn.drive.kind].toLowerCase()} horn`,
-    countText(horn.segments.length, "section", "sections"),
-    `${pathIn(horn)} in`,
+    // a folded horn is its boards: its sections set no shape
+    ...(horn.path === HORN_PATH.folded
+      ? []
+      : [countText(horn.segments.length, "section", "sections"), `${pathIn(horn)} in`]),
     HORN_PATH_NAMES[horn.path].toLowerCase(),
   ].join(", ");
 

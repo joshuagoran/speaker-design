@@ -248,6 +248,14 @@ export const SPEAKER_TEXT = {
   foldCrossing: (a: number, b: number) => `Boards ${a} and ${b} cross. Move one of them.`,
   foldThin: (minIn: string) => `A passage is lower than ${minIn}″. Move its boards apart.`,
   foldSectionLabel: "Side section of the folded horn",
+  /** under the side view when every horn is folded */
+  foldSectionNote:
+    "Side section, baffle at the left. Gray: the boards. Blue: the passage, the mouth marked on the baffle. Magenta: the drivers. Red: a part that fails a check.",
+  /** in the Horn settings of a folded horn, in place of the flare sections */
+  foldSectionsNote:
+    "Folded: the boards set the passage's shape, its areas and where the drivers tap it.",
+  /** a folded horn on automatic boards where no layout passes the checks */
+  foldNoLayout: "No folded layout fits these drivers in this box. Make the box deeper or taller.",
   foldBroken: "The boards do not make one passage from the closed end to the mouth.",
   foldNotFacing: "The drivers do not face the passage. Move them to a board along it.",
   foldCutout:
@@ -464,7 +472,8 @@ export const SPEAKER_TEXT = {
   hornDesigning: "Designing…",
   hornDesignTip:
     "Sets the sections, where the cones open and the chamber volume for these goals and this drive. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
-  hornDesignFailed: "No horn for these goals can be calculated in this chamber.",
+  hornDesignFailed:
+    "No horn for these goals fits this chamber. A folded horn also needs room for the drivers between its boards.",
   hornGoalsOrder: "Set the highest frequency above the lowest.",
   /** the goals check: how flat the response is over the goals' band */
   hornFitSpread: (spread: string, low: string, high: string) =>
@@ -508,6 +517,9 @@ export const SPEAKER_TEXT = {
   hornEndTip: "The area of the section at its mouth end.",
   hornLengthTip: "The length of the section along the horn path.",
   hornPathSectionsTip: "The horn is a row of sections, from the throat to the mouth.",
+  /** at the fewest sections a drive needs: why no Remove shows */
+  hornSectionsNeeded: (n: number) =>
+    `This drive needs at least ${n} sections: the cones open between them.`,
   driverHornTip:
     "A horn or waveguide on this compression driver or tweeter. None: the driver has no horn.",
   hornMountTip:
@@ -520,6 +532,11 @@ export const SPEAKER_TEXT = {
   sharedAmp: "Shared amp channel, W",
   cornerTip:
     "The corner frequency of the filter. A highpass cuts below it, and a lowpass cuts above it.",
+  netAir: "Net air",
+  /** a tapped horn's own air: the small space sealed behind the cones */
+  tappedAir: "Air behind the cones",
+  tappedAirTip:
+    "A tapped horn has no box behind its drivers: both sides of the cones open into the horn. This is only the small sealed space behind them.",
   netAirTip:
     "The air the drivers work against. Auto: the inside volume minus the walls, the braces, the drivers and the vent. Custom: you type the value.",
   stuffingTip:

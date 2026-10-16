@@ -967,7 +967,12 @@ const foldOf = (cabinet: SpeakerCabinet, f: ChamberFrame) =>
 /** The face area of a folded horn's boards, in² (0 for none): each board's length times the chamber's width. */
 function hornBoardsIn2(cabinet: SpeakerCabinet, f: ChamberFrame): number {
   const fold = foldOf(cabinet, f);
-  return fold ? fold.layout.cuts.reduce((sum, c) => sum + c.lengthIn * fold.room.widthIn, 0) : 0;
+  return fold
+    ? fold.layout.cuts.reduce(
+        (sum, c, i) => sum + c.lengthIn * fold.room.widthIn * (fold.plan.boards[i].pieces ?? 1),
+        0,
+      )
+    : 0;
 }
 
 /** The wood of a folded horn's boards, L: each a wall thick. */
@@ -998,7 +1003,7 @@ function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
   return fold.layout.cuts.map((cut, i) => ({
     box: chamberCutBox(f.index),
     part: "hornBoard",
-    qty: 1,
+    qty: fold.plan.boards[i].pieces ?? 1,
     a: cut.lengthIn,
     b: fold.room.widthIn,
     t: cabinet.panel.thicknessIn,
@@ -1006,7 +1011,11 @@ function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
       SPEAKER_TEXT.hornBoardNote(i + 1),
       SPEAKER_TEXT.hornBoardCuts([Math.round(cut.endCutsDeg[0]), Math.round(cut.endCutsDeg[1])]),
       ...(drivers?.board === i
-        ? [...cutouts, SPEAKER_TEXT.hornBoardSpot(formatInches(drivers.alongIn))]
+        ? [
+            ...cutouts,
+            SPEAKER_TEXT.hornBoardSpot(formatInches(drivers.alongIn)),
+            ...((fold.plan.boards[i].pieces ?? 1) > 1 ? [SPEAKER_TEXT.driverBoardNote(2)] : []),
+          ]
         : []),
     ]),
   }));
