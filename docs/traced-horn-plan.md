@@ -126,26 +126,26 @@ passage any more: the trace follows the air.
 
 The mock breaks the UI rules on purpose. Each part becomes an existing pattern.
 
-| Mock part                             | In the app                                                                               |
-| ------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Tool buttons                          | `ToggleGroup` above the side view                                                        |
-| Hint lines under the tools            | A `Tooltip` on the tool label; longer help in the Details fold                           |
-| Start buttons                         | The Speaker page's starts (`StartPicker`)                                                |
-| Inside size, driver size and count    | The chamber and driver fields as now (`ChamberSettings`)                                 |
-| Goal: low end, loudness               | `HornGoalsFields` as now (low, high, target level)                                       |
-| Goal: horn type                       | The Horn type field as now. A notice says when the drawing traces as another type        |
-| Straight horn summary                 | One line under the goals; the sizes in a `Tooltip`                                       |
-| Advanced straight horn fields         | The horn's Advanced fold as now (its steps)                                              |
-| Loudness line                         | A `Notice`: green when the drivers reach the goal, else what would                       |
-| Side view editor                      | `SpeakerSection` gains the tools. One drawing for view and edit                          |
-| Joint marks                           | Yellow circle: a joint. Yellow square: held at 90°. Palette colors, both themes          |
-| Stats (path, mouth, closed end, taps) | `StatTileGrid`                                                                           |
-| Path chart                            | A new chart in `components/charts`. Fixed axes in `chartScales.ts`, shared by every horn |
-| Linked hover                          | The same, between `SpeakerSection` and the path chart                                    |
-| Checks list                           | `Notice` items, as the other checks                                                      |
-| Cutlist card                          | The Speaker cutlist page, with each end's cut (mitre, butt, bevel)                       |
-| 3D view                               | `SpeakerView3D`, boards with their cuts                                                  |
-| Undo                                  | New: the editor's own undo. The app has no undo pattern yet                              |
+| Mock part                             | In the app                                                                                            |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Tool buttons                          | Icon buttons on the editor, in a top corner. Each icon has a `Tooltip`                                |
+| Hint lines under the tools            | Each tool's `Tooltip`. Longer help goes in the Details fold                                           |
+| Start buttons                         | Empty box only. Starting layouts come in a later PR                                                   |
+| Inside size, driver size and count    | The chamber and driver fields as now (`ChamberSettings`). Drag the back or top wall to resize the box |
+| Goal: low end, loudness               | `HornGoalsFields` as now (low, high, target level)                                                    |
+| Goal: horn type                       | The Horn type field as now. A notice says when the drawing traces as another type                     |
+| Straight horn summary                 | One very short line under the goals                                                                   |
+| Advanced straight horn fields         | The horn's Advanced fold as now (its steps)                                                           |
+| Loudness line                         | A `Notice`: green when the drivers reach the goal, else what would                                    |
+| Side view editor                      | `SpeakerSection` gains the tools. One drawing for view and edit                                       |
+| Joint marks                           | Yellow circle: a joint. Yellow square: held at 90°. Palette colors, both themes                       |
+| Stats (path, mouth, closed end, taps) | `StatTileGrid`                                                                                        |
+| Path chart                            | A new chart in `components/charts`. Fixed axes in `chartScales.ts`, shared by every horn              |
+| Linked hover                          | The same, between `SpeakerSection` and the path chart                                                 |
+| Checks list                           | `Notice` items, as the other checks                                                                   |
+| Cutlist card                          | The Speaker cutlist page, with each end's cut (mitre, butt, bevel)                                    |
+| 3D view                               | `SpeakerView3D`, boards with their cuts                                                               |
+| Undo                                  | New: the editor's own undo. Ctrl+Z and Cmd+Z undo. The app has no undo pattern yet                    |
 
 ## Risks
 
@@ -178,5 +178,6 @@ The owner does these on the page. I do them in the browser before every hand-ove
 | 1    | Owner tests the mock and approves this plan                                                                 | -   |
 | 2    | The trace, its checks, the new data and the sound model input, with tests                                   | 1   |
 | 3    | The side view editor (the mock's tools, joints, square joints), the path chart, the 3D view and the cutlist | 1   |
-| 4    | Rear chamber vents, starting layouts, Design from goals (straight horn first)                               | 2   |
+| 4    | Rear chamber vents, Design from goals (straight horn first)                                                 | 2   |
 | 5    | Convert saved boards; remove the recipe model                                                               | 2   |
+| 6    | Starting layouts                                                                                            | 3   |
