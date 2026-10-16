@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   BandId,
   ChamberVent,
@@ -52,6 +52,7 @@ import {
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
+  HORN_DRIVE,
   HORN_PLACEMENT,
   PORT_SHAPE,
   SLOT_KIND,
@@ -80,7 +81,15 @@ import { PlaceFields } from "./PlaceFields";
 import { HornSettings } from "./HornSettings";
 import { onFieldStep, shownIn, shownTenth } from "./speakerFields";
 import { FIELD_ROW, GAP_Y } from "../../styles/layout";
-import { hornRoom, startingHorn, withChamberLoad } from "./chamberLoad";
+import {
+  hornGoalCheck,
+  hornRoom,
+  startingHorn,
+  withChamberLoad,
+  withGoalHorn,
+  withHornDrive,
+} from "./chamberLoad";
+import { hornFromRecord } from "./hornrespImport";
 import {
   defaultHornPlacement,
   driversOnBaffle,
@@ -127,7 +136,7 @@ interface Props {
   result: SpeakerChamberResponse | undefined;
   bands: readonly SpeakerBand[];
   /** the cabinet it is in, and where its layout places it: its vent's and horn mouth's places read them */
-  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">;
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
   placed: PlacedChamber | undefined;
   onEdit: (edit: (chamber: SpeakerChamber) => SpeakerChamber) => void;
   /** absent for the last chamber left */
@@ -159,6 +168,14 @@ export function ChamberSettings({
   const firstBand = bands[0]?.id;
   /** the room a starting horn fills */
   const room = hornRoom(cabinet, chamber, placed);
+  /** a tapped horn: its chamber takes no vent */
+  const tapped =
+    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
+  /** how the horn meets its goals, and whether it holds more air than the chamber has */
+  const goalCheck = useMemo(
+    () => hornGoalCheck(cabinet, chamber, placed, result?.netLiters),
+    [cabinet, chamber, placed, result?.netLiters],
+  );
   /** the chamber's clear room, in: a new woofer's size fits it */
   const clearIn = wooferClearIn(chamber, cabinet.panel.thicknessIn);
   /**
@@ -255,6 +272,8 @@ export function ChamberSettings({
           horn={chamber.load.horn}
           drivers={chamber.drivers}
           wallIn={cabinet.panel.thicknessIn}
+          fit={goalCheck?.fit ?? null}
+          overAir={goalCheck?.overAir ?? null}
           onEdit={(edit) =>
             onEdit((c) =>
               c.load.kind === CHAMBER_LOAD.horn
@@ -262,6 +281,29 @@ export function ChamberSettings({
                 : c,
             )
           }
+          onDrive={(kind) => onEdit((c) => withHornDrive(c, kind))}
+          onDesign={(goals) => {
+            const drive = chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind;
+            if (!drive || drive === HORN_DRIVE.back) return false;
+            const found = withGoalHorn(cabinet, chamber, placed, drive, goals);
+            if (found) onEdit(() => found.chamber);
+            return found !== null;
+          }}
+          onImport={(text) => {
+            const read = hornFromRecord(
+              text,
+              chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null,
+              room.depthIn,
+            );
+            if (read.ok)
+              onEdit((c) => ({
+                ...c,
+                load: { kind: CHAMBER_LOAD.horn, horn: read.horn },
+                netLiters: read.netLiters,
+                vent: read.vent,
+              }));
+            return read;
+          }}
         />
       )}
       {mouth && (
@@ -278,6 +320,11 @@ export function ChamberSettings({
         value={vent.kind}
         onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
         options={entriesOf(VENT_KIND_NAMES)}
+        disabled={
+          tapped
+            ? { values: [VENT_KIND.vented, VENT_KIND.radiator], why: SPEAKER_TEXT.ventTapped }
+            : undefined
+        }
       />
       {vent.kind === VENT_KIND.vented && (
         <>

@@ -16,7 +16,7 @@ import { hfBandOf, speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { frontChamber, throatCones } from "../src/lib/speaker/hornThroat";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
-import { roomOf } from "./horn-room";
+import { frontLoadedOf, roomOf } from "./horn-room";
 import { baffleInsetIn } from "../src/lib/speaker/chamberAir";
 import {
   drawsArchedTop,
@@ -243,8 +243,7 @@ test("speaker templates: the PA v2 sub bin's drivers share one throat, and the h
     const slotL = port.h * placed.clear.h * port.len * LITERS_PER_CUBIC_IN;
     assert.ok(airOf(oneSlot) - airOf(auto) > slotL, "the second slot takes its air");
     const result = hornDesignOf(chamber, { count: 1, angle: 2 }, roomOf(chamber, placed.clear));
-    assert.ok(result.ok, template);
-    const { design } = result;
+    const design = frontLoadedOf(result);
     assert.equal(design.drivers, count);
     assert.equal(design.driver, PA_V2_SUB_BIN.sub.ts);
     assert.equal(design.rear.liters, PA_V2_SUB_BIN.rearLiters * count);
@@ -288,15 +287,15 @@ test("speaker templates: the PA v2 mid box has two 10″ in one throat, tuned to
     { count: 1, angle: 2 },
     roomOf(chamber, speakerLayout(spec.cabinet).chambers[0].clear),
   );
-  assert.ok(result.ok);
-  assert.equal(result.design.drivers, PA_V2_MID_BOX.drivers);
+  const design = frontLoadedOf(result);
+  assert.equal(design.drivers, PA_V2_MID_BOX.drivers);
   // the throat from the compression ratio, the front chamber from the cones under the walls
   const conesCm2 = PA_V2_MID_BOX.mid.ts.Sd * PA_V2_MID_BOX.drivers;
-  assert.ok(Math.abs(result.design.segments[0].s1 - conesCm2 / PA_V2_MID_BOX.compression) < 1e-9);
+  assert.ok(Math.abs(design.segments[0].s1 - conesCm2 / PA_V2_MID_BOX.compression) < 1e-9);
   const cones = throatCones(chamber.drivers);
   assert.ok(cones);
-  assert.equal(result.design.throatChamber, frontChamber(cones.cone, cones.count).liters);
-  const model = hornModel(result.design, hornGrid(), 2.83);
+  assert.equal(design.throatChamber, frontChamber(cones.cone, cones.count).liters);
+  const model = hornModel(design, hornGrid(), 2.83);
   assert.ok(model && model.fb !== null && model.fb > 90 && model.fb < 100, `Fb ${model?.fb}`);
   const [cone1, cone2] = chamber.drivers;
   assert.ok(

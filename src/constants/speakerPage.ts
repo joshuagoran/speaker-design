@@ -9,6 +9,7 @@ import type {
   HifiBoxKind,
   HifiDrive,
   HornDrive,
+  HornGoalLimit,
   HornPath,
   HornPlacement,
   SpeakerModelGap,
@@ -154,9 +155,16 @@ export const HORN_PATH_NAMES = {
   folded: "Folded",
 } as const satisfies Record<HornPath, string>;
 
+/** What limits a horn's maximum output, as the goals check names it (`HORN_GOAL_LIMIT`). */
+export const HORN_GOAL_LIMIT_NAMES = {
+  power: "the power rating",
+  excursion: "cone travel",
+} as const satisfies Record<HornGoalLimit, string>;
+
 /** How a horn's drivers drive its path, as the Horn settings name it (`HORN_DRIVE`). */
 export const HORN_DRIVE_NAMES = {
   front: "Front-loaded",
+  offset: "Offset",
   tapped: "Tapped",
   back: "Back-loaded",
 } as const satisfies Record<HornDrive["kind"], string>;
@@ -202,13 +210,17 @@ export const MODEL_GAP_TEXT = {
     why: "a band filter has a corner that is not a positive frequency",
     fix: "Set each filter corner above 0 Hz.",
   },
-  tapped: {
-    why: "a tapped horn is not calculated",
-    fix: "Use a front-loaded horn.",
-  },
   backLoaded: {
     why: "a back-loaded horn is not calculated",
-    fix: "Use a front-loaded horn.",
+    fix: "Use a front-loaded, offset or tapped horn.",
+  },
+  taps: {
+    why: "a cone side does not sit between two flare sections",
+    fix: "Set each cone side between two sections, the front before the back.",
+  },
+  tappedVent: {
+    why: "a tapped horn has no vent",
+    fix: "Set the vent to Sealed.",
   },
   driver: {
     why: "the horn needs one kind of cone driver with Thiele/Small data",
@@ -401,11 +413,60 @@ export const SPEAKER_TEXT = {
   hornBoardDouble: "Double",
   hornBoardTip: "The board the drivers mount on. Double it for large drivers.",
   hornPath: "Path",
-  hornPathTip:
-    "Only the sections set the response. The views draw a folded path straight for now. The fold layout comes later.",
+  hornPathTip: "Only the sections set the response. The views draw a folded path straight for now.",
   hornDrive: "Drive",
-  hornDriveNote:
-    "Only a front-loaded horn is calculated now. A tapped or back-loaded horn is not calculated yet.",
+  hornDriveTip:
+    "Where the cones meet the path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
+  hornDriveNote: "A back-loaded horn is not calculated yet.",
+  hornTap: "Cones open after section",
+  hornTapTip:
+    "The front of the cones opens into the path after this section. The path before it is closed at its start.",
+  hornFrontTap: "Cone fronts open after section",
+  hornFrontTapTip:
+    "The front of the cones opens into the path after this section. The path before it is closed at its start.",
+  hornRearTap: "Cone backs open after section",
+  hornRearTapTip:
+    "The back of the cones opens into the path after this section. It comes after the front.",
+  /** the line under a tapped horn's settings: what the chamber's volume is */
+  hornTappedAir: "The chamber volume is the air behind the cones.",
+  /** why a tapped horn's chamber takes no vent */
+  ventTapped: "A tapped horn has no vent.",
+  hornGoals: "Goals",
+  hornGoalsTip:
+    "What the horn is for. Design from goals sizes the horn to meet them in this chamber. The chamber's size is the box size.",
+  hornGoalLow: "Lowest frequency, Hz",
+  hornGoalLowTip: "The horn plays flat down to here.",
+  hornGoalHigh: "Highest frequency, Hz",
+  hornGoalHighTip: "The crossover to the box above. The horn plays flat up to here.",
+  hornGoalTarget: "Target level, dB",
+  hornGoalTargetTip:
+    "The level at 1 m at full power, from the lowest to the highest frequency. The power rating or the cone travel of the drivers limits it.",
+  hornDesign: "Design from goals",
+  hornDesigning: "Designing…",
+  hornDesignTip:
+    "Sets the sections, where the cones open and the chamber volume for these goals and this drive. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
+  hornDesignFailed: "No horn for these goals can be calculated in this chamber.",
+  /** the goals check: how flat the response is over the goals' band */
+  hornFitSpread: (spread: string, low: string, high: string) =>
+    `Response: within ${spread} dB from ${low} to ${high} Hz.`,
+  /** the goals check: the level at the lowest frequency, when it falls more than the usual corner under the band */
+  hornFitLowEdge: (db: string) => `At the lowest frequency it is ${db} dB quieter than the band.`,
+  /** the goals check: the lowest maximum output over the band, where it is, and what limits it */
+  hornFitMaxOut: (db: string, hz: string, limit: string) =>
+    `Maximum output: ${db} dB at ${hz} Hz, limited by ${limit}.`,
+  /** the goals check: how far the maximum output falls under the target level */
+  hornFitShort: (db: string) => `That is ${db} dB under the target.`,
+  /** the goals check: the horn holds more air than the chamber has */
+  hornFitAir: (horn: string, chamber: string) =>
+    `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,
+  hornImport: "Import from Hornresp",
+  hornImportTip:
+    "Paste a Hornresp record. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",
+  hornImportField: "Hornresp record",
+  hornImportAction: "Import",
+  hornImportDone: "Imported. The drivers stay as set in this chamber.",
+  hornImportFailed: (reason: string) => `This record cannot be imported: ${reason}.`,
+  hornImportNoHorn: "it has no horn",
   /** the note under a section that starts with a step, by the section's number */
   hornStep: (n: number) =>
     `Section ${n} starts at a different area than section ${n - 1} ends. This makes a step in the horn.`,

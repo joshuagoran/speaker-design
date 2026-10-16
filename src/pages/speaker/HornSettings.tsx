@@ -1,13 +1,13 @@
 import { CardHeading } from "../../components/ui/CardHeading";
 import { useRef, useState } from "react";
-import type { HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
+import type { HornGoalFit, HornGoals, HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
 import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
 import { ReadOnlyField } from "../../components/ui/ReadOnlyField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
-import { entriesOf, keysOf } from "../../lib/records";
+import { entriesOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
 import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/speakerPage";
 import { HORN_DRIVE } from "../../constants/speakerSpec";
@@ -22,7 +22,12 @@ import { driverSetbackIn } from "../../lib/speaker/driverBoard";
 import { shownIn } from "./speakerFields";
 import { FIELD_ROW, HEADING_GROUP, GAP_Y, GAP_Y_TIGHT } from "../../styles/layout";
 import { hornText } from "./speakerText";
+import { HornGoalsFields } from "./HornGoalsFields";
+import { HornImportFold } from "./HornImportFold";
+import type { HornImport } from "./hornrespImport";
+import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
 import {
+  driveAfterRemoval,
   joinsNext,
   shownIn2,
   shownInOfCm,
@@ -38,8 +43,17 @@ import {
   type HornSectionSize,
 } from "./hornSections";
 
-/** The drives the horn engine doesn't take yet: shown, not picked. */
-const DRIVES_NOT_MODELED = keysOf(HORN_DRIVE_NAMES).filter((k) => k !== HORN_DRIVE.front);
+/** The drives the engines don't take yet: shown, not picked. */
+const DRIVES_NOT_MODELED = [HORN_DRIVE.back];
+
+/** Each tap setting of a drive: where it is in the drive, its label and its tooltip. */
+const TAP_FIELDS = {
+  offset: [{ key: "tap", label: SPEAKER_TEXT.hornTap, tip: SPEAKER_TEXT.hornTapTip }],
+  tapped: [
+    { key: "frontTap", label: SPEAKER_TEXT.hornFrontTap, tip: SPEAKER_TEXT.hornFrontTapTip },
+    { key: "rearTap", label: SPEAKER_TEXT.hornRearTap, tip: SPEAKER_TEXT.hornRearTapTip },
+  ],
+} as const;
 
 /** Each size field of a section: its spec field, its label and its step. */
 const SECTION_FIELDS: readonly {
@@ -69,13 +83,40 @@ const BOARD_OPTIONS = [
 const shownSize = (s: HornSegment, size: HornSectionSize) =>
   size === "length" ? shownInOfCm(s.length) : shownIn2(s[size]);
 
+/** A tap setting's key in its drive. */
+type TapKey = (typeof TAP_FIELDS)[keyof typeof TAP_FIELDS][number]["key"];
+
+/** The section a tap opens after (a section boundary from 1); null when the drive has no such tap. */
+function tapOf(drive: SpeakerHorn["drive"], key: TapKey): number | null {
+  if (drive.kind === HORN_DRIVE.offset && key === "tap") return drive.tap;
+  if (drive.kind === HORN_DRIVE.tapped && key !== "tap") return drive[key];
+  return null;
+}
+
+/** The drive with tap `key` set to open after section `tap`; unchanged when it has no such tap. */
+function withTap(drive: SpeakerHorn["drive"], key: TapKey, tap: number): SpeakerHorn["drive"] {
+  if (drive.kind === HORN_DRIVE.offset && key === "tap") return { ...drive, tap };
+  if (drive.kind === HORN_DRIVE.tapped && key !== "tap") return { ...drive, [key]: tap };
+  return drive;
+}
+
 interface Props {
   horn: SpeakerHorn;
   /** the chamber's drivers: their cones set the compression ratio's area and the front chamber */
   drivers: readonly SpeakerDriver[];
   /** the walls' thickness, in: the driver board is a piece or two of it */
   wallIn: number;
+  /** how the horn meets its goals now; null when it cannot be calculated */
+  fit: HornGoalFit | null;
+  /** the horn's air and the chamber's, L, when the horn holds more than the chamber has; else null */
+  overAir: { hornL: number; chamberL: number } | null;
   onEdit: (edit: (horn: SpeakerHorn) => SpeakerHorn) => void;
+  /** sets the drive, with the chamber changes it needs (a tapped horn's chamber has no vent) */
+  onDrive: (kind: SpeakerHorn["drive"]["kind"]) => void;
+  /** sizes the horn and the chamber's air for the goals; false when no horn can be calculated */
+  onDesign: (goals: HornGoals) => boolean;
+  /** reads a pasted Hornresp record onto the horn and the chamber */
+  onImport: (text: string) => HornImport;
 }
 
 /**
@@ -86,8 +127,18 @@ interface Props {
  * fold, and always while the horn has a step) every section shows its start area, so a step can be made; Steps off
  * smooths them.
  */
-export function HornSettings({ horn, drivers, wallIn, onEdit }: Props) {
-  const { segments } = horn;
+export function HornSettings({
+  horn,
+  drivers,
+  wallIn,
+  fit,
+  overAir,
+  onEdit,
+  onDrive,
+  onDesign,
+  onImport,
+}: Props) {
+  const { segments, drive } = horn;
   const conesCm2 = conesAreaCm2(drivers);
   const ratio = compressionRatio(conesCm2, segments);
   const cones = throatCones(drivers);
@@ -112,8 +163,38 @@ export function HornSettings({ horn, drivers, wallIn, onEdit }: Props) {
         <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
         <p className="text-xs text-stone-500">{hornText(horn)}</p>
       </div>
+      <HornGoalsFields
+        goals={horn.goals ?? HORN_GOALS_DEFAULT}
+        fit={fit}
+        overAir={overAir}
+        onGoals={(goals) => onEdit((h) => ({ ...h, goals }))}
+        onDesign={drive.kind === HORN_DRIVE.back ? undefined : onDesign}
+      />
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
+        value={drive.kind}
+        onChange={(kind) => {
+          if (kind !== drive.kind && kind !== HORN_DRIVE.back) onDrive(kind);
+        }}
+        options={entriesOf(HORN_DRIVE_NAMES)}
+        disabled={{ values: DRIVES_NOT_MODELED, why: SPEAKER_TEXT.hornDriveNote }}
+      />
+      {(drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) &&
+        TAP_FIELDS[drive.kind].map(({ key, label, tip }) => (
+          <ToggleGroup
+            key={key}
+            label={<Tooltip tip={tip}>{label}</Tooltip>}
+            value={tapOf(drive, key)}
+            onChange={(tap) => onEdit((h) => ({ ...h, drive: withTap(h.drive, key, tap) }))}
+            options={segments.slice(0, -1).map((_, i) => [i + 1, String(i + 1)] as const)}
+          />
+        ))}
+      {drive.kind === HORN_DRIVE.tapped && (
+        <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornTappedAir}</p>
+      )}
       <div className={FIELD_ROW}>
-        {ratio !== null && (
+        {/* the ratio is the cones' area over the path's start: a front-loaded horn's throat only */}
+        {ratio !== null && drive.kind === HORN_DRIVE.front && (
           <NumberField
             label={
               <Tooltip tip={SPEAKER_TEXT.hornCompressionTip}>
@@ -160,7 +241,13 @@ export function HornSettings({ horn, drivers, wallIn, onEdit }: Props) {
                 segments.length > 1 && (
                   <Button
                     size="xs"
-                    onClick={() => editSegments((list) => withSectionRemoved(list, i))}
+                    onClick={() =>
+                      onEdit((h) => ({
+                        ...h,
+                        segments: withSectionRemoved(h.segments, i),
+                        drive: driveAfterRemoval(h.drive, i),
+                      }))
+                    }
                   >
                     {SPEAKER_TEXT.removeSection}
                   </Button>
@@ -247,17 +334,7 @@ export function HornSettings({ horn, drivers, wallIn, onEdit }: Props) {
         onChange={(path) => onEdit((h) => ({ ...h, path }))}
         options={entriesOf(HORN_PATH_NAMES)}
       />
-      <ToggleGroup
-        label={SPEAKER_TEXT.hornDrive}
-        value={horn.drive.kind}
-        // only a front-loaded horn can be picked: the engine takes no other drive yet
-        onChange={(kind) => {
-          if (kind === HORN_DRIVE.front) onEdit((h) => ({ ...h, drive: { kind } }));
-        }}
-        options={entriesOf(HORN_DRIVE_NAMES)}
-        disabled={{ values: DRIVES_NOT_MODELED, why: SPEAKER_TEXT.hornDriveNote }}
-      />
-      <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornDriveNote}</p>
+      <HornImportFold onImport={onImport} />
     </section>
   );
 }

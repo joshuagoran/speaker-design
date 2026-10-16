@@ -23,7 +23,7 @@ import type {
   SpeakerSpec,
 } from "../../types";
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
-import { hornModel } from "../acoustics/hornModel";
+import { hornLayoutModel } from "./hornLayoutModel";
 import { boxModel, closedBox } from "../pa/calc";
 import { logSpacedFrequencies, passiveRadiatorBox } from "../hifi/hifi";
 import { HIFI_PASSIVES, HIFI_WAVEGUIDES, HORN_OPTIONS, passiveRadiatorMassMax } from "../data";
@@ -35,6 +35,7 @@ import { chamberSetbackIn } from "./driverBoard";
 import { coneParts, hfParts, isConeKind, type ConeParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
+import { HORN_LAYOUT } from "../../constants/acousticNetwork";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
 import {
   CHAMBER_LOAD,
@@ -178,8 +179,11 @@ function modelChamber(
       },
     );
     if (!read.ok) return empty([read.gap]);
-    const model = hornModel(read.design, grid.freqs, volts);
+    const model = hornLayoutModel(read.design, grid.freqs, volts);
     if (!model) return empty([SPEAKER_MODEL_GAP.noModel]);
+    const { design } = read;
+    /** whether the design has a vent: a front-loaded or offset horn's rear chamber port */
+    const vented = design.layout !== HORN_LAYOUT.tapped && design.rear.port !== null;
     return {
       pressure: model.curve.map((o) => pressureOf(o.spl, o.phase)),
       // the chamber's own net air, as a direct chamber reports it (the engine's rear chamber adds the stuffing)
@@ -190,9 +194,9 @@ function modelChamber(
         gaps: [],
         drive: model.curve.map((o) => ({
           xmm: o.xmm,
-          vel: read.design.rear.port ? o.portSpeed : undefined,
+          vel: vented ? o.portSpeed : undefined,
           // a horn's throat; a chamber with no segments radiates from the cones (no throat)
-          throat: read.design.segments.length ? o.throatSpeed : undefined,
+          throat: design.segments.length ? o.throatSpeed : undefined,
         })),
       },
     };

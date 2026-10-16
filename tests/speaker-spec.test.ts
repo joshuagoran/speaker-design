@@ -8,7 +8,7 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi, speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromFill } from "../src/lib/speaker/fillSpec";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
-import { roomOf } from "./horn-room";
+import { frontLoadedOf, roomOf } from "./horn-room";
 import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
@@ -616,8 +616,8 @@ function hornOf(chamber: SpeakerChamber) {
 
 test("speaker spec: a horn chamber reads into a horn design the engine models", () => {
   const result = hornDesignOf(bassBin, { count: 1, angle: 2 }, roomOf(bassBin));
-  assert.ok(result.ok, "a front-loaded horn with one driver, net air and round ports");
-  const { design } = result;
+  // a front-loaded horn with one driver, net air and round ports
+  const design = frontLoadedOf(result);
   assert.equal(design.driver, DEFAULT_PA.sub.ts);
   assert.equal(design.drivers, 1);
   assert.equal(design.rear.liters, 120);
@@ -637,8 +637,9 @@ test("speaker spec: a horn chamber reads into a horn design the engine models", 
     { count: 1, angle: 2 },
     roomOf(bassBin),
   );
-  assert.ok(direct.ok && direct.design.segments.length === 0);
-  assert.ok(hornModel(direct.design, hornGrid(), 2.83));
+  const directDesign = frontLoadedOf(direct);
+  assert.equal(directDesign.segments.length, 0);
+  assert.ok(hornModel(directDesign, hornGrid(), 2.83));
 });
 
 test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, reads in as two drivers on one throat", () => {
@@ -672,8 +673,7 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
   };
   // the slots run the clear face: as wide as the box's inside, here the width that gives ~600 cm² of slot per driver
   const result = hornDesignOf(bin, { count: 1, angle: 2 }, roomOf(bin, { w: slotW, h: 32 - 1.5 }));
-  assert.ok(result.ok);
-  const { design } = result;
+  const design = frontLoadedOf(result);
   // two of one driver on the throat: the engine wires them in parallel, each cone with its own air load
   assert.equal(design.driver, DEFAULT_PA.sub.ts);
   assert.equal(design.drivers, 2);
@@ -708,7 +708,7 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
   });
   assert.equal(
     gapOf(withDrive({ kind: HORN_DRIVE.tapped, frontTap: 0, rearTap: 1 })),
-    HORN_ENGINE_GAP.tapped,
+    HORN_ENGINE_GAP.taps,
   );
   // a back-loaded horn: the cone's front on the baffle, its rear into the throat chamber and the horn
   assert.equal(gapOf(withDrive({ kind: HORN_DRIVE.back })), HORN_ENGINE_GAP.backLoaded);

@@ -294,12 +294,12 @@ test("speaker horn: a size that is not positive and finite is a named gap, never
   }
 });
 
-test("speaker horn: a drive other than front-loaded is the engine's named gap", () => {
+test("speaker horn: taps out of order are the engine's named gap", () => {
   const tapped = withHorn(BIN, (h) => ({
     ...h,
     drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 0 },
   }));
-  assert.deepEqual(responseOf(tapped).chambers[0].gaps, [HORN_ENGINE_GAP.tapped]);
+  assert.deepEqual(responseOf(tapped).chambers[0].gaps, [HORN_ENGINE_GAP.taps]);
   assert.ok(finiteResponse(tapped));
   assert.match(hornText(hornOf(BIN)), /^front-loaded horn, \d+ sections, [\d.]+ in, straight$/);
 });

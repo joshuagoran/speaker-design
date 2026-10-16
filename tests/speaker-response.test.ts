@@ -49,7 +49,7 @@ import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { HIFI_PORT_MAX_MS } from "../src/constants/hifiEngine";
 import { hornModel } from "../src/lib/acoustics/hornModel";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
-import { roomOf } from "./horn-room";
+import { frontLoadedOf, roomOf } from "./horn-room";
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
@@ -394,8 +394,11 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
   };
   const response = speakerResponse(binSpec);
   const read = hornDesignOf(bin, { count: 1, angle: 2 }, roomOf(bin));
-  assert.ok(read.ok);
-  const model = hornModel(read.design, SPEAKER_RESPONSE_FREQUENCIES, SPEAKER_RESPONSE_VOLTS);
+  const model = hornModel(
+    frontLoadedOf(read),
+    SPEAKER_RESPONSE_FREQUENCIES,
+    SPEAKER_RESPONSE_VOLTS,
+  );
   assert.ok(model);
   const low = bandCurve(response, SPEAKER_BAND.low);
   assert.ok(
@@ -418,7 +421,8 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
       ],
     },
   });
-  assert.deepEqual(tapped.chambers[0].gaps, [HORN_ENGINE_GAP.tapped]);
+  // the fronts at the closed end: not between two sections
+  assert.deepEqual(tapped.chambers[0].gaps, [HORN_ENGINE_GAP.taps]);
   assert.deepEqual(tapped.bands, []);
 });
 
@@ -580,8 +584,9 @@ test("speaker model: a chamber's stuffing reaches a horn's rear chamber as it do
     { count: 1, angle: 2 },
     roomOf(set),
   );
-  assert.ok(read.ok);
-  assert.ok(Math.abs(read.design.rear.liters - 10 * (1 + chamber.stuffingPct / 100)) < 1e-12);
+  assert.ok(
+    Math.abs(frontLoadedOf(read).rear.liters - 10 * (1 + chamber.stuffingPct / 100)) < 1e-12,
+  );
   assert.equal(chamber.stuffingPct, 10, "the Hi-fi engine's 10%");
 });
 
@@ -615,9 +620,9 @@ test("speaker model: a stuffed horn chamber reports its own net air and plays on
   const response = speakerResponse(spec);
   assert.equal(response.chambers[0].netLiters, 10, "the chamber's own net air, as a direct one");
   const read = hornDesignOf(horn, { count: 1, angle: 2 }, roomOf(horn));
-  assert.ok(read.ok);
-  assert.ok(Math.abs(read.design.rear.liters - 12) < 1e-12, "the engine's rear chamber: 20% more");
-  const model = hornModel(read.design, SPEAKER_RESPONSE_FREQUENCIES, SPEAKER_RESPONSE_VOLTS);
+  const design = frontLoadedOf(read);
+  assert.ok(Math.abs(design.rear.liters - 12) < 1e-12, "the engine's rear chamber: 20% more");
+  const model = hornModel(design, SPEAKER_RESPONSE_FREQUENCIES, SPEAKER_RESPONSE_VOLTS);
   assert.ok(model);
   const low = bandCurve(response, SPEAKER_BAND.low);
   assert.ok(low.every((o, i) => Math.abs(o.spl - model.curve[i].spl) < 1e-9));
