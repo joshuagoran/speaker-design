@@ -256,7 +256,7 @@ const outline = (run: FoldRun) => [...run.left, ...[...run.right].reverse()];
  * corner that turns more than `FOLD_SHARP_TURN_DEG` (`sharpTurn`).
  */
 export function hornFold(input: HornFoldInput): HornFold | null {
-  const { segments, areaScale, mouth, clear, depthIn, wallIn, runs } = input;
+  const { segments, mouth, clear, depthIn, wallIn, runs } = input;
   if (runs.length === 0 || segments.length === 0) return null;
   const pathIn = segments.reduce((sum, x) => sum + x.length, 0) / CM_PER_IN;
   const widthIn = mouth.w;
@@ -651,3 +651,137 @@ export function boardOutline(fold: HornFold, board: FoldBoard, wallIn: number): 
 
 /** A run's outline in the side view (its duct), for the drawings. */
 export const runOutline = (run: FoldRun) => outline(run);
+
+/**
+ * A tapped horn's automatic folds as runs (cm), a spiral: the mouth's leg along the mouth's edge of the box; under it,
+ * a board's thickness away, the path's start, so a spot on that board has the start on one side and the mouth's leg on
+ * the other (the tapped horn's usual taps: the fronts near the closed end, the backs near the mouth); the legs after
+ * the start nest away from the mouth, turning at the front and in front of a riser up the back; the last of them runs
+ * back into the riser, which climbs to the mouth's leg. The start's leg takes what is left of the path: the fewest
+ * legs (an odd number, so the last runs back) that leave it a length between nothing and a full leg. Null when no
+ * number of legs fits the path (a path too short for a spiral).
+ */
+export function spiralFolds(input: SquareFoldInput): HornRun[] | null {
+  const { segments, mouth, clear, depthIn, wallIn } = input;
+  const pathIn = segments.reduce((sum, x) => sum + x.length, 0) / CM_PER_IN;
+  const heightAt = heightOf(input);
+  const mouthY = mouth.y + mouth.h / 2;
+  const sign = mouthY - clear.y >= clear.y + clear.h - mouthY ? -1 : 1;
+  const edge = mouthY - (sign * mouth.h) / 2;
+  type Line = { a: FoldPoint; b: FoldPoint };
+  const yOn = (line: Line, z: number) =>
+    Math.abs(line.b.z - line.a.z) < 1e-9
+      ? line.a.y
+      : line.a.y + ((line.b.y - line.a.y) * (z - line.a.z)) / (line.b.z - line.a.z);
+  const margin = FOLD_TURN_MARGIN_IN;
+  /**
+   * The layout with `inner` legs after the start (odd), its start leg `startIn` long: its points, closed end first;
+   * the room the start's leg has along the depth; and how far the last leg's outer wall reaches past the box (in).
+   */
+  const layout = (inner: number, startIn: number, sAt: (k: number) => number) => {
+    // the riser's center line stands half its duct's height (at its wider top) from the back wall
+    const hRiser = Math.max(heightAt(sAt(-1)), heightAt(sAt(-2)));
+    const zRiser = depthIn - hRiser / 2 - margin;
+    /** the mouth's leg: its outer wall along the edge, falling a little toward the back */
+    const outer: Line = {
+      a: { z: 0, y: edge },
+      b: { z: depthIn, y: edge + sign * FOLD_EDGE_FALL_IN },
+    };
+    const hMouth = mouth.h,
+      hMouthFar = heightAt(sAt(-2));
+    const mouthFar = { z: zRiser, y: yOn(outer, zRiser) + (sign * hMouthFar) / 2 };
+    /** the board under the mouth's leg, the start's outer wall */
+    let board: Line = {
+      a: { z: 0, y: mouthY + (sign * hMouth) / 2 + sign * wallIn },
+      b: { z: zRiser, y: mouthFar.y + (sign * hMouthFar) / 2 + sign * wallIn },
+    };
+    /** the inner legs' turns: at the front, and in front of the riser and the board beside it */
+    const zFront = (h: number) => h / 2 + margin;
+    const zBack = (h: number) => zRiser - hRiser / 2 - wallIn - h / 2 - margin;
+    const pts: FoldPoint[] = [];
+    // the start's leg runs toward the front, from its closed end to the front turn
+    const hStartEnd = heightAt(sAt(0));
+    const startEnd = {
+      z: zFront(hStartEnd),
+      y: yOn(board, zFront(hStartEnd)) + (sign * hStartEnd) / 2,
+    };
+    const h0 = heightAt(0);
+    const closed = {
+      z: startEnd.z + startIn,
+      y: yOn(board, startEnd.z + startIn) + (sign * h0) / 2,
+    };
+    pts.push(closed, startEnd);
+    board = {
+      a: { z: startEnd.z, y: startEnd.y + (sign * hStartEnd) / 2 + sign * wallIn },
+      b: { z: closed.z, y: closed.y + (sign * h0) / 2 + sign * wallIn },
+    };
+    let toBack = true;
+    for (let k = 1; k <= inner; k++) {
+      const hNear = heightAt(sAt(2 * k - 1)),
+        hFar = heightAt(sAt(2 * k));
+      const zNear = pts[pts.length - 1].z;
+      // the leg's near end, a turn's width under the last
+      const near = { z: zNear, y: yOn(board, zNear) + (sign * hNear) / 2 };
+      // the last leg runs into the riser; the others turn in front of it, or at the front
+      const zFar = k === inner ? zRiser : toBack ? zBack(hFar) : zFront(hFar);
+      const far = { z: zFar, y: yOn(board, zFar) + (sign * hFar) / 2 };
+      pts.push(near, far);
+      board = {
+        a: { z: near.z, y: near.y + (sign * hNear) / 2 + sign * wallIn },
+        b: { z: far.z, y: far.y + (sign * hFar) / 2 + sign * wallIn },
+      };
+      toBack = !toBack;
+    }
+    pts.push(mouthFar, { z: 0, y: mouthY });
+    // the start's closed end stops in front of the riser and the board beside it
+    const span = Math.max(0, zRiser - hRiser / 2 - wallIn - h0 / 2 - margin - startEnd.z);
+    const limit = sign < 0 ? clear.y : clear.y + clear.h;
+    const past = Math.max(
+      sign * (board.a.y - sign * wallIn - limit),
+      sign * (board.b.y - sign * wallIn - limit),
+    );
+    return { pts, span, past };
+  };
+  const lengthOfPts = (pts: readonly FoldPoint[]) =>
+    pts.slice(1).reduce((sum, b, i) => sum + dist(pts[i], b), 0);
+  for (let inner = 1; inner <= MAX_FOLD_LEGS; inner += 2) {
+    /**
+     * The path distance (in) at a point the heights read, from the last pass's points: k from 0 is the start leg's
+     * front end (k = 0) and the inner legs' ends after it; -1 the riser's foot; -2 its top, the mouth leg's far end.
+     * The first pass spreads the path evenly.
+     */
+    let s: number[] = [];
+    const points = 2 * inner + 4;
+    const sAt = (k: number) => {
+      const i = k === -1 ? points - 3 : k === -2 ? points - 2 : k + 1;
+      return s[i] ?? (pathIn * i) / (points - 1);
+    };
+    let shape = layout(inner, 0, sAt);
+    let startIn = 0;
+    for (let pass = 0; pass < 4; pass++) {
+      startIn = pathIn - lengthOfPts(layout(inner, 0, sAt).pts);
+      shape = layout(inner, Math.max(0, startIn), sAt);
+      const { pts } = shape;
+      s = pts.map((_, i) => lengthOfPts(pts.slice(0, i + 1)));
+    }
+    // more legs only reach further down the box, and a shorter start than none cannot be laid out
+    if (startIn < 0 || shape.past > FOLD_BOUNDARY_TOLERANCE_IN) return null;
+    if (startIn <= shape.span) return pointsToRuns(shape.pts);
+  }
+  return null;
+}
+
+/** Runs (cm) from a center line's points, start first. */
+function pointsToRuns(points: readonly FoldPoint[]): HornRun[] {
+  return points.slice(1).flatMap((b, i) => {
+    const a = points[i];
+    const lengthIn = dist(a, b);
+    if (lengthIn < 1e-6) return [];
+    return [
+      {
+        lengthCm: lengthIn * CM_PER_IN,
+        angleDeg: turnOf((Math.atan2(b.y - a.y, b.z - a.z) * 180) / Math.PI),
+      },
+    ];
+  });
+}

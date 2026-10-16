@@ -201,9 +201,8 @@ For code that calls `hornModel` (the Designer, a future page):
   0.6 dB below 20 Hz on a direct radiator.
 - **Slot exits with images.** In quarter or eighth space, or with boxes side by side, the slot's shape scales the
   merged round exit: an approximation.
-- **Folds and back-loaded horns.** Not modeled. The Speaker page models offset and tapped horns through the network
-  (see [Offset and tapped horns on the Speaker page](#offset-and-tapped-horns-on-the-speaker-page)). The 3D view
-  still draws their path straight.
+- **Folds and back-loaded horns.** Folds are ideal: no bend resonances. Back-loaded horns are not modeled. The
+  Speaker page lays out folded paths in runs (see [Folded paths](#folded-paths)).
 - **Tapped and offset-driver horns against Hornresp.** Checked on the acoustic network. Five reference records meet
   Hornresp's results (see [Reference records for Hornresp](#reference-records-for-hornresp)).
 
@@ -242,6 +241,44 @@ level. The box size is the chamber's size.
   - It takes 0.2 s (tapped) to 1.1 s (offset, vented) on the PA v2 bin box.
 - **The check** under the goals: the spread, a low edge under −3 dB, the maximum output and any shortfall, and a horn
   that holds more air than the chamber.
+
+### Folded paths
+
+`src/lib/speaker/hornFold.ts`. A folded path is a list of runs (`HornRun`): a length and an angle each. The sections
+set the sound. The runs set the boards.
+
+| Item            | Rule                                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| Angle           | 0° toward the back, 90° up, 180° toward the baffle                                                   |
+| Layout          | Back from the mouth's center on the baffle. The first run takes up any length difference             |
+| Duct            | The face's width. Its height is the area over the width                                              |
+| Walls           | ±h/2 square to each run. Walls meet at mitres                                                        |
+| Boards          | A wall on the box face is a panel. Two walls a board apart are one board. The start has an end board |
+| Checks          | A run past the box; runs closer than half a board; a turn over 150°                                  |
+| Automatic folds | Zigzag legs (`squareFolds`). A tapped horn takes a spiral first (`spiralFolds`)                      |
+| Reset folds     | Clears the horn's own runs. The automatic folds come back                                            |
+
+- **Spiral.** The mouth leg runs along the mouth's edge. The start lies under it, one board away. Odd inner legs nest
+  below. The last one runs back into a riser up the back wall. The drivers sit on the board between the start and
+  the mouth leg.
+- **The drivers' spot** (`HornMount`): the run, its wall, the distance along it, and which way the cone fronts face.
+  - The spot sets the taps. The taps show read-only.
+  - The tap across the board is the first run within 1.5 in. With none, it is the rear chamber.
+  - `splitSegmentsAt` splits the sections at the taps.
+  - A tapped horn needs a run on both sides. An offset horn needs the rear chamber across the board.
+- **Design from goals** tries every spot (12 per run) and keeps the best score (`withBestSpot`).
+- On the PA v2 bin, a folded tapped horn from the goals fits, with a 2.5 dB spread. Zigzag folds gave 12.8 dB.
+- The 3D view, the side drawing, the cutlist (horn boards, end cuts, cutouts), the wood and the weight read the runs.
+
+**Known designs** (`tests/known-folds.test.ts`):
+
+| Design      | Drive  | Runs from                    | Check against Hornresp                         |
+| ----------- | ------ | ---------------------------- | ---------------------------------------------- |
+| TH18 (Xoc1) | Tapped | A slice of the builder's STL | Taps within 1 cm and 3%; under 1 dB, 30–150 Hz |
+| SKRAM       | Offset | The FreeCAD sketch's path    | Tap within 1 cm; under 0.5 dB, 20–200 Hz       |
+
+- The fit to the box is not checked. TH18 has slanted boards the runs approximate.
+- SKRAM's record computes S3 with the box's depth, not its inner width. Its mouth is 33% larger than built.
 
 ### Hornresp import
 
@@ -392,7 +429,7 @@ The run answered the open points:
 | ----- | --------------------------------------------------------------------------------- |
 | 1     | New wirings: bandpass (4th and 6th order), back-loaded horn, isobaric, push-pull  |
 | 1     | Chambers as ducts (Lrc, Atc), for chamber resonances                              |
-| 2     | Folded geometry: the path drawn in legs, panel angles, cutlist, bracing, net air  |
+| 2     | Folded paths: drag the corners and the drivers' spot in the side view; bracing    |
 | 3     | UI: a chamber editor, a path editor, the optimizer on the network in a web worker |
 
 ## Open questions

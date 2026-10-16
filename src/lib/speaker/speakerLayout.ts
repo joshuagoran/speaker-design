@@ -60,6 +60,7 @@ import { hornPath, type HornPath } from "./hornGeometry";
 import {
   fittedRuns,
   hornFold,
+  spiralFolds,
   squareFolds,
   type FoldTaps,
   type HornFold,
@@ -762,7 +763,10 @@ export function hornFlare(
     depthIn: clearDepthIn(cabinet, placed.dims),
     wallIn: t,
   };
-  const runs = folded ? (horn.runs?.length ? horn.runs : squareFolds(square)) : [];
+  // a tapped horn starts as a spiral, so its drivers sit between the start and the mouth's leg
+  const auto = () =>
+    (horn.drive.kind === HORN_DRIVE.tapped ? spiralFolds(square) : null) ?? squareFolds(square);
+  const runs = folded ? (horn.runs?.length ? horn.runs : auto()) : [];
   const foldInput: HornFoldInput | null = folded
     ? { ...square, runs: fittedRuns(runs, path.pathIn), ...spotOf(horn, runs) }
     : null;

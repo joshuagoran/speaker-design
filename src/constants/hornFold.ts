@@ -2,7 +2,8 @@
 
 /**
  * How close a wall stands to the box's inside face to be the cabinet's own panel (no board of its own), and how far a
- * corner's mitre may pass it, in. */
+ * corner's mitre may pass it, in.
+ */
 export const FOLD_BOUNDARY_TOLERANCE_IN = 0.25;
 
 /** How close two runs' walls stand, a board apart, to share that one board, in. */
