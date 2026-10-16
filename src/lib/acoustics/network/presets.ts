@@ -59,6 +59,8 @@ export interface HornNetworkOptions extends HornModelOptions {
    * default), or is a pure loss, as Hornresp takes it (false).
    */
   leakRadiates?: boolean;
+  /** the amplifier's output resistance in series with each coil, ohms (Hornresp's Rg); absent: none */
+  sourceResistance?: number;
 }
 
 /** What the driver's rear drives: a sealed or vented chamber of its own, or a tap on the path (through a passage). */
@@ -139,6 +141,7 @@ function hornPath(spec: HornPathSpec, opts: HornNetworkOptions): PresetNetwork |
       ts: driver,
       drivers,
       airMassOff: radiationLoad ? oneSideAirMass(driver.Sd) : 0,
+      ...(opts.sourceResistance ? { sourceResistance: opts.sourceResistance } : {}),
     },
   ];
   if (spec.frontPassage) parts.push(passageOf(coneFront, frontNode, spec.frontPassage));

@@ -44,7 +44,8 @@ const LAYOUTS_DIR = path.join(import.meta.dirname, "hornresp-layouts");
 const REFERENCE_DIR = path.join(import.meta.dirname, "..", "tools", "hornresp", "records");
 /**
  * The reference records and the layout each one's key names (tools/hornresp/README.md). th-thorn10-chambers adds
- * both tap chambers to th-thorn10; th-15-four splits th-15's last section, so its rears tap S4.
+ * both tap chambers to th-thorn10; th-15-four splits th-15's last section, so its rears tap S4. th18-xoc1 is a
+ * published design (TH18 by Xoc1).
  */
 const REFERENCES: { name: string; layout: HornLayout }[] = [
   { name: "th-thorn10", layout: HORN_LAYOUT.tapped },
@@ -52,6 +53,8 @@ const REFERENCES: { name: string; layout: HornLayout }[] = [
   { name: "th-15", layout: HORN_LAYOUT.tapped },
   { name: "th-15-four", layout: HORN_LAYOUT.tapped },
   { name: "od-skram", layout: HORN_LAYOUT.offsetDriver },
+  // a published design: four sections, a front chamber and the amplifier's output resistance (Rg 0.1 Ω)
+  { name: "th18-xoc1", layout: HORN_LAYOUT.tapped },
 ];
 
 /** A reading that must succeed. */
@@ -105,6 +108,22 @@ for (const name of RECORDS) {
 const withValue = (text: string, key: string, value: string) =>
   text.replace(new RegExp(`^${key} = .*$`, "m"), `${key} = ${value}`);
 
+test("the reader takes the amplifier's output resistance (Rg) in series with the coil", () => {
+  const base = readOk(readHornrespRecord(recordText("mid-vented")));
+  const withRg = readOk(
+    readHornrespRecord(withValue(recordText("mid-vented"), HORNRESP_KEY.sourceResistance, "4.00")),
+  );
+  assert.equal(base.losses.sourceResistance, 0);
+  assert.equal(withRg.losses.sourceResistance, 4);
+  const at = (reading: HornrespReading & { ok: true }) =>
+    presetModel(reading.preset, [60], reading.volts)?.curve[0];
+  const [plain, damped] = [at(base), at(withRg)];
+  assert.ok(plain && damped);
+  // the resistance takes some of the drive: quieter; the driver's own impedance leaves it out
+  assert.ok(damped.spl < plain.spl - 0.5, `${damped.spl} vs ${plain.spl}`);
+  assert.ok(Math.abs(damped.ze - plain.ze) < 0.5 * plain.ze);
+});
+
 test("the reader names what it cannot model yet", () => {
   const base = recordText("mid-vented");
   const reasonFor = (text: string) => {
@@ -113,7 +132,6 @@ test("the reader names what it cannot model yet", () => {
     return reading.reason;
   };
   const unsupported: [string, string, string][] = [
-    [HORNRESP_KEY.sourceResistance, "4.00", HORNRESP_KEY.sourceResistance],
     [HORNRESP_KEY.angle, "4.0 x Pi", "solid angle"],
     [HORNRESP_KEY.semiInductance, "1", "semi-inductance"],
     [HORNRESP_KEY.endCorrection, "1", HORNRESP_KEY.endCorrection],
