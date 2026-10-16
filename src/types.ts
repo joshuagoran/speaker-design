@@ -2443,7 +2443,7 @@ export interface FoldTrace {
   /** the air farthest from the mouth; null with no passage */
   closedEnd: SidePoint | null;
   /** the width and area every `FOLD_SECTION_STEP_IN` along the path, `sIn` measured from the closed end */
-  sections: { sIn: number; widthIn: number; areaIn2: number }[];
+  sections: FoldPathSection[];
   /** where each side of the first row of cones opens into the passage, in from the closed end; null when it does not */
   taps: { front: number | null; back: number | null };
   /** the air the mouth does not reach, as separate volumes */
