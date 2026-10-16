@@ -8,8 +8,13 @@ import type {
   HornBoards,
   SpeakerHorn,
 } from "../../types";
-import type { FoldRoom } from "./hornBoards";
-import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE, FOLD_WALL } from "../../constants/hornBoards";
+import type { FoldDriverBody, FoldRoom } from "./hornBoards";
+import {
+  FOLD_CUTOUT_MARGIN_IN,
+  FOLD_FACE,
+  FOLD_MAGNET_CLEARANCE_IN,
+  FOLD_WALL,
+} from "../../constants/hornBoards";
 import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 
 /**
@@ -176,3 +181,90 @@ export function mirroredBoards(plan: HornBoards, heightIn: number): HornBoards {
 /** Whether a horn's mouth is set at the bottom of the baffle (its place below the chamber's middle, `heightIn` high). */
 export const mouthAtBottom = (horn: Pick<SpeakerHorn, "mouthPosition">, heightIn: number) =>
   horn.mouthPosition !== undefined && horn.mouthPosition.yIn < heightIn / 2;
+
+/**
+ * A tapped horn's spiral, the classic layout: the mouth's leg across the top, the drivers' board under it, and under
+ * that `inner` legs (an odd number, at least 3) zigzagging down the box, each `growth` times as high as the one before;
+ * the last runs back along the bottom and turns up a riser at the back wall into the mouth's leg. The drivers sit near
+ * the front of their board: the cone fronts down into the first leg near the closed end (on the baffle), the backs up
+ * into the mouth's leg near the mouth. The mouth's leg takes `mouthShare` of the height; turns are `turnShare` of the
+ * legs' height wide.
+ */
+export function spiralBoards(
+  room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn">,
+  inner: number,
+  mouthShare: number,
+  body: Pick<FoldDriverBody, "cutoutIn" | "steps">,
+  turnShare = 1,
+  growth = 1,
+): HornBoards {
+  /** the inner legs, an odd number */
+  const k = Math.max(3, inner - ((inner + 1) % 2));
+  /** the side section's depth and height, and a board's thickness, in */
+  const { depthIn: d, heightIn: h, wallIn: t } = room;
+  /** the mouth's leg's height, and the inner legs' heights from the top down, in */
+  const mouthH = (h - k * t) * mouthShare;
+  const scale = Array.from({ length: k }, (_, i) => growth ** i);
+  const total = scale.reduce((sum, s) => sum + s, 0);
+  const legH = scale.map((s) => ((h - k * t - mouthH) * s) / total);
+  /** the riser's width, and the riser board's front face, in from the baffle */
+  const riserIn = (legH[k - 1] + mouthH) / 2;
+  const zR = d - riserIn - t;
+  /** each inner board's line face (its bottom) height: board i tops leg i */
+  const yTop = (i: number) =>
+    h - mouthH - t - legH.slice(0, i).reduce((sum, x) => sum + x, 0) - i * t;
+  const yD = yTop(0);
+  /** the turn below inner board i's free end, in */
+  const turnIn = (i: number) => ((legH[i - 1] + legH[i]) / 2) * turnShare;
+  const corners: FoldCorner[] = [
+    // 0, 1: the drivers' board, from the baffle over the riser board's top
+    { z: 0, y: yD, wall: FOLD_WALL.baffle },
+    { z: zR + t, y: yD, wall: null },
+  ];
+  const boards: HornBoards["boards"] = [{ a: 0, b: 1, side: 1 }];
+  // the inner boards: after a leg running back, from the baffle; after one running forward, from the riser board
+  for (let i = 1; i < k; i++) {
+    const y = yTop(i);
+    const fromBaffle = i % 2 === 1;
+    corners.push(
+      { z: fromBaffle ? 0 : zR, y, wall: fromBaffle ? FOLD_WALL.baffle : null },
+      { z: fromBaffle ? zR - turnIn(i) : turnIn(i), y, wall: null },
+    );
+    boards.push({ a: corners.length - 2, b: corners.length - 1, side: fromBaffle ? 1 : -1 });
+  }
+  // the riser board: up from the last inner board's back corner to the drivers' board, its thickness to the back
+  const lastBack = corners.length - 2;
+  corners.push({ z: zR, y: yD, wall: null });
+  boards.push({ a: lastBack, b: corners.length - 1, side: -1 });
+  const riser = boards.length - 1;
+  /** the drivers' middle from the baffle, in: the cutout's half and its margin, or the widest step and its clearance */
+  const frontIn = Math.max(
+    body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN,
+    Math.max(0, ...body.steps.map((step) => step.rIn)) + FOLD_MAGNET_CLEARANCE_IN,
+  );
+  const legs: FoldLeg[] = Array.from({ length: k }, (_, i) => {
+    const up: FoldLeg["left"] = { board: i, face: FOLD_FACE.line };
+    const down: FoldLeg["left"] =
+      i === k - 1 ? { wall: FOLD_WALL.bottom } : { board: i + 1, face: FOLD_FACE.offset };
+    // even legs run back (their left is up, turning down to the right), odd legs forward (turning down to the left);
+    // the last turns up into the riser, to its left
+    const back = i % 2 === 0;
+    const leg: FoldLeg = back ? { left: up, right: down } : { left: down, right: up };
+    return { ...leg, turn: i === k - 1 ? 1 : back ? -1 : 1 };
+  });
+  legs.push(
+    // the riser, up the back wall, turning forward into the mouth's leg
+    { left: { board: riser, face: FOLD_FACE.offset }, right: { wall: FOLD_WALL.back }, turn: 1 },
+    // the mouth's leg, forward over the drivers' board to the mouth
+    { left: { board: 0, face: FOLD_FACE.offset }, right: { wall: FOLD_WALL.top } },
+  );
+  return {
+    corners,
+    boards,
+    closed: { wall: FOLD_WALL.baffle },
+    legs,
+    mouth: FOLD_WALL.baffle,
+    // as near the closed end as the cutout's margin and the driver's clearance from the baffle allow
+    drivers: { board: 0, alongIn: frontIn, coneFace: FOLD_FACE.line },
+  };
+}

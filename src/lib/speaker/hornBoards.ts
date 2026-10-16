@@ -312,9 +312,12 @@ function turnGate(
     const board = plan.boards[ia.board];
     const ca = plan.corners[board.a],
       cb = plan.corners[board.b];
-    // the turn goes round the board's free end; with both ends free, the end the leg runs toward
-    const atB =
-      ca.wall !== null ? true : cb.wall !== null ? false : dist(cb, from) >= dist(ca, from);
+    // the turn goes round the board's free end (not on a wall nor shared with another board); with both ends free,
+    // the end the leg runs toward
+    const held = (corner: number) =>
+      plan.corners[corner].wall !== null ||
+      plan.boards.some((other, i) => i !== ia.board && (other.a === corner || other.b === corner));
+    const atB = held(board.a) ? true : held(board.b) ? false : dist(cb, from) >= dist(ca, from);
     const [end, other] = atB ? [cb, ca] : [ca, cb];
     const t = thicknessOf(plan, board, room.wallIn);
     const tip = add(end, t, 0.5);
@@ -577,6 +580,30 @@ function driverParts(
   });
 }
 
+/**
+ * A row's cutout `alongIn` along the drivers' board, as an outline through the board: the cutout wide, and past both
+ * faces by twice the touch distance, so a board that only touches a face there counts as joined across it.
+ */
+function cutoutHole(
+  plan: HornBoards,
+  room: FoldRoom,
+  alongIn: number,
+  cutoutIn: number,
+): FoldPoint[] {
+  const drivers = plan.drivers;
+  if (!drivers) return [];
+  const board = plan.boards[drivers.board];
+  const along = unit(sub(plan.corners[board.b], plan.corners[board.a]));
+  const t = thicknessOf(plan, board, room.wallIn);
+  const across = unit(t);
+  const reach = 2 * FOLD_TOUCH_IN;
+  const center = onBoard(plan, drivers.board, alongIn);
+  const near = add(center, across, -reach),
+    far = add(add(center, t), across, reach);
+  const r = cutoutIn / 2;
+  return [add(near, along, -r), add(near, along, r), add(far, along, r), add(far, along, -r)];
+}
+
 // ---- the whole
 /**
  * A folded horn's boards worked out in a chamber's side section (`room`): the gates, the sections (each area the gate's
@@ -721,10 +748,14 @@ function checksOf(
       facesPassage: taps?.front != null,
       // at least one cutout across the chamber, with the margin either side
       widthFits: across > 0,
-      // every row's cutout on the board, with the margin to spare
+      // every row's cutout on the board, with the margin to spare, and no other board joined across it
       cutoutFits:
         drivers.alongIn + offsets[0] >= need &&
-        drivers.alongIn + offsets[offsets.length - 1] <= lengthIn - need,
+        drivers.alongIn + offsets[offsets.length - 1] <= lengthIn - need &&
+        offsets.every((o) => {
+          const hole = cutoutHole(plan, room, drivers.alongIn + o, body.cutoutIn);
+          return outlines.every((other, i) => i === drivers.board || !overlaps(other, hole));
+        }),
       magnetClear: keepOuts.every(
         (k) => k.every(inRoom) && outlines.every((o, i) => i === drivers.board || !overlaps(o, k)),
       ),

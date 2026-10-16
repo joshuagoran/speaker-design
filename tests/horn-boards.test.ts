@@ -9,8 +9,13 @@ import {
   type FoldDriverBody,
   type FoldRoom,
 } from "../src/lib/speaker/hornBoards";
-import { mirroredBoards, offsetZigzagBoards, zigzagBoards } from "../src/lib/speaker/foldLayouts";
-import { FOLD_FACE, FOLD_MIN_PASSAGE_IN } from "../src/constants/hornBoards";
+import {
+  mirroredBoards,
+  offsetZigzagBoards,
+  spiralBoards,
+  zigzagBoards,
+} from "../src/lib/speaker/foldLayouts";
+import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE, FOLD_MIN_PASSAGE_IN } from "../src/constants/hornBoards";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import type { HornBoards, HornSegment } from "../src/types";
 import { splitSegmentsAt, segmentAreaAt } from "../src/lib/acoustics/hornSegments";
@@ -281,4 +286,21 @@ test("horn boards: an offset zigzag over a sealed rear chamber taps its first le
   const layout = layoutOf(plan);
   assert.ok(foldPasses(layout), JSON.stringify(layout.checks));
   assert.ok(layout.taps && layout.taps.front !== null && layout.taps.rear === null);
+});
+
+test("horn boards: a tapped spiral taps near the closed end and near the mouth, and passes", () => {
+  const plan = spiralBoards(ROOM, 3, 0.35, SUB18, 1, 1.25);
+  const layout = layoutOf(plan);
+  assert.ok(foldPasses(layout), JSON.stringify(layout.checks));
+  assert.ok(layout.taps && layout.taps.front !== null && layout.taps.rear !== null);
+  assert.ok(layout.taps.front < 0.15 * layout.pathIn, `front tap ${layout.taps.front}`);
+  assert.ok(layout.taps.rear > 0.8 * layout.pathIn, `rear tap ${layout.taps.rear}`);
+  // the turn round the last inner board goes round its free end, not the end joined to the riser's board
+  assert.ok(layout.gates.every((g) => g.heightIn >= FOLD_MIN_PASSAGE_IN));
+  // a cutout at the far end of the drivers' board, its margin on the board but over the riser's board joined
+  // under it, does not fit
+  const board = plan.boards[0];
+  const farIn = plan.corners[board.b].z - SUB18.cutoutIn / 2 - FOLD_CUTOUT_MARGIN_IN - 0.1;
+  const over = layoutOf({ ...plan, drivers: plan.drivers && { ...plan.drivers, alongIn: farIn } });
+  assert.equal(over.checks.drivers?.cutoutFits, false);
 });

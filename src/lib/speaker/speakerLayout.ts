@@ -75,14 +75,15 @@ import {
   mirroredBoards,
   mouthAtBottom,
   offsetZigzagBoards,
+  spiralBoards,
   zigzagBoards,
 } from "./foldLayouts";
 import {
   FOLD_AUTO_GROWTHS,
-  FOLD_FACE,
   FOLD_AUTO_MAX_LEGS,
   FOLD_AUTO_TURN_SHARES,
   FOLD_OFFSET_REAR_SHARES,
+  FOLD_SPIRAL_MOUTH_SHARES,
 } from "../../constants/hornBoards";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
@@ -936,7 +937,7 @@ export function foldRoomOf(
 
 /**
  * The layouts the automatic choice and Design from goals try for a drive: zigzags of each leg count, turn width and
- * growth; a tapped horn's with its drivers on the first board or the last, an offset horn's over a sealed rear chamber
+ * growth; a tapped horn's with its drivers on the first board, and spirals, an offset horn's over a sealed rear chamber
  * of each height (none without a driver's body to size it), a front-loaded horn's with its throat at the closed end.
  */
 export const zigzagTries = (
@@ -957,11 +958,24 @@ const layoutTries = (
 ): HornBoards[] => {
   if (kind === HORN_DRIVE.offset) return body ? offsetPlans(room, body.cutoutIn) : [];
   const tapped = kind === HORN_DRIVE.tapped;
-  return zigzagPlans(room, tapped).flatMap((plan) =>
-    // a tapped horn's drivers on the first board, or the last: their backs into the mouth's leg, the tallest
-    tapped && plan.drivers && plan.boards.length > 1 ? [plan, onLastBoard(plan)] : [plan],
-  );
+  // a tapped horn also tries the classic spiral: the fronts near the closed end, the backs into the mouth's leg
+  return tapped && body
+    ? [...zigzagPlans(room, true), ...spiralPlans(room, body)]
+    : zigzagPlans(room, tapped);
 };
+
+/** Each odd inner leg count, mouth's leg height, turn width and growth of the tapped spiral. */
+const spiralPlans = (room: FoldRoom, body: FoldDriverBody): HornBoards[] =>
+  // the inner legs, the riser and the mouth's leg: up to `FOLD_AUTO_MAX_LEGS` in all
+  Array.from({ length: (FOLD_AUTO_MAX_LEGS - 2) / 2 - 1 }, (_, i) =>
+    FOLD_SPIRAL_MOUTH_SHARES.flatMap((mouth) =>
+      FOLD_AUTO_TURN_SHARES.flatMap((share) =>
+        FOLD_AUTO_GROWTHS.map((growth) =>
+          spiralBoards(room, 2 * i + 3, mouth, body, share, growth),
+        ),
+      ),
+    ),
+  ).flat();
 
 /** Each odd leg count, rear chamber height (as a share of the height), turn width and growth of the offset zigzag. */
 const offsetPlans = (room: FoldRoom, cutoutIn: number): HornBoards[] =>
@@ -974,18 +988,6 @@ const offsetPlans = (room: FoldRoom, cutoutIn: number): HornBoards[] =>
       ),
     ),
   ).flat();
-
-/** A tapped zigzag with its drivers moved to its last board, midway along it, the fronts down into the leg below. */
-function onLastBoard(plan: HornBoards): HornBoards {
-  const at = plan.boards.length - 1;
-  const board = plan.boards[at];
-  const a = plan.corners[board.a],
-    b = plan.corners[board.b];
-  return {
-    ...plan,
-    drivers: { board: at, alongIn: Math.hypot(b.z - a.z, b.y - a.y) / 2, coneFace: FOLD_FACE.line },
-  };
-}
 
 /** Each even leg count, turn width and growth of the zigzag. */
 const zigzagPlans = (room: FoldRoom, tapped: boolean): HornBoards[] =>
