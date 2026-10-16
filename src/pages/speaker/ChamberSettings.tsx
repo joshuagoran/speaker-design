@@ -122,6 +122,7 @@ import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
 import { withSlotKind, withSlotPlace } from "../../lib/speaker/slotPort";
 import { SPEAKER_STEPS, STUFFING_MAX_PCT } from "../../constants/speakerSteps";
 import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
+import { tubeDriverOf } from "../../lib/speaker/chamberAir";
 import { ELBOW_COUNTS, elbowCountOf } from "../../lib/tubeFold";
 
 /** The driver types as the type picker lists them: one woofer type, then the other kinds. */
@@ -784,7 +785,8 @@ function RoundFields({
 }) {
   const { n, dia, len, elbows } = port;
   const base = { shape: PORT_SHAPE.round, n, dia, len, elbows };
-  const hasSub = chamber.drivers.some((d) => d.kind === DRIVER_KIND.sub);
+  /** a cone driver: flared tubes are laid out round it */
+  const flaredFits = tubeDriverOf(chamber) !== null;
   return (
     <>
       <div className={FIELD_ROW}>
@@ -809,8 +811,11 @@ function RoundFields({
           onChange(ends === TUBE_ENDS.flared ? { ...base, flared: true, corners: false } : base)
         }
         options={entriesOf(TUBE_ENDS_NAMES)}
+        disabled={
+          flaredFits ? undefined : { values: [TUBE_ENDS.flared], why: SPEAKER_TEXT.tubeEndsNoSub }
+        }
       />
-      {port.flared && !hasSub && (
+      {port.flared && !flaredFits && (
         <p className="text-xs text-stone-500">{SPEAKER_TEXT.tubeEndsNoSub}</p>
       )}
       {port.flared && (
