@@ -3,7 +3,8 @@
 A plan, Oct 2026. It adds a 1-D horn model to the PA planner for the boxes in [pa-v2-plan.md](pa-v2-plan.md):
 front-loaded sub bins and mid horns with vented rear chambers, later folded and tapped horns. Phase 1 (the engine and
 its tests) is done. It matches Hornresp (see [Validation](#validation)). The horn boxes now go to the modular
-Designer, not the PA page (see [Phases](#phases)).
+Designer, not the PA page (see [Phases](#phases)). A general acoustic network now holds the same parts (see
+[The acoustic network](#the-acoustic-network)). Tapped and offset-driver horns are presets on it.
 
 ## What the planner has today
 
@@ -66,12 +67,13 @@ The chain multiplies them per frequency.
 
 ### Topologies
 
-| Topology                       | Chain                                                   | Phase |
-| ------------------------------ | ------------------------------------------------------- | ----- |
-| Front-loaded horn, sealed rear | rear chamber ‖ cone → throat chamber → segments → mouth | 1     |
-| Front-loaded horn, vented rear | as above, with a port; port and mouth outputs summed    | 1     |
-| Folded horn                    | the same chain; folds not modeled, only the path        | 3     |
-| Tapped horn                    | both sides of the cone drive one path at two points     | later |
+| Topology                       | Chain                                                   | Phase       |
+| ------------------------------ | ------------------------------------------------------- | ----------- |
+| Front-loaded horn, sealed rear | rear chamber ‖ cone → throat chamber → segments → mouth | 1           |
+| Front-loaded horn, vented rear | as above, with a port; port and mouth outputs summed    | 1           |
+| Folded horn                    | the same chain; folds not modeled, only the path        | 3           |
+| Offset-driver horn (OD)        | the cone taps the path between a closed end and mouth   | 1 (network) |
+| Tapped horn (TH)               | both sides of the cone drive one path at two points     | 1 (network) |
 
 ### Outputs
 
@@ -199,7 +201,149 @@ For code that calls `hornModel` (the Designer, a future page):
   0.6 dB below 20 Hz on a direct radiator.
 - **Slot exits with images.** In quarter or eighth space, or with boxes side by side, the slot's shape scales the
   merged round exit: an approximation.
-- **Folds, tapped and back-loaded horns.** Not modeled (`hornDesignOf` names the gap).
+- **Folds and back-loaded horns.** Not modeled. Tapped horns are modeled by the network only: no page uses it yet
+  (`hornDesignOf` still names the gap).
+- **Tapped and offset-driver horns against Hornresp.** Checked on the acoustic network. Five reference records meet
+  Hornresp's results (see [Reference records for Hornresp](#reference-records-for-hornresp)).
+
+## The acoustic network
+
+Phase 1 of #169. One engine for any wiring of drivers, chambers, ducts and openings. Code: `src/lib/acoustics/network/`.
+No UI yet.
+
+### Parts
+
+| Part    | Model                                                                                           |
+| ------- | ----------------------------------------------------------------------------------------------- |
+| Driver  | The box models' circuit with Le, a pressure source between a rear node and a front node         |
+| Chamber | Lumped compliance V/(ρc²) to the outside air; an optional absorbing loss beside it              |
+| Duct    | Horn sections in a row: the exact two-ports (conical, exponential, parabolic, straight duct)    |
+| Mass    | Lumped acoustic mass and resistance: a vent with no radiation load, as the box models           |
+| Opening | A mouth, a vent exit or a leak to the air: piston radiation impedance, a resistance, or no load |
+
+- **Nodes.** Each node has one pressure. The outside air is the zero-pressure reference.
+- **Solver.** Modified nodal analysis per frequency. The unknowns are the node pressures and the parts' flows. One
+  row per node sums its flows to zero. One row per part flow gives the part's law.
+- **Ducts keep their transfer matrix.** The solver never inverts it. So a duct where B = 0 (half a wavelength) or of
+  zero length still solves.
+- **Elimination.** Gaussian, with partial pivoting and row scaling. A horn box has 10 to 20 unknowns.
+- **Singular systems.** A pivot below 1e-12 of its scaled row gives null. A node that nothing holds is singular.
+- **Many frequencies.** `prepareNetwork` checks and prepares a network once. `solvePreparedAt` solves it at each
+  frequency. `solveNetworkAt` does both for one frequency.
+- **Outputs.** Node pressures, part flows, cone excursion, Ze, and SPL at 1 m. SPL is on axis (`spl`) and from radiated
+  power (`powerSpl`). Openings sum by flow and setback, as the horn engine.
+- **Pure.** No DOM and no globals: it can run in a web worker.
+
+### Presets
+
+`presets.ts` builds a network from a design. A horn path runs from boundary 0 to boundary n. Each tapped boundary,
+the closed end and the mouth get a node. Ducts join them in order.
+
+| Preset             | Wiring                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `frontLoadedHorn`  | Fronts at boundary 0, through the throat chamber; rears in a sealed or vented chamber            |
+| `offsetDriverHorn` | As above, fronts at boundary `tap`; the stub before it is closed at its start (OD)               |
+| `tappedHorn`       | Fronts at `frontTap`, rears at `rearTap`, each through its chamber; only the mouth radiates (TH) |
+| `sealedBox`        | `closedBox`'s circuit                                                                            |
+| `ventedBox`        | `boxModel`'s circuit, lumped vent, radiating leak                                                |
+
+`presetModel` gives a preset's result in the horn engine's shape (`HornModel`).
+
+- **Chambers.** A front-loaded or OD horn's throat and rear chambers are lumped volumes, as Hornresp's masked mode.
+  A tapped horn's chambers are straight passages from the cones to their taps, as Hornresp's TH. Each has a volume and
+  an area (`TapChamber`); its length is the volume over the area.
+
+### Parity
+
+`tests/acoustic-network.test.ts` checks the network against the existing models. The bar was 0.01 dB and 0.1 %.
+
+| Check                                            | Result                                            |
+| ------------------------------------------------ | ------------------------------------------------- |
+| Every Hornresp case the horn engine passes       | Every readout within 1e-9 of `hornModel`          |
+| Horn engine's box mode, slot vent, quarter space | Within 1e-9                                       |
+| `closedBox`, Le 0 and 1.5 mH                     | SPL, excursion, phase within 1e-9                 |
+| `boxModel`, Le 0 and 1.5 mH, two loss sets       | SPL, excursion, vent speed, phase, Fb within 1e-9 |
+
+- **The horn engine keeps its own code.** Parity holds to rounding, not bit for bit. The PA optimizers call
+  `hornModel`, and their snapshots must not move. A later change can make `hornModel` call the network.
+- **The box models keep their inline real arithmetic.** The optimizers run them millions of times.
+
+### Physics checks
+
+- An offset-driver horn tapped at its throat is the front-loaded horn. Tap 0 meets the horn engine to rounding.
+  A 10 µm stub comes within 0.01 dB.
+- A tapped horn's response moves smoothly as a tap moves. A 1 mm move changes it less than a fifth of a 1 cm move.
+- A section split where no driver taps changes nothing.
+- A tapped horn with both taps at one point plays nothing: the two sides cancel.
+- Every node's flows add to zero, to 1e-12.
+- A chamber's loss is a leak whose flow does not radiate. A duct with no sections is its loss alone.
+- Two drivers in one bank are two driver parts side by side. Two boxes in half space are one box in quarter space.
+- A tapped horn rolls off below its path's quarter-wave resonance: 12 dB per octave or more at the bottom.
+
+### Hornresp reader
+
+`hornrespRecord.ts` reads a Hornresp record onto the presets.
+
+| Supported                                     | Not supported yet (the reader says so)                     |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| Front-loaded horns and direct radiators       | Rg, a driver count other than 1, 4π                        |
+| OD: closed at S1, fronts at S2                | Semi-inductance, lossy inductance, damping models          |
+| TH: closed at S1, fronts at S2, rears at S3   | Hornresp's vent end correction, acoustic path length       |
+| TH with four sections: rears at S4            | Other flares (for example Tra), filled chambers, absorbent |
+| Con, Exp and Par sections, up to four         | Passive radiators, active filters, equalizer bands         |
+| Sealed or vented rear chamber, throat chamber | A vent on a tapped horn, an open rear (Vrc 0)              |
+| TH chambers: Vtc with Atc, Vrc with Lrc       | Other layouts (OD1, OD2, TH1, BP4 and more)                |
+| 2π, π and π/2                                 | A TH throat chamber with no Atc                            |
+
+- **Hornresp's conventions.** Mmd without air load; lossless horn chambers; a direct radiator's leak of QL 7 that
+  does not radiate. With that leak, the network meets `sub-direct-vented` to 0.0003 dB. The horn engine radiates the
+  leak and needs 0.6 dB there.
+- **Every committed record** reads and meets Hornresp's results: SPL within 0.0003 dB, Ze within 0.005 %.
+- **Layouts.** The key of the driver count line (the line after Re) names the layout: `Nd`, `OD` or `TH`. Its value
+  is the number of drivers. Hornresp writes it so. The caller can give another layout, also for an unknown key.
+- **TH chambers.** Hornresp's TH takes Vtc and Vrc as passages, masked or not. Vtc has the area Atc. Vrc has the length
+  Lrc, so its area is Vrc / Lrc. Either value at zero gives no chamber.
+- **Invalid records.** A blank or non-numeric value, a negative length, or a driver value of zero or less fails. So
+  do horn rows with the wrong keys, or a row that does not start at the end of the row before it. The reason starts
+  "invalid record: ".
+- **End correction flag.** Hornresp sets it on every TH record. The reader checks it only when the record has a vent.
+- **SKRAM.** `tests/hornresp-layouts/skram-od.txt` is hand-written from its FreeCAD model. Its Vrc is a placeholder,
+  so its test is structural only.
+
+### Reference records for Hornresp
+
+`tools/hornresp/records/` holds five records, as Hornresp 60.60 exported them. Their results are in
+`tests/hornresp/`. `tests/hornresp-reader.test.ts` checks them with the committed records' tolerances.
+
+| Record                | Design                                                                                              |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `th-thorn10`          | A Thorn-like 10″ TH: 200 cm conical path, taps at 30 and 120 cm                                     |
+| `th-thorn10-chambers` | `th-thorn10` with Vtc 1500 cc (Atc 300 cm²) and Vrc 6 L (Lrc 20 cm)                                 |
+| `th-15`               | A 15″ TH: 300 cm conical path, taps at 40 and 180 cm                                                |
+| `th-15-four`          | `th-15` with its last section split in two: four sections, rears at S4                              |
+| `od-skram`            | The SKRAM-like OD: parabolic, stub 27.28 cm, Vrc 120 L (a plausible value), vent 732 cm² × 79.54 cm |
+
+The network meets all five: SPL within 0.0001 dB, Ze within 0.0001 %, excursion within Hornresp's rounding.
+
+The run answered the open points:
+
+| Point                    | Answer                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| The OD and TH record key | `OD = 1` or `TH = 1` in place of `Nd = 1`: the driver count line                          |
+| TH sides                 | The front at S2 with Vtc, the rear at S3 with Vrc. The phase matches Hornresp's to 0.1°   |
+| TH chambers              | Passages, not lumped volumes. As lumped volumes, the chambers case missed by 55 dB        |
+| TH with four sections    | The rears tap S4                                                                          |
+| OD throat chamber        | Lumped, as the front-loaded horn's                                                        |
+| Mouth key after Par      | `Fta`, the wall angle at the mouth. The area grows linearly, so Fta = atan(dS/dx / (2πr)) |
+
+### Next
+
+| Phase | Work                                                                              |
+| ----- | --------------------------------------------------------------------------------- |
+| 1     | New wirings: bandpass (4th and 6th order), back-loaded horn, isobaric, push-pull  |
+| 1     | Chambers as ducts (Lrc, Atc), for chamber resonances                              |
+| 2     | Folded geometry: the path drawn in legs, panel angles, cutlist, bracing, net air  |
+| 3     | UI: a chamber editor, a path editor, the optimizer on the network in a web worker |
 
 ## Open questions
 
@@ -214,4 +358,4 @@ has the setup, a script that drives it, a record writer and Hornresp's rules for
 
 - **Set the air each time:** 343 m/s and 1.18 kg/m³. A new container starts with Hornresp's defaults.
 - **Check the setup first:** run a committed case. Its results must be identical.
-- **Mask the chamber resonances:** lumped chambers, as the engine.
+- **Mask the chamber resonances:** lumped chambers, as the engine. A TH's chambers are passages either way.

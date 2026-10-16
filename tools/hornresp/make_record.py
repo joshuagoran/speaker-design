@@ -7,7 +7,8 @@ script keeps the rest. It applies the rules Hornresp checks on import:
 - CRLF on every line.
 - Segment rows chain: each row's first area is the row before's last.
 - The mouth key: Cir (mouth circumference in flare-cutoff wavelengths) when the last segment is exponential, Fta
-  (the mouth's wall angle, degrees) when it is conical. Exponential rows also carry their cutoff, F12 to F45.
+  (the mouth's wall angle, degrees) when it is conical or parabolic (Par). Exponential rows also carry their cutoff,
+  F12 to F45.
 - Keys that appear twice (Le, Rms) change only in the traditional driver section.
 
 Example (a 10" mid horn, Le 0.6 mH, a vented rear chamber):
@@ -29,7 +30,7 @@ SPEED_OF_SOUND = 343.0
 #: the record's horn rows: (start area key, end area key, length suffix)
 ROWS = (("S1", "S2", "12"), ("S2", "S3", "23"), ("S3", "S4", "34"), ("S4", "S5", "45"))
 #: profile names as the record keys them
-PROFILE_KEYS = {"con": "Con", "exp": "Exp"}
+PROFILE_KEYS = {"con": "Con", "exp": "Exp", "par": "Par"}
 
 
 def parse_segments(text):
@@ -38,7 +39,7 @@ def parse_segments(text):
     for part in text.split(","):
         profile, s1, s2, length = part.split(":")
         if profile not in PROFILE_KEYS:
-            sys.exit(f"unknown profile {profile!r}: use con or exp")
+            sys.exit(f"unknown profile {profile!r}: use con, exp or par")
         segments.append((profile, float(s1), float(s2), float(length)))
     if not 1 <= len(segments) <= 4:
         sys.exit("Hornresp takes 1 to 4 segments")
@@ -67,6 +68,9 @@ def horn_block(segments):
     radius = lambda area: math.sqrt(area / math.pi)
     if profile == "exp":
         mouth = ("Cir", 2 * math.pi * (radius(s2) / 100) * cutoff(s1, s2, length) / SPEED_OF_SOUND)
+    elif profile == "par":
+        # a parabolic segment's area grows linearly: the wall's slope at the mouth is dS/dx / (2πr)
+        mouth = ("Fta", math.degrees(math.atan((s2 - s1) / length / (2 * math.pi * radius(s2)))))
     else:
         mouth = ("Fta", math.degrees(math.atan((radius(s2) - radius(s1)) / length)))
     return lines, mouth

@@ -15,6 +15,7 @@ import type { INPUT_RANGE_LIMIT, LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { HORN_PROFILE } from "./constants/hornEngine";
+import type { HORN_LAYOUT, NETWORK_PART, OPENING_LOAD } from "./constants/acousticNetwork";
 import type {
   AUTO_DELAY,
   AUTO_LEVEL,
@@ -1627,6 +1628,242 @@ export interface HornModel {
   /** Fb: the rear chamber and vent's tuning on their own (where the vent's reactance cancels the chamber's), Hz; null when sealed */
   fb: number | null;
 }
+
+/**
+ * A node of an acoustic network (lib/acoustics/network): an index from 0 to the network's `nodeCount` − 1. Each node
+ * has one pressure. The outside air, at zero pressure, is not a node: chambers and openings reach it.
+ */
+export type NetworkNode = number;
+
+/**
+ * The cones (`drivers` alike in parallel, each on the full voltage) between two nodes: a pressure source behind the
+ * driver's own impedance, its voice coil's inductance included (lib/acoustics/driverCircuit). They push flow into
+ * `front` and draw the same flow from `rear`.
+ */
+export interface NetworkDriver {
+  kind: (typeof NETWORK_PART)["driver"];
+  front: NetworkNode;
+  rear: NetworkNode;
+  /** one driver's Thiele/Small parameters, as the box models take them */
+  ts: BoxModelTS;
+  /** how many alike drivers share the two nodes, wired in parallel (Hornresp's Nd); 1 for one */
+  drivers: number;
+  /**
+   * kg taken off one cone's moving mass: one side's air load (8/3·ρa³), which the datasheet's Mms includes and the
+   * network's radiation impedances carry; 0 with no radiation load (the box models' mode)
+   */
+  airMassOff: number;
+}
+
+/** An air volume at a node, lumped: its compliance V/(ρc²) to the outside air. */
+export interface NetworkChamber {
+  kind: (typeof NETWORK_PART)["chamber"];
+  node: NetworkNode;
+  /** the volume's net air, L */
+  liters: number;
+  /**
+   * an absorbing loss beside the compliance: acoustic resistance (Pa·s/m³) to the outside air whose flow does not
+   * radiate (damping); absent or Infinity for none
+   */
+  loss?: number;
+}
+
+/**
+ * Horn sections in a row (exact two-ports: conical, exponential, parabolic; a section with equal areas is a straight
+ * duct) from node `from` to node `to`. No sections join the two nodes through the input loss alone.
+ */
+export interface NetworkDuct {
+  kind: (typeof NETWORK_PART)["duct"];
+  from: NetworkNode;
+  to: NetworkNode;
+  /** the sections, `from` first, in Hornresp's units (cm², cm) */
+  segments: readonly HornSegment[];
+  /** a series resistance at the duct's input, Pa·s/m³ (a vent's own loss); 0 for none */
+  loss: number;
+}
+
+/** A lumped acoustic mass and resistance in series from node `from` to node `to`: a vent with no radiation load. */
+export interface NetworkMass {
+  kind: (typeof NETWORK_PART)["mass"];
+  from: NetworkNode;
+  to: NetworkNode;
+  /** the air column's acoustic mass, ρ·length/area, kg/m⁴ */
+  mass: number;
+  /** its series resistance, Pa·s/m³ */
+  resistance: number;
+}
+
+/** What loads an opening (`OPENING_LOAD`). */
+export type OpeningLoad =
+  | {
+      kind: (typeof OPENING_LOAD)["piston"];
+      /** the opening's area, m² */
+      area: number;
+      /**
+       * the reactance's scale against a round piston's: a slot's end correction over a round exit's of the same area
+       * (lib/acoustics/hornModel ventOf); 1 for a round opening
+       */
+      reactanceRatio: number;
+    }
+  | {
+      kind: (typeof OPENING_LOAD)["resistance"];
+      /** Pa·s/m³, positive and finite */
+      resistance: number;
+    }
+  | { kind: (typeof OPENING_LOAD)["open"] };
+
+/**
+ * A node's way out to the outside air: a mouth, a vent's exit or a leak. Its flow out is a small source in the far
+ * field; every radiating opening's pressure adds at 1 m on axis.
+ */
+export interface NetworkOpening {
+  kind: (typeof NETWORK_PART)["opening"];
+  node: NetworkNode;
+  load: OpeningLoad;
+  /** whether its flow reaches the far field: false for a pure loss (Hornresp's leak) */
+  radiates: boolean;
+  /** how far the opening sits behind the mouth's plane on axis, cm: its path offset in the sum */
+  setback: number;
+}
+
+/** One part of an acoustic network (`NETWORK_PART`). */
+export type NetworkPart =
+  | NetworkDriver
+  | NetworkChamber
+  | NetworkDuct
+  | NetworkMass
+  | NetworkOpening;
+
+/**
+ * An acoustic network: parts joined at nodes. The engine (lib/acoustics/network/solve) finds every node's pressure and
+ * every part's flow per frequency, with the drivers as the sources.
+ */
+export interface AcousticNetwork {
+  /** how many nodes the parts use: 0 to nodeCount − 1 */
+  nodeCount: number;
+  parts: readonly NetworkPart[];
+  /** the solid angle the openings radiate into, in units of π: 2 is half space */
+  angle: RadiationAngle;
+  /** identical boxes side by side, openings touching: their pistons load by images, and their outputs add */
+  count: number;
+}
+
+/**
+ * The network at one frequency: each node's pressure (Pa, complex RMS) and each part's flows (m³/s, complex RMS), in
+ * the parts' order. `in` flows from the part's first node into the part, `out` from the part into its second node (or
+ * the outside air). A driver's first node is its rear and its second its front; a chamber's and an opening's flows
+ * both reach the outside air, so their `in` and `out` are equal.
+ */
+export interface NetworkState {
+  pressures: Complex[];
+  flows: { in: Complex; out: Complex }[];
+}
+
+/** One frequency of a network's response, before any crossover. */
+export interface NetworkPoint {
+  /** frequency, Hz */
+  f: number;
+  /** SPL at 1 m on axis, all boxes together, every radiating opening a point source, dB */
+  spl: number;
+  /** SPL at 1 m from each opening's radiated power, as Hornresp shows it (see `HornPoint.powerSpl`), dB */
+  powerSpl: number;
+  /** the summed pressure's phase, radians, unwrapped from the top frequency down */
+  phase: number;
+  /** group delay of the summed pressure, ms */
+  delay: number;
+  /** each driver part's cone excursion, peak, mm, in the order the drivers come in the parts */
+  xmm: number[];
+  /** each driver part's voice-coil impedance Ze (one coil of its bank), ohms, in the same order */
+  ze: number[];
+  /** each part's flow in (`NetworkState` `in`), peak magnitude, m³/s, in the parts' order: a speed is this over an area */
+  flows: number[];
+}
+
+/** An acoustic network's response, one point per frequency asked for. */
+export interface NetworkResponse {
+  curve: NetworkPoint[];
+}
+
+/** Where the horn path presets put the driver (`HORN_LAYOUT`). */
+export type HornLayout = (typeof HORN_LAYOUT)[keyof typeof HORN_LAYOUT];
+
+/**
+ * An offset-driver horn (Hornresp's OD): a front-loaded horn whose path starts at a closed end; the fronts tap it at
+ * segment boundary `tap` (0 the closed end, which makes it front-loaded; `segments.length` the mouth).
+ */
+export type OffsetDriverHornDesign = HornDesign & { tap: number };
+
+/**
+ * A tapped horn's chamber: the air between one side of the cones and its tap, as a straight passage from the cones to
+ * the path (Hornresp's TH model: a duct, not a lumped volume). Its length is its volume over its area.
+ */
+export interface TapChamber {
+  /** the passage's air, L */
+  liters: number;
+  /** the passage's cross-section, cm² */
+  area: number;
+}
+
+/**
+ * A tapped horn (Hornresp's TH): one path, closed at its start, its segments closed end first. The fronts tap it at
+ * segment boundary `frontTap` and the rears at `rearTap` (0 the closed end, `segments.length` the mouth), each through
+ * an optional chamber: `frontChamber` (Hornresp's Vtc and Atc), `rearChamber` (its Vrc, Vrc/Lrc the area).
+ */
+export type TappedHornDesign = Pick<
+  HornDesign,
+  "driver" | "drivers" | "count" | "segments" | "angle"
+> & {
+  frontTap: number;
+  rearTap: number;
+  /** the passage between the fronts and their tap; null for none */
+  frontChamber: TapChamber | null;
+  /** the passage between the rears and their tap; null for none */
+  rearChamber: TapChamber | null;
+};
+
+/**
+ * A preset's network (lib/acoustics/network/presets) and where its readouts sit: part indexes into its `parts`, and
+ * the areas its flows divide by for air speeds.
+ */
+export interface PresetNetwork {
+  network: AcousticNetwork;
+  /** the driver part */
+  driver: number;
+  /**
+   * the part whose flow in is the throat's: the duct from the cones' front toward the mouth, or the mouth's opening
+   * when the cones' front is the mouth
+   */
+  throat: number;
+  /** the throat's area, m² */
+  throatArea: number;
+  /** the vent's duct or mass part; null when sealed or none */
+  vent: number | null;
+  /** the vent's open area, m²; 0 with no vent */
+  ventArea: number;
+  /** the rear chamber and vent's tuning on their own, Hz; null when sealed or none */
+  fb: number | null;
+}
+
+/** A horn path design for one of the presets, by its layout. */
+export type HornLayoutDesign =
+  | ({ layout: (typeof HORN_LAYOUT)["frontLoaded"] } & HornDesign)
+  | ({ layout: (typeof HORN_LAYOUT)["offsetDriver"] } & OffsetDriverHornDesign)
+  | ({ layout: (typeof HORN_LAYOUT)["tapped"] } & TappedHornDesign);
+
+/**
+ * A Hornresp record read onto the network presets (lib/acoustics/network/hornrespRecord): the design, its network, the
+ * drive voltage (Hornresp's Eg, V RMS) and the losses Hornresp takes for it; or why the reader cannot map it yet.
+ */
+export type HornrespReading =
+  | {
+      ok: true;
+      design: HornLayoutDesign;
+      preset: PresetNetwork;
+      volts: number;
+      /** the rear chamber's leak and vent losses as quality factors (Infinity: none), and whether the leak radiates */
+      losses: { QL: number; Qp: number; leakRadiates: boolean };
+    }
+  | { ok: false; reason: string };
 
 /** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator, no horn throat). */
 export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
