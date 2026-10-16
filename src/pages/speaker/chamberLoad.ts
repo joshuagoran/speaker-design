@@ -202,8 +202,8 @@ export function withGoalHorn(
 const DRIVER_SPOT_STEPS = 5;
 
 /**
- * The plan with its drivers at each place they fit along their board (`DRIVER_SPOT_STEPS` of them, the cutout and its
- * margin on the board), each way round: the taps Design from goals tries.
+ * The plan with its drivers on its first or last board, at each place they fit along it (`DRIVER_SPOT_STEPS` of them,
+ * the cutout and its margin on the board), each way round: the taps Design from goals tries.
  */
 function withDriverSpots(
   plan: HornBoards,
@@ -212,22 +212,26 @@ function withDriverSpots(
 ): HornBoards[] {
   const drivers = plan.drivers;
   if (!drivers || !body) return [plan];
-  const board = plan.boards[drivers.board];
-  const lengthIn = Math.hypot(
-    plan.corners[board.b].z - plan.corners[board.a].z,
-    plan.corners[board.b].y - plan.corners[board.a].y,
-  );
   const need = body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN;
-  if (lengthIn < 2 * need) return [plan];
-  return Array.from(
-    { length: DRIVER_SPOT_STEPS },
-    (_, i) => need + ((lengthIn - 2 * need) * i) / (DRIVER_SPOT_STEPS - 1),
-  ).flatMap((alongIn) =>
-    [FOLD_FACE.line, FOLD_FACE.offset].map((coneFace) => ({
-      ...plan,
-      drivers: { ...drivers, alongIn, coneFace },
-    })),
-  );
+  // the first board (the fronts near the closed end) and the last (the backs into the mouth's leg, the tallest)
+  const last = plan.boards.length - 1;
+  return [...new Set([0, last])].flatMap((at) => {
+    const board = plan.boards[at];
+    const lengthIn = Math.hypot(
+      plan.corners[board.b].z - plan.corners[board.a].z,
+      plan.corners[board.b].y - plan.corners[board.a].y,
+    );
+    if (lengthIn < 2 * need) return [];
+    return Array.from(
+      { length: DRIVER_SPOT_STEPS },
+      (_, i) => need + ((lengthIn - 2 * need) * i) / (DRIVER_SPOT_STEPS - 1),
+    ).flatMap((alongIn) =>
+      [FOLD_FACE.line, FOLD_FACE.offset].map((coneFace) => ({
+        ...plan,
+        drivers: { board: at, alongIn, coneFace },
+      })),
+    );
+  });
 }
 
 /**

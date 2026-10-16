@@ -72,6 +72,7 @@ import {
 import { zigzagBoards } from "./foldLayouts";
 import {
   FOLD_AUTO_GROWTHS,
+  FOLD_FACE,
   FOLD_AUTO_MAX_LEGS,
   FOLD_AUTO_TURN_SHARES,
 } from "../../constants/hornBoards";
@@ -925,6 +926,25 @@ export function foldRoomOf(
 
 /** The zigzags the automatic choice and Design from goals try: each even leg count, turn width and growth. */
 export const zigzagTries = (room: FoldRoom, tapped: boolean): HornBoards[] =>
+  zigzagPlans(room, tapped).flatMap((plan) =>
+    // a tapped horn's drivers on the first board, or the last: their backs into the mouth's leg, the tallest
+    tapped && plan.drivers && plan.boards.length > 1 ? [plan, onLastBoard(plan)] : [plan],
+  );
+
+/** A tapped zigzag with its drivers moved to its last board, midway along it, the fronts down into the leg below. */
+function onLastBoard(plan: HornBoards): HornBoards {
+  const at = plan.boards.length - 1;
+  const board = plan.boards[at];
+  const a = plan.corners[board.a],
+    b = plan.corners[board.b];
+  return {
+    ...plan,
+    drivers: { board: at, alongIn: Math.hypot(b.z - a.z, b.y - a.y) / 2, coneFace: FOLD_FACE.line },
+  };
+}
+
+/** Each even leg count, turn width and growth of the zigzag. */
+const zigzagPlans = (room: FoldRoom, tapped: boolean): HornBoards[] =>
   Array.from({ length: FOLD_AUTO_MAX_LEGS / 2 }, (_, i) =>
     FOLD_AUTO_TURN_SHARES.flatMap((share) =>
       FOLD_AUTO_GROWTHS.map((growth) => zigzagBoards(room, 2 * (i + 1), tapped, share, growth)),
