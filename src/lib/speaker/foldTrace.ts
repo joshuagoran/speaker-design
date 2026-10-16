@@ -69,6 +69,10 @@ function inPolygon(p: SidePoint, poly: readonly SidePoint[]): boolean {
   return inside;
 }
 
+/** How many drivers of cutout diameter `cutoutIn` fit side by side across `widthIn`, with room between them and the walls. */
+export const foldAcross = (widthIn: number, cutoutIn: number) =>
+  Math.max(1, Math.floor((widthIn - FOLD_DRIVER_GAP_IN) / (cutoutIn + FOLD_DRIVER_GAP_IN)));
+
 /**
  * The drivers' rows along the board they mount on, each with its cone line and body outline. The rows run across the
  * chamber's width as many as fit side by side (`across`), the rest in more rows (`rows`) along the board, `pitch` apart,
@@ -87,11 +91,7 @@ export function foldDriverParts(
   const along = unit(sub(board.b, board.a));
   const normal = left(along); // the cones face `normal` times `drivers.face`
   const boardLengthIn = Math.hypot(board.b.zIn - board.a.zIn, board.b.yIn - board.a.yIn);
-  /** the drivers that fit side by side across the width, with room between them and the walls */
-  const across = Math.max(
-    1,
-    Math.floor((widthIn - FOLD_DRIVER_GAP_IN) / (driver.cutoutIn + FOLD_DRIVER_GAP_IN)),
-  );
+  const across = foldAcross(widthIn, driver.cutoutIn);
   const rows = Math.ceil(driver.count / across);
   /** the distance between two rows' centers along the board */
   const pitch = driver.cutoutIn + FOLD_DRIVER_GAP_IN;

@@ -12,6 +12,7 @@ import { BAFFLE_CORNER_IN, BAFFLE_THICKNESS_IN, buildCabinet } from "./buildCabi
 import { buildHifiCabinet } from "./buildHifiCabinet";
 import { buildCone, paConeRadius } from "./buildCone";
 import { buildHorn } from "./buildHorn";
+import { buildFoldHorn } from "./buildFoldHorn";
 import { buildBracesAt, buildDriverBody } from "./buildBraces";
 import { buildHardware } from "./buildHardware";
 import { hornBaffleHole } from "./towerParts";
@@ -55,6 +56,7 @@ import {
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import { driverBoardPieces } from "../../lib/speaker/driverBoard";
+import { foldDrawing } from "../../lib/speaker/foldHorn";
 import { bracingRegions } from "../../lib/bracing";
 import { PANEL } from "../../constants/cutParts";
 import {
@@ -82,6 +84,7 @@ import {
   CABINET_CONSTRUCTION,
   CHAMBER_LOAD,
   DRIVER_KIND,
+  FOLD_WALL,
   PORT_SHAPE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
@@ -103,6 +106,12 @@ export const SPEAKER_MESH_NAMES = {
   driverBoard: "chamberDriverBoard",
   /** a front-loaded or tapped horn's driver inside the chamber, drawn in the cutaway */
   hornDriver: "chamberHornDriver",
+  /** a board of a drawn (folded) horn's side section, one mesh per board */
+  foldBoard: "chamberFoldBoard",
+  /** a drawn horn's driver behind its board, one mesh per driver, drawn in the cutaway */
+  foldDriver: "chamberFoldDriver",
+  /** a drawn horn's mouth in the top or the bottom: a plate over the opening (in the baffle or the back it is a hole) */
+  foldMouth: "chamberFoldMouth",
   /** a chamber's own panel in a stepped shell: an outside wall, its back or its baffle */
   wall: "chamberWall",
 } as const;
@@ -215,6 +224,8 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
                 length,
               ]),
               mouth: load.horn.mouthPosition,
+              // a folded horn's drawing: its boards, drivers and mouth
+              fold: load.horn.fold ?? null,
             }
           : null,
     })),
@@ -314,7 +325,9 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
     // board, which the drivers mount on. A shell with any other chamber keeps its baffle, that chamber's, and so does
     // a back-loaded horn (its drivers are on the baffle, no board).
     const hornFront = members.every(
-      ({ placed }) => !driversOnBaffle(placed.chamber) && hornFlare(cabinet, placed) !== null,
+      ({ placed }) =>
+        !driversOnBaffle(placed.chamber) &&
+        (hornFlare(cabinet, placed) !== null || foldDrawing(cabinet, placed.chamber) !== null),
     );
     const faceCtx: SceneContext = hornFront
       ? { ...ctx, materials: { ...ctx.materials, baffle: ctx.materials.shell } }
@@ -544,6 +557,8 @@ function chamberParts(
   const frame = cabinet.construction === CABINET_CONSTRUCTION.frameInset;
   /** a horn built into the box, and how far its throat is behind the baffle's face */
   const flare = hornFlare(cabinet, placed);
+  /** a drawn (folded) horn: its boards and drivers are inside, on its own boards, none on the baffle */
+  const drawing = foldDrawing(cabinet, chamber);
   const baffle: Holes[] = [],
     back: Holes[] = [],
     builds: ((at: BaffleAt) => void)[] = [];
@@ -726,6 +741,8 @@ function chamberParts(
   const onBaffle = driversOnBaffle(chamber);
   for (const driver of chamber.drivers)
     for (const spot of driverSpots(placed, driver)) {
+      // a drawn horn's drivers are on its board (`buildFoldHorn`); only a horn on the top is drawn here
+      if (drawing && !onTop(driver)) continue;
       const x = spot.xIn - placed.cx,
         y = spot.yIn - placed.y0;
       // a horn that no longer fits where it is set isn't built (the page says so)
@@ -890,6 +907,43 @@ function chamberParts(
         addRadiator({ ...ctx, group }, s, { dim: dims, zf, sideZ });
       }
     });
+  }
+
+  // a drawn horn: its boards, its drivers on theirs, and its mouth in its wall (a hole where the wall is a panel)
+  if (drawing) {
+    const { mouth } = drawing.fold;
+    const { clear } = placed;
+    const up = mouth.wall === FOLD_WALL.baffle || mouth.wall === FOLD_WALL.back;
+    const from = Math.max(0, Math.min(mouth.fromIn, mouth.toIn));
+    const to = Math.min(up ? clear.h : drawing.room.depthIn, Math.max(mouth.fromIn, mouth.toIn));
+    // across the clear width, from `from` to `to` up the wall (the baffle and the back run up)
+    if (to > from && up) {
+      const hole: Holes = (ox, oy) => [
+        openingPath(
+          ox,
+          oy,
+          clear.x + clear.w / 2 - placed.cx,
+          clear.y - placed.y0 + (from + to) / 2,
+          clear.w,
+          to - from,
+          HORN_MOUTH_CORNER_IN,
+        ),
+      ];
+      (mouth.wall === FOLD_WALL.baffle ? baffle : back).push(hole);
+    }
+    builds.push(({ innerZ }) =>
+      buildFoldHorn(ctx, {
+        drawing,
+        innerZ,
+        clear,
+        origin: { x: placed.cx, y: placed.y0 },
+        names: {
+          board: SPEAKER_MESH_NAMES.foldBoard,
+          driver: SPEAKER_MESH_NAMES.foldDriver,
+          mouth: SPEAKER_MESH_NAMES.foldMouth,
+        },
+      }),
+    );
   }
 
   // a horn built into the box: its mouth in the baffle, its flare from the segments behind it

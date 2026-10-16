@@ -21,6 +21,7 @@ import {
   chamberHardwareBox,
 } from "../../lib/speaker/speakerLayout";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
+import { foldDrawing } from "../../lib/speaker/foldHorn";
 import { hardwareFrontMarks } from "../stack-view/buildHardware";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
@@ -35,7 +36,7 @@ import { subVentPlan } from "../../lib/pa/subVentPlan";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { HORN_CUTOUT_SHAPE, TOWER_HORN_WALL_GAP_IN, towerHornCutout } from "../../lib/pa/tower";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
-import { DRIVER_KIND, PORT_SHAPE } from "../../constants/speakerSpec";
+import { DRIVER_KIND, FOLD_WALL, PORT_SHAPE } from "../../constants/speakerSpec";
 
 interface Props {
   spec: Pick<SpeakerSpec, "cabinet">;
@@ -350,6 +351,37 @@ export function SpeakerFront({ spec }: Props) {
     return out;
   };
 
+  /**
+   * A drawn (folded) horn's mouth where it is on the baffle: the clear width, from its lower to its upper edge up the
+   * baffle, as the flare's mouth is drawn, inside the panel edges. Its boards and drivers are inside: none on the face.
+   */
+  const foldParts = (
+    placed: PlacedChamber,
+    mouthIn: { fromIn: number; toIn: number },
+    i: number,
+  ) => {
+    const { clear } = placed;
+    const from = Math.max(0, Math.min(mouthIn.fromIn, mouthIn.toIn));
+    const to = Math.min(clear.h, Math.max(mouthIn.fromIn, mouthIn.toIn));
+    return [
+      rect(`e${i}`, clear.x + clear.w / 2, clear.y + clear.h / 2, clear.w, clear.h, {
+        fill: "none",
+        stroke: pal.muted,
+        strokeWidth: 0.8,
+      }),
+      ...(to > from
+        ? [
+            rect(`m${i}`, clear.x + clear.w / 2, clear.y + (from + to) / 2, clear.w, to - from, {
+              rx: 2,
+              fill: pal.panel,
+              stroke: pal.ink,
+              strokeWidth: 1.2,
+            }),
+          ]
+        : []),
+    ];
+  };
+
   // the handles and posts the build plans, seen edge-on where they stand out of the sides and the lid (the same parts and
   // faces the 3D view draws: stack-view/buildHardware)
   const build = cabinetBuild(cabinet);
@@ -412,6 +444,10 @@ export function SpeakerFront({ spec }: Props) {
         // seen through it (each segment's end, the straight walls between), and the drivers behind its throat
         const flare = hornFlare(cabinet, placed);
         if (flare) parts.push(...hornParts(placed, flare, i));
+        // a drawn horn: its mouth, where it is on the baffle
+        const drawing = foldDrawing(cabinet, chamber);
+        if (drawing?.fold.mouth.wall === FOLD_WALL.baffle)
+          parts.push(...foldParts(placed, drawing.fold.mouth, i));
         // the passive radiators: on the baffle as a cone, on the back dashed
         radiatorsAt(cabinet, placed).spots.forEach((s, j) =>
           parts.push(
@@ -423,7 +459,7 @@ export function SpeakerFront({ spec }: Props) {
         );
         // the drivers on the baffle (a front-loaded horn's sit inside, at its throat) and the horns on the top
         chamber.drivers.forEach((d, j) => {
-          if (!driversOnBaffle(chamber) && !onTop(d)) return;
+          if ((drawing || !driversOnBaffle(chamber)) && !onTop(d)) return;
           // a horn that no longer fits where it is set isn't drawn (the page says so)
           if (!hornFitsWhereSet(placed, d)) return;
           driverSpots(placed, d).forEach((s, n) =>

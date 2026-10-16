@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import type { HornFold, SpeakerCabinet, SpeakerChamber, SpeakerHorn } from "../../types";
-import { FoldEditor, startFold } from "../../components/drawings/FoldEditor";
+import { FoldEditor } from "../../components/drawings/FoldEditor";
 import { Card } from "../../components/ui/Card";
 import { Notice } from "../../components/ui/Notice";
 import { CardHeading } from "../../components/ui/CardHeading";
-import { foldRoom } from "../../lib/speaker/foldHorn";
+import { foldRoom, startFold } from "../../lib/speaker/foldHorn";
 import { FOLD_EDITOR_TEXT } from "../../constants/speakerPage";
 
 interface Props {
