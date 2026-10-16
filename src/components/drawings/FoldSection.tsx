@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { HornBoards, SpeakerCabinet } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { alpha } from "../../styles/palette";
@@ -53,6 +53,8 @@ const SPOT_PX = 3;
 export function FoldSection({ cabinet, placed, fold, onPlan, onWall }: Props) {
   const pal = usePalette();
   const svgRef = useRef<SVGSVGElement>(null);
+  /** the clear inside's clip, one per drawing */
+  const clipId = `fold-clip-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const [drag, setDrag] = useState<Drag | null>(null);
   /** the boards as a drag has them, before it ends and they are saved */
   const [draft, setDraft] = useState<HornBoards | null>(null);
@@ -177,10 +179,22 @@ export function FoldSection({ cabinet, placed, fold, onPlan, onWall }: Props) {
         ])}
         fill={pal.panel}
       />
-      {/* the passage: each leg and each turn */}
-      {layout.pieces.map((piece, i) => (
-        <polygon key={`a${i}`} points={points(piece)} fill={alpha(pal.cyan, 0.28)} />
-      ))}
+      {/* the passage: each leg and each turn, kept to the clear inside */}
+      <clipPath id={clipId}>
+        <polygon
+          points={points([
+            { z: 0, y: 0 },
+            { z: room.depthIn, y: 0 },
+            { z: room.depthIn, y: room.heightIn },
+            { z: 0, y: room.heightIn },
+          ])}
+        />
+      </clipPath>
+      <g clipPath={`url(#${clipId})`}>
+        {layout.pieces.map((piece, i) => (
+          <polygon key={`a${i}`} points={points(piece)} fill={alpha(pal.cyan, 0.28)} />
+        ))}
+      </g>
       {/* the mouth: the last gate, open in its wall */}
       {gates.length > 0 && (
         <line

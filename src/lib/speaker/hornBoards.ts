@@ -652,7 +652,19 @@ export function hornBoardsLayout(
   const outlines = plan.boards.map((_, i) => boardOutline(plan, i, room.wallIn));
   const found = gatesOf(plan, room);
   const raw = found?.gates ?? null;
-  const broken = !raw || raw.some(([a, b]) => ![a.z, a.y, b.z, b.y].every(Number.isFinite));
+  // a passage whose gates or turns reach past the side section is no passage: boards at angles their legs cannot take
+  const inside = (p: FoldPoint) =>
+    Number.isFinite(p.z) &&
+    Number.isFinite(p.y) &&
+    p.z >= -FOLD_TOUCH_IN &&
+    p.z <= room.depthIn + FOLD_TOUCH_IN &&
+    p.y >= -FOLD_TOUCH_IN &&
+    p.y <= room.heightIn + FOLD_TOUCH_IN;
+  const broken =
+    !found ||
+    !raw ||
+    !raw.every(([a, b]) => inside(a) && inside(b)) ||
+    !found.turnCorners.every((corners) => corners.every(inside));
   const pieces = found && !broken ? piecesOf(found.gates, found.turnCorners, plan.legs.length) : [];
   let along = 0;
   const gates: FoldGate[] = (broken || !raw ? [] : raw).map(([a, b], i, all) => {
