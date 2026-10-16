@@ -11,7 +11,7 @@ import {
 } from "../src/components/stack-view/buildSpeakerScene";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { CHAMBER_LOAD, HORN_PATH } from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD } from "../src/constants/speakerSpec";
 import {
   chamberSetbackIn,
   driverBoardIn,
@@ -253,42 +253,6 @@ describe("the driver board in the front chamber and the depth fit", () => {
     };
     expect(bayOf(shallow(false)).flare.path.fits).toBe(true);
     expect(bayOf(shallow(true)).flare.path.fits).toBe(false);
-  });
-
-  test("a folded path keeps the drivers' room: the doubled board needs the same extra wall", () => {
-    const wall = bin().cabinet.panel.thicknessIn;
-    const folded = (doubleBoard: boolean): SpeakerSpec => {
-      const spec = bin(doubleBoard);
-      return {
-        ...spec,
-        cabinet: {
-          ...spec.cabinet,
-          chambers: spec.cabinet.chambers.map((c) =>
-            c.load.kind === CHAMBER_LOAD.horn
-              ? {
-                  ...c,
-                  dims: { ...c.dims, h: 60, d: 56 },
-                  load: {
-                    ...c.load,
-                    horn: {
-                      ...c.load.horn,
-                      path: HORN_PATH.folded,
-                      segments: [{ ...c.load.horn.segments[0], length: 140 }],
-                    },
-                  },
-                }
-              : c,
-          ),
-        },
-      };
-    };
-    const one = bayOf(folded(false)),
-      two = bayOf(folded(true));
-    expect(one.flare.path.fits && two.flare.path.fits).toBe(true);
-    expect(two.bay.coneZ - two.bay.boardZ).toBeCloseTo(
-      (one.flare.path.folds % 2 === 0 ? 1 : -1) * wall,
-      12,
-    );
   });
 });
 

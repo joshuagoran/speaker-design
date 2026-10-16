@@ -5,6 +5,7 @@ import type {
   ChamberVent,
   Dims2,
   HornGoalFit,
+  HornFold,
   HornGoals,
   SpeakerCabinet,
   SpeakerChamber,
@@ -232,4 +233,10 @@ export function hornGoalCheck(
     flareLiters(horn) + (throat ? frontChamber(throat.cone, throat.count, setbackIn).liters : 0);
   const chamberL = chamberAirLiters(cabinet, chamber, placed).airLiters;
   return { fit, overAir: hornL > chamberL ? { hornL, chamberL } : null };
+}
+
+/** The chamber with its horn's drawing set to `fold`; unchanged without a horn. */
+export function withHornFold(chamber: SpeakerChamber, fold: HornFold): SpeakerChamber {
+  if (chamber.load.kind !== CHAMBER_LOAD.horn) return chamber;
+  return { ...chamber, load: { kind: CHAMBER_LOAD.horn, horn: { ...chamber.load.horn, fold } } };
 }

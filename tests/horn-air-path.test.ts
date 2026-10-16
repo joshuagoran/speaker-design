@@ -14,7 +14,7 @@ import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speaker
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { hornFlare, slotOpeningsAt, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { portRule, PORT_RULE } from "../src/lib/speaker/speakerLayout";
-import { CHAMBER_LOAD, HORN_PATH, PORT_SHAPE } from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD, PORT_SHAPE } from "../src/constants/speakerSpec";
 import type { HornPath } from "../src/lib/speaker/hornGeometry";
 import type { SpeakerSpec } from "../src/types";
 
@@ -125,39 +125,11 @@ function surfacePoints(mesh: THREE.Mesh): THREE.Vector3[] {
 }
 
 /** The name of the folded bin. */
-const FOLDED = "a folded sub bin";
-
-/** The template horns, and a folded bin with room for its path: each as a spec and its name. */
+/** The template horns: each as a spec and its name. (A folded horn is drawn by hand: tests/fold-*.) */
 function hornSpecs(): [string, SpeakerSpec][] {
   const specs = SPEAKER_TEMPLATES.map((t): [string, SpeakerSpec] => [t, templateSpeaker(t)]).filter(
     ([, spec]) => spec.cabinet.chambers.some((c) => c.load.kind === CHAMBER_LOAD.horn),
   );
-  const bin = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne);
-  const [chamber] = bin.cabinet.chambers;
-  if (chamber.load.kind === CHAMBER_LOAD.horn) {
-    const [segment] = chamber.load.horn.segments;
-    const folded: SpeakerSpec = {
-      ...bin,
-      cabinet: {
-        ...bin.cabinet,
-        chambers: [
-          {
-            ...chamber,
-            dims: { ...chamber.dims, h: 60, d: 56 },
-            load: {
-              ...chamber.load,
-              horn: {
-                ...chamber.load.horn,
-                path: HORN_PATH.folded,
-                segments: [{ ...segment, length: 140 }],
-              },
-            },
-          },
-        ],
-      },
-    };
-    specs.push([FOLDED, folded]);
-  }
   return specs;
 }
 
@@ -174,7 +146,7 @@ describe("the horn's air path in the 3D view", () => {
 
   for (const [name, spec] of hornSpecs())
     // the cutaway's drivers of a folded path are not yet kept clear of its other legs (the bay is as tall as the cones)
-    for (const cutaway of name === FOLDED ? [false] : [false, true])
+    for (const cutaway of [false, true])
       test(`${name}${cutaway ? " (cutaway)" : ""}: no solid part in the air, over the mouth or over a slot`, () => {
         const layout = speakerLayout(spec.cabinet);
         expect(layout.chambers.length).toBe(1);
