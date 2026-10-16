@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
+import type { FOLD_FACE, FOLD_WALL } from "./constants/hornBoards";
 import type {
   BACK_JOINT_NAMES,
   BOX_AXIS_NAMES,
@@ -2320,6 +2321,64 @@ export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset">
   doubleBoard?: boolean;
   /** what the horn is designed for (lib/speaker/hornGoals); absent: the defaults (`HORN_GOALS_DEFAULT`) */
   goals?: HornGoals;
+  /** a folded path's boards (lib/speaker/hornBoards): its passage and its drivers' spot come from them */
+  boards?: HornBoards;
+}
+
+/** A wall of a chamber's clear inside, in its side section (`FOLD_WALL`). */
+export type FoldWall = (typeof FOLD_WALL)[keyof typeof FOLD_WALL];
+/** A board's face (`FOLD_FACE`): on its corner line, or a panel's thickness off it. */
+export type FoldFace = (typeof FOLD_FACE)[keyof typeof FOLD_FACE];
+
+/**
+ * A corner of a folded horn's boards: a point of the chamber's side section, in: `z` back from the baffle's inside
+ * face, `y` up from the clear bottom. A corner on a wall slides along it.
+ */
+export interface FoldCorner {
+  z: number;
+  y: number;
+  wall: FoldWall | null;
+}
+
+/** A flat board between corners `a` and `b` (their indexes), one panel thick to `side` of the line a→b: 1 left, −1 right. */
+export interface FoldBoard {
+  a: number;
+  b: number;
+  side: 1 | -1;
+}
+
+/** A side of a passage: a board's face, or a wall. */
+export type FoldSurface = { board: number; face: FoldFace } | { wall: FoldWall };
+
+/**
+ * One leg of the passage: its sides, left and right going toward the mouth, and the way it turns into the next leg
+ * (1 left, −1 right; the inner side of that turn). The last leg has no turn.
+ */
+export interface FoldLeg {
+  left: FoldSurface;
+  right: FoldSurface;
+  turn?: 1 | -1;
+}
+
+/** Where the drivers sit: on a board, `alongIn` from its `a` corner, the cone fronts facing one of its faces. */
+export interface FoldDrivers {
+  board: number;
+  alongIn: number;
+  coneFace: FoldFace;
+}
+
+/**
+ * A folded horn as its boards, in the chamber's side section (every board runs the chamber's full width): its corners
+ * and boards, what closes the passage's start, its legs from there to the mouth, the wall the mouth opens in, and the
+ * drivers. The passage's areas, the taps and the build all come from these.
+ */
+export interface HornBoards {
+  corners: FoldCorner[];
+  boards: FoldBoard[];
+  closed: FoldSurface;
+  legs: FoldLeg[];
+  mouth: FoldWall;
+  drivers: FoldDrivers | null;
 }
 
 /**

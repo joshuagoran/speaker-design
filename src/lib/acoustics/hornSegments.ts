@@ -246,3 +246,49 @@ export const inputImpedance = (matrix: Matrix2, load: Complex): Complex =>
 /** The flow out of a two-port per unit of flow in, with `load` on its output: U₂/U₁ = 1/(C·Z + D). */
 export const outputFlowRatio = (matrix: Matrix2, load: Complex): Complex =>
   divide(complex(1), add(multiply(matrix[2], load), matrix[3]));
+
+/**
+ * The segments with a boundary at each of `cutsCm` (cm along the path), each segment that a cut falls inside split in
+ * two along its own flare law (`segmentAreaAt`), and where each cut is: the index of its boundary (0 the start,
+ * `segments.length` the end). A cut within `CUT_SNAP_CM` of a boundary takes that boundary; cuts outside the path go
+ * to its ends.
+ */
+export function splitSegmentsAt(
+  segments: readonly HornSegment[],
+  cutsCm: readonly number[],
+): { segments: HornSegment[]; boundaries: number[] } {
+  const total = segments.reduce((sum, s) => sum + s.length, 0);
+  const cuts = [...new Set(cutsCm.map((c) => Math.min(total, Math.max(0, c))))].sort(
+    (a, b) => a - b,
+  );
+  const out: HornSegment[] = [];
+  /** the path distance at each boundary of `out` */
+  const at: number[] = [0];
+  let start = 0;
+  for (const segment of segments) {
+    const end = start + segment.length;
+    let from = start;
+    /** the first piece keeps the segment's own start area (a step into it stays) */
+    let s1 = segment.s1;
+    for (const cut of cuts) {
+      if (cut <= from + CUT_SNAP_CM || cut >= end - CUT_SNAP_CM) continue;
+      const area = segmentAreaAt(segment, cut - start);
+      out.push({ ...segment, s1, s2: area, length: cut - from });
+      at.push(cut);
+      from = cut;
+      s1 = area;
+    }
+    out.push({ ...segment, s1, s2: segment.s2, length: end - from });
+    at.push(end);
+    start = end;
+  }
+  const boundaryOf = (cut: number) =>
+    at.reduce((best, x, i) => (Math.abs(x - cut) < Math.abs(at[best] - cut) ? i : best), 0);
+  return {
+    segments: out,
+    boundaries: cutsCm.map((c) => boundaryOf(Math.min(total, Math.max(0, c)))),
+  };
+}
+
+/** How close a cut may fall to a segment boundary and take it, cm. */
+const CUT_SNAP_CM = 0.05;
