@@ -55,6 +55,16 @@ export const FOLD_SPIRAL_MOUTH_SHARES = [0.3, 0.4, 0.5] as const;
 export const FOLD_GROW_STEP = 0.1;
 export const FOLD_GROW_MAX = 2;
 
+/** The layout a folded horn's automatic boards take: either kind, or one alone. */
+export const FOLD_SHAPE = { auto: "auto", zigzag: "zigzag", spiral: "spiral" } as const;
+
+/** What each layout choice shows. */
+export const FOLD_SHAPE_NAMES = {
+  auto: "Auto",
+  zigzag: "Zigzag",
+  spiral: "Spiral",
+} as const satisfies Record<keyof typeof FOLD_SHAPE, string>;
+
 /** Where a folded horn's mouth opens on the baffle. */
 export const FOLD_MOUTH = { top: "top", bottom: "bottom" } as const;
 

@@ -15,9 +15,14 @@ import {
   spiralBoards,
   zigzagBoards,
 } from "../src/lib/speaker/foldLayouts";
-import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE, FOLD_MIN_PASSAGE_IN } from "../src/constants/hornBoards";
+import {
+  FOLD_CUTOUT_MARGIN_IN,
+  FOLD_FACE,
+  FOLD_MIN_PASSAGE_IN,
+  FOLD_SHAPE,
+} from "../src/constants/hornBoards";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
-import type { HornBoards, HornSegment } from "../src/types";
+import type { FoldShape, HornBoards, HornSegment } from "../src/types";
 import { splitSegmentsAt, segmentAreaAt } from "../src/lib/acoustics/hornSegments";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
@@ -303,4 +308,30 @@ test("horn boards: a tapped spiral taps near the closed end and near the mouth, 
   const farIn = plan.corners[board.b].z - SUB18.cutoutIn / 2 - FOLD_CUTOUT_MARGIN_IN - 0.1;
   const over = layoutOf({ ...plan, drivers: plan.drivers && { ...plan.drivers, alongIn: farIn } });
   assert.equal(over.checks.drivers?.cutoutFits, false);
+});
+
+test("horn boards: a tapped horn's Layout keeps its automatic boards to zigzags or spirals", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+  const tapped = withHornDrive(spec.cabinet.chambers[0], HORN_DRIVE.tapped);
+  assert.ok(tapped.load.kind === CHAMBER_LOAD.horn);
+  const foldWith = (foldShape: FoldShape) => {
+    assert.ok(tapped.load.kind === CHAMBER_LOAD.horn);
+    const chamber = {
+      ...tapped,
+      load: { ...tapped.load, horn: { ...tapped.load.horn, foldShape } },
+    };
+    const cabinet = { ...spec.cabinet, chambers: [chamber] };
+    return hornFlare(cabinet, speakerLayout(cabinet).chambers[0])?.fold;
+  };
+  // a spiral's mouth's leg runs over the drivers' board; a zigzag's over its last board
+  const mouthOver = (fold: ReturnType<typeof foldWith>) => {
+    const last = fold?.plan.legs.at(-1)?.left;
+    return last && "board" in last ? last.board : null;
+  };
+  const spiral = foldWith(FOLD_SHAPE.spiral);
+  assert.ok(spiral && foldPasses(spiral.layout), JSON.stringify(spiral?.layout.checks));
+  assert.equal(mouthOver(spiral), spiral.plan.drivers?.board);
+  const zigzag = foldWith(FOLD_SHAPE.zigzag);
+  assert.ok(zigzag && foldPasses(zigzag.layout), JSON.stringify(zigzag?.layout.checks));
+  assert.equal(mouthOver(zigzag), zigzag.plan.boards.length - 1);
 });

@@ -394,6 +394,9 @@ export const SPEAKER_TEXT = {
   foldMouth: "Horn mouth",
   /** beside the mouth in the side view */
   foldMouthLabel: "mouth",
+  foldShape: "Layout",
+  foldShapeTip:
+    "How the boards fold the path. Zigzag: legs stacked up the box, the drivers on the first board. Spiral: the legs wind in under the mouth's leg, the drivers on the board under it. Auto: the better of the two.",
   foldMouthTip:
     "A folded horn's mouth opens where its last leg meets the baffle: across the top or the bottom.",
   panel: "Panel",

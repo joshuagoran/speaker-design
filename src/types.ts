@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
-import type { FOLD_FACE, FOLD_WALL } from "./constants/hornBoards";
+import type { FOLD_FACE, FOLD_SHAPE, FOLD_WALL } from "./constants/hornBoards";
 import type {
   BACK_JOINT_NAMES,
   BOX_AXIS_NAMES,
@@ -2323,7 +2323,12 @@ export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset">
   goals?: HornGoals;
   /** a folded path's boards (lib/speaker/hornBoards): its passage and its drivers' spot come from them */
   boards?: HornBoards;
+  /** the layout automatic boards take (a tapped horn's zigzag or spiral); absent: the best of either */
+  foldShape?: FoldShape;
 }
+
+/** A folded horn's layout choice (`FOLD_SHAPE`). */
+export type FoldShape = (typeof FOLD_SHAPE)[keyof typeof FOLD_SHAPE];
 
 /** A wall of a chamber's clear inside, in its side section (`FOLD_WALL`). */
 export type FoldWall = (typeof FOLD_WALL)[keyof typeof FOLD_WALL];

@@ -183,7 +183,8 @@ export const SECTIONS_NEEDED: Record<SpeakerHorn["drive"]["kind"], number> = {
 /**
  * The horn driven as `kind`: with too few sections for its taps, the longest splits in two until there are enough (the
  * horn stays the same); an offset horn's cones then open after the first section, a tapped horn's fronts after the
- * first and its backs before the last.
+ * first and its backs before the last. Boards of its own are dropped for a new drive (their drivers' spot fits the old
+ * one): the automatic boards take over.
  */
 export function withDriveKind(horn: SpeakerHorn, kind: SpeakerHorn["drive"]["kind"]): SpeakerHorn {
   let segments = [...horn.segments];
@@ -198,7 +199,14 @@ export function withDriveKind(horn: SpeakerHorn, kind: SpeakerHorn["drive"]["kin
   // a tapped or offset horn is always folded
   const path =
     kind === HORN_DRIVE.offset || kind === HORN_DRIVE.tapped ? HORN_PATH.folded : horn.path;
-  return { ...horn, segments, drive, path };
+  const { boards, ...rest } = horn;
+  return {
+    ...rest,
+    segments,
+    drive,
+    path,
+    ...(boards && kind === horn.drive.kind ? { boards } : {}),
+  };
 }
 
 /** `x` kept from `lo` to `hi`. */

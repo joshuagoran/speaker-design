@@ -291,3 +291,18 @@ test("Hornresp import: an offset record keeps its tap, rear chamber and vent are
   const broken = hornFromRecord("not a record", null, 30);
   assert.ok(!broken.ok && broken.reason.length > 0);
 });
+
+test("horn drive: a new drive drops the horn's own boards, so the automatic boards fit it", () => {
+  const found = withGoalHorn(
+    BIN_SPEC.cabinet,
+    TAPPED,
+    PLACED,
+    HORN_DRIVE.tapped,
+    HORN_GOALS_DEFAULT,
+  );
+  assert.ok(found && hornOf(found.chamber).boards, "a tapped design has boards");
+  const front = withDriveKind(hornOf(found.chamber), HORN_DRIVE.front);
+  assert.equal(front.boards, undefined);
+  // the same drive keeps them
+  assert.ok(withDriveKind(hornOf(found.chamber), HORN_DRIVE.tapped).boards);
+});

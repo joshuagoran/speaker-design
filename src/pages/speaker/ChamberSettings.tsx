@@ -1,5 +1,10 @@
 import { isFolded, mouthAtBottom } from "../../lib/speaker/foldLayouts";
-import { FOLD_MOUTH, FOLD_MOUTH_NAMES } from "../../constants/hornBoards";
+import {
+  FOLD_MOUTH,
+  FOLD_MOUTH_NAMES,
+  FOLD_SHAPE,
+  FOLD_SHAPE_NAMES,
+} from "../../constants/hornBoards";
 import { useMemo, useState } from "react";
 import type {
   BandId,
@@ -364,6 +369,20 @@ export function ChamberSettings({
             )
           }
           options={entriesOf(FOLD_MOUTH_NAMES)}
+        />
+      )}
+      {foldedHorn && tapped && chamber.load.kind === CHAMBER_LOAD.horn && (
+        <ToggleGroup
+          label={<Tooltip tip={SPEAKER_TEXT.foldShapeTip}>{SPEAKER_TEXT.foldShape}</Tooltip>}
+          value={chamber.load.horn.foldShape ?? FOLD_SHAPE.auto}
+          onChange={(foldShape) =>
+            onEdit((c) =>
+              c.load.kind === CHAMBER_LOAD.horn
+                ? { ...c, load: { ...c.load, horn: { ...c.load.horn, foldShape } } }
+                : c,
+            )
+          }
+          options={entriesOf(FOLD_SHAPE_NAMES)}
         />
       )}
       {mouth && !foldedHorn && (

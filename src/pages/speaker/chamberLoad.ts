@@ -221,12 +221,13 @@ export function foldNeeds(
   const where = foldRoomOf(cabinet, chamber);
   if (!where) return null;
   const { room, body } = where;
-  const bottom =
-    chamber.load.kind === CHAMBER_LOAD.horn && mouthAtBottom(chamber.load.horn, chamber.dims.h);
-  const fits = zigzagTries(room, drive, body, bottom).some((plan) =>
+  const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
+  const bottom = horn !== null && mouthAtBottom(horn, chamber.dims.h);
+  const shape = horn?.foldShape;
+  const fits = zigzagTries(room, drive, body, bottom, shape).some((plan) =>
     foldPasses(hornBoardsLayout(plan, room, body)),
   );
-  return fits ? null : grownChamber(chamber.dims, foldGrowNeeded(room, drive, body, bottom));
+  return fits ? null : grownChamber(chamber.dims, foldGrowNeeded(room, drive, body, bottom, shape));
 }
 
 /** How many places along their board, from end to end of where they fit, Design from goals tries the drivers at. */
@@ -287,8 +288,8 @@ function withGoalBoards(
   let best: { chamber: SpeakerChamber; fit: HornGoalFit; score: number } | null = null;
   const tapped = horn.drive.kind === HORN_DRIVE.tapped;
   const bottom = mouthAtBottom(horn, designed.dims.h);
-  for (const plan of zigzagTries(room, horn.drive.kind, body, bottom).flatMap((p) =>
-    tapped ? withDriverSpots(p, room, body) : [p],
+  for (const plan of zigzagTries(room, horn.drive.kind, body, bottom, horn.foldShape).flatMap(
+    (p) => (tapped ? withDriverSpots(p, room, body) : [p]),
   )) {
     const layout = hornBoardsLayout(plan, room, body);
     if (!foldPasses(layout)) continue;
