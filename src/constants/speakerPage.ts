@@ -461,9 +461,9 @@ export const SPEAKER_TEXT = {
   hornPath: "Path",
   hornPathTip:
     "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box. Only the sections set the response.",
-  hornDrive: "Drive",
+  hornDrive: "Horn type",
   hornDriveTip:
-    "Where the cones meet the path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
+    "Where the cones meet the horn's path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
   hornDriveNote: "A back-loaded horn is not calculated yet.",
   hornTap: "Cones open after section",
   hornTapTip:
@@ -475,7 +475,6 @@ export const SPEAKER_TEXT = {
   hornRearTapTip:
     "The back of the cones opens into the path after this section. It comes after the front.",
   /** the line under a tapped horn's settings: what the chamber's volume is */
-  hornTappedAir: "The chamber volume is the air behind the cones.",
   /** why a tapped horn's chamber takes no vent */
   ventTapped: "A tapped horn has no vent.",
   hornGoals: "Goals",
@@ -491,7 +490,7 @@ export const SPEAKER_TEXT = {
   hornDesign: "Design from goals",
   hornDesigning: "Designing…",
   hornDesignTip:
-    "Sets the sections, where the cones open and the chamber volume for these goals and this drive. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
+    "Sets the sections, where the cones open and the chamber volume for these goals and this horn type. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
   hornDesignFailed:
     "No horn for these goals fits this chamber. A folded horn also needs room for the drivers between its boards.",
   /** Design from goals failed, with the chamber size where folded boards fit the drivers */
@@ -518,7 +517,7 @@ export const SPEAKER_TEXT = {
     `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,
   hornImport: "Import a horn record",
   hornImportTip:
-    "Paste the text of a record file from a horn simulation program. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",
+    "Paste the text of a record file from a horn simulation program. It sets the sections, the horn type, the chamber volume and the vent. The drivers stay as set in this chamber.",
   hornImportField: "Record text",
   hornImportAction: "Import",
   hornImportDone: "Imported. The drivers stay as set in this chamber.",
@@ -549,7 +548,7 @@ export const SPEAKER_TEXT = {
   hornStraightNote:
     "A tapped or offset horn's drivers sit on a board between parts of its path, so its path is folded.",
   hornSectionsNeeded: (n: number) =>
-    `This drive needs at least ${n} sections: the cones open between them.`,
+    `This horn type needs at least ${n} sections: the cones open between them.`,
   driverHornTip:
     "A horn or waveguide on this compression driver or tweeter. None: the driver has no horn.",
   hornMountTip:

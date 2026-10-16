@@ -201,9 +201,6 @@ export function HornSettings({
             options={segments.slice(0, -1).map((_, i) => [i + 1, String(i + 1)] as const)}
           />
         ))}
-      {drive.kind === HORN_DRIVE.tapped && (
-        <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornTappedAir}</p>
-      )}
       <div className={FIELD_ROW}>
         {/* the ratio is the cones' area over the path's start: a front-loaded horn's throat only */}
         {!folded && ratio !== null && drive.kind === HORN_DRIVE.front && (
