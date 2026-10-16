@@ -84,6 +84,7 @@ import { HornSettings } from "./HornSettings";
 import { onFieldStep, shownIn, shownTenth } from "./speakerFields";
 import { FIELD_ROW, GAP_Y } from "../../styles/layout";
 import {
+  foldNeeds,
   hornGoalCheck,
   hornRoom,
   startingHorn,
@@ -298,6 +299,7 @@ export function ChamberSettings({
           wallIn={cabinet.panel.thicknessIn}
           fit={goalCheck?.fit ?? null}
           overAir={goalCheck?.overAir ?? null}
+          pathIn={goalCheck?.pathIn ?? null}
           onEdit={(edit) =>
             onEdit((c) =>
               c.load.kind === CHAMBER_LOAD.horn
@@ -308,10 +310,19 @@ export function ChamberSettings({
           onDrive={(kind) => onEdit((c) => withHornDrive(c, kind))}
           onDesign={(goals) => {
             const drive = chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind;
-            if (!drive || drive === HORN_DRIVE.back) return false;
+            if (!drive || drive === HORN_DRIVE.back) return SPEAKER_TEXT.hornDesignFailed;
             const found = withGoalHorn(cabinet, chamber, placed, drive, goals);
-            if (found) onEdit(() => found.chamber);
-            return found !== null;
+            if (found) {
+              onEdit(() => found.chamber);
+              return null;
+            }
+            const needs = foldNeeds(cabinet, chamber, drive);
+            return needs
+              ? SPEAKER_TEXT.hornDesignFailedSize(
+                  formatInches(needs.depthIn),
+                  formatInches(needs.heightIn),
+                )
+              : SPEAKER_TEXT.hornDesignFailed;
           }}
           onImport={(text) => {
             const read = hornFromRecord(

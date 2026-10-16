@@ -27,7 +27,14 @@ import {
   type GoalDrive,
 } from "../../lib/speaker/hornGoals";
 import { DEFAULT_VENTS } from "./speakerParts";
-import { chamberFold, foldRoomOf, zigzagTries } from "../../lib/speaker/speakerLayout";
+import {
+  chamberFold,
+  foldGrowNeeded,
+  foldRoomOf,
+  grownChamber,
+  zigzagTries,
+  type FoldGrow,
+} from "../../lib/speaker/speakerLayout";
 import {
   foldPasses,
   foldRestLiters,
@@ -202,6 +209,26 @@ export function withGoalHorn(
   return scoreOf(boards.fit, goals) <= scoreOf(straight.fit, goals) ? boards : straight;
 }
 
+/**
+ * The chamber's depth and height where folded boards for `drive` fit its drivers (`foldGrowNeeded`), in; null when
+ * they fit already, or not even at twice the size.
+ */
+export function foldNeeds(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+  drive: GoalDrive,
+): FoldGrow | null {
+  const where = foldRoomOf(cabinet, chamber);
+  if (!where) return null;
+  const { room, body } = where;
+  const bottom =
+    chamber.load.kind === CHAMBER_LOAD.horn && mouthAtBottom(chamber.load.horn, chamber.dims.h);
+  const fits = zigzagTries(room, drive, body, bottom).some((plan) =>
+    foldPasses(hornBoardsLayout(plan, room, body)),
+  );
+  return fits ? null : grownChamber(chamber.dims, foldGrowNeeded(room, drive, body, bottom));
+}
+
 /** How many places along their board, from end to end of where they fit, Design from goals tries the drivers at. */
 const DRIVER_SPOT_STEPS = 5;
 
@@ -326,15 +353,19 @@ function chamberAirLiters(
 
 /**
  * How a horn chamber meets its goals (`hornGoalFit`, on the model's net air `netLiters`; no fit while that is not known
- * yet), and its horn's air (the flare's and the front chamber's) with the chamber's when the horn holds more; null
- * without a horn.
+ * yet), its horn's air (the flare's and the front chamber's) with the chamber's when the horn holds more, and its
+ * path's length, in; null without a horn.
  */
 export function hornGoalCheck(
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
   chamber: SpeakerChamber,
   placed: Pick<PlacedChamber, "clear"> | undefined,
   netLiters: number | undefined,
-): { fit: HornGoalFit | null; overAir: { hornL: number; chamberL: number } | null } | null {
+): {
+  fit: HornGoalFit | null;
+  overAir: { hornL: number; chamberL: number } | null;
+  pathIn: number;
+} | null {
   if (chamber.load.kind !== CHAMBER_LOAD.horn) return null;
   const { horn } = chamber.load;
   const throat = throatCones(chamber.drivers);
@@ -362,5 +393,9 @@ export function hornGoalCheck(
     (fold ? fold.layout.airLiters : flareLiters(horn)) +
     (throat ? frontChamber(throat.cone, throat.count, setbackIn).liters : 0);
   const chamberL = chamberAirLiters(cabinet, chamber, placed).airLiters;
-  return { fit, overAir: hornL > chamberL ? { hornL, chamberL } : null };
+  // the path: the boards' when folded, else the sections'
+  const pathIn = fold
+    ? fold.layout.pathIn
+    : horn.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
+  return { fit, overAir: hornL > chamberL ? { hornL, chamberL } : null, pathIn };
 }

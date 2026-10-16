@@ -9,6 +9,12 @@ import { SPEAKER_TEXT, HORN_GOAL_LIMIT_NAMES } from "../../constants/speakerPage
 import { HORN_GOAL_FIELDS, LOW_EDGE_DB } from "../../constants/hornGoals";
 import { FIELD_ROW, GAP_Y_TIGHT } from "../../styles/layout";
 import { shownTenth } from "./speakerFields";
+import { formatInches } from "../../lib/format";
+import { SPEED_OF_SOUND } from "../../constants/acoustics";
+import { CM_PER_IN } from "../../constants/units";
+
+/** A quarter wavelength at `hz`, in. */
+const quarterWaveIn = (hz: number) => (SPEED_OF_SOUND * 100) / (4 * hz) / CM_PER_IN;
 
 /** Each goal field: its goal, label, tooltip and range. */
 const GOAL_FIELDS = [
@@ -23,18 +29,21 @@ interface Props {
   fit: HornGoalFit | null;
   /** the horn's air and the chamber's, L, when the horn holds more than the chamber has; else null */
   overAir: { hornL: number; chamberL: number } | null;
+  /** the horn's path length, in; null when it cannot be calculated */
+  pathIn?: number | null;
   onGoals: (goals: HornGoals) => void;
-  /** sizes the horn for the goals; false when no horn can be calculated. Absent: the drive can't be designed. */
-  onDesign?: (goals: HornGoals) => boolean;
+  /** sizes the horn for the goals: null when done, else why no horn fits. Absent: the drive can't be designed. */
+  onDesign?: (goals: HornGoals) => string | null;
 }
 
 /**
  * A horn's goals (the band it plays flat, and the level it reaches there), the Design from goals action, and how the
  * horn meets the goals now: its spread, its low edge, its lowest maximum output and the air it holds.
  */
-export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Props) {
+export function HornGoalsFields({ goals, fit, overAir, pathIn, onGoals, onDesign }: Props) {
   const [designing, setDesigning] = useState(false);
-  const [failed, setFailed] = useState(false);
+  /** why the last Design from goals found no horn; null when it did, or after a goal changes */
+  const [failed, setFailed] = useState<string | null>(null);
   /** the queued search, cleared if the fields go away first */
   const queued = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -59,7 +68,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
             value={goals[goal]}
             {...HORN_GOAL_FIELDS[goal]}
             onChange={(v) => {
-              setFailed(false);
+              setFailed(null);
               onGoals({ ...goals, [goal]: v });
             }}
           />
@@ -77,7 +86,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
               // let the button show the work before the search holds the page
               queued.current = setTimeout(() => {
                 queued.current = null;
-                setFailed(!onDesign(goals));
+                setFailed(onDesign(goals));
                 setDesigning(false);
               }, 0);
             }}
@@ -87,7 +96,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
         </div>
       )}
       {outOfOrder && <Notice>{SPEAKER_TEXT.hornGoalsOrder}</Notice>}
-      {failed && <Notice>{SPEAKER_TEXT.hornDesignFailed}</Notice>}
+      {failed && <Notice>{failed}</Notice>}
       {fit && (
         <>
           <p className="text-xs text-stone-500">
@@ -109,6 +118,17 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
           </p>
           {short > 0 && <Notice>{SPEAKER_TEXT.hornFitShort(String(shownTenth(short)))}</Notice>}
         </>
+      )}
+      {pathIn != null && Number.isFinite(pathIn) && !outOfOrder && (
+        <p className="text-xs text-stone-500">
+          <Tooltip tip={SPEAKER_TEXT.hornFitPathTip}>
+            {SPEAKER_TEXT.hornFitPath(
+              formatInches(Math.round(pathIn)),
+              formatInches(Math.round(quarterWaveIn(goals.lowHz))),
+              String(goals.lowHz),
+            )}
+          </Tooltip>
+        </p>
       )}
       {overAir && (
         <Notice>

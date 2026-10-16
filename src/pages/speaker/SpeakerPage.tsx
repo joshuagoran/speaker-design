@@ -372,7 +372,14 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 f.fold
                   ? [
                       ...(f.fold.auto && !foldPasses(f.fold.layout)
-                        ? [SPEAKER_TEXT.foldNoLayout]
+                        ? [
+                            SPEAKER_TEXT.foldNoLayout(
+                              f.fold.needs && {
+                                depth: formatInches(f.fold.needs.depthIn),
+                                height: formatInches(f.fold.needs.heightIn),
+                              },
+                            ),
+                          ]
                         : []),
                       ...foldNotices(f.fold.layout.checks),
                     ]

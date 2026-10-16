@@ -48,6 +48,13 @@ export const FOLD_OFFSET_REAR_SHARES = [0.2, 0.3, 0.4] as const;
 /** The mouth's leg heights a tapped horn's spirals try, as shares of the height its legs share. */
 export const FOLD_SPIRAL_MOUTH_SHARES = [0.3, 0.4, 0.5] as const;
 
+/**
+ * When no folded layout fits, the side section is tried this much larger at a time (a share of its depth and height),
+ * up to `FOLD_GROW_MAX` times its size, to find the chamber size one fits.
+ */
+export const FOLD_GROW_STEP = 0.1;
+export const FOLD_GROW_MAX = 2;
+
 /** Where a folded horn's mouth opens on the baffle. */
 export const FOLD_MOUTH = { top: "top", bottom: "bottom" } as const;
 

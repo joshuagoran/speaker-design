@@ -255,7 +255,10 @@ export const SPEAKER_TEXT = {
   foldSectionsNote:
     "Folded: the boards set the passage's shape, its areas and where the drivers tap it.",
   /** a folded horn on automatic boards where no layout passes the checks */
-  foldNoLayout: "No folded layout fits these drivers in this box. Make the box deeper or taller.",
+  foldNoLayout: (needs: { depth: string; height: string } | null) =>
+    needs
+      ? `No folded layout fits these drivers in this box. One fits a chamber ${needs.depth} deep and ${needs.height} tall.`
+      : "No folded layout fits these drivers in this box, even at twice its depth and height.",
   foldBroken: "The boards do not make one passage from the closed end to the mouth.",
   foldNotFacing: "The drivers do not face the passage. Move them to a board along it.",
   foldWidth: "The drivers' cutout is wider than the inside of the box. Make the box wider.",
@@ -484,6 +487,9 @@ export const SPEAKER_TEXT = {
     "Sets the sections, where the cones open and the chamber volume for these goals and this drive. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
   hornDesignFailed:
     "No horn for these goals fits this chamber. A folded horn also needs room for the drivers between its boards.",
+  /** Design from goals failed, with the chamber size where folded boards fit the drivers */
+  hornDesignFailedSize: (depth: string, height: string) =>
+    `No horn for these goals fits this chamber. Folded boards fit the drivers in a chamber ${depth} deep and ${height} tall.`,
   hornGoalsOrder: "Set the highest frequency above the lowest.",
   /** the goals check: how flat the response is over the goals' band */
   hornFitSpread: (spread: string, low: string, high: string) =>
@@ -495,6 +501,11 @@ export const SPEAKER_TEXT = {
     `Maximum output: ${db} dB at ${hz} Hz, limited by ${limit}.`,
   /** the goals check: how far the maximum output falls under the target level */
   hornFitShort: (db: string) => `That is ${db} dB under the target.`,
+  /** the goals check: the path's length beside a quarter wave at the lowest frequency */
+  hornFitPath: (path: string, quarter: string, low: string) =>
+    `Path: ${path}. A quarter wave at ${low} Hz is ${quarter}.`,
+  hornFitPathTip:
+    "A horn plays down to about where its path is a quarter wave long. A tapped horn's whole path counts. A longer path plays lower, but needs a larger box.",
   /** the goals check: the horn holds more air than the chamber has */
   hornFitAir: (horn: string, chamber: string) =>
     `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,

@@ -82,6 +82,8 @@ import {
   FOLD_AUTO_GROWTHS,
   FOLD_AUTO_MAX_LEGS,
   FOLD_AUTO_TURN_SHARES,
+  FOLD_GROW_MAX,
+  FOLD_GROW_STEP,
   FOLD_OFFSET_REAR_SHARES,
   FOLD_SPIRAL_MOUTH_SHARES,
 } from "../../constants/hornBoards";
@@ -847,6 +849,49 @@ export interface ChamberFold {
   y0In: number;
   /** the drivers' body the boards were checked with (the 3D view draws it); null without a cone */
   body: FoldDriverBody | null;
+  /** automatic boards that fail their checks: the chamber's depth and height a layout fits, in; else null */
+  needs: FoldGrow | null;
+}
+
+/** A depth and a height, in: how much deeper and taller a chamber must be for a folded layout to fit, or that size. */
+export interface FoldGrow {
+  depthIn: number;
+  heightIn: number;
+}
+
+/** A chamber's depth and height grown by `grow`, up to the next half inch; null without a growth. */
+export const grownChamber = (
+  dims: Pick<SpeakerChamber["dims"], "d" | "h">,
+  grow: FoldGrow | null,
+): FoldGrow | null =>
+  grow && {
+    depthIn: Math.ceil(2 * (dims.d + grow.depthIn)) / 2,
+    heightIn: Math.ceil(2 * (dims.h + grow.heightIn)) / 2,
+  };
+
+/**
+ * How much deeper and taller (in steps of `FOLD_GROW_STEP` of each, the two together) a side section must be for one
+ * of the layouts `zigzagTries` offers to pass every check; null when even `FOLD_GROW_MAX` times its size does not.
+ */
+export function foldGrowNeeded(
+  room: FoldRoom,
+  kind: SpeakerHorn["drive"]["kind"],
+  body: FoldDriverBody | null,
+  bottom: boolean,
+): FoldGrow | null {
+  for (let step = 1; 1 + step * FOLD_GROW_STEP <= FOLD_GROW_MAX + 1e-9; step++) {
+    const share = step * FOLD_GROW_STEP;
+    const grown = {
+      ...room,
+      depthIn: room.depthIn * (1 + share),
+      heightIn: room.heightIn * (1 + share),
+    };
+    const fits = zigzagTries(grown, kind, body, bottom).some((plan) =>
+      foldPasses(hornBoardsLayout(plan, grown, body)),
+    );
+    if (fits) return { depthIn: room.depthIn * share, heightIn: room.heightIn * share };
+  }
+  return null;
 }
 
 /**
@@ -874,13 +919,17 @@ function chamberFoldIn(
     horn.boards ??
     autoBoards(room, horn.segments, body, horn.drive.kind, mouthAtBottom(horn, placed.dims.h));
   const plan = withDriverBoardPieces(chosen, horn.doubleBoard ? 2 : 1);
+  const layout = hornBoardsLayout(plan, room, body);
+  const grow = () =>
+    foldGrowNeeded(room, horn.drive.kind, body, mouthAtBottom(horn, placed.dims.h));
   const fold = {
     plan,
     auto: !horn.boards,
     room,
-    layout: hornBoardsLayout(plan, room, body),
+    layout,
     y0In: face.y,
     body,
+    needs: !horn.boards && !foldPasses(layout) ? grownChamber(placed.dims, grow()) : null,
   };
   FOLD_CACHE.set(placed.chamber, { key, fold });
   return fold;

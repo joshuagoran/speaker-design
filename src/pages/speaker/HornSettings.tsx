@@ -115,11 +115,13 @@ interface Props {
   fit: HornGoalFit | null;
   /** the horn's air and the chamber's, L, when the horn holds more than the chamber has; else null */
   overAir: { hornL: number; chamberL: number } | null;
+  /** the horn's path length, in; null when it cannot be calculated */
+  pathIn: number | null;
   onEdit: (edit: (horn: SpeakerHorn) => SpeakerHorn) => void;
   /** sets the drive, with the chamber changes it needs (a tapped horn's chamber has no vent) */
   onDrive: (kind: SpeakerHorn["drive"]["kind"]) => void;
-  /** sizes the horn and the chamber's air for the goals; false when no horn can be calculated */
-  onDesign: (goals: HornGoals) => boolean;
+  /** sizes the horn and the chamber's air for the goals: null when done, else why no horn fits */
+  onDesign: (goals: HornGoals) => string | null;
   /** reads a pasted Hornresp record onto the horn and the chamber */
   onImport: (text: string) => HornImport;
 }
@@ -138,6 +140,7 @@ export function HornSettings({
   wallIn,
   fit,
   overAir,
+  pathIn,
   onEdit,
   onDrive,
   onDesign,
@@ -174,6 +177,7 @@ export function HornSettings({
         goals={horn.goals ?? HORN_GOALS_DEFAULT}
         fit={fit}
         overAir={overAir}
+        pathIn={pathIn}
         onGoals={(goals) => onEdit((h) => ({ ...h, goals }))}
         onDesign={drive.kind === HORN_DRIVE.back ? undefined : onDesign}
       />
