@@ -91,12 +91,22 @@ export function ResponseChart({
     y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
   const paths = series.map((sr) => {
     const pts = sr.curve.filter((o) => o.f >= fmin && o.f <= fmax);
-    // the runs of points the line draws: all of them, or (clipped at the floor) each run on or above the floor
+    /** where the line between two points crosses the floor, on the log frequency axis */
+    const atFloor = (a: FrequencyPoint, b: FrequencyPoint): FrequencyPoint => {
+      const t = (BOT - a.spl) / (b.spl - a.spl);
+      return { f: a.f * (b.f / a.f) ** t, spl: BOT };
+    };
+    // the runs of points the line draws: all of them, or (clipped at the floor) each run on or above the floor, each
+    // run down to where it crosses the floor, so a null reads as one
     const runs = sr.clipAtFloor
       ? pts.reduce<FrequencyPoint[][]>((list, p, i) => {
-          if (p.spl < BOT) return list;
-          if (i > 0 && pts[i - 1].spl >= BOT) list[list.length - 1].push(p);
-          else list.push([p]);
+          const prev = i > 0 ? pts[i - 1] : null;
+          if (p.spl < BOT) {
+            if (prev && prev.spl >= BOT) list[list.length - 1].push(atFloor(prev, p));
+            return list;
+          }
+          if (prev && prev.spl >= BOT) list[list.length - 1].push(p);
+          else list.push(prev ? [atFloor(prev, p), p] : [p]);
           return list;
         }, [])
       : [pts];
