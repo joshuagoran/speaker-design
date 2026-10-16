@@ -240,6 +240,21 @@ export const MODEL_GAP_TEXT = {
   },
 } as const satisfies Record<SpeakerModelGap, { why: string; fix: string }>;
 
+/** The folded-horn path chart's labels. */
+export const FOLD_CHART_TEXT = {
+  label: "Passage area against distance from the closed end",
+  xAxis: "distance from the closed end, in",
+  yAxis: "area, in²",
+  traced: "Traced path",
+  target: "Straight horn",
+  taps: "Cones open",
+  front: "front",
+  back: "back",
+  /** the readout at the place pointed at: distance, width, area (numbers as formatted text) */
+  at: (distanceIn: string, widthIn: string, areaIn2: string) =>
+    `${distanceIn} in · ${widthIn} in wide · ${areaIn2} in²`,
+} as const;
+
 /** The Speaker page's results headings and chart labels. */
 export const SPEAKER_TEXT = {
   views: "The speaker",
