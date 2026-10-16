@@ -163,6 +163,7 @@ export function withGoalHorn(
       drive,
       room: {
         face: chamberClearFace(cabinet, searched),
+        wallIn: cabinet.panel.thicknessIn,
         setbackIn: chamberSetbackIn(cabinet.panel, searched),
       },
       airLiters,
@@ -189,6 +190,7 @@ export function withGoalHorn(
       drive,
       room: {
         face: chamberClearFace(cabinet, searched),
+        wallIn: cabinet.panel.thicknessIn,
         setbackIn: chamberSetbackIn(cabinet.panel, searched),
       },
       airLiters,
@@ -310,7 +312,7 @@ function withGoalBoards(
     const read = hornDesignOf(
       chamber,
       { count: 1, angle: 2 },
-      { netLiters: rearL, face, setbackIn, fold: layout },
+      { netLiters: rearL, face, wallIn: room.wallIn, setbackIn, fold: layout },
     );
     const fit = read.ok ? hornGoalFit(read.design, goals, power) : null;
     if (!fit) return null;
@@ -401,6 +403,7 @@ export function hornGoalCheck(
           {
             netLiters,
             face: chamberClearFace(cabinet, chamber),
+            wallIn: cabinet.panel.thicknessIn,
             setbackIn,
             fold: fold?.layout ?? null,
           },

@@ -14,7 +14,7 @@ export const roomOf = (
   chamber: Pick<SpeakerChamber, "dims" | "netLiters">,
   face: Dims2 = { w: chamber.dims.w - 2 * WALL_IN, h: chamber.dims.h - 2 * WALL_IN },
   setbackIn = 0,
-): HornDesignRoom => ({ netLiters: chamber.netLiters ?? 1, face, setbackIn });
+): HornDesignRoom => ({ netLiters: chamber.netLiters ?? 1, face, wallIn: WALL_IN, setbackIn });
 
 /** A horn design result that must be a front-loaded design (or a direct radiator): the design. */
 export function frontLoadedOf(result: HornDesignResult) {

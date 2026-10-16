@@ -255,13 +255,13 @@ export function ChamberSettings({
           />
         </div>
       </SettingsFold>
+      {tappedHorn && <p className="text-xs text-stone-500">{SPEAKER_TEXT.tappedAirNote}</p>}
       <ToggleGroup
-        label={
-          tappedHorn ? (
-            <Tooltip tip={SPEAKER_TEXT.tappedAirTip}>{SPEAKER_TEXT.tappedAir}</Tooltip>
-          ) : (
-            <Tooltip tip={SPEAKER_TEXT.netAirTip}>{SPEAKER_TEXT.netAir}</Tooltip>
-          )
+        label={<Tooltip tip={SPEAKER_TEXT.netAirTip}>{SPEAKER_TEXT.netAir}</Tooltip>}
+        disabled={
+          tappedHorn
+            ? { values: [NET_AIR.auto, NET_AIR.custom], why: SPEAKER_TEXT.tappedAirNote }
+            : undefined
         }
         value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
         onChange={(v) =>
@@ -276,7 +276,7 @@ export function ChamberSettings({
         label="Volume, L"
         // Auto: the model's value, read-only
         value={chamber.netLiters ?? shownTenth(result?.netLiters ?? 0)}
-        disabled={chamber.netLiters === null}
+        disabled={chamber.netLiters === null || tappedHorn}
         min={0.5}
         step={SPEAKER_STEPS.netL}
         onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
@@ -284,6 +284,7 @@ export function ChamberSettings({
       <NumberField
         label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>Stuffing, %</Tooltip>}
         value={chamber.stuffingPct}
+        disabled={tappedHorn}
         min={0}
         step={5}
         onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}

@@ -32,14 +32,15 @@ import {
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   SPEAKER_RESPONSE_VOLTS,
+  PORT_SHAPE,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
 import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { HORN_GOAL_LIMIT, HORN_GOALS_DEFAULT } from "../src/constants/hornGoals";
-import { CM_PER_IN } from "../src/constants/units";
+import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import type { HornSegment, SpeakerChamber, SpeakerHorn, SpeakerSpec } from "../src/types";
-import { roomOf } from "./horn-room";
+import { frontLoadedOf, roomOf } from "./horn-room";
 
 /** The two-18″ PA v2 sub bin: one horn-loaded chamber with a vent. */
 const BIN_SPEC = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
@@ -338,4 +339,19 @@ test("folded horn: the mouth setting flips designed boards; the layout setting g
   const spiral = withFoldShape(horn, FOLD_SHAPE.spiral);
   assert.equal(spiral.boards, undefined);
   assert.equal(spiral.foldShape, FOLD_SHAPE.spiral);
+});
+
+test("horn rear chamber: a slot's fins take their thickness off its open area", () => {
+  const vent = BIN.vent;
+  assert.ok(vent.kind === VENT_KIND.vented, "the bin is vented");
+  const slotWith = (fins: number): SpeakerChamber => ({
+    ...BIN,
+    vent: { ...vent, port: { shape: PORT_SHAPE.slot, n: 1, h: 3, len: 12, fins } },
+  });
+  const areaOf = (fins: number) => {
+    const design = frontLoadedOf(hornDesignOf(slotWith(fins), { count: 1, angle: 2 }, roomOf(BIN)));
+    return design.rear.port?.area ?? 0;
+  };
+  const wallIn = 0.75;
+  assert.ok(Math.abs(areaOf(0) - areaOf(2) - 2 * 3 * wallIn * CM2_PER_IN2) < 1e-6);
 });

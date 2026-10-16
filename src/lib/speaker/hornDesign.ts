@@ -16,6 +16,7 @@ import { frontChamber, throatCones } from "./hornThroat";
 import { isSizedSegment, splitSegmentsAt } from "../acoustics/hornSegments";
 import type { FoldLayout } from "./hornBoards";
 import { slotRunIn, stuffedLiters } from "./chamberAir";
+import { slotFinsOf } from "../pa/calc";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
@@ -37,14 +38,22 @@ const INNER_END_RATIO = BOTH_ENDS_CORRECTION_RATIO - 1;
  * radiation load adds the outer end's, a slot's from its opening's rectangle). Null: a vent the engine doesn't take yet
  * (side ducts, radiators). The inner ends follow the Hi-fi round-tube rule and the PA's flanged rectangle.
  */
-function rearPort(vent: ChamberVent, face: Dims2): { port: HornPort | null } | null {
+function rearPort(
+  vent: ChamberVent,
+  face: Dims2,
+  wallIn: number,
+): { port: HornPort | null } | null {
   if (vent.kind === VENT_KIND.sealed) return { port: null };
   if (vent.kind === VENT_KIND.radiator) return null;
   const { port } = vent;
   if (port.shape === PORT_SHAPE.duct) return null;
   if (port.shape === PORT_SHAPE.slot) {
-    /** each opening's long side: the whole clear face */
-    const run = slotRunIn(face, port);
+    /** each opening's long side: the whole clear face, less its fins (as the box model takes them) */
+    const faceRun = slotRunIn(face, port);
+    const run =
+      port.fins === undefined
+        ? faceRun
+        : faceRun - slotFinsOf({ fins: port.fins, slotH: port.h }, faceRun, wallIn) * wallIn;
     return {
       port: {
         area: port.n * port.h * run * CM2_PER_IN2,
@@ -82,6 +91,8 @@ const isInnerBoundary = (tap: number, n: number) => Number.isInteger(tap) && tap
 export interface HornDesignRoom {
   netLiters: number;
   face: Dims2;
+  /** the walls' thickness, in: a slot's fins are as thick */
+  wallIn: number;
   /** how far the horn's driver board stands the cones behind the bay's end, in (`chamberSetbackIn`): front chamber air */
   setbackIn: number;
   /**
@@ -185,6 +196,8 @@ export function hornDesignOf(
   };
   if (drive?.kind === HORN_DRIVE.tapped) {
     if (chamber.vent.kind !== VENT_KIND.sealed) return gap(HORN_ENGINE_GAP.tappedVent);
+    // folded, the backs open straight into the passage: only the air in the board's cutout is behind them, as in front
+    const backLiters = room.fold ? frontLiters : airLiters;
     /** each passage's cross-section: the cones' area */
     const area = throat.cone.Sd * throat.count;
     return {
@@ -196,18 +209,18 @@ export function hornDesignOf(
         rearTap: drive.rearTap,
         // the passage at the earlier tap holds the backs' air when the backs open first
         frontChamber:
-          (boards?.backsFirst ? airLiters : frontLiters) > 0
-            ? { liters: boards?.backsFirst ? airLiters : frontLiters, area }
+          (boards?.backsFirst ? backLiters : frontLiters) > 0
+            ? { liters: boards?.backsFirst ? backLiters : frontLiters, area }
             : null,
         rearChamber:
-          (boards?.backsFirst ? frontLiters : airLiters) > 0
-            ? { liters: boards?.backsFirst ? frontLiters : airLiters, area }
+          (boards?.backsFirst ? frontLiters : backLiters) > 0
+            ? { liters: boards?.backsFirst ? frontLiters : backLiters, area }
             : null,
       },
     };
   }
   /** the rear chamber's vent as the engine's port */
-  const rear = rearPort(chamber.vent, room.face);
+  const rear = rearPort(chamber.vent, room.face, room.wallIn);
   if (!rear) return gap(HORN_ENGINE_GAP.vent);
   const front = {
     ...common,

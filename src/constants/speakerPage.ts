@@ -564,9 +564,8 @@ export const SPEAKER_TEXT = {
     "The corner frequency of the filter. A highpass cuts below it, and a lowpass cuts above it.",
   netAir: "Net air",
   /** a tapped horn's own air: the small space sealed behind the cones */
-  tappedAir: "Air behind the cones",
-  tappedAirTip:
-    "A tapped horn has no box behind its drivers: both sides of the cones open into the horn. This is only the small sealed space behind them.",
+  /** a tapped horn's chamber: its air and stuffing settings do nothing */
+  tappedAirNote: "Both sides of the cones open into the horn, so there is no box air to set.",
   netAirTip:
     "The air the drivers work against. Auto: the inside volume minus the walls, the braces, the drivers and the vent. Custom: you type the value.",
   stuffingTip:
