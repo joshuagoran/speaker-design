@@ -28,6 +28,7 @@ export const CUT_PART_NAMES = {
   slotShelf: "Slot shelf",
   partition: "Partition",
   driverBoard: "Driver board",
+  hornBoard: "Horn board",
   archTop: "Arched top",
 } as const;
 

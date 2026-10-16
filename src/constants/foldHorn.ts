@@ -90,3 +90,6 @@ export const FOLD_MIN_BOARD_IN = 2;
 
 /** How far past half a board's thickness an end may sit from another board's center line and still butt it, in. */
 export const FOLD_EDGE_TOL_IN = 0.05;
+
+/** A cut this close to square is called square, in degrees. */
+export const FOLD_SQUARE_TOL_DEG = 0.05;
