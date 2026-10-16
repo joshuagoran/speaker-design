@@ -28,6 +28,7 @@ import type {
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   HORN_PATH,
+  FOLD_WALL,
   HORN_PLACEMENT,
   PORT_SHAPE,
   SLOT_PLACE,
@@ -2291,6 +2292,58 @@ export type HornDrive =
 export type HornPath = (typeof HORN_PATH)[keyof typeof HORN_PATH];
 
 /**
+ * A point in a chamber's side section, in: `zIn` back from the inside face of the baffle, `yIn` up from the inside face
+ * of the bottom.
+ */
+export interface SidePoint {
+  zIn: number;
+  yIn: number;
+}
+
+/** A side-section wall of a chamber (`FOLD_WALL`): the baffle, the bottom, the back or the top. */
+export type FoldWall = (typeof FOLD_WALL)[keyof typeof FOLD_WALL];
+
+/**
+ * A board in a folded horn's side section: its center line's two ends, as wide as the chamber. `square` marks the ends
+ * held at 90° to what they meet (a wall, another board's end or another board's edge).
+ */
+export interface FoldBoard {
+  a: SidePoint;
+  b: SidePoint;
+  square?: { a?: boolean; b?: boolean };
+}
+
+/**
+ * Where a folded horn's drivers sit: the board they mount on (an index into `boards`), the spot along it (0 at its end
+ * `a`, 1 at `b`), and the side their cones face: 1 to the left of the line from `a` to `b`, −1 to the right.
+ */
+export interface FoldDrivers {
+  board: number;
+  along: number;
+  face: 1 | -1;
+}
+
+/**
+ * A folded horn's mouth: an opening in one wall, from `fromIn` to `toIn` along it. The baffle and the back run from the
+ * bottom up; the bottom and the top run from the baffle back.
+ */
+export interface FoldMouth {
+  wall: FoldWall;
+  fromIn: number;
+  toIn: number;
+}
+
+/**
+ * A folded horn as the user draws it in the side section: its boards, its drivers and its mouth. The app traces the
+ * passage from these (lib/speaker/foldTrace); nothing about the passage is stored.
+ */
+export interface HornFold {
+  boards: FoldBoard[];
+  drivers: FoldDrivers | null;
+  mouth: FoldMouth;
+}
+
+/**
  * A horn built into the box: the horn engine's segments and vent offset (`HornDesign`). The chamber's own net air and
  * vent are the horn's rear chamber. Its front chamber is not a setting: it comes from the walls over the cones
  * (lib/speaker/hornThroat); an older save's `throatChamber` is not read. The first segment's start area is the throat,
@@ -2312,6 +2365,8 @@ export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset">
   doubleBoard?: boolean;
   /** what the horn is designed for (lib/speaker/hornGoals); absent: the defaults (`HORN_GOALS_DEFAULT`) */
   goals?: HornGoals;
+  /** a folded horn's drawing (`HornFold`); absent: the horn is not drawn yet */
+  fold?: HornFold;
 }
 
 /**
