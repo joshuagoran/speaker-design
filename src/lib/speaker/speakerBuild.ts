@@ -134,6 +134,7 @@ import {
   hornFitsWhereSet,
   hornCutoutBox,
 } from "./speakerLayout";
+import { onPolyline } from "./hornFold";
 import {
   DRIVER_CUTOUT_IN,
   HIFI_DRIVER_CUTOUT_IN,
@@ -1055,16 +1056,16 @@ function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
   if (!of) return [];
   const { fold } = of;
   const spot = fold.mount;
-  /** the board the drivers' spot is on: the nearest to it */
+  /** the board the drivers' spot is on (the nearest to it), and how far along it the spot is from its first end */
   const spotBoard = spot
     ? of.boards.reduce(
         (best, b, i) => {
-          const d = Math.min(...b.points.map((p) => Math.hypot(p.z - spot.at.z, p.y - spot.at.y)));
-          return d < best.d ? { i, d } : best;
+          const on = onPolyline(spot.at, b.points);
+          return on.off < best.off ? { i, ...on } : best;
         },
-        { i: -1, d: Infinity },
-      ).i
-    : -1;
+        { i: -1, off: Infinity, along: 0 },
+      )
+    : null;
   const cutouts = f.placed.chamber.drivers.flatMap((driver) => {
     const cone = coneBuild(driver);
     return cone
@@ -1078,8 +1079,6 @@ function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
       : [];
   });
   return of.boards.map((board, i) => {
-    const [a] = board.points;
-    const fromEnd = spot && a ? Math.hypot(spot.at.z - a.z, spot.at.y - a.y) : 0;
     return {
       box: chamberCutBox(f.index),
       part: "hornBoard",
@@ -1090,10 +1089,12 @@ function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
       note: joinNotes([
         SPEAKER_TEXT.hornBoardNote(board.run, board.across),
         SPEAKER_TEXT.hornBoardCuts([
-          String(Math.round(board.endCutsDeg[0])),
-          String(Math.round(board.endCutsDeg[1])),
+          Math.round(board.endCutsDeg[0]),
+          Math.round(board.endCutsDeg[1]),
         ]),
-        ...(i === spotBoard ? [...cutouts, SPEAKER_TEXT.hornBoardSpot(formatInches(fromEnd))] : []),
+        ...(i === spotBoard?.i
+          ? [...cutouts, SPEAKER_TEXT.hornBoardSpot(formatInches(spotBoard.along))]
+          : []),
       ]),
     };
   });

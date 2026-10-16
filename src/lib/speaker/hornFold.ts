@@ -212,6 +212,28 @@ function toSegment(p: FoldPoint, a: FoldPoint, b: FoldPoint): number {
 const toPolyline = (p: FoldPoint, line: readonly FoldPoint[]) =>
   line.slice(1).reduce((best, b, i) => Math.min(best, toSegment(p, line[i], b)), Infinity);
 
+/**
+ * Where a point sits on a polyline (a board's face): its distance from the line, and how far along the line its
+ * nearest point is from the line's first point, in.
+ */
+export function onPolyline(
+  p: FoldPoint,
+  line: readonly FoldPoint[],
+): { off: number; along: number } {
+  let best = { off: Infinity, along: 0 };
+  let start = 0;
+  line.slice(1).forEach((b, i) => {
+    const a = line[i];
+    const ab = sub(b, a);
+    const len2 = dot(ab, ab);
+    const t = len2 > 0 ? Math.min(1, Math.max(0, dot(sub(p, a), ab) / len2)) : 0;
+    const off = dist(p, add(a, ab, t));
+    if (off < best.off) best = { off, along: start + t * Math.sqrt(len2) };
+    start += Math.sqrt(len2);
+  });
+  return best;
+}
+
 /** The length of a polyline. */
 const lengthOf = (line: readonly FoldPoint[]) =>
   line.slice(1).reduce((sum, b, i) => sum + dist(line[i], b), 0);
@@ -664,6 +686,7 @@ export const runOutline = (run: FoldRun) => outline(run);
 export function spiralFolds(input: SquareFoldInput): HornRun[] | null {
   const { segments, mouth, clear, depthIn, wallIn } = input;
   const pathIn = segments.reduce((sum, x) => sum + x.length, 0) / CM_PER_IN;
+  if (!(pathIn > 0)) return null;
   const heightAt = heightOf(input);
   const mouthY = mouth.y + mouth.h / 2;
   const sign = mouthY - clear.y >= clear.y + clear.h - mouthY ? -1 : 1;

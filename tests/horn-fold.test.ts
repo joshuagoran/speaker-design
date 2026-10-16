@@ -11,6 +11,7 @@ import { speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { fittedRuns, spiralFolds } from "../src/lib/speaker/hornFold";
 import { splitSegmentsAt, segmentAreaAt } from "../src/lib/acoustics/hornSegments";
 import {
+  mountAfterRemoval,
   withRunAdded,
   withRunEdited,
   withRunRemoved,
@@ -154,4 +155,27 @@ test("horn fold: the cutlist lists the horn boards, the cutouts on the drivers' 
   assert.ok(boards.length > 0);
   assert.ok(boards.length <= fold.boards.length);
   assert.equal(boards.filter((p) => p.note.includes("cutout")).length, 1);
+});
+
+test("horn fold: removing a run keeps the drivers on their run, or drops the spot with it", () => {
+  const mount = { run: 2, side: 1 as const, alongCm: 10, frontInRun: true };
+  assert.deepEqual(mountAfterRemoval(mount, 0), { ...mount, run: 1 });
+  assert.equal(mountAfterRemoval(mount, 2), undefined);
+  assert.equal(mountAfterRemoval(mount, 3), mount);
+  // a length or angle that is not a number leaves the runs as they are
+  const runs: HornRun[] = [{ lengthCm: 40, angleDeg: 0 }];
+  assert.deepEqual(withRunEdited(runs, 0, { angleDeg: Number.NaN }), runs);
+});
+
+test("horn fold: Design from goals keeps the runs its drivers' spot was scored on", () => {
+  assert.ok(FOUND?.chamber.load.kind === CHAMBER_LOAD.horn);
+  assert.ok(FOUND.chamber.load.horn.runs?.length);
+  assert.ok(FOUND.chamber.load.horn.mount);
+});
+
+test("horn fold: a cut at the path's start or end takes that end", () => {
+  const segments: HornSegment[] = [{ profile: HORN_PROFILE.conical, s1: 300, s2: 900, length: 80 }];
+  const { segments: split, boundaries } = splitSegmentsAt(segments, [0, 80, -5]);
+  assert.equal(split.length, 1);
+  assert.deepEqual(boundaries, [0, 1, 0]);
 });

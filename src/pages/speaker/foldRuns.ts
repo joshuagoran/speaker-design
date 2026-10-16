@@ -1,15 +1,21 @@
 // A folded horn path's runs as the Horn settings edit them (`HornRun`, lengths in cm): one run changed, added or
 // removed, and a run's wall named by where it faces. Pure.
-import type { HornRun } from "../../types";
+import type { HornMount, HornRun } from "../../types";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 
 /** A new run's length over the last run's, and the turn it takes from it, degrees: a quarter turn, as a fold. */
 const NEW_RUN_SHARE = 0.5;
 const NEW_RUN_TURN_DEG = 90;
 
-/** The runs with run `i` changed. */
-export const withRunEdited = (runs: readonly HornRun[], i: number, change: Partial<HornRun>) =>
-  runs.map((r, k) => (k === i ? { ...r, ...change } : r));
+/** The runs with run `i` changed; a length or angle that is not a finite number leaves them as they are. */
+export function withRunEdited(
+  runs: readonly HornRun[],
+  i: number,
+  change: Partial<HornRun>,
+): HornRun[] {
+  if (Object.values(change).some((v) => !Number.isFinite(v))) return [...runs];
+  return runs.map((r, k) => (k === i ? { ...r, ...change } : r));
+}
 
 /** The runs with one more at the mouth's end: half the last run's length, a quarter turn from it. */
 export function withRunAdded(runs: readonly HornRun[]): HornRun[] {
@@ -27,6 +33,15 @@ export function withRunAdded(runs: readonly HornRun[]): HornRun[] {
 /** The runs without run `i`. */
 export const withRunRemoved = (runs: readonly HornRun[], i: number) =>
   runs.filter((_, k) => k !== i);
+
+/**
+ * The drivers' spot after run `removed` goes: on a later run, that run's new number; on the removed run, none (the
+ * fold then picks the spot closest to the drive's taps).
+ */
+export function mountAfterRemoval(mount: HornMount, removed: number): HornMount | undefined {
+  if (mount.run === removed) return undefined;
+  return mount.run > removed ? { ...mount, run: mount.run - 1 } : mount;
+}
 
 /**
  * A run's wall named by the way it faces in the side view: a run more along the depth than up has an upper and a lower

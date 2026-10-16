@@ -1,5 +1,5 @@
 import type { HornMount, HornRun } from "../../types";
-import type { HornFold } from "../../lib/speaker/hornFold";
+import { fittedRuns, type HornFold } from "../../lib/speaker/hornFold";
 import { CardHeading } from "../../components/ui/CardHeading";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
@@ -17,6 +17,9 @@ import { withRunAdded, withRunEdited, withRunRemoved, wallName } from "./foldRun
 const RUN_STEP_IN = 0.25;
 const ANGLE_STEP_DEG = 1;
 
+/** The drivers' spot a picked run starts with: its upper or left wall, at its start, the fronts in the run. */
+const NEW_MOUNT: Omit<HornMount, "run"> = { side: 1, alongCm: 0, frontInRun: true };
+
 interface RunsProps {
   /** the runs the fold lays out: the horn's own, or the automatic folds' */
   runs: readonly HornRun[];
@@ -25,7 +28,8 @@ interface RunsProps {
   /** the sections' path length, in: the runs' first run takes up any difference */
   pathIn: number;
   fold: HornFold | null;
-  onRuns: (runs: readonly HornRun[] | undefined) => void;
+  /** new runs (undefined: back to the automatic folds), and the run removed, if one was */
+  onRuns: (runs: readonly HornRun[] | undefined, removed?: number) => void;
 }
 
 /**
@@ -33,7 +37,9 @@ interface RunsProps {
  * checks: the runs' length against the sections', a run past the box, runs that cross, a sharp turn.
  */
 export function FoldRunsFields({ runs, own, pathIn, fold, onRuns }: RunsProps) {
-  const totalIn = runs.reduce((sum, r) => sum + r.lengthCm, 0) / CM_PER_IN;
+  // the first run's length is what the path leaves it, so it shows read-only
+  const fitted = fittedRuns(runs, pathIn);
+  const totalIn = fitted.reduce((sum, r) => sum + r.lengthIn, 0);
   return (
     <div className={GAP_Y_TIGHT}>
       <CardHeading sub>
@@ -41,13 +47,24 @@ export function FoldRunsFields({ runs, own, pathIn, fold, onRuns }: RunsProps) {
       </CardHeading>
       {runs.map((run, i) => (
         <div key={i} className={FIELD_ROW}>
-          <NumberField
-            label={SPEAKER_TEXT.foldRunLength(i + 1)}
-            value={shownIn(run.lengthCm / CM_PER_IN)}
-            min={0}
-            step={RUN_STEP_IN}
-            onChange={(v) => onRuns(withRunEdited(runs, i, { lengthCm: v * CM_PER_IN }))}
-          />
+          {i === 0 ? (
+            <ReadOnlyField
+              label={
+                <Tooltip tip={SPEAKER_TEXT.foldFirstRunTip}>
+                  {SPEAKER_TEXT.foldRunLength(1)}
+                </Tooltip>
+              }
+              value={shownIn(fitted[0].lengthIn)}
+            />
+          ) : (
+            <NumberField
+              label={SPEAKER_TEXT.foldRunLength(i + 1)}
+              value={shownIn(run.lengthCm / CM_PER_IN)}
+              min={0}
+              step={RUN_STEP_IN}
+              onChange={(v) => onRuns(withRunEdited(runs, i, { lengthCm: v * CM_PER_IN }))}
+            />
+          )}
           <NumberField
             label={<Tooltip tip={SPEAKER_TEXT.foldAngleTip}>{SPEAKER_TEXT.foldAngle}</Tooltip>}
             value={shownTenth(run.angleDeg)}
@@ -55,7 +72,7 @@ export function FoldRunsFields({ runs, own, pathIn, fold, onRuns }: RunsProps) {
             onChange={(v) => onRuns(withRunEdited(runs, i, { angleDeg: v }))}
           />
           {runs.length > 1 && (
-            <Button size="xs" onClick={() => onRuns(withRunRemoved(runs, i))}>
+            <Button size="xs" onClick={() => onRuns(withRunRemoved(runs, i), i)}>
               {SPEAKER_TEXT.removeRun}
             </Button>
           )}
@@ -97,7 +114,18 @@ interface MountProps {
  */
 export function FoldMountFields({ fold, tapped, onMount }: MountProps) {
   const spot = fold.mount;
-  if (!spot) return <Notice>{SPEAKER_TEXT.foldNoSpot}</Notice>;
+  if (!spot)
+    return (
+      <div className={GAP_Y_TIGHT}>
+        <Notice>{SPEAKER_TEXT.foldNoSpot}</Notice>
+        <ToggleGroup
+          label={SPEAKER_TEXT.foldDriversRun}
+          value={-1}
+          onChange={(run) => onMount({ ...NEW_MOUNT, run })}
+          options={fold.runs.map((_, i) => [i, String(i + 1)] as const)}
+        />
+      </div>
+    );
   const { mount } = spot;
   const set = (change: Partial<HornMount>) => {
     const { alongIn, ...rest } = mount;

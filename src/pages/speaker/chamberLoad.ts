@@ -201,7 +201,12 @@ function withBestSpot(
     setbackIn: chamberSetbackIn(cabinet.panel, designed),
   };
   let best: { mount: MountIn; fit: HornGoalFit; score: number } | null = null;
+  /** the taps already scored, to the tenth of an inch: many spots give the same taps */
+  const scored = new Set<string>();
   for (const spot of foldSpots(flare.foldInput, flare.fold, SPOT_SEARCH_STEPS)) {
+    const key = `${spot.taps.front?.toFixed(1)}|${spot.taps.rear?.toFixed(1)}`;
+    if (scored.has(key)) continue;
+    scored.add(key);
     const read = hornDesignOf(designed, { count: 1, angle: 2 }, { ...room, foldTaps: spot.taps });
     const fit = read.ok ? hornGoalFit(read.design, goals, power) : null;
     if (!fit) continue;
@@ -215,7 +220,8 @@ function withBestSpot(
       ...designed,
       load: {
         kind: CHAMBER_LOAD.horn,
-        horn: { ...horn, mount: { ...rest, alongCm: alongIn * CM_PER_IN } },
+        // the runs the spot was scored on stay with it, so a later edit to the sections keeps the drivers' run
+        horn: { ...horn, runs: flare.runs, mount: { ...rest, alongCm: alongIn * CM_PER_IN } },
       },
     },
     fit: best.fit,

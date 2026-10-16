@@ -20,6 +20,7 @@ import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants
 import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import type { HornFlare } from "../../lib/speaker/speakerLayout";
 import { FoldMountFields, FoldRunsFields } from "./FoldFields";
+import { mountAfterRemoval } from "./foldRuns";
 import { COMPRESSION_RATIO } from "../../constants/hornThroat";
 import {
   compressionRatio,
@@ -113,11 +114,19 @@ function withTap(drive: SpeakerHorn["drive"], key: TapKey, tap: number): Speaker
   return drive;
 }
 
-/** The horn with its own runs set, or cleared (undefined: back to the automatic folds). */
-function withRuns(horn: SpeakerHorn, runs: readonly HornRun[] | undefined): SpeakerHorn {
-  if (runs) return { ...horn, runs };
-  const { runs: cleared, ...rest } = horn;
-  return cleared ? rest : horn;
+/**
+ * The horn with its own runs set, or cleared (undefined: back to the automatic folds, which drops the drivers' spot
+ * on the old runs). With run `removed` gone, the spot moves with its run, or goes with it.
+ */
+function withRuns(
+  horn: SpeakerHorn,
+  runs: readonly HornRun[] | undefined,
+  removed: number | undefined,
+): SpeakerHorn {
+  const { runs: _runs, mount, ...rest } = horn;
+  const kept =
+    runs && mount && removed !== undefined ? mountAfterRemoval(mount, removed) : runs && mount;
+  return { ...rest, ...(runs && { runs }), ...(kept && { mount: kept }) };
 }
 
 interface Props {
@@ -215,7 +224,7 @@ export function HornSettings({
           own={!!horn.runs?.length}
           pathIn={flare.path.pathIn}
           fold={flare.fold}
-          onRuns={(runs) => onEdit((h) => withRuns(h, runs))}
+          onRuns={(runs, removed) => onEdit((h) => withRuns(h, runs, removed))}
         />
       )}
       {folded &&

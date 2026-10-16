@@ -308,8 +308,8 @@ export const SPEAKER_TEXT = {
         ? `wall of run ${run + 1}`
         : `between runs ${run + 1} and ${across + 1}`,
   /** a folded horn board's end cuts, degrees off square at each end */
-  hornBoardCuts: ([a, b]: [string, string]) =>
-    a === "0" && b === "0" ? "square ends" : `ends cut ${a}° and ${b}° off square`,
+  hornBoardCuts: ([a, b]: readonly [number, number]) =>
+    a === 0 && b === 0 ? "square ends" : `ends cut ${a}° and ${b}° off square`,
   /** where the drivers' cutouts center on their board, from its first end */
   hornBoardSpot: (fromEnd: string) => `cutouts centered ${fromEnd}″ from its first end`,
   hornNoFitNote:
@@ -484,8 +484,8 @@ export const SPEAKER_TEXT = {
   removeRun: "Remove",
   resetFolds: "Reset folds",
   /** the runs' length against the sections' path length, as formatted lengths */
-  foldRunsTotal: (runs: string, path: string) =>
-    `Runs: ${runs} in. Sections: ${path} in. The first run takes up any difference.`,
+  foldRunsTotal: (runs: string, path: string) => `Runs: ${runs} in of the sections' ${path} in.`,
+  foldFirstRunTip: "The first run takes what the path's length leaves after the other runs.",
   foldOutside: (n: number) => `Run ${n} goes past the box. Shorten it or change its angle.`,
   foldCrossing: (a: number, b: number) =>
     `Runs ${a} and ${b} cross, or have no room for a board between them.`,
@@ -511,7 +511,7 @@ export const SPEAKER_TEXT = {
   foldAcrossChamber: "The other side of the board is the rear chamber.",
   foldAcrossRun: (n: number) => `The other side of the board is run ${n}.`,
   foldTappedNeedsRun: "A tapped horn needs a run on both sides of the drivers. Move them.",
-  foldNoSpot: "No wall here has room for the drivers. Add runs, or set them side by side.",
+  foldNoSpot: "No spot fits the drive's taps. Pick a run for the drivers.",
   foldOffsetNeedsChamber:
     "An offset horn needs the cone fronts in a run and the backs in the rear chamber. Move the drivers.",
   hornImport: "Import a Hornresp record",
