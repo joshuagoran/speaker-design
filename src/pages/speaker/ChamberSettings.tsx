@@ -172,9 +172,20 @@ export function ChamberSettings({
   const tapped =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
   /** how the horn meets its goals, and whether it holds more air than the chamber has */
+  const netLiters = result?.netLiters ?? chamber.netLiters ?? undefined;
+  /** the clear face, as numbers: the layout is new each render, the face often is not */
+  const { x: clearX, y: clearY, w: clearW, h: clearH } = placed?.clear ?? {};
   const goalCheck = useMemo(
-    () => hornGoalCheck(cabinet, chamber, placed, result?.netLiters),
-    [cabinet, chamber, placed, result?.netLiters],
+    () =>
+      hornGoalCheck(
+        cabinet,
+        chamber,
+        clearX === undefined || clearY === undefined || clearW === undefined || clearH === undefined
+          ? undefined
+          : { clear: { x: clearX, y: clearY, w: clearW, h: clearH } },
+        netLiters,
+      ),
+    [cabinet, chamber, clearX, clearY, clearW, clearH, netLiters],
   );
   /** the chamber's clear room, in: a new woofer's size fits it */
   const clearIn = wooferClearIn(chamber, cabinet.panel.thicknessIn);

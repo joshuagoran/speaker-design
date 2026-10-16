@@ -15,7 +15,14 @@ import { shownIn, shownTenth } from "./speakerFields";
 
 /** A record read onto the horn: the horn, the chamber's net air and vent; or why it cannot be read. */
 export type HornImport =
-  | { ok: true; horn: SpeakerHorn; netLiters: number; vent: ChamberVent }
+  | {
+      ok: true;
+      horn: SpeakerHorn;
+      netLiters: number;
+      vent: ChamberVent;
+      /** the record had a front chamber the import does not use: the cones and the walls set it */
+      frontChamberDropped: boolean;
+    }
   | { ok: false; reason: string };
 
 /**
@@ -71,11 +78,13 @@ export function hornFromRecord(
       horn,
       netLiters: Math.max(MIN_NET_L, shownTenth(design.rearChamber?.liters ?? 0)),
       vent: { kind: VENT_KIND.sealed },
+      frontChamberDropped: design.frontChamber !== null,
     };
   return {
     ok: true,
     horn,
     netLiters: Math.max(MIN_NET_L, shownTenth(design.rear.liters)),
     vent: design.rear.port ? roundVent(design.rear.port) : { kind: VENT_KIND.sealed },
+    frontChamberDropped: design.throatChamber > 0,
   };
 }

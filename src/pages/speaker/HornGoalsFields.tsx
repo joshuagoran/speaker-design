@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HornGoalFit, HornGoals } from "../../types";
 import { CardHeading } from "../../components/ui/CardHeading";
 import { Button } from "../../components/ui/Button";
@@ -35,7 +35,17 @@ interface Props {
 export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Props) {
   const [designing, setDesigning] = useState(false);
   const [failed, setFailed] = useState(false);
+  /** the queued search, cleared if the fields go away first */
+  const queued = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (queued.current !== null) clearTimeout(queued.current);
+    },
+    [],
+  );
   const short = fit ? goals.targetDb - fit.maxOutDb : 0;
+  /** the band is empty: nothing to design for or check */
+  const outOfOrder = goals.highHz <= goals.lowHz;
   return (
     <div className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${GAP_Y_TIGHT}`}>
       <CardHeading sub>
@@ -48,7 +58,10 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
             label={<Tooltip tip={tip}>{label}</Tooltip>}
             value={goals[goal]}
             {...HORN_GOAL_FIELDS[goal]}
-            onChange={(v) => onGoals({ ...goals, [goal]: v })}
+            onChange={(v) => {
+              setFailed(false);
+              onGoals({ ...goals, [goal]: v });
+            }}
           />
         ))}
       </div>
@@ -57,12 +70,13 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
           <Button
             variant="primary"
             size="xs"
-            disabled={designing}
+            disabled={designing || outOfOrder}
             title={SPEAKER_TEXT.hornDesignTip}
             onClick={() => {
               setDesigning(true);
               // let the button show the work before the search holds the page
-              setTimeout(() => {
+              queued.current = setTimeout(() => {
+                queued.current = null;
                 setFailed(!onDesign(goals));
                 setDesigning(false);
               }, 0);
@@ -72,6 +86,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
           </Button>
         </div>
       )}
+      {outOfOrder && <Notice>{SPEAKER_TEXT.hornGoalsOrder}</Notice>}
       {failed && <Notice>{SPEAKER_TEXT.hornDesignFailed}</Notice>}
       {fit && (
         <>

@@ -434,7 +434,7 @@ export const SPEAKER_TEXT = {
   ventTapped: "A tapped horn has no vent.",
   hornGoals: "Goals",
   hornGoalsTip:
-    "What the horn is for. Design from goals sizes the horn to meet them in this chamber. The chamber's size is the box size.",
+    "What the horn is for. Design from goals sizes the horn to fit inside this chamber and meet them.",
   hornGoalLow: "Lowest frequency, Hz",
   hornGoalLowTip: "The horn plays flat down to here.",
   hornGoalHigh: "Highest frequency, Hz",
@@ -447,6 +447,7 @@ export const SPEAKER_TEXT = {
   hornDesignTip:
     "Sets the sections, where the cones open and the chamber volume for these goals and this drive. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
   hornDesignFailed: "No horn for these goals can be calculated in this chamber.",
+  hornGoalsOrder: "Set the highest frequency above the lowest.",
   /** the goals check: how flat the response is over the goals' band */
   hornFitSpread: (spread: string, low: string, high: string) =>
     `Response: within ${spread} dB from ${low} to ${high} Hz.`,
@@ -466,7 +467,10 @@ export const SPEAKER_TEXT = {
   hornImportField: "Hornresp record",
   hornImportAction: "Import",
   hornImportDone: "Imported. The drivers stay as set in this chamber.",
-  hornImportFailed: (reason: string) => `This record cannot be imported: ${reason}.`,
+  hornImportFailed: (reason: string) =>
+    `This record cannot be imported: ${reason.replace(/\.$/, "")}.`,
+  /** after a tapped record with a front chamber: the cones and the walls set it here */
+  hornImportFrontChamber: "The record's front chamber is not used. The cones and the walls set it.",
   hornImportNoHorn: "it has no horn",
   /** the note under a section that starts with a step, by the section's number */
   hornStep: (n: number) =>

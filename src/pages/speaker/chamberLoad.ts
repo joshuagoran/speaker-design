@@ -194,8 +194,9 @@ function chamberAirLiters(
 }
 
 /**
- * How a horn chamber meets its goals (`hornGoalFit`, on the model's net air `netLiters`), and its horn's air (the
- * flare's and the front chamber's) with the chamber's when the horn holds more; null without a horn.
+ * How a horn chamber meets its goals (`hornGoalFit`, on the model's net air `netLiters`; no fit while that is not known
+ * yet), and its horn's air (the flare's and the front chamber's) with the chamber's when the horn holds more; null
+ * without a horn.
  */
 export function hornGoalCheck(
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
@@ -207,13 +208,16 @@ export function hornGoalCheck(
   const { horn } = chamber.load;
   const throat = throatCones(chamber.drivers);
   const setbackIn = chamberSetbackIn(cabinet.panel, chamber);
-  const read = hornDesignOf(
-    chamber,
-    { count: 1, angle: 2 },
-    { netLiters: netLiters ?? 0, face: chamberClearFace(cabinet, chamber), setbackIn },
-  );
+  const read =
+    netLiters === undefined
+      ? null
+      : hornDesignOf(
+          chamber,
+          { count: 1, angle: 2 },
+          { netLiters, face: chamberClearFace(cabinet, chamber), setbackIn },
+        );
   const fit =
-    read.ok && throat
+    read?.ok && throat
       ? hornGoalFit(read.design, horn.goals ?? HORN_GOALS_DEFAULT, throat.parts.ts)
       : null;
   const hornL =

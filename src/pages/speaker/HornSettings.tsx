@@ -27,6 +27,7 @@ import { HornImportFold } from "./HornImportFold";
 import type { HornImport } from "./hornrespImport";
 import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
 import {
+  SECTIONS_NEEDED,
   driveAfterRemoval,
   joinsNext,
   shownIn2,
@@ -46,9 +47,12 @@ import {
 /** The drives the engines don't take yet: shown, not picked. */
 const DRIVES_NOT_MODELED = [HORN_DRIVE.back];
 
+/** An offset drive's one tap, by its key in the drive. */
+const OFFSET_TAP = "tap" satisfies keyof Extract<SpeakerHorn["drive"], { kind: "offset" }>;
+
 /** Each tap setting of a drive: where it is in the drive, its label and its tooltip. */
 const TAP_FIELDS = {
-  offset: [{ key: "tap", label: SPEAKER_TEXT.hornTap, tip: SPEAKER_TEXT.hornTapTip }],
+  offset: [{ key: OFFSET_TAP, label: SPEAKER_TEXT.hornTap, tip: SPEAKER_TEXT.hornTapTip }],
   tapped: [
     { key: "frontTap", label: SPEAKER_TEXT.hornFrontTap, tip: SPEAKER_TEXT.hornFrontTapTip },
     { key: "rearTap", label: SPEAKER_TEXT.hornRearTap, tip: SPEAKER_TEXT.hornRearTapTip },
@@ -88,15 +92,15 @@ type TapKey = (typeof TAP_FIELDS)[keyof typeof TAP_FIELDS][number]["key"];
 
 /** The section a tap opens after (a section boundary from 1); null when the drive has no such tap. */
 function tapOf(drive: SpeakerHorn["drive"], key: TapKey): number | null {
-  if (drive.kind === HORN_DRIVE.offset && key === "tap") return drive.tap;
-  if (drive.kind === HORN_DRIVE.tapped && key !== "tap") return drive[key];
+  if (drive.kind === HORN_DRIVE.offset && key === OFFSET_TAP) return drive.tap;
+  if (drive.kind === HORN_DRIVE.tapped && key !== OFFSET_TAP) return drive[key];
   return null;
 }
 
 /** The drive with tap `key` set to open after section `tap`; unchanged when it has no such tap. */
 function withTap(drive: SpeakerHorn["drive"], key: TapKey, tap: number): SpeakerHorn["drive"] {
-  if (drive.kind === HORN_DRIVE.offset && key === "tap") return { ...drive, tap };
-  if (drive.kind === HORN_DRIVE.tapped && key !== "tap") return { ...drive, [key]: tap };
+  if (drive.kind === HORN_DRIVE.offset && key === OFFSET_TAP) return { ...drive, tap };
+  if (drive.kind === HORN_DRIVE.tapped && key !== OFFSET_TAP) return { ...drive, [key]: tap };
   return drive;
 }
 
@@ -238,14 +242,15 @@ export function HornSettings({
             <CardHeading
               sub
               action={
-                segments.length > 1 && (
+                // a drive's taps need their sections: no Remove at the fewest
+                segments.length > SECTIONS_NEEDED[drive.kind] && (
                   <Button
                     size="xs"
                     onClick={() =>
                       onEdit((h) => ({
                         ...h,
                         segments: withSectionRemoved(h.segments, i),
-                        drive: driveAfterRemoval(h.drive, i),
+                        drive: driveAfterRemoval(h.drive, i, h.segments.length - 1),
                       }))
                     }
                   >

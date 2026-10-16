@@ -173,7 +173,7 @@ function withLongestSplit(segments: readonly HornSegment[]): HornSegment[] {
 }
 
 /** How many sections each drive needs: a closed stub before an offset tap, a section between a tapped horn's taps. */
-const SECTIONS_NEEDED: Record<SpeakerHorn["drive"]["kind"], number> = {
+export const SECTIONS_NEEDED: Record<SpeakerHorn["drive"]["kind"], number> = {
   [HORN_DRIVE.front]: 1,
   [HORN_DRIVE.offset]: 2,
   [HORN_DRIVE.tapped]: 3,
@@ -198,14 +198,26 @@ export function withDriveKind(horn: SpeakerHorn, kind: SpeakerHorn["drive"]["kin
   return { ...horn, segments, drive };
 }
 
-/** The drive with its taps moved back one where they came after removed section `i`, so they stay on their sections. */
-export function driveAfterRemoval(drive: SpeakerHorn["drive"], i: number): SpeakerHorn["drive"] {
+/** `x` kept from `lo` to `hi`. */
+const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+
+/**
+ * The drive with its taps moved back one where they came after removed section `i`, so they stay on their sections,
+ * then kept between two of the `n` sections left (1 to n − 1), a tapped horn's front before its back.
+ */
+export function driveAfterRemoval(
+  drive: SpeakerHorn["drive"],
+  i: number,
+  n: number,
+): SpeakerHorn["drive"] {
   const moved = (tap: number) => (tap > i ? tap - 1 : tap);
   switch (drive.kind) {
     case HORN_DRIVE.offset:
-      return { ...drive, tap: moved(drive.tap) };
-    case HORN_DRIVE.tapped:
-      return { ...drive, frontTap: moved(drive.frontTap), rearTap: moved(drive.rearTap) };
+      return { ...drive, tap: clamp(moved(drive.tap), 1, n - 1) };
+    case HORN_DRIVE.tapped: {
+      const frontTap = clamp(moved(drive.frontTap), 1, n - 2);
+      return { ...drive, frontTap, rearTap: clamp(moved(drive.rearTap), frontTap + 1, n - 1) };
+    }
     default:
       return drive;
   }

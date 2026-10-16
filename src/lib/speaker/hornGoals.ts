@@ -36,6 +36,7 @@ import {
   FOLD_AIR_SHARE,
   HORN_GOAL_LIMIT,
   LOW_EDGE_DB,
+  MIN_SECTION_SHARE,
   SEARCH_FLARES,
   SEARCH_PATH_SHARES,
   SEARCH_POINTS,
@@ -63,6 +64,8 @@ export function hornGoalFit(
   power: DriverPower,
 ): HornGoalFit | null {
   if (!(goals.lowHz > 0 && goals.highHz > goals.lowHz)) return null;
+  // no power or no travel: no maximum output to read
+  if (!(power.aes > 0 && design.driver.Xmax > 0)) return null;
   const freqs = logSpacedFrequencies(goals.lowHz, goals.highHz, SEARCH_POINTS);
   const model = hornLayoutModel(design, freqs, SPEAKER_RESPONSE_VOLTS);
   if (!model || !model.curve.every((p) => Number.isFinite(p.spl) && p.xmm > 0)) return null;
@@ -204,9 +207,9 @@ export function goalHorn(search: GoalSearch, depthCm: number): GoalHorn | null {
     const fit = read.ok ? hornGoalFit(read.design, goals, search.power) : null;
     return fit && { horn, netLiters: rearL, fit, score: scoreOf(fit, goals) };
   };
-  /** the taps must stay in order and apart, inside the path */
+  /** the taps must stay in order, inside the path, each section at least `MIN_SECTION_SHARE` of it */
   const tapsValid = (taps: readonly number[]) =>
-    taps.every((t, i) => t > 0 && t < 1 && (i === 0 || t > taps[i - 1]));
+    [0, ...taps, 1].every((t, i, all) => i === 0 || t - all[i - 1] >= MIN_SECTION_SHARE);
   const tapSets: number[][] =
     TAP_COUNT[drive] === 0
       ? [[]]

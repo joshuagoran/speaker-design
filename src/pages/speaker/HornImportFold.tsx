@@ -38,7 +38,12 @@ export function HornImportFold({ onImport }: Props) {
       </div>
       {outcome &&
         (outcome.ok ? (
-          <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornImportDone}</p>
+          <>
+            <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornImportDone}</p>
+            {outcome.frontChamberDropped && (
+              <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornImportFrontChamber}</p>
+            )}
+          </>
         ) : (
           <Notice>{SPEAKER_TEXT.hornImportFailed(outcome.reason)}</Notice>
         ))}

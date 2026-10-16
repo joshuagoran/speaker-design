@@ -105,12 +105,17 @@ test("horn drive: each flare law's middle splits a section into two of the same 
   );
 });
 
-test("horn drive: removing a section moves the taps after it back one", () => {
+test("horn drive: removing a section moves the taps after it back one, kept between sections and in order", () => {
   const drive = { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 3 } as const;
-  assert.deepEqual(driveAfterRemoval(drive, 0), { ...drive, frontTap: 0, rearTap: 2 });
-  assert.deepEqual(driveAfterRemoval(drive, 2), { ...drive, rearTap: 2 });
-  assert.deepEqual(driveAfterRemoval(drive, 3), drive);
-  assert.deepEqual(driveAfterRemoval({ kind: HORN_DRIVE.offset, tap: 2 }, 1), {
+  // five sections to four
+  assert.deepEqual(driveAfterRemoval(drive, 2, 4), { ...drive, rearTap: 2 });
+  assert.deepEqual(driveAfterRemoval(drive, 3, 4), drive);
+  // the first section goes: the front stays after the new first section
+  assert.deepEqual(driveAfterRemoval(drive, 0, 4), { ...drive, frontTap: 1, rearTap: 2 });
+  // four sections to three, the taps meeting: the back moves past the front
+  const close = { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 2 } as const;
+  assert.deepEqual(driveAfterRemoval(close, 1, 3), close);
+  assert.deepEqual(driveAfterRemoval({ kind: HORN_DRIVE.offset, tap: 2 }, 1, 2), {
     kind: HORN_DRIVE.offset,
     tap: 1,
   });
@@ -192,7 +197,12 @@ test("horn goals: the fit's maximum output is the lower of the power and Xmax li
   // with almost no power the power rating limits it everywhere
   const weak = hornGoalFit(read.design, HORN_GOALS_DEFAULT, { ...cones.parts.ts, aes: 0.01 });
   assert.equal(weak?.limit, HORN_GOAL_LIMIT.power);
-  // an empty band has no fit
+  // no power or no travel has no fit; nor has an empty band
+  assert.equal(hornGoalFit(read.design, HORN_GOALS_DEFAULT, { ...cones.parts.ts, aes: 0 }), null);
+  const still = { ...read.design, driver: { ...read.design.driver, Xmax: 0 } };
+  assert.equal(hornGoalFit(still, HORN_GOALS_DEFAULT, cones.parts.ts), null);
+  // the page's check gives no fit while the net air is not known yet
+  assert.equal(hornGoalCheck(BIN_SPEC.cabinet, TAPPED, PLACED, undefined)?.fit, null);
   assert.equal(
     hornGoalFit(read.design, { ...HORN_GOALS_DEFAULT, highHz: 30 }, cones.parts.ts),
     null,
@@ -258,6 +268,8 @@ test("Hornresp import: a tapped record sets the sections, the taps and a sealed 
   // the chambers' record: its rear chamber is the net air
   const chambers = hornFromRecord(recordText("th-thorn10-chambers"), null, 100);
   assert.ok(chambers.ok && chambers.netLiters === 6 && chambers.horn.path === "straight");
+  // its front chamber is not used: the cones and the walls set it
+  assert.ok(chambers.frontChamberDropped && !read.frontChamberDropped);
 });
 
 test("Hornresp import: an offset record keeps its tap, rear chamber and vent area", () => {
