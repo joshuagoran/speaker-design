@@ -1656,6 +1656,11 @@ export interface NetworkDriver {
    * network's radiation impedances carry; 0 with no radiation load (the box models' mode)
    */
   airMassOff: number;
+  /**
+   * the amplifier's output resistance in series with the coil, ohms (Hornresp's Rg); absent: none. It adds to Re in the
+   * motor; the driver's impedance readout leaves it out, as Hornresp's does.
+   */
+  sourceResistance?: number;
 }
 
 /** An air volume at a node, lumped: its compliance V/(ρc²) to the outside air. */
@@ -1863,8 +1868,11 @@ export type HornrespReading =
       design: HornLayoutDesign;
       preset: PresetNetwork;
       volts: number;
-      /** the rear chamber's leak and vent losses as quality factors (Infinity: none), and whether the leak radiates */
-      losses: { QL: number; Qp: number; leakRadiates: boolean };
+      /**
+       * the rear chamber's leak and vent losses as quality factors (Infinity: none), whether the leak radiates, and the
+       * amplifier's output resistance (Hornresp's Rg, ohms)
+       */
+      losses: { QL: number; Qp: number; leakRadiates: boolean; sourceResistance: number };
     }
   | { ok: false; reason: string };
 

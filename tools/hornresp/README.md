@@ -74,7 +74,7 @@ applies them.
 
 ## Tapped and offset-driver reference records
 
-`records/` holds five records, as Hornresp exported them. Their results are in `tests/hornresp/`, and
+`records/` holds six records, as Hornresp exported them. Their results are in `tests/hornresp/`, and
 `tests/hornresp-reader.test.ts` checks them.
 
 | Record                | Layout | Design                                                                 |
@@ -84,6 +84,7 @@ applies them.
 | `th-15`               | TH     | A 15″ tapped horn, 300 cm conical path                                 |
 | `th-15-four`          | TH     | `th-15` in four sections: the rears tap S4                             |
 | `od-skram`            | OD     | SKRAM-like: parabolic, from its FreeCAD model; Vrc 120 L is a guess    |
+| `th18-xoc1`           | TH     | TH18 by Xoc1 (PD 1850/3), as published on its plans page; Rg 0.1 Ω     |
 
 To run one again, use `hr_run` as for any case. The layout key is in the record. Do not step the layout with the
 Nd label in Hornresp: its OD3 step (a Ripole) rewrites the horn's values.
