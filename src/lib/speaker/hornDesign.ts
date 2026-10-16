@@ -13,7 +13,7 @@ import type {
   HornSegment,
 } from "../../types";
 import { frontChamber, throatCones } from "./hornThroat";
-import { isSizedSegment, splitSegmentsAt } from "../acoustics/hornSegments";
+import { isSizedSegment, segmentsAirLiters, splitSegmentsAt } from "../acoustics/hornSegments";
 import type { FoldLayout } from "./hornBoards";
 import { slotRunIn, stuffedLiters } from "./chamberAir";
 import { slotFinsOf } from "../pa/calc";
@@ -102,17 +102,28 @@ export interface HornDesignRoom {
   fold?: Pick<FoldLayout, "segments" | "taps"> | null;
 }
 
+/** A tap this near a front-loaded horn's closed end is at it, in. */
+const MIN_TAP_IN = 1e-6;
+
 /**
  * A folded horn's sections and drive from its boards: the sections split at the drivers' taps, the taps as section
  * boundaries. A tapped horn needs the drivers' two sides in the passage, either way round (`backsFirst`: the backs open
  * nearer the closed end; the drive's taps stay in order and the design swaps its two passages' air); an offset horn the fronts in the passage past its start and the backs in the rear chamber; a
- * front-loaded horn the fronts at the start, or no drivers on a board (the throat at the closed end). False where the
- * drivers' place does not fit the drive.
+ * front-loaded horn the fronts at the start (the passage behind them, beside the closed end, is air in front of them),
+ * or no drivers on a board (the throat at the closed end). False where the drivers' place does not fit the drive.
  */
 function boardsDrive(
   drive: SpeakerHorn["drive"],
   fold: Pick<FoldLayout, "segments" | "taps">,
-): { segments: HornSegment[]; drive: SpeakerHorn["drive"]; backsFirst?: boolean } | false {
+):
+  | {
+      segments: HornSegment[];
+      drive: SpeakerHorn["drive"];
+      backsFirst?: boolean;
+      /** a front-loaded horn's passage between its closed end and the cones, L: air in front of the cones */
+      throatLiters?: number;
+    }
+  | false {
   const { segments, taps } = fold;
   if (drive.kind === HORN_DRIVE.tapped) {
     if (taps?.front == null || taps.rear == null) return false;
@@ -136,8 +147,17 @@ function boardsDrive(
     const split = splitSegmentsAt(segments, [taps.front * CM_PER_IN]);
     return { segments: split.segments, drive: { kind: drive.kind, tap: split.boundaries[0] } };
   }
-  if (taps && (taps.rear !== null || (taps.front ?? 0) > 1e-6)) return false;
-  return { segments, drive };
+  if (taps && taps.rear !== null) return false;
+  const tapIn = taps?.front ?? 0;
+  if (tapIn <= MIN_TAP_IN) return { segments, drive };
+  // the cones beside the closed end (the drivers need room there): the passage behind them is air in front of them
+  const split = splitSegmentsAt(segments, [tapIn * CM_PER_IN]);
+  const at = split.boundaries[0];
+  return {
+    segments: split.segments.slice(at),
+    drive,
+    throatLiters: segmentsAirLiters(split.segments.slice(0, at)),
+  };
 }
 
 /**
@@ -183,8 +203,10 @@ export function hornDesignOf(
     )
   )
     return gap(HORN_ENGINE_GAP.taps);
-  /** the air between the cones and the walls' back edges; a direct radiator has none */
-  const frontLiters = horn ? frontChamber(throat.cone, throat.count, room.setbackIn).liters : 0;
+  /** the air between the cones and the walls' back edges (a folded front-loaded horn's passage behind the cones with it); a direct radiator has none */
+  const frontLiters =
+    (horn ? frontChamber(throat.cone, throat.count, room.setbackIn).liters : 0) +
+    (boards ? (boards.throatLiters ?? 0) : 0);
   /** the chamber's air with its stuffing, as a direct chamber's */
   const airLiters = stuffedLiters(chamber, room.netLiters);
   const common = {

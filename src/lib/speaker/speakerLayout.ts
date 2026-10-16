@@ -1010,9 +1010,12 @@ const layoutTries = (
   body: FoldDriverBody | null,
   shape: FoldShape,
 ): HornBoards[] => {
+  // an offset horn's drivers over a sealed rear chamber; a front-loaded horn's too, beside the closed end (without a
+  // cone to place, a zigzag from the closed end)
   if (kind === HORN_DRIVE.offset) return body ? offsetPlans(room, body) : [];
   const tapped = kind === HORN_DRIVE.tapped;
-  if (!tapped || !body) return zigzagPlans(room, tapped);
+  if (!tapped) return body ? offsetPlans(room, body) : zigzagPlans(room, false);
+  if (!body) return zigzagPlans(room, true);
   // a tapped horn also tries the classic spiral: the fronts near the closed end, the backs into the mouth's leg
   const zigzags = shape === FOLD_SHAPE.spiral ? [] : zigzagPlans(room, true);
   const spirals = shape === FOLD_SHAPE.zigzag ? [] : spiralPlans(room, body);

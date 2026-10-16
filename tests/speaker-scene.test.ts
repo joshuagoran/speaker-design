@@ -402,7 +402,8 @@ describe("horns", () => {
       const boards = named(solid, SPEAKER_MESH_NAMES.hornBoard);
       expect(boards).toHaveLength(fold.plan.boards.length);
       const box = boxOf(...boards);
-      expect(box.min.z).toBeGreaterThan(-base.dims.d / 2);
+      // inside this chamber, 28 in deep
+      expect(box.min.z).toBeGreaterThan(-spec.cabinet.chambers[0].dims.d / 2);
       expect(box.max.z).toBeLessThanOrEqual(
         frontZ(spec) - spec.cabinet.insetIn - BAFFLE_THICKNESS_IN + 1e-6,
       );

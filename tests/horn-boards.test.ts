@@ -393,3 +393,19 @@ test("horn boards: boards that stop short of each other let the sound cut across
   assert.equal(layout.checks.shortcut, true);
   assert.equal(foldPasses(layout), false);
 });
+
+test("horn boards: a folded front-loaded horn sets its drivers over a rear chamber beside the closed end, and plays", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+  const [bin] = spec.cabinet.chambers;
+  assert.ok(bin.load.kind === CHAMBER_LOAD.horn);
+  const chamber = {
+    ...bin,
+    load: { ...bin.load, horn: { ...bin.load.horn, path: HORN_PATH.folded, boards: undefined } },
+  };
+  const cabinet = { ...spec.cabinet, chambers: [chamber] };
+  const fold = hornFlare(cabinet, speakerLayout(cabinet).chambers[0])?.fold;
+  assert.ok(fold && foldPasses(fold.layout), JSON.stringify(fold?.layout.checks));
+  assert.ok(fold.plan.drivers, "the drivers sit on a board");
+  assert.ok(fold.layout.taps?.front != null && fold.layout.taps.rear === null);
+  assert.ok(speakerResponse({ ...spec, cabinet }).bands.length > 0, "it plays");
+});
