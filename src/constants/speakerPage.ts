@@ -252,6 +252,11 @@ export const SPEAKER_TEXT = {
   /** under the side view when every horn is folded */
   foldSectionNote:
     "Side section, baffle at the left. Gray: the boards. Blue: the passage, the mouth marked on the baffle. Magenta: the drivers. Red: a part that fails a check.",
+  /** under the side view: what drags */
+  foldDragNote: "Drag a corner, a board, the drivers, or the back or top wall.",
+  /** a folded horn with boards of its own (dragged, or from Design from goals) */
+  foldOwnBoards: "These boards are set by hand.",
+  foldAutoBoards: "Use automatic boards",
   /** in the Horn settings of a folded horn, in place of the flare sections */
   foldSectionsNote:
     "Folded: the boards set the passage's shape, its areas and where the drivers tap it.",

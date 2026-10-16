@@ -379,6 +379,23 @@ export function ChamberSettings({
           options={entriesOf(FOLD_MOUTH_NAMES)}
         />
       )}
+      {foldedHorn && chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.boards && (
+        <div className={FIELD_ROW}>
+          <p className="text-xs text-stone-500">{SPEAKER_TEXT.foldOwnBoards}</p>
+          <Button
+            size="xs"
+            onClick={() =>
+              onEdit((c) => {
+                if (c.load.kind !== CHAMBER_LOAD.horn) return c;
+                const { boards: _own, ...horn } = c.load.horn;
+                return { ...c, load: { ...c.load, horn } };
+              })
+            }
+          >
+            {SPEAKER_TEXT.foldAutoBoards}
+          </Button>
+        </div>
+      )}
       {foldedHorn && tapped && chamber.load.kind === CHAMBER_LOAD.horn && (
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.foldShapeTip}>{SPEAKER_TEXT.foldShape}</Tooltip>}

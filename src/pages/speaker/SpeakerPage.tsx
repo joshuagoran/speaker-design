@@ -342,13 +342,19 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               {flares.length > 0 && (
                 <Card gapY={false} className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
                   <div className="flex-1 min-h-0">
-                    <SpeakerSection spec={spec} />
+                    <SpeakerSection
+                      spec={spec}
+                      onEditChamber={(i, edit) => speakerPage.editChamber(i, edit)}
+                    />
                   </div>
                   <p className="text-xs text-stone-500 mt-2">
                     {flares.every((f) => f.fold)
                       ? SPEAKER_TEXT.foldSectionNote
                       : SPEAKER_TEXT.sectionNote}
                   </p>
+                  {flares.some((f) => f.fold) && (
+                    <p className="text-xs text-stone-500">{SPEAKER_TEXT.foldDragNote}</p>
+                  )}
                 </Card>
               )}
             </div>

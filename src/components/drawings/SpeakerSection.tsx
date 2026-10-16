@@ -1,4 +1,4 @@
-import type { SpeakerSpec } from "../../types";
+import type { SpeakerChamber, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { alpha } from "../../styles/palette";
 import {
@@ -11,11 +11,15 @@ import {
   speakerLayout,
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
-import { PORT_SHAPE } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, PORT_SHAPE } from "../../constants/speakerSpec";
+import { FOLD_WALL } from "../../constants/hornBoards";
+import { withWallMoved } from "../../lib/speaker/foldEdit";
 import { FoldSection } from "./FoldSection";
 
 interface Props {
   spec: Pick<SpeakerSpec, "cabinet">;
+  /** edits chamber `index` (its folded horn's boards and walls drag in the side view); absent: no dragging */
+  onEditChamber?: (index: number, edit: (chamber: SpeakerChamber) => SpeakerChamber) => void;
 }
 
 /** The drawing's scale, px per inch, and its margin and the gap between two panels, px. */
@@ -32,26 +36,54 @@ const GAP_PX = 14;
  * walls narrower than the cones where the horn loads them), and a slot's channel (up a front side in the top section,
  * along the floor in the side). Null when no chamber has a horn.
  */
-export function SpeakerSection({ spec }: Props) {
+export function SpeakerSection({ spec, onEditChamber }: Props) {
   const pal = usePalette();
   const { cabinet } = spec;
   const t = cabinet.panel.thicknessIn;
   const inset = baffleInsetIn(cabinet);
   const layout = speakerLayout(cabinet);
-  const flares = layout.chambers.flatMap((placed) => {
+  const flares = layout.chambers.flatMap((placed, index) => {
     const flare = hornFlare(cabinet, placed);
-    return flare ? [{ placed, flare }] : [];
+    return flare ? [{ placed, flare, index }] : [];
   });
   if (!flares.length) return null;
   // a straight path draws here; a folded one is its boards (`FoldSection`)
   const horns = flares.flatMap(({ placed, flare }) =>
     flare.path ? [{ placed, flare, path: flare.path }] : [],
   );
-  const folds = flares.flatMap(({ placed, flare }) =>
-    flare.fold ? [{ placed, fold: flare.fold }] : [],
+  const folds = flares.flatMap(({ placed, flare, index }) =>
+    flare.fold ? [{ placed, fold: flare.fold, index }] : [],
   );
-  const foldViews = folds.map(({ placed, fold }, i) => (
-    <FoldSection key={`f${i}`} cabinet={cabinet} placed={placed} fold={fold} />
+  const foldViews = folds.map(({ placed, fold, index }) => (
+    <FoldSection
+      key={`f${index}`}
+      cabinet={cabinet}
+      placed={placed}
+      fold={fold}
+      onPlan={
+        onEditChamber &&
+        ((plan) =>
+          onEditChamber(index, (c) =>
+            c.load.kind === CHAMBER_LOAD.horn
+              ? { ...c, load: { ...c.load, horn: { ...c.load.horn, boards: plan } } }
+              : c,
+          ))
+      }
+      onWall={
+        onEditChamber &&
+        ((wall, byIn) =>
+          onEditChamber(index, (c) => {
+            const dims =
+              wall === FOLD_WALL.back
+                ? { ...c.dims, d: c.dims.d + byIn }
+                : { ...c.dims, h: c.dims.h + byIn };
+            // the horn's own boards keep their corners on the wall that moved
+            if (c.load.kind !== CHAMBER_LOAD.horn || !c.load.horn.boards) return { ...c, dims };
+            const boards = withWallMoved(c.load.horn.boards, wall, byIn);
+            return { ...c, dims, load: { ...c.load, horn: { ...c.load.horn, boards } } };
+          }))
+      }
+    />
   ));
   if (!horns.length) return <>{foldViews}</>;
   /** the baffle's inside face is where the path's z starts, behind the frame's inset and the baffle */
