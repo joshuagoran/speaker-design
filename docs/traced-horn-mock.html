@@ -337,6 +337,17 @@
           ><i class="sw" style="background: var(--magenta)"></i>drivers (the line is the cone)</span
         >
         <span><i class="sw" style="background: var(--cyan)"></i>mouth</span>
+        <span
+          ><i
+            class="sw"
+            style="background: var(--yellow); border-radius: 50%; border: 1px solid var(--ink)"
+          ></i
+          >joint</span
+        >
+        <span
+          ><i class="sw" style="background: var(--yellow); border: 1px solid var(--ink)"></i>held at
+          90°</span
+        >
       </div>
     </div>
     <div class="card">
@@ -1383,47 +1394,37 @@
         });
         grip.dataset.drivers = "1";
       });
-      // board end handles
-      if (tool === "move")
-        S.boards.forEach((bd, i) =>
-          ["a", "b"].forEach((end) => {
-            const h = el("circle", {
-              cx: X(bd[end].z),
-              cy: Y(bd[end].y),
-              r: 6,
-              fill: css("--panel"),
-              stroke: css("--ink"),
-              "stroke-width": 1.5,
-              style: "cursor:pointer",
-            });
-            h.dataset.end = `${i}:${end}`;
-          }),
-        );
-      // joints: in the Square joint tool, one handle per joint; in Delete, one per corner; elsewhere, a mark on each held
-      // joint
+      // board ends: a yellow circle on a joint, a yellow square on a joint held at 90°, an open circle on a free end.
+      // Move drags them; Square joint and Delete (corners) click them; elsewhere they only mark the joints.
       const seen = [];
       S.boards.forEach((bd, i) =>
         ["a", "b"].forEach((end) => {
           const P = bd[end];
-          const pr = partnerAt(i, end);
-          if (!pr || seen.some((q) => len(sub(q, P)) < JOIN)) return;
+          if (seen.some((q) => len(sub(q, P)) < JOIN)) return;
           seen.push(P);
+          const pr = partnerAt(i, end);
           const held = !!isSquare(i, end);
-          const unjoin = tool === "delete" && pr.kind === "corner";
-          if (!held && tool !== "square" && !unjoin) return;
-          const handle = tool === "square" || unjoin;
-          const r = handle ? 7 : 4;
-          const h = el("rect", {
-            x: X(P.z) - r,
-            y: Y(P.y) - r,
-            width: 2 * r,
-            height: 2 * r,
-            rx: 1,
-            fill: held ? css("--yellow") : css("--panel"),
+          const unjoin = tool === "delete" && pr?.kind === "corner";
+          const handle = tool === "move" || (tool === "square" && pr) || unjoin;
+          if (!pr && !handle) return;
+          const r = handle ? 6 : 4;
+          const look = {
+            fill: pr ? css("--yellow") : css("--panel"),
             stroke: css("--ink"),
             "stroke-width": 1.5,
             style: handle ? "cursor:pointer" : "pointer-events:none",
-          });
+          };
+          const h = held
+            ? el("rect", {
+                x: X(P.z) - r,
+                y: Y(P.y) - r,
+                width: 2 * r,
+                height: 2 * r,
+                rx: 1,
+                ...look,
+              })
+            : el("circle", { cx: X(P.z), cy: Y(P.y), r, ...look });
+          if (tool === "move") h.dataset.end = `${i}:${end}`;
           if (tool === "square") h.dataset.sq = `${i}:${end}`;
           if (unjoin) h.dataset.unjoin = `${i}:${end}`;
         }),
@@ -1665,7 +1666,7 @@
       move: "Drag a board, an end of a board (circles), or the drivers (magenta dot). Ends snap onto walls, onto another board's end (a corner) or its edge, and stay joined when you move that board.",
       board: "Press and drag to draw a board. It snaps onto walls and other boards.",
       delete:
-        "Click a board to delete it, a corner (square) to pull its boards apart, or the drivers' dot to take the drivers out.",
+        "Click a board to delete it, a corner to pull its boards apart, or the drivers' dot to take the drivers out.",
       driver:
         "Click a board to put the drivers there. Click the drivers' dot or their board again to turn the cones the other way.",
       mouth: "Click a wall to open the mouth there, then drag its two ends.",

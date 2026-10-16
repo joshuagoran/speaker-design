@@ -122,6 +122,31 @@ passage any more: the trace follows the air.
 | Cutlist            | From the joints (Cutlist section)                                                          |
 | Saved designs      | Boards from #190 convert: their ends, the drivers' spot, the mouth from the mouth wall     |
 
+## From mock to app
+
+The mock breaks the UI rules on purpose. Each part becomes an existing pattern.
+
+| Mock part                             | In the app                                                                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Tool buttons                          | `ToggleGroup` above the side view                                                        |
+| Hint lines under the tools            | A `Tooltip` on the tool label; longer help in the Details fold                           |
+| Start buttons                         | The Speaker page's starts (`StartPicker`)                                                |
+| Inside size, driver size and count    | The chamber and driver fields as now (`ChamberSettings`)                                 |
+| Goal: low end, loudness               | `HornGoalsFields` as now (low, high, target level)                                       |
+| Goal: horn type                       | The Horn type field as now. A notice says when the drawing traces as another type        |
+| Straight horn summary                 | One line under the goals; the sizes in a `Tooltip`                                       |
+| Advanced straight horn fields         | The horn's Advanced fold as now (its steps)                                              |
+| Loudness line                         | A `Notice`: green when the drivers reach the goal, else what would                       |
+| Side view editor                      | `SpeakerSection` gains the tools. One drawing for view and edit                          |
+| Joint marks                           | Yellow circle: a joint. Yellow square: held at 90°. Palette colors, both themes          |
+| Stats (path, mouth, closed end, taps) | `StatTileGrid`                                                                           |
+| Path chart                            | A new chart in `components/charts`. Fixed axes in `chartScales.ts`, shared by every horn |
+| Linked hover                          | The same, between `SpeakerSection` and the path chart                                    |
+| Checks list                           | `Notice` items, as the other checks                                                      |
+| Cutlist card                          | The Speaker cutlist page, with each end's cut (mitre, butt, bevel)                       |
+| 3D view                               | `SpeakerView3D`, boards with their cuts                                                  |
+| Undo                                  | New: the editor's own undo. The app has no undo pattern yet                              |
+
 ## Risks
 
 | Risk                                     | Plan                                                                        |
