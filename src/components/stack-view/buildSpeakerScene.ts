@@ -219,6 +219,9 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
                 length,
               ]),
               mouth: load.horn.mouthPosition,
+              // a folded horn's own boards, or the layout its automatic boards take
+              boards: load.horn.boards,
+              foldShape: load.horn.foldShape,
             }
           : null,
     })),

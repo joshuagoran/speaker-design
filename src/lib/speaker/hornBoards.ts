@@ -14,6 +14,7 @@ import type {
 } from "../../types";
 import {
   FOLD_CONE_MARGIN_IN,
+  FOLD_CHOKE_SHARE,
   FOLD_CUTOUT_MARGIN_IN,
   FOLD_FACE,
   FOLD_MAGNET_CLEARANCE_IN,
@@ -107,13 +108,15 @@ export interface FoldTaps {
 
 /**
  * The checks (docs/folded-horn-plan.md, "Checks"): the first board past the chamber, the first two boards that cross,
- * the first gate under the lowest passage, a passage that cannot be measured, and the drivers' fit (null without
- * drivers).
+ * the first gate under the lowest passage, the first gate that chokes the passage, a passage that cannot be measured,
+ * and the drivers' fit (null without drivers).
  */
 export interface FoldChecks {
   outside: number | null;
   crossing: [number, number] | null;
   thin: number | null;
+  /** the first gate under `FOLD_CHOKE_SHARE` of the last leg gate before it (a turn or a leg pinched) */
+  choke: number | null;
   broken: boolean;
   drivers: {
     facesPassage: boolean;
@@ -725,6 +728,13 @@ function checksOf(
         break;
       }
   const thin = gates.findIndex((g) => g.heightIn < FOLD_MIN_PASSAGE_IN);
+  // the gates are the closed end's, then per turn its leg's end, the turn's and the next leg's start, then the mouth's:
+  // each is held to the last leg gate before it (a turn's gate is not one), so a narrow turn or a pinched leg chokes
+  const choke = gates.findIndex((g, i) => {
+    if (i === 0) return false;
+    const before = i % 3 === 0 ? i - 2 : i - 1;
+    return g.heightIn < FOLD_CHOKE_SHARE * gates[before].heightIn;
+  });
   const drivers = plan.drivers;
   let driverChecks: FoldChecks["drivers"] = null;
   if (drivers && body && driverBodies.length) {
@@ -772,6 +782,7 @@ function checksOf(
     outside: outside < 0 ? null : outside,
     crossing,
     thin: thin < 0 ? null : thin,
+    choke: choke < 0 ? null : choke,
     broken,
     drivers: driverChecks,
   };
@@ -828,5 +839,6 @@ export const foldPasses = ({ checks }: Pick<FoldLayout, "checks">) =>
   checks.outside === null &&
   checks.crossing === null &&
   checks.thin === null &&
+  checks.choke === null &&
   !checks.broken &&
   (checks.drivers === null || Object.values(checks.drivers).every(Boolean));

@@ -288,7 +288,7 @@ test("horn boards: mirrored top to bottom, a zigzag passes the same checks with 
 });
 
 test("horn boards: an offset zigzag over a sealed rear chamber taps its first leg and passes", () => {
-  const plan = offsetZigzagBoards(ROOM, 3, 10, SUB18.cutoutIn);
+  const plan = offsetZigzagBoards(ROOM, 3, 10, SUB18);
   const layout = layoutOf(plan);
   assert.ok(foldPasses(layout), JSON.stringify(layout.checks));
   assert.ok(layout.taps && layout.taps.front !== null && layout.taps.rear === null);
@@ -374,4 +374,12 @@ test("horn boards: drivers far from the closed end leave a dead end behind them,
   assert.equal(late.checks.drivers?.nearClosed, false);
   assert.equal(foldPasses(late), false);
   assert.equal(layoutOf(plan).checks.drivers?.nearClosed, true);
+});
+
+test("horn boards: a turn much narrower than its leg chokes the passage, and fails", () => {
+  // turns half a leg wide
+  const narrow = layoutOf(zigzagBoards(ROOM, 4, true, 0.5));
+  assert.notEqual(narrow.checks.choke, null);
+  assert.equal(foldPasses(narrow), false);
+  assert.equal(layoutOf(zigzagBoards(ROOM, 4, true, 1)).checks.choke, null);
 });

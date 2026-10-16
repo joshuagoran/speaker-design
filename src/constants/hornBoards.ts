@@ -71,6 +71,12 @@ export const FOLD_SHAPE_NAMES = {
  */
 export const FOLD_TAP_MAX_SHARE = 0.4;
 
+/**
+ * How narrow a gate may be, as a share of the last leg gate before it: narrower, and the passage chokes there (a turn
+ * narrower than its leg, or a leg pinched by a board at an angle).
+ */
+export const FOLD_CHOKE_SHARE = 0.75;
+
 /** What a passage narrowing along its legs costs Design from goals, in dB of score for a leg all the way closed. */
 export const FOLD_NARROWING_DB = 4;
 

@@ -90,6 +90,16 @@ export const isFolded = (horn: Pick<SpeakerHorn, "path" | "drive">) =>
   horn.drive.kind === HORN_DRIVE.offset;
 
 /**
+ * How near a wall the drivers' middle may sit, in: the cutout's half and its margin on the board, or the body's widest
+ * step and the clearance round it.
+ */
+const driverWallIn = (body: Pick<FoldDriverBody, "cutoutIn" | "steps">) =>
+  Math.max(
+    body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN,
+    Math.max(0, ...body.steps.map((step) => step.rIn)) + FOLD_MAGNET_CLEARANCE_IN,
+  );
+
+/**
  * An offset-driver horn's zigzag: a sealed rear chamber `rearIn` high across the bottom (a board from the baffle to the
  * back wall closes it), and above it `legs` legs (an odd number, at least 1) stacked as in `zigzagBoards`. The first leg
  * runs forward from its closed end at the back wall, so the mouth is on the baffle at the top. The drivers sit on the
@@ -99,7 +109,7 @@ export function offsetZigzagBoards(
   room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn">,
   legs: number,
   rearIn: number,
-  cutoutIn: number,
+  body: Pick<FoldDriverBody, "cutoutIn" | "steps">,
   turnShare = 1,
   growth = 1,
 ): HornBoards {
@@ -147,10 +157,10 @@ export function offsetZigzagBoards(
     closed: { wall: FOLD_WALL.back },
     legs: legList,
     mouth: FOLD_WALL.baffle,
-    // near the closed end: the cutout's half and its margin, and as much again, from the back wall
+    // as near the closed end as the cutout's margin and the driver's clearance from the back wall allow
     drivers: {
       board: 0,
-      alongIn: d - cutoutIn - 2 * FOLD_CUTOUT_MARGIN_IN,
+      alongIn: d - driverWallIn(body),
       coneFace: FOLD_FACE.offset,
     },
   };
@@ -237,11 +247,7 @@ export function spiralBoards(
   corners.push({ z: zR, y: yD, wall: null });
   boards.push({ a: lastBack, b: corners.length - 1, side: -1 });
   const riser = boards.length - 1;
-  /** the drivers' middle from the baffle, in: the cutout's half and its margin, or the widest step and its clearance */
-  const frontIn = Math.max(
-    body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN,
-    Math.max(0, ...body.steps.map((step) => step.rIn)) + FOLD_MAGNET_CLEARANCE_IN,
-  );
+  const frontIn = driverWallIn(body);
   const legs: FoldLeg[] = Array.from({ length: k }, (_, i) => {
     const up: FoldLeg["left"] = { board: i, face: FOLD_FACE.line };
     const down: FoldLeg["left"] =

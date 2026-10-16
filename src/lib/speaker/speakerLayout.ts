@@ -1010,7 +1010,7 @@ const layoutTries = (
   body: FoldDriverBody | null,
   shape: FoldShape,
 ): HornBoards[] => {
-  if (kind === HORN_DRIVE.offset) return body ? offsetPlans(room, body.cutoutIn) : [];
+  if (kind === HORN_DRIVE.offset) return body ? offsetPlans(room, body) : [];
   const tapped = kind === HORN_DRIVE.tapped;
   if (!tapped || !body) return zigzagPlans(room, tapped);
   // a tapped horn also tries the classic spiral: the fronts near the closed end, the backs into the mouth's leg
@@ -1033,12 +1033,12 @@ const spiralPlans = (room: FoldRoom, body: FoldDriverBody): HornBoards[] =>
   ).flat();
 
 /** Each odd leg count, rear chamber height (as a share of the height), turn width and growth of the offset zigzag. */
-const offsetPlans = (room: FoldRoom, cutoutIn: number): HornBoards[] =>
+const offsetPlans = (room: FoldRoom, body: FoldDriverBody): HornBoards[] =>
   Array.from({ length: FOLD_AUTO_MAX_LEGS / 2 }, (_, i) =>
     FOLD_OFFSET_REAR_SHARES.flatMap((rear) =>
       FOLD_AUTO_TURN_SHARES.flatMap((share) =>
         FOLD_AUTO_GROWTHS.map((growth) =>
-          offsetZigzagBoards(room, 2 * i + 1, room.heightIn * rear, cutoutIn, share, growth),
+          offsetZigzagBoards(room, 2 * i + 1, room.heightIn * rear, body, share, growth),
         ),
       ),
     ),

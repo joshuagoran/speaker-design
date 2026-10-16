@@ -12,6 +12,7 @@ export function foldNotices(checks: FoldChecks): string[] {
   if (checks.crossing)
     out.push(SPEAKER_TEXT.foldCrossing(checks.crossing[0] + 1, checks.crossing[1] + 1));
   if (checks.thin !== null) out.push(SPEAKER_TEXT.foldThin(formatInches(FOLD_MIN_PASSAGE_IN)));
+  if (checks.choke !== null) out.push(SPEAKER_TEXT.foldChoke);
   const d = checks.drivers;
   if (d && !d.facesPassage) out.push(SPEAKER_TEXT.foldNotFacing);
   if (d && !d.widthFits) out.push(SPEAKER_TEXT.foldWidth);

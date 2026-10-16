@@ -418,5 +418,6 @@ export function hornGoalCheck(
   const pathIn = fold
     ? fold.layout.pathIn
     : horn.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
-  return { fit, overAir: hornL > chamberL ? { hornL, chamberL } : null, pathIn };
+  // a folded horn's boards keep its passage in the box (their checks say where they do not)
+  return { fit, overAir: !fold && hornL > chamberL ? { hornL, chamberL } : null, pathIn };
 }

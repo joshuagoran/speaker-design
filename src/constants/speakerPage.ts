@@ -260,6 +260,8 @@ export const SPEAKER_TEXT = {
       ? `No folded layout fits these drivers in this box. One fits a chamber ${needs.depth} deep and ${needs.height} tall.`
       : "No folded layout fits these drivers in this box, even at twice its depth and height.",
   foldBroken: "The boards do not make one passage from the closed end to the mouth.",
+  foldChoke:
+    "The passage chokes at a turn or along a leg: it is much narrower there than just before. Widen the turn or the leg.",
   foldNotFacing: "The drivers do not face the passage. Move them to a board along it.",
   foldDeadEnd:
     "The cones open far from the closed end, so most of the passage is a dead end behind them. Move the drivers nearer the closed end.",
