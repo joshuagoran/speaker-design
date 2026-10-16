@@ -38,7 +38,6 @@ import type {
   SpeakerPort,
   SpeakerSlotPort,
   SubDriver,
-  ThieleSmall,
   VentPanel,
   VentSpec,
 } from "../../types";
@@ -61,7 +60,6 @@ import {
   internalWoodLiters,
   isRoundPort,
   maxFoldedSlotIn,
-  paConeBody,
   partitionNote,
   railsOnBack,
   subBoxBracing,
@@ -71,7 +69,6 @@ import {
   subVentParts,
   type BraceInputs,
   type BraceShell,
-  type ConeBody,
   type HardwareCutNotes,
 } from "../pa/calc";
 import { subTubeKit } from "../pa/tubes";
@@ -111,13 +108,14 @@ import {
 } from "../data";
 import { byId } from "../tables";
 import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls, slotRunIn } from "./chamberAir";
-import { coneDepthIn, driverListing, sourceOf } from "./driverParts";
+import { driverListing, sourceOf } from "./driverParts";
 import { conesAreaCm2, frontChamber, throatCones } from "./hornThroat";
 import { chamberSetbackIn, driverBoardPieces } from "./driverBoard";
 import { segmentsAirLiters } from "../acoustics/hornSegments";
 import {
   PORT_RULE,
-  driverAcrossIn,
+  coneBuild,
+  type ConeBuild,
   driverHorn,
   driverSpots,
   driversOnBaffle,
@@ -134,11 +132,7 @@ import {
   hornFitsWhereSet,
   hornCutoutBox,
 } from "./speakerLayout";
-import {
-  DRIVER_CUTOUT_IN,
-  HIFI_DRIVER_CUTOUT_IN,
-  HIFI_MOTOR_CUTOUT_SHARE,
-} from "../../data/catalog/driver-cutouts";
+import { DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { CM2_PER_IN2, KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
@@ -285,57 +279,6 @@ function chamberFrames(cabinet: SpeakerCabinet, layout: SpeakerLayout): ChamberF
       paSub,
     };
   });
-}
-
-/** A cone's body, depth, weight and figures as the bracing and the hardware read them. */
-interface ConeBuild {
-  body: ConeBody;
-  depthIn: number;
-  lb: number;
-  ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp">;
-}
-
-/** A cone driver's body (its catalog's, or the Hi-fi estimates where the catalog has none); null for another kind. */
-function coneBuild(driver: SpeakerDriver): ConeBuild | null {
-  /** its depth behind the baffle's front: the catalog's, or the fallback for its kind and size */
-  const depthIn = coneDepthIn(driver) ?? 0;
-  const hifiCone = (size: number, lb: number, ts: ConeBuild["ts"]): ConeBuild => {
-    const cutoutIn = HIFI_DRIVER_CUTOUT_IN[size] ?? driverAcrossIn(driver);
-    return {
-      body: { cutoutIn, motorIn: cutoutIn * HIFI_MOTOR_CUTOUT_SHARE },
-      depthIn,
-      lb,
-      ts,
-    };
-  };
-  switch (driver.kind) {
-    case DRIVER_KIND.sub: {
-      const sub = byId(SUB_OPTIONS, driver.driverId);
-      return sub ? { body: paConeBody(sub.size), depthIn, lb: sub.lb, ts: sub.ts } : null;
-    }
-    case DRIVER_KIND.mid: {
-      const mid = byId(MID_OPTIONS, driver.driverId);
-      return mid
-        ? {
-            body: paConeBody(mid.size),
-            depthIn,
-            lb: mid.lb || 0,
-            ts: mid.ts,
-          }
-        : null;
-    }
-    case DRIVER_KIND.woofer: {
-      const woofer = hifiDriverById("woofer", driver.driverId);
-      return woofer ? hifiCone(woofer.size, woofer.lb || HIFI_FALLBACK_LB.woofer, woofer.ts) : null;
-    }
-    case DRIVER_KIND.coaxial: {
-      const coax = byId(FILL_OPTIONS, driver.driverId);
-      return coax ? hifiCone(coax.size, coax.lb || HIFI_FALLBACK_LB.woofer, coax.ts) : null;
-    }
-    case DRIVER_KIND.compression:
-    case DRIVER_KIND.tweeter:
-      return null;
-  }
 }
 
 /** One driver's weight, lb: its catalog weight (the Hi-fi fallbacks where a Hi-fi part lists none) and its horn's. */
@@ -543,6 +486,13 @@ function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
     const c = insidePoint(f, { xIn: (x0 + x1) / 2, yIn: (y0 + y1) / 2 });
     out.push(roomAround(c, x1 - x0, y1 - y0, z0, z1));
   };
+  // a folded path's boards fill the chamber: no brace goes inside it
+  if (!path) {
+    const { clear } = f.placed;
+    const all = { cx: clear.x + clear.w / 2, cy: clear.y + clear.h / 2, w: clear.w, h: clear.h };
+    room(all, all, 0, inD);
+    return out;
+  }
   // each leg from section to section (each box as large as both ends), then each turn
   for (const leg of path.legs)
     leg.sections.forEach((sec, i) => {
@@ -820,7 +770,11 @@ function woodLb(
     : isBase
       ? HIFI_FIXINGS_LB
       : 0;
-  return (panels + boardIn2 * wallRate) / SQ_IN_PER_SQ_FT + braces + fixings;
+  return (
+    (panels + (boardIn2 + hornBoardsIn2(cabinet, f)) * wallRate) / SQ_IN_PER_SQ_FT +
+    braces +
+    fixings
+  );
 }
 
 /** The chamber's radiators' weight, lb (none for another vent, or a radiator the catalog doesn't have). */
@@ -957,7 +911,7 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
       clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
       ventL: vent ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
       hornL: hornAirL(cabinet, chamber),
-      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f),
+      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f) + hornBoardsL(cabinet, f),
       recessL: hardware?.liters ?? 0,
       lb: { wood, drivers, hardware: hardwareLb, total: wood + drivers + hardwareLb },
     };
@@ -995,7 +949,7 @@ function driverBoardOf(
   const { chamber } = f.placed;
   if (chamber.load.kind !== CHAMBER_LOAD.horn || chamber.load.horn.drive.kind === HORN_DRIVE.back)
     return null;
-  const bay = hornFlare(cabinet, f.placed)?.path.bay;
+  const bay = hornFlare(cabinet, f.placed)?.path?.bay;
   if (!bay) return null;
   /** the cutouts, as the front chamber takes them: each cone's area */
   const cutoutsIn2 = conesAreaCm2(chamber.drivers) / CM2_PER_IN2;
@@ -1007,6 +961,58 @@ function driverBoardOf(
 }
 
 /** The wood of a horn chamber's driver board, L (0 for none): its cutouts are front chamber air (`hornAirL`). */
+/** A folded horn's boards worked out (lib/speaker/hornBoards); null for another chamber. */
+const foldOf = (cabinet: SpeakerCabinet, f: ChamberFrame) =>
+  hornFlare(cabinet, f.placed)?.fold ?? null;
+
+/** The face area of a folded horn's boards, in² (0 for none): each board's length times the chamber's width. */
+function hornBoardsIn2(cabinet: SpeakerCabinet, f: ChamberFrame): number {
+  const fold = foldOf(cabinet, f);
+  return fold ? fold.layout.cuts.reduce((sum, c) => sum + c.lengthIn * fold.room.widthIn, 0) : 0;
+}
+
+/** The wood of a folded horn's boards, L: each a wall thick. */
+const hornBoardsL = (cabinet: SpeakerCabinet, f: ChamberFrame) =>
+  hornBoardsIn2(cabinet, f) * cabinet.panel.thicknessIn * LITERS_PER_CUBIC_IN;
+
+/**
+ * A folded horn's boards as cutlist rows, each a piece of the walls' plywood as long as its line face and as wide as
+ * the chamber: its number in the side view, its end cuts, and on the drivers' board their cutouts and where they
+ * center. None for another chamber.
+ */
+function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
+  const fold = foldOf(cabinet, f);
+  if (!fold) return [];
+  const drivers = fold.plan.drivers;
+  const cutouts = f.placed.chamber.drivers.flatMap((driver) => {
+    const cone = coneBuild(driver);
+    return cone
+      ? [
+          SPEAKER_TEXT.driverBoardCutout(
+            driver.count,
+            kindWord(driver),
+            cutoutNote(cone.body.cutoutIn),
+          ),
+        ]
+      : [];
+  });
+  return fold.layout.cuts.map((cut, i) => ({
+    box: chamberCutBox(f.index),
+    part: "hornBoard",
+    qty: 1,
+    a: cut.lengthIn,
+    b: fold.room.widthIn,
+    t: cabinet.panel.thicknessIn,
+    note: joinNotes([
+      SPEAKER_TEXT.hornBoardNote(i + 1),
+      SPEAKER_TEXT.hornBoardCuts([Math.round(cut.endCutsDeg[0]), Math.round(cut.endCutsDeg[1])]),
+      ...(drivers?.board === i
+        ? [...cutouts, SPEAKER_TEXT.hornBoardSpot(formatInches(drivers.alongIn))]
+        : []),
+    ]),
+  }));
+}
+
 function driverBoardL(cabinet: SpeakerCabinet, f: ChamberFrame): number {
   const board = driverBoardOf(cabinet, f);
   return board ? board.netIn2 * board.pieces * cabinet.panel.thicknessIn * LITERS_PER_CUBIC_IN : 0;
@@ -1452,7 +1458,7 @@ export function speakerCutParts(
     // a frame's own box already carries its braces (boxParts)
     if (frame) parts.push(...ventPartsOf(f));
     else parts.push(...insideParts(f));
-    parts.push(...driverBoardParts(f));
+    parts.push(...driverBoardParts(f), ...hornBoardParts(cabinet, f));
   }
   return { parts, also, vent: ventLines };
 

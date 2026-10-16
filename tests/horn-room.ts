@@ -1,3 +1,6 @@
+import assert from "node:assert";
+import type { HornFlare } from "../src/lib/speaker/speakerLayout";
+import type { HornPath } from "../src/lib/speaker/hornGeometry";
 // The room `hornDesignOf` reads for a chamber in a test (lib/speaker/hornDesign `HornDesignRoom`): its set net air (1 L
 // where it is Auto), a clear face of its outside size less the walls (3/4″ plywood), or the face given, and the cones'
 // setback on the driver board (none, or the one given). `frontLoadedOf` narrows a result to a front-loaded design.
@@ -18,4 +21,10 @@ export function frontLoadedOf(result: HornDesignResult) {
   if (!result.ok || result.design.layout !== HORN_LAYOUT.frontLoaded)
     throw new Error("a front-loaded design");
   return result.design;
+}
+
+/** A flare's straight path; fails for a folded one (its boards draw it instead). */
+export function straightPath(flare: Pick<HornFlare, "path"> | null | undefined): HornPath {
+  assert.ok(flare?.path, "a straight path");
+  return flare.path;
 }

@@ -2,6 +2,7 @@
 // response, the 3D flare and the cutlist; sections chain as they are added and removed; the settings' in² and in
 // convert to the spec's cm² and cm and back; a size that is not positive and finite is a named gap, never NaN; the PA
 // v2 templates still model.
+import { straightPath } from "./horn-room";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
@@ -142,7 +143,7 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
     withSectionSize(s, 0, "length", shownInOfCm(s[0].length) + 4),
   );
   assert.ok(maxDiff(BIN, longer) > 0.1);
-  const lengthIn = (spec: SpeakerSpec) => flareOf(spec)?.path.pathIn ?? 0;
+  const lengthIn = (spec: SpeakerSpec) => flareOf(spec)?.path?.pathIn ?? 0;
   assert.ok(Math.abs(lengthIn(longer) - lengthIn(BIN) - 4) < 0.01, "4 in more flare");
   // a profile change reaches the engine too
   const exp = withSegments(BIN, (s) => withSectionProfile(s, 0, HORN_PROFILE.exponential));
@@ -160,15 +161,17 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
   const [wide, narrow] = [flareOf(BIN), flareOf(loaded)];
   assert.ok(wide && narrow);
   assert.ok(
-    Math.abs(narrow.path.legs[0].sections[0].w * 2 - wide.path.legs[0].sections[0].w) < 1e-9,
+    Math.abs(
+      straightPath(narrow).legs[0].sections[0].w * 2 - straightPath(wide).legs[0].sections[0].w,
+    ) < 1e-9,
     "the walls start half as far apart",
   );
-  // a folded path: the same sound, the flare drawn in legs that add up to the same path
+  // a folded path is its boards: the passage between them plays, not the sections
   const folded = withHorn(BIN, (h) => ({ ...h, path: HORN_PATH.folded }));
-  assert.equal(maxDiff(BIN, folded), 0);
-  const foldedPath = flareOf(folded)?.path;
-  assert.ok(foldedPath && foldedPath.folds >= 1, "the path folds");
-  assert.ok(Math.abs(foldedPath.pathIn - lengthIn(BIN)) < 1e-9, "the path is as long");
+  const fold = flareOf(folded)?.fold;
+  assert.ok(fold && fold.layout.segments.length > 0, "the boards make a passage");
+  assert.equal(flareOf(folded)?.path, null, "no straight path");
+  assert.ok(maxDiff(BIN, folded) > 0, "the boards' passage plays");
 });
 
 test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 489.6 in²)", () => {
@@ -230,7 +233,7 @@ test("speaker horn: sections chain as they are edited, added and removed", () =>
   const addedSpec = withSegments(BIN, () => added);
   assert.deepEqual(responseOf(addedSpec).chambers[0].gaps, []);
   const jointsOf = (spec: SpeakerSpec) =>
-    new Set(flareOf(spec)?.path.legs.flatMap((l) => l.sections.map((sec) => sec.s.toFixed(6))));
+    new Set(flareOf(spec)?.path?.legs.flatMap((l) => l.sections.map((sec) => sec.s.toFixed(6))));
   const ends = [
     0,
     ...segments.map(

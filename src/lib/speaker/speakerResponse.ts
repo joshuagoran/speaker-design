@@ -31,6 +31,7 @@ import { byId } from "../tables";
 import { chamberClearFace, chamberVentModel, stuffedLiters } from "./chamberAir";
 import { chamberNetLiters } from "./speakerBuild";
 import { hornDesignOf } from "./hornDesign";
+import { chamberFold } from "./speakerLayout";
 import { chamberSetbackIn } from "./driverBoard";
 import { coneParts, hfParts, isConeKind, type ConeParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
@@ -176,6 +177,7 @@ function modelChamber(
         netLiters,
         face: chamberClearFace(cabinet, chamber),
         setbackIn: chamberSetbackIn(cabinet.panel, chamber),
+        fold: chamberFold(cabinet, chamber)?.layout ?? null,
       },
     );
     if (!read.ok) return empty([read.gap]);

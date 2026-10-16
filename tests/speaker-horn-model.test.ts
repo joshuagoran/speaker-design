@@ -113,7 +113,7 @@ describe("a resized horn box", () => {
               // a horn that is buildable (its path fits) models
               const [placed] = speakerLayout(spec.cabinet).chambers;
               const flare = hornFlare(spec.cabinet, placed);
-              if (flare?.path.fits && !flare.mouthClipped)
+              if (flare?.path?.fits && !flare.mouthClipped)
                 expect(response.bands.length, `${where}: a buildable horn models`).toBe(1);
               expect(
                 response.sum.every((p) => Number.isFinite(p.spl)),
@@ -125,7 +125,7 @@ describe("a resized horn box", () => {
   test("a path that does not fit still models (the page says it does not fit)", () => {
     const spec = resized({ w: 30, h: 14, d: 12 }, { sections: 2, compression: 2, lengthCm: 120 });
     const [placed] = speakerLayout(spec.cabinet).chambers;
-    expect(hornFlare(spec.cabinet, placed)?.path.fits).toBe(false);
+    expect(hornFlare(spec.cabinet, placed)?.path?.fits).toBe(false);
     expect(speakerResponse(spec).bands).toHaveLength(1);
   });
 

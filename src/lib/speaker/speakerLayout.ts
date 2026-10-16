@@ -26,6 +26,9 @@ import type {
   SubDriver,
   VentPanel,
   VentPosition,
+  ThieleSmall,
+  HornBoards,
+  HornSegment,
 } from "../../types";
 import {
   CD_OPTIONS,
@@ -40,7 +43,9 @@ import { byId } from "../tables";
 import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
 import { clearDepthIn, sharedWalls, slotRunIn, TOUCH_IN } from "./chamberAir";
-import { RADIATOR_PANEL } from "../hifi/hifi";
+import { HIFI_FALLBACK_LB, RADIATOR_PANEL } from "../hifi/hifi";
+import { paConeBody, type ConeBody } from "../pa/calc";
+import { coneDepthIn } from "./driverParts";
 import { subVentOpenings, subVentPlan } from "../pa/subVentPlan";
 import {
   radiatorSpots,
@@ -50,9 +55,22 @@ import {
 } from "../hifi/boxLayout";
 import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
-import { DRIVER_CUTOUT_IN, HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
+import {
+  DRIVER_CUTOUT_IN,
+  HIFI_DRIVER_CUTOUT_IN,
+  HIFI_MOTOR_CUTOUT_SHARE,
+} from "../../data/catalog/driver-cutouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { CM2_PER_IN2 } from "../../constants/units";
+import { CM2_PER_IN2, CM_PER_IN, MM_PER_IN } from "../../constants/units";
+import {
+  foldPasses,
+  hornBoardsLayout,
+  type FoldDriverBody,
+  type FoldLayout,
+  type FoldRoom,
+} from "./hornBoards";
+import { zigzagBoards } from "./foldLayouts";
+import { FOLD_AUTO_MAX_LEGS } from "../../constants/hornBoards";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { hornPath, type HornPath } from "./hornGeometry";
@@ -330,6 +348,57 @@ export function driverAcrossIn(driver: SpeakerDriver): number {
     }
     case DRIVER_KIND.compression:
       return horn ? horn.size.w : (byId(CD_OPTIONS, driver.driverId)?.body.dia ?? 0);
+  }
+}
+
+/** A cone's body, depth, weight and figures as the bracing and the hardware read them. */
+export interface ConeBuild {
+  body: ConeBody;
+  depthIn: number;
+  lb: number;
+  ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp">;
+}
+
+/** A cone driver's body (its catalog's, or the Hi-fi estimates where the catalog has none); null for another kind. */
+export function coneBuild(driver: SpeakerDriver): ConeBuild | null {
+  /** its depth behind the baffle's front: the catalog's, or the fallback for its kind and size */
+  const depthIn = coneDepthIn(driver) ?? 0;
+  const hifiCone = (size: number, lb: number, ts: ConeBuild["ts"]): ConeBuild => {
+    const cutoutIn = HIFI_DRIVER_CUTOUT_IN[size] ?? driverAcrossIn(driver);
+    return {
+      body: { cutoutIn, motorIn: cutoutIn * HIFI_MOTOR_CUTOUT_SHARE },
+      depthIn,
+      lb,
+      ts,
+    };
+  };
+  switch (driver.kind) {
+    case DRIVER_KIND.sub: {
+      const sub = byId(SUB_OPTIONS, driver.driverId);
+      return sub ? { body: paConeBody(sub.size), depthIn, lb: sub.lb, ts: sub.ts } : null;
+    }
+    case DRIVER_KIND.mid: {
+      const mid = byId(MID_OPTIONS, driver.driverId);
+      return mid
+        ? {
+            body: paConeBody(mid.size),
+            depthIn,
+            lb: mid.lb || 0,
+            ts: mid.ts,
+          }
+        : null;
+    }
+    case DRIVER_KIND.woofer: {
+      const woofer = hifiDriverById("woofer", driver.driverId);
+      return woofer ? hifiCone(woofer.size, woofer.lb || HIFI_FALLBACK_LB.woofer, woofer.ts) : null;
+    }
+    case DRIVER_KIND.coaxial: {
+      const coax = byId(FILL_OPTIONS, driver.driverId);
+      return coax ? hifiCone(coax.size, coax.lb || HIFI_FALLBACK_LB.woofer, coax.ts) : null;
+    }
+    case DRIVER_KIND.compression:
+    case DRIVER_KIND.tweeter:
+      return null;
   }
 }
 
@@ -660,10 +729,13 @@ export interface HornFlare {
   /** the mouth on the baffle, centered at the horn's `mouthPosition` (absent: on the horn's face) */
   mouth: FaceRect;
   /**
-   * the path from the throat to the mouth (lib/speaker/hornGeometry): one geometry for every view. Its `fits` is false
-   * where the path, folded or not, does not fit the chamber: the views then draw it as it is, past the walls
+   * a straight path from the throat to the mouth (lib/speaker/hornGeometry): one geometry for every view. Its `fits` is
+   * false where it does not fit the chamber: the views then draw it as it is, past the walls. Null for a folded path,
+   * which is its boards (`fold`)
    */
-  path: HornPath;
+  path: HornPath | null;
+  /** a folded path's boards worked out in the chamber's side section; null for a straight path */
+  fold: ChamberFold | null;
   /** the mouth is larger than the horn's face: drawn at the face, every section shrunk alike */
   mouthClipped: boolean;
   /** the horn's `mouthPosition` would put the mouth past the face: drawn moved inside it */
@@ -700,6 +772,22 @@ export function hornFlare(
   const horn: SpeakerHorn = load.horn;
   const t = cabinet.panel.thicknessIn;
   const face = hornFace(placed, t);
+  if (horn.path === HORN_PATH.folded) {
+    const fold = chamberFoldIn(cabinet, placed, horn, face);
+    const [ga, gb] = fold.layout.gates.length
+      ? [
+          fold.layout.gates[fold.layout.gates.length - 1].a,
+          fold.layout.gates[fold.layout.gates.length - 1].b,
+        ]
+      : [
+          { z: 0, y: 0 },
+          { z: 0, y: face.h },
+        ];
+    // the mouth is the last gate, where the last leg meets its wall: across the face, between the gate's ends
+    const y0 = face.y + Math.min(ga.y, gb.y);
+    const mouth = { x: face.x, y: y0, w: face.w, h: Math.abs(gb.y - ga.y) };
+    return { mouth, path: null, fold, mouthClipped: false, mouthMoved: false };
+  }
   const mouthArea = horn.segments[horn.segments.length - 1].s2 / CM2_PER_IN2;
   // as square as it fits: wider than square where a square would be taller than the face
   const w = Math.min(face.w, Math.max(Math.sqrt(mouthArea), mouthArea / face.h));
@@ -726,10 +814,87 @@ export function hornFlare(
     frontIn: wallClearanceIn(placed.chamber.drivers),
     bodyIn: driverBodyIn(placed.chamber.drivers),
     boardIn: driverBoardIn(t, horn),
-    folded: horn.path === HORN_PATH.folded,
+    folded: false,
   });
   if (!path) return null;
-  return { mouth, path, mouthClipped: fit < 1 - 1e-9, mouthMoved: set?.moved ?? false };
+  return { mouth, path, fold: null, mouthClipped: fit < 1 - 1e-9, mouthMoved: set?.moved ?? false };
+}
+
+/**
+ * A folded horn's boards worked out in its chamber's side section: the boards (`room`'s coordinates: z back from the
+ * baffle's inside face, y up from the horn's face's bottom), the room, the layout (gates, sections, taps, checks), and
+ * where the side section's bottom sits in the front view (`y0In`).
+ */
+export interface ChamberFold {
+  plan: HornBoards;
+  room: FoldRoom;
+  layout: FoldLayout;
+  y0In: number;
+}
+
+/**
+ * A folded horn's boards in its chamber (`face` its horn face): its own, or the zigzag whose path comes nearest the
+ * sections' length; worked out with the chamber's first cone as the drivers' body.
+ */
+function chamberFoldIn(
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  placed: PlacedChamber,
+  horn: SpeakerHorn,
+  face: FaceRect,
+): ChamberFold {
+  const room: FoldRoom = {
+    depthIn: clearDepthIn(cabinet, placed.dims),
+    heightIn: face.h,
+    wallIn: cabinet.panel.thicknessIn,
+    widthIn: face.w,
+  };
+  const cone = placed.chamber.drivers.map(coneBuild).find((c) => c !== null) ?? null;
+  const body: FoldDriverBody | null = cone
+    ? {
+        cutoutIn: cone.body.cutoutIn,
+        motorIn: cone.body.motorIn,
+        depthIn: cone.depthIn,
+        xmaxIn: (cone.ts.Xmax ?? 0) / MM_PER_IN,
+      }
+    : null;
+  const plan =
+    horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind === HORN_DRIVE.tapped);
+  return { plan, room, layout: hornBoardsLayout(plan, room, body), y0In: face.y };
+}
+
+/** What a failed check costs a layout in the automatic choice, in of path: more than any path's difference. */
+const FAILED_LAYOUT_IN = 1e6;
+
+/**
+ * The zigzag that passes every check, if one does, whose path comes nearest the sections' length (the even leg counts up to `FOLD_AUTO_MAX_LEGS`): a tapped
+ * horn's with its drivers on the first board, another's with its throat at the closed end.
+ */
+function autoBoards(
+  room: FoldRoom,
+  segments: readonly HornSegment[],
+  body: FoldDriverBody | null,
+  tapped: boolean,
+): HornBoards {
+  const wantIn = segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
+  const tries = Array.from({ length: FOLD_AUTO_MAX_LEGS / 2 }, (_, i) =>
+    zigzagBoards(room, 2 * (i + 1), tapped),
+  );
+  // a layout that passes every check beats one that does not; then the path nearest the sections'
+  const cost = (plan: HornBoards) => {
+    const layout = hornBoardsLayout(plan, room, body);
+    return (foldPasses(layout) ? 0 : FAILED_LAYOUT_IN) + Math.abs(layout.pathIn - wantIn);
+  };
+  return tries.reduce((best, plan) => (cost(plan) < cost(best) ? plan : best));
+}
+
+/** A folded horn chamber's boards worked out (`ChamberFold`), found in the cabinet; null for any other chamber. */
+export function chamberFold(
+  cabinet: LayoutCabinet & Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+): ChamberFold | null {
+  const index = cabinet.chambers.indexOf(chamber);
+  const placed = index >= 0 ? speakerLayout(cabinet).chambers[index] : undefined;
+  return (placed && hornFlare(cabinet, placed)?.fold) ?? null;
 }
 
 /** A box in the front view by its edges, in. */
@@ -1075,7 +1240,7 @@ function placeDrivers(
     return first ?? spots;
   }
   const stack = hornStack(drivers, placed.clear);
-  const bay = hornFlare(cabinet, placed)?.path.bay;
+  const bay = hornFlare(cabinet, placed)?.path?.bay;
   const face = hornFace(placed, cabinet.panel.thicknessIn);
   const center = bay
     ? { x: bay.x + bay.w / 2, y: bay.y + bay.h / 2 }

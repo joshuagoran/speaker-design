@@ -12,6 +12,7 @@ import {
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { PORT_SHAPE } from "../../constants/speakerSpec";
+import { FoldSection } from "./FoldSection";
 
 interface Props {
   spec: Pick<SpeakerSpec, "cabinet">;
@@ -37,18 +38,29 @@ export function SpeakerSection({ spec }: Props) {
   const t = cabinet.panel.thicknessIn;
   const inset = baffleInsetIn(cabinet);
   const layout = speakerLayout(cabinet);
-  const horns = layout.chambers.flatMap((placed) => {
+  const flares = layout.chambers.flatMap((placed) => {
     const flare = hornFlare(cabinet, placed);
     return flare ? [{ placed, flare }] : [];
   });
-  if (!horns.length) return null;
+  if (!flares.length) return null;
+  // a straight path draws here; a folded one is its boards (`FoldSection`)
+  const horns = flares.flatMap(({ placed, flare }) =>
+    flare.path ? [{ placed, flare, path: flare.path }] : [],
+  );
+  const folds = flares.flatMap(({ placed, flare }) =>
+    flare.fold ? [{ placed, fold: flare.fold }] : [],
+  );
+  const foldViews = folds.map(({ placed, fold }, i) => (
+    <FoldSection key={`f${i}`} cabinet={cabinet} placed={placed} fold={fold} />
+  ));
+  if (!horns.length) return <>{foldViews}</>;
   /** the baffle's inside face is where the path's z starts, behind the frame's inset and the baffle */
   const zero = inset + t;
   /**
    * What each chamber's two sections span, in: its box and the horn, which is drawn as it is where it does not fit
    * (past the walls), so the drawing takes the room it needs.
    */
-  const spans = horns.map(({ placed, flare: { path } }) => {
+  const spans = horns.map(({ placed, path }) => {
     const { dims, y0, cx } = placed;
     const parts = [
       ...path.legs.flatMap((l) => l.sections),
@@ -89,9 +101,8 @@ export function SpeakerSection({ spec }: Props) {
   const wall = { fill: pal.edge, stroke: pal.ink, strokeWidth: 1.2 };
   const inner = { fill: pal.panel, stroke: pal.muted, strokeWidth: 0.8 };
 
-  const panels = horns.map(({ placed, flare }, n) => {
+  const panels = horns.map(({ placed, path }, n) => {
     const { dims, y0, cx } = placed;
-    const { path } = flare;
     const top = PAD_PX + rowH.slice(0, n).reduce((a, b) => a + b + GAP_PX, 0);
     const span = spans[n];
     const ux = (z: number, side: 0 | 1) =>
@@ -291,13 +302,16 @@ export function SpeakerSection({ spec }: Props) {
     );
   });
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="w-full h-full"
-      role="img"
-      aria-label={`Top and side sections of ${horns.length} horn chamber${horns.length === 1 ? "" : "s"}`}
-    >
-      {panels}
-    </svg>
+    <>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-full"
+        role="img"
+        aria-label={`Top and side sections of ${horns.length} horn chamber${horns.length === 1 ? "" : "s"}`}
+      >
+        {panels}
+      </svg>
+      {foldViews}
+    </>
   );
 }

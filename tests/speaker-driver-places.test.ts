@@ -99,7 +99,7 @@ describe("a horn-loaded chamber's drivers", () => {
       for (const c of [cabinet, moved]) {
         const [placed] = speakerLayout(c).chambers;
         const flare = hornFlare(c, placed);
-        const bay = flare?.path.bay;
+        const bay = flare?.path?.bay;
         expect(bay, "the horn has a bay behind the throat").toBeTruthy();
         if (!bay) continue;
         const boxes = driverBoxes(placed);
@@ -477,10 +477,10 @@ describe("a back-loaded horn's drivers are on its baffle, with no driver board",
     expect(driversOnBaffle(cabinet.chambers[0])).toBe(true);
     const flare = hornFlare(cabinet, speakerLayout(cabinet).chambers[0]);
     expect(flare).not.toBeNull();
-    expect(flare?.path.bay).toBeNull();
+    expect(flare?.path?.bay).toBeNull();
     // the front-loaded horn has one
     const front = bin(false).cabinet;
-    expect(hornFlare(front, speakerLayout(front).chambers[0])?.path.bay).toBeTruthy();
+    expect(hornFlare(front, speakerLayout(front).chambers[0])?.path?.bay).toBeTruthy();
   });
 
   test("no driver board row in the cutlist", () => {

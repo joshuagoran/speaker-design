@@ -2,6 +2,7 @@
 // keep-out): its areas are the model's (the throat's, each segment's end, the mouth's, and every step between by the
 // segment's flare law), its length is the segments', and it sits inside the box's clear room, folded or not. A path
 // that does not fit says so, and is drawn as it is.
+import { straightPath } from "./horn-room";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { hornPath, type HornPath, type HornPathInput } from "../src/lib/speaker/hornGeometry";
@@ -400,7 +401,7 @@ test("horn geometry: the PA v2 boxes draw their settings' areas, with the side s
     assert.ok(flare, template);
     const { segments } = load.horn;
     const scale = (flare.mouth.w * flare.mouth.h * CM2_PER_IN2) / segments[segments.length - 1].s2;
-    const sections = flare.path.legs[0].sections;
+    const sections = straightPath(flare).legs[0].sections;
     const first = sections[0],
       last = sections[sections.length - 1];
     assert.ok(
@@ -411,7 +412,7 @@ test("horn geometry: the PA v2 boxes draw their settings' areas, with the side s
       Math.abs(last.w * last.h * CM2_PER_IN2 - segments[segments.length - 1].s2 * scale) < 1e-6,
       template,
     );
-    assert.ok(flare.path.fits, `${template}: the horn fits`);
+    assert.ok(flare.path?.fits, `${template}: the horn fits`);
     // the slots: one up each front side, on the baffle beside the mouth, never over it
     assert.ok(vent.kind === "vented" && vent.port.shape === PORT_SHAPE.slot, template);
     assert.equal(vent.port.place, SLOT_PLACE.sides, template);
@@ -459,7 +460,7 @@ test("horn geometry: every template horn draws the model's area at the throat, t
       assert.ok(flare, template);
       // the mouth fits the horn's face: nothing is cut to fit
       assert.equal(flare.mouthClipped, false, `${template}: the mouth fits the face`);
-      const sections = flare.path.legs.flatMap((leg) => leg.sections);
+      const sections = straightPath(flare).legs.flatMap((leg) => leg.sections);
       const { segments } = load.horn;
       const starts = startsOf(segments);
       segments.forEach((g, k) => {
@@ -494,7 +495,7 @@ test("horn geometry: the PA v2 sub bins are straight-sided horns at the box's in
     const [placed] = speakerLayout(spec.cabinet).chambers;
     const flare = hornFlare(spec.cabinet, placed);
     assert.ok(flare, template);
-    const sections = flare.path.legs[0].sections;
+    const sections = straightPath(flare).legs[0].sections;
     // a parallel top and bottom: the box's own, its inside height apart
     for (const s of sections)
       assert.ok(Math.abs(s.h - placed.clear.h) < EPS, `${template}: height`);
@@ -518,9 +519,9 @@ test("horn geometry: the PA v2 horns' walls start narrower than the cones, their
     const spec = templateSpeaker(template);
     const [placed] = speakerLayout(spec.cabinet).chambers;
     const flare = hornFlare(spec.cabinet, placed);
-    assert.ok(flare?.path.bay, template);
+    assert.ok(flare?.path?.bay, template);
     const { bay } = flare.path;
-    const [throat] = flare.path.legs[0].sections;
+    const [throat] = straightPath(flare).legs[0].sections;
     const [driver] = placed.chamber.drivers;
     const ts = coneParts(driver)?.ts;
     assert.ok(ts, template);

@@ -9,11 +9,13 @@ import { FOLD_FACE, FOLD_WALL } from "../../constants/hornBoards";
  * turns at the back and the front. Boards run from the baffle and the back wall in turn, each stopping a leg's height
  * short of the far wall, so each turn is as wide as a leg. The closed end is on the baffle at the bottom; the mouth is
  * on the baffle at the top. The drivers sit on the first board, midway along it, the cone fronts down into the first
- * leg (a tapped horn's taps: the fronts near the closed end, the backs into the second leg).
+ * leg (a tapped horn's taps: the fronts near the closed end, the backs into the second leg). Without drivers
+ * (`withDrivers` false) the throat is the closed end: a front-loaded horn.
  */
 export function zigzagBoards(
   room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn">,
   legs: number,
+  withDrivers = true,
 ): HornBoards {
   const n = Math.max(2, legs - (legs % 2));
   const { depthIn: d, heightIn: h, wallIn: t } = room;
@@ -50,6 +52,6 @@ export function zigzagBoards(
     closed: { wall: FOLD_WALL.baffle },
     legs: legList,
     mouth: FOLD_WALL.baffle,
-    drivers: { board: 0, alongIn: (d - legH) / 2, coneFace: FOLD_FACE.line },
+    drivers: withDrivers ? { board: 0, alongIn: (d - legH) / 2, coneFace: FOLD_FACE.line } : null,
   };
 }

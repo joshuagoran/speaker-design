@@ -20,6 +20,7 @@ import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
 import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
 import { goalHorn, hornGoalFit, type GoalDrive } from "../../lib/speaker/hornGoals";
 import { DEFAULT_VENTS } from "./speakerParts";
+import { chamberFold } from "../../lib/speaker/speakerLayout";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -208,20 +209,28 @@ export function hornGoalCheck(
   const { horn } = chamber.load;
   const throat = throatCones(chamber.drivers);
   const setbackIn = chamberSetbackIn(cabinet.panel, chamber);
+  const fold = chamberFold(cabinet, chamber);
   const read =
     netLiters === undefined
       ? null
       : hornDesignOf(
           chamber,
           { count: 1, angle: 2 },
-          { netLiters, face: chamberClearFace(cabinet, chamber), setbackIn },
+          {
+            netLiters,
+            face: chamberClearFace(cabinet, chamber),
+            setbackIn,
+            fold: fold?.layout ?? null,
+          },
         );
   const fit =
     read?.ok && throat
       ? hornGoalFit(read.design, horn.goals ?? HORN_GOALS_DEFAULT, throat.parts.ts)
       : null;
+  // a folded horn's air is its boards' passage
   const hornL =
-    flareLiters(horn) + (throat ? frontChamber(throat.cone, throat.count, setbackIn).liters : 0);
+    (fold ? fold.layout.airLiters : flareLiters(horn)) +
+    (throat ? frontChamber(throat.cone, throat.count, setbackIn).liters : 0);
   const chamberL = chamberAirLiters(cabinet, chamber, placed).airLiters;
   return { fit, overAir: hornL > chamberL ? { hornL, chamberL } : null };
 }

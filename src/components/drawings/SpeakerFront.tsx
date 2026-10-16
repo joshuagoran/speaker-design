@@ -287,6 +287,21 @@ export function SpeakerFront({ spec }: Props) {
   const hornParts = (placed: PlacedChamber, flare: HornFlare, i: number) => {
     const { mouth, path } = flare;
     const { clear } = placed;
+    // a folded path shows its mouth in the baffle; its boards and drivers are out of sight
+    if (!path)
+      return [
+        rect(`e${i}`, clear.x + clear.w / 2, clear.y + clear.h / 2, clear.w, clear.h, {
+          fill: "none",
+          stroke: pal.muted,
+          strokeWidth: 0.8,
+        }),
+        rect(`m${i}`, mouth.x + mouth.w / 2, mouth.y + mouth.h / 2, mouth.w, mouth.h, {
+          rx: 2,
+          fill: pal.panel,
+          stroke: pal.ink,
+          strokeWidth: 1.2,
+        }),
+      ];
     // the path's last leg ends at the mouth: its sections are what shows through it, nested
     const seen = path.legs[path.legs.length - 1].sections;
     /** where a segment starts or ends: the outlines drawn (the steps between are the flare's walls) */

@@ -12,6 +12,12 @@ import { zigzagBoards } from "../src/lib/speaker/foldLayouts";
 import { FOLD_FACE, FOLD_MIN_PASSAGE_IN } from "../src/constants/hornBoards";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import type { HornBoards } from "../src/types";
+import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
+import { withHornDrive } from "../src/pages/speaker/chamberLoad";
+import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
+import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
 
 /** A 30 × 38 in side section, 21 in wide, 3/4 in walls. */
 const ROOM: FoldRoom = { depthIn: 30, heightIn: 38, wallIn: 0.75, widthIn: 21 };
@@ -115,4 +121,44 @@ test("horn boards: a passage with no legs cannot be measured", () => {
   assert.equal(layout.checks.broken, true);
   assert.equal(layout.segments.length, 0);
   assert.equal(foldPasses(layout), false);
+});
+
+test("horn boards: the passage draws as one piece per leg and per turn, the turns out to the far wall", () => {
+  const { pieces } = layoutOf(ZIGZAG);
+  assert.equal(pieces.length, 4 + 3);
+  const area = (ps: readonly { z: number; y: number }[]) =>
+    Math.abs(
+      ps.reduce(
+        (sum, p, i) => sum + p.z * ps[(i + 1) % ps.length].y - ps[(i + 1) % ps.length].z * p.y,
+        0,
+      ),
+    ) / 2;
+  // a turn spans both legs' heights and the board between, from the board's end to the wall
+  const turn = pieces[4];
+  assert.ok(
+    Math.abs(area(turn) - LEG_H * (2 * LEG_H + ROOM.wallIn)) < 1e-6,
+    `turn ${area(turn)} in²`,
+  );
+});
+
+test("horn boards: without drivers on a board the throat is the closed end", () => {
+  const plan = zigzagBoards(ROOM, 4, false);
+  const layout = layoutOf(plan);
+  assert.equal(layout.taps, null);
+  assert.ok(foldPasses(layout));
+});
+
+test("horn boards: a folded tapped PA v2 bin's automatic boards pass every check and play", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+  const tapped = withHornDrive(spec.cabinet.chambers[0], HORN_DRIVE.tapped);
+  assert.ok(tapped.load.kind === CHAMBER_LOAD.horn);
+  const chamber = {
+    ...tapped,
+    load: { ...tapped.load, horn: { ...tapped.load.horn, path: HORN_PATH.folded } },
+  };
+  const cabinet = { ...spec.cabinet, chambers: [chamber] };
+  const fold = hornFlare(cabinet, speakerLayout(cabinet).chambers[0])?.fold;
+  assert.ok(fold && foldPasses(fold.layout), JSON.stringify(fold?.layout.checks));
+  const response = speakerResponse({ ...spec, cabinet });
+  assert.ok(response.bands.length > 0, "the boards' passage plays");
 });

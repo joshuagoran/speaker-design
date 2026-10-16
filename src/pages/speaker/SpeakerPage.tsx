@@ -48,6 +48,7 @@ import {
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { formatInches } from "../../lib/format";
+import { foldNotices } from "./foldNotices";
 import { PANEL_NOMINAL_OPTIONS, formatThickness } from "../../lib/panel";
 import { withWallPanel } from "../../lib/speaker/cabinetPanels";
 import { BAFFLE_PLY_IN } from "../../lib/pa/calc";
@@ -346,20 +347,25 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               )}
             </div>
             {flares
-              .filter((f) => !f.path.fits)
-              .map((f, i) => (
+              .flatMap((f) => (f.path && !f.path.fits ? [f.path] : []))
+              .map((path, i) => (
                 <Notice key={i}>
                   {SPEAKER_TEXT.hornNoRoom(
                     {
-                      depth: formatInches(f.path.needs.depthIn),
-                      height: formatInches(f.path.needs.heightIn),
+                      depth: formatInches(path.needs.depthIn),
+                      height: formatInches(path.needs.heightIn),
                     },
                     {
-                      depth: formatInches(f.path.room.depthIn),
-                      height: formatInches(f.path.room.heightIn),
+                      depth: formatInches(path.room.depthIn),
+                      height: formatInches(path.room.heightIn),
                     },
                   )}
                 </Notice>
+              ))}
+            {flares
+              .flatMap((f) => (f.fold ? foldNotices(f.fold.layout.checks) : []))
+              .map((text, i) => (
+                <Notice key={`fold${i}`}>{text}</Notice>
               ))}
             {flares.some((f) => f.mouthClipped) && <Notice>{SPEAKER_TEXT.hornMouthClipped}</Notice>}
             {flares.some((f) => f.mouthMoved) && <Notice>{SPEAKER_TEXT.hornMouthMoved}</Notice>}

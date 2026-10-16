@@ -92,6 +92,10 @@ export interface FoldLayout {
   outlines: FoldPoint[][];
   /** the drivers' basket and motor behind the mounting face, as one outline; null without drivers */
   driverBody: FoldPoint[] | null;
+  /** the passage as pieces to draw: each leg, then each turn out to its far corners */
+  pieces: FoldPoint[][];
+  /** each board's length along its line face, in, and how far each end is cut off square, degrees */
+  cuts: { lengthIn: number; endCutsDeg: [number, number] }[];
 }
 
 // ---- vectors
@@ -249,7 +253,7 @@ function turnGate(
   k: number,
   from: FoldPoint,
   sides: (s: FoldSurface) => Segment,
-): Segment | null {
+): { gate: Segment; outer: FoldPoint[] } | null {
   const leg = plan.legs[k],
     next = plan.legs[k + 1];
   const inner = (l: FoldLeg) => ((leg.turn ?? 1) > 0 ? l.left : l.right);
@@ -268,17 +272,25 @@ function turnGate(
     const tip = add(end, t, 0.5);
     const out = unit(sub(end, other));
     const hit = everySegment(plan, room, ia.board).reduce(
-      (best, s) => Math.min(best, rayTo(tip, out, s)),
-      Infinity,
+      (best, s) => {
+        const d = rayTo(tip, out, s);
+        return d < best.d ? { d, s } : best;
+      },
+      { d: Infinity, s: null as Segment | null },
     );
-    return Number.isFinite(hit) ? [tip, add(tip, out, hit)] : null;
+    if (!Number.isFinite(hit.d) || !hit.s) return null;
+    // the turn's far corners: where each leg's outer side meets the surface the turn runs against
+    const far = [meet(sides(outer(leg)), hit.s), meet(sides(outer(next)), hit.s)].filter(
+      (p): p is FoldPoint => p !== null,
+    );
+    return { gate: [tip, add(tip, out, hit.d)], outer: far };
   }
   const pivot = meet(sides(ia), sides(ib));
   if (!pivot) return null;
   const oa = sides(outer(leg)),
     ob = sides(outer(next));
   const corner = meet(oa, ob) ?? footOn(pivot, oa);
-  return [pivot, corner];
+  return { gate: [pivot, corner], outer: [corner] };
 }
 
 /** Every segment a ray can meet: the walls and each board's four edges, but board `skip`'s. */
@@ -297,7 +309,10 @@ function everySegment(plan: HornBoards, room: FoldRoom, skip: number): Segment[]
  * across the turn and the gate where the next leg starts, then the mouth's. Null when a gate cannot be found (sides
  * that never meet).
  */
-function gatesOf(plan: HornBoards, room: FoldRoom): Segment[] | null {
+function gatesOf(
+  plan: HornBoards,
+  room: FoldRoom,
+): { gates: Segment[]; turnCorners: FoldPoint[][] } | null {
   const { legs } = plan;
   if (legs.length === 0) return null;
   const sides = (s: FoldSurface) => surfaceSegment(plan, s, room);
@@ -314,12 +329,14 @@ function gatesOf(plan: HornBoards, room: FoldRoom): Segment[] | null {
     mouth: Segment = [ma, mb];
   // the turns, in order: each pivots after the last
   const turns: Segment[] = [];
+  const turnCorners: FoldPoint[][] = [];
   let from = midpoint(ca, cb);
   for (let k = 0; k + 1 < legs.length; k++) {
-    const gate = turnGate(plan, room, k, from, sides);
-    if (!gate) return null;
-    turns.push(gate);
-    from = gate[0];
+    const turn = turnGate(plan, room, k, from, sides);
+    if (!turn) return null;
+    turns.push(turn.gate);
+    turnCorners.push(turn.outer);
+    from = turn.gate[0];
   }
   // each leg runs from its start (the closed end, or the last turn's pivot) to its end (the next pivot, or the mouth)
   const startOf = (k: number) => (k === 0 ? midpoint(ca, cb) : turns[k - 1][0]);
@@ -340,10 +357,52 @@ function gatesOf(plan: HornBoards, room: FoldRoom): Segment[] | null {
       sides(legs[k + 1].right),
     );
     if (!end || !start) return null;
-    out.push(end, turns[k], start);
+    // the turn's gate from its left side to its right, as every other gate: a turn to the right pivots on its right
+    const [pivot, corner] = turns[k];
+    out.push(end, (legs[k].turn ?? 1) > 0 ? [pivot, corner] : [corner, pivot], start);
   }
   out.push(mouth);
-  return out;
+  return { gates: out, turnCorners };
+}
+
+/** The convex hull of some points, counterclockwise. */
+function hull(points: readonly FoldPoint[]): FoldPoint[] {
+  const ps = [...points].sort((a, b) => a.z - b.z || a.y - b.y);
+  if (ps.length < 3) return ps;
+  const half = (list: FoldPoint[]) => {
+    const out: FoldPoint[] = [];
+    for (const p of list) {
+      while (
+        out.length >= 2 &&
+        cross(sub(out[out.length - 1], out[out.length - 2]), sub(p, out[out.length - 2])) <= 0
+      )
+        out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return [...half(ps), ...half([...ps].reverse())];
+}
+
+/**
+ * The passage as pieces to draw: each leg between its start and end gates, and each turn between the gates either side
+ * of it out to its far corners.
+ */
+function piecesOf(
+  gates: readonly Segment[],
+  turnCorners: readonly FoldPoint[][],
+  legs: number,
+): FoldPoint[][] {
+  const legGates = (k: number): [Segment, Segment] => [
+    gates[k === 0 ? 0 : 3 * k],
+    gates[k === legs - 1 ? gates.length - 1 : 3 * k + 1],
+  ];
+  const legPieces = Array.from({ length: legs }, (_, k) => hull(legGates(k).flat()));
+  const turnPieces = turnCorners.map((corners, k) =>
+    hull([...gates[3 * k + 1], ...gates[3 * k + 3], ...corners]),
+  );
+  return [...legPieces, ...turnPieces];
 }
 
 /** The sections between consecutive gates: each area the gate's height times the width, growing linearly between. */
@@ -388,6 +447,8 @@ function tapAt(
   side: FoldSurface,
   p: FoldPoint,
 ): number | null {
+  // the closed end's surface opens at the path's start (a front-loaded horn's drivers)
+  if (sameSurface(plan.closed, side)) return 0;
   const k = plan.legs.findIndex((l) => sameSurface(l.left, side) || sameSurface(l.right, side));
   if (k < 0) return null;
   // leg k runs from gate 3k (its start; the closed end's for the first) to gate 3k + 1 (its end; the mouth's for the last)
@@ -441,8 +502,10 @@ export function hornBoardsLayout(
   body: FoldDriverBody | null,
 ): FoldLayout {
   const outlines = plan.boards.map((_, i) => boardOutline(plan, i, room.wallIn));
-  const raw = gatesOf(plan, room);
+  const found = gatesOf(plan, room);
+  const raw = found?.gates ?? null;
   const broken = !raw || raw.some(([a, b]) => ![a.z, a.y, b.z, b.y].every(Number.isFinite));
+  const pieces = found && !broken ? piecesOf(found.gates, found.turnCorners, plan.legs.length) : [];
   let along = 0;
   const gates: FoldGate[] = (broken || !raw ? [] : raw).map(([a, b], i, all) => {
     if (i > 0) along += dist(midpoint(all[i - 1][0], all[i - 1][1]), midpoint(a, b));
@@ -470,7 +533,16 @@ export function hornBoardsLayout(
         }
       : null;
   const driverBody = body ? driverOutline(plan, room, body) : null;
+  const cuts = plan.boards.map((board, i) => ({
+    lengthIn: dist(plan.corners[board.a], plan.corners[board.b]),
+    endCutsDeg: [endCut(plan, i, board.a, room), endCut(plan, i, board.b, room)] as [
+      number,
+      number,
+    ],
+  }));
   return {
+    pieces,
+    cuts,
     gates,
     segments,
     pathIn: along,
@@ -547,6 +619,36 @@ function checksOf(
     broken,
     drivers: driverChecks,
   };
+}
+
+/** The angle between two lines, degrees, from 0 (parallel) to 90 (square). */
+function lineAngle(a: FoldPoint, b: FoldPoint): number {
+  const c = Math.abs(dot(unit(a), unit(b)));
+  return (Math.acos(Math.min(1, c)) * 180) / Math.PI;
+}
+
+/**
+ * How far board `i`'s end at corner `c` is cut off square, degrees: against a wall, by the angle it meets the wall at
+ * (none when square to it); where it meets another board at a shared corner, a mitre (half the turn between them); a
+ * free end, square.
+ */
+function endCut(plan: HornBoards, i: number, c: number, room: FoldRoom): number {
+  const board = plan.boards[i];
+  const corner = plan.corners[c];
+  const other = plan.corners[c === board.a ? board.b : board.a];
+  const way = sub(other, corner);
+  if (corner.wall !== null) {
+    const [wa, wb] = wallSegment(corner.wall, room);
+    return 90 - lineAngle(way, sub(wb, wa));
+  }
+  const j = plan.boards.findIndex((b, k) => k !== i && (b.a === c || b.b === c));
+  if (j < 0) return 0;
+  const bj = plan.boards[j];
+  const far = plan.corners[bj.a === c ? bj.b : bj.a];
+  // the turn between the two boards, 0 straight on to 180 folded back; each takes half of it
+  const cos = dot(unit(way), unit(sub(far, corner)));
+  const between = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+  return (180 - between) / 2;
 }
 
 /** Whether a worked-out layout passes every check. */

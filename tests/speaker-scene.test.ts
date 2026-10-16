@@ -1,3 +1,4 @@
+import assert from "node:assert";
 // The Speaker page's 3D scene of any speaker spec (stack-view/buildSpeakerScene), built from the read adapters' specs of
 // golden PA and Hi-fi designs (the PA sub, the mid/high box, the tower, a Hi-fi speaker on a waveguide, a coaxial):
 // each chamber, driver, horn and port where the spec and its layout (lib/speaker/speakerLayout) put them, the walls the
@@ -363,30 +364,48 @@ describe("horns", () => {
         },
       },
     });
-    for (const path of [HORN_PATH.straight, HORN_PATH.folded]) {
-      const spec = { ...sub, cabinet: { ...sub.cabinet, chambers: [hornChamber(path)] } };
+    {
+      const spec = {
+        ...sub,
+        cabinet: { ...sub.cabinet, chambers: [hornChamber(HORN_PATH.straight)] },
+      };
       const solid = buildSpeakerScene({ spec, cutaway: false });
       const flare = named(solid, SPEAKER_MESH_NAMES.hornFlare);
       const [placedChamber] = speakerLayout(spec.cabinet).chambers;
       const drawn = hornFlare(spec.cabinet, placedChamber);
-      // one duct per leg of the path: a straight path is one
-      expect(flare).toHaveLength(drawn?.path.legs.length ?? -1);
-      expect(drawn?.path.legs.length).toBe(path === HORN_PATH.folded ? 2 : 1);
+      // a straight path is one duct
+      expect(flare).toHaveLength(1);
+      expect(drawn?.path?.legs.length).toBe(1);
       const box = boxOf(...flare);
       // the mouth is at the baffle's inside face, the path inside the walls
       expect(box.max.z).toBeCloseTo(frontZ(spec) - spec.cabinet.insetIn - BAFFLE_THICKNESS_IN, 6);
       expect(box.min.z).toBeGreaterThan(-base.dims.d / 2);
-      expect(drawn?.path.fits).toBe(true);
+      expect(drawn?.path?.fits).toBe(true);
       // the front-loaded horn's driver sits at its throat, inside: drawn only in the cutaway
       expect(named(solid, SPEAKER_MESH_NAMES.hornDriver)).toHaveLength(0);
       expect(
         named(buildSpeakerScene({ spec, cutaway: true }), SPEAKER_MESH_NAMES.hornDriver),
       ).toHaveLength(1);
+      expect(drawn?.mouthClipped).toBe(false);
+    }
+    {
+      // a folded path is its boards: one mesh each, inside the chamber, and no straight flare
+      const spec = {
+        ...sub,
+        cabinet: { ...sub.cabinet, chambers: [hornChamber(HORN_PATH.folded)] },
+      };
+      const solid = buildSpeakerScene({ spec, cutaway: false });
       const [placed] = speakerLayout(spec.cabinet).chambers;
-      expect((hornFlare(spec.cabinet, placed)?.path.folds ?? 0) > 0).toBe(
-        path === HORN_PATH.folded,
+      const fold = hornFlare(spec.cabinet, placed)?.fold;
+      assert.ok(fold);
+      expect(named(solid, SPEAKER_MESH_NAMES.hornFlare)).toHaveLength(0);
+      const boards = named(solid, SPEAKER_MESH_NAMES.hornBoard);
+      expect(boards).toHaveLength(fold.plan.boards.length);
+      const box = boxOf(...boards);
+      expect(box.min.z).toBeGreaterThan(-base.dims.d / 2);
+      expect(box.max.z).toBeLessThanOrEqual(
+        frontZ(spec) - spec.cabinet.insetIn - BAFFLE_THICKNESS_IN + 1e-6,
       );
-      expect(hornFlare(spec.cabinet, placed)?.mouthClipped).toBe(false);
     }
     // a mouth larger than the clear face: cut to it, flagged, the flare shrunk to meet it
     const big = hornChamber(HORN_PATH.straight);
@@ -404,7 +423,7 @@ describe("horns", () => {
     expect(flare?.mouthClipped).toBe(true);
     expect(flare?.mouth.w).toBeLessThanOrEqual(placed.clear.w + EPS);
     expect(flare?.mouth.h).toBeLessThanOrEqual(placed.clear.h + EPS);
-    const end = flare?.path.legs[0].sections.at(-1);
+    const end = flare?.path?.legs[0].sections.at(-1);
     expect((end?.w ?? 0) * (end?.h ?? 0)).toBeCloseTo(
       (flare?.mouth.w ?? 0) * (flare?.mouth.h ?? 0),
       6,

@@ -9,9 +9,12 @@ import type {
   HornEngineGap,
   HornPort,
   SpeakerChamber,
+  SpeakerHorn,
+  HornSegment,
 } from "../../types";
 import { frontChamber, throatCones } from "./hornThroat";
-import { isSizedSegment } from "../acoustics/hornSegments";
+import { isSizedSegment, splitSegmentsAt } from "../acoustics/hornSegments";
+import type { FoldLayout } from "./hornBoards";
 import { slotRunIn, stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
@@ -81,6 +84,40 @@ export interface HornDesignRoom {
   face: Dims2;
   /** how far the horn's driver board stands the cones behind the bay's end, in (`chamberSetbackIn`): front chamber air */
   setbackIn: number;
+  /**
+   * a folded horn's boards worked out (lib/speaker/hornBoards): their sections and the taps where the drivers sit
+   * replace the horn's own. Absent or null: a straight path
+   */
+  fold?: Pick<FoldLayout, "segments" | "taps"> | null;
+}
+
+/**
+ * A folded horn's sections and drive from its boards: the sections split at the drivers' taps, the taps as section
+ * boundaries. A tapped horn needs the drivers' two sides in the passage (either way round: the backs first only flips
+ * the polarity); an offset horn the fronts in the passage past its start and the backs in the rear chamber; a
+ * front-loaded horn the fronts at the start, or no drivers on a board (the throat at the closed end). False where the
+ * drivers' place does not fit the drive.
+ */
+function boardsDrive(
+  drive: SpeakerHorn["drive"],
+  fold: Pick<FoldLayout, "segments" | "taps">,
+): { segments: HornSegment[]; drive: SpeakerHorn["drive"] } | false {
+  const { segments, taps } = fold;
+  if (drive.kind === HORN_DRIVE.tapped) {
+    if (taps?.front == null || taps.rear == null || Math.abs(taps.front - taps.rear) < 1e-6)
+      return false;
+    const [a, b] = [taps.front, taps.rear].sort((x, y) => x - y);
+    const split = splitSegmentsAt(segments, [a * CM_PER_IN, b * CM_PER_IN]);
+    const [frontTap, rearTap] = split.boundaries;
+    return { segments: split.segments, drive: { kind: drive.kind, frontTap, rearTap } };
+  }
+  if (drive.kind === HORN_DRIVE.offset) {
+    if (taps?.front == null || taps.rear !== null) return false;
+    const split = splitSegmentsAt(segments, [taps.front * CM_PER_IN]);
+    return { segments: split.segments, drive: { kind: drive.kind, tap: split.boundaries[0] } };
+  }
+  if (taps && (taps.rear !== null || (taps.front ?? 0) > 1e-6)) return false;
+  return { segments, drive };
 }
 
 /**
@@ -109,8 +146,12 @@ export function hornDesignOf(
   const throat = throatCones(chamber.drivers);
   if (!throat) return gap(HORN_ENGINE_GAP.driver);
   if (horn && !horn.segments.every(isSizedSegment)) return gap(HORN_ENGINE_GAP.segment);
-  const n = horn?.segments.length ?? 0;
-  const drive = horn?.drive;
+  const boards = horn && room.fold ? boardsDrive(horn.drive, room.fold) : null;
+  if (boards === false) return gap(HORN_ENGINE_GAP.taps);
+  if (boards && !boards.segments.length) return gap(HORN_ENGINE_GAP.segment);
+  const segmentsUsed = boards ? boards.segments : (horn?.segments ?? []);
+  const n = segmentsUsed.length;
+  const drive = boards ? boards.drive : horn?.drive;
   if (drive?.kind === HORN_DRIVE.offset && !isInnerBoundary(drive.tap, n))
     return gap(HORN_ENGINE_GAP.taps);
   if (
@@ -130,7 +171,7 @@ export function hornDesignOf(
     driver: throat.parts.ts,
     drivers: throat.count,
     count: at.count,
-    segments: horn?.segments ?? [],
+    segments: segmentsUsed,
     angle: at.angle,
   };
   if (drive?.kind === HORN_DRIVE.tapped) {

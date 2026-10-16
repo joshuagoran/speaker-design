@@ -26,3 +26,6 @@ export const FOLD_CONE_MARGIN_IN = 0.5;
 
 /** How far apart two points may be and count as one, in (a corner on a wall, a board's end on another's face). */
 export const FOLD_TOUCH_IN = 0.01;
+
+/** The most legs the automatic zigzag tries when a folded horn has no boards of its own. */
+export const FOLD_AUTO_MAX_LEGS = 10;

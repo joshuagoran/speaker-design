@@ -372,7 +372,7 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
         ],
         portOffset: 30,
         drive: { kind: HORN_DRIVE.front },
-        path: HORN_PATH.folded,
+        path: HORN_PATH.straight,
       },
     },
     drivers: [

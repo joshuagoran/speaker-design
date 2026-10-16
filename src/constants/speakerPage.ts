@@ -243,6 +243,18 @@ export const SPEAKER_TEXT = {
   section: "Sections",
   sectionNote:
     "Top and side, cut through the horn's center, the baffle at the left. The horn's walls follow its flare sections. They start just in front of the cones and cover their outer parts. The dashed box is the front chamber, between the cones and the back edges of the walls. A folded path turns at the walls. A slot on a front side runs back along the side wall.",
+  /** a folded horn's failed checks (lib/speaker/hornBoards), each with what to change; boards by number from 1 */
+  foldOutside: (n: number) => `Board ${n} goes past the box. Move its corners inside.`,
+  foldCrossing: (a: number, b: number) => `Boards ${a} and ${b} cross. Move one of them.`,
+  foldThin: (minIn: string) => `A passage is lower than ${minIn}″. Move its boards apart.`,
+  foldBroken: "The boards do not make one passage from the closed end to the mouth.",
+  foldNotFacing: "The drivers do not face the passage. Move them to a board along it.",
+  foldCutout:
+    "The drivers' cutout runs off their board. Move them along it, or make the board longer.",
+  foldMagnet:
+    "The drivers' magnets hit a board or a wall. Move the drivers, or open up the passage behind them.",
+  foldCone:
+    "The cones have no room to move. Move the drivers, or open up the passage in front of them.",
   /** the horn's path does not fit its chamber: what it needs and what the chamber gives, as formatted lengths */
   hornNoRoom: (needs: { depth: string; height: string }, room: { depth: string; height: string }) =>
     `A horn path does not fit its chamber. It needs ${needs.depth} of depth and ${needs.height} of height. The chamber gives ${room.depth} and ${room.height}. The views draw the horn as it is, past the walls. Make the chamber larger, shorten the path, or set the path to Folded.`,
@@ -300,6 +312,11 @@ export const SPEAKER_TEXT = {
       : "the drivers mount on its back",
   driverBoardCutout: (count: number, kind: string, cutout: string) =>
     `${count} × ${kind.toLowerCase()} cutout, ${cutout}`,
+  /** a folded horn's board's cutlist notes: its number in the side view, its end cuts, where the drivers' cutouts center */
+  hornBoardNote: (n: number) => `board ${n} in the side view`,
+  hornBoardCuts: ([a, b]: readonly [number, number]) =>
+    a === 0 && b === 0 ? "square ends" : `ends cut ${a}° and ${b}° off square`,
+  hornBoardSpot: (fromEnd: string) => `cutouts centered ${fromEnd}″ from its first end`,
   hornNoFitNote:
     "the horn does not fit where it is mounted; no cutout until you change the mounting",
   portTooLong: "too long for this chamber: make it shorter",

@@ -11,7 +11,7 @@ import {
 } from "../src/components/stack-view/buildSpeakerScene";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { CHAMBER_LOAD, HORN_PATH } from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD } from "../src/constants/speakerSpec";
 import {
   chamberSetbackIn,
   driverBoardIn,
@@ -25,7 +25,7 @@ import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { panelLbPerSqFt } from "../src/lib/panel";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
-import { frontLoadedOf, roomOf } from "./horn-room";
+import { frontLoadedOf, roomOf, straightPath } from "./horn-room";
 import type { SpeakerChamber, SpeakerSpec } from "../src/types";
 
 /** The spec with its one horn chamber's driver board doubled, or not. */
@@ -55,8 +55,8 @@ const boardRows = (spec: SpeakerSpec) =>
 function bayOf(spec: SpeakerSpec) {
   const [placed] = speakerLayout(spec.cabinet).chambers;
   const flare = hornFlare(spec.cabinet, placed);
-  if (!flare?.path.bay) throw new Error("the horn has a bay");
-  return { flare, bay: flare.path.bay, placed };
+  if (!flare?.path?.bay) throw new Error("the horn has a bay");
+  return { flare, bay: flare.path?.bay, placed };
 }
 
 describe("the driver board's thickness", () => {
@@ -230,13 +230,15 @@ describe("the driver board in the front chamber and the depth fit", () => {
     expect(two.bay.boardZ).toBeCloseTo(one.bay.boardZ, 12);
     expect(two.bay.coneZ - two.bay.boardZ).toBeCloseTo(wall, 12);
     expect(two.bay.bodyZ - one.bay.bodyZ).toBeCloseTo(wall, 12);
-    expect(two.flare.path.needs.depthIn - one.flare.path.needs.depthIn).toBeCloseTo(wall, 12);
+    expect(
+      straightPath(two.flare).needs.depthIn - straightPath(one.flare).needs.depthIn,
+    ).toBeCloseTo(wall, 12);
   });
 
   test("a chamber that fits with one piece can fail the fit with two", () => {
     const wall = bin().cabinet.panel.thicknessIn;
     const inset = bin().cabinet.insetIn;
-    const need = bayOf(bin()).flare.path.needs.depthIn;
+    const need = straightPath(bayOf(bin()).flare).needs.depthIn;
     // the clear depth is the depth less the back, the baffle and the inset: a hair more than the single board needs
     const shallow = (doubleBoard: boolean): SpeakerSpec => {
       const spec = bin(doubleBoard);
@@ -251,44 +253,8 @@ describe("the driver board in the front chamber and the depth fit", () => {
         },
       };
     };
-    expect(bayOf(shallow(false)).flare.path.fits).toBe(true);
-    expect(bayOf(shallow(true)).flare.path.fits).toBe(false);
-  });
-
-  test("a folded path keeps the drivers' room: the doubled board needs the same extra wall", () => {
-    const wall = bin().cabinet.panel.thicknessIn;
-    const folded = (doubleBoard: boolean): SpeakerSpec => {
-      const spec = bin(doubleBoard);
-      return {
-        ...spec,
-        cabinet: {
-          ...spec.cabinet,
-          chambers: spec.cabinet.chambers.map((c) =>
-            c.load.kind === CHAMBER_LOAD.horn
-              ? {
-                  ...c,
-                  dims: { ...c.dims, h: 60, d: 56 },
-                  load: {
-                    ...c.load,
-                    horn: {
-                      ...c.load.horn,
-                      path: HORN_PATH.folded,
-                      segments: [{ ...c.load.horn.segments[0], length: 140 }],
-                    },
-                  },
-                }
-              : c,
-          ),
-        },
-      };
-    };
-    const one = bayOf(folded(false)),
-      two = bayOf(folded(true));
-    expect(one.flare.path.fits && two.flare.path.fits).toBe(true);
-    expect(two.bay.coneZ - two.bay.boardZ).toBeCloseTo(
-      (one.flare.path.folds % 2 === 0 ? 1 : -1) * wall,
-      12,
-    );
+    expect(bayOf(shallow(false)).flare.path?.fits).toBe(true);
+    expect(bayOf(shallow(true)).flare.path?.fits).toBe(false);
   });
 });
 

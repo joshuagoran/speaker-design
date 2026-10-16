@@ -1,3 +1,4 @@
+import { straightPath } from "./horn-room";
 // The horn's air path in the 3D view (stack-view/buildSpeakerScene), checked against the path's own sections
 // (lib/speaker/hornGeometry): nothing solid inside the air from the driver board's front face through the throat to the mouth, and
 // nothing solid over the mouth or the side slots' openings. The wood that must stay (the horn's walls, the walls' back
@@ -14,7 +15,7 @@ import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speaker
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { hornFlare, slotOpeningsAt, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { portRule, PORT_RULE } from "../src/lib/speaker/speakerLayout";
-import { CHAMBER_LOAD, HORN_PATH, PORT_SHAPE } from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD, PORT_SHAPE } from "../src/constants/speakerSpec";
 import type { HornPath } from "../src/lib/speaker/hornGeometry";
 import type { SpeakerSpec } from "../src/types";
 
@@ -124,41 +125,11 @@ function surfacePoints(mesh: THREE.Mesh): THREE.Vector3[] {
   return points;
 }
 
-/** The name of the folded bin. */
-const FOLDED = "a folded sub bin";
-
-/** The template horns, and a folded bin with room for its path: each as a spec and its name. */
+/** The template horns with a straight path, each as a spec and its name (a folded path is its boards: horn-boards.test). */
 function hornSpecs(): [string, SpeakerSpec][] {
-  const specs = SPEAKER_TEMPLATES.map((t): [string, SpeakerSpec] => [t, templateSpeaker(t)]).filter(
+  return SPEAKER_TEMPLATES.map((t): [string, SpeakerSpec] => [t, templateSpeaker(t)]).filter(
     ([, spec]) => spec.cabinet.chambers.some((c) => c.load.kind === CHAMBER_LOAD.horn),
   );
-  const bin = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne);
-  const [chamber] = bin.cabinet.chambers;
-  if (chamber.load.kind === CHAMBER_LOAD.horn) {
-    const [segment] = chamber.load.horn.segments;
-    const folded: SpeakerSpec = {
-      ...bin,
-      cabinet: {
-        ...bin.cabinet,
-        chambers: [
-          {
-            ...chamber,
-            dims: { ...chamber.dims, h: 60, d: 56 },
-            load: {
-              ...chamber.load,
-              horn: {
-                ...chamber.load.horn,
-                path: HORN_PATH.folded,
-                segments: [{ ...segment, length: 140 }],
-              },
-            },
-          },
-        ],
-      },
-    };
-    specs.push([FOLDED, folded]);
-  }
-  return specs;
 }
 
 describe("the horn's air path in the 3D view", () => {
@@ -173,8 +144,7 @@ describe("the horn's air path in the 3D view", () => {
   });
 
   for (const [name, spec] of hornSpecs())
-    // the cutaway's drivers of a folded path are not yet kept clear of its other legs (the bay is as tall as the cones)
-    for (const cutaway of name === FOLDED ? [false] : [false, true])
+    for (const cutaway of [false, true])
       test(`${name}${cutaway ? " (cutaway)" : ""}: no solid part in the air, over the mouth or over a slot`, () => {
         const layout = speakerLayout(spec.cabinet);
         expect(layout.chambers.length).toBe(1);
@@ -182,8 +152,8 @@ describe("the horn's air path in the 3D view", () => {
         const flare = hornFlare(spec.cabinet, placed);
         expect(flare, "the horn has a path").toBeTruthy();
         if (!flare) return;
-        // a path that does not fit its box is drawn as it is, past the walls: the template horns and the folded bin fit
-        expect(flare.path.fits, `${name}: the path fits`).toBe(true);
+        // a path that does not fit its box is drawn as it is, past the walls: the template horns fit
+        expect(flare.path?.fits, `${name}: the path fits`).toBe(true);
         const scene = buildSpeakerScene({
           spec: { cabinet: spec.cabinet, look: spec.look },
           cutaway,
@@ -195,13 +165,13 @@ describe("the horn's air path in the 3D view", () => {
         });
         // the baffle's inside face is where the mouth's section is: the flare's front-most point
         const flares = meshes.filter((m) => m.name === SPEAKER_MESH_NAMES.hornFlare);
-        expect(flares.length).toBe(flare.path.legs.length);
+        expect(flares.length).toBe(flare.path?.legs.length);
         const innerZ = Math.max(...flares.map((m) => new THREE.Box3().setFromObject(m).max.z));
-        const pieces = airPieces(flare.path);
+        const pieces = airPieces(straightPath(flare));
 
         // the throat's boards exist where the path says (the bay's face less the throat), none over the opening
         const boards = meshes.filter((m) => m.name === SPEAKER_MESH_NAMES.hornThroat);
-        expect(boards.length).toBe(flare.path.bay?.strips.length ?? 0);
+        expect(boards.length).toBe(flare.path?.bay?.strips.length ?? 0);
 
         const mouth = flare.mouth;
         const slots = (() => {
