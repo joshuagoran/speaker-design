@@ -514,10 +514,10 @@ export const SPEAKER_TEXT = {
   foldNoSpot: "No wall here has room for the drivers. Add runs, or set them side by side.",
   foldOffsetNeedsChamber:
     "An offset horn needs the cone fronts in a run and the backs in the rear chamber. Move the drivers.",
-  hornImport: "Import a horn record",
+  hornImport: "Import a Hornresp record",
   hornImportTip:
-    "Paste the text of a record file from a horn simulation program. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",
-  hornImportField: "Record text",
+    "Paste the text of a Hornresp record file. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",
+  hornImportField: "Hornresp record text",
   hornImportAction: "Import",
   hornImportDone: "Imported. The drivers stay as set in this chamber.",
   hornImportFailed: (reason: string) =>
