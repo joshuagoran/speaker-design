@@ -8,7 +8,7 @@ import type {
   HornBoards,
   SpeakerHorn,
 } from "../../types";
-import type { FoldDriverBody, FoldRoom } from "./hornBoards";
+import { driverRowsSpanIn, type FoldDriverBody, type FoldRoom } from "./hornBoards";
 import {
   FOLD_CUTOUT_MARGIN_IN,
   FOLD_FACE,
@@ -91,13 +91,18 @@ export const isFolded = (horn: Pick<SpeakerHorn, "path" | "drive">) =>
 
 /**
  * How near a wall the drivers' middle may sit, in: the cutout's half and its margin on the board, or the body's widest
- * step and the clearance round it.
+ * step and the clearance round it, and half the spread of their rows along the board where they take several (across a
+ * chamber `widthIn` wide).
  */
-const driverWallIn = (body: Pick<FoldDriverBody, "cutoutIn" | "steps">) =>
+const driverWallIn = (
+  body: Pick<FoldDriverBody, "cutoutIn" | "steps" | "count">,
+  widthIn: number,
+) =>
   Math.max(
     body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN,
     Math.max(0, ...body.steps.map((step) => step.rIn)) + FOLD_MAGNET_CLEARANCE_IN,
-  );
+  ) +
+  driverRowsSpanIn(body, widthIn) / 2;
 
 /**
  * An offset-driver horn's zigzag: a sealed rear chamber `rearIn` high across the bottom (a board from the baffle to the
@@ -106,10 +111,10 @@ const driverWallIn = (body: Pick<FoldDriverBody, "cutoutIn" | "steps">) =>
  * rear chamber's board near the closed end, the cone fronts up into the first leg and their backs into the chamber.
  */
 export function offsetZigzagBoards(
-  room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn">,
+  room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn" | "widthIn">,
   legs: number,
   rearIn: number,
-  body: Pick<FoldDriverBody, "cutoutIn" | "steps">,
+  body: Pick<FoldDriverBody, "cutoutIn" | "steps" | "count">,
   turnShare = 1,
   growth = 1,
 ): HornBoards {
@@ -160,7 +165,7 @@ export function offsetZigzagBoards(
     // as near the closed end as the cutout's margin and the driver's clearance from the back wall allow
     drivers: {
       board: 0,
-      alongIn: d - driverWallIn(body),
+      alongIn: d - driverWallIn(body, room.widthIn),
       coneFace: FOLD_FACE.offset,
     },
   };
@@ -201,10 +206,10 @@ export const mouthAtBottom = (horn: Pick<SpeakerHorn, "mouthPosition">, heightIn
  * legs' height wide.
  */
 export function spiralBoards(
-  room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn">,
+  room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn" | "widthIn">,
   inner: number,
   mouthShare: number,
-  body: Pick<FoldDriverBody, "cutoutIn" | "steps">,
+  body: Pick<FoldDriverBody, "cutoutIn" | "steps" | "count">,
   turnShare = 1,
   growth = 1,
 ): HornBoards {
@@ -247,7 +252,7 @@ export function spiralBoards(
   corners.push({ z: zR, y: yD, wall: null });
   boards.push({ a: lastBack, b: corners.length - 1, side: -1 });
   const riser = boards.length - 1;
-  const frontIn = driverWallIn(body);
+  const frontIn = driverWallIn(body, room.widthIn);
   const legs: FoldLeg[] = Array.from({ length: k }, (_, i) => {
     const up: FoldLeg["left"] = { board: i, face: FOLD_FACE.line };
     const down: FoldLeg["left"] =
