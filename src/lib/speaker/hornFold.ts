@@ -279,7 +279,22 @@ export function hornFold(input: HornFoldInput): HornFold | null {
   const flares = segments.some((s) => !isStraightSegment(s));
   const foldRuns: FoldRun[] = runs.map((run, k) => {
     const steps = flares ? HORN_PATH_STEPS : 1;
-    const wall = (side: 1 | -1) =>
+    const way = dir(angles[k]);
+    /** how far along the run a point is */
+    const alongOf = (p: FoldPoint) => dot(sub(p, points[k]), way);
+    /**
+     * a wall from its start to its end: at an inner corner the mitre stands short of the run's end, so the samples past
+     * it (and before the start's mitre) are left out, and the wall never doubles back
+     */
+    const wall = (side: 1 | -1) => {
+      const line = sampled(side);
+      const from = alongOf(line[0]),
+        to = alongOf(line[line.length - 1]);
+      return line.filter(
+        (p, j) => j === 0 || j === line.length - 1 || (alongOf(p) > from && alongOf(p) < to),
+      );
+    };
+    const sampled = (side: 1 | -1) =>
       Array.from({ length: steps + 1 }, (_, j) => {
         if (j === 0 && k > 0) return corner(k - 1, side);
         if (j === steps && k < runs.length - 1) return corner(k, side);
@@ -340,7 +355,13 @@ export function hornFold(input: HornFoldInput): HornFold | null {
     );
     return found < 0 ? null : found;
   };
-  const cutAt = (k: number) => (k < 0 || k >= runs.length - 1 ? 0 : turnDeg(k) / 2);
+  /** the mouth's run meets the baffle off square by its tilt from straight toward the baffle */
+  const mouthCut = (() => {
+    const d = Math.abs(runs[runs.length - 1].angleDeg - 180) % 360;
+    return d > 180 ? 360 - d : d;
+  })();
+  const cutAt = (k: number) =>
+    k === runs.length - 1 ? mouthCut : k < 0 || k > runs.length - 1 ? 0 : turnDeg(k) / 2;
   const boards: FoldBoard[] = [];
   foldRuns.forEach((run, k) => {
     for (const side of [1, -1] as const) {
@@ -603,3 +624,20 @@ export function squareFolds(input: SquareFoldInput): HornRun[] {
     };
   });
 }
+
+/** A board's outward normal in the side view: off its run's duct face, or back from the path's start (the end board). */
+export function boardNormal(fold: HornFold, board: FoldBoard): FoldPoint {
+  const run = fold.runs[Math.max(0, board.run)];
+  return board.side === 0
+    ? { z: -Math.cos(run.angle), y: -Math.sin(run.angle) }
+    : { z: -Math.sin(run.angle) * board.side, y: Math.cos(run.angle) * board.side };
+}
+
+/** A board's outline in the side view: its duct face, then that face `wallIn` out along its normal, back. */
+export function boardOutline(fold: HornFold, board: FoldBoard, wallIn: number): FoldPoint[] {
+  const out = boardNormal(fold, board);
+  return [...board.points, ...[...board.points].reverse().map((p) => add(p, out, wallIn))];
+}
+
+/** A run's outline in the side view (its duct), for the drawings. */
+export const runOutline = (run: FoldRun) => outline(run);

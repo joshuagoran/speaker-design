@@ -16,6 +16,8 @@ import { hornFlare, slotOpeningsAt, speakerLayout } from "../src/lib/speaker/spe
 import { portRule, PORT_RULE } from "../src/lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_PATH, PORT_SHAPE } from "../src/constants/speakerSpec";
 import type { HornPath } from "../src/lib/speaker/hornGeometry";
+import { runOutline, type FoldPoint } from "../src/lib/speaker/hornFold";
+import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
 import type { SpeakerSpec } from "../src/types";
 
 /**
@@ -127,6 +129,30 @@ function surfacePoints(mesh: THREE.Mesh): THREE.Vector3[] {
 /** The name of the folded bin. */
 const FOLDED = "a folded sub bin";
 
+/** The front of the baffle in the scene: the layout's front face. */
+const frontOfBaffle = (spec: SpeakerSpec) => speakerLayout(spec.cabinet).size.d / 2;
+
+/** How far inside a folded path's duct a point must be to count as in its air, in: its boards touch its faces. */
+const AIR_MARGIN_IN = 0.05;
+
+/** Whether a point is inside a polygon (even-odd) and at least `margin` from its edges. */
+function insideBy(poly: readonly FoldPoint[], p: FoldPoint, margin: number): boolean {
+  let hit = false;
+  let near = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i],
+      b = poly[j];
+    if (a.y > p.y !== b.y > p.y && p.z < ((b.z - a.z) * (p.y - a.y)) / (b.y - a.y) + a.z)
+      hit = !hit;
+    const ab = { z: b.z - a.z, y: b.y - a.y };
+    const len2 = ab.z * ab.z + ab.y * ab.y;
+    const t =
+      len2 > 0 ? Math.min(1, Math.max(0, ((p.z - a.z) * ab.z + (p.y - a.y) * ab.y) / len2)) : 0;
+    near = Math.min(near, Math.hypot(p.z - (a.z + ab.z * t), p.y - (a.y + ab.y * t)));
+  }
+  return hit && near > margin;
+}
+
 /** The template horns, and a folded bin with room for its path: each as a spec and its name. */
 function hornSpecs(): [string, SpeakerSpec][] {
   const specs = SPEAKER_TEMPLATES.map((t): [string, SpeakerSpec] => [t, templateSpeaker(t)]).filter(
@@ -183,7 +209,7 @@ describe("the horn's air path in the 3D view", () => {
         expect(flare, "the horn has a path").toBeTruthy();
         if (!flare) return;
         // a path that does not fit its box is drawn as it is, past the walls: the template horns and the folded bin fit
-        expect(flare.path.fits, `${name}: the path fits`).toBe(true);
+        expect(flare.fold ? flare.fold.fits : flare.path.fits, `${name}: the path fits`).toBe(true);
         const scene = buildSpeakerScene({
           spec: { cabinet: spec.cabinet, look: spec.look },
           cutaway,
@@ -193,15 +219,28 @@ describe("the horn's air path in the 3D view", () => {
         scene.traverse((o) => {
           if (o instanceof THREE.Mesh) meshes.push(o);
         });
-        // the baffle's inside face is where the mouth's section is: the flare's front-most point
-        const flares = meshes.filter((m) => m.name === SPEAKER_MESH_NAMES.hornFlare);
-        expect(flares.length).toBe(flare.path.legs.length);
-        const innerZ = Math.max(...flares.map((m) => new THREE.Box3().setFromObject(m).max.z));
+        // the baffle's inside face is where the mouth's section is: the flare's front-most point (a folded path's
+        // boards: the mouth's run's boards end there)
+        const { fold } = flare;
+        const flares = meshes.filter(
+          (m) => m.name === (fold ? SPEAKER_MESH_NAMES.hornBoard : SPEAKER_MESH_NAMES.hornFlare),
+        );
+        if (fold) expect(flares.length).toBeGreaterThan(0);
+        else expect(flares.length).toBe(flare.path.legs.length);
+        const innerZ = fold
+          ? frontOfBaffle(spec) - spec.cabinet.insetIn - BAFFLE_THICKNESS_IN
+          : Math.max(...flares.map((m) => new THREE.Box3().setFromObject(m).max.z));
         const pieces = airPieces(flare.path);
+        /** whether a point is in a folded path's air: across the duct's width, inside a run's duct by a margin */
+        const inFoldAir = (x: number, y: number, zBack: number) =>
+          fold !== null &&
+          Math.abs(x - fold.cx) < fold.widthIn / 2 - AIR_MARGIN_IN &&
+          fold.runs.some((run) => insideBy(runOutline(run), { z: zBack, y }, AIR_MARGIN_IN));
 
-        // the throat's boards exist where the path says (the bay's face less the throat), none over the opening
+        // the throat's boards exist where the path says (the bay's face less the throat), none over the opening; a
+        // folded path has none (its drivers mount on a board)
         const boards = meshes.filter((m) => m.name === SPEAKER_MESH_NAMES.hornThroat);
-        expect(boards.length).toBe(flare.path.bay?.strips.length ?? 0);
+        expect(boards.length).toBe(fold ? 0 : (flare.path.bay?.strips.length ?? 0));
 
         const mouth = flare.mouth;
         const slots = (() => {
@@ -223,7 +262,7 @@ describe("the horn's air path in the 3D view", () => {
           for (const p of surfacePoints(mesh)) {
             const zBack = innerZ - p.z;
             expect(
-              inAir(pieces, p.x, p.y, zBack),
+              fold ? inFoldAir(p.x, p.y, zBack) : inAir(pieces, p.x, p.y, zBack),
               `${name}: ${mesh.name || "a panel"} has wood in the air at x ${p.x.toFixed(2)}, y ${p.y.toFixed(2)}, ${zBack.toFixed(2)} back`,
             ).toBe(false);
             // over an opening: from the baffle's inside face out

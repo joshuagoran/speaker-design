@@ -1,4 +1,10 @@
 import type { SpeakerSpec } from "../../types";
+import {
+  boardOutline,
+  runOutline,
+  type FoldPoint,
+  type HornFold,
+} from "../../lib/speaker/hornFold";
 import { usePalette } from "../../hooks/useTheme";
 import { alpha } from "../../styles/palette";
 import {
@@ -21,6 +27,8 @@ interface Props {
 const SCALE_PX = 6;
 const PAD_PX = 4;
 const GAP_PX = 14;
+/** the drivers' spot's dot on a folded horn, px */
+const FOLD_SPOT_PX = 4;
 
 /**
  * Sections of every horn-loaded chamber of a speaker, to scale: one from the top and one from the side, each cut through
@@ -48,29 +56,39 @@ export function SpeakerSection({ spec }: Props) {
    * What each chamber's two sections span, in: its box and the horn, which is drawn as it is where it does not fit
    * (past the walls), so the drawing takes the room it needs.
    */
-  const spans = horns.map(({ placed, flare: { path } }) => {
+  const spans = horns.map(({ placed, flare: { path, fold } }) => {
     const { dims, y0, cx } = placed;
-    const parts = [
-      ...path.legs.flatMap((l) => l.sections),
-      ...path.turns.map((u) => ({
-        z: u.z1,
-        cx: u.cx,
-        w: u.w,
-        cy: (u.y0 + u.y1) / 2,
-        h: u.y1 - u.y0,
-      })),
-      ...(path.bay
-        ? [
-            {
-              z: Math.max(path.bay.z1, path.bay.bodyZ),
-              cx: path.bay.x + path.bay.w / 2,
-              w: path.bay.w,
-              cy: path.bay.y + path.bay.h / 2,
-              h: path.bay.h,
-            },
-          ]
-        : []),
-    ];
+    const parts = fold
+      ? fold.runs.flatMap((r) =>
+          [...r.left, ...r.right].map((p) => ({
+            z: p.z,
+            cy: p.y,
+            h: 0,
+            cx: fold.cx,
+            w: fold.widthIn,
+          })),
+        )
+      : [
+          ...path.legs.flatMap((l) => l.sections),
+          ...path.turns.map((u) => ({
+            z: u.z1,
+            cx: u.cx,
+            w: u.w,
+            cy: (u.y0 + u.y1) / 2,
+            h: u.y1 - u.y0,
+          })),
+          ...(path.bay
+            ? [
+                {
+                  z: Math.max(path.bay.z1, path.bay.bodyZ),
+                  cx: path.bay.x + path.bay.w / 2,
+                  w: path.bay.w,
+                  cy: path.bay.y + path.bay.h / 2,
+                  h: path.bay.h,
+                },
+              ]
+            : []),
+        ];
     const x0 = cx - dims.w / 2;
     return {
       depth: Math.max(dims.d, zero + Math.max(...parts.map((q) => q.z))),
@@ -91,7 +109,7 @@ export function SpeakerSection({ spec }: Props) {
 
   const panels = horns.map(({ placed, flare }, n) => {
     const { dims, y0, cx } = placed;
-    const { path } = flare;
+    const { path, fold } = flare;
     const top = PAD_PX + rowH.slice(0, n).reduce((a, b) => a + b + GAP_PX, 0);
     const span = spans[n];
     const ux = (z: number, side: 0 | 1) =>
@@ -167,7 +185,20 @@ export function SpeakerSection({ spec }: Props) {
               ]
             : [],
         )}
-        {path.legs.map((leg, k) => (
+        {fold && (
+          <rect
+            {...box(
+              0,
+              vTop,
+              Math.min(...fold.runs.flatMap((r) => [...r.left, ...r.right].map((p) => p.z))),
+              Math.max(...fold.runs.flatMap((r) => [...r.left, ...r.right].map((p) => p.z))),
+              fold.cx - fold.widthIn / 2,
+              fold.cx + fold.widthIn / 2,
+            )}
+            {...air}
+          />
+        )}
+        {(fold ? [] : path.legs).map((leg, k) => (
           <polygon
             key={`tl${k}`}
             points={[
@@ -177,14 +208,14 @@ export function SpeakerSection({ spec }: Props) {
             {...air}
           />
         ))}
-        {path.turns.map((turn, k) => (
+        {(fold ? [] : path.turns).map((turn, k) => (
           <rect
             key={`tt${k}`}
             {...box(0, vTop, turn.z0, turn.z1, turn.cx - turn.w / 2, turn.cx + turn.w / 2)}
             {...air}
           />
         ))}
-        {path.bay && (
+        {!fold && path.bay && (
           <rect
             {...box(0, vTop, path.bay.z0, path.bay.z1, path.bay.x, path.bay.x + path.bay.w)}
             fill="none"
@@ -193,7 +224,7 @@ export function SpeakerSection({ spec }: Props) {
             strokeDasharray="3 2"
           />
         )}
-        {path.bay && (
+        {!fold && path.bay && (
           <rect
             {...box(
               0,
@@ -206,7 +237,8 @@ export function SpeakerSection({ spec }: Props) {
             {...wall}
           />
         )}
-        {path.bay &&
+        {!fold &&
+          path.bay &&
           placed.chamber.drivers
             .filter((d) => placed.spots.has(d))
             .flatMap((d, j) =>
@@ -235,7 +267,18 @@ export function SpeakerSection({ spec }: Props) {
               {...vent}
             />
           ))}
-        {path.legs.map((leg, k) => (
+        {fold && (
+          <FoldSection
+            fold={fold}
+            wallIn={t}
+            x={(z) => ux(z, 1)}
+            y={vSide}
+            air={air}
+            wall={wall}
+            spot={pal.magenta}
+          />
+        )}
+        {(fold ? [] : path.legs).map((leg, k) => (
           <polygon
             key={`sl${k}`}
             points={[
@@ -245,10 +288,10 @@ export function SpeakerSection({ spec }: Props) {
             {...air}
           />
         ))}
-        {path.turns.map((turn, k) => (
+        {(fold ? [] : path.turns).map((turn, k) => (
           <rect key={`st${k}`} {...box(1, vSide, turn.z0, turn.z1, turn.y0, turn.y1)} {...air} />
         ))}
-        {path.bay && (
+        {!fold && path.bay && (
           <rect
             {...box(1, vSide, path.bay.z0, path.bay.z1, path.bay.y, path.bay.y + path.bay.h)}
             fill="none"
@@ -257,7 +300,7 @@ export function SpeakerSection({ spec }: Props) {
             strokeDasharray="3 2"
           />
         )}
-        {path.bay && (
+        {!fold && path.bay && (
           <rect
             {...box(
               1,
@@ -270,7 +313,8 @@ export function SpeakerSection({ spec }: Props) {
             {...wall}
           />
         )}
-        {path.bay &&
+        {!fold &&
+          path.bay &&
           placed.chamber.drivers
             .filter((d) => placed.spots.has(d))
             .flatMap((d, j) =>
@@ -299,5 +343,42 @@ export function SpeakerSection({ spec }: Props) {
     >
       {panels}
     </svg>
+  );
+}
+
+/**
+ * A folded horn's side section (lib/speaker/hornFold): each run's duct, each board a wall thick outside its duct face,
+ * and the drivers' spot. `x` and `y` map the side view's z and y to the drawing.
+ */
+function FoldSection({
+  fold,
+  wallIn,
+  x,
+  y,
+  air,
+  wall,
+  spot,
+}: {
+  fold: HornFold;
+  wallIn: number;
+  x: (z: number) => number;
+  y: (y: number) => number;
+  air: React.SVGProps<SVGPolygonElement>;
+  wall: React.SVGProps<SVGPolygonElement>;
+  spot: string;
+}) {
+  const points = (line: readonly FoldPoint[]) => line.map((p) => `${x(p.z)},${y(p.y)}`).join(" ");
+  return (
+    <>
+      {fold.runs.map((run, k) => (
+        <polygon key={`fr${k}`} points={points(runOutline(run))} {...air} />
+      ))}
+      {fold.boards.map((board, k) => (
+        <polygon key={`fb${k}`} points={points(boardOutline(fold, board, wallIn))} {...wall} />
+      ))}
+      {fold.mount && (
+        <circle cx={x(fold.mount.at.z)} cy={y(fold.mount.at.y)} r={FOLD_SPOT_PX} fill={spot} />
+      )}
+    </>
   );
 }

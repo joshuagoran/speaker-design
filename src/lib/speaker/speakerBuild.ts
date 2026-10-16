@@ -543,6 +543,23 @@ function flareRegions(cabinet: SpeakerCabinet, f: ChamberFrame): BoxRegion[] {
     const c = insidePoint(f, { xIn: (x0 + x1) / 2, yIn: (y0 + y1) / 2 });
     out.push(roomAround(c, x1 - x0, y1 - y0, z0, z1));
   };
+  // a folded path laid out in runs: each run's duct as its box, from its nearest to its farthest point
+  if (flare.fold) {
+    const { fold } = flare;
+    for (const run of fold.runs) {
+      const pts = [...run.left, ...run.right];
+      const ys = pts.map((p) => p.y),
+        zs = pts.map((p) => p.z);
+      const rect = {
+        cx: fold.cx,
+        cy: (Math.min(...ys) + Math.max(...ys)) / 2,
+        w: fold.widthIn,
+        h: Math.max(...ys) - Math.min(...ys),
+      };
+      room(rect, rect, Math.max(0, Math.min(...zs)), Math.max(...zs));
+    }
+    return out.sort((x, y) => x.z[0] - y.z[0]);
+  }
   // each leg from section to section (each box as large as both ends), then each turn
   for (const leg of path.legs)
     leg.sections.forEach((sec, i) => {
@@ -820,7 +837,11 @@ function woodLb(
     : isBase
       ? HIFI_FIXINGS_LB
       : 0;
-  return (panels + boardIn2 * wallRate) / SQ_IN_PER_SQ_FT + braces + fixings;
+  return (
+    (panels + (boardIn2 + hornBoardsIn2(cabinet, f)) * wallRate) / SQ_IN_PER_SQ_FT +
+    braces +
+    fixings
+  );
 }
 
 /** The chamber's radiators' weight, lb (none for another vent, or a radiator the catalog doesn't have). */
@@ -957,7 +978,7 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
       clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
       ventL: vent ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
       hornL: hornAirL(cabinet, chamber),
-      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f),
+      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f) + hornBoardsL(cabinet, f),
       recessL: hardware?.liters ?? 0,
       lb: { wood, drivers, hardware: hardwareLb, total: wood + drivers + hardwareLb },
     };
@@ -995,7 +1016,9 @@ function driverBoardOf(
   const { chamber } = f.placed;
   if (chamber.load.kind !== CHAMBER_LOAD.horn || chamber.load.horn.drive.kind === HORN_DRIVE.back)
     return null;
-  const bay = hornFlare(cabinet, f.placed)?.path.bay;
+  const flare = hornFlare(cabinet, f.placed);
+  // a folded path's drivers mount on one of its boards (`hornBoardParts`)
+  const bay = flare && !flare.fold ? flare.path.bay : null;
   if (!bay) return null;
   /** the cutouts, as the front chamber takes them: each cone's area */
   const cutoutsIn2 = conesAreaCm2(chamber.drivers) / CM2_PER_IN2;
@@ -1004,6 +1027,76 @@ function driverBoardOf(
     netIn2: Math.max(0, bay.w * bay.h - cutoutsIn2),
     pieces: driverBoardPieces(chamber.load.horn),
   };
+}
+
+/** A folded horn's boards (lib/speaker/hornFold), with the duct's width across the box; none for another chamber. */
+function hornBoardsOf(cabinet: SpeakerCabinet, f: ChamberFrame) {
+  const fold = hornFlare(cabinet, f.placed)?.fold;
+  return fold ? { fold, boards: fold.boards } : null;
+}
+
+/** The face area of a folded horn's boards, in² (0 for none): each board's length times the duct's width. */
+function hornBoardsIn2(cabinet: SpeakerCabinet, f: ChamberFrame): number {
+  const of = hornBoardsOf(cabinet, f);
+  return of ? of.boards.reduce((sum, b) => sum + b.lengthIn * of.fold.widthIn, 0) : 0;
+}
+
+/** The wood of a folded horn's boards, L: each a wall thick. */
+const hornBoardsL = (cabinet: SpeakerCabinet, f: ChamberFrame) =>
+  hornBoardsIn2(cabinet, f) * cabinet.panel.thicknessIn * LITERS_PER_CUBIC_IN;
+
+/**
+ * A folded horn's boards as cutlist rows, each a piece of the walls' plywood as long as its duct face and as wide as
+ * the duct: which runs it walls, its end cuts, and the drivers' cutouts on the board their spot is on, with the spot's
+ * distance from the board's end. None for another chamber.
+ */
+function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
+  const of = hornBoardsOf(cabinet, f);
+  if (!of) return [];
+  const { fold } = of;
+  const spot = fold.mount;
+  /** the board the drivers' spot is on: the nearest to it */
+  const spotBoard = spot
+    ? of.boards.reduce(
+        (best, b, i) => {
+          const d = Math.min(...b.points.map((p) => Math.hypot(p.z - spot.at.z, p.y - spot.at.y)));
+          return d < best.d ? { i, d } : best;
+        },
+        { i: -1, d: Infinity },
+      ).i
+    : -1;
+  const cutouts = f.placed.chamber.drivers.flatMap((driver) => {
+    const cone = coneBuild(driver);
+    return cone
+      ? [
+          SPEAKER_TEXT.driverBoardCutout(
+            driver.count,
+            kindWord(driver),
+            cutoutNote(cone.body.cutoutIn),
+          ),
+        ]
+      : [];
+  });
+  return of.boards.map((board, i) => {
+    const [a] = board.points;
+    const fromEnd = spot && a ? Math.hypot(spot.at.z - a.z, spot.at.y - a.y) : 0;
+    return {
+      box: chamberCutBox(f.index),
+      part: "hornBoard",
+      qty: 1,
+      a: board.lengthIn,
+      b: fold.widthIn,
+      t: cabinet.panel.thicknessIn,
+      note: joinNotes([
+        SPEAKER_TEXT.hornBoardNote(board.run, board.across),
+        SPEAKER_TEXT.hornBoardCuts([
+          String(Math.round(board.endCutsDeg[0])),
+          String(Math.round(board.endCutsDeg[1])),
+        ]),
+        ...(i === spotBoard ? [...cutouts, SPEAKER_TEXT.hornBoardSpot(formatInches(fromEnd))] : []),
+      ]),
+    };
+  });
 }
 
 /** The wood of a horn chamber's driver board, L (0 for none): its cutouts are front chamber air (`hornAirL`). */
@@ -1452,7 +1545,7 @@ export function speakerCutParts(
     // a frame's own box already carries its braces (boxParts)
     if (frame) parts.push(...ventPartsOf(f));
     else parts.push(...insideParts(f));
-    parts.push(...driverBoardParts(f));
+    parts.push(...driverBoardParts(f), ...hornBoardParts(cabinet, f));
   }
   return { parts, also, vent: ventLines };
 

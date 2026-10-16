@@ -86,6 +86,8 @@ import {
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import type { BoxRegion, Horn, RadiatorPanel, SpeakerDriver, SpeakerSpec } from "../../types";
+import { boardNormal, type FoldPoint, type HornFold } from "../../lib/speaker/hornFold";
+import { driverBodyIn } from "../../lib/speaker/hornThroat";
 
 /** The speaker scene's own meshes (every reused part keeps its builder's names). */
 export const SPEAKER_MESH_NAMES = {
@@ -103,6 +105,8 @@ export const SPEAKER_MESH_NAMES = {
   driverBoard: "chamberDriverBoard",
   /** a front-loaded or tapped horn's driver inside the chamber, drawn in the cutaway */
   hornDriver: "chamberHornDriver",
+  /** a board of a folded horn's runs: one mesh per straight piece of it */
+  hornBoard: "chamberHornBoard",
   /** a chamber's own panel in a stepped shell: an outside wall, its back or its baffle */
   wall: "chamberWall",
 } as const;
@@ -730,7 +734,8 @@ function chamberParts(
         y = spot.yIn - placed.y0;
       // a horn that no longer fits where it is set isn't built (the page says so)
       if ((onBaffle || onTop(driver)) && hornFitsWhereSet(placed, driver)) addDriver(driver, x, y);
-      else
+      // a folded horn's drivers stand at its spot (or its start): drawn with its boards
+      else if (!flare?.fold)
         builds.push(({ innerZ }) => {
           // a front-loaded horn's drivers stand in the bay at its throat, where the layout stacks them
           const { bay } = flare?.path ?? { bay: null };
@@ -898,110 +903,195 @@ function chamberParts(
     const mx = mouth.x + mouth.w / 2 - placed.cx,
       my = mouth.y + mouth.h / 2 - placed.y0;
     baffle.push((ox, oy) => [openingPath(ox, oy, mx, my, mouth.w, mouth.h, HORN_MOUTH_CORNER_IN)]);
-    const { path } = flare;
-    builds.push(({ innerZ }) => {
-      const material = ctx.materials.inner.clone();
-      material.side = THREE.DoubleSide;
-      const line = new THREE.LineBasicMaterial({ color: PARTS_3D.black });
-      /** a duct of flat panels with a line along each edge, named for the check that finds it */
-      const duct = (
-        name: string,
-        sections: readonly DuctSection[],
-        look: THREE.Material = material,
-      ) => {
-        const geometry = ductGeometry(sections);
-        const mesh = new THREE.Mesh(geometry, look);
-        mesh.name = name;
-        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, HORN_EDGE_DEG), line));
-        ctx.group.add(mesh);
-      };
-      /** a rectangle of the path in the group's coordinates: z measured back from the baffle's inside face */
-      const at = (c: { cx: number; cy: number; z: number; w: number; h: number }): DuctSection => ({
-        x: c.cx - placed.cx,
-        y: c.cy - placed.y0,
-        z: innerZ - c.z,
-        w: c.w,
-        h: c.h,
-      });
-      for (const leg of path.legs) duct(SPEAKER_MESH_NAMES.hornFlare, leg.sections.map(at));
-      for (const t of path.turns) {
-        const rect = { cx: t.cx, cy: (t.y0 + t.y1) / 2, w: t.w, h: t.y1 - t.y0 };
-        duct(SPEAKER_MESH_NAMES.hornTurn, [at({ ...rect, z: t.z0 }), at({ ...rect, z: t.z1 })]);
-      }
-      // the drivers' bay behind the throat (the front chamber): its sides, and the walls' back edges returning to them
-      // along the throat's plane as strips round the throat's opening (lib/speaker/hornGeometry `HornBay.strips`). The
-      // strips are boards a wall thick on the cones' side of that plane: the opening itself stays clear, cones to mouth.
-      const { bay } = path;
-      if (bay) {
-        const rect = { cx: bay.x + bay.w / 2, cy: bay.y + bay.h / 2, w: bay.w, h: bay.h };
-        duct(
-          SPEAKER_MESH_NAMES.hornBay,
-          [at({ ...rect, z: bay.z0 }), at({ ...rect, z: bay.z1 })],
-          ctx.materials.shell,
-        );
-        // the driver board behind the bay: the baffle the drivers mount on, painted as one, a piece of the walls' plywood
-        // each (two when doubled), with a hole for every cone; the first piece's front face is the bay's end
-        const toBack = path.folds % 2 === 0 ? 1 : -1;
-        const pieces =
-          chamber.load.kind === CHAMBER_LOAD.horn ? driverBoardPieces(chamber.load.horn) : 1;
-        const pieceIn = bay.boardIn / pieces;
-        const cones = chamber.drivers.flatMap((driver) => {
-          const size = coneSize(driver);
-          return size === undefined
-            ? []
-            : driverSpots(placed, driver).map((spot) => ({
-                x: spot.xIn - placed.cx,
-                y: spot.yIn - placed.y0,
-                r: wooferCutoutR(size),
-              }));
+    const { path, fold } = flare;
+    if (fold)
+      builds.push(({ innerZ }) =>
+        addFold(ctx, placed, fold, innerZ, driverBodyIn(chamber.drivers)),
+      );
+    else
+      builds.push(({ innerZ }) => {
+        const material = ctx.materials.inner.clone();
+        material.side = THREE.DoubleSide;
+        const line = new THREE.LineBasicMaterial({ color: PARTS_3D.black });
+        /** a duct of flat panels with a line along each edge, named for the check that finds it */
+        const duct = (
+          name: string,
+          sections: readonly DuctSection[],
+          look: THREE.Material = material,
+        ) => {
+          const geometry = ductGeometry(sections);
+          const mesh = new THREE.Mesh(geometry, look);
+          mesh.name = name;
+          mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, HORN_EDGE_DEG), line));
+          ctx.group.add(mesh);
+        };
+        /** a rectangle of the path in the group's coordinates: z measured back from the baffle's inside face */
+        const at = (c: {
+          cx: number;
+          cy: number;
+          z: number;
+          w: number;
+          h: number;
+        }): DuctSection => ({
+          x: c.cx - placed.cx,
+          y: c.cy - placed.y0,
+          z: innerZ - c.z,
+          w: c.w,
+          h: c.h,
         });
-        const local = { x: bay.x - placed.cx, y: bay.y - placed.y0 };
-        for (let k = 0; k < pieces; k++) {
-          const shape = new THREE.Shape([
-            new THREE.Vector2(local.x, local.y),
-            new THREE.Vector2(local.x + bay.w, local.y),
-            new THREE.Vector2(local.x + bay.w, local.y + bay.h),
-            new THREE.Vector2(local.x, local.y + bay.h),
-          ]);
-          for (const c of cones) shape.holes.push(circlePath(c.x, c.y, c.r));
-          const piece = new THREE.Mesh(
-            new THREE.ExtrudeGeometry(shape, {
-              depth: pieceIn,
-              bevelEnabled: false,
-              curveSegments: 48,
-            }),
-            [ctx.materials.baffle, ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner],
-          );
-          // this piece's two faces, back from the baffle's inside face; the extrusion runs from its position toward the front
-          const faces = [
-            bay.boardZ + toBack * k * pieceIn,
-            bay.boardZ + toBack * (k + 1) * pieceIn,
-          ];
-          piece.position.z = innerZ - Math.max(...faces);
-          piece.name = SPEAKER_MESH_NAMES.driverBoard;
-          ctx.group.add(piece);
+        for (const leg of path.legs) duct(SPEAKER_MESH_NAMES.hornFlare, leg.sections.map(at));
+        for (const t of path.turns) {
+          const rect = { cx: t.cx, cy: (t.y0 + t.y1) / 2, w: t.w, h: t.y1 - t.y0 };
+          duct(SPEAKER_MESH_NAMES.hornTurn, [at({ ...rect, z: t.z0 }), at({ ...rect, z: t.z1 })]);
         }
-        /** the throat's plane, back from the baffle's inside face, and the way the cones lie from it (back, or forward) */
-        const throatZ = path.folds % 2 === 0 ? bay.z0 : bay.z1;
-        const toCones = path.folds % 2 === 0 ? 1 : -1;
-        for (const strip of bay.strips) {
-          const board = new THREE.Mesh(
-            new THREE.BoxGeometry(strip.w, strip.h, bay.stripIn),
+        // the drivers' bay behind the throat (the front chamber): its sides, and the walls' back edges returning to them
+        // along the throat's plane as strips round the throat's opening (lib/speaker/hornGeometry `HornBay.strips`). The
+        // strips are boards a wall thick on the cones' side of that plane: the opening itself stays clear, cones to mouth.
+        const { bay } = path;
+        if (bay) {
+          const rect = { cx: bay.x + bay.w / 2, cy: bay.y + bay.h / 2, w: bay.w, h: bay.h };
+          duct(
+            SPEAKER_MESH_NAMES.hornBay,
+            [at({ ...rect, z: bay.z0 }), at({ ...rect, z: bay.z1 })],
             ctx.materials.shell,
           );
-          board.name = SPEAKER_MESH_NAMES.hornThroat;
-          board.position.set(
-            strip.x + strip.w / 2 - placed.cx,
-            strip.y + strip.h / 2 - placed.y0,
-            innerZ - (throatZ + (toCones * bay.stripIn) / 2),
-          );
-          ctx.group.add(board);
+          // the driver board behind the bay: the baffle the drivers mount on, painted as one, a piece of the walls' plywood
+          // each (two when doubled), with a hole for every cone; the first piece's front face is the bay's end
+          const toBack = path.folds % 2 === 0 ? 1 : -1;
+          const pieces =
+            chamber.load.kind === CHAMBER_LOAD.horn ? driverBoardPieces(chamber.load.horn) : 1;
+          const pieceIn = bay.boardIn / pieces;
+          const cones = chamber.drivers.flatMap((driver) => {
+            const size = coneSize(driver);
+            return size === undefined
+              ? []
+              : driverSpots(placed, driver).map((spot) => ({
+                  x: spot.xIn - placed.cx,
+                  y: spot.yIn - placed.y0,
+                  r: wooferCutoutR(size),
+                }));
+          });
+          const local = { x: bay.x - placed.cx, y: bay.y - placed.y0 };
+          for (let k = 0; k < pieces; k++) {
+            const shape = new THREE.Shape([
+              new THREE.Vector2(local.x, local.y),
+              new THREE.Vector2(local.x + bay.w, local.y),
+              new THREE.Vector2(local.x + bay.w, local.y + bay.h),
+              new THREE.Vector2(local.x, local.y + bay.h),
+            ]);
+            for (const c of cones) shape.holes.push(circlePath(c.x, c.y, c.r));
+            const piece = new THREE.Mesh(
+              new THREE.ExtrudeGeometry(shape, {
+                depth: pieceIn,
+                bevelEnabled: false,
+                curveSegments: 48,
+              }),
+              [ctx.materials.baffle, ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner],
+            );
+            // this piece's two faces, back from the baffle's inside face; the extrusion runs from its position toward the front
+            const faces = [
+              bay.boardZ + toBack * k * pieceIn,
+              bay.boardZ + toBack * (k + 1) * pieceIn,
+            ];
+            piece.position.z = innerZ - Math.max(...faces);
+            piece.name = SPEAKER_MESH_NAMES.driverBoard;
+            ctx.group.add(piece);
+          }
+          /** the throat's plane, back from the baffle's inside face, and the way the cones lie from it (back, or forward) */
+          const throatZ = path.folds % 2 === 0 ? bay.z0 : bay.z1;
+          const toCones = path.folds % 2 === 0 ? 1 : -1;
+          for (const strip of bay.strips) {
+            const board = new THREE.Mesh(
+              new THREE.BoxGeometry(strip.w, strip.h, bay.stripIn),
+              ctx.materials.shell,
+            );
+            board.name = SPEAKER_MESH_NAMES.hornThroat;
+            board.position.set(
+              strip.x + strip.w / 2 - placed.cx,
+              strip.y + strip.h / 2 - placed.y0,
+              innerZ - (throatZ + (toCones * bay.stripIn) / 2),
+            );
+            ctx.group.add(board);
+          }
         }
-      }
-    });
+      });
   }
 
   return { baffle, back, slotBand, build: (at) => builds.forEach((b) => b(at)) };
+}
+
+/**
+ * A folded horn's boards and drivers (lib/speaker/hornFold), in the group's coordinates (`innerZ` the baffle's inside
+ * face): each board a wall thick, outside its duct face, as wide as the duct across the box, one box per straight piece
+ * of it; the board that closes the path's start likewise. The drivers, in the cutaway, stand in a row across the duct:
+ * at the spot on their board for an offset or tapped horn, their bodies `bodyIn` through the board on the side away
+ * from their fronts; at the path's start for a front-loaded horn, behind its closed end.
+ */
+function addFold(
+  ctx: SceneContext,
+  placed: PlacedChamber,
+  fold: HornFold,
+  innerZ: number,
+  bodyIn: number,
+) {
+  const x = fold.cx - placed.cx;
+  /** a side view point in the group's coordinates */
+  const at = (p: FoldPoint) => ({ y: p.y - placed.y0, z: innerZ - p.z });
+  for (const board of fold.boards) {
+    const out = boardNormal(fold, board);
+    board.points.slice(1).forEach((b, i) => {
+      const a = board.points[i];
+      const length = Math.hypot(b.z - a.z, b.y - a.y);
+      if (length < 1e-6) return;
+      const mid = at({
+        z: (a.z + b.z) / 2 + (out.z * ctx.wall) / 2,
+        y: (a.y + b.y) / 2 + (out.y * ctx.wall) / 2,
+      });
+      const piece = new THREE.Mesh(
+        new THREE.BoxGeometry(fold.widthIn, ctx.wall, length),
+        ctx.materials.shell,
+      );
+      // the box's length along the piece: its local z turned onto the piece's way in the group (z toward the front)
+      piece.rotation.x = Math.atan2(-(b.y - a.y), -(b.z - a.z));
+      piece.position.set(x, mid.y, mid.z);
+      piece.name = SPEAKER_MESH_NAMES.hornBoard;
+      ctx.group.add(piece);
+    });
+  }
+  if (!ctx.cutaway) return;
+  const cones = placed.chamber.drivers.flatMap((driver) => {
+    const size = coneSize(driver);
+    return size === undefined
+      ? []
+      : Array.from({ length: driver.count }, () => wooferCutoutR(size));
+  });
+  if (cones.length === 0) return;
+  const [first] = fold.runs;
+  /** where the cones' faces stand and the way their bodies go from there, in the side view */
+  const spot = fold.mount
+    ? {
+        at: fold.mount.at,
+        way: fold.mount.mount.frontInRun
+          ? fold.mount.normal
+          : { z: -fold.mount.normal.z, y: -fold.mount.normal.y },
+      }
+    : { at: first.start, way: { z: -Math.cos(first.angle), y: -Math.sin(first.angle) } };
+  const center = at({
+    z: spot.at.z + (spot.way.z * bodyIn) / 2,
+    y: spot.at.y + (spot.way.y * bodyIn) / 2,
+  });
+  cones.forEach((r, i) => {
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, bodyIn, 32), ctx.materials.black);
+    // the cylinder's axis (its local y) along the way, in the group (z toward the front)
+    body.rotation.x = Math.atan2(-spot.way.z, spot.way.y);
+    body.position.set(
+      x - fold.widthIn / 2 + (fold.widthIn * (i + 0.5)) / cones.length,
+      center.y,
+      center.z,
+    );
+    body.name = SPEAKER_MESH_NAMES.hornDriver;
+    ctx.group.add(body);
+  });
 }
 
 /**

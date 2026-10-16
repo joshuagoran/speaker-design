@@ -300,6 +300,18 @@ export const SPEAKER_TEXT = {
       : "the drivers mount on its back",
   driverBoardCutout: (count: number, kind: string, cutout: string) =>
     `${count} × ${kind.toLowerCase()} cutout, ${cutout}`,
+  /** a folded horn board's note: the runs on its two sides (run −1: the board that closes the path's start) */
+  hornBoardNote: (run: number, across: number | null) =>
+    run < 0
+      ? "closes the start of the horn path"
+      : across === null
+        ? `wall of run ${run + 1}`
+        : `between runs ${run + 1} and ${across + 1}`,
+  /** a folded horn board's end cuts, degrees off square at each end */
+  hornBoardCuts: ([a, b]: [string, string]) =>
+    a === "0" && b === "0" ? "square ends" : `ends cut ${a}° and ${b}° off square`,
+  /** where the drivers' cutouts center on their board, from its first end */
+  hornBoardSpot: (fromEnd: string) => `cutouts centered ${fromEnd}″ from its first end`,
   hornNoFitNote:
     "the horn does not fit where it is mounted; no cutout until you change the mounting",
   portTooLong: "too long for this chamber: make it shorter",
