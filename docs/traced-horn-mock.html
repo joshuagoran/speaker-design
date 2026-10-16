@@ -1,0 +1,1451 @@
+<title>Traced Horn Mock</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;600;700&display=swap"
+/>
+<style>
+  /* Layout: a tool bar over a two-pane work area (the side section, the readout), stacking at phone width. */
+  :root {
+    --ink: #111111;
+    --muted: #595959;
+    --faint: #8c8c8c;
+    --edge: #e6e6e6;
+    --panel: #ffffff;
+    --page: #f6f7f8;
+    --cyan: #0077b8;
+    --magenta: #e5007e;
+    --yellow: #ffd400;
+    --red: #c81e1e;
+    --red-tint: #fdeeee;
+    --green: #1a7f37;
+    --wall: #c9ccd0;
+    --font: "Inconsolata", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e8e8e6;
+      --muted: #a3a3a3;
+      --faint: #707070;
+      --edge: #33373b;
+      --panel: #1b1d1f;
+      --page: #121415;
+      --cyan: #45b6f2;
+      --magenta: #ff4fae;
+      --yellow: #ffd84d;
+      --red: #ff8a8a;
+      --red-tint: #2e1414;
+      --green: #6fd98c;
+      --wall: #4a4f55;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e8e8e6;
+    --muted: #a3a3a3;
+    --faint: #707070;
+    --edge: #33373b;
+    --panel: #1b1d1f;
+    --page: #121415;
+    --cyan: #45b6f2;
+    --magenta: #ff4fae;
+    --yellow: #ffd84d;
+    --red: #ff8a8a;
+    --red-tint: #2e1414;
+    --green: #6fd98c;
+    --wall: #4a4f55;
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.45;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 16px 28px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .lede {
+    color: var(--muted);
+    margin: 0;
+    max-width: 72ch;
+  }
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    padding: 4px;
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    background: var(--panel);
+  }
+  .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+  button {
+    font: inherit;
+    font-size: 14px;
+    border: 1px solid var(--edge);
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--panel);
+    border-color: var(--ink);
+  }
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 1px;
+  }
+  button.primary {
+    background: var(--cyan);
+    border-color: var(--cyan);
+    color: #fff;
+  }
+  input,
+  select {
+    font: inherit;
+    font-size: 14px;
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    padding: 4px 6px;
+    background: var(--panel);
+    color: var(--ink);
+    width: 64px;
+  }
+  select {
+    width: auto;
+  }
+  .work {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .work {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .hint {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0;
+  }
+  #stage {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    touch-action: none;
+    user-select: none;
+    display: block;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+  .stat {
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat b {
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat span {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .type {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .notes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .notes li {
+    font-size: 13px;
+    padding: 6px 8px;
+    border-left: 3px solid var(--red);
+    background: var(--red-tint);
+    border-radius: 0 4px 4px 0;
+  }
+  .notes li.ok {
+    border-left-color: var(--green);
+    background: transparent;
+  }
+  #chart {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .sw {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    vertical-align: -2px;
+    margin-right: 4px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header style="display: flex; flex-direction: column; gap: 4px">
+    <h1>Traced horn mock</h1>
+    <p class="lede">
+      Draw the boards, put the drivers and the mouth where you want them. The page finds the passage
+      itself, measures it along the path, and works out the horn type from where the drivers open.
+    </p>
+  </header>
+
+  <div class="bar">
+    <div class="group" role="group" aria-label="Tool">
+      <span class="label">Tool</span>
+      <button id="t-move" data-tool="move" aria-pressed="true">Move</button>
+      <button id="t-board" data-tool="board" aria-pressed="false">Add board</button>
+      <button id="t-delete" data-tool="delete" aria-pressed="false">Delete board</button>
+      <button id="t-driver" data-tool="driver" aria-pressed="false">Place drivers</button>
+      <button id="t-mouth" data-tool="mouth" aria-pressed="false">Set mouth</button>
+    </div>
+    <div class="group" role="group" aria-label="Start">
+      <span class="label">Start</span>
+      <button id="p-tapped">Tapped spiral</button>
+      <button id="p-offset">Offset, rear chamber</button>
+      <button id="p-front">Front-loaded</button>
+      <button id="p-empty">Empty box</button>
+    </div>
+    <div class="group">
+      <button id="undo">Undo</button>
+    </div>
+  </div>
+
+  <div class="bar">
+    <div class="group">
+      <span class="label">Inside, in</span>
+      <label for="in-d">Depth</label><input id="in-d" type="number" step="0.25" min="8" max="60" />
+      <label for="in-h">Height</label><input id="in-h" type="number" step="0.25" min="8" max="60" />
+      <label for="in-w">Width</label><input id="in-w" type="number" step="0.25" min="6" max="60" />
+    </div>
+    <div class="group">
+      <label class="label" for="in-size">Drivers</label>
+      <select id="in-size">
+        <option value="12">12″</option>
+        <option value="15">15″</option>
+        <option value="18" selected>18″</option>
+        <option value="21">21″</option>
+      </select>
+      <label for="in-n">Count</label
+      ><input id="in-n" type="number" min="1" max="4" step="1" value="1" />
+    </div>
+  </div>
+
+  <div class="work">
+    <div class="card">
+      <svg id="stage" role="img" aria-label="Side section of the box, baffle at the left"></svg>
+      <p class="hint" id="toolhint"></p>
+      <div class="legend">
+        <span><i class="sw" style="background: var(--wall)"></i>boards</span>
+        <span
+          ><i class="sw" style="background: linear-gradient(90deg, #0b4f7a, #7fd0ff)"></i>passage,
+          dark at the closed end</span
+        >
+        <span><i class="sw" style="background: var(--yellow)"></i>sealed air</span>
+        <span
+          ><i class="sw" style="background: var(--magenta)"></i>drivers (the line is the cone)</span
+        >
+        <span><i class="sw" style="background: var(--cyan)"></i>mouth</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="type" id="htype">–</div>
+      <div class="stats" id="stats"></div>
+      <svg
+        id="chart"
+        viewBox="0 0 420 220"
+        role="img"
+        aria-label="Passage area along the path"
+      ></svg>
+      <p class="hint">
+        Area along the path, from the closed end to the mouth. Fixed axes: 0–200 in, 0–1500 in².
+        Magenta marks: where the cones open.
+      </p>
+      <ul class="notes" id="notes"></ul>
+      <p class="hint">
+        This mock traces and measures the passage only. The real build plays it through the sound
+        model.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    "use strict";
+    // ---- units and fixed sizes (in)
+    const T = 0.75; // board thickness
+    const CELL = 0.25; // tracing grid
+    const SNAP = 0.25; // placement step
+    const SNAP_TO = 0.6; // ends snap onto a wall or a board this close
+    const MAGNET_CLEAR = 1; // room round the motor
+    const CHOKE = 0.75; // a width under this share of the widest before it chokes
+    const X_MAX = 200,
+      Y_MAX = 1500; // chart axes
+    const C_IN_S = 13504; // speed of sound, in/s
+    // driver bodies by size: cutout, depth behind the board, motor diameter
+    const DRIVERS = {
+      12: { cut: 11.1, depth: 5.6, motor: 5.5 },
+      15: { cut: 14.0, depth: 6.8, motor: 6.6 },
+      18: { cut: 16.6, depth: 8.2, motor: 7.6 },
+      21: { cut: 19.7, depth: 9.6, motor: 8.8 },
+    };
+    const WALLS = ["baffle", "bottom", "back", "top"];
+
+    // ---- state
+    let S = null;
+    const history = [];
+    const push = () => {
+      history.push(JSON.stringify(S));
+      if (history.length > 60) history.shift();
+    };
+
+    const presets = {
+      tapped: () => ({
+        D: 30,
+        H: 40,
+        W: 20,
+        size: 18,
+        n: 1,
+        boards: [
+          { a: { z: 0, y: 22 }, b: { z: 19.5, y: 22 } },
+          { a: { z: 0, y: 15 }, b: { z: 11, y: 15 } },
+          { a: { z: 19, y: 7.5 }, b: { z: 8.5, y: 7.5 } },
+          { a: { z: 19, y: 7.5 }, b: { z: 19, y: 22 } },
+        ],
+        driver: { board: 0, u: 0.5, face: -1 },
+        mouth: { wall: "baffle", a: 22.75, b: 40 },
+      }),
+      offset: () => ({
+        D: 30,
+        H: 40,
+        W: 20,
+        size: 18,
+        n: 1,
+        boards: [
+          { a: { z: 0, y: 12 }, b: { z: 30, y: 12 } },
+          { a: { z: 30, y: 21 }, b: { z: 8, y: 21 } },
+          { a: { z: 0, y: 30 }, b: { z: 22, y: 30 } },
+        ],
+        driver: { board: 0, u: 0.63, face: 1 },
+        mouth: { wall: "baffle", a: 30.75, b: 40 },
+      }),
+      front: () => ({
+        D: 30,
+        H: 40,
+        W: 20,
+        size: 18,
+        n: 1,
+        boards: [
+          { a: { z: 0, y: 12 }, b: { z: 30, y: 12 } },
+          { a: { z: 30, y: 21 }, b: { z: 8, y: 21 } },
+          { a: { z: 0, y: 30 }, b: { z: 22, y: 30 } },
+        ],
+        driver: { board: 0, u: 0.66, face: 1 },
+        mouth: { wall: "baffle", a: 30.75, b: 40 },
+      }),
+      empty: () => ({
+        D: 30,
+        H: 40,
+        W: 20,
+        size: 18,
+        n: 1,
+        boards: [],
+        driver: null,
+        mouth: { wall: "baffle", a: 30, b: 40 },
+      }),
+    };
+
+    // ---- geometry helpers
+    const sub = (p, q) => ({ z: p.z - q.z, y: p.y - q.y });
+    const add = (p, q, k = 1) => ({ z: p.z + q.z * k, y: p.y + q.y * k });
+    const len = (v) => Math.hypot(v.z, v.y);
+    const unit = (v) => {
+      const l = len(v) || 1;
+      return { z: v.z / l, y: v.y / l };
+    };
+    const left = (v) => ({ z: -v.y, y: v.z });
+    const snap = (v) => Math.round(v / SNAP) * SNAP;
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    function segDist(p, a, b) {
+      const ab = sub(b, a),
+        l2 = ab.z * ab.z + ab.y * ab.y;
+      const t = l2 > 0 ? clamp(((p.z - a.z) * ab.z + (p.y - a.y) * ab.y) / l2, 0, 1) : 0;
+      return { d: len(sub(p, add(a, ab, t))), t };
+    }
+    function inPoly(p, poly) {
+      let c = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const a = poly[i],
+          b = poly[j];
+        if (a.y > p.y !== b.y > p.y && p.z < ((b.z - a.z) * (p.y - a.y)) / (b.y - a.y) + a.z)
+          c = !c;
+      }
+      return c;
+    }
+
+    // the drivers: their rows along the board, each row's cone line and body outline
+    function driverParts() {
+      if (!S.driver) return null;
+      const bd = S.boards[S.driver.board];
+      if (!bd) return null;
+      const spec = DRIVERS[S.size];
+      const along = unit(sub(bd.b, bd.a));
+      const nrm = left(along); // the cone faces nrm × face
+      const face = S.driver.face;
+      const L = len(sub(bd.b, bd.a));
+      const across = Math.max(1, Math.floor((S.W - 0.5) / (spec.cut + 0.5)));
+      const rows = Math.ceil(S.n / across);
+      const pitch = spec.cut + 0.5;
+      const center = S.driver.u * L;
+      const out = [];
+      for (let r = 0; r < rows; r++) {
+        const s = center + (r - (rows - 1) / 2) * pitch;
+        const mid = add(bd.a, along, s);
+        const coneFace = add(mid, nrm, (face * T) / 2);
+        const backFace = add(mid, nrm, (-face * T) / 2);
+        const back = { z: -nrm.z * face, y: -nrm.y * face };
+        const R = spec.cut / 2,
+          m = spec.motor / 2;
+        // basket flaring from the cutout to the motor, then the motor
+        const body = [
+          add(backFace, along, -R),
+          add(backFace, along, R),
+          add(add(backFace, back, spec.depth * 0.45), along, m * 1.25),
+          add(add(backFace, back, spec.depth), along, m),
+          add(add(backFace, back, spec.depth), along, -m),
+          add(add(backFace, back, spec.depth * 0.45), along, -m * 1.25),
+        ];
+        out.push({
+          s,
+          mid,
+          coneFace,
+          backFace,
+          out: { z: nrm.z * face, y: nrm.y * face },
+          back,
+          body,
+          R,
+          L,
+        });
+      }
+      return out;
+    }
+
+    // ---- the trace: solids on a grid, distance from the mouth through the air, sealed pockets, widths along the path
+    function trace() {
+      const nz = Math.round(S.D / CELL),
+        ny = Math.round(S.H / CELL);
+      const N = nz * ny;
+      const solid = new Uint8Array(N);
+      const at = (i, j) => j * nz + i;
+      const cellPt = (i, j) => ({ z: (i + 0.5) * CELL, y: (j + 0.5) * CELL });
+      const mark = (pred, box) => {
+        const i0 = clamp(Math.floor(box.z0 / CELL), 0, nz - 1),
+          i1 = clamp(Math.ceil(box.z1 / CELL), 0, nz - 1);
+        const j0 = clamp(Math.floor(box.y0 / CELL), 0, ny - 1),
+          j1 = clamp(Math.ceil(box.y1 / CELL), 0, ny - 1);
+        for (let j = j0; j <= j1; j++)
+          for (let i = i0; i <= i1; i++) if (pred(cellPt(i, j))) solid[at(i, j)] = 1;
+      };
+      S.boards.forEach((bd) => {
+        const pad = T / 2 + CELL;
+        mark((p) => segDist(p, bd.a, bd.b).d <= T / 2 + 0.01, {
+          z0: Math.min(bd.a.z, bd.b.z) - pad,
+          z1: Math.max(bd.a.z, bd.b.z) + pad,
+          y0: Math.min(bd.a.y, bd.b.y) - pad,
+          y1: Math.max(bd.a.y, bd.b.y) + pad,
+        });
+      });
+      const parts = driverParts();
+      (parts || []).forEach((dp) => {
+        const zs = dp.body.map((p) => p.z),
+          ys = dp.body.map((p) => p.y);
+        mark((p) => inPoly(p, dp.body), {
+          z0: Math.min(...zs),
+          z1: Math.max(...zs),
+          y0: Math.min(...ys),
+          y1: Math.max(...ys),
+        });
+      });
+      // the mouth: the air cells along the opening
+      const mouthCells = [];
+      const m = S.mouth;
+      const onMouth = (i, j) => {
+        const p = cellPt(i, j);
+        if (m.wall === "baffle") return i === 0 && p.y >= m.a && p.y <= m.b;
+        if (m.wall === "back") return i === nz - 1 && p.y >= m.a && p.y <= m.b;
+        if (m.wall === "bottom") return j === 0 && p.z >= m.a && p.z <= m.b;
+        return j === ny - 1 && p.z >= m.a && p.z <= m.b;
+      };
+      for (let j = 0; j < ny; j++)
+        for (let i = 0; i < nz; i++)
+          if (!solid[at(i, j)] && onMouth(i, j)) mouthCells.push(at(i, j));
+      // distance from the mouth through the air (8 neighbours, diagonal √2), a binary heap
+      const dist = new Float64Array(N).fill(Infinity);
+      const heap = [];
+      const hpush = (d, k) => {
+        heap.push([d, k]);
+        let c = heap.length - 1;
+        while (c > 0) {
+          const p = (c - 1) >> 1;
+          if (heap[p][0] <= heap[c][0]) break;
+          [heap[p], heap[c]] = [heap[c], heap[p]];
+          c = p;
+        }
+      };
+      const hpop = () => {
+        const top = heap[0],
+          last = heap.pop();
+        if (heap.length) {
+          heap[0] = last;
+          let c = 0;
+          for (;;) {
+            const l = 2 * c + 1,
+              r = l + 1;
+            let s = c;
+            if (l < heap.length && heap[l][0] < heap[s][0]) s = l;
+            if (r < heap.length && heap[r][0] < heap[s][0]) s = r;
+            if (s === c) break;
+            [heap[s], heap[c]] = [heap[c], heap[s]];
+            c = s;
+          }
+        }
+        return top;
+      };
+      mouthCells.forEach((k) => {
+        dist[k] = 0;
+        hpush(0, k);
+      });
+      const NB = [
+        [1, 0, 1],
+        [-1, 0, 1],
+        [0, 1, 1],
+        [0, -1, 1],
+        [1, 1, Math.SQRT2],
+        [1, -1, Math.SQRT2],
+        [-1, 1, Math.SQRT2],
+        [-1, -1, Math.SQRT2],
+      ];
+      while (heap.length) {
+        const [d, k] = hpop();
+        if (d > dist[k]) continue;
+        const i = k % nz,
+          j = (k / nz) | 0;
+        for (const [di, dj, w] of NB) {
+          const a = i + di,
+            b = j + dj;
+          if (a < 0 || b < 0 || a >= nz || b >= ny) continue;
+          const q = at(a, b);
+          if (solid[q]) continue;
+          // no squeezing diagonally between two solid cells
+          if (di && dj && (solid[at(i + di, j)] || solid[at(i, j + dj)])) continue;
+          const nd = d + w * CELL;
+          if (nd < dist[q]) {
+            dist[q] = nd;
+            hpush(nd, q);
+          }
+        }
+      }
+      // sealed pockets: air the mouth never reaches
+      const pocket = new Int32Array(N).fill(-1);
+      const pockets = [];
+      for (let k = 0; k < N; k++) {
+        if (solid[k] || dist[k] < Infinity || pocket[k] >= 0) continue;
+        const id = pockets.length,
+          stack = [k];
+        let cells = 0;
+        pocket[k] = id;
+        while (stack.length) {
+          const c = stack.pop();
+          cells++;
+          const i = c % nz,
+            j = (c / nz) | 0;
+          for (const [di, dj] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ]) {
+            const a = i + di,
+              b = j + dj;
+            if (a < 0 || b < 0 || a >= nz || b >= ny) continue;
+            const q = at(a, b);
+            if (!solid[q] && dist[q] === Infinity && pocket[q] < 0) {
+              pocket[q] = id;
+              stack.push(q);
+            }
+          }
+        }
+        pockets.push({ cells, liters: (cells * CELL * CELL * S.W) / 61.0237 });
+      }
+      // the path's length: the farthest air from the mouth is the closed end
+      let L = 0,
+        endK = -1;
+      for (let k = 0; k < N; k++)
+        if (dist[k] < Infinity && dist[k] > L) {
+          L = dist[k];
+          endK = k;
+        }
+      // the clearance: each air cell's distance to the nearest board, driver or wall (the mouth's opening is no wall)
+      const clear = new Float64Array(N).fill(Infinity);
+      const q2 = [];
+      for (let j = 0; j < ny; j++)
+        for (let i = 0; i < nz; i++) {
+          const k = at(i, j);
+          if (solid[k]) {
+            clear[k] = 0;
+            q2.push(k);
+            continue;
+          }
+          const edge = (i === 0 || i === nz - 1 || j === 0 || j === ny - 1) && !onMouth(i, j);
+          if (edge) {
+            clear[k] = CELL / 2;
+            q2.push(k);
+          }
+        }
+      // a few sweeps of the chamfer distance (forward and back) settle it on this grid
+      for (let pass = 0; pass < 2; pass++) {
+        for (let j = 0; j < ny; j++)
+          for (let i = 0; i < nz; i++) {
+            const k = at(i, j);
+            for (const [di, dj, w] of [
+              [-1, 0, 1],
+              [0, -1, 1],
+              [-1, -1, Math.SQRT2],
+              [1, -1, Math.SQRT2],
+            ]) {
+              const a = i + di,
+                b = j + dj;
+              if (a < 0 || b < 0 || a >= nz) continue;
+              const v = clear[at(a, b)] + w * CELL;
+              if (v < clear[k]) clear[k] = v;
+            }
+          }
+        for (let j = ny - 1; j >= 0; j--)
+          for (let i = nz - 1; i >= 0; i--) {
+            const k = at(i, j);
+            for (const [di, dj, w] of [
+              [1, 0, 1],
+              [0, 1, 1],
+              [1, 1, Math.SQRT2],
+              [-1, 1, Math.SQRT2],
+            ]) {
+              const a = i + di,
+                b = j + dj;
+              if (a < 0 || b >= ny || a >= nz) continue;
+              const v = clear[at(a, b)] + w * CELL;
+              if (v < clear[k]) clear[k] = v;
+            }
+          }
+      }
+      // the width along the path: in each band of distance from the mouth, the widest circle that fits (twice the most
+      // clearance there): a leg's height in a straight leg, steady through a turn
+      const ds = 0.5;
+      const bins = Math.max(1, Math.ceil(L / ds));
+      const widest = new Float64Array(bins);
+      for (let k = 0; k < N; k++)
+        if (dist[k] < Infinity) {
+          const b = Math.min(bins - 1, Math.floor(dist[k] / ds));
+          widest[b] = Math.max(widest[b], 2 * clear[k]);
+        }
+      const smooth = Array.from(widest, (_, i) => {
+        let s = 0,
+          n = 0;
+        for (let k = Math.max(0, i - 2); k <= Math.min(bins - 1, i + 2); k++) {
+          s += widest[k];
+          n++;
+        }
+        return s / n;
+      });
+      const profile = smooth.map((w, i) => ({ s: L - (i + 0.5) * ds, area: w * S.W })).reverse();
+      // the taps: the air just off each side of the cones
+      const sample = (p) => {
+        const i = Math.floor(p.z / CELL),
+          j = Math.floor(p.y / CELL);
+        if (i < 0 || j < 0 || i >= nz || j >= ny) return null;
+        const k = at(i, j);
+        if (solid[k]) return null;
+        return dist[k] < Infinity
+          ? { horn: true, s: L - dist[k] }
+          : { horn: false, pocket: pocket[k] };
+      };
+      // the backs: the air beside the basket, on either side of it, just behind the board
+      const taps = (parts || []).map((dp) => {
+        const along = unit(sub(dp.body[1], dp.body[0]));
+        const beside = [1, -1].map((sd) =>
+          sample(add(add(dp.backFace, dp.back, CELL * 2), along, sd * (dp.R + CELL * 2))),
+        );
+        return {
+          front: sample(add(dp.coneFace, dp.out, CELL * 1.5)),
+          back: beside.find((b) => b && b.horn) || beside.find((b) => b) || null,
+        };
+      });
+      // dead-end stubs: far points of the passage other than the closed end, each with its own distance
+      return {
+        nz,
+        ny,
+        solid,
+        dist,
+        pocket,
+        pockets,
+        L,
+        endK,
+        profile,
+        taps,
+        parts,
+        mouthCells,
+        at,
+      };
+    }
+
+    // ---- reading the trace
+    function readOut(tr) {
+      const notes = [];
+      const parts = tr.parts || [];
+      let type = "No drivers placed";
+      let tapInfo = [];
+      if (!tr.mouthCells.length) {
+        notes.push("The mouth opens onto a board. Move the mouth or the board.");
+        type = "No mouth";
+      } else if (parts.length) {
+        const t0 = tr.taps[0];
+        const f = t0.front,
+          b = t0.back;
+        const spec = DRIVERS[S.size];
+        if (!f && !b) {
+          type = "Drivers blocked";
+          notes.push("Both sides of the cones face a board. Move the drivers.");
+        } else if (f && b && f.horn && b.horn) {
+          type = "Tapped horn";
+          tapInfo = [f.s, b.s];
+          const first = Math.min(f.s, b.s);
+          if (first > 0.4 * tr.L)
+            notes.push(
+              `The cones first open ${first.toFixed(1)} in from the closed end, ${Math.round((100 * first) / tr.L)}% of the path. The passage behind them is a long dead end.`,
+            );
+        } else if ((f && f.horn) || (b && b.horn)) {
+          const open = f && f.horn ? f : b;
+          const sealed = f && f.horn ? b : f;
+          tapInfo = [open.s];
+          const stub = open.s;
+          const rear = sealed && !sealed.horn ? tr.pockets[sealed.pocket] : null;
+          type = stub <= spec.cut / 2 + 2 ? "Front-loaded horn" : "Offset horn";
+          if (!rear)
+            notes.push(
+              "The backs of the cones face a board. Give them a sealed chamber or open them into the passage.",
+            );
+          if (type === "Offset horn" && stub > 0.4 * tr.L)
+            notes.push(
+              `The cones open ${stub.toFixed(1)} in from the closed end, ${Math.round((100 * stub) / tr.L)}% of the path. The passage behind them is a long dead end.`,
+            );
+        } else {
+          type = "Drivers outside the passage";
+          notes.push(
+            "Neither side of the cones opens into the passage. Move the drivers onto a board along it.",
+          );
+        }
+        // the cutout on its board, the motor clear
+        parts.forEach((dp, r) => {
+          if (dp.s - dp.R < 0.5 || dp.s + dp.R > dp.L - 0.5)
+            notes.push(`Drivers row ${r + 1}: the cutout runs off its board.`);
+        });
+        const motorHit = parts.some((dp) => {
+          const grow = dp.body.map((p) => p); // the body with its clearance, sampled round its edge
+          for (let k = 0; k < grow.length; k++) {
+            const a = grow[k],
+              c = grow[(k + 1) % grow.length];
+            for (let u = 0; u <= 1; u += 0.1) {
+              const p = add(a, sub(c, a), u);
+              const probes = [
+                { z: MAGNET_CLEAR, y: 0 },
+                { z: -MAGNET_CLEAR, y: 0 },
+                { z: 0, y: MAGNET_CLEAR },
+                { z: 0, y: -MAGNET_CLEAR },
+              ];
+              for (const o of probes) {
+                const q = add(p, o);
+                if (q.z < 0 || q.y < 0 || q.z > S.D || q.y > S.H) return true;
+                if (
+                  S.boards.some(
+                    (bd, bi) => bi !== S.driver.board && segDist(q, bd.a, bd.b).d < T / 2,
+                  )
+                )
+                  return true;
+              }
+            }
+          }
+          return false;
+        });
+        if (motorHit)
+          notes.push(
+            "A motor comes within 1 in of a board or a wall. Move the drivers or the board.",
+          );
+      }
+      if (tr.pockets.length > (type === "Offset horn" || type === "Front-loaded horn" ? 1 : 0)) {
+        const extra =
+          tr.pockets.length - (type === "Offset horn" || type === "Front-loaded horn" ? 1 : 0);
+        notes.push(
+          `${extra} sealed pocket${extra > 1 ? "s" : ""} of air that no driver uses (yellow).`,
+        );
+      }
+      // chokes: the area falls under 3/4 of its usual size over the 15 in before (the median, so a turn's bulge does
+      // not count; the ends left out)
+      let choke = null;
+      const prof = tr.profile;
+      prof.forEach((p) => {
+        if (choke !== null || p.s < 4 || p.s > tr.L - 4) return;
+        const before = prof
+          .filter((q) => q.s < p.s && q.s >= p.s - 15 && q.s >= 4)
+          .map((q) => q.area)
+          .sort((a, b) => a - b);
+        if (before.length > 4 && p.area < CHOKE * before[before.length >> 1]) choke = p.s;
+      });
+      if (choke !== null)
+        notes.push(
+          `The passage chokes about ${choke.toFixed(0)} in from the closed end: it is much narrower there than before.`,
+        );
+      if (!notes.length) notes.push("No problems found.");
+      return { type, tapInfo, notes };
+    }
+
+    // ---- drawing
+    const svg = document.getElementById("stage");
+    const NS = "http://www.w3.org/2000/svg";
+    const PX = 12; // px per inch in the viewBox
+    const PAD = 18;
+    let tr = null,
+      ro = null;
+    const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const X = (z) => PAD + z * PX,
+      Y = (y) => PAD + (S.H - y) * PX;
+    const el = (tag, attrs, parent = svg) => {
+      const e = document.createElementNS(NS, tag);
+      for (const k in attrs) e.setAttribute(k, attrs[k]);
+      parent.appendChild(e);
+      return e;
+    };
+
+    function render() {
+      tr = trace();
+      ro = readOut(tr);
+      const W = S.D * PX + 2 * PAD,
+        H = S.H * PX + 2 * PAD;
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      svg.replaceChildren();
+      // box walls and the clear inside
+      el("rect", {
+        x: PAD - T * PX,
+        y: PAD - T * PX,
+        width: (S.D + 2 * T) * PX,
+        height: (S.H + 2 * T) * PX,
+        fill: css("--wall"),
+        rx: 3,
+      });
+      el("rect", { x: PAD, y: PAD, width: S.D * PX, height: S.H * PX, fill: css("--panel") });
+      // the air, as an image of the grid: the passage shaded by distance from the closed end, sealed air yellow
+      const cv = document.createElement("canvas");
+      cv.width = tr.nz;
+      cv.height = tr.ny;
+      const g = cv.getContext("2d");
+      const img = g.createImageData(tr.nz, tr.ny);
+      const yel = [255, 212, 0];
+      for (let j = 0; j < tr.ny; j++)
+        for (let i = 0; i < tr.nz; i++) {
+          const k = tr.at(i, j),
+            o = ((tr.ny - 1 - j) * tr.nz + i) * 4;
+          if (tr.solid[k]) {
+            img.data[o + 3] = 0;
+            continue;
+          }
+          if (tr.dist[k] < Infinity) {
+            const u = tr.L > 0 ? tr.dist[k] / tr.L : 0; // 0 at the mouth, 1 at the closed end
+            const band = Math.floor((tr.L - tr.dist[k]) / 6) % 2 === 0 ? 1 : 0.9; // a band every 6 in along the path
+            img.data[o] = (127 - 116 * u) * band;
+            img.data[o + 1] = (208 - 129 * u) * band;
+            img.data[o + 2] = (255 - 133 * u) * band;
+            img.data[o + 3] = 200;
+          } else {
+            img.data[o] = yel[0];
+            img.data[o + 1] = yel[1];
+            img.data[o + 2] = yel[2];
+            img.data[o + 3] = 120;
+          }
+        }
+      g.putImageData(img, 0, 0);
+      el("image", {
+        href: cv.toDataURL(),
+        x: PAD,
+        y: PAD,
+        width: S.D * PX,
+        height: S.H * PX,
+        preserveAspectRatio: "none",
+        style: "image-rendering:pixelated",
+      });
+      // the mouth, open in its wall
+      const m = S.mouth;
+      const mouthLine =
+        m.wall === "baffle"
+          ? [X(0) - (T * PX) / 2, Y(m.a), X(0) - (T * PX) / 2, Y(m.b)]
+          : m.wall === "back"
+            ? [X(S.D) + (T * PX) / 2, Y(m.a), X(S.D) + (T * PX) / 2, Y(m.b)]
+            : m.wall === "bottom"
+              ? [X(m.a), Y(0) + (T * PX) / 2, X(m.b), Y(0) + (T * PX) / 2]
+              : [X(m.a), Y(S.H) - (T * PX) / 2, X(m.b), Y(S.H) - (T * PX) / 2];
+      el("line", {
+        x1: mouthLine[0],
+        y1: mouthLine[1],
+        x2: mouthLine[2],
+        y2: mouthLine[3],
+        stroke: css("--panel"),
+        "stroke-width": T * PX + 2,
+      });
+      el("line", {
+        x1: mouthLine[0],
+        y1: mouthLine[1],
+        x2: mouthLine[2],
+        y2: mouthLine[3],
+        stroke: css("--cyan"),
+        "stroke-width": 4,
+        "stroke-linecap": "round",
+      });
+      if (tool === "mouth") {
+        [
+          [mouthLine[0], mouthLine[1], "a"],
+          [mouthLine[2], mouthLine[3], "b"],
+        ].forEach(([x, y, end]) => {
+          const h = el("circle", {
+            cx: x,
+            cy: y,
+            r: 7,
+            fill: css("--panel"),
+            stroke: css("--cyan"),
+            "stroke-width": 2,
+            style: "cursor:grab",
+          });
+          h.dataset.mouth = end;
+        });
+      }
+      // the boards
+      S.boards.forEach((bd, i) => {
+        const n = left(unit(sub(bd.b, bd.a)));
+        const poly = [
+          add(bd.a, n, T / 2),
+          add(bd.b, n, T / 2),
+          add(bd.b, n, -T / 2),
+          add(bd.a, n, -T / 2),
+        ];
+        const p = el("polygon", {
+          points: poly.map((q) => `${X(q.z)},${Y(q.y)}`).join(" "),
+          fill: css("--wall"),
+          stroke: css("--ink"),
+          "stroke-width": 1,
+          style: `cursor:${tool === "delete" ? "not-allowed" : tool === "driver" ? "copy" : "move"}`,
+        });
+        p.dataset.board = i;
+      });
+      // the drivers
+      (tr.parts || []).forEach((dp) => {
+        el("polygon", {
+          points: dp.body.map((q) => `${X(q.z)},${Y(q.y)}`).join(" "),
+          fill: css("--magenta"),
+          "fill-opacity": 0.35,
+          stroke: css("--magenta"),
+          "stroke-width": 1,
+        });
+        const along = unit(sub(S.boards[S.driver.board].b, S.boards[S.driver.board].a));
+        const c1 = add(dp.coneFace, along, -dp.R),
+          c2 = add(dp.coneFace, along, dp.R);
+        el("line", {
+          x1: X(c1.z),
+          y1: Y(c1.y),
+          x2: X(c2.z),
+          y2: Y(c2.y),
+          stroke: css("--magenta"),
+          "stroke-width": 4,
+          "stroke-linecap": "round",
+        });
+        const arrow = add(dp.coneFace, dp.out, 2.2);
+        el("line", {
+          x1: X(dp.coneFace.z),
+          y1: Y(dp.coneFace.y),
+          x2: X(arrow.z),
+          y2: Y(arrow.y),
+          stroke: css("--magenta"),
+          "stroke-width": 2,
+        });
+        const grip = el("circle", {
+          cx: X(dp.mid.z),
+          cy: Y(dp.mid.y),
+          r: 6,
+          fill: css("--magenta"),
+          style: "cursor:grab",
+        });
+        grip.dataset.drivers = "1";
+      });
+      // board end handles
+      if (tool === "move")
+        S.boards.forEach((bd, i) =>
+          ["a", "b"].forEach((end) => {
+            const h = el("circle", {
+              cx: X(bd[end].z),
+              cy: Y(bd[end].y),
+              r: 6,
+              fill: css("--panel"),
+              stroke: css("--ink"),
+              "stroke-width": 1.5,
+              style: "cursor:pointer",
+            });
+            h.dataset.end = `${i}:${end}`;
+          }),
+        );
+      // a board being drawn
+      if (drawing)
+        el("line", {
+          x1: X(drawing.a.z),
+          y1: Y(drawing.a.y),
+          x2: X(drawing.b.z),
+          y2: Y(drawing.b.y),
+          stroke: css("--ink"),
+          "stroke-width": T * PX,
+          "stroke-opacity": 0.5,
+          "stroke-linecap": "butt",
+        });
+      // the closed end
+      if (tr.endK >= 0) {
+        const i = tr.endK % tr.nz,
+          j = (tr.endK / tr.nz) | 0;
+        const cz = (i + 0.5) * CELL,
+          cy = (j + 0.5) * CELL;
+        el("circle", { cx: X(cz), cy: Y(cy), r: 4, fill: css("--ink") });
+        const t = el("text", {
+          x: X(cz) + 7,
+          y: Y(cy) + 4,
+          "font-size": 12,
+          fill: css("--ink"),
+          "font-family": "Inconsolata, monospace",
+        });
+        t.textContent = "closed end";
+      }
+      renderReadout();
+    }
+
+    function renderReadout() {
+      document.getElementById("htype").textContent = ro.type;
+      const throat = tr.profile.length ? tr.profile[Math.min(tr.profile.length - 1, 2)].area : 0;
+      const mouthArea = (S.mouth.b - S.mouth.a) * S.W;
+      const rear = tr.pockets.reduce((s, p) => Math.max(s, p.liters), 0);
+      const stats = [
+        ["path", `${tr.L.toFixed(1)} in`],
+        ["quarter wave at", tr.L > 0 ? `${Math.round(C_IN_S / (4 * tr.L))} Hz` : "–"],
+        ["mouth", `${mouthArea.toFixed(0)} in²`],
+        ["closed end", `${throat.toFixed(0)} in²`],
+        ...(ro.tapInfo.length
+          ? [["cones open at", ro.tapInfo.map((s) => `${s.toFixed(1)}`).join(" and ") + " in"]]
+          : []),
+        ...(rear > 0 ? [["sealed air", `${rear.toFixed(1)} L`]] : []),
+      ];
+      const box = document.getElementById("stats");
+      box.replaceChildren(
+        ...stats.map(([k, v]) => {
+          const d = document.createElement("div");
+          d.className = "stat";
+          d.innerHTML = `<b></b><span></span>`;
+          d.firstChild.textContent = v;
+          d.lastChild.textContent = k;
+          return d;
+        }),
+      );
+      const ul = document.getElementById("notes");
+      ul.replaceChildren(
+        ...ro.notes.map((n) => {
+          const li = document.createElement("li");
+          li.textContent = n;
+          if (n === "No problems found.") li.className = "ok";
+          return li;
+        }),
+      );
+      drawChart();
+    }
+
+    function drawChart() {
+      const c = document.getElementById("chart");
+      c.replaceChildren();
+      const L = 44,
+        R = 410,
+        T0 = 10,
+        B = 190;
+      const x = (s) => L + (clamp(s, 0, X_MAX) / X_MAX) * (R - L);
+      const y = (a) => B - (clamp(a, 0, Y_MAX) / Y_MAX) * (B - T0);
+      const mk = (tag, attrs) => el(tag, attrs, c);
+      for (let s = 0; s <= X_MAX; s += 25) {
+        mk("line", { x1: x(s), y1: T0, x2: x(s), y2: B, stroke: css("--edge") });
+        const t = mk("text", {
+          x: x(s),
+          y: B + 14,
+          "text-anchor": "middle",
+          "font-size": 11,
+          fill: css("--muted"),
+          "font-family": "Inconsolata, monospace",
+        });
+        t.textContent = s;
+      }
+      for (let a = 0; a <= Y_MAX; a += 300) {
+        mk("line", { x1: L, y1: y(a), x2: R, y2: y(a), stroke: css("--edge") });
+        const t = mk("text", {
+          x: L - 5,
+          y: y(a) + 4,
+          "text-anchor": "end",
+          "font-size": 11,
+          fill: css("--muted"),
+          "font-family": "Inconsolata, monospace",
+        });
+        t.textContent = a;
+      }
+      const t1 = mk("text", {
+        x: (L + R) / 2,
+        y: 216,
+        "text-anchor": "middle",
+        "font-size": 11,
+        fill: css("--muted"),
+        "font-family": "Inconsolata, monospace",
+      });
+      t1.textContent = "along the path from the closed end, in";
+      if (tr.profile.length) {
+        const pts = tr.profile.map((p) => `${x(p.s)},${y(p.area)}`);
+        mk("polygon", {
+          points: `${x(tr.profile[0].s)},${B} ${pts.join(" ")} ${x(tr.profile[tr.profile.length - 1].s)},${B}`,
+          fill: css("--cyan"),
+          "fill-opacity": 0.15,
+        });
+        mk("polyline", {
+          points: pts.join(" "),
+          fill: "none",
+          stroke: css("--cyan"),
+          "stroke-width": 2,
+        });
+      }
+      ro.tapInfo.forEach((s) =>
+        mk("line", {
+          x1: x(s),
+          y1: T0,
+          x2: x(s),
+          y2: B,
+          stroke: css("--magenta"),
+          "stroke-width": 2,
+          "stroke-dasharray": "4 3",
+        }),
+      );
+    }
+
+    // ---- interaction
+    let tool = "move";
+    let drag = null,
+      drawing = null;
+    const hints = {
+      move: "Drag a board, an end of a board (circles), or the drivers (magenta dot). Ends snap onto walls and boards.",
+      board: "Press and drag to draw a board. It snaps onto walls and other boards.",
+      delete: "Click a board to delete it, or the drivers' dot to take the drivers out.",
+      driver:
+        "Click a board to put the drivers there. Click the drivers' dot or their board again to turn the cones the other way.",
+      mouth: "Click a wall to open the mouth there, then drag its two ends.",
+    };
+    const pt = (e) => {
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return { z: 0, y: 0 };
+      const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+      return { z: (p.x - PAD) / PX, y: S.H - (p.y - PAD) / PX };
+    };
+    // an end snapped to the grid, then onto a wall or a board's face if near
+    function snapEnd(p, skip = -1) {
+      let q = { z: clamp(snap(p.z), 0, S.D), y: clamp(snap(p.y), 0, S.H) };
+      if (q.z < SNAP_TO) q.z = 0;
+      if (q.z > S.D - SNAP_TO) q.z = S.D;
+      if (q.y < SNAP_TO) q.y = 0;
+      if (q.y > S.H - SNAP_TO) q.y = S.H;
+      S.boards.forEach((bd, i) => {
+        if (i === skip) return;
+        const { d, t } = segDist(q, bd.a, bd.b);
+        if (d < T / 2 + SNAP_TO && d > 0.01) {
+          const on = add(bd.a, sub(bd.b, bd.a), t);
+          const n = unit(sub(q, on));
+          q = add(on, n, T / 2);
+        }
+      });
+      return q;
+    }
+    function setTool(t) {
+      tool = t;
+      document
+        .querySelectorAll("[data-tool]")
+        .forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tool === t)));
+      document.getElementById("toolhint").textContent = hints[t];
+      render();
+    }
+    document
+      .querySelectorAll("[data-tool]")
+      .forEach((b) => b.addEventListener("click", () => setTool(b.dataset.tool)));
+
+    svg.addEventListener("pointerdown", (e) => {
+      const p = pt(e);
+      const tgt = e.target;
+      if (tool === "mouth" && tgt.dataset.mouth) {
+        push();
+        drag = { kind: "mouth", end: tgt.dataset.mouth };
+      } else if (tool === "mouth") {
+        // the nearest wall to the press
+        const dists = {
+          baffle: Math.abs(p.z),
+          back: Math.abs(S.D - p.z),
+          bottom: Math.abs(p.y),
+          top: Math.abs(S.H - p.y),
+        };
+        const wall = WALLS.reduce((a, b) => (dists[b] < dists[a] ? b : a));
+        const along = wall === "baffle" || wall === "back" ? p.y : p.z;
+        const span = wall === "baffle" || wall === "back" ? S.H : S.D;
+        push();
+        S.mouth = { wall, a: clamp(snap(along - 4), 0, span), b: clamp(snap(along + 4), 0, span) };
+        render();
+        return;
+      } else if (tool === "board") {
+        push();
+        const a = snapEnd(p);
+        drawing = { a, b: a };
+      } else if (tgt.dataset.end) {
+        push();
+        const [i, end] = tgt.dataset.end.split(":");
+        drag = { kind: "end", i: +i, end };
+      } else if (tgt.dataset.drivers && tool === "delete") {
+        push();
+        S.driver = null;
+        render();
+        return;
+      } else if (tgt.dataset.drivers && tool === "driver") {
+        push();
+        S.driver.face *= -1;
+        render();
+        return;
+      } else if (tgt.dataset.drivers) {
+        push();
+        drag = { kind: "drivers" };
+      } else if (tgt.dataset.board !== undefined) {
+        const i = +tgt.dataset.board;
+        if (tool === "delete") {
+          push();
+          S.boards.splice(i, 1);
+          if (S.driver) {
+            if (S.driver.board === i) S.driver = null;
+            else if (S.driver.board > i) S.driver.board--;
+          }
+          render();
+          return;
+        }
+        if (tool === "driver") {
+          push();
+          if (S.driver && S.driver.board === i) S.driver.face *= -1;
+          else {
+            const bd = S.boards[i];
+            S.driver = { board: i, u: clamp(segDist(p, bd.a, bd.b).t, 0, 1), face: 1 };
+          }
+          render();
+          return;
+        }
+        push();
+        drag = { kind: "board", i, from: p, start: JSON.parse(JSON.stringify(S.boards[i])) };
+      } else return;
+      svg.setPointerCapture(e.pointerId);
+      render();
+    });
+    svg.addEventListener("pointermove", (e) => {
+      if (!drag && !drawing) return;
+      const p = pt(e);
+      if (drawing) drawing.b = snapEnd(p);
+      else if (drag.kind === "end") S.boards[drag.i][drag.end] = snapEnd(p, drag.i);
+      else if (drag.kind === "board") {
+        const dz = snap(p.z - drag.from.z),
+          dy = snap(p.y - drag.from.y);
+        const s0 = drag.start;
+        S.boards[drag.i] = {
+          a: { z: clamp(s0.a.z + dz, 0, S.D), y: clamp(s0.a.y + dy, 0, S.H) },
+          b: { z: clamp(s0.b.z + dz, 0, S.D), y: clamp(s0.b.y + dy, 0, S.H) },
+        };
+      } else if (drag.kind === "drivers") {
+        const bd = S.boards[S.driver.board];
+        S.driver.u = clamp(segDist(p, bd.a, bd.b).t, 0, 1);
+      } else if (drag.kind === "mouth") {
+        const m = S.mouth;
+        const along = m.wall === "baffle" || m.wall === "back" ? p.y : p.z;
+        const span = m.wall === "baffle" || m.wall === "back" ? S.H : S.D;
+        m[drag.end] = clamp(snap(along), 0, span);
+        if (m.a > m.b) (([m.a, m.b] = [m.b, m.a]), (drag.end = drag.end === "a" ? "b" : "a"));
+      }
+      render();
+    });
+    const finish = () => {
+      if (drawing) {
+        if (len(sub(drawing.b, drawing.a)) >= 2) S.boards.push({ a: drawing.a, b: drawing.b });
+        else history.pop();
+        drawing = null;
+      }
+      drag = null;
+      render();
+    };
+    svg.addEventListener("pointerup", finish);
+    svg.addEventListener("pointercancel", finish);
+
+    // ---- settings
+    const inD = document.getElementById("in-d"),
+      inH = document.getElementById("in-h"),
+      inW = document.getElementById("in-w");
+    const inSize = document.getElementById("in-size"),
+      inN = document.getElementById("in-n");
+    const syncInputs = () => {
+      inD.value = S.D;
+      inH.value = S.H;
+      inW.value = S.W;
+      inSize.value = S.size;
+      inN.value = S.n;
+    };
+    const onNum = (input, key, lo, hi) =>
+      input.addEventListener("change", () => {
+        const v = parseFloat(input.value);
+        if (!Number.isFinite(v)) {
+          syncInputs();
+          return;
+        }
+        push();
+        const old = S[key];
+        S[key] = clamp(v, lo, hi);
+        // a wall that moves takes the board ends on it along
+        if (key === "D")
+          S.boards.forEach((bd) =>
+            ["a", "b"].forEach((e) => {
+              if (Math.abs(bd[e].z - old) < 0.01) bd[e].z = S.D;
+              else bd[e].z = Math.min(bd[e].z, S.D);
+            }),
+          );
+        if (key === "H") {
+          S.boards.forEach((bd) =>
+            ["a", "b"].forEach((e) => {
+              if (Math.abs(bd[e].y - old) < 0.01) bd[e].y = S.H;
+              else bd[e].y = Math.min(bd[e].y, S.H);
+            }),
+          );
+          if (S.mouth.wall === "baffle" || S.mouth.wall === "back") {
+            if (Math.abs(S.mouth.b - old) < 0.01) S.mouth.b = S.H;
+            S.mouth.a = Math.min(S.mouth.a, S.H - 1);
+            S.mouth.b = Math.min(S.mouth.b, S.H);
+          }
+        }
+        syncInputs();
+        render();
+      });
+    onNum(inD, "D", 8, 60);
+    onNum(inH, "H", 8, 60);
+    onNum(inW, "W", 6, 60);
+    onNum(inN, "n", 1, 4);
+    inSize.addEventListener("change", () => {
+      push();
+      S.size = +inSize.value;
+      render();
+    });
+    const load = (name) => {
+      push();
+      S = presets[name]();
+      syncInputs();
+      render();
+    };
+    document.getElementById("p-tapped").addEventListener("click", () => load("tapped"));
+    document.getElementById("p-offset").addEventListener("click", () => load("offset"));
+    document.getElementById("p-front").addEventListener("click", () => load("front"));
+    document.getElementById("p-empty").addEventListener("click", () => load("empty"));
+    document.getElementById("undo").addEventListener("click", () => {
+      const prev = history.pop();
+      if (prev) {
+        S = JSON.parse(prev);
+        syncInputs();
+        render();
+      }
+    });
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+
+    S = presets.tapped();
+    syncInputs();
+    setTool("move");
+  })();
+</script>
