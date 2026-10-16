@@ -4,7 +4,8 @@ import { FoldEditor } from "../../components/drawings/FoldEditor";
 import { Card } from "../../components/ui/Card";
 import { Notice } from "../../components/ui/Notice";
 import { CardHeading } from "../../components/ui/CardHeading";
-import { foldRoom, startFold } from "../../lib/speaker/foldHorn";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { foldRoom, isDrawn, startFold } from "../../lib/speaker/foldHorn";
 import { FOLD_EDITOR_TEXT } from "../../constants/speakerPage";
 
 interface Props {
@@ -31,9 +32,11 @@ export function FoldHornCard({ cabinet, chamber, horn, name, onFold }: Props) {
   return (
     <Card className="sm:col-span-2">
       <CardHeading>
-        {name ? `${FOLD_EDITOR_TEXT.heading}: ${name}` : FOLD_EDITOR_TEXT.heading}
+        <Tooltip tip={FOLD_EDITOR_TEXT.key}>
+          {name ? `${FOLD_EDITOR_TEXT.heading}: ${name}` : FOLD_EDITOR_TEXT.heading}
+        </Tooltip>
       </CardHeading>
-      {!horn.fold && <Notice>{FOLD_EDITOR_TEXT.notDrawn}</Notice>}
+      {!isDrawn(horn.fold) && <Notice>{FOLD_EDITOR_TEXT.notDrawn}</Notice>}
       <FoldEditor
         room={room}
         fold={fold}

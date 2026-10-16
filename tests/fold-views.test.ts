@@ -108,11 +108,11 @@ describe("a drawn horn in the 3D view", () => {
     expect(meshes(scene, SPEAKER_MESH_NAMES.foldBoard)).toHaveLength(2);
   });
 
-  test("with no drawing the scene builds with no boards and no drivers", () => {
+  test("with no drawing the scene builds with no boards, no drawn drivers and no mouth", () => {
     const scene = buildSpeakerScene({ spec, cutaway: true });
     expect(meshes(scene, SPEAKER_MESH_NAMES.foldBoard)).toHaveLength(0);
     expect(meshes(scene, SPEAKER_MESH_NAMES.foldDriver)).toHaveLength(0);
-    expect(meshes(scene, SPEAKER_MESH_NAMES.hornDriver)).toHaveLength(0);
+    expect(meshes(scene, SPEAKER_MESH_NAMES.foldMouth)).toHaveLength(0);
   });
 
   test("a mouth in the top or the bottom is a plate in the chamber", () => {
@@ -162,10 +162,8 @@ describe("a drawn horn in the front view", () => {
     expect(+mouth.y).toBeCloseTo(+face.y, 6);
   });
 
-  test("a horn not drawn yet shows the default mouth on the top quarter of the baffle", () => {
-    const { mouth, face } = mouthAndFace(folded());
-    expect(+mouth.height / +face.height).toBeCloseTo(0.25, 6);
-    expect(+mouth.y).toBeCloseTo(+face.y, 6);
+  test("a horn not drawn yet shows no mouth", () => {
+    expect(rects(html(folded())).some((r) => r.rx === "2")).toBe(false);
   });
 
   test("a mouth on the bottom is not on the baffle", () => {

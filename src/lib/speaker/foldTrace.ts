@@ -240,8 +240,9 @@ function onMouth(
 export function foldTrace(input: FoldTraceInput): FoldTrace {
   const { depthIn, heightIn, widthIn, boardIn, fold, driver } = input;
   const cellIn = FOLD_CELL_IN;
-  const nz = Math.round(depthIn / cellIn);
-  const ny = Math.round(heightIn / cellIn);
+  // at least one cell each way: a room too small to hold a fold still traces (to nothing) rather than fail
+  const nz = Math.max(1, Math.round(depthIn / cellIn));
+  const ny = Math.max(1, Math.round(heightIn / cellIn));
   const count = nz * ny;
   const solid = new Uint8Array(count);
   const at = (i: number, j: number) => j * nz + i;

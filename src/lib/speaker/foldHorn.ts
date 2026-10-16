@@ -22,6 +22,8 @@ import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 const SECTION_IN = 2;
 /** The least area a traced section gets, in²: the closed end's last cells can read narrower. */
 const MIN_AREA_IN2 = 1;
+/** The least clear depth and height a fold is traced in, in: smaller rooms hold no passage. */
+const MIN_ROOM_IN = 2;
 
 /** A chamber's drawn horn: its trace (`FoldTrace`) and what the sound model reads of it. */
 export interface TracedHorn extends TracedHornModel {
@@ -69,44 +71,51 @@ export const startFold = (heightIn: number): HornFold => ({
   mouth: { wall: FOLD_WALL.baffle, fromIn: heightIn * 0.75, toIn: heightIn },
 });
 
-/** A chamber's folded horn as the views draw it: the fold, its drivers' rows, and the room it is drawn in. */
+/** Whether a fold is drawn: it has a board. Before that the response shows the straight horn. */
+export const isDrawn = (fold: HornFold | undefined): fold is HornFold => !!fold?.boards.length;
+
+/** Whether a room holds a fold: its clear depth and height at least `MIN_ROOM_IN`, its width more than 0. */
+export const roomFits = (room: Pick<TraceRoom, "depthIn" | "heightIn" | "widthIn">) =>
+  room.depthIn >= MIN_ROOM_IN && room.heightIn >= MIN_ROOM_IN && room.widthIn > 0;
+
+/** A chamber's drawn horn as the views draw it: the fold, its drivers' rows, and the room it is drawn in. */
 export interface FoldDrawing {
-  /** the user's fold, or the default start (`startFold`) before one is drawn */
   fold: HornFold;
-  /** the drivers' rows (`FoldTrace.parts`); empty before a fold is drawn */
+  /** the drivers' rows (`FoldTrace.parts`) */
   parts: FoldTrace["parts"];
   room: TraceRoom;
 }
 
-/** The chamber's folded horn as the views draw it; null when its horn is not folded. */
+/** The chamber's drawn horn as the views draw it; null when its horn is not folded or not drawn. */
 export function foldDrawing(
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
   chamber: SpeakerChamber,
 ): FoldDrawing | null {
+  const drawn = tracedHorn(cabinet, chamber);
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
-  if (!horn || horn.path !== HORN_PATH.folded) return null;
-  const room = foldRoom(cabinet, chamber);
-  return {
-    fold: horn.fold ?? startFold(room.heightIn),
-    parts: tracedHorn(cabinet, chamber)?.trace.parts ?? [],
-    room,
-  };
+  if (!drawn || !horn?.fold) return null;
+  return { fold: horn.fold, parts: drawn.trace.parts, room: foldRoom(cabinet, chamber) };
 }
 
-/** The chamber's drawn horn, traced; null when its horn is not folded or not drawn. */
+/** The chamber's drawn horn, traced; null when its horn is not folded or not drawn, or its room is too small. */
 export function tracedHorn(
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
   chamber: SpeakerChamber,
 ): TracedHorn | null {
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
-  if (!horn?.fold || horn.path !== HORN_PATH.folded) return null;
+  if (!horn || horn.path !== HORN_PATH.folded || !isDrawn(horn.fold)) return null;
   const room = foldRoom(cabinet, chamber);
+  return roomFits(room) ? tracedFold(room, horn.fold) : null;
+}
+
+/** A fold traced in a room, and what the sound model reads of it; each fold keeps its last trace. */
+export function tracedFold(room: TraceRoom, fold: HornFold): TracedHorn {
   const key = JSON.stringify(room);
-  const kept = traced.get(horn.fold);
+  const kept = traced.get(fold);
   if (kept?.key === key) return kept.value;
-  const trace = foldTrace({ ...room, fold: horn.fold });
+  const trace = foldTrace({ ...room, fold });
   const value: TracedHorn = { trace, ...traceModel(trace) };
-  traced.set(horn.fold, { key, value });
+  traced.set(fold, { key, value });
   return value;
 }
 
@@ -117,7 +126,7 @@ export function tracedHorn(
  * the trace finds no horn.
  */
 export function traceModel(trace: ReturnType<typeof foldTrace>): TracedHornModel {
-  const { hornType, taps, sections, pathIn, sealed } = trace;
+  const { hornType, taps, sections, pathIn, sealed, grid } = trace;
   const none: TracedHornModel = { segments: [], drive: null, rearLiters: null };
   if (!hornType || !sections.length || !(pathIn > 0)) return none;
   const opened = [taps.front, taps.back]
@@ -125,7 +134,7 @@ export function traceModel(trace: ReturnType<typeof foldTrace>): TracedHornModel
     .sort((p, q) => p - q);
   if (!opened.length) return none;
   const start = hornType === HORN_DRIVE.front ? opened[0] : 0;
-  const marks = hornType === HORN_DRIVE.front ? [] : opened.filter((t) => t > 0 && t < pathIn);
+  const marks = hornType === HORN_DRIVE.front ? [] : innerTaps(opened, pathIn, grid.cellIn);
   const cuts = sectionCuts(start, pathIn, marks);
   if (cuts.length < 2) return none;
   const areaAt = (s: number) => Math.max(MIN_AREA_IN2, interpolate(sections, s)) * CM2_PER_IN2;
@@ -146,12 +155,25 @@ export function traceModel(trace: ReturnType<typeof foldTrace>): TracedHornModel
           ? { kind: HORN_DRIVE.front }
           : null;
   if (!drive) return none;
+  if (hornType === HORN_DRIVE.tapped) return { segments, drive, rearLiters: null };
   /** the sealed air the cones' closed side opens into: a front-loaded or offset horn's rear chamber */
-  const rear =
-    hornType === HORN_DRIVE.tapped
-      ? undefined
-      : sealed.find((p) => (taps.front === null ? p.opensToFront : p.opensToBack));
-  return { segments, drive, rearLiters: rear ? rear.liters : null };
+  const rear = sealed.find((p) => (taps.front === null ? p.opensToFront : p.opensToBack));
+  // no air behind the cones: no horn to play (the trace's rear chamber check says why)
+  if (!rear || !(rear.liters > 0)) return none;
+  return { segments, drive, rearLiters: rear.liters };
+}
+
+/**
+ * The taps as section boundaries strictly inside the path: each at least `cellIn` from either end and from the tap
+ * before it, so each tap has its own boundary with a section on both sides.
+ */
+function innerTaps(taps: readonly number[], pathIn: number, cellIn: number): number[] {
+  if (pathIn < 3 * cellIn) return [];
+  return taps.reduce<number[]>((kept, t) => {
+    const least = kept.length ? kept[kept.length - 1] + cellIn : cellIn;
+    const at = Math.min(pathIn - cellIn, Math.max(least, t));
+    return at >= least ? [...kept, at] : kept;
+  }, []);
 }
 
 /** The section boundaries from `start` to `end`, in: every tap in `marks`, and no section longer than `SECTION_IN`. */

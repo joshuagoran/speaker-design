@@ -5,7 +5,7 @@ import { CHAMBER_LOAD, FOLD_WALL, HORN_DRIVE, HORN_PATH } from "../src/constants
 import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
 import { CM_PER_IN } from "../src/constants/units";
 import { foldTrace, type FoldDriverShape } from "../src/lib/speaker/foldTrace";
-import { traceModel } from "../src/lib/speaker/foldHorn";
+import { isDrawn, roomFits, traceModel } from "../src/lib/speaker/foldHorn";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
@@ -45,10 +45,9 @@ const EMPTY: HornFold = {
   mouth: { wall: FOLD_WALL.baffle, fromIn: 30, toIn: 40 },
 };
 
-const modelOf = (fold: HornFold) =>
-  traceModel(
-    foldTrace({ depthIn: 30, heightIn: 40, widthIn: 20, boardIn: 0.75, fold, driver: DRIVER_18 }),
-  );
+const traceOf = (fold: HornFold) =>
+  foldTrace({ depthIn: 30, heightIn: 40, widthIn: 20, boardIn: 0.75, fold, driver: DRIVER_18 });
+const modelOf = (fold: HornFold) => traceModel(traceOf(fold));
 const lengthIn = (m: ReturnType<typeof modelOf>) =>
   m.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
 
@@ -77,8 +76,40 @@ test("a front-loaded horn starts at the cones", () => {
   expect(m.rearLiters).toBeGreaterThan(50);
 });
 
-test("an empty box gives no horn", () => {
+test("an empty box gives no horn, and is not drawn", () => {
   expect(modelOf(EMPTY).drive).toBeNull();
+  expect(isDrawn(EMPTY)).toBe(false);
+  expect(isDrawn(undefined)).toBe(false);
+  expect(isDrawn(OFFSET)).toBe(true);
+});
+
+test("a room too small for a fold traces to nothing", () => {
+  const room = { depthIn: 0, heightIn: 40, widthIn: 20 };
+  expect(roomFits(room)).toBe(false);
+  const t = foldTrace({ ...room, boardIn: 0.75, fold: OFFSET, driver: DRIVER_18 });
+  expect(traceModel(t).drive).toBeNull();
+});
+
+test("a tap at the closed end, or two taps at one place, still lands on its own inner boundary", () => {
+  const offset = traceOf(OFFSET);
+  const atEnd = traceModel({
+    ...offset,
+    taps: {
+      front: offset.taps.front === null ? null : 0,
+      back: offset.taps.back === null ? null : 0,
+    },
+  });
+  expect(atEnd.drive?.kind === HORN_DRIVE.offset && atEnd.drive.tap).toBeGreaterThanOrEqual(1);
+  const tapped = traceOf(TAPPED);
+  const same = traceModel({ ...tapped, taps: { front: 30, back: 30 } });
+  expect(same.drive?.kind).toBe(HORN_DRIVE.tapped);
+  if (same.drive?.kind !== HORN_DRIVE.tapped) return;
+  expect(same.drive.rearTap).toBeGreaterThan(same.drive.frontTap);
+});
+
+test("no sealed air behind the cones gives no horn", () => {
+  const offset = traceOf(OFFSET);
+  expect(traceModel({ ...offset, sealed: [] }).drive).toBeNull();
 });
 
 test("the sound model reads the traced horn in place of the stored one", () => {

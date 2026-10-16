@@ -18,7 +18,7 @@ import type {
 } from "../types";
 import { FIRST_ORDER_FILTER } from "./speakerSpec";
 import { UI_TEXT } from "./uiText";
-import { FOLD_DRIVERS_REASON } from "./foldHorn";
+import { FOLD_DRIVERS_REASON, FOLD_MAGNET_CLEAR_IN } from "./foldHorn";
 
 /** Each driver kind as the Speaker page names it: the catalog table it picks from. */
 export const DRIVER_KIND_NAMES = {
@@ -298,7 +298,7 @@ export const FOLD_CHECK_TEXT = {
   deadEnd: (at: string) =>
     `The cones first open ${at} from the closed end. That is a long dead end behind them. Move them nearer the closed end.`,
   choke: (at: string) => `The passage narrows sharply ${at} from the closed end.`,
-  magnet: () => "A driver's motor is within 1 in of a board or a wall.",
+  magnet: () => `A driver's motor is within ${FOLD_MAGNET_CLEAR_IN} in of a board or a wall.`,
   cutout: () => "A driver's cutout runs off its board.",
   strayAir: (count: number) =>
     count === 1
