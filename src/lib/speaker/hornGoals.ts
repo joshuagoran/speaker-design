@@ -10,6 +10,7 @@
 // motors). A front-loaded or offset horn shares it with its rear chamber, a share the search also tries. Folding loses
 // some air to the panels inside the fold (`FOLD_AIR_SHARE`).
 import type {
+  ChamberVent,
   HornDesignResult,
   HornGoalFit,
   HornGoals,
@@ -31,12 +32,19 @@ import {
   HORN_DRIVE,
   HORN_PATH,
   SPEAKER_RESPONSE_VOLTS,
+  VENT_KIND,
 } from "../../constants/speakerSpec";
+import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import {
+  ABOVE_BAND_DB_PER_OCTAVE,
+  ABOVE_BAND_OCTAVES,
+  ABOVE_BAND_POINTS,
   FOLD_AIR_SHARE,
   HORN_GOAL_LIMIT,
   LOW_EDGE_DB,
   MIN_SECTION_SHARE,
+  RING_DB_PER_CYCLE,
+  RING_FREE_CYCLES,
   SEARCH_FLARES,
   SEARCH_PATH_SHARES,
   SEARCH_POINTS,
@@ -47,6 +55,10 @@ import {
 } from "../../constants/hornGoals";
 import { MIN_NET_L } from "./speakerBuild";
 
+/** A chamber vent's air speed limit, m/s: a port's (absent: the Hi-fi page's); null for any other vent. */
+export const ventSpeedLimit = (vent: ChamberVent): number | null =>
+  vent.kind === VENT_KIND.vented ? (vent.maxSpeedMs ?? HIFI_PORT_MAX_MS) : null;
+
 /** The drives a starting layout can be sized for: every drive the engines model. */
 export type GoalDrive = Exclude<SpeakerHorn["drive"]["kind"], typeof HORN_DRIVE.back>;
 
@@ -55,49 +67,78 @@ export type DriverPower = Pick<ThieleSmall, "aes" | "imp">;
 
 /**
  * How a design meets the goals: its response at the model's drive over the goals' band, and its maximum output there,
- * where the drivers' power rating (`power`, into their impedance) or their Xmax stops it. Null when the engine cannot
+ * where the drivers' power rating (`power`, into their impedance), their Xmax or the port's air speed limit
+ * (`portMaxMs`; null: none) stops it; how long it rings there, and its peaks above the band. Null when the engine cannot
  * model it or the band is empty.
  */
 export function hornGoalFit(
   design: HornLayoutDesign,
   goals: HornGoals,
   power: DriverPower,
+  portMaxMs: number | null = null,
 ): HornGoalFit | null {
   if (!(goals.lowHz > 0 && goals.highHz > goals.lowHz)) return null;
   // no power or no travel: no maximum output to read
   if (!(power.aes > 0 && design.driver.Xmax > 0)) return null;
-  const freqs = logSpacedFrequencies(goals.lowHz, goals.highHz, SEARCH_POINTS);
-  const model = hornLayoutModel(design, freqs, SPEAKER_RESPONSE_VOLTS);
+  const band = logSpacedFrequencies(goals.lowHz, goals.highHz, SEARCH_POINTS);
+  const above = logSpacedFrequencies(
+    goals.highHz,
+    goals.highHz * 2 ** ABOVE_BAND_OCTAVES,
+    ABOVE_BAND_POINTS + 1,
+  ).slice(1);
+  const model = hornLayoutModel(design, [...band, ...above], SPEAKER_RESPONSE_VOLTS);
   if (!model || !model.curve.every((p) => Number.isFinite(p.spl) && p.xmm > 0)) return null;
-  const spl = model.curve.map((p) => p.spl);
+  const inBand = model.curve.slice(0, band.length);
+  const spl = inBand.map((p) => p.spl);
   const mean = spl.reduce((sum, x) => sum + x, 0) / spl.length;
   /** the most the drivers' power rating lifts the level from the model's drive, dB */
   const powerDb = 20 * Math.log10(wattsToVolts(power.aes, power) / SPEAKER_RESPONSE_VOLTS);
   let maxOutDb = Infinity,
     maxOutHz = goals.lowHz,
     limit: HornGoalFit["limit"] = HORN_GOAL_LIMIT.power;
-  model.curve.forEach((p) => {
-    /** the most the cones' Xmax lifts the level here, dB */
+  inBand.forEach((p) => {
+    /** the most the cones' Xmax, and the port's air speed, lift the level here, dB */
     const excursionDb = 20 * Math.log10(design.driver.Xmax / p.xmm);
-    const out = p.spl + Math.min(powerDb, excursionDb);
+    const portDb =
+      portMaxMs !== null && p.portSpeed > 0 ? 20 * Math.log10(portMaxMs / p.portSpeed) : Infinity;
+    const lift = Math.min(powerDb, excursionDb, portDb);
+    const out = p.spl + lift;
     if (out < maxOutDb) {
       maxOutDb = out;
       maxOutHz = p.f;
-      limit = excursionDb < powerDb ? HORN_GOAL_LIMIT.excursion : HORN_GOAL_LIMIT.power;
+      limit =
+        lift === portDb
+          ? HORN_GOAL_LIMIT.port
+          : lift === excursionDb
+            ? HORN_GOAL_LIMIT.excursion
+            : HORN_GOAL_LIMIT.power;
     }
   });
+  const aboveDb = Math.max(
+    0,
+    ...model.curve
+      .slice(band.length)
+      .map((p) => p.spl - ABOVE_BAND_DB_PER_OCTAVE * Math.log2(p.f / goals.highHz) - mean),
+  );
   return {
     spreadDb: Math.max(...spl) - Math.min(...spl),
     lowEdgeDb: spl[0] - mean,
     maxOutDb,
     maxOutHz,
     limit,
+    ringCycles: Math.max(0, ...inBand.map((p) => (p.delay / 1000) * p.f)),
+    aboveDb,
   };
 }
 
-/** A fit's score: lower is better. The spread, a low edge under the usual corner, and a shortfall from the target. */
+/**
+ * A fit's score: lower is better. The spread, a low edge under the usual corner, a shortfall from the target, ringing
+ * past the usual and peaks above the band.
+ */
 export const scoreOf = (fit: HornGoalFit, goals: HornGoals) =>
   fit.spreadDb +
+  RING_DB_PER_CYCLE * Math.max(0, fit.ringCycles - RING_FREE_CYCLES) +
+  fit.aboveDb +
   2 * Math.max(0, -LOW_EDGE_DB - fit.lowEdgeDb) +
   2 * Math.max(0, goals.targetDb - fit.maxOutDb);
 
@@ -213,7 +254,9 @@ export function goalHorn(
       { count: 1, angle: 2 },
       { ...search.room, netLiters: rearL },
     );
-    const fit = read.ok ? hornGoalFit(read.design, goals, search.power) : null;
+    const fit = read.ok
+      ? hornGoalFit(read.design, goals, search.power, ventSpeedLimit(search.chamber.vent))
+      : null;
     return fit && { horn, netLiters: rearL, fit, score: scoreOf(fit, goals) };
   };
   /** the taps must stay in order, inside the path, each section at least `MIN_SECTION_SHARE` of it */

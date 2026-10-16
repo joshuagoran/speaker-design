@@ -2411,6 +2411,10 @@ export interface HornGoalFit {
   maxOutDb: number;
   maxOutHz: number;
   limit: HornGoalLimit;
+  /** the most group delay over the band, in cycles of its frequency: how long it rings */
+  ringCycles: number;
+  /** how far the highest peak above the band stands over the band's level after a crossover at its top, dB */
+  aboveDb: number;
 }
 
 /** What stops a horn's maximum output at a frequency (`HORN_GOAL_LIMIT`). */

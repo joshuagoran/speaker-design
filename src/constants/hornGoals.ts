@@ -19,7 +19,20 @@ export const HORN_GOAL_FIELDS = {
 export const HORN_GOAL_LIMIT = {
   power: "power",
   excursion: "excursion",
+  port: "port",
 } as const;
+
+/**
+ * How the score weighs what a flat response can hide: ringing (group delay over `RING_FREE_CYCLES` cycles of the
+ * frequency costs `RING_DB_PER_CYCLE` dB per cycle) and peaks above the band (each dB a peak stands over the band's
+ * level, after a `ABOVE_BAND_DB_PER_OCTAVE` crossover at the band's top, up to `ABOVE_BAND_OCTAVES` above it, costs a
+ * dB). `ABOVE_BAND_POINTS` frequencies check above the band.
+ */
+export const RING_FREE_CYCLES = 1.5;
+export const RING_DB_PER_CYCLE = 2;
+export const ABOVE_BAND_DB_PER_OCTAVE = 24;
+export const ABOVE_BAND_OCTAVES = 1.5;
+export const ABOVE_BAND_POINTS = 10;
 
 /**
  * The share of a chamber's clear air a folded horn path gets: the rest is the panels inside the fold. A first estimate
@@ -56,13 +69,13 @@ export const LOW_EDGE_DB = 3;
 
 /**
  * The round tubes Design from goals tries on a folded front-loaded or offset horn's rear chamber: each count, each
- * size, in, with at least `REAR_PORT_MIN_AREA_SHARE` of the cones' area (so the air in them stays slow enough), tuned
- * to each share of the goals' lowest frequency.
+ * size, in, with at least `REAR_PORT_MIN_AREA_SHARE` of the cones' area, each length in steps of
+ * `REAR_PORT_LENGTH_STEP_IN` that fits.
  */
 export const REAR_PORT_COUNTS = [1, 2, 3, 4] as const;
-export const REAR_PORT_DIAS_IN = [4, 6, 8] as const;
+export const REAR_PORT_DIAS_IN = [4, 6, 8, 10] as const;
 export const REAR_PORT_MIN_AREA_SHARE = 0.15;
-export const REAR_PORT_TUNE_SHARES = [0.7, 0.85, 1] as const;
+export const REAR_PORT_LENGTH_STEP_IN = 2;
 
 /** The shortest section the search makes, as a share of the path. */
 export const MIN_SECTION_SHARE = 0.05;

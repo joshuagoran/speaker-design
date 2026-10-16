@@ -159,6 +159,7 @@ export const HORN_PATH_NAMES = {
 export const HORN_GOAL_LIMIT_NAMES = {
   power: "the power rating",
   excursion: "cone travel",
+  port: "port air speed",
 } as const satisfies Record<HornGoalLimit, string>;
 
 /** How a horn's drivers drive its path, as the Horn settings name it (`HORN_DRIVE`). */
