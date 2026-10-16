@@ -1,5 +1,5 @@
 // The Speaker page's names and choices (src/pages/speaker): the spec's ids as the page shows them.
-import type { SLOT_KIND, SLOT_PLACE, TUBE_ENDS, TUBE_LAYOUT } from "./speakerSpec";
+import type { FOLD_WALL, SLOT_KIND, SLOT_PLACE, TUBE_ENDS, TUBE_LAYOUT } from "./speakerSpec";
 import type {
   ArchBlock,
   ChamberLoad,
@@ -377,6 +377,25 @@ export const SPEAKER_TEXT = {
     `${count} × ${kind.toLowerCase()} cutout, ${cutout}`,
   hornNoFitNote:
     "the horn does not fit where it is mounted; no cutout until you change the mounting",
+  /** the horn mouth's opening on a wall's cutlist note: its size and where it sits */
+  hornMouthNote: (w: string, h: string, where: string) =>
+    `horn mouth: ${w} × ${h}″ opening, ${where}`,
+  /**
+   * a folded horn board's cutlist note: its number, then its two ends' cuts, or one cut when both ends are alike. A
+   * semicolon starts a new line of the row's notes, so the note has none.
+   */
+  foldBoardNote: (board: number, first: string, second: string) =>
+    first === second
+      ? `Horn board ${board}: ${first} at both ends`
+      : `Horn board ${board}: ${first} at one end, ${second} at the other`,
+  /** a folded horn board's end cut, `deg` off square (empty: square), by what it meets (`board` counts from 1) */
+  foldEndFree: "square",
+  foldEndCorner: (deg: string, board: number) =>
+    deg ? `${deg}° miter to board ${board}` : `square to board ${board}`,
+  foldEndWall: (deg: string, wall: string) =>
+    deg ? `${deg}° bevel to the ${wall}` : `square to the ${wall}`,
+  foldEndButt: (deg: string, board: number) =>
+    deg ? `${deg}° bevel butt on board ${board}` : `square butt on board ${board}`,
   portTooLong: "too long for this chamber: make it shorter",
   slotTooLong: "too long to run straight in this chamber: make it shorter, or fold it",
   slotTooLongFolded: "too long to fold in this chamber: make it shorter",
@@ -592,3 +611,11 @@ export const SPEAKER_TEXT = {
   addSection: "Add section",
   removeSection: "Remove section",
 } as const;
+
+/** A chamber's walls by id, as a cutlist note names them. */
+export const FOLD_WALL_NAMES = {
+  baffle: "baffle",
+  bottom: "bottom",
+  back: "back",
+  top: "top",
+} as const satisfies Record<keyof typeof FOLD_WALL, string>;
