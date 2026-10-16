@@ -1,6 +1,13 @@
 import { CardHeading } from "../../components/ui/CardHeading";
 import { useRef, useState } from "react";
-import type { HornGoalFit, HornGoals, HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
+import type {
+  HornGoalFit,
+  HornGoals,
+  HornRun,
+  HornSegment,
+  SpeakerDriver,
+  SpeakerHorn,
+} from "../../types";
 import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
@@ -10,7 +17,9 @@ import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
 import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/speakerPage";
-import { HORN_DRIVE } from "../../constants/speakerSpec";
+import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
+import type { HornFlare } from "../../lib/speaker/speakerLayout";
+import { FoldMountFields, FoldRunsFields } from "./FoldFields";
 import { COMPRESSION_RATIO } from "../../constants/hornThroat";
 import {
   compressionRatio,
@@ -104,6 +113,13 @@ function withTap(drive: SpeakerHorn["drive"], key: TapKey, tap: number): Speaker
   return drive;
 }
 
+/** The horn with its own runs set, or cleared (undefined: back to the automatic folds). */
+function withRuns(horn: SpeakerHorn, runs: readonly HornRun[] | undefined): SpeakerHorn {
+  if (runs) return { ...horn, runs };
+  const { runs: cleared, ...rest } = horn;
+  return cleared ? rest : horn;
+}
+
 interface Props {
   horn: SpeakerHorn;
   /** the chamber's drivers: their cones set the compression ratio's area and the front chamber */
@@ -121,6 +137,8 @@ interface Props {
   onDesign: (goals: HornGoals) => boolean;
   /** reads a pasted Hornresp record onto the horn and the chamber */
   onImport: (text: string) => HornImport;
+  /** the horn as the views lay it out (its folded runs and drivers' spot); null when the layout has none */
+  flare: HornFlare | null;
 }
 
 /**
@@ -141,8 +159,10 @@ export function HornSettings({
   onDrive,
   onDesign,
   onImport,
+  flare,
 }: Props) {
   const { segments, drive } = horn;
+  const folded = horn.path === HORN_PATH.folded;
   const conesCm2 = conesAreaCm2(drivers);
   const ratio = compressionRatio(conesCm2, segments);
   const cones = throatCones(drivers);
@@ -183,7 +203,32 @@ export function HornSettings({
         options={entriesOf(HORN_DRIVE_NAMES)}
         disabled={{ values: DRIVES_NOT_MODELED, why: SPEAKER_TEXT.hornDriveNote }}
       />
-      {(drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) &&
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
+        value={horn.path}
+        onChange={(path) => onEdit((h) => ({ ...h, path }))}
+        options={entriesOf(HORN_PATH_NAMES)}
+      />
+      {folded && flare && (
+        <FoldRunsFields
+          runs={flare.runs}
+          own={!!horn.runs?.length}
+          pathIn={flare.path.pathIn}
+          fold={flare.fold}
+          onRuns={(runs) => onEdit((h) => withRuns(h, runs))}
+        />
+      )}
+      {folded &&
+        flare?.fold &&
+        (drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) && (
+          <FoldMountFields
+            fold={flare.fold}
+            tapped={drive.kind === HORN_DRIVE.tapped}
+            onMount={(mount) => onEdit((h) => ({ ...h, mount }))}
+          />
+        )}
+      {!folded &&
+        (drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) &&
         TAP_FIELDS[drive.kind].map(({ key, label, tip }) => (
           <ToggleGroup
             key={key}
@@ -332,12 +377,6 @@ export function HornSettings({
         value={horn.doubleBoard === true}
         onChange={(doubleBoard) => onEdit((h) => ({ ...h, doubleBoard }))}
         options={BOARD_OPTIONS}
-      />
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
-        value={horn.path}
-        onChange={(path) => onEdit((h) => ({ ...h, path }))}
-        options={entriesOf(HORN_PATH_NAMES)}
       />
       <HornImportFold onImport={onImport} />
     </section>

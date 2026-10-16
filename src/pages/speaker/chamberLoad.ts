@@ -231,11 +231,20 @@ export function withHornDrive(
   kind: SpeakerHorn["drive"]["kind"],
 ): SpeakerChamber {
   if (chamber.load.kind !== CHAMBER_LOAD.horn) return chamber;
+  // a new drive drops the drivers' spot: the fold picks the spot closest to the new taps
+  const horn = withoutMount(withDriveKind(chamber.load.horn, kind));
   return {
     ...chamber,
-    load: { kind: CHAMBER_LOAD.horn, horn: withDriveKind(chamber.load.horn, kind) },
+    load: { kind: CHAMBER_LOAD.horn, horn },
     vent: kind === HORN_DRIVE.tapped ? DEFAULT_VENTS.sealed : chamber.vent,
   };
+}
+
+/** The horn without its drivers' spot. */
+function withoutMount(horn: SpeakerHorn): SpeakerHorn {
+  const copy = { ...horn };
+  delete copy.mount;
+  return copy;
 }
 
 /** The chamber's air, L: its clear room (`hornRoom`) less its drivers' displacement. */

@@ -764,7 +764,7 @@ export function hornFlare(
   };
   const runs = folded ? (horn.runs?.length ? horn.runs : squareFolds(square)) : [];
   const foldInput: HornFoldInput | null = folded
-    ? { ...square, runs: fittedRuns(runs, path.pathIn), ...spotOf(horn) }
+    ? { ...square, runs: fittedRuns(runs, path.pathIn), ...spotOf(horn, runs) }
     : null;
   const fold = foldInput && hornFold(foldInput);
   return {
@@ -779,14 +779,18 @@ export function hornFlare(
 }
 
 /**
- * An offset or tapped horn's drivers' spot as the fold reads it (inches): the horn's own (`mount`), else none and the
+ * An offset or tapped horn's drivers' spot as the fold reads it (inches): the horn's own (`mount`, on one of `runs`), else none and the
  * taps it should come closest to: the drive's own taps as path distances (an offset horn's backs in the rear chamber).
  * Null mount and taps for another drive.
  */
-function spotOf(horn: SpeakerHorn): Pick<HornFoldInput, "mount" | "wantTaps"> {
+function spotOf(
+  horn: SpeakerHorn,
+  runs: readonly HornRun[],
+): Pick<HornFoldInput, "mount" | "wantTaps"> {
   const { drive } = horn;
   if (drive.kind !== HORN_DRIVE.offset && drive.kind !== HORN_DRIVE.tapped) return { mount: null };
-  if (horn.mount) {
+  // a spot on a run the path no longer has is no spot: the closest to the taps instead
+  if (horn.mount && horn.mount.run < runs.length) {
     const { alongCm, ...rest } = horn.mount;
     return { mount: { ...rest, alongIn: alongCm / CM_PER_IN } };
   }

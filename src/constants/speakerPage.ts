@@ -426,7 +426,7 @@ export const SPEAKER_TEXT = {
   hornBoardTip: "The board the drivers mount on. Double it for large drivers.",
   hornPath: "Path",
   hornPathTip:
-    "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box. Only the sections set the response.",
+    "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box, in runs you can change. Only the sections set the response.",
   hornDrive: "Drive",
   hornDriveTip:
     "Where the cones meet the path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
@@ -473,6 +473,47 @@ export const SPEAKER_TEXT = {
   /** the goals check: the horn holds more air than the chamber has */
   hornFitAir: (horn: string, chamber: string) =>
     `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,
+  foldRuns: "Runs",
+  foldRunsTip:
+    "A folded path is straight runs in the side view, from the start of the path to the mouth. The flare sections set the sound. The runs only lay the path out in the box.",
+  foldRunLength: (n: number) => `Run ${n}, in`,
+  foldAngle: "Angle, °",
+  foldAngleTip:
+    "The way the run goes in the side view: 0° toward the back, 90° up, 180° toward the baffle.",
+  addRun: "Add run",
+  removeRun: "Remove",
+  resetFolds: "Reset folds",
+  /** the runs' length against the sections' path length, as formatted lengths */
+  foldRunsTotal: (runs: string, path: string) =>
+    `Runs: ${runs} in. Sections: ${path} in. The first run takes up any difference.`,
+  foldOutside: (n: number) => `Run ${n} goes past the box. Shorten it or change its angle.`,
+  foldCrossing: (a: number, b: number) =>
+    `Runs ${a} and ${b} cross, or have no room for a board between them.`,
+  foldSharp: (n: number) => `Run ${n} turns too sharply. Add a run between.`,
+  foldDrivers: "Drivers",
+  foldDriversTip:
+    "The drivers sit in a wall of one run. The front of the cones opens on one side of that board, the back on the other. The spot sets where each side opens into the path.",
+  foldDriversRun: "On run",
+  foldWall: "Wall",
+  wallUpper: "Upper",
+  wallLower: "Lower",
+  wallFront: "Front",
+  wallBack: "Back",
+  foldAlong: "From the run's start, in",
+  foldFront: "Cone fronts face",
+  foldFrontTip:
+    "This run: the cone fronts open into it. Other side: they open on the far side of the board.",
+  foldFrontRun: "This run",
+  foldFrontAcross: "Other side",
+  foldFrontTap: "Front opens at",
+  foldBackTap: "Back opens at",
+  foldTapTip: "The distance along the path from its start.",
+  foldAcrossChamber: "The other side of the board is the rear chamber.",
+  foldAcrossRun: (n: number) => `The other side of the board is run ${n}.`,
+  foldTappedNeedsRun: "A tapped horn needs a run on both sides of the drivers. Move them.",
+  foldNoSpot: "No wall here has room for the drivers. Add runs, or set them side by side.",
+  foldOffsetNeedsChamber:
+    "An offset horn needs the cone fronts in a run and the backs in the rear chamber. Move the drivers.",
   hornImport: "Import a horn record",
   hornImportTip:
     "Paste the text of a record file from a horn simulation program. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",

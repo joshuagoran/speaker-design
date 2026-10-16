@@ -94,6 +94,7 @@ import {
   defaultHornPlacement,
   driversOnBaffle,
   hornFits,
+  hornFlare,
   onTop,
   type PlacedChamber,
 } from "../../lib/speaker/speakerLayout";
@@ -168,6 +169,8 @@ export function ChamberSettings({
   const firstBand = bands[0]?.id;
   /** the room a starting horn fills */
   const room = hornRoom(cabinet, chamber, placed);
+  /** the horn as the views lay it out: its folded runs and its drivers' spot */
+  const flare = useMemo(() => (placed ? hornFlare(cabinet, placed) : null), [cabinet, placed]);
   /** a tapped horn: its chamber takes no vent */
   const tapped =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
@@ -300,6 +303,7 @@ export function ChamberSettings({
             if (found) onEdit(() => found.chamber);
             return found !== null;
           }}
+          flare={flare}
           onImport={(text) => {
             const read = hornFromRecord(
               text,

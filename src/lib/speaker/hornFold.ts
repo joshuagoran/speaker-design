@@ -548,6 +548,8 @@ export function squareFolds(input: SquareFoldInput): HornRun[] {
     );
   };
   const mouthY = mouth.y + mouth.h / 2;
+  // a path no longer than the box is deep is one run straight back from the mouth's center
+  if (pathIn <= depthIn - heightAt(0) / 2) return [{ lengthCm: pathIn * CM_PER_IN, angleDeg: 180 }];
   /** −1: the legs stack down from a mouth with more room below it; 1: up */
   const sign = mouthY - clear.y >= clear.y + clear.h - mouthY ? -1 : 1;
   /** a wall's line in the side view, and its y at depth `z` */
@@ -585,9 +587,17 @@ export function squareFolds(input: SquareFoldInput): HornRun[] {
       guess = length;
     }
     if (length >= s - 1e-9) {
-      // the path's start: a part of the leg, along the same line
-      const k = s / length;
-      points.unshift({ z: near.z + (far.z - near.z) * k, y: near.y + (far.y - near.y) * k });
+      // the path's start: a part of the leg, its outer wall still along the leg's outer line; settle how far along
+      // the depth it reaches so the run is as long as what is left of the path
+      const h0 = heightAt(0);
+      let span = s,
+        start = far;
+      for (let pass = 0; pass < 3; pass++) {
+        const z = toFront ? near.z + span : near.z - span;
+        start = { z, y: yOn(outer, z) + (sign * h0) / 2 };
+        span *= s / Math.max(1e-9, dist(near, start));
+      }
+      points.unshift(start);
       s = 0;
       break;
     }
