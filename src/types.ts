@@ -38,6 +38,7 @@ import type {
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
+import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
 import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
@@ -2341,6 +2342,117 @@ export interface HornFold {
   boards: FoldBoard[];
   drivers: FoldDrivers | null;
   mouth: FoldMouth;
+}
+
+/** One row of drivers in a traced fold (`foldDriverParts`): where it sits and how it is drawn. */
+export interface FoldDriverPart {
+  /** the row's center along its board, in from the board's end `a` */
+  alongIn: number;
+  /** the center of the row on the board's center line */
+  mid: SidePoint;
+  /** the center of the cones' face (the board's face the cones look out of) */
+  coneFace: SidePoint;
+  /** the board's other face, where the basket starts */
+  backFace: SidePoint;
+  /** the unit vector the cones face */
+  out: SidePoint;
+  /** the unit vector the baskets reach back along (the opposite of `out`) */
+  back: SidePoint;
+  /** the basket and motor, as a closed polygon */
+  body: SidePoint[];
+  /** the cone as a line across the cutout */
+  coneLine: { from: SidePoint; to: SidePoint };
+  /** the cutout's radius */
+  cutoutRadiusIn: number;
+  /** the board's length */
+  boardLengthIn: number;
+}
+
+/** What a traced fold's checks say; each carries its id and the numbers a UI needs to word it. */
+export type FoldCheck =
+  | { id: (typeof FOLD_CHECK)["mouth"] }
+  | {
+      id: (typeof FOLD_CHECK)["drivers"];
+      reason: (typeof FOLD_DRIVERS_REASON)[keyof typeof FOLD_DRIVERS_REASON];
+    }
+  | { id: (typeof FOLD_CHECK)["rearChamber"] }
+  | {
+      id: (typeof FOLD_CHECK)["deadEnd"];
+      /** where the cones first open, in from the closed end */
+      fromClosedEndIn: number;
+      /** that distance as a share of the path, 0 to 1 */
+      share: number;
+    }
+  | {
+      id: (typeof FOLD_CHECK)["choke"];
+      /** where the passage chokes, in from the closed end */
+      fromClosedEndIn: number;
+    }
+  | { id: (typeof FOLD_CHECK)["magnet"] }
+  | {
+      id: (typeof FOLD_CHECK)["cutout"];
+      /** the row of drivers, from 0 */
+      row: number;
+    }
+  | {
+      id: (typeof FOLD_CHECK)["strayAir"];
+      /** how many sealed pockets no driver uses */
+      count: number;
+    }
+  | {
+      id: (typeof FOLD_CHECK)["thin"];
+      /** the first place the passage is thin, in from the closed end */
+      fromClosedEndIn: number;
+      /** the width there */
+      widthIn: number;
+    };
+
+/** A pocket of air the mouth does not reach. */
+export interface FoldSealedPocket {
+  /** how many grid cells the pocket holds */
+  cells: number;
+  /** its volume, using the box's inside width */
+  liters: number;
+  /** the backs of the first row of cones open into it */
+  opensToBack: boolean;
+  /** the fronts of the first row of cones open into it */
+  opensToFront: boolean;
+}
+
+/** The air around a fold on a grid: the distance of each cell from the mouth, through the air. */
+export interface FoldGrid {
+  /** a cell's side, in */
+  cellIn: number;
+  /** the cells across the depth (`zIn`) */
+  nz: number;
+  /** the cells up the height (`yIn`) */
+  ny: number;
+  /** by `yIndex * nz + zIndex`: 1 for a board or a driver body, else 0 */
+  solid: Uint8Array;
+  /** by the same index: the path distance from the mouth, in; Infinity for solid cells and sealed air */
+  dist: Float64Array;
+  /** by the same index: the sealed pocket's index in `FoldTrace.sealed`, or -1 */
+  pocket: Int32Array;
+}
+
+/** The traced passage of a folded horn (lib/speaker/foldTrace). */
+export interface FoldTrace {
+  grid: FoldGrid;
+  /** the path's length from the mouth to the closed end, in; 0 with no passage */
+  pathIn: number;
+  /** the air farthest from the mouth; null with no passage */
+  closedEnd: SidePoint | null;
+  /** the width and area every `FOLD_SECTION_STEP_IN` along the path, `sIn` measured from the closed end */
+  sections: { sIn: number; widthIn: number; areaIn2: number }[];
+  /** where each side of the first row of cones opens into the passage, in from the closed end; null when it does not */
+  taps: { front: number | null; back: number | null };
+  /** the air the mouth does not reach, as separate volumes */
+  sealed: FoldSealedPocket[];
+  /** the horn type the taps make; null with no mouth, no drivers, or drivers that open nowhere */
+  hornType: HornDrive["kind"] | null;
+  /** the drivers' rows, for drawing; empty with no drivers */
+  parts: FoldDriverPart[];
+  checks: FoldCheck[];
 }
 
 /**
