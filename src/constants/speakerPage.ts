@@ -461,10 +461,10 @@ export const SPEAKER_TEXT = {
   /** the goals check: the horn holds more air than the chamber has */
   hornFitAir: (horn: string, chamber: string) =>
     `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,
-  hornImport: "Import from Hornresp",
+  hornImport: "Import a horn record",
   hornImportTip:
-    "Paste a Hornresp record. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",
-  hornImportField: "Hornresp record",
+    "Paste the text of a record file from a horn simulation program. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",
+  hornImportField: "Record text",
   hornImportAction: "Import",
   hornImportDone: "Imported. The drivers stay as set in this chamber.",
   hornImportFailed: (reason: string) =>
