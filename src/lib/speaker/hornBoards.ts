@@ -550,6 +550,18 @@ function driverRows(body: Pick<FoldDriverBody, "cutoutIn" | "count">, widthIn: n
   };
 }
 
+/**
+ * How far the drivers' rows spread along their board, center to center, in: none for one row (the drivers side by side
+ * across the chamber, `widthIn` wide), more where they take several.
+ */
+export const driverRowsSpanIn = (
+  body: Pick<FoldDriverBody, "cutoutIn" | "count">,
+  widthIn: number,
+): number => {
+  const { offsets } = driverRows(body, widthIn);
+  return offsets.length > 1 ? offsets[offsets.length - 1] - offsets[0] : 0;
+};
+
 /** A row of drivers' mount, `offsetIn` along the board from the drivers' place; null without drivers. */
 function driverMount(
   plan: HornBoards,

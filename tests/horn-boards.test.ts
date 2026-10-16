@@ -409,3 +409,14 @@ test("horn boards: a folded front-loaded horn sets its drivers over a rear chamb
   assert.ok(fold.layout.taps?.front != null && fold.layout.taps.rear === null);
   assert.ok(speakerResponse({ ...spec, cabinet }).bands.length > 0, "it plays");
 });
+
+test("horn boards: two drivers in a row along an offset horn's board both fit before the back wall", () => {
+  // too narrow for two side by side: they take two rows along the rear chamber's board
+  const narrow: FoldRoom = { depthIn: 25.75, heightIn: 34.5, wallIn: 0.75, widthIn: 16.5 };
+  const pair = foldBodyFrom({ cutoutIn: 11, motorIn: 6 }, 6, 0.4, 2);
+  const plan = offsetZigzagBoards(narrow, 3, 10, pair);
+  const layout = hornBoardsLayout(plan, narrow, pair);
+  assert.equal(layout.driverMounts.length, 2, "two rows");
+  assert.ok(layout.checks.drivers?.cutoutFits, "both cutouts on the board");
+  assert.ok(layout.checks.drivers?.magnetClear, "both motors clear the back wall");
+});
