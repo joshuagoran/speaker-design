@@ -247,6 +247,7 @@ export const SPEAKER_TEXT = {
   foldOutside: (n: number) => `Board ${n} goes past the box. Move its corners inside.`,
   foldCrossing: (a: number, b: number) => `Boards ${a} and ${b} cross. Move one of them.`,
   foldThin: (minIn: string) => `A passage is lower than ${minIn}″. Move its boards apart.`,
+  foldSectionLabel: "Side section of the folded horn",
   foldBroken: "The boards do not make one passage from the closed end to the mouth.",
   foldNotFacing: "The drivers do not face the passage. Move them to a board along it.",
   foldCutout:

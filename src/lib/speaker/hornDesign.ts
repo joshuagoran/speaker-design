@@ -93,23 +93,32 @@ export interface HornDesignRoom {
 
 /**
  * A folded horn's sections and drive from its boards: the sections split at the drivers' taps, the taps as section
- * boundaries. A tapped horn needs the drivers' two sides in the passage (either way round: the backs first only flips
- * the polarity); an offset horn the fronts in the passage past its start and the backs in the rear chamber; a
+ * boundaries. A tapped horn needs the drivers' two sides in the passage, either way round (`backsFirst`: the backs open
+ * nearer the closed end; the drive's taps stay in order and the design swaps its two passages' air); an offset horn the fronts in the passage past its start and the backs in the rear chamber; a
  * front-loaded horn the fronts at the start, or no drivers on a board (the throat at the closed end). False where the
  * drivers' place does not fit the drive.
  */
 function boardsDrive(
   drive: SpeakerHorn["drive"],
   fold: Pick<FoldLayout, "segments" | "taps">,
-): { segments: HornSegment[]; drive: SpeakerHorn["drive"] } | false {
+): { segments: HornSegment[]; drive: SpeakerHorn["drive"]; backsFirst?: boolean } | false {
   const { segments, taps } = fold;
   if (drive.kind === HORN_DRIVE.tapped) {
-    if (taps?.front == null || taps.rear == null || Math.abs(taps.front - taps.rear) < 1e-6)
-      return false;
-    const [a, b] = [taps.front, taps.rear].sort((x, y) => x - y);
-    const split = splitSegmentsAt(segments, [a * CM_PER_IN, b * CM_PER_IN]);
-    const [frontTap, rearTap] = split.boundaries;
-    return { segments: split.segments, drive: { kind: drive.kind, frontTap, rearTap } };
+    if (taps?.front == null || taps.rear == null) return false;
+    const backsFirst = taps.rear < taps.front;
+    const split = splitSegmentsAt(segments, [taps.front * CM_PER_IN, taps.rear * CM_PER_IN]);
+    const [atFront, atRear] = split.boundaries;
+    // two taps at one boundary are no tapped horn
+    if (atFront === atRear) return false;
+    return {
+      segments: split.segments,
+      drive: {
+        kind: drive.kind,
+        frontTap: Math.min(atFront, atRear),
+        rearTap: Math.max(atFront, atRear),
+      },
+      backsFirst,
+    };
   }
   if (drive.kind === HORN_DRIVE.offset) {
     if (taps?.front == null || taps.rear !== null) return false;
@@ -185,8 +194,15 @@ export function hornDesignOf(
         ...common,
         frontTap: drive.frontTap,
         rearTap: drive.rearTap,
-        frontChamber: frontLiters > 0 ? { liters: frontLiters, area } : null,
-        rearChamber: airLiters > 0 ? { liters: airLiters, area } : null,
+        // the passage at the earlier tap holds the backs' air when the backs open first
+        frontChamber:
+          (boards?.backsFirst ? airLiters : frontLiters) > 0
+            ? { liters: boards?.backsFirst ? airLiters : frontLiters, area }
+            : null,
+        rearChamber:
+          (boards?.backsFirst ? frontLiters : airLiters) > 0
+            ? { liters: boards?.backsFirst ? frontLiters : airLiters, area }
+            : null,
       },
     };
   }

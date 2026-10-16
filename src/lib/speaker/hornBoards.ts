@@ -49,12 +49,16 @@ export interface FoldRoom {
   widthIn: number;
 }
 
-/** The drivers' body, in: the cutout, the motor's diameter, the depth behind the mounting face, one-way excursion. */
+/**
+ * The drivers' body, in: the cutout, the motor's diameter, the depth behind the mounting face, one-way excursion; and
+ * how many sit side by side across the board.
+ */
 export interface FoldDriverBody {
   cutoutIn: number;
   motorIn: number;
   depthIn: number;
   xmaxIn: number;
+  count: number;
 }
 
 /** The taps where the drivers' two sides open into the passage, in along it; null: into the rear chamber. */
@@ -272,13 +276,12 @@ function turnGate(
     const t = thicknessOf(plan, board, room.wallIn);
     const tip = add(end, t, 0.5);
     const out = unit(sub(end, other));
-    const hit = everySegment(plan, room, ia.board).reduce(
-      (best, s) => {
-        const d = rayTo(tip, out, s);
-        return d < best.d ? { d, s } : best;
-      },
-      { d: Infinity, s: null as Segment | null },
-    );
+    /** the nearest surface past the board's end, and how far */
+    const none: { d: number; s: Segment | null } = { d: Infinity, s: null };
+    const hit = everySegment(plan, room, ia.board).reduce((best, s) => {
+      const d = rayTo(tip, out, s);
+      return d < best.d ? { d, s } : best;
+    }, none);
     if (!Number.isFinite(hit.d) || !hit.s) return null;
     // the turn's far corners: where each leg's outer side meets the surface the turn runs against
     const far = [meet(sides(outer(leg)), hit.s), meet(sides(outer(next)), hit.s)].filter(
@@ -534,7 +537,7 @@ export function hornBoardsLayout(
         }
       : null;
   const driverBody = body ? driverOutline(plan, room, body) : null;
-  const cuts = plan.boards.map((board, i) => ({
+  const cuts: FoldLayout["cuts"] = plan.boards.map((board, i) => ({
     lengthIn: dist(plan.corners[board.a], plan.corners[board.b]),
     endCutsDeg: [endCut(plan, i, board.a, room), endCut(plan, i, board.b, room)] as [
       number,
@@ -612,7 +615,11 @@ function checksOf(
     );
     driverChecks = {
       facesPassage: taps?.front != null,
-      cutoutFits: drivers.alongIn >= need && drivers.alongIn <= lengthIn - need,
+      // along the board, and side by side across the chamber's width, each with the margin to spare
+      cutoutFits:
+        drivers.alongIn >= need &&
+        drivers.alongIn <= lengthIn - need &&
+        body.count * body.cutoutIn + (body.count + 1) * FOLD_CUTOUT_MARGIN_IN <= room.widthIn,
       magnetClear:
         keepOut !== null &&
         keepOut.every(inRoom) &&
@@ -653,7 +660,7 @@ function endCut(plan: HornBoards, i: number, c: number, room: FoldRoom): number 
   if (j < 0) return 0;
   const bj = plan.boards[j];
   const far = plan.corners[bj.a === c ? bj.b : bj.a];
-  // the turn between the two boards, 0 straight on to 180 folded back; each takes half of it
+  // the angle between the two boards, 180 straight on to 0 folded back; each end takes half of what it turns
   const cos = dot(unit(way), unit(sub(far, corner)));
   const between = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
   return (180 - between) / 2;

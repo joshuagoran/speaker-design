@@ -848,19 +848,33 @@ function chamberFoldIn(
     wallIn: cabinet.panel.thicknessIn,
     widthIn: face.w,
   };
-  const cone = placed.chamber.drivers.map(coneBuild).find((c) => c !== null) ?? null;
-  const body: FoldDriverBody | null = cone
+  // the same chamber in the same room is worked out once (the views, the build and the model all read it)
+  const key = JSON.stringify([room, face.y]);
+  const cached = FOLD_CACHE.get(placed.chamber);
+  if (cached?.key === key) return cached.fold;
+  const cones = placed.chamber.drivers.flatMap((d) => {
+    const cone = coneBuild(d);
+    return cone ? [{ cone, count: d.count }] : [];
+  });
+  const first = cones[0]?.cone;
+  const body: FoldDriverBody | null = first
     ? {
-        cutoutIn: cone.body.cutoutIn,
-        motorIn: cone.body.motorIn,
-        depthIn: cone.depthIn,
-        xmaxIn: (cone.ts.Xmax ?? 0) / MM_PER_IN,
+        cutoutIn: first.body.cutoutIn,
+        motorIn: first.body.motorIn,
+        depthIn: first.depthIn,
+        xmaxIn: (first.ts.Xmax ?? 0) / MM_PER_IN,
+        count: cones.reduce((sum, c) => sum + c.count, 0),
       }
     : null;
   const plan =
     horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind === HORN_DRIVE.tapped);
-  return { plan, room, layout: hornBoardsLayout(plan, room, body), y0In: face.y };
+  const fold = { plan, room, layout: hornBoardsLayout(plan, room, body), y0In: face.y };
+  FOLD_CACHE.set(placed.chamber, { key, fold });
+  return fold;
 }
+
+/** Each folded chamber's boards worked out, with the room they were worked out in (`chamberFoldIn`). */
+const FOLD_CACHE = new WeakMap<SpeakerChamber, { key: string; fold: ChamberFold }>();
 
 /** What a failed check costs a layout in the automatic choice, in of path: more than any path's difference. */
 const FAILED_LAYOUT_IN = 1e6;
@@ -885,8 +899,13 @@ function autoBoards(
     const layout = hornBoardsLayout(plan, room, body);
     return (foldPasses(layout) ? 0 : FAILED_LAYOUT_IN) + Math.abs(layout.pathIn - wantIn);
   };
-  const costs = tries.map(cost);
-  return tries[costs.indexOf(Math.min(...costs))];
+  // a cost that is not a number (sizes being typed) counts as the worst
+  const costs = tries.map((plan) => {
+    const c = cost(plan);
+    return Number.isFinite(c) ? c : Infinity;
+  });
+  const best = costs.indexOf(Math.min(...costs));
+  return tries[best < 0 ? 0 : best];
 }
 
 /** A folded horn chamber's boards worked out (`ChamberFold`), found in the cabinet; null for any other chamber. */
@@ -894,7 +913,14 @@ export function chamberFold(
   cabinet: LayoutCabinet & Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
   chamber: SpeakerChamber,
 ): ChamberFold | null {
-  const index = cabinet.chambers.indexOf(chamber);
+  // the chamber itself, or (an edited copy) the one at its place
+  const same = cabinet.chambers.indexOf(chamber);
+  const index =
+    same >= 0
+      ? same
+      : cabinet.chambers.findIndex(
+          (c) => c.at.xIn === chamber.at.xIn && c.at.yIn === chamber.at.yIn,
+        );
   const placed = index >= 0 ? speakerLayout(cabinet).chambers[index] : undefined;
   return (placed && hornFlare(cabinet, placed)?.fold) ?? null;
 }

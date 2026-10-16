@@ -102,15 +102,15 @@ passage's areas update).
 
 ## Steps
 
-| Step | Work                                                                         | PR  |
-| ---- | ---------------------------------------------------------------------------- | --- |
-| 1    | Owner reviews this plan and the mock                                         | -   |
-| 2    | Data model (corners, boards, gates), sections from gates, all checks, tests  | 1   |
-| 3    | Views (side, 3D, front) and the cutlist from boards; the straight checks off | 1   |
-| 4    | UI: layouts, drag handles, corner and driver fields, notices, passage chart  | 2   |
-| 5    | Design from goals on boards                                                  | 2   |
-| 6    | TH18 and SKRAM starts traced from their plans; their drivers                 | 3   |
-| 7    | Later: bandpass, back-loaded, curved boards                                  | -   |
+| Step | Work                                                                                                  | PR  |
+| ---- | ----------------------------------------------------------------------------------------------------- | --- |
+| 1    | Owner reviews this plan and the mock                                                                  | -   |
+| 2    | Data model (corners, boards, gates), sections from gates, all checks, tests                           | 1   |
+| 3    | Views (side, 3D, front) and the cutlist from boards; the straight checks off                          | 1   |
+| 4    | UI: layouts, drag handles, corner and driver fields, passage chart; box walls drag for every box type | 2   |
+| 5    | Design from goals on boards                                                                           | 2   |
+| 6    | TH18 and SKRAM starts traced from their plans; their drivers                                          | 3   |
+| 7    | Later: bandpass, back-loaded, curved boards                                                           | -   |
 
 - From #188, keep: the amplifier output resistance (Rg), the TH18 reference record and test, the taps from the
   drivers' spot.

@@ -4,6 +4,7 @@ import { alpha } from "../../styles/palette";
 import type { ChamberFold, PlacedChamber } from "../../lib/speaker/speakerLayout";
 import type { FoldPoint } from "../../lib/speaker/hornBoards";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
+import { SPEAKER_TEXT } from "../../constants/speakerPage";
 
 interface Props {
   cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">;
@@ -56,7 +57,7 @@ export function FoldSection({ cabinet, placed, fold }: Props) {
       viewBox={`0 0 ${W} ${H}`}
       className="w-full h-full"
       role="img"
-      aria-label="Side section of the folded horn"
+      aria-label={SPEAKER_TEXT.foldSectionLabel}
     >
       {/* the box: its walls, and the clear inside */}
       <rect

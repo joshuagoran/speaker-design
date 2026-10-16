@@ -1032,12 +1032,13 @@ function addFold(
   innerZ: number,
 ) {
   const cx = mouth.x + mouth.w / 2 - placed.cx;
-  /** a side-section outline run `across` wide, centered at `cx`, in the group's coordinates */
+  /** a side-section outline run `across` wide, centered at `center` (the face's middle), in the group's coordinates */
   const prism = (
     outline: readonly FoldPoint[],
     across: number,
     look: THREE.Material,
     name: string,
+    center = cx,
   ) => {
     const shape = new THREE.Shape(
       outline.map((p) => new THREE.Vector2(innerZ - p.z, fold.y0In + p.y - placed.y0)),
@@ -1047,16 +1048,21 @@ function addFold(
     geometry.rotateY(-Math.PI / 2);
     const mesh = new THREE.Mesh(geometry, look);
     // the rotation maps local x to z and local z to −x: shift across so the prism is centered
-    mesh.position.x = cx + across / 2;
+    mesh.position.x = center + across / 2;
     mesh.name = name;
     ctx.group.add(mesh);
   };
   for (const outline of fold.layout.outlines)
     prism(outline, fold.room.widthIn, ctx.materials.shell, SPEAKER_MESH_NAMES.hornBoard);
   const body = fold.layout.driverBody;
-  if (ctx.cutaway && body) {
+  const count = placed.chamber.drivers.reduce((sum, d) => sum + d.count, 0);
+  if (ctx.cutaway && body && count > 0) {
     const across = Math.hypot(body[1].z - body[0].z, body[1].y - body[0].y);
-    prism(body, across, ctx.materials.black, SPEAKER_MESH_NAMES.hornDriver);
+    // the drivers side by side across the board, each in an equal share of its width
+    for (let i = 0; i < count; i++) {
+      const at = cx + fold.room.widthIn * ((i + 0.5) / count - 0.5);
+      prism(body, across, ctx.materials.black, SPEAKER_MESH_NAMES.hornDriver, at);
+    }
   }
 }
 

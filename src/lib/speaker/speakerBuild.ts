@@ -960,7 +960,6 @@ function driverBoardOf(
   };
 }
 
-/** The wood of a horn chamber's driver board, L (0 for none): its cutouts are front chamber air (`hornAirL`). */
 /** A folded horn's boards worked out (lib/speaker/hornBoards); null for another chamber. */
 const foldOf = (cabinet: SpeakerCabinet, f: ChamberFrame) =>
   hornFlare(cabinet, f.placed)?.fold ?? null;
@@ -1013,6 +1012,7 @@ function hornBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
   }));
 }
 
+/** The wood of a horn chamber's driver board, L (0 for none): its cutouts are front chamber air (`hornAirL`). */
 function driverBoardL(cabinet: SpeakerCabinet, f: ChamberFrame): number {
   const board = driverBoardOf(cabinet, f);
   return board ? board.netIn2 * board.pieces * cabinet.panel.thicknessIn * LITERS_PER_CUBIC_IN : 0;

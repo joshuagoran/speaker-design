@@ -18,7 +18,9 @@ export function zigzagBoards(
   withDrivers = true,
   turnShare = 1,
 ): HornBoards {
+  /** the legs, an even number */
   const n = Math.max(2, legs - (legs % 2));
+  /** the side section's depth and height, and a board's thickness, in */
   const { depthIn: d, heightIn: h, wallIn: t } = room;
   /** each leg's height, in */
   const legH = (h - (n - 1) * t) / n;

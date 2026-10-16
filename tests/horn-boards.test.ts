@@ -11,7 +11,12 @@ import {
 import { zigzagBoards } from "../src/lib/speaker/foldLayouts";
 import { FOLD_FACE, FOLD_MIN_PASSAGE_IN } from "../src/constants/hornBoards";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
-import type { HornBoards } from "../src/types";
+import type { HornBoards, HornSegment } from "../src/types";
+import { splitSegmentsAt, segmentAreaAt } from "../src/lib/acoustics/hornSegments";
+import { HORN_PROFILE } from "../src/constants/hornEngine";
+import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
+import { hornDesignOf } from "../src/lib/speaker/hornDesign";
+import { roomOf } from "./horn-room";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { withHornDrive } from "../src/pages/speaker/chamberLoad";
@@ -22,7 +27,7 @@ import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpe
 /** A 30 × 38 in side section, 21 in wide, 3/4 in walls. */
 const ROOM: FoldRoom = { depthIn: 30, heightIn: 38, wallIn: 0.75, widthIn: 21 };
 /** An 18″ sub's body: cutout, motor, depth behind its mounting face, excursion. */
-const SUB18: FoldDriverBody = { cutoutIn: 16.6, motorIn: 9, depthIn: 7.5, xmaxIn: 0.5 };
+const SUB18: FoldDriverBody = { cutoutIn: 16.6, motorIn: 9, depthIn: 7.5, xmaxIn: 0.5, count: 1 };
 /** Each leg's height in the four-leg zigzag, in. */
 const LEG_H = (ROOM.heightIn - 3 * ROOM.wallIn) / 4;
 
@@ -161,4 +166,56 @@ test("horn boards: a folded tapped PA v2 bin's automatic boards pass every check
   assert.ok(fold && foldPasses(fold.layout), JSON.stringify(fold?.layout.checks));
   const response = speakerResponse({ ...spec, cabinet });
   assert.ok(response.bands.length > 0, "the boards' passage plays");
+});
+
+test("horn boards: the sections split at the taps along their own flare", () => {
+  const segments: HornSegment[] = [
+    { profile: HORN_PROFILE.exponential, s1: 300, s2: 1200, length: 100 },
+    { profile: HORN_PROFILE.conical, s1: 1200, s2: 2000, length: 50 },
+  ];
+  // a cut inside a section, one within the snap of a boundary, one past the end
+  const { segments: split, boundaries } = splitSegmentsAt(segments, [40, 100.02, 200]);
+  assert.equal(split.length, 3);
+  assert.deepEqual(boundaries, [1, 2, 3]);
+  assert.ok(Math.abs(split[0].s2 - segmentAreaAt(segments[0], 40)) < 1e-6);
+  assert.equal(split[1].s1, split[0].s2);
+  assert.ok(Math.abs(split.reduce((sum, s) => sum + s.length, 0) - 150) < 1e-9);
+  // a step into a section stays: the first piece keeps the section's own start area
+  const stepped = splitSegmentsAt([{ ...segments[0] }, { ...segments[1], s1: 1500 }], [120]);
+  assert.equal(stepped.segments[1].s1, 1500);
+});
+
+test("horn boards: the engine reads the boards' taps either way round, and refuses taps at one boundary", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+  const chamber = withHornDrive(spec.cabinet.chambers[0], HORN_DRIVE.tapped);
+  const room = { ...roomOf(chamber), netLiters: 5 };
+  const { segments } = layoutOf(ZIGZAG);
+  const read = (taps: { front: number; rear: number }) =>
+    hornDesignOf(chamber, { count: 1, angle: 2 }, { ...room, fold: { segments, taps } });
+  const fronts = read({ front: 10, rear: 50 });
+  const backs = read({ front: 50, rear: 10 });
+  assert.ok(
+    fronts.ok &&
+      backs.ok &&
+      fronts.design.layout === HORN_LAYOUT.tapped &&
+      backs.design.layout === HORN_LAYOUT.tapped,
+  );
+  // the same taps in order; the two passages' air swapped
+  assert.deepEqual(
+    [backs.design.frontTap, backs.design.rearTap],
+    [fronts.design.frontTap, fronts.design.rearTap],
+  );
+  assert.equal(backs.design.frontChamber?.liters, fronts.design.rearChamber?.liters);
+  assert.equal(backs.design.rearChamber?.liters, fronts.design.frontChamber?.liters);
+  assert.equal(read({ front: 10, rear: 10.001 }).ok, false);
+});
+
+test("horn boards: a board against a wall at an angle is cut to it; drivers side by side need the width", () => {
+  const tilted = withCorner(ZIGZAG, 1, ZIGZAG.corners[1].z, ZIGZAG.corners[1].y + 5);
+  const [aEnd, bEnd] = layoutOf(tilted).cuts[0].endCutsDeg;
+  // the baffle end meets the wall at the board's tilt off square; the free end is square
+  const tilt = (Math.atan2(5, ZIGZAG.corners[1].z) * 180) / Math.PI;
+  assert.ok(Math.abs(aEnd - tilt) < 1e-6, `${aEnd}°`);
+  assert.equal(bEnd, 0);
+  assert.equal(layoutOf(ZIGZAG, { ...SUB18, count: 2 }).checks.drivers?.cutoutFits, false);
 });
