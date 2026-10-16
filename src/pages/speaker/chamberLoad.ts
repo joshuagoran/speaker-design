@@ -14,6 +14,7 @@ import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { frontChamber, throatCones, wallClearanceIn } from "../../lib/speaker/hornThroat";
 import { hornDesignOf } from "../../lib/speaker/hornDesign";
+import { tracedHorn } from "../../lib/speaker/foldHorn";
 import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
 import { withDriveKind } from "./hornSections";
 import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
@@ -220,6 +221,7 @@ export function hornGoalCheck(
             face: chamberClearFace(cabinet, chamber),
             wallIn: cabinet.panel.thicknessIn,
             setbackIn,
+            traced: tracedHorn(cabinet, chamber) ?? undefined,
           },
         );
   const fit =
