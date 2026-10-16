@@ -65,7 +65,6 @@ const RADIATION_ANGLES: readonly RadiationAngle[] = [2, 1, 0.5];
  * "not supported yet: " and its name.
  */
 const MUST_BE_ZERO: Record<string, string> = {
-  [HORNRESP_KEY.sourceResistance]: `a source resistance (${HORNRESP_KEY.sourceResistance})`,
   [HORNRESP_KEY.addedMass]: `a passive radiator (${HORNRESP_KEY.addedMass})`,
   [HORNRESP_KEY.pathLength]: "an acoustic path length",
   [HORNRESP_KEY.lossyInductance]: "the lossy inductance model",
@@ -328,7 +327,13 @@ export function readHornrespRecord(
     const design = designOf(lines, layoutOf(lines, options.layout));
     // Hornresp's horn rear chamber is lossless; its direct radiator's vented box leaks (QL 7) without radiating it
     const direct = design.segments.length === 0;
-    const losses = { QL: direct ? BOX_LEAK_Q : Infinity, Qp: Infinity, leakRadiates: false };
+    const losses = {
+      QL: direct ? BOX_LEAK_Q : Infinity,
+      Qp: Infinity,
+      leakRadiates: false,
+      // the amplifier's output resistance, in series with the coil
+      sourceResistance: optionalNumber(lines, HORNRESP_KEY.sourceResistance) ?? 0,
+    };
     const preset =
       hornLayoutNetwork(design, losses) ?? fail(`${NOT_SUPPORTED_YET}these driver taps`);
     return { ok: true, design, preset, volts: requiredNumber(lines, HORNRESP_KEY.drive), losses };
