@@ -43,6 +43,7 @@ import { traceModel } from "../../lib/speaker/foldHorn";
 import { FoldPathChart, targetPathPoints } from "../charts/FoldPathChart";
 import { Icon, IconButton } from "../ui/IconButton";
 import { usePalette } from "../../hooks/useTheme";
+import { useElementWidth } from "../../hooks/useElementWidth";
 import { SVG_FONT } from "../../styles/fonts";
 import type { Palette } from "../../styles/palette";
 
@@ -128,6 +129,7 @@ function gridImage(
  */
 export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
   const pal = usePalette();
+  const [frame, widthPx] = useElementWidth(800);
   const [tool, setTool] = useState<Tool>(TOOL.move);
   /** the fold while a press is held; null between presses */
   const [draft, setDraft] = useState<HornFold | null>(null);
@@ -178,6 +180,8 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
   const Y = (y: number) => PAD_PX + (H - y + T) * PX;
   const W = (D + 2 * T) * PX + 2 * PAD_PX;
   const Hpx = (H + 2 * T) * PX + 2 * PAD_PX;
+  /** viewBox units per screen pixel: marks, handles and text keep their size on screen at any drawing width */
+  const u = W / Math.max(1, widthPx);
   const toPoint = (e: React.PointerEvent): SidePoint => {
     const ctm = svg.current?.getScreenCTM();
     if (!ctm) return { zIn: 0, yIn: 0 };
@@ -392,7 +396,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
 
   return (
     <div className="flex flex-col gap-3 min-w-0">
-      <div className="relative">
+      <div className="relative" ref={frame}>
         <div
           className="absolute top-2 left-2 flex flex-wrap gap-1"
           role="toolbar"
@@ -417,7 +421,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
         <svg
           ref={svg}
           viewBox={`0 0 ${W} ${Hpx}`}
-          className="w-full h-auto touch-none select-none"
+          className="w-full h-auto max-h-[75vh] touch-none select-none"
           role="img"
           aria-label={FOLD_EDITOR_TEXT.label}
           onPointerDown={onPointerDown}
@@ -460,7 +464,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
             x2={X(mouthLine[1].zIn)}
             y2={Y(mouthLine[1].yIn)}
             stroke={pal.cyan}
-            strokeWidth={4}
+            strokeWidth={4 * u}
             strokeLinecap="round"
           />
           {band && (
@@ -513,20 +517,20 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
                 x2={X(dp.coneLine.to.zIn)}
                 y2={Y(dp.coneLine.to.yIn)}
                 stroke={pal.magenta}
-                strokeWidth={4}
+                strokeWidth={4 * u}
                 strokeLinecap="round"
               />
               <circle
                 data-hit="drivers"
                 cx={X(dp.mid.zIn)}
                 cy={Y(dp.mid.yIn)}
-                r={6}
+                r={6 * u}
                 fill={pal.magenta}
                 style={{ cursor: "grab" }}
               />
             </g>
           ))}
-          <JointMarks fold={shown} box={box} boardIn={T} tool={tool} X={X} Y={Y} pal={pal} />
+          <JointMarks fold={shown} box={box} boardIn={T} tool={tool} X={X} Y={Y} pal={pal} u={u} />
           {tool === TOOL.mouth &&
             (["fromIn", "toIn"] as const).map((end, k) => (
               <circle
@@ -534,10 +538,10 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
                 data-hit={`mouth:${end}`}
                 cx={X(mouthLine[k].zIn)}
                 cy={Y(mouthLine[k].yIn)}
-                r={7}
+                r={7 * u}
                 fill={pal.panel}
                 stroke={pal.cyan}
-                strokeWidth={2}
+                strokeWidth={2 * u}
                 style={{ cursor: "grab" }}
               />
             ))}
@@ -557,14 +561,14 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
               <circle
                 cx={X(trace.closedEnd.zIn)}
                 cy={Y(trace.closedEnd.yIn)}
-                r={4}
+                r={4 * u}
                 fill={pal.ink}
               />
               <text
                 x={X(trace.closedEnd.zIn) + (trace.closedEnd.zIn > D - 8 ? -7 : 7)}
                 y={Y(trace.closedEnd.yIn) + 4}
                 textAnchor={trace.closedEnd.zIn > D - 8 ? "end" : "start"}
-                fontSize={12}
+                fontSize={12 * u}
                 fontFamily={SVG_FONT}
                 fill={pal.ink}
               >
@@ -610,6 +614,7 @@ function JointMarks({
   X,
   Y,
   pal,
+  u,
 }: {
   fold: HornFold;
   box: { depthIn: number; heightIn: number };
@@ -618,6 +623,8 @@ function JointMarks({
   X: (z: number) => number;
   Y: (y: number) => number;
   pal: Palette;
+  /** viewBox units per screen pixel */
+  u: number;
 }) {
   const seen: SidePoint[] = [];
   return (
@@ -632,12 +639,12 @@ function JointMarks({
           const unjoin = tool === TOOL.remove && partner?.kind === FOLD_END.corner;
           const handle = tool === TOOL.move || (tool === TOOL.square && partner !== null) || unjoin;
           if (!partner && !handle) return [];
-          const r = handle ? 6 : 4;
+          const r = (handle ? 6 : 4) * u;
           const look = {
             "data-hit": handle ? `joint:${i}:${end}` : undefined,
             fill: partner ? pal.yellow : pal.panel,
             stroke: pal.ink,
-            strokeWidth: 1.5,
+            strokeWidth: 1.5 * u,
             style: handle ? { cursor: "pointer" } : { pointerEvents: "none" as const },
           };
           return [
