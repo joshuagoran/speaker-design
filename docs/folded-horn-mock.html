@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Folded Horn Mock</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap"
+    />
     <style>
       :root {
         --ink: #1a1a1a;
@@ -30,7 +36,20 @@
           --board: #7a746c;
           --green: #66bb6a;
           --red: #ef5350;
+          color-scheme: dark;
         }
+      }
+      :root[data-theme="dark"] {
+        --ink: #ececec;
+        --gray: #a0a0a0;
+        --line: #444;
+        --panel: #1e1e1e;
+        --bg: #121212;
+        --air: #12323f;
+        --board: #7a746c;
+        --green: #66bb6a;
+        --red: #ef5350;
+        color-scheme: dark;
       }
       * {
         box-sizing: border-box;
@@ -47,8 +66,22 @@
       .page {
         display: flex;
         gap: 16px;
-        padding: 16px;
         flex-wrap: wrap;
+        padding-block: 16px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+      }
+      .side {
+        min-width: 0;
+      }
+      table {
+        font-variant-numeric: tabular-nums;
+      }
+      .tbtn:focus-visible,
+      input:focus-visible,
+      .handle:focus-visible {
+        outline: 2px solid var(--cyan);
+        outline-offset: 2px;
       }
       .card {
         background: var(--panel);
@@ -169,12 +202,13 @@
     <div class="page">
       <div class="card view">
         <div>
-          <h3>Side view (mock)</h3>
+          <h3>Side view</h3>
           <div class="sub">
-            Drag a corner. The boards follow. Square corners slide along a wall.
+            Drag a corner, a whole board, or the back or top wall. Square corners slide along a
+            wall.
           </div>
         </div>
-        <svg id="svg" viewBox="-6 -3 42 46"></svg>
+        <svg id="svg" viewBox="-6 -1 50 55"></svg>
         <div class="sub">
           Baffle at the left. Blue lines: where the app measures the passage's height (its area is
           that times the 21 in width).
@@ -184,11 +218,17 @@
         <div class="card">
           <h4>Layout</h4>
           <div class="toggle">
-            <button class="tbtn on">Zigzag</button><button class="tbtn" disabled>Spiral</button
-            ><button class="tbtn" disabled>TH18-style</button>
+            <button class="tbtn on">Zigzag</button><button class="tbtn" disabled>Spiral</button>
           </div>
           <div class="sub">Start from a layout, then drag its corners. (Mock: zigzag only.)</div>
           <button class="tbtn" id="reset" style="align-self: flex-start">Reset layout</button>
+        </div>
+        <div class="card">
+          <h4>Box, inside</h4>
+          <div class="row">
+            <label>Depth, in<input id="bD" type="number" step="0.25" /></label>
+            <label>Height, in<input id="bH" type="number" step="0.25" /></label>
+          </div>
         </div>
         <div class="card">
           <h4>Corner</h4>
@@ -219,15 +259,20 @@
     </div>
     <script>
       // ---- the box (in): clear inside, baffle at z = 0, bottom at y = 0
-      const D = 26,
-        H = 38,
-        T = 0.75,
+      let D = 26,
+        H = 38;
+      const T = 0.75,
         W = 21;
+      /** the view's fixed scale: the largest box it draws, in */
+      const D_MAX = 42,
+        H_MAX = 52;
       const DRIVER = { cutout: 16.6, depth: 7.5, motor: 9, margin: 0.5, coneRoom: 1 };
       const PAD = 0.5;
       // corners: id -> {z, y, wall: "baffle"|"back"|null}
       let corners, boards, driverAlong;
       function reset() {
+        D = 26;
+        H = 38;
         corners = {
           a0: { z: 0, y: 9, wall: "baffle" },
           a1: { z: 21, y: 8.5, wall: null },
@@ -419,7 +464,7 @@
       // ---- drawing
       const svg = document.getElementById("svg");
       const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-      const Y = (y) => H - y; // svg y down
+      const Y = (y) => H_MAX - y; // svg y down, the bottom fixed
       const pts = (poly) => poly.map((p) => `${p.z},${Y(p.y)}`).join(" ");
       function render() {
         const c = checks();
@@ -427,9 +472,13 @@
         const dv = driver();
         let s = "";
         // air, box walls (mouth open on the baffle above the top board)
-        s += `<rect x="0" y="0" width="${D}" height="${H}" fill="${css("--air")}"/>`;
+        s += `<rect x="0" y="${Y(H)}" width="${D}" height="${H}" fill="${css("--air")}"/>`;
         const mouthLo = P("c0").y + T;
-        s += `<path d="M0,${Y(mouthLo)} V${Y(0)} H${D} V${Y(H)} H0" fill="none" stroke="${css("--ink")}" stroke-width="${T}" stroke-linejoin="miter" transform="translate(0,0)" />`;
+        s += `<path d="M0,${Y(mouthLo)} V${Y(0)} H${D} V${Y(H)} H0" fill="none" stroke="${css("--ink")}" stroke-width="${T}" stroke-linejoin="miter" />`;
+        // the walls you can drag: the back (its depth) and the top (its height)
+        s += `<rect class="handle" data-wall="back" x="${D - 0.6}" y="${Y(H)}" width="1.2" height="${H}" fill="transparent" style="cursor:ew-resize"/>`;
+        s += `<rect class="handle" data-wall="top" x="0" y="${Y(H) - 0.6}" width="${D}" height="1.2" fill="transparent" style="cursor:ns-resize"/>`;
+        s += `<text x="${D / 2}" y="${Y(H) - 1}" font-size="1.1" fill="${css("--gray")}" text-anchor="middle">${D} × ${H} in</text>`;
         s += `<text x="-0.6" y="${Y((mouthLo + H) / 2)}" font-size="1.2" text-anchor="end" fill="${css("--gray")}">mouth</text>`;
         // gates
         for (const x of g)
@@ -438,16 +487,16 @@
         // boards
         boards.forEach((b, i) => {
           const bad = c.outside === i || (c.hit && c.hit.includes(i));
-          s += `<polygon points="${pts(boardQuad(b))}" fill="${bad ? css("--red") : css("--board")}" stroke="${css("--ink")}" stroke-width="0.1"/>`;
+          s += `<polygon class="handle" data-board="${i}" points="${pts(boardQuad(b))}" fill="${bad ? css("--red") : css("--board")}" stroke="${css("--ink")}" stroke-width="0.1"/>`;
           const m = { z: (P(b[0]).z + P(b[1]).z) / 2, y: (P(b[0]).y + P(b[1]).y) / 2 + 1.6 };
-          s += `<text x="${m.z}" y="${Y(m.y)}" font-size="1.2" fill="${css("--gray")}" text-anchor="middle">board ${i + 1}</text>`;
+          s += `<text x="${m.z}" y="${Y(m.y)}" font-size="1.2" fill="${css("--gray")}" text-anchor="middle" pointer-events="none">board ${i + 1}</text>`;
         });
         // drivers: the basket and magnet up into leg 2, the cone on board 1
         s += `<polygon points="${pts(dv.basket)}" fill="${c.magnetHits ? css("--red") : css("--magenta")}" fill-opacity="0.75" stroke="${css("--ink")}" stroke-width="0.1"/>`;
-        s += `<circle class="handle" data-drv="1" cx="${dv.at.z}" cy="${Y(dv.at.y)}" r="0.7" fill="${css("--magenta")}" stroke="#fff" stroke-width="0.15"/>`;
+        s += `<circle class="handle" data-drv="1" cx="${dv.at.z}" cy="${Y(dv.at.y)}" r="0.7" fill="${css("--magenta")}" stroke="${css("--panel")}" stroke-width="0.15"/>`;
         // corners
         for (const [id, p] of Object.entries(corners)) {
-          const on = selected === id ? css("--yellow") : "#fff";
+          const on = selected === id ? css("--yellow") : css("--panel");
           s += p.wall
             ? `<rect class="handle" data-id="${id}" x="${p.z - 0.6}" y="${Y(p.y) - 0.6}" width="1.2" height="1.2" fill="${on}" stroke="${css("--cyan")}" stroke-width="0.2"/>`
             : `<circle class="handle" data-id="${id}" cx="${p.z}" cy="${Y(p.y)}" r="0.65" fill="${on}" stroke="${css("--cyan")}" stroke-width="0.2"/>`;
@@ -476,6 +525,13 @@
         cy.disabled = !sel;
         if (document.activeElement !== cz) cz.value = sel ? sel.z.toFixed(2) : "";
         if (document.activeElement !== cy) cy.value = sel ? sel.y.toFixed(2) : "";
+        for (const [id, v] of [
+          ["bD", D],
+          ["bH", H],
+        ]) {
+          const el = document.getElementById(id);
+          if (document.activeElement !== el) el.value = v;
+        }
         const da = document.getElementById("dAlong");
         if (document.activeElement !== da) da.value = driverAlong.toFixed(2);
       }
@@ -496,15 +552,23 @@
         p.x = evt.clientX;
         p.y = evt.clientY;
         const m = p.matrixTransform(svg.getScreenCTM().inverse());
-        return { z: m.x, y: H - m.y };
+        return { z: m.x, y: H_MAX - m.y };
       }
       svg.addEventListener("pointerdown", (e) => {
         const t = e.target;
         if (t.dataset.id) {
           drag = { id: t.dataset.id };
           selected = t.dataset.id;
-        } else if (t.dataset.drv) drag = { drv: true };
-        else return;
+        } else if (t.dataset.wall) drag = { wall: t.dataset.wall };
+        else if (t.dataset.drv) drag = { drv: true };
+        else if (t.dataset.board) {
+          const ids = boards[+t.dataset.board];
+          drag = {
+            start: toBox(e),
+            orig: ids.map((id) => ({ id, z: corners[id].z, y: corners[id].y })),
+          };
+          selected = null;
+        } else return;
         svg.setPointerCapture(e.pointerId);
         render();
       });
@@ -518,6 +582,17 @@
           else {
             c.z = Math.max(-2, Math.min(D + 2, snap(p.z)));
             c.y = Math.max(-2, Math.min(H + 2, snap(p.y)));
+          }
+        } else if (drag.wall) {
+          setBox(drag.wall === "back" ? snap(p.z) : D, drag.wall === "top" ? snap(p.y) : H);
+        } else if (drag.orig) {
+          // the whole board: wall corners slide along their wall, free corners follow
+          const dz = snap(p.z - drag.start.z),
+            dy = snap(p.y - drag.start.y);
+          for (const o of drag.orig) {
+            const c = corners[o.id];
+            c.y = Math.max(c.wall ? 0 : -2, Math.min(c.wall ? H : H + 2, o.y + dy));
+            if (!c.wall) c.z = Math.max(-2, Math.min(D + 2, o.z + dz));
           }
         } else {
           const [a, b] = boards[0].map(P);
@@ -552,6 +627,29 @@
         }
       });
       document.getElementById("reset").addEventListener("click", reset);
+      /** the box's inside depth and height, in: back-wall corners move with the back; wall corners stay under the top */
+      function setBox(d, h) {
+        D = Math.max(10, Math.min(D_MAX, d));
+        H = Math.max(15, Math.min(H_MAX, h));
+        for (const c of Object.values(corners)) {
+          if (c.wall === "back") c.z = D;
+          if (c.wall) c.y = Math.min(c.y, H);
+        }
+      }
+      document.getElementById("bD").addEventListener("input", (e) => {
+        const v = parseFloat(e.target.value);
+        if (Number.isFinite(v)) {
+          setBox(v, H);
+          render();
+        }
+      });
+      document.getElementById("bH").addEventListener("input", (e) => {
+        const v = parseFloat(e.target.value);
+        if (Number.isFinite(v)) {
+          setBox(D, v);
+          render();
+        }
+      });
       reset();
     </script>
   </body>

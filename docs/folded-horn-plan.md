@@ -68,7 +68,8 @@ A design passes every check, or the page says which one fails and what to change
 
 ## Starting a design
 
-- **Layouts.** Zigzag, spiral, and TH18-style. Each places its corners to fit the chamber and the drivers.
+- **Layouts.** Zigzag and spiral, named by shape. Each places its corners to fit the chamber and the drivers. A
+  known design (TH18, SKRAM) is a start of its own, with its exact boards.
 - **Design from goals.** Moves the corners of the chosen layout to meet the goals. It keeps the checks.
 - **Hornresp import.** A record has no boards. Import sets the goals from the record. The page shows how close the
   boards' sound comes to the record's.
@@ -86,16 +87,18 @@ A design passes every check, or the page says which one fails and what to change
 
 ## The UI
 
-A clickable mock (`docs/folded-horn-mock.html`) shows the editing model (drag corners and the drivers; the checks and the passage's areas update).
+A clickable mock (`docs/folded-horn-mock.html`) shows the editing model (drag corners, whole boards, the back and top walls, and the drivers; the checks and the
+passage's areas update).
 
-| Control       | Place                                                                  |
-| ------------- | ---------------------------------------------------------------------- |
-| Layout picker | Horn settings, under Path                                              |
-| Corner fields | Horn settings: the picked corner's distance from the baffle and height |
-| Drivers       | Horn settings: board, distance along it, the side the cone faces       |
-| Checks        | Notices under the side view, one per failed check                      |
-| Passage chart | Area along the path, fixed axes                                        |
-| Drag handles  | Side view: corners (squares on a wall, circles free) and the drivers   |
+| Control       | Place                                                                           |
+| ------------- | ------------------------------------------------------------------------------- |
+| Layout picker | Horn settings, under Path                                                       |
+| Corner fields | Horn settings: the picked corner's distance from the baffle and height          |
+| Drivers       | Horn settings: board, distance along it, the side the cone faces                |
+| Checks        | Notices under the side view, one per failed check                               |
+| Passage chart | Area along the path, fixed axes                                                 |
+| Drag handles  | Side view: corners (squares on a wall, circles free), whole boards, the drivers |
+| Box walls     | Side view: drag the back or top wall; depth and height fields                   |
 
 ## Steps
 
