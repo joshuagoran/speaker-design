@@ -17,7 +17,7 @@ import { chamberChips } from "../src/pages/speaker/speakerChips";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
-import { roomOf } from "./horn-room";
+import { frontLoadedOf, roomOf } from "./horn-room";
 import { BC18NBX } from "../src/lib/data";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { CHAMBER_LOAD, VENT_KIND } from "../src/constants/speakerSpec";
@@ -72,16 +72,14 @@ test("horn throat: the chamber's cones give the engine its drivers and front cha
   assert.equal(cones.cone.depthIn, BC18NBX.depthIn, "the catalog's depth");
   assert.equal(wallClearanceIn(chamber.drivers), frontChamber(cones.cone, 1).clearanceIn);
   const result = hornDesignOf(chamber, { count: 1, angle: 2 }, roomOf(chamber));
-  assert.ok(result.ok);
-  assert.equal(result.design.throatChamber, frontChamber(cones.cone, 2).liters);
+  assert.equal(frontLoadedOf(result).throatChamber, frontChamber(cones.cone, 2).liters);
   // a direct chamber has no front chamber
   const direct = hornDesignOf(
     { ...chamber, load: { kind: CHAMBER_LOAD.direct } },
     { count: 1, angle: 2 },
     roomOf(chamber),
   );
-  assert.ok(direct.ok);
-  assert.equal(direct.design.throatChamber, 0);
+  assert.equal(frontLoadedOf(direct).throatChamber, 0);
   // mixed drivers: no throat cones, no clearance from a missing part
   assert.equal(throatCones([]), null);
   assert.equal(wallClearanceIn([]), 0);

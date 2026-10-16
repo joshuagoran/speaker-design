@@ -25,7 +25,7 @@ import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { panelLbPerSqFt } from "../src/lib/panel";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
-import { roomOf } from "./horn-room";
+import { frontLoadedOf, roomOf } from "./horn-room";
 import type { SpeakerChamber, SpeakerSpec } from "../src/types";
 
 /** The spec with its one horn chamber's driver board doubled, or not. */
@@ -203,8 +203,7 @@ describe("the driver board in the front chamber and the depth fit", () => {
           setbackIn: chamberSetbackIn(spec.cabinet.panel, c),
         },
       );
-      if (!result.ok) throw new Error("the engine takes it");
-      return result.design.throatChamber;
+      return frontLoadedOf(result).throatChamber;
     };
     const one = read(bin()),
       two = read(bin(true));

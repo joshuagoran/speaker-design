@@ -1,17 +1,25 @@
-// A chamber's load as the Speaker page's Load setting switches it: Direct, or Horn with a starting horn made from the
-// chamber's cones and size. Pure.
+// A chamber's load as the Speaker page's Load and Horn settings switch it: Direct, or Horn with a starting horn made
+// from the chamber's cones and size; a horn's drive; a horn sized from its goals, and how it meets them. Pure.
 import type {
   ChamberLoad,
+  ChamberVent,
   Dims2,
-  HornSegment,
+  HornGoalFit,
+  HornGoals,
   SpeakerCabinet,
   SpeakerChamber,
   SpeakerHorn,
 } from "../../types";
 import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
-import { clearDepthIn } from "../../lib/speaker/chamberAir";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
-import { wallClearanceIn } from "../../lib/speaker/hornThroat";
+import { frontChamber, throatCones, wallClearanceIn } from "../../lib/speaker/hornThroat";
+import { hornDesignOf } from "../../lib/speaker/hornDesign";
+import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
+import { withDriveKind } from "./hornSections";
+import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
+import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
+import { goalHorn, hornGoalFit, type GoalDrive } from "../../lib/speaker/hornGoals";
+import { DEFAULT_VENTS } from "./speakerParts";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -104,4 +112,116 @@ export function withChamberLoad(
     load: { kind: CHAMBER_LOAD.horn, horn },
     netLiters: Math.max(MIN_NET_L, shownTenth(now - flareLiters(horn))),
   };
+}
+
+/**
+ * The chamber with a starting layout sized from `goals` for `drive` (lib/speaker/hornGoals `goalHorn`): its horn, its
+ * net air (the rear chamber) to the tenth, and a sealed vent for a tapped horn (it has none). The search reads the
+ * chamber's room (`hornRoom`), less the drivers' displacement. Null when no layout can be modeled.
+ */
+export function withGoalHorn(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+  placed: Pick<PlacedChamber, "clear"> | undefined,
+  drive: GoalDrive,
+  goals: HornGoals,
+): { chamber: SpeakerChamber; fit: HornGoalFit } | null {
+  const throat = throatCones(chamber.drivers);
+  if (!throat) return null;
+  const { room, displacementLiters, airLiters } = chamberAirLiters(cabinet, chamber, placed);
+  const vent: ChamberVent = drive === HORN_DRIVE.tapped ? DEFAULT_VENTS.sealed : chamber.vent;
+  const searched = { ...chamber, vent };
+  const found = goalHorn(
+    {
+      chamber: searched,
+      drive,
+      room: {
+        face: chamberClearFace(cabinet, searched),
+        setbackIn: chamberSetbackIn(cabinet.panel, searched),
+      },
+      airLiters,
+      displacementLiters,
+      power: throat.parts.ts,
+      goals,
+    },
+    room.depthIn * CM_PER_IN,
+  );
+  if (!found) return null;
+  return {
+    chamber: {
+      ...searched,
+      load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
+      netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+    },
+    fit: found.fit,
+  };
+}
+
+/**
+ * The chamber with its horn driven as `kind` (`withDriveKind`: enough sections for the taps, the taps on them); a
+ * tapped horn's chamber sealed, as it has no vent. Unchanged without a horn.
+ */
+export function withHornDrive(
+  chamber: SpeakerChamber,
+  kind: SpeakerHorn["drive"]["kind"],
+): SpeakerChamber {
+  if (chamber.load.kind !== CHAMBER_LOAD.horn) return chamber;
+  return {
+    ...chamber,
+    load: { kind: CHAMBER_LOAD.horn, horn: withDriveKind(chamber.load.horn, kind) },
+    vent: kind === HORN_DRIVE.tapped ? DEFAULT_VENTS.sealed : chamber.vent,
+  };
+}
+
+/** The chamber's air, L: its clear room (`hornRoom`) less its drivers' displacement. */
+function chamberAirLiters(
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+  placed: Pick<PlacedChamber, "clear"> | undefined,
+) {
+  const room = hornRoom(cabinet, chamber, placed);
+  const displacementLiters = chamber.drivers.reduce(
+    (sum, d) => sum + (coneParts(d)?.dispL ?? 0) * d.count,
+    0,
+  );
+  return {
+    room,
+    displacementLiters,
+    airLiters:
+      room.clear.w * room.clear.h * Math.max(0, room.depthIn) * LITERS_PER_CUBIC_IN -
+      displacementLiters,
+  };
+}
+
+/**
+ * How a horn chamber meets its goals (`hornGoalFit`, on the model's net air `netLiters`; no fit while that is not known
+ * yet), and its horn's air (the flare's and the front chamber's) with the chamber's when the horn holds more; null
+ * without a horn.
+ */
+export function hornGoalCheck(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+  placed: Pick<PlacedChamber, "clear"> | undefined,
+  netLiters: number | undefined,
+): { fit: HornGoalFit | null; overAir: { hornL: number; chamberL: number } | null } | null {
+  if (chamber.load.kind !== CHAMBER_LOAD.horn) return null;
+  const { horn } = chamber.load;
+  const throat = throatCones(chamber.drivers);
+  const setbackIn = chamberSetbackIn(cabinet.panel, chamber);
+  const read =
+    netLiters === undefined
+      ? null
+      : hornDesignOf(
+          chamber,
+          { count: 1, angle: 2 },
+          { netLiters, face: chamberClearFace(cabinet, chamber), setbackIn },
+        );
+  const fit =
+    read?.ok && throat
+      ? hornGoalFit(read.design, horn.goals ?? HORN_GOALS_DEFAULT, throat.parts.ts)
+      : null;
+  const hornL =
+    flareLiters(horn) + (throat ? frontChamber(throat.cone, throat.count, setbackIn).liters : 0);
+  const chamberL = chamberAirLiters(cabinet, chamber, placed).airLiters;
+  return { fit, overAir: hornL > chamberL ? { hornL, chamberL } : null };
 }

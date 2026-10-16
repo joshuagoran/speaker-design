@@ -159,11 +159,12 @@ export const CHAMBER_LOAD = {
   horn: "horn",
 } as const;
 
-/** How a horn's drivers drive its path, by id (`HornDrive`): front-loaded, back-loaded or tapped. */
+/** How a horn's drivers drive its path, by id (`HornDrive`): front-loaded, offset, tapped or back-loaded. */
 export const HORN_DRIVE = {
   front: "front",
-  back: "back",
+  offset: "offset",
   tapped: "tapped",
+  back: "back",
 } as const;
 
 /** How a horn's path runs in the box, by id: straight, or folded (a bass bin). The acoustics read only the segments. */
@@ -192,10 +193,12 @@ export const SPACE_ITEM = {
 
 /** Why a chamber has no horn-engine design yet, by id (lib/speaker/hornDesign `hornDesignOf`). */
 export const HORN_ENGINE_GAP = {
-  /** a tapped horn: the engine models only a front-loaded one */
-  tapped: "tapped",
-  /** a back-loaded horn: the engine models only a front-loaded one */
+  /** a back-loaded horn: the engines model front-loaded, offset and tapped horns only */
   backLoaded: "backLoaded",
+  /** an offset or tapped horn's tap that is not a boundary between two sections, or taps out of order */
+  taps: "taps",
+  /** a tapped horn in a chamber with a vent: its rear chamber is a closed passage to its tap */
+  tappedVent: "tappedVent",
   /** no driver, drivers of more than one kind or id, or a driver with no Thiele/Small parameters */
   driver: "driver",
   /** a horn section with an area or a length that is not positive */

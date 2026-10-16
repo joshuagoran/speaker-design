@@ -4,6 +4,8 @@ import type { HornSegment, SpeakerHorn } from "../../types";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { shownIn, shownTenth } from "./speakerFields";
 import { throatAreaCm2 } from "../../lib/speaker/hornThroat";
+import { HORN_PROFILE } from "../../constants/hornEngine";
+import { HORN_DRIVE } from "../../constants/speakerSpec";
 
 /** A new section's end area over its start area: it doubles, as a flare step. */
 const NEW_SECTION_AREA_RATIO = 2;
@@ -142,3 +144,81 @@ export const withCompressionRatio = (
   ratio: number,
 ): HornSegment[] =>
   segments.map((s, k) => (k === 0 ? { ...s, s1: throatAreaCm2(conesCm2, ratio) } : s));
+
+/** A section's area at `share` of its length from its start, cm², by its flare law (Hornresp's CON, EXP and PAR). */
+export function areaAtShare(s: HornSegment, share: number): number {
+  switch (s.profile) {
+    case HORN_PROFILE.parabolic:
+      return s.s1 + (s.s2 - s.s1) * share;
+    case HORN_PROFILE.exponential:
+      return s.s1 * Math.pow(s.s2 / s.s1, share);
+    case HORN_PROFILE.conical: {
+      const r1 = Math.sqrt(s.s1);
+      return Math.pow(r1 + (Math.sqrt(s.s2) - r1) * share, 2);
+    }
+  }
+}
+
+/** The sections with the longest one split in two at its middle, along its own flare law: the same horn. */
+function withLongestSplit(segments: readonly HornSegment[]): HornSegment[] {
+  const longest = segments.reduce((at, s, i) => (s.length > segments[at].length ? i : at), 0);
+  return segments.flatMap((s, i) => {
+    if (i !== longest) return [s];
+    const middle = areaAtShare(s, 0.5);
+    return [
+      { ...s, s2: middle, length: s.length / 2 },
+      { ...s, s1: middle, length: s.length / 2 },
+    ];
+  });
+}
+
+/** How many sections each drive needs: a closed stub before an offset tap, a section between a tapped horn's taps. */
+export const SECTIONS_NEEDED: Record<SpeakerHorn["drive"]["kind"], number> = {
+  [HORN_DRIVE.front]: 1,
+  [HORN_DRIVE.offset]: 2,
+  [HORN_DRIVE.tapped]: 3,
+  [HORN_DRIVE.back]: 1,
+};
+
+/**
+ * The horn driven as `kind`: with too few sections for its taps, the longest splits in two until there are enough (the
+ * horn stays the same); an offset horn's cones then open after the first section, a tapped horn's fronts after the
+ * first and its backs before the last.
+ */
+export function withDriveKind(horn: SpeakerHorn, kind: SpeakerHorn["drive"]["kind"]): SpeakerHorn {
+  let segments = [...horn.segments];
+  if (segments.length === 0) return horn;
+  while (segments.length < SECTIONS_NEEDED[kind]) segments = withLongestSplit(segments);
+  const drive: SpeakerHorn["drive"] =
+    kind === HORN_DRIVE.offset
+      ? { kind, tap: 1 }
+      : kind === HORN_DRIVE.tapped
+        ? { kind, frontTap: 1, rearTap: segments.length - 1 }
+        : { kind };
+  return { ...horn, segments, drive };
+}
+
+/** `x` kept from `lo` to `hi`. */
+const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+
+/**
+ * The drive with its taps moved back one where they came after removed section `i`, so they stay on their sections,
+ * then kept between two of the `n` sections left (1 to n − 1), a tapped horn's front before its back.
+ */
+export function driveAfterRemoval(
+  drive: SpeakerHorn["drive"],
+  i: number,
+  n: number,
+): SpeakerHorn["drive"] {
+  const moved = (tap: number) => (tap > i ? tap - 1 : tap);
+  switch (drive.kind) {
+    case HORN_DRIVE.offset:
+      return { ...drive, tap: clamp(moved(drive.tap), 1, n - 1) };
+    case HORN_DRIVE.tapped: {
+      const frontTap = clamp(moved(drive.frontTap), 1, n - 2);
+      return { ...drive, frontTap, rearTap: clamp(moved(drive.rearTap), frontTap + 1, n - 1) };
+    }
+    default:
+      return drive;
+  }
+}

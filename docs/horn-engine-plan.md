@@ -201,10 +201,60 @@ For code that calls `hornModel` (the Designer, a future page):
   0.6 dB below 20 Hz on a direct radiator.
 - **Slot exits with images.** In quarter or eighth space, or with boxes side by side, the slot's shape scales the
   merged round exit: an approximation.
-- **Folds and back-loaded horns.** Not modeled. Tapped horns are modeled by the network only: no page uses it yet
-  (`hornDesignOf` still names the gap).
+- **Folds and back-loaded horns.** Not modeled. The Speaker page models offset and tapped horns through the network
+  (see [Offset and tapped horns on the Speaker page](#offset-and-tapped-horns-on-the-speaker-page)). The 3D view
+  still draws their path straight.
 - **Tapped and offset-driver horns against Hornresp.** Checked on the acoustic network. Five reference records meet
   Hornresp's results (see [Reference records for Hornresp](#reference-records-for-hornresp)).
+
+## Offset and tapped horns on the Speaker page
+
+Phase 2 of #169, part 1. The Horn settings' Drive picks Front-loaded, Offset or Tapped.
+
+| Drive        | Engine                       | Cones                                               | Chamber's net air                   | Vent          |
+| ------------ | ---------------------------- | --------------------------------------------------- | ----------------------------------- | ------------- |
+| Front-loaded | Horn engine (`hornModel`)    | Fronts at the throat                                | Rear chamber                        | Any taken     |
+| Offset       | Network (`offsetDriverHorn`) | Fronts after section `tap`; the path's start closed | Rear chamber                        | Any taken     |
+| Tapped       | Network (`tappedHorn`)       | Fronts after `frontTap`, backs after `rearTap`      | Passage from the backs to their tap | None (sealed) |
+
+- `hornDesignOf` gives a `HornLayoutDesign`. `hornLayoutModel` runs it on its engine.
+- A tap is a boundary between two sections: 1 to n − 1. A bad tap is the `taps` gap. A vent on a tapped horn is
+  the `tappedVent` gap.
+- A tapped horn's two passages are as wide as the cones' area. The front passage is the front chamber
+  (`frontChamber`). The back passage holds the chamber's net air with its stuffing.
+- Picking a drive splits the longest section until there are enough sections for the taps. The horn does not change.
+
+### Goals and the starting layout
+
+`src/lib/speaker/hornGoals.ts`. The user sets the goals: the lowest frequency, the highest frequency and the target
+level. The box size is the chamber's size.
+
+- **The fit** (`hornGoalFit`): the response's spread over the band, the level at the low goal against the band's mean,
+  and the lowest maximum output. The maximum output is the lower of the power limit (`aes` into the impedance) and the
+  Xmax limit.
+- **Design from goals** (`goalHorn`): one parabolic flare from the closed end to the mouth, split at the taps.
+  - The search tries path lengths of 0.5 to 1.5 quarter wavelengths at the low goal, three flares, the tap places and
+    (front-loaded and offset) the rear chamber's share of the air. Then it halves its steps five times around the
+    best try.
+  - The score is the spread, plus twice any low edge under −3 dB, plus twice any shortfall from the target.
+  - The air is the chamber's clear air less the drivers' displacement, times 0.85 (`FOLD_AIR_SHARE`) for the fold's
+    panels. A tapped horn's rear chamber is twice the drivers' displacement.
+  - It takes 0.2 s (tapped) to 1.1 s (offset, vented) on the PA v2 bin box.
+- **The check** under the goals: the spread, a low edge under −3 dB, the maximum output and any shortfall, and a horn
+  that holds more air than the chamber.
+
+### Hornresp import
+
+`src/pages/speaker/hornrespImport.ts`. A pasted record sets the sections, the drive, the chamber's net air and the
+vent. The chamber keeps its drivers.
+
+| Record             | Net air            | Vent                                                     |
+| ------------------ | ------------------ | -------------------------------------------------------- |
+| Front-loaded or OD | Vrc                | One round tube of area Ap, length Lpt less its inner end |
+| TH                 | Vrc (at least 1 L) | Sealed                                                   |
+
+- The record's Vtc, Atc and Lrc are not read. The front chamber comes from the cones and the walls. The passages are
+  as wide as the cones.
 
 ## The acoustic network
 

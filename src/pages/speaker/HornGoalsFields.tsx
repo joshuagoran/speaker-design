@@ -1,0 +1,123 @@
+import { useEffect, useRef, useState } from "react";
+import type { HornGoalFit, HornGoals } from "../../types";
+import { CardHeading } from "../../components/ui/CardHeading";
+import { Button } from "../../components/ui/Button";
+import { NumberField } from "../../components/ui/NumberField";
+import { Notice } from "../../components/ui/Notice";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { SPEAKER_TEXT, HORN_GOAL_LIMIT_NAMES } from "../../constants/speakerPage";
+import { HORN_GOAL_FIELDS, LOW_EDGE_DB } from "../../constants/hornGoals";
+import { FIELD_ROW, GAP_Y_TIGHT } from "../../styles/layout";
+import { shownTenth } from "./speakerFields";
+
+/** Each goal field: its goal, label, tooltip and range. */
+const GOAL_FIELDS = [
+  { goal: "lowHz", label: SPEAKER_TEXT.hornGoalLow, tip: SPEAKER_TEXT.hornGoalLowTip },
+  { goal: "highHz", label: SPEAKER_TEXT.hornGoalHigh, tip: SPEAKER_TEXT.hornGoalHighTip },
+  { goal: "targetDb", label: SPEAKER_TEXT.hornGoalTarget, tip: SPEAKER_TEXT.hornGoalTargetTip },
+] as const satisfies readonly { goal: keyof HornGoals; label: string; tip: string }[];
+
+interface Props {
+  goals: HornGoals;
+  /** how the horn meets them now; null when it cannot be calculated */
+  fit: HornGoalFit | null;
+  /** the horn's air and the chamber's, L, when the horn holds more than the chamber has; else null */
+  overAir: { hornL: number; chamberL: number } | null;
+  onGoals: (goals: HornGoals) => void;
+  /** sizes the horn for the goals; false when no horn can be calculated. Absent: the drive can't be designed. */
+  onDesign?: (goals: HornGoals) => boolean;
+}
+
+/**
+ * A horn's goals (the band it plays flat, and the level it reaches there), the Design from goals action, and how the
+ * horn meets the goals now: its spread, its low edge, its lowest maximum output and the air it holds.
+ */
+export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Props) {
+  const [designing, setDesigning] = useState(false);
+  const [failed, setFailed] = useState(false);
+  /** the queued search, cleared if the fields go away first */
+  const queued = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (queued.current !== null) clearTimeout(queued.current);
+    },
+    [],
+  );
+  const short = fit ? goals.targetDb - fit.maxOutDb : 0;
+  /** the band is empty: nothing to design for or check */
+  const outOfOrder = goals.highHz <= goals.lowHz;
+  return (
+    <div className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${GAP_Y_TIGHT}`}>
+      <CardHeading sub>
+        <Tooltip tip={SPEAKER_TEXT.hornGoalsTip}>{SPEAKER_TEXT.hornGoals}</Tooltip>
+      </CardHeading>
+      <div className={FIELD_ROW}>
+        {GOAL_FIELDS.map(({ goal, label, tip }) => (
+          <NumberField
+            key={goal}
+            label={<Tooltip tip={tip}>{label}</Tooltip>}
+            value={goals[goal]}
+            {...HORN_GOAL_FIELDS[goal]}
+            onChange={(v) => {
+              setFailed(false);
+              onGoals({ ...goals, [goal]: v });
+            }}
+          />
+        ))}
+      </div>
+      {onDesign && (
+        <div>
+          <Button
+            variant="primary"
+            size="xs"
+            disabled={designing || outOfOrder}
+            title={SPEAKER_TEXT.hornDesignTip}
+            onClick={() => {
+              setDesigning(true);
+              // let the button show the work before the search holds the page
+              queued.current = setTimeout(() => {
+                queued.current = null;
+                setFailed(!onDesign(goals));
+                setDesigning(false);
+              }, 0);
+            }}
+          >
+            {designing ? SPEAKER_TEXT.hornDesigning : SPEAKER_TEXT.hornDesign}
+          </Button>
+        </div>
+      )}
+      {outOfOrder && <Notice>{SPEAKER_TEXT.hornGoalsOrder}</Notice>}
+      {failed && <Notice>{SPEAKER_TEXT.hornDesignFailed}</Notice>}
+      {fit && (
+        <>
+          <p className="text-xs text-stone-500">
+            {SPEAKER_TEXT.hornFitSpread(
+              String(shownTenth(fit.spreadDb)),
+              String(goals.lowHz),
+              String(goals.highHz),
+            )}
+          </p>
+          {fit.lowEdgeDb < -LOW_EDGE_DB && (
+            <Notice>{SPEAKER_TEXT.hornFitLowEdge(String(shownTenth(-fit.lowEdgeDb)))}</Notice>
+          )}
+          <p className="text-xs text-stone-500">
+            {SPEAKER_TEXT.hornFitMaxOut(
+              String(shownTenth(fit.maxOutDb)),
+              String(Math.round(fit.maxOutHz)),
+              HORN_GOAL_LIMIT_NAMES[fit.limit],
+            )}
+          </p>
+          {short > 0 && <Notice>{SPEAKER_TEXT.hornFitShort(String(shownTenth(short)))}</Notice>}
+        </>
+      )}
+      {overAir && (
+        <Notice>
+          {SPEAKER_TEXT.hornFitAir(
+            String(shownTenth(overAir.hornL)),
+            String(shownTenth(overAir.chamberL)),
+          )}
+        </Notice>
+      )}
+    </div>
+  );
+}

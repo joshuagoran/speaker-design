@@ -15,6 +15,7 @@ import type { INPUT_RANGE_LIMIT, LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { HORN_PROFILE } from "./constants/hornEngine";
+import type { HORN_GOAL_LIMIT } from "./constants/hornGoals";
 import type { HORN_LAYOUT, NETWORK_PART, OPENING_LOAD } from "./constants/acousticNetwork";
 import type {
   AUTO_DELAY,
@@ -2269,14 +2270,19 @@ export type ChamberVent =
 /**
  * How a horn's drivers drive its path (`HORN_DRIVE`).
  * - Front: the cones' fronts at the throat (through the throat chamber), their rears into the chamber.
+ * - Offset: as front, but the path starts at a closed end and the fronts tap it at segment boundary `tap` (Hornresp's
+ *   OD), from 1 to `segments.length - 1`.
+ * - Tapped: the front and the rear each at a segment boundary, 0 the closed end and `segments.length` the mouth, from 1
+ *   to `segments.length - 1`, the front first (Hornresp's TH). The chamber's net air is the passage from the rears to
+ *   their tap; the chamber has no vent.
  * - Back: the fronts radiate from the baffle, the rears drive the throat through the throat chamber (a Lowther-style
  *   back-loaded horn).
- * - Tapped: the front and the rear each at a segment boundary, 0 the throat and `segments.length` the mouth.
  */
 export type HornDrive =
   | { kind: (typeof HORN_DRIVE)["front"] }
-  | { kind: (typeof HORN_DRIVE)["back"] }
-  | { kind: (typeof HORN_DRIVE)["tapped"]; frontTap: number; rearTap: number };
+  | { kind: (typeof HORN_DRIVE)["offset"]; tap: number }
+  | { kind: (typeof HORN_DRIVE)["tapped"]; frontTap: number; rearTap: number }
+  | { kind: (typeof HORN_DRIVE)["back"] };
 
 /**
  * How a horn's path runs in the box (`HORN_PATH`). A folded path (a bass bin) has the same segments as a straight one;
@@ -2304,7 +2310,35 @@ export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset">
    * thick as a wall. The board is the panel at the back of the bay that the drivers mount on.
    */
   doubleBoard?: boolean;
+  /** what the horn is designed for (lib/speaker/hornGoals); absent: the defaults (`HORN_GOALS_DEFAULT`) */
+  goals?: HornGoals;
 }
+
+/**
+ * A horn's goals: the band it plays flat, Hz, from `lowHz` to `highHz` (its crossover), and the level it reaches over
+ * that band at full power, dB at 1 m (`targetDb`). The box's size is the chamber's size.
+ */
+export interface HornGoals {
+  lowHz: number;
+  highHz: number;
+  targetDb: number;
+}
+
+/**
+ * How a horn meets its goals over their band: the spread of its response, dB (highest less lowest), its level at the
+ * low goal against the band's mean, dB, and its lowest maximum output, dB at 1 m, the frequency where it is, Hz, and
+ * what stops it there (`HORN_GOAL_LIMIT`).
+ */
+export interface HornGoalFit {
+  spreadDb: number;
+  lowEdgeDb: number;
+  maxOutDb: number;
+  maxOutHz: number;
+  limit: HornGoalLimit;
+}
+
+/** What stops a horn's maximum output at a frequency (`HORN_GOAL_LIMIT`). */
+export type HornGoalLimit = (typeof HORN_GOAL_LIMIT)[keyof typeof HORN_GOAL_LIMIT];
 
 /** How a chamber's drivers meet the air (`CHAMBER_LOAD`): straight, or through a horn built into the box. */
 export type ChamberLoad =
@@ -2601,8 +2635,10 @@ export interface DesignLayers {
 /** Why a chamber has no horn-engine design yet, by id (`HORN_ENGINE_GAP`). */
 export type HornEngineGap = (typeof HORN_ENGINE_GAP)[keyof typeof HORN_ENGINE_GAP];
 
-/** A chamber as the horn engine takes it, or why it can't yet. */
-export type HornDesignResult = { ok: true; design: HornDesign } | { ok: false; gap: HornEngineGap };
+/** A chamber as the horn engines take it (by its layout), or why they can't yet. */
+export type HornDesignResult =
+  | { ok: true; design: HornLayoutDesign }
+  | { ok: false; gap: HornEngineGap };
 
 /** Why the speaker model leaves out a chamber or a driver (`SPEAKER_MODEL_GAP`, or the horn engine's gap). */
 export type SpeakerModelGap =

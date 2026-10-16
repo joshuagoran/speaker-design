@@ -12,7 +12,12 @@ import { withCompressionRatio } from "../src/pages/speaker/hornSections";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { MODEL_GAP_TEXT, SPEAKER_TEXT } from "../src/constants/speakerPage";
-import { CHAMBER_LOAD, HORN_PATH, SPEAKER_MODEL_GAP } from "../src/constants/speakerSpec";
+import {
+  CHAMBER_LOAD,
+  HORN_PATH,
+  SPEAKER_MODEL_GAP,
+  HORN_ENGINE_GAP,
+} from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { conesAreaCm2 } from "../src/lib/speaker/hornThroat";
 import type { HornSegment, SpeakerChamber, SpeakerSpec } from "../src/types";
@@ -160,7 +165,7 @@ describe("a chamber the model leaves out is named", () => {
   test("every reason has a why and a what to change, each a sentence", () => {
     const ids = Object.keys(MODEL_GAP_TEXT);
     // every gap the model can name
-    for (const id of [...Object.values(SPEAKER_MODEL_GAP), "segment", "vent", "driver", "tapped"])
+    for (const id of [...Object.values(SPEAKER_MODEL_GAP), ...Object.values(HORN_ENGINE_GAP)])
       expect(ids).toContain(id);
     for (const { why, fix } of Object.values(MODEL_GAP_TEXT)) {
       expect(why.length).toBeGreaterThan(10);

@@ -1,6 +1,6 @@
-// A speaker spec's chamber as the horn engine (lib/acoustics/hornModel) takes it: a front-loaded horn, or a direct
-// radiator (no segments), with the chamber's own net air and vent as the rear chamber. A horn's front chamber comes
-// from its walls (lib/speaker/hornThroat). Pure.
+// A speaker spec's chamber as the horn engines take it: a front-loaded horn or a direct radiator (no segments) for the
+// horn engine (lib/acoustics/hornModel), an offset or tapped horn for the acoustic network's presets
+// (lib/acoustics/network/presets). A horn's front chamber comes from its walls (lib/speaker/hornThroat). Pure.
 import type {
   ChamberVent,
   Dims2,
@@ -16,6 +16,7 @@ import { slotRunIn, stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
+import { HORN_LAYOUT } from "../../constants/acousticNetwork";
 import {
   CHAMBER_LOAD,
   HORN_DRIVE,
@@ -67,6 +68,9 @@ function rearPort(vent: ChamberVent, face: Dims2): { port: HornPort | null } | n
 /** A result that names the gap. */
 const gap = (why: HornEngineGap): HornDesignResult => ({ ok: false, gap: why });
 
+/** Whether `tap` is a boundary between two of `n` sections: from 1 to n − 1. */
+const isInnerBoundary = (tap: number, n: number) => Number.isInteger(tap) && tap >= 1 && tap < n;
+
 /**
  * What the horn engine reads of the chamber's place in its box: its air as the box models take it (the set net air, or
  * the Auto one: lib/speaker/speakerBuild `chamberNetLiters`), before the stuffing, its clear face (a slot runs it) and
@@ -81,10 +85,15 @@ export interface HornDesignRoom {
 
 /**
  * The chamber as a horn design, `at.count` boxes side by side radiating into `at.angle`, or the first gap that stops
- * it: a tapped or back-loaded horn; drivers of more than one kind, or none with Thiele/Small parameters; a section
- * with a size that is not positive; a vent the engine doesn't take. Several alike drivers share the throat
- * (`throatCones`), and the front chamber is their air under the walls' back edges (`frontChamber`). A direct chamber
- * is a design with no segments.
+ * it: a back-loaded horn; drivers of more than one kind, or none with Thiele/Small parameters; a section with a size
+ * that is not positive; a tap that is not between two sections; a vent the engine doesn't take (any vent on a tapped
+ * horn). Several alike drivers share the throat (`throatCones`), and the front chamber is their air under the walls'
+ * back edges (`frontChamber`). A direct chamber is a front-loaded design with no segments.
+ *
+ * - Front-loaded and offset: the chamber's air with its stuffing and its vent are the rear chamber; the front chamber
+ *   is lumped at the fronts' node (Hornresp's Vtc).
+ * - Tapped: the front chamber and the chamber's air with its stuffing are the two tap passages (Hornresp's Vtc and
+ *   Vrc), each as wide as the cones' area (their length is their air over that area).
  */
 export function hornDesignOf(
   chamber: SpeakerChamber,
@@ -92,7 +101,6 @@ export function hornDesignOf(
   room: HornDesignRoom,
 ): HornDesignResult {
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
-  if (horn?.drive.kind === HORN_DRIVE.tapped) return gap(HORN_ENGINE_GAP.tapped);
   if (horn?.drive.kind === HORN_DRIVE.back) return gap(HORN_ENGINE_GAP.backLoaded);
   /**
    * the drivers on the throat: one driver's Thiele/Small parameters and how many share it (Hornresp's Nd; the engine
@@ -101,22 +109,60 @@ export function hornDesignOf(
   const throat = throatCones(chamber.drivers);
   if (!throat) return gap(HORN_ENGINE_GAP.driver);
   if (horn && !horn.segments.every(isSizedSegment)) return gap(HORN_ENGINE_GAP.segment);
+  const n = horn?.segments.length ?? 0;
+  const drive = horn?.drive;
+  if (drive?.kind === HORN_DRIVE.offset && !isInnerBoundary(drive.tap, n))
+    return gap(HORN_ENGINE_GAP.taps);
+  if (
+    drive?.kind === HORN_DRIVE.tapped &&
+    !(
+      isInnerBoundary(drive.frontTap, n) &&
+      isInnerBoundary(drive.rearTap, n) &&
+      drive.frontTap < drive.rearTap
+    )
+  )
+    return gap(HORN_ENGINE_GAP.taps);
+  /** the air between the cones and the walls' back edges; a direct radiator has none */
+  const frontLiters = horn ? frontChamber(throat.cone, throat.count, room.setbackIn).liters : 0;
+  /** the chamber's air with its stuffing, as a direct chamber's */
+  const airLiters = stuffedLiters(chamber, room.netLiters);
+  const common = {
+    driver: throat.parts.ts,
+    drivers: throat.count,
+    count: at.count,
+    segments: horn?.segments ?? [],
+    angle: at.angle,
+  };
+  if (drive?.kind === HORN_DRIVE.tapped) {
+    if (chamber.vent.kind !== VENT_KIND.sealed) return gap(HORN_ENGINE_GAP.tappedVent);
+    /** each passage's cross-section: the cones' area */
+    const area = throat.cone.Sd * throat.count;
+    return {
+      ok: true,
+      design: {
+        layout: HORN_LAYOUT.tapped,
+        ...common,
+        frontTap: drive.frontTap,
+        rearTap: drive.rearTap,
+        frontChamber: frontLiters > 0 ? { liters: frontLiters, area } : null,
+        rearChamber: airLiters > 0 ? { liters: airLiters, area } : null,
+      },
+    };
+  }
   /** the rear chamber's vent as the engine's port */
   const rear = rearPort(chamber.vent, room.face);
   if (!rear) return gap(HORN_ENGINE_GAP.vent);
+  const front = {
+    ...common,
+    throatChamber: frontLiters,
+    rear: { liters: airLiters, port: rear.port },
+    portOffset: horn?.portOffset ?? 0,
+  };
   return {
     ok: true,
-    design: {
-      driver: throat.parts.ts,
-      drivers: throat.count,
-      count: at.count,
-      // the air between the cones and the walls' back edges; a direct radiator has none
-      throatChamber: horn ? frontChamber(throat.cone, throat.count, room.setbackIn).liters : 0,
-      segments: horn?.segments ?? [],
-      // the rear chamber's air with its stuffing, as a direct chamber's
-      rear: { liters: stuffedLiters(chamber, room.netLiters), port: rear.port },
-      angle: at.angle,
-      portOffset: horn?.portOffset ?? 0,
-    },
+    design:
+      drive?.kind === HORN_DRIVE.offset
+        ? { layout: HORN_LAYOUT.offsetDriver, ...front, tap: drive.tap }
+        : { layout: HORN_LAYOUT.frontLoaded, ...front },
   };
 }
