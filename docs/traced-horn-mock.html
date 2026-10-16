@@ -344,6 +344,23 @@
       <div class="stats" id="stats"></div>
       <div class="bar">
         <div class="group">
+          <span class="label">Goal</span>
+          <select id="g-type" aria-label="Horn type">
+            <option value="tapped">Tapped</option>
+            <option value="front">Front-loaded</option>
+          </select>
+          <label for="g-low">Low end, Hz</label
+          ><input id="g-low" type="number" step="1" min="20" max="120" />
+          <label for="g-db">Loudness, dB</label
+          ><input id="g-db" type="number" step="1" min="90" max="150" />
+          <label style="display: flex; gap: 6px; align-items: center; padding: 0 6px"
+            ><input id="g-adv" type="checkbox" style="width: auto" /> Advanced</label
+          >
+        </div>
+      </div>
+      <p class="hint" id="goal-out"></p>
+      <div class="bar" id="sh-row">
+        <div class="group">
           <span class="label">Straight horn</span>
           <label for="sh-len">Length</label
           ><input id="sh-len" type="number" step="1" min="10" max="200" />
@@ -411,6 +428,60 @@
       18: { cut: 16.6, depth: 8.2, motor: 7.6 },
       21: { cut: 19.7, depth: 9.6, motor: 8.8 },
     };
+    /** typical cone area, in², and one-way excursion, in, for each size: rough figures for the goal estimate */
+    const CONES = {
+      12: { sd: 82, xmax: 0.3 },
+      15: { sd: 136, xmax: 0.35 },
+      18: { sd: 178, xmax: 0.43 },
+      21: { sd: 237, xmax: 0.55 },
+    };
+    const C_IN = 13504; // speed of sound, in/s
+    const HORN_GAIN_DB = 10; // rough level a horn adds at its low end over the bare cones
+    /**
+     * the straight horn from the goal, by rules of thumb: a quarter wave long at the low end; a tapped horn opens from
+     * 0.7 to 2 times the cones' area (parabolic); a front-loaded one starts at half the cones' area and flares
+     * exponentially toward the mouth the low end wants on the floor. Both mouths stop at the mouth you set.
+     */
+    function goalTarget() {
+      const g = S.goal,
+        sd = CONES[S.size].sd * S.n;
+      const len = C_IN / (4 * g.lowHz);
+      const mouthCap = Math.min(1500, (S.mouth.b - S.mouth.a) * S.W);
+      if (g.type === "tapped")
+        return {
+          len,
+          s1: 0.7 * sd,
+          s2: Math.min(2 * sd, mouthCap),
+          flare: "par",
+          capped: 2 * sd > mouthCap,
+        };
+      const s1 = sd / 2;
+      const lambda = C_IN / g.lowHz;
+      const ideal = Math.min((lambda * lambda) / (8 * Math.PI), s1 * Math.exp(Math.PI));
+      return {
+        len,
+        s1,
+        s2: Math.max(s1, Math.min(ideal, mouthCap)),
+        flare: "exp",
+        capped: ideal > mouthCap,
+      };
+    }
+    /**
+     * the loudest the drivers reach at the low end, dB at 1 m on the floor, limited by how far the cones move, with
+     * the horn's gain; and how many drivers the loudness goal needs. Rough.
+     */
+    function goalLoudness() {
+      const c = CONES[S.size],
+        f = S.goal.lowHz;
+      const vd = c.sd * c.xmax * 1.6387e-5; // m³ moved by one cone
+      const w = 2 * Math.PI * f;
+      const pa = (1.2 * w * w * vd) / (2 * Math.PI) / Math.SQRT2; // rms pressure at 1 m, half space
+      const one = 20 * Math.log10(pa / 2e-5) + HORN_GAIN_DB;
+      return {
+        now: one + 20 * Math.log10(S.n),
+        need: Math.max(1, Math.ceil(10 ** ((S.goal.db - one) / 20))),
+      };
+    }
     const WALLS = ["baffle", "bottom", "back", "top"];
     const JOIN = 0.01; // ends this close are one joint
 
@@ -1127,6 +1198,8 @@
     };
 
     function render() {
+      if (!S.advanced) S.target = goalTarget();
+      renderGoal();
       tr = trace();
       ro = readOut(tr);
       const W = S.D * PX + 2 * PAD,
@@ -1855,16 +1928,62 @@
     const inSize = document.getElementById("in-size"),
       inN = document.getElementById("in-n");
     const syncInputs = () => {
+      if (!S.advanced) S.target = goalTarget();
       inD.value = S.D;
       inH.value = S.H;
       inW.value = S.W;
       inSize.value = S.size;
       inN.value = S.n;
-      shLen.value = S.target.len;
-      shS1.value = S.target.s1;
-      shS2.value = S.target.s2;
+      shLen.value = +S.target.len.toFixed(1);
+      shS1.value = +S.target.s1.toFixed(1);
+      shS2.value = +S.target.s2.toFixed(1);
       shFlare.value = S.target.flare;
+      gType.value = S.goal.type;
+      gLow.value = S.goal.lowHz;
+      gDb.value = S.goal.db;
+      gAdv.checked = S.advanced;
     };
+    const gType = document.getElementById("g-type"),
+      gLow = document.getElementById("g-low"),
+      gDb = document.getElementById("g-db"),
+      gAdv = document.getElementById("g-adv");
+    /** the goal's readout, and the straight horn's fields: typed in Advanced, else filled from the goal */
+    function renderGoal() {
+      const t = S.target,
+        l = goalLoudness();
+      const flare = { par: "parabolic", exp: "exponential", con: "conical" }[t.flare];
+      const horn = `Straight horn: ${t.len.toFixed(0)} in long, ${t.s1.toFixed(0)} → ${t.s2.toFixed(0)} in², ${flare}${t.capped && !S.advanced ? " (mouth held to the opening you set)" : ""}.`;
+      const loud = `${S.n} × ${S.size}″ reach about ${l.now.toFixed(0)} dB at ${S.goal.lowHz} Hz; ${S.goal.db} dB needs about ${l.need}.`;
+      document.getElementById("goal-out").textContent = S.advanced ? loud : `${horn} ${loud}`;
+      document.getElementById("sh-row").style.display = S.advanced ? "" : "none";
+      [gType, gLow, gDb].forEach((x) => (x.disabled = S.advanced));
+      if (!S.advanced) {
+        shLen.value = t.len.toFixed(0);
+        shS1.value = t.s1.toFixed(0);
+        shS2.value = t.s2.toFixed(0);
+        shFlare.value = t.flare;
+      }
+    }
+    gType.addEventListener("change", () => {
+      S.goal.type = gType.value;
+      render();
+    });
+    const onGoal = (input, key, lo, hi) =>
+      input.addEventListener("change", () => {
+        const v = parseFloat(input.value);
+        if (Number.isFinite(v)) S.goal[key] = clamp(v, lo, hi);
+        syncInputs();
+        render();
+      });
+    onGoal(gLow, "lowHz", 20, 120);
+    onGoal(gDb, "db", 90, 150);
+    gAdv.addEventListener("change", () => {
+      // Advanced starts from the horn the goal gave
+      S.advanced = gAdv.checked;
+      S.target = { ...S.target, capped: false };
+      syncInputs();
+      render();
+    });
     const onNum = (input, key, lo, hi) =>
       input.addEventListener("change", () => {
         const v = parseFloat(input.value);
@@ -1908,16 +2027,17 @@
       S.size = +inSize.value;
       render();
     });
-    const TARGETS = {
-      tapped: { len: 75, s1: 120, s2: 345, flare: "par" },
-      offset: { len: 68, s1: 140, s2: 185, flare: "par" },
-      front: { len: 68, s1: 140, s2: 185, flare: "par" },
-      empty: { len: 45, s1: 60, s2: 200, flare: "con" },
+    const GOALS = {
+      tapped: { type: "tapped", lowHz: 45, db: 125 },
+      offset: { type: "front", lowHz: 50, db: 120 },
+      front: { type: "front", lowHz: 50, db: 120 },
+      empty: { type: "tapped", lowHz: 50, db: 120 },
     };
     const load = (name) => {
       push();
       S = presets[name]();
-      S.target = { ...TARGETS[name] };
+      S.goal = { ...GOALS[name] };
+      S.advanced = false;
       syncInputs();
       render();
     };
@@ -1954,7 +2074,8 @@
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
 
     S = presets.tapped();
-    S.target = { ...TARGETS.tapped };
+    S.goal = { ...GOALS.tapped };
+    S.advanced = false;
     syncInputs();
     setTool("move");
   })();

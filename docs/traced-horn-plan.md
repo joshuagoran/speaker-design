@@ -59,7 +59,10 @@ The Horn type setting goes away for folded horns. The drawing sets it.
 
 ## Straight horn first
 
-1. Design from goals sizes the straight horn: length, start and mouth area, flare.
+1. The user sets the goal: horn type, low end, loudness and drivers. The app sizes the straight horn from it: length,
+   start and mouth area, flare. It says how loud the drivers get and how many the goal needs.
+   - Advanced: the user types the straight horn's sizes instead.
+   - The mock uses rules of thumb. The app uses the sound model's search (Design from goals).
 2. The app places boards so the traced passage follows it.
 3. The chart shows the straight horn (dashed) and the traced passage.
 4. The user edits the boards by hand. The match readout updates.
