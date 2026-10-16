@@ -1053,7 +1053,7 @@ const zigzagPlans = (room: FoldRoom, tapped: boolean): HornBoards[] =>
   ).flat();
 
 /** The boards with the drivers' board `pieces` panels thick (the horn's Double setting). */
-function withDriverBoardPieces(plan: HornBoards, pieces: 1 | 2): HornBoards {
+export function withDriverBoardPieces(plan: HornBoards, pieces: 1 | 2): HornBoards {
   const at = plan.drivers?.board;
   if (at === undefined) return plan;
   return { ...plan, boards: plan.boards.map((b, i) => (i === at ? { ...b, pieces } : b)) };

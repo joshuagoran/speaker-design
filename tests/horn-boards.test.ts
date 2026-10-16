@@ -32,6 +32,7 @@ import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { withGoalHorn, withHornDrive } from "../src/pages/speaker/chamberLoad";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
+import { foldNarrowingDb, refinedBoards } from "../src/lib/speaker/foldRefine";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
 
@@ -334,4 +335,28 @@ test("horn boards: a tapped horn's Layout keeps its automatic boards to zigzags 
   const zigzag = foldWith(FOLD_SHAPE.zigzag);
   assert.ok(zigzag && foldPasses(zigzag.layout), JSON.stringify(zigzag?.layout.checks));
   assert.equal(mouthOver(zigzag), zigzag.plan.boards.length - 1);
+});
+
+test("horn boards: a passage that only widens costs nothing; one that narrows along its legs costs score", () => {
+  assert.ok(foldNarrowingDb(layoutOf(zigzagBoards(ROOM, 4, true, 1, 1.25))) < 1e-9);
+  assert.ok(foldNarrowingDb(layoutOf(zigzagBoards(ROOM, 4, true, 1, 0.8))) > 0);
+});
+
+test("horn boards: refining keeps a better score and keeps a resting corner on its board", () => {
+  const plan = spiralBoards(ROOM, 3, 0.35, SUB18, 1, 1.25);
+  // the riser board's top end rests on the drivers' board; a score that wants it lower and further back can only slide it back along that board
+  const riser = plan.boards[plan.boards.length - 1];
+  const top = riser.b;
+  const startY = plan.corners[top].y;
+  const score = (p: HornBoards) =>
+    foldPasses(layoutOf(p)) ? p.corners[top].y - p.corners[top].z : null;
+  const start = score(plan);
+  assert.ok(start !== null);
+  const refined = refinedBoards(plan, start, score, ROOM.wallIn);
+  assert.ok(refined.score < start, "moving the corner along the board scores better");
+  assert.ok(
+    Math.abs(refined.plan.corners[top].y - startY) < 1e-9,
+    "the corner stays on the drivers' board",
+  );
+  assert.ok(foldPasses(layoutOf(refined.plan)));
 });

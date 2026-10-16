@@ -65,6 +65,15 @@ export const FOLD_SHAPE_NAMES = {
   spiral: "Spiral",
 } as const satisfies Record<keyof typeof FOLD_SHAPE, string>;
 
+/** What a passage narrowing along its legs costs Design from goals, in dB of score for a leg all the way closed. */
+export const FOLD_NARROWING_DB = 4;
+
+/** The step sizes Design from goals moves a folded horn's corners and drivers by, largest first, in. */
+export const FOLD_REFINE_STEPS_IN = [2, 1, 0.5] as const;
+
+/** At most how many rounds of moves Design from goals runs at each step size. */
+export const FOLD_REFINE_ROUNDS = 4;
+
 /** Where a folded horn's mouth opens on the baffle. */
 export const FOLD_MOUTH = { top: "top", bottom: "bottom" } as const;
 

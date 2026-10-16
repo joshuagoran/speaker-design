@@ -32,6 +32,7 @@ import {
   foldGrowNeeded,
   foldRoomOf,
   grownChamber,
+  withDriverBoardPieces,
   zigzagTries,
   type FoldGrow,
 } from "../../lib/speaker/speakerLayout";
@@ -44,6 +45,7 @@ import {
 } from "../../lib/speaker/hornBoards";
 import { FOLD_CUTOUT_MARGIN_IN, FOLD_FACE } from "../../constants/hornBoards";
 import { isFolded, mouthAtBottom } from "../../lib/speaker/foldLayouts";
+import { foldNarrowingDb, refinedBoards } from "../../lib/speaker/foldRefine";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -268,7 +270,8 @@ function withDriverSpots(
 
 /**
  * A folded horn's chamber (`designed`) with the boards that meet the goals best among those that pass every check (the
- * zigzags `zigzagTries` offers), each scored on its own passage and taps; null when none passes (the box is too small
+ * layouts `zigzagTries` offers), each scored on its own passage and taps, less for a passage that narrows; then its
+ * corners and drivers' spot moved while that improves (`refinedBoards`). Null when none passes (the box is too small
  * for the drivers folded) or none can be modeled.
  */
 function withGoalBoards(
@@ -285,14 +288,17 @@ function withGoalBoards(
   const { room, body } = where;
   const setbackIn = chamberSetbackIn(cabinet.panel, designed);
   const face = chamberClearFace(cabinet, designed);
-  let best: { chamber: SpeakerChamber; fit: HornGoalFit; score: number } | null = null;
   const tapped = horn.drive.kind === HORN_DRIVE.tapped;
   const bottom = mouthAtBottom(horn, designed.dims.h);
-  for (const plan of zigzagTries(room, horn.drive.kind, body, bottom, horn.foldShape).flatMap(
-    (p) => (tapped ? withDriverSpots(p, room, body) : [p]),
-  )) {
-    const layout = hornBoardsLayout(plan, room, body);
-    if (!foldPasses(layout)) continue;
+  /** the chamber with these boards, how it meets the goals, and its score with the passage's narrowing; null: fails */
+  const tried = (plan: HornBoards) => {
+    // checked and played as the page lays it out: the drivers' board as thick as the horn's Double setting makes it
+    const layout = hornBoardsLayout(
+      withDriverBoardPieces(plan, horn.doubleBoard ? 2 : 1),
+      room,
+      body,
+    );
+    if (!foldPasses(layout)) return null;
     // the air outside the passage is the rear chamber: Auto works it out from the boards (a tapped horn keeps the
     // small air behind its cones that the search set)
     const rearL = tapped
@@ -309,11 +315,27 @@ function withGoalBoards(
       { netLiters: rearL, face, setbackIn, fold: layout },
     );
     const fit = read.ok ? hornGoalFit(read.design, goals, power) : null;
-    if (!fit) continue;
-    const score = scoreOf(fit, goals);
-    if (!best || score < best.score) best = { chamber, fit, score };
+    if (!fit) return null;
+    const score = scoreOf(fit, goals) + foldNarrowingDb(layout);
+    return Number.isFinite(score) ? { plan, chamber, fit, score } : null;
+  };
+  let best: NonNullable<ReturnType<typeof tried>> | null = null;
+  for (const plan of zigzagTries(room, horn.drive.kind, body, bottom, horn.foldShape).flatMap(
+    (p) => (tapped ? withDriverSpots(p, room, body) : [p]),
+  )) {
+    const t = tried(plan);
+    if (t && (!best || t.score < best.score)) best = t;
   }
-  return best && { chamber: best.chamber, fit: best.fit };
+  if (!best) return null;
+  // then each corner and the drivers' spot moved while the score improves
+  const refined = refinedBoards(
+    best.plan,
+    best.score,
+    (plan) => tried(plan)?.score ?? null,
+    room.wallIn,
+  );
+  const final = refined.plan === best.plan ? best : (tried(refined.plan) ?? best);
+  return { chamber: final.chamber, fit: final.fit };
 }
 
 /**
@@ -389,10 +411,10 @@ export function hornGoalCheck(
     read?.ok && throat
       ? hornGoalFit(read.design, horn.goals ?? HORN_GOALS_DEFAULT, throat.parts.ts)
       : null;
-  // a folded horn's air is its boards' passage
-  const hornL =
-    (fold ? fold.layout.airLiters : flareLiters(horn)) +
-    (throat ? frontChamber(throat.cone, throat.count, setbackIn).liters : 0);
+  // a folded horn's air is its boards' passage, the air in front of the cones with it
+  const hornL = fold
+    ? fold.layout.airLiters
+    : flareLiters(horn) + (throat ? frontChamber(throat.cone, throat.count, setbackIn).liters : 0);
   const chamberL = chamberAirLiters(cabinet, chamber, placed).airLiters;
   // the path: the boards' when folded, else the sections'
   const pathIn = fold

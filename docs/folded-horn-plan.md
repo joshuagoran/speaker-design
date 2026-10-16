@@ -70,7 +70,8 @@ A design passes every check, or the page says which one fails and what to change
 
 - **Layouts.** Zigzag and spiral, named by shape. Each places its corners to fit the chamber and the drivers. A
   known design (TH18, SKRAM) is a start of its own, with its exact boards.
-- **Design from goals.** Moves the corners of the chosen layout to meet the goals. It keeps the checks.
+- **Design from goals.** Moves the corners of the chosen layout to meet the goals. It keeps the checks. A passage that
+  narrows along its legs scores worse. A corner that rests on a board stays on that board.
 - **Hornresp import.** A record has no boards. Import sets the goals from the record. The page shows how close the
   boards' sound comes to the record's.
 
