@@ -79,13 +79,6 @@ interface Props {
   setType: HornDrive["kind"];
 }
 
-/** The fold a folded horn starts from: no boards, no drivers, the mouth on the top quarter of the baffle. */
-export const startFold = (heightIn: number): HornFold => ({
-  boards: [],
-  drivers: null,
-  mouth: { wall: FOLD_WALL.baffle, fromIn: heightIn * 0.75, toIn: heightIn },
-});
-
 /** The walls a mouth runs up (baffle, back) rather than across (bottom, top). */
 const upright = (wall: FoldWall) => wall === FOLD_WALL.baffle || wall === FOLD_WALL.back;
 

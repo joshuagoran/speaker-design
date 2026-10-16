@@ -4,6 +4,7 @@
 import type {
   HornDrive,
   HornFold,
+  FoldTrace,
   HornSegment,
   SpeakerCabinet,
   SpeakerChamber,
@@ -13,7 +14,7 @@ import { foldTrace, type FoldDriverShape } from "./foldTrace";
 import type { TracedHornModel } from "./hornDesign";
 import { chamberClearFace, clearDepthIn } from "./chamberAir";
 import { coneShapeOf } from "./speakerBuild";
-import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, FOLD_WALL, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 
@@ -58,6 +59,37 @@ export function foldRoom(
     widthIn: face.w,
     boardIn: cabinet.panel.thicknessIn,
     driver: foldDriverShape(chamber.drivers),
+  };
+}
+
+/** The fold a folded horn starts from: no boards, no drivers, the mouth on the top quarter of the baffle. */
+export const startFold = (heightIn: number): HornFold => ({
+  boards: [],
+  drivers: null,
+  mouth: { wall: FOLD_WALL.baffle, fromIn: heightIn * 0.75, toIn: heightIn },
+});
+
+/** A chamber's folded horn as the views draw it: the fold, its drivers' rows, and the room it is drawn in. */
+export interface FoldDrawing {
+  /** the user's fold, or the default start (`startFold`) before one is drawn */
+  fold: HornFold;
+  /** the drivers' rows (`FoldTrace.parts`); empty before a fold is drawn */
+  parts: FoldTrace["parts"];
+  room: TraceRoom;
+}
+
+/** The chamber's folded horn as the views draw it; null when its horn is not folded. */
+export function foldDrawing(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+): FoldDrawing | null {
+  const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
+  if (!horn || horn.path !== HORN_PATH.folded) return null;
+  const room = foldRoom(cabinet, chamber);
+  return {
+    fold: horn.fold ?? startFold(room.heightIn),
+    parts: tracedHorn(cabinet, chamber)?.trace.parts ?? [],
+    room,
   };
 }
 
