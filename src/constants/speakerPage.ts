@@ -308,7 +308,7 @@ export const FOLD_CHECK_TEXT = {
     `The passage is only ${width} wide ${at} from the closed end.`,
   /** the drawing makes a different horn type than the Horn type setting */
   typeDiffers: (drawn: string, set: string) =>
-    `The drawing makes a ${drawn} horn. Horn type is set to ${set}.`,
+    `The drawing traces as ${drawn}. Horn type is set to ${set}.`,
 } as const;
 
 /** The Speaker page's results headings and chart labels. */

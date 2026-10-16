@@ -585,10 +585,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       ))}
       {trace.hornType && trace.hornType !== setType && (
         <Notice>
-          {FOLD_CHECK_TEXT.typeDiffers(
-            HORN_DRIVE_NAMES[trace.hornType].toLowerCase(),
-            HORN_DRIVE_NAMES[setType],
-          )}
+          {FOLD_CHECK_TEXT.typeDiffers(HORN_DRIVE_NAMES[trace.hornType], HORN_DRIVE_NAMES[setType])}
         </Notice>
       )}
     </div>
