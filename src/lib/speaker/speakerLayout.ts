@@ -1048,7 +1048,16 @@ function chamberFoldIn(
   const body = foldBodyOf(placed.chamber);
   const bottom = mouthAtBottom(horn, placed.dims.h);
   const chosen =
-    horn.boards ?? autoBoards(room, horn.segments, body, horn.drive.kind, bottom, horn.foldShape);
+    horn.boards ??
+    autoBoards(
+      room,
+      horn.segments,
+      body,
+      horn.drive.kind,
+      bottom,
+      horn.foldShape,
+      horn.doubleBoard ? 2 : 1,
+    );
   const plan = withDriverBoardPieces(chosen, horn.doubleBoard ? 2 : 1);
   const layout = hornBoardsLayout(plan, room, body);
   const grow = () => foldGrowNeeded(room, horn.drive.kind, body, bottom, horn.foldShape);
@@ -1208,6 +1217,7 @@ function autoBoards(
   kind: SpeakerHorn["drive"]["kind"],
   bottom: boolean,
   shape: FoldShape = FOLD_SHAPE.auto,
+  pieces: 1 | 2 = 1,
 ): HornBoards {
   const wantIn = segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
   const found = zigzagTries(room, kind, body, bottom, shape);
@@ -1215,7 +1225,8 @@ function autoBoards(
   const tries = found.length ? found : zigzagTries(room, HORN_DRIVE.front, body, bottom);
   // a layout that passes every check beats one that does not; then the path nearest the sections'
   const cost = (plan: HornBoards) => {
-    const layout = hornBoardsLayout(plan, room, body);
+    // checked with the drivers' board as thick as it is built
+    const layout = hornBoardsLayout(withDriverBoardPieces(plan, pieces), room, body);
     return (foldPasses(layout) ? 0 : FAILED_LAYOUT_IN) + Math.abs(layout.pathIn - wantIn);
   };
   // a cost that is not a number (sizes being typed) counts as the worst
