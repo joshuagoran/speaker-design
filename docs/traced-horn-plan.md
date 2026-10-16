@@ -71,7 +71,7 @@ The Horn type setting goes away for folded horns. The drawing sets it.
 
 | End meets      | Cut                                             |
 | -------------- | ----------------------------------------------- |
-| Another end    | Mitre on the line that halves the corner        |
+| Another end    | Miter on the line that halves the corner        |
 | A wall         | Square or bevel to the wall                     |
 | Another's edge | Butt: cut to that board's face, square or bevel |
 | Nothing        | Square                                          |
@@ -118,7 +118,7 @@ passage any more: the trace follows the air.
 | Design from goals  | Moves board ends and the drivers; scores the traced passage                                |
 | Side view          | As the mock: passage shaded along the path, closed end marked, linked to the path chart    |
 | Path chart         | Traced width along the path, the straight horn dashed, fixed axes                          |
-| 3D view            | Boards as now, with mitres and butts                                                       |
+| 3D view            | Boards as now, with miters and butts                                                       |
 | Cutlist            | From the joints (Cutlist section)                                                          |
 | Saved designs      | Boards from #190 convert: their ends, the drivers' spot, the mouth from the mouth wall     |
 
@@ -143,7 +143,7 @@ The mock breaks the UI rules on purpose. Each part becomes an existing pattern.
 | Path chart                            | A new chart in `components/charts`. Fixed axes in `chartScales.ts`, shared by every horn              |
 | Linked hover                          | The same, between `SpeakerSection` and the path chart                                                 |
 | Checks list                           | `Notice` items, as the other checks                                                                   |
-| Cutlist card                          | The Speaker cutlist page, with each end's cut (mitre, butt, bevel)                                    |
+| Cutlist card                          | The Speaker cutlist page, with each end's cut (miter, butt, bevel)                                    |
 | 3D view                               | `SpeakerView3D`, boards with their cuts                                                               |
 | Undo                                  | New: the editor's own undo. Ctrl+Z and Cmd+Z undo. The app has no undo pattern yet                    |
 
@@ -167,7 +167,7 @@ The owner does these on the page. I do them in the browser before every hand-ove
 5. Delete a board. Nothing breaks.
 6. Port the sealed chamber of an offset horn. The port stays in that chamber.
 7. Run Design from goals, then edit its boards by hand.
-8. Join two boards at a corner and one at an edge. The cutlist shows a mitre and a butt.
+8. Join two boards at a corner and one at an edge. The cutlist shows a miter and a butt.
 9. Hold one joint at 90°. Drag its boards. That joint stays square; the others do not.
 10. Point at the chart. The side view lights the right band.
 
