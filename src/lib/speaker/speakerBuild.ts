@@ -295,6 +295,15 @@ interface ConeBuild {
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp">;
 }
 
+/**
+ * A cone driver's cutout and motor diameters and its depth behind the board's front, in, as a folded horn's trace reads
+ * them (lib/speaker/foldHorn); null for another kind.
+ */
+export function coneShapeOf(driver: SpeakerDriver): (ConeBody & Pick<ConeBuild, "depthIn">) | null {
+  const c = coneBuild(driver);
+  return c && { ...c.body, depthIn: c.depthIn };
+}
+
 /** A cone driver's body (its catalog's, or the Hi-fi estimates where the catalog has none); null for another kind. */
 function coneBuild(driver: SpeakerDriver): ConeBuild | null {
   /** its depth behind the baffle's front: the catalog's, or the fallback for its kind and size */

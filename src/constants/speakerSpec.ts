@@ -213,6 +213,8 @@ export const HORN_ENGINE_GAP = {
   segment: "segment",
   /** a vent the engine doesn't take yet: side ducts or radiators */
   vent: "vent",
+  /** a drawn (folded) horn whose cones open into no passage to the mouth */
+  drawing: "drawing",
 } as const;
 
 /** The Fills model's walls: ½″ ply (lib/pa/calc `fillSystem` takes an inch off each outside size). */

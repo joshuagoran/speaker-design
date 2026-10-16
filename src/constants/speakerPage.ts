@@ -234,6 +234,10 @@ export const MODEL_GAP_TEXT = {
     why: "a horn with this vent is not calculated",
     fix: "Use a sealed chamber, round tubes or a slot.",
   },
+  drawing: {
+    why: "the drawn horn has no passage from the cones to the mouth",
+    fix: "Put the drivers on a board so that one side of the cones opens into the passage.",
+  },
 } as const satisfies Record<SpeakerModelGap, { why: string; fix: string }>;
 
 /** The Speaker page's results headings and chart labels. */

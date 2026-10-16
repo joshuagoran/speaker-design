@@ -5,9 +5,11 @@ import type {
   ChamberVent,
   Dims2,
   HornDesign,
+  HornDrive,
   HornDesignResult,
   HornEngineGap,
   HornPort,
+  HornSegment,
   SpeakerChamber,
 } from "../../types";
 import { frontChamber, throatCones } from "./hornThroat";
@@ -92,6 +94,19 @@ export interface HornDesignRoom {
   wallIn: number;
   /** how far the horn's driver board stands the cones behind the bay's end, in (`chamberSetbackIn`): front chamber air */
   setbackIn: number;
+  /**
+   * a drawn horn's traced passage (lib/speaker/foldHorn `tracedHorn`): its sections, its taps and the sealed air behind
+   * the cones, L. When given, these replace the horn's stored sections (its straight horn) and drive, the passage
+   * holds the cones' front air, and the sealed air is the rear chamber. A null drive: the cones open into no passage.
+   */
+  traced?: TracedHornModel;
+}
+
+/** What the sound model reads of a drawn horn's trace (lib/speaker/foldHorn). */
+export interface TracedHornModel {
+  segments: readonly HornSegment[];
+  drive: HornDrive | null;
+  rearLiters: number | null;
 }
 
 /**
@@ -111,7 +126,14 @@ export function hornDesignOf(
   at: Pick<HornDesign, "count" | "angle">,
   room: HornDesignRoom,
 ): HornDesignResult {
-  const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
+  const stored = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
+  const { traced } = room;
+  if (stored && traced && !traced.drive) return gap(HORN_ENGINE_GAP.drawing);
+  /** the horn as the engine reads it: a drawn horn's traced sections and drive, else the stored ones */
+  const horn =
+    stored && traced?.drive
+      ? { ...stored, segments: traced.segments, drive: traced.drive }
+      : stored;
   if (horn?.drive.kind === HORN_DRIVE.back) return gap(HORN_ENGINE_GAP.backLoaded);
   /**
    * the drivers on the throat: one driver's Thiele/Small parameters and how many share it (Hornresp's Nd; the engine
@@ -133,10 +155,11 @@ export function hornDesignOf(
     )
   )
     return gap(HORN_ENGINE_GAP.taps);
-  /** the air between the cones and the walls' back edges; a direct radiator has none */
-  const frontLiters = horn ? frontChamber(throat.cone, throat.count, room.setbackIn).liters : 0;
-  /** the chamber's air with its stuffing, as a direct chamber's */
-  const airLiters = stuffedLiters(chamber, room.netLiters);
+  /** the air between the cones and the walls' back edges; a direct radiator, or a drawn horn's passage, has none */
+  const frontLiters =
+    horn && !traced ? frontChamber(throat.cone, throat.count, room.setbackIn).liters : 0;
+  /** the chamber's air with its stuffing, as a direct chamber's; a drawn horn's sealed air behind the cones */
+  const airLiters = stuffedLiters(chamber, traced ? (traced.rearLiters ?? 0) : room.netLiters);
   const common = {
     driver: throat.parts.ts,
     drivers: throat.count,
