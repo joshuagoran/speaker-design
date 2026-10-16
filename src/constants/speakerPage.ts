@@ -430,7 +430,7 @@ export const SPEAKER_TEXT = {
   tubeEnds: "Tube ends",
   tubeEndsTip:
     "Flared: tubes with flared ends. They need a sub driver in this chamber. Plain: plain round tubes.",
-  tubeEndsNoSub: "Flared tubes need a sub driver in this chamber. Until then, the tubes are plain.",
+  tubeEndsNoSub: "Flared tubes need a cone driver in this chamber.",
   tubeLayout: "Tube position",
   elbows: "Elbows",
   elbowsTip:

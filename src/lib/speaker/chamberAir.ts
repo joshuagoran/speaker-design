@@ -22,7 +22,8 @@ import {
 import { rectangleEndCorrection } from "../acoustics/radiation";
 import { subTubeEndCorrection, type TubeDriver } from "../pa/tubes";
 import { elbowCountOf } from "../tubeFold";
-import { SUB_OPTIONS } from "../data";
+import { MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
+import { coneDepthIn } from "./driverParts";
 import { byId } from "../tables";
 import {
   CABINET_CONSTRUCTION,
@@ -104,11 +105,32 @@ export const clearDepthIn = (
 const PA_CORNER_TUBES = "round4" satisfies PortStyle;
 const PA_ROW_TUBES = "round2" satisfies PortStyle;
 
-/** The chamber's PA sub, as the tube rule reads it (its size and depth); null when its cone isn't a PA sub. */
-function tubeDriverOf(chamber: SpeakerChamber): TubeDriver | null {
-  const driver = chamber.drivers.find((d) => d.kind === DRIVER_KIND.sub);
-  return (driver && byId(SUB_OPTIONS, driver.driverId)) ?? null;
+/**
+ * The chamber's driver as the PA vents read it (their places round a 15″ or 18″ frame): a PA sub's size and depth, or
+ * any other cone as the nearer of those sizes, with its own depth. Null with no cone.
+ */
+export function tubeDriverOf(chamber: Pick<SpeakerChamber, "drivers">): TubeDriver | null {
+  const sub = chamber.drivers.find((d) => d.kind === DRIVER_KIND.sub);
+  const catalog = sub && byId(SUB_OPTIONS, sub.driverId);
+  if (catalog) return catalog;
+  for (const driver of chamber.drivers) {
+    const nominal =
+      driver.kind === DRIVER_KIND.woofer
+        ? hifiDriverById("woofer", driver.driverId)?.size
+        : driver.kind === DRIVER_KIND.mid
+          ? byId(MID_OPTIONS, driver.driverId)?.size
+          : undefined;
+    if (nominal !== undefined)
+      return {
+        size: nominal > TUBE_SIZE_SPLIT_IN ? 18 : 15,
+        depthIn: coneDepthIn(driver) ?? undefined,
+      };
+  }
+  return null;
 }
+
+/** A cone's size above which the PA vents lay out round an 18″ frame, below it a 15″'s, in. */
+const TUBE_SIZE_SPLIT_IN = 16.5;
 
 /** The parts of a cabinet the air and vent rules read. */
 type CabinetAir = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
