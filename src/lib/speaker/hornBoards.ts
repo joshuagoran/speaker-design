@@ -16,6 +16,7 @@ import {
   FOLD_CONE_MARGIN_IN,
   FOLD_CUTOUT_MARGIN_IN,
   FOLD_FACE,
+  FOLD_MAGNET_CLEARANCE_IN,
   FOLD_MIN_PASSAGE_IN,
   FOLD_TOUCH_IN,
   FOLD_WALL,
@@ -589,6 +590,12 @@ function checksOf(
   const drivers = plan.drivers;
   let driverChecks: FoldChecks["drivers"] = null;
   if (drivers && body && driverBody) {
+    // the room the motor needs: its body, deeper and wider by the clearance the air behind the cone flows through
+    const keepOut = driverOutline(plan, room, {
+      ...body,
+      depthIn: body.depthIn + FOLD_MAGNET_CLEARANCE_IN,
+      motorIn: body.motorIn + 2 * FOLD_MAGNET_CLEARANCE_IN,
+    });
     const board = plan.boards[drivers.board];
     const lengthIn = dist(plan.corners[board.a], plan.corners[board.b]);
     const need = body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN;
@@ -607,8 +614,9 @@ function checksOf(
       facesPassage: taps?.front != null,
       cutoutFits: drivers.alongIn >= need && drivers.alongIn <= lengthIn - need,
       magnetClear:
-        driverBody.every(inRoom) &&
-        outlines.every((o, i) => i === drivers.board || !overlaps(o, driverBody)),
+        keepOut !== null &&
+        keepOut.every(inRoom) &&
+        outlines.every((o, i) => i === drivers.board || !overlaps(o, keepOut)),
       coneRoom: room0 >= body.xmaxIn + FOLD_CONE_MARGIN_IN,
     };
   }

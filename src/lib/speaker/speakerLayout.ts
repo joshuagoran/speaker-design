@@ -70,7 +70,7 @@ import {
   type FoldRoom,
 } from "./hornBoards";
 import { zigzagBoards } from "./foldLayouts";
-import { FOLD_AUTO_MAX_LEGS } from "../../constants/hornBoards";
+import { FOLD_AUTO_MAX_LEGS, FOLD_AUTO_TURN_SHARES } from "../../constants/hornBoards";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { hornPath, type HornPath } from "./hornGeometry";
@@ -866,7 +866,8 @@ function chamberFoldIn(
 const FAILED_LAYOUT_IN = 1e6;
 
 /**
- * The zigzag that passes every check, if one does, whose path comes nearest the sections' length (the even leg counts up to `FOLD_AUTO_MAX_LEGS`): a tapped
+ * The zigzag (each even leg count, each turn width) that passes every check, if one does, whose path comes nearest the
+ * sections' length (the even leg counts up to `FOLD_AUTO_MAX_LEGS`): a tapped
  * horn's with its drivers on the first board, another's with its throat at the closed end.
  */
 function autoBoards(
@@ -877,14 +878,15 @@ function autoBoards(
 ): HornBoards {
   const wantIn = segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
   const tries = Array.from({ length: FOLD_AUTO_MAX_LEGS / 2 }, (_, i) =>
-    zigzagBoards(room, 2 * (i + 1), tapped),
-  );
+    FOLD_AUTO_TURN_SHARES.map((share) => zigzagBoards(room, 2 * (i + 1), tapped, share)),
+  ).flat();
   // a layout that passes every check beats one that does not; then the path nearest the sections'
   const cost = (plan: HornBoards) => {
     const layout = hornBoardsLayout(plan, room, body);
     return (foldPasses(layout) ? 0 : FAILED_LAYOUT_IN) + Math.abs(layout.pathIn - wantIn);
   };
-  return tries.reduce((best, plan) => (cost(plan) < cost(best) ? plan : best));
+  const costs = tries.map(cost);
+  return tries[costs.indexOf(Math.min(...costs))];
 }
 
 /** A folded horn chamber's boards worked out (`ChamberFold`), found in the cabinet; null for any other chamber. */

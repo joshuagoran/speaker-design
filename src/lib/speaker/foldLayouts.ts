@@ -6,8 +6,8 @@ import { FOLD_FACE, FOLD_WALL } from "../../constants/hornBoards";
 
 /**
  * A zigzag: `legs` legs (an even number, at least 2) stacked up the chamber, each as high as the others, joined by
- * turns at the back and the front. Boards run from the baffle and the back wall in turn, each stopping a leg's height
- * short of the far wall, so each turn is as wide as a leg. The closed end is on the baffle at the bottom; the mouth is
+ * turns at the back and the front. Boards run from the baffle and the back wall in turn, each stopping `turnShare` of a
+ * leg's height short of the far wall (1: each turn as wide as a leg; less leaves longer boards and narrower turns). The closed end is on the baffle at the bottom; the mouth is
  * on the baffle at the top. The drivers sit on the first board, midway along it, the cone fronts down into the first
  * leg (a tapped horn's taps: the fronts near the closed end, the backs into the second leg). Without drivers
  * (`withDrivers` false) the throat is the closed end: a front-loaded horn.
@@ -16,11 +16,14 @@ export function zigzagBoards(
   room: Pick<FoldRoom, "depthIn" | "heightIn" | "wallIn">,
   legs: number,
   withDrivers = true,
+  turnShare = 1,
 ): HornBoards {
   const n = Math.max(2, legs - (legs % 2));
   const { depthIn: d, heightIn: h, wallIn: t } = room;
   /** each leg's height, in */
   const legH = (h - (n - 1) * t) / n;
+  /** each turn's width, in: a leg's height, or a share of it (a narrower turn leaves longer boards) */
+  const turnIn = legH * turnShare;
   const corners: FoldCorner[] = [];
   const boards: HornBoards["boards"] = [];
   for (let i = 0; i < n - 1; i++) {
@@ -29,7 +32,7 @@ export function zigzagBoards(
     const fromBaffle = i % 2 === 0;
     corners.push(
       { z: fromBaffle ? 0 : d, y, wall: fromBaffle ? FOLD_WALL.baffle : FOLD_WALL.back },
-      { z: fromBaffle ? d - legH : legH, y, wall: null },
+      { z: fromBaffle ? d - turnIn : turnIn, y, wall: null },
     );
     // a→b runs back from the baffle (its left is up) or forward from the back (its right is up): the thickness up
     boards.push({ a: 2 * i, b: 2 * i + 1, side: fromBaffle ? 1 : -1 });
@@ -52,6 +55,6 @@ export function zigzagBoards(
     closed: { wall: FOLD_WALL.baffle },
     legs: legList,
     mouth: FOLD_WALL.baffle,
-    drivers: withDrivers ? { board: 0, alongIn: (d - legH) / 2, coneFace: FOLD_FACE.line } : null,
+    drivers: withDrivers ? { board: 0, alongIn: (d - turnIn) / 2, coneFace: FOLD_FACE.line } : null,
   };
 }

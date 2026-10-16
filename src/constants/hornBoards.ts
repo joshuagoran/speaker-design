@@ -21,6 +21,12 @@ export const FOLD_MIN_PASSAGE_IN = 1.5;
 /** How far a board runs past the drivers' cutout on each side, at least, in. */
 export const FOLD_CUTOUT_MARGIN_IN = 0.5;
 
+/**
+ * The room the drivers' motor needs past its back and sides, in: the air behind the cone flows round it into the
+ * passage. Nothing may come closer.
+ */
+export const FOLD_MAGNET_CLEARANCE_IN = 1;
+
 /** The room the cone side needs past the cone's excursion, in. */
 export const FOLD_CONE_MARGIN_IN = 0.5;
 
@@ -29,3 +35,6 @@ export const FOLD_TOUCH_IN = 0.01;
 
 /** The most legs the automatic zigzag tries when a folded horn has no boards of its own. */
 export const FOLD_AUTO_MAX_LEGS = 10;
+
+/** The turn widths the automatic zigzag tries, as shares of a leg's height: narrower turns leave longer boards. */
+export const FOLD_AUTO_TURN_SHARES = [1, 0.75, 0.5] as const;

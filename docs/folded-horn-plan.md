@@ -58,7 +58,7 @@ A design passes every check, or the page says which one fails and what to change
 | No crossing          | No two boards touch, except at a shared corner.                |
 | Passage height       | Every passage is at least 1.5 in high.                         |
 | Cutout on the board  | The board runs at least 1/2 in past the cutout on each side.   |
-| Magnet room          | The basket and magnet touch no board or wall.                  |
+| Magnet room          | The basket and magnet stay 1 in clear of every board and wall. |
 | Cone room            | The cone side has room for the cone's depth and its excursion. |
 | Straight path checks | Off for folded paths.                                          |
 
