@@ -15,7 +15,13 @@ import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { frontChamber, throatCones, wallClearanceIn } from "../../lib/speaker/hornThroat";
 import { hornDesignOf } from "../../lib/speaker/hornDesign";
-import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
+import {
+  HORN_GOALS_DEFAULT,
+  REAR_PORT_COUNTS,
+  REAR_PORT_DIAS_IN,
+  REAR_PORT_MIN_AREA_SHARE,
+  REAR_PORT_TUNE_SHARES,
+} from "../../constants/hornGoals";
 import { withDriveKind } from "./hornSections";
 import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
 import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
@@ -26,12 +32,14 @@ import {
   type DriverPower,
   type GoalDrive,
 } from "../../lib/speaker/hornGoals";
-import { DEFAULT_VENTS } from "./speakerParts";
+import { DEFAULT_PORTS, DEFAULT_VENTS } from "./speakerParts";
 import {
   chamberFold,
   foldGrowNeeded,
   foldRoomOf,
   grownChamber,
+  rearVentFits,
+  speakerLayout,
   withDriverBoardPieces,
   zigzagTries,
   type FoldGrow,
@@ -48,10 +56,23 @@ import { isFolded, mouthAtBottom } from "../../lib/speaker/foldLayouts";
 import { foldNarrowingDb, refinedBoards } from "../../lib/speaker/foldRefine";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
-import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
+import {
+  CHAMBER_LOAD,
+  HORN_DRIVE,
+  HORN_PATH,
+  PORT_SHAPE,
+  VENT_KIND,
+} from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { segmentsAirLiters } from "../../lib/acoustics/hornSegments";
-import { CM_PER_IN, CM2_PER_IN2, LITERS_PER_CUBIC_IN } from "../../constants/units";
+import {
+  CM_PER_IN,
+  CM2_PER_IN2,
+  LITERS_PER_CUBIC_IN,
+  METERS_PER_INCH,
+} from "../../constants/units";
+import { effectiveLengthFor } from "../../lib/pa/exactSub";
+import { hifiRoundEndCorrection } from "../../lib/hifi/hifi";
 import { shownTenth } from "./speakerFields";
 
 /** The shortest path a starting horn takes, in: where the cones fill the chamber's depth. */
@@ -290,8 +311,11 @@ function withGoalBoards(
   const face = chamberClearFace(cabinet, designed);
   const tapped = horn.drive.kind === HORN_DRIVE.tapped;
   const bottom = mouthAtBottom(horn, designed.dims.h);
-  /** the chamber with these boards, how it meets the goals, and its score with the passage's narrowing; null: fails */
-  const tried = (plan: HornBoards) => {
+  /**
+   * the chamber with these boards (and `vent`), how it meets the goals, and its score with the passage's narrowing;
+   * null: fails
+   */
+  const tried = (plan: HornBoards, vent: ChamberVent = designed.vent) => {
     // checked and played as the page lays it out: the drivers' board as thick as the horn's Double setting makes it
     const layout = hornBoardsLayout(
       withDriverBoardPieces(plan, horn.doubleBoard ? 2 : 1),
@@ -303,9 +327,10 @@ function withGoalBoards(
     // small air behind its cones that the search set)
     const rearL = tapped
       ? (designed.netLiters ?? MIN_NET_L)
-      : Math.max(MIN_NET_L, foldRestLiters(layout, room) - displacementLiters);
+      : Math.max(MIN_NET_L, foldRestLiters(layout, room) - displacementLiters - ventLiters(vent));
     const chamber: SpeakerChamber = {
       ...designed,
+      vent,
       load: { kind: CHAMBER_LOAD.horn, horn: { ...horn, boards: plan } },
       netLiters: tapped ? designed.netLiters : null,
     };
@@ -335,7 +360,78 @@ function withGoalBoards(
     room.wallIn,
   );
   const final = refined.plan === best.plan ? best : (tried(refined.plan) ?? best);
-  return { chamber: final.chamber, fit: final.fit };
+  if (tapped) return { chamber: final.chamber, fit: final.fit };
+  // a front-loaded or offset horn's rear chamber: sealed, or round tubes that fit it, whichever meets the goals best
+  const layout = hornBoardsLayout(final.plan, room, body);
+  const rearL = Math.max(MIN_NET_L, foldRestLiters(layout, room) - displacementLiters);
+  const conesCm2 = (throatCones(designed.drivers)?.parts.ts.Sd ?? 0) * (body?.count ?? 1);
+  const fits = (vent: ChamberVent, chamber: SpeakerChamber) => {
+    if (vent.kind === VENT_KIND.sealed) return true;
+    const laid = {
+      ...cabinet,
+      chambers: cabinet.chambers.map((c) => (samePlace(c, designed) ? chamber : c)),
+    };
+    const placed = speakerLayout(laid).chambers.find((c) => c.chamber === chamber);
+    return placed !== undefined && rearVentFits(cabinet, placed);
+  };
+  // the chamber's own vent where it fits, else the best that does
+  let pick: { chamber: SpeakerChamber; fit: HornGoalFit; score: number } | null = fits(
+    designed.vent,
+    final.chamber,
+  )
+    ? final
+    : null;
+  for (const vent of rearVents(rearL, conesCm2, goals, room.depthIn)) {
+    const t = tried(final.plan, vent);
+    if (t && (!pick || t.score < pick.score) && fits(vent, t.chamber)) pick = t;
+  }
+  return pick && { chamber: pick.chamber, fit: pick.fit };
+}
+
+/** Whether two chambers stand at one place in the cabinet (an edited copy and the chamber it replaces). */
+const samePlace = (a: Pick<SpeakerChamber, "at">, b: Pick<SpeakerChamber, "at">) =>
+  a.at.xIn === b.at.xIn && a.at.yIn === b.at.yIn;
+
+/** A vent's own air, L: what its tubes or slots take from the rear chamber (a slot as its opening's height across the box at its length is left out). */
+function ventLiters(vent: ChamberVent): number {
+  if (vent.kind !== VENT_KIND.vented || vent.port.shape !== PORT_SHAPE.round) return 0;
+  const { n, dia, len } = vent.port;
+  return n * Math.PI * (dia / 2) ** 2 * len * LITERS_PER_CUBIC_IN;
+}
+
+/**
+ * The vents Design from goals tries on a folded horn's rear chamber of `rearL`: sealed, then round tubes of each count
+ * and size with at least `REAR_PORT_MIN_AREA_SHARE` of the cones' area (`conesCm2`), each tuned to each share of the
+ * goals' lowest frequency (its length less its ends' correction, the tubes' own air taken from the chamber), as long as
+ * it fits the clear depth (`depthIn`) with its own diameter to spare.
+ */
+function rearVents(
+  rearL: number,
+  conesCm2: number,
+  goals: HornGoals,
+  depthIn: number,
+): ChamberVent[] {
+  const least = (REAR_PORT_MIN_AREA_SHARE * conesCm2) / CM2_PER_IN2;
+  const ported = REAR_PORT_COUNTS.flatMap((n) =>
+    REAR_PORT_DIAS_IN.flatMap((dia) => {
+      const area = n * Math.PI * (dia / 2) ** 2;
+      if (area < least) return [];
+      return REAR_PORT_TUNE_SHARES.flatMap((share): ChamberVent[] => {
+        const lenFor = (airL: number) =>
+          effectiveLengthFor(area, airL, share * goals.lowHz) / METERS_PER_INCH -
+          hifiRoundEndCorrection({ dia }, 0);
+        const first = lenFor(rearL);
+        // the tubes' own air comes out of the chamber: once more with what is left
+        const len = lenFor(
+          Math.max(MIN_NET_L, rearL - n * Math.PI * (dia / 2) ** 2 * first * LITERS_PER_CUBIC_IN),
+        );
+        if (!(len >= 1) || len + dia > depthIn) return [];
+        const port = { ...DEFAULT_PORTS.round, n, dia, len: Math.round(len * 2) / 2 };
+        return [{ ...DEFAULT_VENTS.vented, port }];
+      });
+    }),
+  );
+  return [DEFAULT_VENTS.sealed, ...ported];
 }
 
 /**

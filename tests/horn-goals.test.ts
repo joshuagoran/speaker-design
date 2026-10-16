@@ -21,7 +21,8 @@ import { hornFromRecord } from "../src/pages/speaker/hornrespImport";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { hornGoalFit } from "../src/lib/speaker/hornGoals";
 import { speakerResponse, SPEAKER_RESPONSE_FREQUENCIES } from "../src/lib/speaker/speakerResponse";
-import { speakerLayout } from "../src/lib/speaker/speakerLayout";
+import { rearVentFits, speakerLayout } from "../src/lib/speaker/speakerLayout";
+import { DEFAULT_VENTS } from "../src/pages/speaker/speakerParts";
 import { frontChamber, throatCones } from "../src/lib/speaker/hornThroat";
 import { hornLayoutNetwork, presetModel } from "../src/lib/acoustics/network/presets";
 import { segmentsAirLiters } from "../src/lib/acoustics/hornSegments";
@@ -32,7 +33,9 @@ import {
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   SPEAKER_RESPONSE_VOLTS,
+  HORN_PATH,
   PORT_SHAPE,
+  SLOT_PLACE,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
 import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
@@ -252,10 +255,14 @@ test("horn goals: a tapped horn sized for 40–100 Hz plays flat in the box and 
   );
 });
 
-test("horn goals: a front-loaded horn keeps its vent and shares the air with its rear chamber", () => {
+test("horn goals: a front-loaded horn keeps a vent that fits and shares the air with its rear chamber", () => {
   const found = withGoalHorn(BIN_SPEC.cabinet, BIN, PLACED, HORN_DRIVE.front, HORN_GOALS_DEFAULT);
   assert.ok(found);
-  assert.equal(found.chamber.vent, BIN.vent);
+  // a straight horn keeps its vent; a folded one takes one that fits the rear chamber under its boards
+  if (hornOf(found.chamber).boards) {
+    const cabinet = { ...BIN_SPEC.cabinet, chambers: [found.chamber] };
+    assert.ok(rearVentFits(cabinet, speakerLayout(cabinet).chambers[0]));
+  } else assert.equal(found.chamber.vent, BIN.vent);
   assert.equal(hornOf(found.chamber).segments.length, 1);
   // a straight horn sets its rear chamber's air; a folded one leaves it on Auto, the air outside its boards
   const horn = hornOf(found.chamber);
@@ -354,4 +361,45 @@ test("horn rear chamber: a slot's fins take their thickness off its open area", 
   };
   const wallIn = 0.75;
   assert.ok(Math.abs(areaOf(0) - areaOf(2) - 2 * 3 * wallIn * CM2_PER_IN2) < 1e-6);
+});
+
+test("folded rear chamber: Design from goals ports it where tubes fit, and the vent stays inside it", () => {
+  for (const drive of [HORN_DRIVE.front, HORN_DRIVE.offset])
+    for (const bottom of [false, true]) {
+      let chamber = withHornDrive(BIN, drive);
+      assert.ok(chamber.load.kind === CHAMBER_LOAD.horn);
+      const horn = withFoldMouth(
+        { ...chamber.load.horn, path: HORN_PATH.folded },
+        bottom,
+        chamber.dims.h,
+        chamber.dims.h - 1.5,
+      );
+      chamber = { ...chamber, load: { ...chamber.load, horn } };
+      const cabinet = { ...BIN_SPEC.cabinet, chambers: [chamber] };
+      const found = withGoalHorn(
+        cabinet,
+        chamber,
+        speakerLayout(cabinet).chambers[0],
+        drive,
+        HORN_GOALS_DEFAULT,
+      );
+      assert.ok(found, `${drive} ${bottom}`);
+      const placed = speakerLayout({ ...cabinet, chambers: [found.chamber] }).chambers[0];
+      assert.ok(rearVentFits(cabinet, placed), `${drive} ${bottom}: the vent fits`);
+      assert.equal(
+        found.chamber.vent.kind,
+        VENT_KIND.vented,
+        `${drive} ${bottom}: ported plays flatter`,
+      );
+      // a vent that cannot fit the rear chamber: slots up the sides
+      const sides = {
+        ...found.chamber,
+        vent: {
+          ...DEFAULT_VENTS.vented,
+          port: { shape: PORT_SHAPE.slot, n: 1, h: 2, len: 10, place: SLOT_PLACE.sides },
+        },
+      };
+      const placedSides = speakerLayout({ ...cabinet, chambers: [sides] }).chambers[0];
+      assert.equal(rearVentFits(cabinet, placedSides), false);
+    }
 });

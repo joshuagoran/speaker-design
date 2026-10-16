@@ -103,6 +103,7 @@ import {
   defaultHornPlacement,
   driversOnBaffle,
   foldRoomOf,
+  foldsRearChamber,
   hornFits,
   onTop,
   type PlacedChamber,
@@ -168,6 +169,9 @@ export function ChamberSettings({
   /** a tapped horn: its cones open into the horn both sides, so its own air is only the space sealed behind them */
   /** a folded horn's mouth is where its last leg meets the baffle: at the top or the bottom */
   const foldedHorn = chamber.load.kind === CHAMBER_LOAD.horn && isFolded(chamber.load.horn);
+  /** a folded front-loaded or offset horn: its vent opens from the rear chamber under its boards */
+  const rearChamber =
+    chamber.load.kind === CHAMBER_LOAD.horn && foldsRearChamber(chamber.load.horn);
   const tappedHorn =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
   const vents = placed ? ventPlace(cabinet, placed) : null;
@@ -406,7 +410,9 @@ export function ChamberSettings({
         disabled={
           tapped
             ? { values: [VENT_KIND.vented, VENT_KIND.radiator], why: SPEAKER_TEXT.ventTapped }
-            : undefined
+            : rearChamber
+              ? { values: [VENT_KIND.radiator], why: SPEAKER_TEXT.ventRearChamber }
+              : undefined
         }
       />
       {vent.kind === VENT_KIND.vented && (
@@ -420,11 +426,17 @@ export function ChamberSettings({
               )
             }
             options={entriesOf(PORT_SHAPE_NAMES)}
+            disabled={
+              rearChamber
+                ? { values: [PORT_SHAPE.duct], why: SPEAKER_TEXT.ventRearChamber }
+                : undefined
+            }
           />
           <PortFields
             port={vent.port}
             walls={cabinet.panel}
             chamber={chamber}
+            rearChamber={rearChamber}
             clearW={placed?.clear.w ?? chamber.dims.w - 2 * cabinet.panel.thicknessIn}
             onChange={setPort}
           />
@@ -550,9 +562,12 @@ export function PortFields({
   walls,
   chamber,
   clearW,
+  rearChamber = false,
   onChange,
 }: {
   port: SpeakerPort;
+  /** the port opens from a folded horn's rear chamber: a slot stays on the floor and runs straight */
+  rearChamber?: boolean;
   /** the walls: side-duct dividers of their size take their thickness, and a letterbox's fins */
   walls: Pick<SpeakerPanel, "nominal" | "thicknessIn">;
   /** the chamber: its size folds a letterbox, its drivers take flared tubes */
@@ -568,6 +583,7 @@ export function PortFields({
         t={walls.thicknessIn}
         chamber={chamber}
         clearW={clearW}
+        rearChamber={rearChamber}
         onChange={onChange}
       />
     );
@@ -631,12 +647,15 @@ function SlotFields({
   t,
   chamber,
   clearW,
+  rearChamber,
   onChange,
 }: {
   port: SpeakerSlotPort;
   t: SpeakerPanel["thicknessIn"];
   chamber: Pick<SpeakerChamber, "dims">;
   clearW: number;
+  /** a folded horn's rear chamber: the slot stays on the floor and runs straight */
+  rearChamber: boolean;
   onChange: (p: SpeakerPort) => void;
 }) {
   const letterbox = port.fins !== undefined;
@@ -710,6 +729,11 @@ function SlotFields({
         value={port.place ?? SLOT_PLACE.floor}
         onChange={(place) => onChange(withSlotPlace(port, place))}
         options={entriesOf(SLOT_PLACE_NAMES)}
+        disabled={
+          rearChamber
+            ? { values: [SLOT_PLACE.sides], why: SPEAKER_TEXT.ventRearChamber }
+            : undefined
+        }
       />
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.slotFoldTip}>{SPEAKER_TEXT.slotFold}</Tooltip>}
@@ -722,6 +746,7 @@ function SlotFields({
           [false, SLOT_FOLD_NAMES.straight],
           [true, SLOT_FOLD_NAMES.folded],
         ]}
+        disabled={rearChamber ? { values: [true], why: SPEAKER_TEXT.ventRearChamber } : undefined}
       />
     </>
   );

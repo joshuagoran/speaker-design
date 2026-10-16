@@ -81,6 +81,8 @@ import {
 } from "./foldLayouts";
 import {
   FOLD_AUTO_GROWTHS,
+  FOLD_FACE,
+  FOLD_WALL,
   FOLD_AUTO_MAX_LEGS,
   FOLD_AUTO_TURN_SHARES,
   FOLD_GROW_MAX,
@@ -148,6 +150,11 @@ export interface PlacedChamber {
    * out of it where the spec sets a place the layout does not keep (a horn on the top)
    */
   spots: Map<SpeakerDriver, FacePoint[]>;
+  /**
+   * where its vent may open on the baffle, when that is less than its clear face: a folded front-loaded or offset
+   * horn's rear chamber (`foldVentFace`). Absent: the clear face
+   */
+  ventClear?: FaceRect;
 }
 
 /** A cabinet's chambers placed, and the walls they share. */
@@ -256,6 +263,11 @@ export function speakerLayout(cabinet: LayoutCabinet): SpeakerLayout {
   });
   // the drivers' places, once every chamber's face and walls are known (a horn's path reads them)
   for (const placed of chambers) placed.spots = placeDrivers(cabinet, placed);
+  // a folded horn's vent opens from its rear chamber
+  for (const placed of chambers) {
+    const vent = foldVentFace(cabinet, placed);
+    if (vent) placed.ventClear = vent;
+  }
   const area = list.reduce((sum, c) => sum + c.dims.w * c.dims.h, 0);
   const disjoint = boxes.every((a, i) =>
     boxes
@@ -276,6 +288,112 @@ export function speakerLayout(cabinet: LayoutCabinet): SpeakerLayout {
     chambers,
     partitions: chambers.flatMap((c) => c.walls.filter((w) => w.shared)),
   };
+}
+
+/**
+ * A folded horn's rear chamber, as heights up from its side section's bottom, in: the side of its drivers' board their
+ * motors stand in, where that board runs from the baffle to the back wall (the front-loaded and offset layouts). Null
+ * for boards of any other shape.
+ */
+export function foldRearBand(fold: Pick<ChamberFold, "plan" | "layout" | "room">): {
+  y0In: number;
+  y1In: number;
+} | null {
+  const drivers = fold.plan.drivers;
+  if (!drivers) return null;
+  const board = fold.plan.boards[drivers.board];
+  const walls = [fold.plan.corners[board.a].wall, fold.plan.corners[board.b].wall];
+  if (!walls.includes(FOLD_WALL.baffle) || !walls.includes(FOLD_WALL.back)) return null;
+  const outline = fold.layout.outlines[drivers.board];
+  if (!outline) return null;
+  // the outline runs along the line face, then back along the offset face
+  const lineY = outline[0].y,
+    offsetY = outline[3].y;
+  const offsetUp = offsetY > lineY;
+  // the motors stand past the face the cones do not face
+  const motorFaceY = drivers.coneFace === FOLD_FACE.offset ? lineY : offsetY;
+  const motorsUp = drivers.coneFace === FOLD_FACE.offset ? !offsetUp : offsetUp;
+  return motorsUp ? { y0In: motorFaceY, y1In: fold.room.heightIn } : { y0In: 0, y1In: motorFaceY };
+}
+
+/** Whether a horn is folded over a rear chamber: a folded front-loaded or offset horn. */
+export const foldsRearChamber = (horn: Pick<SpeakerHorn, "path" | "drive">) =>
+  isFolded(horn) && (horn.drive.kind === HORN_DRIVE.front || horn.drive.kind === HORN_DRIVE.offset);
+
+/**
+ * Where a vented folded front-loaded or offset horn's vent may open on the baffle: its rear chamber's band across the
+ * clear face (`foldRearBand`). Null for any other chamber.
+ */
+function foldVentFace(cabinet: LayoutCabinet, placed: PlacedChamber): FaceRect | null {
+  const { chamber } = placed;
+  if (chamber.vent.kind !== VENT_KIND.vented || chamber.load.kind !== CHAMBER_LOAD.horn)
+    return null;
+  const horn = chamber.load.horn;
+  if (!foldsRearChamber(horn)) return null;
+  if (!horn.segments.length || !horn.segments.every(isSizedSegment)) return null;
+  const face = hornFace(placed, cabinet.panel.thicknessIn);
+  const band = foldRearBand(chamberFoldIn(cabinet, placed, horn, face));
+  return band && { ...face, y: face.y + band.y0In, h: Math.max(0, band.y1In - band.y0In) };
+}
+
+/**
+ * Whether a folded front-loaded or offset horn's vent fits its rear chamber (`PlacedChamber.ventClear`): round tubes
+ * on the baffle inside the chamber's band, each its own diameter short of the back wall, or of the drivers' motors
+ * level with it (room at its inner end); a slot along the floor under a rear chamber at the bottom, its openings stacked inside the band and as long as
+ * the clear depth less its height. Side slots, ducts and radiators never fit. True for any other chamber.
+ */
+export function rearVentFits(
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  placed: PlacedChamber,
+): boolean {
+  const { vent, load } = placed.chamber;
+  if (load.kind !== CHAMBER_LOAD.horn || !foldsRearChamber(load.horn)) return true;
+  // radiators have no place on a folded horn's rear chamber
+  if (vent.kind === VENT_KIND.radiator) return false;
+  if (vent.kind !== VENT_KIND.vented) return true;
+  const band = placed.ventClear;
+  if (!band) return false;
+  const t = cabinet.panel.thicknessIn;
+  const depthIn = clearDepthIn(cabinet, placed.dims);
+  const { port } = vent;
+  const bottom = band.y - placed.y0,
+    top = bottom + band.h;
+  switch (port.shape) {
+    case PORT_SHAPE.duct:
+      return false;
+    case PORT_SHAPE.slot: {
+      if (port.place === SLOT_PLACE.sides) return false;
+      const openings = slotOpeningsAt(placed, port, t);
+      const atFloor = Math.abs(band.y - placed.clear.y) < TOUCH_IN;
+      return (
+        atFloor &&
+        openings.every((o) => o.y + o.h + t <= top + TOUCH_IN) &&
+        port.len + port.h <= depthIn
+      );
+    }
+    default: {
+      const { spots } = roundPortsAt(placed, port);
+      // each tube's inner end a diameter short of the back wall, or of the drivers' motors level with it
+      const fold = hornFlare(cabinet, placed)?.fold;
+      /** the drivers' parts, up from the chamber's bottom */
+      const bodies = (fold?.layout.driverBodies ?? []).map((b) =>
+        b.map((p) => ({ z: p.z, y: p.y + (fold?.y0In ?? 0) - placed.y0 })),
+      );
+      const motorZ = (s: RoundSpot) =>
+        Math.min(
+          depthIn,
+          ...bodies
+            .filter((b) => b.some((p) => p.y >= s.y - s.r) && b.some((p) => p.y <= s.y + s.r))
+            .flatMap((b) => b.map((p) => p.z)),
+        );
+      return spots.every(
+        (s) =>
+          s.y - s.r >= bottom - TOUCH_IN &&
+          s.y + s.r <= top + TOUCH_IN &&
+          port.len + port.dia <= motorZ(s),
+      );
+    }
+  }
 }
 
 /** A driver entry's horn from the catalog (a PA horn or a Hi-fi waveguide); null for none or a stale id. */
@@ -620,11 +738,11 @@ function intoFace<S extends { x: number; y: number }>(
 }
 
 /** The chamber's clear face in its own coordinates: from its center line across and its bottom up. */
-const localClear = ({ clear, cx, y0 }: PlacedChamber): FaceRect => ({
-  ...clear,
-  x: clear.x - cx,
-  y: clear.y - y0,
-});
+/** Where the chamber's vent may open (`PlacedChamber.ventClear`, else its clear face), in its own coordinates. */
+const localClear = ({ clear, ventClear, cx, y0 }: PlacedChamber): FaceRect => {
+  const face = ventClear ?? clear;
+  return { ...face, x: face.x - cx, y: face.y - y0 };
+};
 
 /**
  * A vent's spots placed at `position`: the rule's spots moved together so that their center is at it, then into the
@@ -665,7 +783,17 @@ export function roundPortsAt(
   port: Pick<SpeakerRoundPort, "n" | "dia" | "position">,
 ): PlacedRoundPorts {
   const spots = roundPortSpots(port);
-  if (!port.position) return { panel: PANEL.baffle, spots, moved: false };
+  if (!port.position) {
+    // the rule's spots on the floor, kept inside a folded horn's rear chamber: mirrored to its top where it is at the
+    // top (away from the drivers' board and its motors)
+    if (!placed.ventClear) return { panel: PANEL.baffle, spots, moved: false };
+    const face = localClear(placed);
+    const floor = placed.clear.y - placed.y0;
+    const atTop = placed.ventClear.y - placed.clear.y > TOUCH_IN;
+    const ruled = atTop ? spots.map((s) => ({ ...s, y: face.y + face.h - (s.y - floor) })) : spots;
+    const kept = intoFace(ruled, (s) => ({ w: s.r, h: s.r }), face);
+    return { panel: PANEL.baffle, spots: kept.spots, moved: false };
+  }
   const cut = (s: RoundSpot) => {
     const r = s.r + HIFI_BOX_LAYOUT.portTubeWallIn;
     return { w: r, h: r };

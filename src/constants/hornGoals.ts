@@ -54,5 +54,15 @@ export const SEARCH_REFINE_ROUNDS = 5;
 /** A level at the low goal this far under the band's mean, dB, counts as flat: the usual −3 dB corner. */
 export const LOW_EDGE_DB = 3;
 
+/**
+ * The round tubes Design from goals tries on a folded front-loaded or offset horn's rear chamber: each count, each
+ * size, in, with at least `REAR_PORT_MIN_AREA_SHARE` of the cones' area (so the air in them stays slow enough), tuned
+ * to each share of the goals' lowest frequency.
+ */
+export const REAR_PORT_COUNTS = [1, 2, 3, 4] as const;
+export const REAR_PORT_DIAS_IN = [4, 6, 8] as const;
+export const REAR_PORT_MIN_AREA_SHARE = 0.15;
+export const REAR_PORT_TUNE_SHARES = [0.7, 0.85, 1] as const;
+
 /** The shortest section the search makes, as a share of the path. */
 export const MIN_SECTION_SHARE = 0.05;

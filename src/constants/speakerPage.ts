@@ -479,6 +479,12 @@ export const SPEAKER_TEXT = {
   /** the line under a tapped horn's settings: what the chamber's volume is */
   /** why a tapped horn's chamber takes no vent */
   ventTapped: "A tapped horn has no vent.",
+  /** why some vents are off for a folded front-loaded or offset horn */
+  ventRearChamber:
+    "The vent opens from the rear chamber under the boards: round tubes, or a straight slot along its floor.",
+  /** a folded horn's vent that does not fit its rear chamber */
+  ventNoRearFit:
+    "The vent does not fit the rear chamber. Round tubes must sit inside its height on the baffle, a slot needs the rear chamber at the bottom, and either must be shorter than the depth.",
   hornGoals: "Goals",
   hornGoalsTip:
     "What the horn is for. Design from goals sizes the horn to fit inside this chamber and meet them.",

@@ -41,6 +41,7 @@ import {
   archBlock,
   driverHorn,
   hornFlare,
+  rearVentFits,
   speakerLayout,
   ventMoved,
   hornFitsWhereSet,
@@ -393,6 +394,9 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             {layout.chambers.some((c) =>
               c.chamber.drivers.some((d) => !hornFitsWhereSet(c, d)),
             ) && <Notice>{SPEAKER_TEXT.hornNoFit}</Notice>}
+            {layout.chambers.some((c) => !rearVentFits(spec.cabinet, c)) && (
+              <Notice>{SPEAKER_TEXT.ventNoRearFit}</Notice>
+            )}
             {layout.chambers.some((c) => ventMoved(spec.cabinet, c)) && (
               <Notice>{SPEAKER_TEXT.ventMoved}</Notice>
             )}
