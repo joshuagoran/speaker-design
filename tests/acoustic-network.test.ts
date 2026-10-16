@@ -283,8 +283,8 @@ function atTaps(front: number, rear: number): TappedHornDesign {
     driver: TAPPED_DRIVER,
     drivers: 1,
     count: 1,
-    throatChamber: 0,
-    rearChamber: 0,
+    frontChamber: null,
+    rearChamber: null,
     angle: 2,
     segments: cuts.slice(1).map((end, i) => ({
       profile: HORN_PROFILE.parabolic,
@@ -407,7 +407,13 @@ test("every node's flows add to zero (conservation of volume velocity)", () => {
   const networks = [
     built(frontLoadedHorn(vented)).network,
     built(offsetDriverHorn({ ...vented, tap: 1 })).network,
-    built(tappedHorn({ ...atTaps(30, 120), throatChamber: 1, rearChamber: 4 })).network,
+    built(
+      tappedHorn({
+        ...atTaps(30, 120),
+        frontChamber: { liters: 1, area: 200 },
+        rearChamber: { liters: 4, area: 300 },
+      }),
+    ).network,
     ventedBox(DEFAULT_PA.sub.ts, 180, 40, 14).network,
   ];
   for (const network of networks)
@@ -451,4 +457,9 @@ test("a network with a size it divides by at zero, or a node out of range, is no
   // a tap off the path's boundaries does not build
   assert.strictEqual(offsetDriverHorn({ ...SUB_BIN, tap: 4 }), null);
   assert.strictEqual(tappedHorn({ ...atTaps(30, 120), rearTap: 1.5 }), null);
+  // nor does a tap chamber's passage with no area
+  assert.strictEqual(
+    tappedHorn({ ...atTaps(30, 120), frontChamber: { liters: 1, area: 0 } }),
+    null,
+  );
 });

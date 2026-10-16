@@ -203,8 +203,8 @@ For code that calls `hornModel` (the Designer, a future page):
   merged round exit: an approximation.
 - **Folds and back-loaded horns.** Not modeled. Tapped horns are modeled by the network only: no page uses it yet
   (`hornDesignOf` still names the gap).
-- **Tapped and offset-driver horns against Hornresp.** Not checked yet. The reference records wait on a Hornresp run
-  (see [The acoustic network](#the-acoustic-network)).
+- **Tapped and offset-driver horns against Hornresp.** Checked on the acoustic network: five reference records meet
+  Hornresp's results (see [Reference records for Hornresp](#reference-records-for-hornresp)).
 
 ## The acoustic network
 
@@ -236,15 +236,19 @@ No UI yet.
 `presets.ts` builds a network from a design. A horn path runs from boundary 0 to boundary n. Each tapped boundary,
 the closed end and the mouth get a node. Ducts join them in order.
 
-| Preset             | Wiring                                                                                             |
-| ------------------ | -------------------------------------------------------------------------------------------------- |
-| `frontLoadedHorn`  | Fronts at boundary 0, through the throat chamber; rears in a sealed or vented chamber              |
-| `offsetDriverHorn` | As above, fronts at boundary `tap`; the stub before it is closed at its start (OD)                 |
-| `tappedHorn`       | Fronts at `frontTap` (through Vtc), rears at `rearTap` (through Vrc); only the mouth radiates (TH) |
-| `sealedBox`        | `closedBox`'s circuit                                                                              |
-| `ventedBox`        | `boxModel`'s circuit, lumped vent, radiating leak                                                  |
+| Preset             | Wiring                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `frontLoadedHorn`  | Fronts at boundary 0, through the throat chamber; rears in a sealed or vented chamber            |
+| `offsetDriverHorn` | As above, fronts at boundary `tap`; the stub before it is closed at its start (OD)               |
+| `tappedHorn`       | Fronts at `frontTap`, rears at `rearTap`, each through its chamber; only the mouth radiates (TH) |
+| `sealedBox`        | `closedBox`'s circuit                                                                            |
+| `ventedBox`        | `boxModel`'s circuit, lumped vent, radiating leak                                                |
 
 `presetModel` gives a preset's result in the horn engine's shape (`HornModel`).
+
+- **Chambers.** A front-loaded or OD horn's throat and rear chambers are lumped volumes, as Hornresp's masked mode.
+  A tapped horn's chambers are straight passages from the cones to their taps, as Hornresp's TH. Each has a volume and
+  an area (`TapChamber`); its length is the volume over the area.
 
 ### Parity
 
@@ -276,44 +280,57 @@ the closed end and the mouth get a node. Ducts join them in order.
 
 | Supported                                     | Not supported yet (the reader says so)                     |
 | --------------------------------------------- | ---------------------------------------------------------- |
-| Front-loaded horns and direct radiators       | Rg, Nd other than 1, 4π                                    |
+| Front-loaded horns and direct radiators       | Rg, a driver count other than 1, 4π                        |
 | OD: closed at S1, fronts at S2                | Semi-inductance, lossy inductance, damping models          |
 | TH: closed at S1, fronts at S2, rears at S3   | Hornresp's vent end correction, acoustic path length       |
-| Con, Exp and Par sections, up to four         | Other flares (for example Tra), filled chambers, absorbent |
-| Sealed or vented rear chamber, throat chamber | Passive radiators, active filters, equalizer bands         |
-| 2π, π and π/2                                 | A vent on a tapped horn, an open rear (Vrc 0)              |
+| TH with four sections: rears at S4            | Other flares (for example Tra), filled chambers, absorbent |
+| Con, Exp and Par sections, up to four         | Passive radiators, active filters, equalizer bands         |
+| Sealed or vented rear chamber, throat chamber | A vent on a tapped horn, an open rear (Vrc 0)              |
+| TH chambers: Vtc with Atc, Vrc with Lrc       | Other layouts (OD1, OD2, TH1, BP4 and more)                |
+| 2π, π and π/2                                 | A TH throat chamber with no Atc                            |
 
 - **Hornresp's conventions.** Mmd without air load; lossless horn chambers; a direct radiator's leak of QL 7 that
   does not radiate. With that leak, the network meets `sub-direct-vented` to 0.0003 dB. The horn engine radiates the
   leak and needs 0.6 dB there.
 - **Every committed record** reads and meets Hornresp's results: SPL within 0.0003 dB, Ze within 0.005 %.
-- **Layouts.** A record's `OD` or `TH` flag (a nonzero value) sets the layout, or the caller gives it. The record key
-  Hornresp itself writes is not confirmed yet.
+- **Layouts.** The key of the driver count line (the line after Re) names the layout: `Nd`, `OD` or `TH`. Its value
+  is the number of drivers. Hornresp writes it so. The caller can give another layout.
+- **TH chambers.** Hornresp's TH takes Vtc and Vrc as passages, masked or not. Vtc has the area Atc. Vrc has the length
+  Lrc, so its area is Vrc / Lrc. Either value at zero gives no chamber.
+- **End correction flag.** Hornresp sets it on every TH record. The reader checks it only when the record has a vent.
 - **SKRAM.** `tests/hornresp-layouts/skram-od.txt` is hand-written from its FreeCAD model. Its Vrc is a placeholder,
   so its test is structural only.
 
 ### Reference records for Hornresp
 
-`tools/hornresp/records/` holds three records, ready to run in Hornresp. Their tests in
-`tests/hornresp-reader.test.ts` are skipped until the results exist.
+`tools/hornresp/records/` holds five records, as Hornresp 60.60 exported them. Their results are in
+`tests/hornresp/`. `tests/hornresp-reader.test.ts` checks them with the committed records' tolerances.
 
-| Record       | Design                                                                                              |
-| ------------ | --------------------------------------------------------------------------------------------------- |
-| `th-thorn10` | A Thorn-like 10″ TH: 200 cm conical path, taps at 30 and 120 cm                                     |
-| `th-15`      | A 15″ TH: 300 cm conical path, taps at 40 and 180 cm                                                |
-| `od-skram`   | The SKRAM-like OD: parabolic, stub 27.28 cm, Vrc 120 L (a plausible value), vent 732 cm² × 79.54 cm |
+| Record                | Design                                                                                              |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `th-thorn10`          | A Thorn-like 10″ TH: 200 cm conical path, taps at 30 and 120 cm                                     |
+| `th-thorn10-chambers` | `th-thorn10` with Vtc 1500 cc (Atc 300 cm²) and Vrc 6 L (Lrc 20 cm)                                 |
+| `th-15`               | A 15″ TH: 300 cm conical path, taps at 40 and 180 cm                                                |
+| `th-15-four`          | `th-15` with its last section split in two: four sections, rears at S4                              |
+| `od-skram`            | The SKRAM-like OD: parabolic, stub 27.28 cm, Vrc 120 L (a plausible value), vent 732 cm² × 79.54 cm |
 
-The run must confirm three points:
+The network meets all five: SPL within 0.0001 dB, Ze within 0.0001 %, excursion within Hornresp's rounding.
 
-1. The record key for the OD and TH layouts. The records leave it out, so set the layout in Hornresp.
-2. Which tap takes the cone's front in Hornresp's TH. Swapping the sides flips the phase only, not the level.
-3. The mouth key after a Par section. `make_record.py` writes Fta.
+The run answered the open points:
+
+| Point                    | Answer                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| The OD and TH record key | `OD = 1` or `TH = 1` in place of `Nd = 1`: the driver count line                          |
+| TH sides                 | The front at S2 with Vtc, the rear at S3 with Vrc. The phase matches Hornresp's to 0.1°   |
+| TH chambers              | Passages, not lumped volumes. As lumped volumes, the chambers case missed by 55 dB        |
+| TH with four sections    | The rears tap S4                                                                          |
+| OD throat chamber        | Lumped, as the front-loaded horn's                                                        |
+| Mouth key after Par      | `Fta`, the wall angle at the mouth. The area grows linearly, so Fta = atan(dS/dx / (2πr)) |
 
 ### Next
 
 | Phase | Work                                                                              |
 | ----- | --------------------------------------------------------------------------------- |
-| 1     | Hornresp results for the reference records; un-skip their tests                   |
 | 1     | New wirings: bandpass (4th and 6th order), back-loaded horn, isobaric, push-pull  |
 | 1     | Chambers as ducts (Lrc, Atc), for chamber resonances                              |
 | 2     | Folded geometry: the path drawn in legs, panel angles, cutlist, bracing, net air  |
@@ -332,4 +349,4 @@ has the setup, a script that drives it, a record writer and Hornresp's rules for
 
 - **Set the air each time:** 343 m/s and 1.18 kg/m³. A new container starts with Hornresp's defaults.
 - **Check the setup first:** run a committed case. Its results must be identical.
-- **Mask the chamber resonances:** lumped chambers, as the engine.
+- **Mask the chamber resonances:** lumped chambers, as the engine. A TH's chambers are passages either way.

@@ -1794,18 +1794,31 @@ export type HornLayout = (typeof HORN_LAYOUT)[keyof typeof HORN_LAYOUT];
 export type OffsetDriverHornDesign = HornDesign & { tap: number };
 
 /**
+ * A tapped horn's chamber: the air between one side of the cones and its tap, as a straight passage from the cones to
+ * the path (Hornresp's TH model: a duct, not a lumped volume). Its length is its volume over its area.
+ */
+export interface TapChamber {
+  /** the passage's air, L */
+  liters: number;
+  /** the passage's cross-section, cm² */
+  area: number;
+}
+
+/**
  * A tapped horn (Hornresp's TH): one path, closed at its start, its segments closed end first. The fronts tap it at
  * segment boundary `frontTap` and the rears at `rearTap` (0 the closed end, `segments.length` the mouth), each through
- * an optional lumped chamber: `throatChamber` on the front side (Hornresp's Vtc), `rearChamber` on the rear (its Vrc).
+ * an optional chamber: `frontChamber` (Hornresp's Vtc and Atc), `rearChamber` (its Vrc, Vrc/Lrc the area).
  */
 export type TappedHornDesign = Pick<
   HornDesign,
-  "driver" | "drivers" | "count" | "throatChamber" | "segments" | "angle"
+  "driver" | "drivers" | "count" | "segments" | "angle"
 > & {
   frontTap: number;
   rearTap: number;
-  /** the air between the rears and their tap, L; 0 for none */
-  rearChamber: number;
+  /** the passage between the fronts and their tap; null for none */
+  frontChamber: TapChamber | null;
+  /** the passage between the rears and their tap; null for none */
+  rearChamber: TapChamber | null;
 };
 
 /**

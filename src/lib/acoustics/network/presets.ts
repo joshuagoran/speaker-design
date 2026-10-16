@@ -7,6 +7,10 @@
 // So a front-loaded horn is the path tapped at 0, an offset-driver horn the path tapped further along (the stub before
 // the tap is closed at its start), and a tapped horn the path tapped at two points.
 //
+// The chambers follow Hornresp: a front-loaded or offset-driver horn's throat and rear chambers are lumped volumes at
+// their node (its masked chamber resonances); a tapped horn's chambers are straight passages from the cones to their
+// taps (its TH model), so the cones' sides get nodes of their own at the passages' cone ends.
+//
 // Words used below: "flow" is volume velocity (m³/s); "impedance" is acoustic impedance (Pa·s/m³). Units of the
 // designs are Hornresp's (cm², cm, L), as the horn engine's.
 import type {
@@ -20,6 +24,7 @@ import type {
   NetworkPart,
   OffsetDriverHornDesign,
   PresetNetwork,
+  TapChamber,
   TappedHornDesign,
 } from "../../../types";
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q } from "../../../constants/acoustics";
@@ -29,7 +34,12 @@ import {
   OPENING_LOAD,
   REAR_SIDE,
 } from "../../../constants/acousticNetwork";
-import { CM_PER_M, LITERS_PER_CUBIC_M, SQ_CM_PER_SQ_M } from "../../../constants/units";
+import {
+  CM3_PER_LITER,
+  CM_PER_M,
+  LITERS_PER_CUBIC_M,
+  SQ_CM_PER_SQ_M,
+} from "../../../constants/units";
 import { ventResistances } from "../driverCircuit";
 import { AIR_STIFFNESS, ventDuct, ventOf, type HornModelOptions } from "../hornModel";
 import { ventTuning, type BoxModelOptions } from "../../pa/calc";
@@ -51,10 +61,10 @@ export interface HornNetworkOptions extends HornModelOptions {
 const oneSideAirMass = (coneAreaCm2: number) =>
   (8 / 3) * AIR_DENSITY * Math.pow(coneAreaCm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
 
-/** What the driver's rear drives: a sealed or vented chamber of its own, or a tap on the path. */
+/** What the driver's rear drives: a sealed or vented chamber of its own, or a tap on the path (through a passage). */
 type RearSide =
   | { kind: typeof REAR_SIDE.chamber; rear: HornRearChamber; portOffset: number }
-  | { kind: typeof REAR_SIDE.tap; tap: number; liters: number };
+  | { kind: typeof REAR_SIDE.tap; tap: number; passage: TapChamber | null };
 
 /** One horn path with the driver's sides on it: the general builder behind the three horn presets. */
 interface HornPathSpec extends Pick<
@@ -63,22 +73,46 @@ interface HornPathSpec extends Pick<
 > {
   /** the segment boundary the fronts tap: 0 the closed end, `segments.length` the mouth */
   frontTap: number;
+  /** a passage between the fronts and their tap (a tapped horn's), in place of the lumped `throatChamber`; or null */
+  frontPassage: TapChamber | null;
   rear: RearSide;
 }
+
+/** A tap chamber's passage as a straight duct: its area, cm², and its length, its volume over its area, cm. */
+const passageDuct = (passage: TapChamber) =>
+  ventDuct(passage.area, (passage.liters * CM3_PER_LITER) / passage.area);
+
+/** The duct of a tap chamber's passage, from the cones' side `from` to its tap's node `to`. */
+const passageOf = (from: number, to: number, passage: TapChamber): NetworkPart => ({
+  kind: NETWORK_PART.duct,
+  from,
+  to,
+  segments: [passageDuct(passage)],
+  loss: 0,
+});
 
 /** Whether a tap is a whole segment boundary on the path, from 0 to the segment count. */
 const isBoundary = (tap: number, segments: readonly unknown[]) =>
   Number.isInteger(tap) && tap >= 0 && tap <= segments.length;
 
 /**
- * Builds the network of one horn path (see the header), or null when a tap is not a segment boundary. The parts come
- * in a fixed order: the driver, the front side's chamber, the path's ducts, the mouth, then the rear side.
+ * Builds the network of one horn path (see the header), or null when a tap is not a segment boundary or a passage has
+ * no size. The parts come in a fixed order: the driver, the front side's chamber, the path's ducts, the mouth, then the
+ * rear side.
  */
 function hornPath(spec: HornPathSpec, opts: HornNetworkOptions): PresetNetwork | null {
   const { radiationLoad = true, QL = BOX_LEAK_Q, Qp = BOX_PORT_Q, leakRadiates = true } = opts;
   const { segments, driver, drivers } = spec;
   const rearTap = spec.rear.kind === REAR_SIDE.tap ? spec.rear.tap : null;
   if (!isBoundary(spec.frontTap, segments) || (rearTap !== null && !isBoundary(rearTap, segments)))
+    return null;
+  /** a passage with no area or no air cannot be modeled */
+  const unsized = (passage: TapChamber | null) =>
+    passage !== null && !(passage.area > 0 && passage.liters > 0);
+  if (
+    unsized(spec.frontPassage) ||
+    (spec.rear.kind === REAR_SIDE.tap && unsized(spec.rear.passage))
+  )
     return null;
   /** the boundaries that get a node, in order along the path: the closed end, the taps, the mouth */
   const boundaries = [
@@ -92,17 +126,23 @@ function hornPath(spec: HornPathSpec, opts: HornNetworkOptions): PresetNetwork |
   const mouthNode = nodeAt.get(segments.length) ?? 0;
   /** the rear side's node: a chamber of its own, or the rear tap's */
   const rearNode = rearTap === null ? nodeCount++ : (nodeAt.get(rearTap) ?? 0);
+  /** the rear tap's passage, if any */
+  const rearPassage = spec.rear.kind === REAR_SIDE.tap ? spec.rear.passage : null;
+  /** the cones' own sides: their tap's node, or a node of their own at a passage's cone end */
+  const coneFront = spec.frontPassage ? nodeCount++ : frontNode;
+  const coneRear = rearPassage ? nodeCount++ : rearNode;
   const parts: NetworkPart[] = [
     {
       kind: NETWORK_PART.driver,
-      front: frontNode,
-      rear: rearNode,
+      front: coneFront,
+      rear: coneRear,
       ts: driver,
       drivers,
       airMassOff: radiationLoad ? oneSideAirMass(driver.Sd) : 0,
     },
   ];
-  if (spec.throatChamber > 0)
+  if (spec.frontPassage) parts.push(passageOf(coneFront, frontNode, spec.frontPassage));
+  else if (spec.throatChamber > 0)
     parts.push({ kind: NETWORK_PART.chamber, node: frontNode, liters: spec.throatChamber });
   /** the part whose flow in is the throat's (see PresetNetwork) */
   let throat = -1;
@@ -138,8 +178,7 @@ function hornPath(spec: HornPathSpec, opts: HornNetworkOptions): PresetNetwork |
     ventArea = 0,
     fb: number | null = null;
   if (spec.rear.kind === REAR_SIDE.tap) {
-    if (spec.rear.liters > 0)
-      parts.push({ kind: NETWORK_PART.chamber, node: rearNode, liters: spec.rear.liters });
+    if (rearPassage) parts.push(passageOf(coneRear, rearNode, rearPassage));
   } else {
     const { rear, portOffset } = spec.rear;
     parts.push({ kind: NETWORK_PART.chamber, node: rearNode, liters: rear.liters });
@@ -211,6 +250,7 @@ export const frontLoadedHorn = (design: HornDesign, opts: HornNetworkOptions = {
     {
       ...design,
       frontTap: 0,
+      frontPassage: null,
       rear: { kind: REAR_SIDE.chamber, rear: design.rear, portOffset: design.portOffset },
     },
     opts,
@@ -226,22 +266,24 @@ export const offsetDriverHorn = (design: OffsetDriverHornDesign, opts: HornNetwo
     {
       ...design,
       frontTap: design.tap,
+      frontPassage: null,
       rear: { kind: REAR_SIDE.chamber, rear: design.rear, portOffset: design.portOffset },
     },
     opts,
   );
 
 /**
- * A tapped horn (Hornresp's TH) as a network: one path closed at its start; the fronts tap it at `frontTap` (through
- * the throat chamber) and the rears at `rearTap` (through the rear chamber); only the mouth radiates. Null when a tap
- * is not a segment boundary.
+ * A tapped horn (Hornresp's TH) as a network: one path closed at its start; the fronts tap it at `frontTap` and the
+ * rears at `rearTap`, each through its chamber's passage when it has one; only the mouth radiates. Null when a tap is
+ * not a segment boundary or a passage has no size.
  */
 export const tappedHorn = (design: TappedHornDesign, opts: HornNetworkOptions = {}) =>
   hornPath(
     {
       ...design,
-      frontTap: design.frontTap,
-      rear: { kind: REAR_SIDE.tap, tap: design.rearTap, liters: design.rearChamber },
+      throatChamber: 0,
+      frontPassage: design.frontChamber,
+      rear: { kind: REAR_SIDE.tap, tap: design.rearTap, passage: design.rearChamber },
     },
     opts,
   );

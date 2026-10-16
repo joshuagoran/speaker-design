@@ -34,7 +34,7 @@ Rms = 13.28
 Mmd = 422.82
 Le = 1.50
 Re = 3.40
-Nd = 1
+OD = 1
 
 |CHAMBER PARAMETER VALUES:
 
@@ -51,7 +51,3 @@ Acoustic Path Length = 0.0
 
 Pmax = 2000
 Xmax = 15.0
-
-|DRIVER LAYOUT:
-
-OD = 1

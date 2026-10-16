@@ -7,8 +7,8 @@ script keeps the rest. It applies the rules Hornresp checks on import:
 - CRLF on every line.
 - Segment rows chain: each row's first area is the row before's last.
 - The mouth key: Cir (mouth circumference in flare-cutoff wavelengths) when the last segment is exponential, Fta
-  (the mouth's wall angle, degrees) when it is conical, and here also when it is parabolic (Par): not yet checked
-  against Hornresp. Exponential rows also carry their cutoff, F12 to F45.
+  (the mouth's wall angle, degrees) when it is conical or parabolic (Par). Exponential rows also carry their cutoff,
+  F12 to F45.
 - Keys that appear twice (Le, Rms) change only in the traditional driver section.
 
 Example (a 10" mid horn, Le 0.6 mH, a vented rear chamber):
@@ -68,6 +68,9 @@ def horn_block(segments):
     radius = lambda area: math.sqrt(area / math.pi)
     if profile == "exp":
         mouth = ("Cir", 2 * math.pi * (radius(s2) / 100) * cutoff(s1, s2, length) / SPEED_OF_SOUND)
+    elif profile == "par":
+        # a parabolic segment's area grows linearly: the wall's slope at the mouth is dS/dx / (2πr)
+        mouth = ("Fta", math.degrees(math.atan((s2 - s1) / length / (2 * math.pi * radius(s2)))))
     else:
         mouth = ("Fta", math.degrees(math.atan((radius(s2) - radius(s1)) / length)))
     return lines, mouth

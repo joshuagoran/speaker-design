@@ -1,7 +1,7 @@
 // The Hornresp reader (lib/acoustics/network/hornrespRecord): every committed record read onto the network presets
 // against Hornresp's own results; the records it cannot map yet; a hand-written offset-driver record (SKRAM, its rear
 // chamber's volume a placeholder: structural checks only); and the tapped and offset-driver reference records in
-// tools/hornresp/records, whose Hornresp results come later (their checks are skipped placeholders until then).
+// tools/hornresp/records (as Hornresp exported them, its layout key in each) against Hornresp 60.60's results.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import fs from "node:fs";
@@ -36,16 +36,18 @@ const RECORDS = [
   "mid-le",
   "mid-pair-le",
 ] as const;
-/** The hand-written SKRAM record, and the reference records waiting on Hornresp's results. */
+/** The hand-written SKRAM record, and the tapped and offset-driver reference records. */
 const LAYOUTS_DIR = path.join(import.meta.dirname, "hornresp-layouts");
 const REFERENCE_DIR = path.join(import.meta.dirname, "..", "tools", "hornresp", "records");
 /**
- * The reference records and their layouts. The records leave the layout out (Hornresp may reject a key it does not
- * know), so the reader takes it from here; tools/hornresp/README.md says how to set it in Hornresp.
+ * The reference records and the layout each one's key names (tools/hornresp/README.md). th-thorn10-chambers adds
+ * both tap chambers to th-thorn10; th-15-four splits th-15's last section, so its rears tap S4.
  */
 const REFERENCES: { name: string; layout: HornLayout }[] = [
   { name: "th-thorn10", layout: HORN_LAYOUT.tapped },
+  { name: "th-thorn10-chambers", layout: HORN_LAYOUT.tapped },
   { name: "th-15", layout: HORN_LAYOUT.tapped },
+  { name: "th-15-four", layout: HORN_LAYOUT.tapped },
   { name: "od-skram", layout: HORN_LAYOUT.offsetDriver },
 ];
 
@@ -58,36 +60,41 @@ function readOk(reading: HornrespReading) {
 const recordText = (name: string) =>
   fs.readFileSync(path.join(HORNRESP_DIR, `${name}.txt`), "latin1");
 
+/** Asserts that a reading's network meets Hornresp's results for `name` (tests/hornresp/<name>-results.txt). */
+function assertMatchesHornresp(name: string, reading: HornrespReading & { ok: true }) {
+  const hornresp = resultsOf(
+    fs.readFileSync(path.join(HORNRESP_DIR, `${name}-results.txt`), "utf8"),
+  );
+  const model = presetModel(
+    reading.preset,
+    hornresp.map((p) => p.f),
+    reading.volts,
+  );
+  assert.ok(model);
+  hornresp.forEach((expected, i) => {
+    const point = model.curve[i];
+    const at = `${name} at ${expected.f.toFixed(1)} Hz`;
+    assert.ok(
+      Math.abs(point.powerSpl - expected.spl) <= SPL_TOLERANCE,
+      `${at}: SPL ${point.powerSpl} vs ${expected.spl}`,
+    );
+    assert.ok(
+      Math.abs(point.ze / expected.ze - 1) <= CIRCUIT_TOLERANCE,
+      `${at}: Ze ${point.ze} vs ${expected.ze}`,
+    );
+    assert.ok(
+      Math.abs(point.xmm - expected.xmm) <=
+        CIRCUIT_TOLERANCE * expected.xmm + EXCURSION_ROUNDING_MM,
+      `${at}: excursion ${point.xmm} vs ${expected.xmm}`,
+    );
+  });
+}
+
 for (const name of RECORDS) {
   test(`the reader maps ${name} and matches Hornresp's results`, () => {
     const reading = readOk(readHornrespRecord(recordText(name)));
     assert.strictEqual(reading.design.layout, HORN_LAYOUT.frontLoaded);
-    const hornresp = resultsOf(
-      fs.readFileSync(path.join(HORNRESP_DIR, `${name}-results.txt`), "utf8"),
-    );
-    const model = presetModel(
-      reading.preset,
-      hornresp.map((p) => p.f),
-      reading.volts,
-    );
-    assert.ok(model);
-    hornresp.forEach((expected, i) => {
-      const point = model.curve[i];
-      const at = `${name} at ${expected.f.toFixed(1)} Hz`;
-      assert.ok(
-        Math.abs(point.powerSpl - expected.spl) <= SPL_TOLERANCE,
-        `${at}: SPL ${point.powerSpl} vs ${expected.spl}`,
-      );
-      assert.ok(
-        Math.abs(point.ze / expected.ze - 1) <= CIRCUIT_TOLERANCE,
-        `${at}: Ze ${point.ze} vs ${expected.ze}`,
-      );
-      assert.ok(
-        Math.abs(point.xmm - expected.xmm) <=
-          CIRCUIT_TOLERANCE * expected.xmm + EXCURSION_ROUNDING_MM,
-        `${at}: excursion ${point.xmm} vs ${expected.xmm}`,
-      );
-    });
+    assertMatchesHornresp(name, reading);
   });
 }
 
@@ -122,10 +129,12 @@ test("the reader names what it cannot model yet", () => {
   // a section of another flare
   const tractrix = reasonFor(base.replace("Exp = 35.00", "Tra = 35.00"));
   assert.ok(tractrix.startsWith(NOT_SUPPORTED_YET) && tractrix.includes("Tra"), tractrix);
-  // both layout flags
-  assert.ok(reasonFor(`${base}\nOD = 1\nTH = 1\n`).includes("OD and TH"));
-  // a tapped horn needs two sections, and no vent
-  assert.ok(reasonFor(`${base}\nTH = 1\n`).startsWith(NOT_SUPPORTED_YET));
+  // another of Hornresp's layouts, named by the driver count line's key
+  const ripole = reasonFor(base.replace(/^Nd = 1$/m, "OD3 = 1"));
+  assert.ok(ripole.startsWith(NOT_SUPPORTED_YET) && ripole.includes("OD3"), ripole);
+  // a tapped horn needs three or four sections (this record has one)
+  const tapped = reasonFor(base.replace(/^Nd = 1$/m, "TH = 1"));
+  assert.ok(tapped.startsWith(NOT_SUPPORTED_YET) && tapped.includes("three sections"), tapped);
   // a missing value
   const missing = reasonFor(base.replace(/^Sd = .*$/m, ""));
   assert.strictEqual(missing, `${MISSING_VALUE}Sd`);
@@ -180,35 +189,32 @@ function near(actual: number, expected: number, tolerance: number, what: string)
   assert.ok(Math.abs(actual - expected) <= tolerance, `${what}: ${actual} vs ${expected}`);
 }
 
+/** A reference record's text (tools/hornresp/records/<name>.txt). */
+const referenceText = (name: string) =>
+  fs.readFileSync(path.join(REFERENCE_DIR, `${name}.txt`), "latin1");
+
 for (const reference of REFERENCES) {
-  const text = () => fs.readFileSync(path.join(REFERENCE_DIR, `${reference.name}.txt`), "latin1");
-  test(`the reader maps the reference record ${reference.name} (${reference.layout})`, () => {
-    const reading = readOk(readHornrespRecord(text(), { layout: reference.layout }));
+  test(`the reader maps ${reference.name} (${reference.layout}) and matches Hornresp's results`, () => {
+    const reading = readOk(readHornrespRecord(referenceText(reference.name)));
     assert.strictEqual(reading.design.layout, reference.layout);
-    const freqs = Array.from({ length: 40 }, (_, i) => 10 * Math.pow(40, i / 39));
-    const model = presetModel(reading.preset, freqs, reading.volts);
-    assert.ok(model);
-    for (const point of model.curve)
-      assert.ok(Number.isFinite(point.powerSpl) && Number.isFinite(point.xmm));
-  });
-  // Placeholder: Hornresp's results for this record come from a Hornresp run (tools/hornresp/README.md). Once
-  // tests/hornresp/<name>-results.txt exists, drop the skip: the check is the committed records' (above), with the
-  // layout from REFERENCES. The tapped horn's sides (front at S2, rear at S3) and the OD and TH flags' record keys
-  // are to be confirmed by that run.
-  test.skip(`the reader matches Hornresp's results: ${reference.name} (waits on Hornresp's results)`, () => {
-    const reading = readOk(readHornrespRecord(text(), { layout: reference.layout }));
-    const hornresp = resultsOf(
-      fs.readFileSync(path.join(HORNRESP_DIR, `${reference.name}-results.txt`), "utf8"),
-    );
-    const model = presetModel(
-      reading.preset,
-      hornresp.map((p) => p.f),
-      reading.volts,
-    );
-    assert.ok(model);
-    hornresp.forEach((expected, i) => {
-      near(model.curve[i].powerSpl, expected.spl, SPL_TOLERANCE, `SPL at ${expected.f} Hz`);
-      near(model.curve[i].ze / expected.ze, 1, CIRCUIT_TOLERANCE, `Ze at ${expected.f} Hz`);
-    });
+    assertMatchesHornresp(reference.name, reading);
   });
 }
+
+test("the reader puts a tapped horn's rears at S3 or S4 and its chambers in passages", () => {
+  const tapsOf = (name: string) => {
+    const { design } = readOk(readHornrespRecord(referenceText(name)));
+    assert.ok(design.layout === HORN_LAYOUT.tapped);
+    return design;
+  };
+  // three sections: the fronts at S2, the rears at S3; four: the rears at S4
+  const three = tapsOf("th-15"),
+    four = tapsOf("th-15-four");
+  assert.deepStrictEqual([three.frontTap, three.rearTap], [1, 2]);
+  assert.deepStrictEqual([four.frontTap, four.rearTap], [1, 3]);
+  assert.deepStrictEqual([three.frontChamber, three.rearChamber], [null, null]);
+  // Vtc 1500 cc with Atc 300 cm²; Vrc 6 L with Lrc 20 cm, so 300 cm²
+  const chambers = tapsOf("th-thorn10-chambers");
+  assert.deepStrictEqual(chambers.frontChamber, { liters: 1.5, area: 300 });
+  assert.deepStrictEqual(chambers.rearChamber, { liters: 6, area: 300 });
+});

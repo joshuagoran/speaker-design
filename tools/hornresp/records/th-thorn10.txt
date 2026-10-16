@@ -1,6 +1,6 @@
 ID = 55.30
 
-Comment = speaker-design reference (set layout TH): th-thorn10
+Comment = speaker-design reference: th-thorn10
 
 |RADIATION, SOURCE AND MOUTH PARAMETER VALUES:
 
@@ -37,7 +37,7 @@ Rms = 2.50
 Mmd = 50.00
 Le = 0.90
 Re = 5.30
-Nd = 1
+TH = 1
 
 |ADVANCED DRIVER PARAMETER VALUES FOR SEMI-INDUCTANCE MODEL:
 
@@ -54,7 +54,7 @@ Ams = 0.00
 
 |PASSIVE RADIATOR PARAMETER VALUE:
 
-Added Mass = 0.00
+Ap = 0.00
 
 |CHAMBER PARAMETER VALUES:
 
@@ -65,7 +65,7 @@ Tal = 0.00
 Vtc = 0.00
 Atc = 0.00
 
-Acoustic Path Length = 0.0
+Lpt = 0.00
 
 |MAXIMUM SPL PARAMETER VALUES:
 
@@ -153,7 +153,7 @@ Semi-Inductance Model Flag = 0
 Damping Model Flag = 0
 Closed Mouth Flag = 0
 Continuous Flag = 1
-End Correction Flag = 0
+End Correction Flag = 1
 
 |OTHER SETTINGS:
 

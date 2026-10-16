@@ -43,10 +43,12 @@ export const HORN_LAYOUT = {
 } as const;
 
 /**
- * Hornresp's flags for its driver layouts, as a record's "Key = value" lines may give them (a nonzero value sets the
- * layout). A record with neither is front-loaded, or a direct radiator when it has no horn.
+ * Hornresp's keys for the driver layouts the reader takes: the key of a record's driver count line (the line after Re
+ * in its driver section), whose value is the number of drivers. Nd is front-loaded (or a direct radiator when it has no
+ * horn), OD the offset-driver horn and TH the tapped horn.
  */
 export const HORNRESP_LAYOUT_KEY = {
+  frontLoaded: "Nd",
   offsetDriver: "OD",
   tapped: "TH",
 } as const;

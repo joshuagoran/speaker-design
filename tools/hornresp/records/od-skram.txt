@@ -1,13 +1,13 @@
 ID = 55.30
 
-Comment = speaker-design reference (set layout OD): od-skram
+Comment = speaker-design reference: od-skram
 
 |RADIATION, SOURCE AND MOUTH PARAMETER VALUES:
 
 Ang = 2.0 x Pi
 Eg = 2.83
 Rg = 0.00
-Fta = 3.39
+Fta = 2.88
 
 |HORN PARAMETER VALUES:
 
@@ -37,7 +37,7 @@ Rms = 13.28
 Mmd = 422.82
 Le = 1.50
 Re = 3.40
-Nd = 1
+OD = 1
 
 |ADVANCED DRIVER PARAMETER VALUES FOR SEMI-INDUCTANCE MODEL:
 

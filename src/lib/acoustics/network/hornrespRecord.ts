@@ -8,12 +8,15 @@
 //   one side's air load in Mms, which the presets take back off with the radiation load on; so Mms = Mmd + 8/3·ρa³.
 // - Several drivers are one composite driver (Sd, Mmd and Rms added; Cms, Re and Le divided): read as one driver.
 // - A horn's rear chamber is lossless. A direct radiator's vented box has QL = 7, and its leak does not radiate.
-// - The chambers are lumped (Hornresp's masked chamber resonances): Lrc and Atc are not used.
 // - The horn rows: S1 to S5, each row's length keyed by its flare (Con, Exp, Par; L12 to L45 when unused). A row of
-//   zero length ends the path.
-// - The layouts: front-loaded (or direct, with no horn) by default. OD: the path starts closed at S1 and the fronts tap
-//   it at S2, the rears in the rear chamber. TH: the path starts closed at S1, the fronts tap it at S2 (through Vtc)
-//   and the rears at S3 (through Vrc). A record names its layout with an OD or TH flag, or the caller gives it.
+//   zero length ends the path. The mouth key is Cir after an Exp row and Fta after a Con or Par row (not read).
+// - The layout: the key of the driver count's line, the line after Re, names it (Nd = 1, OD = 1, TH = 1; its value is
+//   the number of drivers). Nd: front-loaded, or direct with no horn. OD: the path starts closed at S1 and the fronts
+//   tap it at S2, the rears in the rear chamber. TH: the path starts closed at S1; the fronts tap it at S2 and the rears
+//   at S3 (three rows) or S4 (four rows). Hornresp's other layouts (OD1, TH1, BP4 and more) are not read yet.
+// - The chambers: front-loaded and offset-driver horns' are lumped (Hornresp's masked chamber resonances), so Lrc and
+//   Atc are not used. A tapped horn's are passages from the cones to their taps (Hornresp's TH model, masked or not):
+//   Vtc with the area Atc on the front side, Vrc with the length Lrc (area Vrc/Lrc) on the rear side.
 //
 // Words used below: a "row" is one horn section's four lines (start area, end area, length, cutoff).
 import type {
@@ -25,6 +28,7 @@ import type {
   HornrespReading,
   HornSegment,
   RadiationAngle,
+  TapChamber,
 } from "../../../types";
 import { AIR_DENSITY, BOX_LEAK_Q } from "../../../constants/acoustics";
 import {
@@ -60,7 +64,6 @@ const MUST_BE_ZERO: Record<string, string> = {
   "Semi-Inductance Model Flag": "the semi-inductance model",
   "Damping Model Flag": "the frequency-dependent damping model",
   "Closed Mouth Flag": "a closed mouth",
-  "End Correction Flag": "Hornresp's vent end correction (End Correction Flag 1)",
   Fr: "a filled rear chamber (Fr)",
   Tal: "a filled rear chamber (Tal)",
   Fr1: "absorbent filling in the horn (Fr1)",
@@ -174,13 +177,28 @@ function driverOf(lines: RecordLines): BoxModelTS {
   };
 }
 
-/** The layout: the caller's, else the record's OD or TH flag, else front-loaded. */
+/** The layouts the reader takes, by the key of the record's driver count line. */
+const LAYOUT_OF_KEY: Record<string, HornLayout> = {
+  [HORNRESP_LAYOUT_KEY.frontLoaded]: HORN_LAYOUT.frontLoaded,
+  [HORNRESP_LAYOUT_KEY.offsetDriver]: HORN_LAYOUT.offsetDriver,
+  [HORNRESP_LAYOUT_KEY.tapped]: HORN_LAYOUT.tapped,
+};
+
+/**
+ * The record's driver count line: the line after the first Re, whose key names the layout (Nd, OD, TH or another of
+ * Hornresp's) and whose value is the number of drivers.
+ */
+function layoutLineOf(lines: RecordLines) {
+  const re = lines.findIndex((l) => l.key === "Re");
+  if (re < 0) fail(`${MISSING_VALUE}Re`);
+  return lines[re + 1] ?? fail(`${MISSING_VALUE}${HORNRESP_LAYOUT_KEY.frontLoaded}`);
+}
+
+/** The layout: the caller's, else the one the record's driver count line names. */
 function layoutOf(lines: RecordLines, given: HornLayout | undefined): HornLayout {
-  if (given) return given;
-  const offset = (optionalNumber(lines, HORNRESP_LAYOUT_KEY.offsetDriver) ?? 0) !== 0,
-    tapped = (optionalNumber(lines, HORNRESP_LAYOUT_KEY.tapped) ?? 0) !== 0;
-  if (offset && tapped) fail(`${NOT_SUPPORTED_YET}both the OD and TH layouts`);
-  return offset ? HORN_LAYOUT.offsetDriver : tapped ? HORN_LAYOUT.tapped : HORN_LAYOUT.frontLoaded;
+  const { key } = layoutLineOf(lines);
+  const named = LAYOUT_OF_KEY[key] ?? fail(`${NOT_SUPPORTED_YET}Hornresp's ${key} layout`);
+  return given ?? named;
 }
 
 /** Fails for any value the reader cannot model yet (see MUST_BE_ZERO), and for more than one driver count. */
@@ -190,9 +208,17 @@ function checkSupported(lines: RecordLines) {
   for (const line of lines)
     if (EQ_BAND_FREQUENCY.test(line.key) && Number(line.value) !== 0)
       fail(`${NOT_SUPPORTED_YET}an equalizer band (${line.key})`);
-  if ((optionalNumber(lines, "Nd") ?? 1) !== 1)
-    fail(`${NOT_SUPPORTED_YET}Nd other than 1 (give the drivers as one composite driver)`);
+  const { key, value } = layoutLineOf(lines);
+  if (Number(value) !== 1)
+    fail(`${NOT_SUPPORTED_YET}${key} other than 1 (give the drivers as one composite driver)`);
 }
+
+/**
+ * A tapped horn's chamber from its volume (cm³) and its area (cm²), or null for none (either one zero, as Hornresp's
+ * "Vrc and/or Lrc = 0").
+ */
+const tapChamberOf = (cubicCm: number, area: number): TapChamber | null =>
+  cubicCm > 0 && area > 0 ? { liters: cubicCm / CM3_PER_LITER, area } : null;
 
 /** The design the record describes, in its layout. */
 function designOf(lines: RecordLines, layout: HornLayout): HornLayoutDesign {
@@ -200,30 +226,51 @@ function designOf(lines: RecordLines, layout: HornLayout): HornLayoutDesign {
   const ventArea = optionalNumber(lines, "Ap") ?? 0;
   const ventLength = optionalNumber(lines, "Lpt") ?? 0;
   if (ventArea > 0 && !(ventLength > 0)) fail(`${NOT_SUPPORTED_YET}a vent with no length (Lpt)`);
+  // the flag only acts on a vent (Hornresp sets it on every tapped horn, which takes no vent here)
+  if (ventArea > 0 && (optionalNumber(lines, "End Correction Flag") ?? 0) !== 0)
+    fail(`${NOT_SUPPORTED_YET}Hornresp's vent end correction (End Correction Flag 1)`);
   const rearLiters = requiredNumber(lines, "Vrc");
+  const throatCubicCm = optionalNumber(lines, "Vtc") ?? 0;
   const common = {
     driver: driverOf(lines),
     drivers: 1,
     count: 1,
     angle: angleOf(lines),
     segments,
-    throatChamber: (optionalNumber(lines, "Vtc") ?? 0) / CM3_PER_LITER,
   };
   if (layout === HORN_LAYOUT.tapped) {
-    if (segments.length < 2) fail(`${NOT_SUPPORTED_YET}a tapped horn with fewer than two sections`);
+    if (segments.length < 3)
+      fail(`${NOT_SUPPORTED_YET}a tapped horn with fewer than three sections`);
     if (ventArea > 0) fail(`${NOT_SUPPORTED_YET}a vent on a tapped horn`);
-    return { layout, ...common, frontTap: 1, rearTap: 2, rearChamber: rearLiters };
+    const throatArea = optionalNumber(lines, "Atc") ?? 0;
+    if (throatCubicCm > 0 && !(throatArea > 0))
+      fail(`${NOT_SUPPORTED_YET}a tapped horn's throat chamber with no area (Atc)`);
+    const rearLength = optionalNumber(lines, "Lrc") ?? 0;
+    return {
+      layout,
+      ...common,
+      // the rears tap S3 on a three-section path, S4 on a four-section one
+      frontTap: 1,
+      rearTap: segments.length - 1,
+      frontChamber: tapChamberOf(throatCubicCm, throatArea),
+      rearChamber: tapChamberOf(
+        rearLiters * CM3_PER_LITER,
+        rearLength > 0 ? (rearLiters * CM3_PER_LITER) / rearLength : 0,
+      ),
+    };
   }
+  const throatChamber = throatCubicCm / CM3_PER_LITER;
   if (!(rearLiters > 0)) fail(`${NOT_SUPPORTED_YET}an open rear (Vrc = 0)`);
   const rear: HornDesign["rear"] = {
     liters: rearLiters,
     port: ventArea > 0 ? { area: ventArea, length: ventLength } : null,
   };
   if (layout === HORN_LAYOUT.offsetDriver) {
-    if (segments.length < 1) fail(`${NOT_SUPPORTED_YET}an offset-driver horn with no sections`);
-    return { layout, ...common, rear, portOffset: 0, tap: 1 };
+    if (segments.length < 2)
+      fail(`${NOT_SUPPORTED_YET}an offset-driver horn with fewer than two sections`);
+    return { layout, ...common, throatChamber, rear, portOffset: 0, tap: 1 };
   }
-  return { layout, ...common, rear, portOffset: 0 };
+  return { layout, ...common, throatChamber, rear, portOffset: 0 };
 }
 
 /**
