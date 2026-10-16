@@ -16,7 +16,7 @@ import {
   HIFI_WOOFERS,
   HORN_OPTIONS,
   MID_OPTIONS,
-  SUB_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
 } from "../../lib/data";
 import { byId } from "../../lib/tables";
 import {
@@ -31,7 +31,7 @@ import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 
 /** Each driver kind's catalog, as its picker lists it. */
 export const DRIVER_OPTIONS: Record<DriverKind, readonly SelectOption[]> = {
-  sub: SUB_OPTIONS,
+  sub: SPEAKER_SUB_OPTIONS,
   mid: MID_OPTIONS,
   compression: CD_OPTIONS,
   woofer: HIFI_WOOFERS_BY_SIZE,
@@ -117,7 +117,7 @@ export interface WooferOption extends SelectOption {
 
 /** Every woofer in the catalog in one list, smallest first, A–Z within a size. */
 export const WOOFER_OPTIONS: readonly WooferOption[] = [
-  ...SUB_OPTIONS.map((d) => ({ ...d, kind: DRIVER_KIND.sub })),
+  ...SPEAKER_SUB_OPTIONS.map((d) => ({ ...d, kind: DRIVER_KIND.sub })),
   ...MID_OPTIONS.map((d) => ({ ...d, kind: DRIVER_KIND.mid })),
   ...HIFI_WOOFERS.map((d) => ({ ...d, kind: DRIVER_KIND.woofer })),
 ]

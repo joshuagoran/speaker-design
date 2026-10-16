@@ -15,6 +15,7 @@ export const MAKER_NAMES = {
   fostex: "Fostex",
   lavoce: "Lavoce",
   peerless: "Peerless",
+  precisionDevices: "Precision Devices",
   purifi: "Purifi",
   sbAcoustics: "SB Acoustics",
   sbAudience: "SB Audience",
@@ -43,4 +44,5 @@ export const MAKER_SEGMENT: Record<keyof typeof MAKER_NAMES, "hifi" | "pro"> = {
   sbAudience: "pro",
   scanSpeak: "hifi",
   seas: "hifi",
+  precisionDevices: "pro",
 };

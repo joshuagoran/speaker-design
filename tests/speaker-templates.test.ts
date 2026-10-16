@@ -93,6 +93,8 @@ const EXPECTED: Record<SpeakerTemplate, { chambers: DriverKind[][]; bands: strin
   paV2SubBinOne: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
   paV2SubBinTwo: { chambers: [[DRIVER_KIND.sub, DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
   paV2MidBox: { chambers: [[DRIVER_KIND.mid, DRIVER_KIND.mid]], bands: [SPEAKER_BAND.mid] },
+  th18: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
+  skram: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
 };
 
 /** The spec as a save stores it and the library opens it again: JSON, undefined fields dropped. */

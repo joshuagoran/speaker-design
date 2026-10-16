@@ -19,6 +19,8 @@ export const SPEAKER_TEMPLATE = {
   paV2SubBinOne: "paV2SubBinOne",
   paV2SubBinTwo: "paV2SubBinTwo",
   paV2MidBox: "paV2MidBox",
+  th18: "th18",
+  skram: "skram",
 } as const;
 export type SpeakerTemplate = (typeof SPEAKER_TEMPLATE)[keyof typeof SPEAKER_TEMPLATE];
 
@@ -50,6 +52,8 @@ export const SPEAKER_START_NAMES = {
   paV2SubBinOne: "PA v2 sub bin, one driver",
   paV2SubBinTwo: "PA v2 sub bin, two drivers",
   paV2MidBox: "PA v2 mid box",
+  th18: "TH18 tapped horn (Xoc1)",
+  skram: "SKRAM offset-driver horn",
   hifi: "The Hi-fi design",
   paSub: "The PA design's sub",
   paTop: "The PA design's mid/high box",
@@ -70,6 +74,8 @@ export const SPEAKER_START_SPEAKER_NAMES = {
   paV2SubBinOne: "Sub bin",
   paV2SubBinTwo: "Sub bin",
   paV2MidBox: "Mid box",
+  th18: "TH18",
+  skram: "SKRAM",
   hifi: "Hi-fi speaker",
   paSub: "PA sub",
   paTop: "PA mid/high box",

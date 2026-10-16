@@ -24,7 +24,13 @@ import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import { hardwareFrontMarks } from "../stack-view/buildHardware";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
-import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
+import {
+  CD_OPTIONS,
+  FILL_OPTIONS,
+  hifiDriverById,
+  MID_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
+} from "../../lib/data";
 import { coneParts } from "../../lib/speaker/driverParts";
 import { CM2_PER_IN2 } from "../../constants/units";
 import { byId } from "../../lib/tables";
@@ -210,7 +216,7 @@ export function SpeakerFront({ spec }: Props) {
       case DRIVER_KIND.mid: {
         const size =
           d.kind === DRIVER_KIND.sub
-            ? byId(SUB_OPTIONS, d.driverId)?.size
+            ? byId(SPEAKER_SUB_OPTIONS, d.driverId)?.size
             : byId(MID_OPTIONS, d.driverId)?.size;
         return size === undefined ? [] : [circle(key, x, y, paConeRadius(size), cone)];
       }

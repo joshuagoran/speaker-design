@@ -36,7 +36,13 @@ import {
   DEFAULT_PA,
   PA_V2_MID_BOX,
   PA_V2_SUB_BIN,
+  SKRAM,
+  TH18_XOC1,
+  type KnownFoldedHorn,
 } from "../../lib/defaults";
+import { pointsToRuns } from "../../lib/speaker/hornFold";
+import { roundVent } from "./hornrespImport";
+import { DEFAULT_VENTS } from "./speakerParts";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
@@ -417,6 +423,57 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
   };
 }
 
+/**
+ * A known folded horn as built (`KnownFoldedHorn`): its box the clear inside and the walls, its one driver, its record's
+ * sections and drive on a folded path laid out in its traced runs, its mouth where the plans put it, its rear air and
+ * vent; the drivers' spot follows the record's taps. On the PA's sub band and subsonic, below the PA's crossover.
+ */
+function foldedHornStart(known: KnownFoldedHorn, identity: SpecIdentity): SpeakerSpec {
+  const t = DEFAULT_PA.wall;
+  const h = inches(known.clearHMm) + 2 * t;
+  const chamber: SpeakerChamber = {
+    at: { xIn: 0, yIn: 0 },
+    dims: { w: inches(known.widthMm) + 2 * t, h, d: inches(known.depthMm) + 2 * t },
+    netLiters: known.rearLiters,
+    stuffingPct: 0,
+    vent: known.vent ? roundVent(known.vent) : DEFAULT_VENTS.sealed,
+    load: {
+      kind: CHAMBER_LOAD.horn,
+      horn: {
+        segments: known.segments,
+        portOffset: 0,
+        drive: known.drive,
+        path: HORN_PATH.folded,
+        runs: pointsToRuns(known.points.map(([z, y]) => ({ z: inches(z), y: inches(y) }))),
+        mouthPosition: { xIn: 0, yIn: inches(known.mouthYMm) },
+      },
+    },
+    drivers: [
+      {
+        kind: DRIVER_KIND.sub,
+        driverId: known.driver.id,
+        count: 1,
+        position: { xIn: 0, yIn: h / 2 },
+        bands: [SPEAKER_BAND.low],
+        horn: null,
+      },
+    ],
+  };
+  return {
+    ...identity,
+    cabinet: paV2Cabinet(chamber),
+    bands: [
+      paV2Band(
+        SPEAKER_BAND.low,
+        { highpass: PA_V2_SUB_BIN.subsonic, lowpass: null },
+        DEFAULT_PA.ampW,
+      ),
+    ],
+    input: { highpass: null, lowpass: lrFilter(DEFAULT_PA.xoLo, DEFAULT_PA.xoLoOrder) },
+    look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
+  };
+}
+
 /** Each template's speaker, from its identity. */
 const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec> = {
   empty: (identity) => ({ ...emptySpeaker(), ...identity }),
@@ -431,6 +488,8 @@ const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec
   paV2SubBinOne: (identity) => paV2SubBin(1, identity),
   paV2SubBinTwo: (identity) => paV2SubBin(2, identity),
   paV2MidBox,
+  th18: (identity) => foldedHornStart(TH18_XOC1, identity),
+  skram: (identity) => foldedHornStart(SKRAM, identity),
 };
 
 /** The templates in the picker's order. */

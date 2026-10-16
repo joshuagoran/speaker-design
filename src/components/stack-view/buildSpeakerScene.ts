@@ -61,7 +61,7 @@ import {
   CD_OPTIONS,
   FILL_OPTIONS,
   MID_OPTIONS,
-  SUB_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
   driverMountKind,
   hifiDriverById,
   hornMountKind,
@@ -505,7 +505,7 @@ function hornContext(ctx: SceneContext, horn: Horn, hornColor: string | undefine
 function coneSize(driver: SpeakerDriver): number | undefined {
   switch (driver.kind) {
     case DRIVER_KIND.sub:
-      return byId(SUB_OPTIONS, driver.driverId)?.size;
+      return byId(SPEAKER_SUB_OPTIONS, driver.driverId)?.size;
     case DRIVER_KIND.mid:
       return byId(MID_OPTIONS, driver.driverId)?.size;
     case DRIVER_KIND.woofer:
@@ -521,7 +521,7 @@ function coneSize(driver: SpeakerDriver): number | undefined {
 /** A PA cone's basket and motor behind the baffle, as the PA's keep-out has them, in its box's inside coordinates. */
 function paDriverBody(driver: SpeakerDriver, center: { x: number; y: number }): BoxRegion[] | null {
   if (driver.kind === DRIVER_KIND.sub) {
-    const sub = byId(SUB_OPTIONS, driver.driverId);
+    const sub = byId(SPEAKER_SUB_OPTIONS, driver.driverId);
     return sub ? driverKeepOut(center, sub.size, subDriverDepthIn(sub)) : null;
   }
   if (driver.kind === DRIVER_KIND.mid) {

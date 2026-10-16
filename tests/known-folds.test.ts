@@ -8,6 +8,8 @@
 // - SKRAM (offset driver): runs from the acoustic path in its FreeCAD sketch, mirrored (its mouth is on its back). Its
 //   record's mouth area is the sketch's height times the box's depth, not its width (its spreadsheet), a third larger
 //   than built, so its ducts overlap its boards and the fit is not checked either.
+// - The TH18 and SKRAM starts (pages/speaker/speakerTemplates) lay the same runs out: their spots give the records'
+//   taps. The SKRAM start's mouth is as built, so its runs fit; TH18's do not, as above.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import fs from "node:fs";
@@ -19,6 +21,10 @@ import { hornLayoutNetwork, presetModel } from "../src/lib/acoustics/network/pre
 import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
 import { CM_PER_IN, CM2_PER_IN2 } from "../src/constants/units";
 import type { HornLayoutDesign, HornRun } from "../src/types";
+import { SKRAM as SKRAM_HORN, TH18_XOC1, type KnownFoldedHorn } from "../src/lib/defaults";
+import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
+import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { resultsOf } from "./hornresp-records";
 
 const MM_PER_IN = 25.4;
@@ -35,62 +41,17 @@ const runsOf = (points: readonly (readonly [number, number])[]): HornRun[] =>
     };
   });
 
-/** A known design: its record, its runs, its box (mm) and its mouth's center height, mm. */
-interface Known {
+/** A known design (lib/defaults): its record, and its walls, mm (the records' boxes are 18 mm birch). */
+interface Known extends Pick<
+  KnownFoldedHorn,
+  "points" | "widthMm" | "clearHMm" | "depthMm" | "mouthYMm"
+> {
   record: string;
-  points: readonly (readonly [number, number])[];
-  /** the duct's width across the box, the box's clear height (from its bottom panel's top) and depth, the walls, mm */
-  widthMm: number;
-  clearHMm: number;
-  depthMm: number;
   wallMm: number;
-  mouthYMm: number;
 }
 
-const TH18: Known = {
-  record: "th18-xoc1",
-  points: [
-    [438, 368.9],
-    [50, 585],
-    [60, 929],
-    [206, 929],
-    [206, 668],
-    [377, 628],
-    [382, 899],
-    [572, 899],
-    [572, 255],
-    [442, 169],
-    [0, 268],
-  ],
-  widthMm: 535,
-  clearHMm: 980,
-  depthMm: 688,
-  wallMm: 18,
-  mouthYMm: 268,
-};
-
-const SKRAM: Known = {
-  record: "od-skram",
-  points: [
-    [205.3, 157],
-    [198.2, 429.8],
-    [191.2, 694.4],
-    [191.2, 721.9],
-    [163.5, 749.5],
-    [88.7, 749.0],
-    [59.6, 719.7],
-    [59.6, 690.4],
-    [69.7, 303.9],
-    [71.7, 266.5],
-    [32.3, 229.0],
-    [0, 229],
-  ],
-  widthMm: 610,
-  clearHMm: 879,
-  depthMm: 777,
-  wallMm: 18,
-  mouthYMm: 229,
-};
+const TH18: Known = { ...TH18_XOC1, record: "th18-xoc1", wallMm: 18 };
+const SKRAM: Known = { ...SKRAM_HORN, record: "od-skram", wallMm: 18 };
 
 /** A known design's record, and its fold with the spot closest to `want` (cm). */
 function foldOf(known: Known, want: { front: number; rear: number | null }) {
@@ -185,4 +146,32 @@ test("SKRAM: the spot on the rear chamber's wall gives the record's tap and play
   assert.ok(mount.taps.front !== null && Math.abs(mount.taps.front * CM_PER_IN - 27.28) < 1);
   const worst = worstDb(SKRAM.record, reading, playedFrom(reading.design, mount.taps), 20, 200);
   assert.ok(worst < 0.5, `${worst} dB from Hornresp, 20–200 Hz`);
+});
+
+/** TH18's path length, cm. */
+const TH18_PATH_CM = TH18_XOC1.segments.reduce((sum, s) => sum + s.length, 0);
+
+/** A template's fold, as the Speaker page lays it out. */
+function templateFold(template: (typeof SPEAKER_TEMPLATE)["th18" | "skram"]) {
+  const { cabinet } = templateSpeaker(template);
+  const fold = hornFlare(cabinet, speakerLayout(cabinet).chambers[0])?.fold;
+  assert.ok(fold?.mount);
+  return { fold, taps: fold.mount.taps };
+}
+
+test("TH18 start: its drivers sit where its record's taps are", () => {
+  const { taps } = templateFold(SPEAKER_TEMPLATE.th18);
+  assert.ok(taps.front !== null && taps.rear !== null);
+  assert.ok(Math.abs(taps.front * CM_PER_IN - 21.76) < 1.5, `front ${taps.front * CM_PER_IN} cm`);
+  assert.ok(
+    Math.abs(taps.rear * CM_PER_IN - 284.22) < 0.03 * TH18_PATH_CM,
+    `back ${taps.rear * CM_PER_IN} cm`,
+  );
+});
+
+test("SKRAM start: its drivers face the rear chamber at its record's tap, and its runs fit the box", () => {
+  const { fold, taps } = templateFold(SPEAKER_TEMPLATE.skram);
+  assert.equal(taps.rear, null);
+  assert.ok(taps.front !== null && Math.abs(taps.front * CM_PER_IN - 27.28) < 1);
+  assert.ok(fold.fits, `outside ${fold.outside}, crossing ${JSON.stringify(fold.crossing)}`);
 });

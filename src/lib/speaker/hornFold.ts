@@ -346,9 +346,15 @@ export function hornFold(input: HornFoldInput): HornFold | null {
     p.z >= -tol && p.z <= depthIn + tol && p.y >= clear.y - tol && p.y <= clear.y + clear.h + tol;
   const outsideRun = foldRuns.findIndex((r) => ![...r.left, ...r.right].every(inBox));
   let crossingPair: [number, number] | null = null;
+  /** whether the runs between `i` and `j` are shorter than the duct is high: one turn, cut in short runs (a chamfer) */
+  const oneTurn = (i: number, j: number) =>
+    foldRuns[j].s0 - foldRuns[i].s1 < heightAt(foldRuns[i].s1);
   for (let i = 0; i < foldRuns.length && !crossingPair; i++)
     for (let j = i + 2; j < foldRuns.length; j++)
-      if (gapBetween(outline(foldRuns[i]), outline(foldRuns[j])) < FOLD_MIN_GAP_BOARDS * wallIn) {
+      if (
+        !oneTurn(i, j) &&
+        gapBetween(outline(foldRuns[i]), outline(foldRuns[j])) < FOLD_MIN_GAP_BOARDS * wallIn
+      ) {
         crossingPair = [i, j];
         break;
       }
@@ -794,8 +800,8 @@ export function spiralFolds(input: SquareFoldInput): HornRun[] | null {
   return null;
 }
 
-/** Runs (cm) from a center line's points, start first. */
-function pointsToRuns(points: readonly FoldPoint[]): HornRun[] {
+/** Runs (cm) from a center line's points (in), start first. */
+export function pointsToRuns(points: readonly FoldPoint[]): HornRun[] {
   return points.slice(1).flatMap((b, i) => {
     const a = points[i];
     const lengthIn = dist(a, b);

@@ -1,7 +1,7 @@
 // The PA sub's round port tubes (`round1`, `round2`, `round4`): where they sit on the baffle, how they fold to fit
 // (the shared rule in lib/tubeFold), and their end correction. The model, the chips, the optimizers, the cutlist and the
 // 3D view all take the tubes from here, so they agree.
-import type { Dims3, PortStyle, SubDriver, VentSpec } from "../../types";
+import type { Dims3, PortStyle, SpeakerSubDriver, SubDriver, VentSpec } from "../../types";
 import { SUB_DEPTH_FALLBACK_IN, SUB_FRAME_DIA_IN } from "../../data/catalog/driver-cutouts";
 import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../../data/acoustics/tube-ends";
 import { PORT_ELBOWS, PORT_PIPES } from "../../data/catalog/port-tubes";
@@ -26,7 +26,8 @@ const EDGE_IN = 0.25;
 const GAP_IN = 0.5;
 
 /** The driver's mounting depth, inches: its datasheet's, else its size class's fallback. */
-export const subDriverDepthIn = (d: TubeDriver) => d.depthIn ?? SUB_DEPTH_FALLBACK_IN[d.size];
+export const subDriverDepthIn = (d: Pick<SpeakerSubDriver, "size" | "depthIn">) =>
+  d.depthIn ?? SUB_DEPTH_FALLBACK_IN[d.size];
 
 /** A point on the baffle, inches: across from its center line, and up from the inside face of the floor. */
 export interface BafflePoint {

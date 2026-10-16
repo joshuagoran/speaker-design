@@ -66,6 +66,8 @@ import type {
 
 /** Sub driver diameters in inches; also the keys of a cabinet's `dims`. */
 export type SubSize = 15 | 18;
+/** Sub driver diameters the Speaker page offers, in: the PA's and 21 in (no PA cabinet takes a 21 in driver). */
+export type SpeakerSubSize = SubSize | 21;
 /** Mid driver diameters in inches. */
 export type MidSize = 10 | 12 | 15;
 
@@ -186,6 +188,15 @@ export type BoxModelTS = Pick<
 >;
 
 /** Subs always list a displacement and their nominal impedance. */
+/**
+ * A sub driver the Speaker page alone offers (data/catalog/speaker-subs): a size no PA cabinet takes, or no price from a
+ * US vendor (null; the note says so).
+ */
+export type SpeakerSubDriver = Omit<SubDriver, "size" | "price"> & {
+  size: SpeakerSubSize;
+  price: number | null;
+};
+
 export interface SubTS extends ThieleSmall {
   disp: number;
   imp: number;

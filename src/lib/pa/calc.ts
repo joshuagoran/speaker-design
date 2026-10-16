@@ -48,6 +48,7 @@ import type {
   PortStyle,
   SealedBoxModel,
   SealedPoint,
+  SpeakerSubDriver,
   SubDriver,
   SubGeometry,
   SubGeometryConfig,
@@ -745,14 +746,14 @@ export function coneKeepOut(
   ];
 }
 /** A PA cone's body by its size class: the typical cutout and the class's motor (DRIVER_MOTOR_DIA_IN). */
-export const paConeBody = (size: SubDriver["size"] | MidDriver["size"]): ConeBody => ({
+export const paConeBody = (size: SpeakerSubDriver["size"] | MidDriver["size"]): ConeBody => ({
   cutoutIn: DRIVER_CUTOUT_IN[size],
   motorIn: DRIVER_MOTOR_DIA_IN[size],
 });
 /** A PA cone's room behind the baffle (coneKeepOut), by its size class. */
 export const driverKeepOut = (
   center: { x: number; y: number },
-  size: SubDriver["size"] | MidDriver["size"],
+  size: SpeakerSubDriver["size"] | MidDriver["size"],
   depthIn: number,
 ): BoxRegion[] => coneKeepOut(center, paConeBody(size), depthIn);
 /** Where the sub driver's center sits on the inside of the baffle, in from the box's inside corner (the 3D view's). */

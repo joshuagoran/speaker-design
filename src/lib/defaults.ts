@@ -6,6 +6,7 @@ import {
   BC10CXN64,
   BC15NDL76,
   BC18NBX,
+  BC21DS115,
   CABINETS,
   F12PR300,
   FILL_OPTIONS,
@@ -16,6 +17,7 @@ import {
   HORN_OPTIONS,
   MID_OPTIONS,
   N314T,
+  PD1850,
   SB17NRX,
   SB26STCN,
   ST260,
@@ -48,12 +50,22 @@ import type {
   SpeakerChamber,
   SpeakerDriverParts,
   SpeakerSpec,
+  SpeakerSubDriver,
   SubDriver,
+  HornDrive,
+  HornSegment,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../constants/panelSizes";
 import { HIFI_DRIVE } from "../constants/hifiEngine";
-import { PORT_SHAPE, SPEAKER_BAND, SPEAKER_BAND_NAMES, VENT_KIND } from "../constants/speakerSpec";
+import {
+  HORN_DRIVE,
+  PORT_SHAPE,
+  SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
+  VENT_KIND,
+} from "../constants/speakerSpec";
+import { HORN_PROFILE } from "../constants/hornEngine";
 import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
 import {
   DIRECT_LOAD,
@@ -326,6 +338,96 @@ export const PA_V2_SUB_BIN = {
   sub: SubDriver;
   subsonic: BandFilter;
   [figure: string]: number | SubDriver | BandFilter;
+};
+
+/**
+ * A known folded horn, as built: its box's clear inside (mm), its driver, its sections (cm², cm, from its Hornresp
+ * record), its drive, its rear air and vent, and its path's center line (mm: back from the baffle's inside face, up from
+ * the box's outside bottom), traced from its plans. Its mouth's center sits `mouthYMm` up from the box's outside bottom.
+ */
+export interface KnownFoldedHorn {
+  driver: SpeakerSubDriver;
+  widthMm: number;
+  clearHMm: number;
+  depthMm: number;
+  mouthYMm: number;
+  segments: HornSegment[];
+  /** the record's taps: section boundaries (1 to n − 1) */
+  drive: Extract<HornDrive, { kind: typeof HORN_DRIVE.tapped | typeof HORN_DRIVE.offset }>;
+  /** the rear chamber's net air, L */
+  rearLiters: number;
+  /** the rear chamber's round vent: its area, cm², and length, cm (Hornresp's Ap, Lpt); null when sealed */
+  vent: { area: number; length: number } | null;
+  points: readonly (readonly [number, number])[];
+}
+
+/**
+ * TH18 by Xoc1 (planssystemes.notion.site): a tapped horn for one Precision Devices PD.1850/3. Its center line is a
+ * section of its STL at mid-width, each run midway between its two boards (about ±10 mm; its boards slant). Its record
+ * keeps 1 L of rear air (Vrc 0) and no vent.
+ */
+export const TH18_XOC1: KnownFoldedHorn = {
+  driver: PD1850,
+  widthMm: 535,
+  clearHMm: 980,
+  depthMm: 688,
+  mouthYMm: 268,
+  segments: [
+    { profile: HORN_PROFILE.conical, s1: 283.55, s2: 455.34, length: 21.76 },
+    { profile: HORN_PROFILE.conical, s1: 455.34, s2: 1248.53, length: 217.59 },
+    { profile: HORN_PROFILE.conical, s1: 1248.53, s2: 2150.7, length: 44.87 },
+    { profile: HORN_PROFILE.conical, s1: 2150.7, s2: 2717.8, length: 24.22 },
+  ],
+  drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 3 },
+  rearLiters: 1,
+  vent: null,
+  points: [
+    [438, 368.9],
+    [50, 585],
+    [60, 929],
+    [206, 929],
+    [206, 668],
+    [377, 628],
+    [382, 899],
+    [572, 899],
+    [572, 255],
+    [442, 169],
+    [0, 268],
+  ],
+};
+
+/**
+ * SKRAM: an offset-driver horn for one B&C 21DS115-8. Its center line is the acoustic path of its FreeCAD sketch,
+ * mirrored (its mouth is on its back). Its record works the mouth out with the box's depth for its width, a third too
+ * large: the mouth here is as built (the record's 1195.5 cm² times 610 / 777). Its record's 120 L rear air and port.
+ */
+export const SKRAM: KnownFoldedHorn = {
+  driver: BC21DS115,
+  widthMm: 610,
+  clearHMm: 879,
+  depthMm: 777,
+  mouthYMm: 229,
+  segments: [
+    { profile: HORN_PROFILE.parabolic, s1: 488, s2: 575.2, length: 27.28 },
+    { profile: HORN_PROFILE.parabolic, s1: 575.2, s2: 938.6, length: 100.75 },
+  ],
+  drive: { kind: HORN_DRIVE.offset, tap: 1 },
+  rearLiters: 120,
+  vent: { area: 732, length: 79.54 },
+  points: [
+    [205.3, 157],
+    [198.2, 429.8],
+    [191.2, 694.4],
+    [191.2, 721.9],
+    [163.5, 749.5],
+    [88.7, 749.0],
+    [59.6, 719.7],
+    [59.6, 690.4],
+    [69.7, 303.9],
+    [71.7, 266.5],
+    [32.3, 229.0],
+    [0, 229],
+  ],
 };
 
 /**

@@ -1,9 +1,11 @@
 // Typical front-mount baffle cutout per driver size class, inches; the cutlist notes quote it with "check the
-// datasheet". Keyed by every PA sub and mid size (SubSize | MidSize in src/types.ts), so a new size class fails the
-// type check until its cutout is added here.
-import type { MidSize, SubSize } from "../../types";
+// datasheet". Keyed by every sub and mid size (SpeakerSubSize | MidSize in src/types.ts; 21 in on the Speaker page
+// only), so a new size class fails the type check until its cutout is added here.
+import type { MidSize, SpeakerSubSize } from "../../types";
 
-export const DRIVER_CUTOUT_IN: Record<SubSize | MidSize, number> = {
+export const DRIVER_CUTOUT_IN: Record<SpeakerSubSize | MidSize, number> = {
+  // B&C's 21 in drivers: 508 mm
+  21: 20,
   18: 16.6,
   15: 13.9,
   12: 11.1,
@@ -27,7 +29,8 @@ export const HIFI_DRIVER_CUTOUT_IN: Partial<Record<number, number>> = {
  * A sub driver's mounting depth (baffle front to the back of its magnet) per size class, inches, where its datasheet
  * gives none: about the deepest of the class's published depths, so a tube routed behind the driver clears it.
  */
-export const SUB_DEPTH_FALLBACK_IN: Record<SubSize, number> = {
+export const SUB_DEPTH_FALLBACK_IN: Record<SpeakerSubSize, number> = {
+  21: 10.5,
   18: 9.5,
   15: 8,
 };
@@ -36,7 +39,8 @@ export const SUB_DEPTH_FALLBACK_IN: Record<SubSize, number> = {
  * A sub driver's frame diameter per size class, inches: the round flange that sits on the baffle, about half an inch
  * over the nominal size. The port tubes' layout keeps their flares off it.
  */
-export const SUB_FRAME_DIA_IN: Record<SubSize, number> = {
+export const SUB_FRAME_DIA_IN: Record<SpeakerSubSize, number> = {
+  21: 21.5,
   18: 18.5,
   15: 15.5,
 };
@@ -54,10 +58,11 @@ export const MID_DEPTH_FALLBACK_IN: Record<MidSize, number> = {
 
 /**
  * A PA driver's motor (magnet and plates) diameter per size class, inches: about the largest ferrite motor of the
- * class (an 18″ sub's runs to 250 mm, a 15″'s to 220 mm, a 12″'s to 180 mm, a 10″'s to 150 mm); neodymium motors are
+ * class (a 21″ sub's to 280 mm, an 18″'s to 250 mm, a 15″'s to 220 mm, a 12″'s to 180 mm, a 10″'s to 150 mm); neodymium motors are
  * smaller. The braces keep clear of the basket narrowing to it.
  */
-export const DRIVER_MOTOR_DIA_IN: Record<SubSize | MidSize, number> = {
+export const DRIVER_MOTOR_DIA_IN: Record<SpeakerSubSize | MidSize, number> = {
+  21: 11,
   18: 10,
   15: 8.75,
   12: 7.25,

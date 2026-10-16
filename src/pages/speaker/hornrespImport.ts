@@ -30,7 +30,7 @@ export type HornImport =
  * the vent's whole length less the outer end (Hornresp's end correction off); the tube's own length is that less its
  * inner end's correction, as the horn engine adds it back (lib/speaker/hornDesign rearPort).
  */
-function roundVent(port: { area: number; length: number }): ChamberVent {
+export function roundVent(port: { area: number; length: number }): ChamberVent {
   const dia = (2 * Math.sqrt(port.area / Math.PI)) / CM_PER_IN;
   const inner = hifiRoundEndCorrection({ dia }, 0) * (1 - 1 / BOTH_ENDS_CORRECTION_RATIO);
   return {

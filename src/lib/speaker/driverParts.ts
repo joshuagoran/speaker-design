@@ -14,7 +14,7 @@ import {
   CD_OPTIONS,
   FILL_OPTIONS,
   MID_OPTIONS,
-  SUB_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
   hifiDriverById,
   hornById,
 } from "../data";
@@ -54,7 +54,7 @@ export const isConeKind = (kind: DriverKind) => CONE_KINDS.has(kind);
 export function coneParts(driver: SpeakerDriver): ConeParts | null {
   switch (driver.kind) {
     case DRIVER_KIND.sub: {
-      const sub = byId(SUB_OPTIONS, driver.driverId);
+      const sub = byId(SPEAKER_SUB_OPTIONS, driver.driverId);
       return sub ? { ts: sub.ts, dispL: sub.ts.disp } : null;
     }
     case DRIVER_KIND.mid: {
@@ -82,7 +82,7 @@ export function coneParts(driver: SpeakerDriver): ConeParts | null {
 export function coneShape(driver: SpeakerDriver): Pick<SubDriver, "surroundIn" | "dishDepthIn"> {
   const part =
     driver.kind === DRIVER_KIND.sub
-      ? byId(SUB_OPTIONS, driver.driverId)
+      ? byId(SPEAKER_SUB_OPTIONS, driver.driverId)
       : driver.kind === DRIVER_KIND.mid
         ? byId(MID_OPTIONS, driver.driverId)
         : undefined;
@@ -97,7 +97,7 @@ export function coneShape(driver: SpeakerDriver): Pick<SubDriver, "surroundIn" |
 export function coneDepthIn(driver: SpeakerDriver): number | null {
   switch (driver.kind) {
     case DRIVER_KIND.sub: {
-      const sub = byId(SUB_OPTIONS, driver.driverId);
+      const sub = byId(SPEAKER_SUB_OPTIONS, driver.driverId);
       return sub ? subDriverDepthIn(sub) : null;
     }
     case DRIVER_KIND.mid: {
@@ -174,7 +174,7 @@ export function driverListing(
 ): { name: string; price: number | null; src: string } | null {
   switch (driver.kind) {
     case DRIVER_KIND.sub:
-      return byId(SUB_OPTIONS, driver.driverId) ?? null;
+      return byId(SPEAKER_SUB_OPTIONS, driver.driverId) ?? null;
     case DRIVER_KIND.mid:
       return byId(MID_OPTIONS, driver.driverId) ?? null;
     case DRIVER_KIND.compression:

@@ -280,6 +280,18 @@ set the sound. The runs set the boards.
 - The fit to the box is not checked. TH18 has slanted boards the runs approximate.
 - SKRAM's record computes S3 with the box's depth, not its inner width. Its mouth is 33% larger than built.
 
+**Starts.** The Speaker page's TH18 and SKRAM starts build the same designs (`TH18_XOC1`, `SKRAM` in
+`src/lib/defaults.ts`).
+
+| Start | Driver                      | Differences from the record                             | Fits the box       |
+| ----- | --------------------------- | ------------------------------------------------------- | ------------------ |
+| TH18  | Precision Devices PD.1850/3 | 3/4″ walls, not 18 mm                                   | No: the back riser |
+| SKRAM | B&C 21DS115-8 (21″)         | The maker's specs, not the record's; the mouth as built | Yes                |
+
+- Both drivers are Speaker-page parts (`src/data/catalog/speaker-subs.ts`). The PA keeps its 15″ and 18″ subs.
+- The PD.1850/3 has no US vendor. Its price is not known.
+- The fold check treats runs joined by a run shorter than the duct's height as one turn (a chamfer), not a crossing.
+
 ### Hornresp import
 
 `src/pages/speaker/hornrespImport.ts`. A pasted record sets the sections, the drive, the chamber's net air and the
