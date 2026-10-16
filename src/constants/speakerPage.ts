@@ -413,7 +413,8 @@ export const SPEAKER_TEXT = {
   hornBoardDouble: "Double",
   hornBoardTip: "The board the drivers mount on. Double it for large drivers.",
   hornPath: "Path",
-  hornPathTip: "Only the sections set the response. The views draw a folded path straight for now.",
+  hornPathTip:
+    "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box. Only the sections set the response.",
   hornDrive: "Drive",
   hornDriveTip:
     "Where the cones meet the path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
