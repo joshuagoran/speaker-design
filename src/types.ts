@@ -2456,6 +2456,19 @@ export interface FoldTrace {
 }
 
 /**
+ * One section of a folded horn's traced passage, every 0.5 in from the closed end: how far along the path it is, how
+ * wide the passage is there across its section, and its area.
+ */
+export interface FoldPathSection {
+  /** the distance along the path from the closed end, in */
+  sIn: number;
+  /** the passage's width across the section there, in */
+  widthIn: number;
+  /** the passage's area there, in² */
+  areaIn2: number;
+}
+
+/**
  * A horn built into the box: the horn engine's segments and vent offset (`HornDesign`). The chamber's own net air and
  * vent are the horn's rear chamber. Its front chamber is not a setting: it comes from the walls over the cones
  * (lib/speaker/hornThroat); an older save's `throatChamber` is not read. The first segment's start area is the throat,
