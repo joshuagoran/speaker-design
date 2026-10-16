@@ -25,6 +25,12 @@ export const SPEAKER_STEPS = {
   ampW: 10,
 } as const;
 
+/**
+ * The most a chamber's stuffing makes it act larger, %: fiber fill packed full gives about this much; more is not
+ * possible with real fill.
+ */
+export const STUFFING_MAX_PCT = 25;
+
 /** The Stack page's member field steps: a member's level, dB, and its set delay, ms. The Stack optimizer builds on them. */
 export const STACK_STEPS = {
   levelDb: 0.5,

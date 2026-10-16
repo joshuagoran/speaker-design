@@ -567,8 +567,9 @@ export const SPEAKER_TEXT = {
   tappedAirNote: "Both sides of the cones open into the horn, so there is no box air to set.",
   netAirTip:
     "The air the drivers work against. Auto: the inside volume minus the walls, the braces, the drivers and the vent. Custom: you type the value.",
+  stuffing: "Stuffing: acts larger by, %",
   stuffingTip:
-    "Fiber fill in the chamber, in percent. Fill makes the box act larger. 10% is normal, and 15% is heavy.",
+    "Fiber fill makes the box act larger than its air. Light fill: about 10%. Heavy fill: about 15%. Packed full: about 25%, the most real fill gives.",
   airSpeedTip:
     "The highest air speed in the port at full power. Above it, the port makes noise. The maximum output stops at this limit.",
   radiatorMassTip: "Mass that you add to each passive radiator. More mass tunes the box lower.",

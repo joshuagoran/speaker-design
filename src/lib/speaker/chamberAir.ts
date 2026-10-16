@@ -3,6 +3,7 @@
 // speakerBuild). Pure.
 //
 // Symbols kept short are the established ones: t is the wall's thickness, in (as lib/pa/calc and lib/hifi name it).
+import { STUFFING_MAX_PCT } from "../../constants/speakerSteps";
 import type {
   Dims2,
   PortStyle,
@@ -203,6 +204,9 @@ export function chamberVentModel(
   }
 }
 
-/** The air the box models take for a chamber of `netLiters`: its stuffing makes it act `stuffingPct` % bigger. */
+/**
+ * The air the box models take for a chamber of `netLiters`: its stuffing makes it act `stuffingPct` % bigger, at most
+ * `STUFFING_MAX_PCT` (saved designs may carry more).
+ */
 export const stuffedLiters = (chamber: Pick<SpeakerChamber, "stuffingPct">, netLiters: number) =>
-  netLiters * (1 + chamber.stuffingPct / 100);
+  netLiters * (1 + Math.min(STUFFING_MAX_PCT, Math.max(0, chamber.stuffingPct)) / 100);

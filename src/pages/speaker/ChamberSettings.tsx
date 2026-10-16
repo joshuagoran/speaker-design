@@ -119,7 +119,7 @@ import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
 import { withSlotKind, withSlotPlace } from "../../lib/speaker/slotPort";
-import { SPEAKER_STEPS } from "../../constants/speakerSteps";
+import { SPEAKER_STEPS, STUFFING_MAX_PCT } from "../../constants/speakerSteps";
 import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
 import { ELBOW_COUNTS, elbowCountOf } from "../../lib/tubeFold";
 
@@ -282,10 +282,11 @@ export function ChamberSettings({
         onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
       />
       <NumberField
-        label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>Stuffing, %</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>{SPEAKER_TEXT.stuffing}</Tooltip>}
         value={chamber.stuffingPct}
         disabled={tappedHorn}
         min={0}
+        max={STUFFING_MAX_PCT}
         step={5}
         onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
       />
