@@ -8,6 +8,7 @@
 // seen from the front), y up from the cabinet's bottom. Both views draw the left speaker of a pair, so a driver's
 // `xIn` (+ toward the pair's inside) is + to the right, as the Hi-fi page draws it. Pure.
 import type {
+  HornRun,
   ArchBlock,
   Dims2,
   Dims3,
@@ -52,10 +53,11 @@ import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
 import { DRIVER_CUTOUT_IN, HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { CM2_PER_IN2 } from "../../constants/units";
+import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { hornPath, type HornPath } from "./hornGeometry";
+import { fittedRuns, hornFold, squareFolds, type HornFold, type HornFoldInput } from "./hornFold";
 import { driverBodyIn, wallClearanceIn } from "./hornThroat";
 import { driverBoardIn } from "./driverBoard";
 import { PORT_STYLE } from "../../constants/portStyles";
@@ -664,6 +666,13 @@ export interface HornFlare {
    * where the path, folded or not, does not fit the chamber: the views then draw it as it is, past the walls
    */
   path: HornPath;
+  /**
+   * a folded path laid out in runs (lib/speaker/hornFold): the horn's own runs, else the square folds of `path` as runs.
+   * Null on a straight path. The views draw a folded horn from it.
+   */
+  fold: HornFold | null;
+  /** the runs `fold` lays out, as the horn stores them (cm): the horn's own, or the square folds'; empty when straight */
+  runs: readonly HornRun[];
   /** the mouth is larger than the horn's face: drawn at the face, every section shrunk alike */
   mouthClipped: boolean;
   /** the horn's `mouthPosition` would put the mouth past the face: drawn moved inside it */
@@ -701,8 +710,12 @@ export function hornFlare(
   const t = cabinet.panel.thicknessIn;
   const face = hornFace(placed, t);
   const mouthArea = horn.segments[horn.segments.length - 1].s2 / CM2_PER_IN2;
-  // as square as it fits: wider than square where a square would be taller than the face
-  const w = Math.min(face.w, Math.max(Math.sqrt(mouthArea), mouthArea / face.h));
+  // as square as it fits: wider than square where a square would be taller than the face; a folded path's duct is as
+  // wide as the face, so its legs are as low as they can be
+  const w =
+    horn.path === HORN_PATH.folded
+      ? face.w
+      : Math.min(face.w, Math.max(Math.sqrt(mouthArea), mouthArea / face.h));
   const h = Math.min(face.h, mouthArea / w);
   /** what the face leaves of the mouth's area: every section is drawn that much smaller */
   const fit = (w * h) / mouthArea;
@@ -713,7 +726,9 @@ export function hornFlare(
         face,
       )
     : null;
-  const [center] = set?.spots ?? [{ x: face.x + face.w / 2, y: face.y + face.h / 2 }];
+  // a folded path's mouth sits at the top of the face, so its legs stack down the box under it
+  const defaultY = horn.path === HORN_PATH.folded ? face.y + face.h - h / 2 : face.y + face.h / 2;
+  const [center] = set?.spots ?? [{ x: face.x + face.w / 2, y: defaultY }];
   const mouth = { x: center.x - w / 2, y: center.y - h / 2, w, h };
   const path = hornPath({
     segments: horn.segments,
@@ -729,7 +744,43 @@ export function hornFlare(
     folded: horn.path === HORN_PATH.folded,
   });
   if (!path) return null;
-  return { mouth, path, mouthClipped: fit < 1 - 1e-9, mouthMoved: set?.moved ?? false };
+  const folded = horn.path === HORN_PATH.folded;
+  const square = {
+    segments: horn.segments,
+    areaScale: fit,
+    mouth,
+    clear: face,
+    depthIn: clearDepthIn(cabinet, placed.dims),
+    wallIn: t,
+  };
+  const runs = folded ? (horn.runs?.length ? horn.runs : squareFolds(square)) : [];
+  const fold = folded
+    ? hornFold({ ...square, runs: fittedRuns(runs, path.pathIn), mount: mountOf(horn, runs) })
+    : null;
+  return {
+    mouth,
+    path,
+    fold,
+    runs,
+    mouthClipped: fit < 1 - 1e-9,
+    mouthMoved: set?.moved ?? false,
+  };
+}
+
+/**
+ * An offset or tapped horn's drivers' spot as the fold reads it (inches): the horn's own, else on the first run's right
+ * wall (below a run toward the back) at its middle, the cone fronts into the run. Null for another drive.
+ */
+function mountOf(horn: SpeakerHorn, runs: readonly HornRun[]): HornFoldInput["mount"] {
+  if (horn.drive.kind !== HORN_DRIVE.offset && horn.drive.kind !== HORN_DRIVE.tapped) return null;
+  const mount = horn.mount ?? {
+    run: 0,
+    alongCm: (runs[0]?.lengthCm ?? 0) / 2,
+    side: -1,
+    frontInRun: true,
+  };
+  const { alongCm, ...rest } = mount;
+  return { ...rest, alongIn: alongCm / CM_PER_IN };
 }
 
 /** A box in the front view by its edges, in. */

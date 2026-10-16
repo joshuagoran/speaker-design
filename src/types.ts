@@ -2320,6 +2320,35 @@ export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset">
   doubleBoard?: boolean;
   /** what the horn is designed for (lib/speaker/hornGoals); absent: the defaults (`HORN_GOALS_DEFAULT`) */
   goals?: HornGoals;
+  /**
+   * a folded path's runs, from the path's start to the mouth, as the user set them (lib/speaker/hornFold); absent: the
+   * automatic square folds. Ignored on a straight path.
+   */
+  runs?: readonly HornRun[];
+  /** where an offset or tapped horn's drivers sit on a folded path; absent: on the first run's lower wall, at its middle */
+  mount?: HornMount;
+}
+
+/**
+ * One straight run of a folded horn path in the side view: its length along the path, cm, and the way it runs,
+ * degrees: 0 toward the back, 90 up, 180 toward the baffle, 270 down.
+ */
+export interface HornRun {
+  lengthCm: number;
+  angleDeg: number;
+}
+
+/**
+ * Where an offset or tapped horn's drivers sit on a folded path: in a wall of run `run` (from 0), `alongCm` from the
+ * run's start, on its `side` (1: the left of the run's way, −1: its right). `frontInRun`: the cone fronts face into
+ * the run (true) or out through the wall (false). The spot sets the taps: the run on each side of the wall, or the
+ * rear chamber where no run is.
+ */
+export interface HornMount {
+  run: number;
+  alongCm: number;
+  side: 1 | -1;
+  frontInRun: boolean;
 }
 
 /**
