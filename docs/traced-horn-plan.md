@@ -20,7 +20,7 @@ A working mock shows the model: `docs/traced-horn-mock.html`.
 | Add a board      | Drag in the side view. The ends snap onto walls and other boards. |
 | Join boards      | Drop an end on another board's end (corner) or edge (butt).       |
 | Move a board     | Drag the board, or drag one end. Joined ends move with it.        |
-| Square only      | A switch. Board ends then move only across or up and down.        |
+| Square a joint   | Click a joint to hold it at 90°. It stays square as you drag.     |
 | Delete a board   | Delete tool, then click the board.                                |
 | Place drivers    | Click a board. Click again to turn the cones the other way.       |
 | Move the drivers | Drag them along their board.                                      |
@@ -139,15 +139,15 @@ The owner does these on the page. I do them in the browser before every hand-ove
 6. Port the sealed chamber of an offset horn. The port stays in that chamber.
 7. Run Design from goals, then edit its boards by hand.
 8. Join two boards at a corner and one at an edge. The cutlist shows a mitre and a butt.
-9. Turn on Square only. Drag an end. It stays square.
+9. Hold one joint at 90°. Drag its boards. That joint stays square; the others do not.
 10. Point at the chart. The side view lights the right band.
 
 ## Steps
 
-| Step | Work                                                                                                      | PR  |
-| ---- | --------------------------------------------------------------------------------------------------------- | --- |
-| 1    | Owner tests the mock and approves this plan                                                               | -   |
-| 2    | The trace, its checks, the new data and the sound model input, with tests                                 | 1   |
-| 3    | The side view editor (the mock's tools, joints, Square only), the path chart, the 3D view and the cutlist | 1   |
-| 4    | Rear chamber vents, starting layouts, Design from goals (straight horn first)                             | 2   |
-| 5    | Convert saved boards; remove the recipe model                                                             | 2   |
+| Step | Work                                                                                                        | PR  |
+| ---- | ----------------------------------------------------------------------------------------------------------- | --- |
+| 1    | Owner tests the mock and approves this plan                                                                 | -   |
+| 2    | The trace, its checks, the new data and the sound model input, with tests                                   | 1   |
+| 3    | The side view editor (the mock's tools, joints, square joints), the path chart, the 3D view and the cutlist | 1   |
+| 4    | Rear chamber vents, starting layouts, Design from goals (straight horn first)                               | 2   |
+| 5    | Convert saved boards; remove the recipe model                                                               | 2   |

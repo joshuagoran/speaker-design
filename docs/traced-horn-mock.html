@@ -288,6 +288,7 @@
       <button id="t-delete" data-tool="delete" aria-pressed="false">Delete board</button>
       <button id="t-driver" data-tool="driver" aria-pressed="false">Place drivers</button>
       <button id="t-mouth" data-tool="mouth" aria-pressed="false">Set mouth</button>
+      <button id="t-square" data-tool="square" aria-pressed="false">Square joint</button>
     </div>
     <div class="group" role="group" aria-label="Start">
       <span class="label">Start</span>
@@ -297,9 +298,6 @@
       <button id="p-empty">Empty box</button>
     </div>
     <div class="group">
-      <label style="display: flex; gap: 6px; align-items: center; padding: 0 6px"
-        ><input id="in-square" type="checkbox" style="width: auto" /> Square only (90°)</label
-      >
       <button id="undo">Undo</button>
     </div>
   </div>
@@ -511,6 +509,104 @@
       const a = jointAt(bd.a, i).length ? add(bd.a, dir, -T / 2) : bd.a;
       const b = jointAt(bd.b, i).length ? add(bd.b, dir, T / 2) : bd.b;
       return { a, b };
+    }
+    const dot = (v, w) => v.z * w.z + v.y * w.y;
+    const inBox = (q) => ({ z: clamp(q.z, 0, S.D), y: clamp(q.y, 0, S.H) });
+    /**
+     * what board i's end e meets: another board's end (a corner: that board, its end, its far end), a wall, or another
+     * board's edge; with `d`, the direction of what it meets. Null: a free end.
+     */
+    function partnerAt(i, e) {
+      const P = S.boards[i][e];
+      const joint = jointAt(P, i)[0];
+      if (joint) {
+        const o = S.boards[joint.j];
+        const far = joint.e === "a" ? o.b : o.a;
+        return { kind: "corner", ...joint, far: { ...far }, d: unit(sub(far, P)) };
+      }
+      if (Math.abs(P.z) < JOIN || Math.abs(P.z - S.D) < JOIN)
+        return { kind: "wall", axis: "z", d: { z: 0, y: 1 } };
+      if (Math.abs(P.y) < JOIN || Math.abs(P.y - S.H) < JOIN)
+        return { kind: "wall", axis: "y", d: { z: 1, y: 0 } };
+      for (const [j, o] of S.boards.entries()) {
+        if (j === i) continue;
+        const { d, t } = segDist(P, o.a, o.b);
+        if (d <= T / 2 + 0.05 && t > 0 && t < 1) return { kind: "edge", j, d: unit(sub(o.b, o.a)) };
+      }
+      return null;
+    }
+    /** board i's end e is held at 90° to what it meets (at a corner, either board's end may carry the hold) */
+    function isSquare(i, e) {
+      const pr = partnerAt(i, e);
+      if (!pr) return null;
+      const held = S.boards[i].sq?.[e] || (pr.kind === "corner" && S.boards[pr.j].sq?.[pr.e]);
+      return held ? pr : null;
+    }
+    function setSquare(i, e, on) {
+      const pr = partnerAt(i, e);
+      S.boards[i].sq = { ...S.boards[i].sq, [e]: on };
+      if (pr?.kind === "corner") S.boards[pr.j].sq = { ...S.boards[pr.j].sq, [pr.e]: on };
+    }
+    /** the point nearest `p` where Q and R see each other at 90° (the circle on QR) */
+    function thales(Q, R, p) {
+      const M = { z: (Q.z + R.z) / 2, y: (Q.y + R.y) / 2 };
+      const u = unit(sub(p, M));
+      return inBox(len(u) ? add(M, u, len(sub(R, Q)) / 2) : p);
+    }
+    /** move board i's end e, and the ends joined to it, to `to` */
+    function moveEnd(i, e, to) {
+      const joined = jointAt(S.boards[i][e], i);
+      S.boards[i][e] = { ...to };
+      joined.forEach((o) => (S.boards[o.j][o.e] = { ...to }));
+    }
+    /**
+     * make board i's end e meet its partner at 90°: the joint stays put and a board swings round it, keeping its length
+     * (at a corner, the board further from level or upright)
+     */
+    function squareUp(i, e) {
+      const pr = partnerAt(i, e);
+      if (!pr) return;
+      let k = i,
+        ke = e,
+        ref = pr.d;
+      if (pr.kind === "corner") {
+        /** how far a board is from level or upright: 0 when it is either */
+        const off = (b) => {
+          const d = unit(sub(b.b, b.a));
+          return Math.min(Math.abs(d.z), Math.abs(d.y));
+        };
+        if (off(S.boards[pr.j]) > off(S.boards[i]))
+          ((k = pr.j),
+            (ke = pr.e),
+            (ref = unit(sub(S.boards[i][e === "a" ? "b" : "a"], S.boards[i][e]))));
+      }
+      const bd = S.boards[k],
+        P = bd[ke],
+        oe = ke === "a" ? "b" : "a",
+        Q = bd[oe];
+      const n = left(ref);
+      const side = dot(sub(Q, P), n) >= 0 ? 1 : -1;
+      moveEnd(k, oe, inBox(add(P, n, side * len(sub(Q, P)))));
+    }
+    /** the boards that move as one with board i: those held square to it at a corner, or butting it held square */
+    function rigidGroup(i) {
+      const group = new Set([i]);
+      const todo = [i];
+      while (todo.length) {
+        const g = todo.pop();
+        const add1 = (j) => !group.has(j) && (group.add(j), todo.push(j));
+        ["a", "b"].forEach((e) => {
+          const pr = isSquare(g, e);
+          if (pr?.kind === "corner") add1(pr.j);
+        });
+        S.boards.forEach((_, k) =>
+          ["a", "b"].forEach((e) => {
+            const pr = isSquare(k, e);
+            if (pr?.kind === "edge" && pr.j === g) add1(k);
+          }),
+        );
+      }
+      return group;
     }
     /** the straight horn's area at `x` in along it, in² */
     function targetArea(x) {
@@ -1214,6 +1310,30 @@
             h.dataset.end = `${i}:${end}`;
           }),
         );
+      // joints: in the Square joint tool, one handle per joint; elsewhere, a mark on each held joint
+      const seen = [];
+      S.boards.forEach((bd, i) =>
+        ["a", "b"].forEach((end) => {
+          const P = bd[end];
+          if (!partnerAt(i, end) || seen.some((q) => len(sub(q, P)) < JOIN)) return;
+          seen.push(P);
+          const held = !!isSquare(i, end);
+          if (!held && tool !== "square") return;
+          const r = tool === "square" ? 7 : 4;
+          const h = el("rect", {
+            x: X(P.z) - r,
+            y: Y(P.y) - r,
+            width: 2 * r,
+            height: 2 * r,
+            rx: 1,
+            fill: held ? css("--yellow") : css("--panel"),
+            stroke: css("--ink"),
+            "stroke-width": 1.5,
+            style: tool === "square" ? "cursor:pointer" : "pointer-events:none",
+          });
+          if (tool === "square") h.dataset.sq = `${i}:${end}`;
+        }),
+      );
       // a board being drawn
       if (drawing)
         el("line", {
@@ -1422,7 +1542,6 @@
     /** the place along the path pointed at, in from the closed end; null: none */
     let hoverS = null;
     let bandEl = null;
-    let squareOnly = false;
     /** the hover band: the air within half an inch of the place pointed at */
     function updateBand() {
       if (!bandEl || !tr) return;
@@ -1455,6 +1574,8 @@
       driver:
         "Click a board to put the drivers there. Click the drivers' dot or their board again to turn the cones the other way.",
       mouth: "Click a wall to open the mouth there, then drag its two ends.",
+      square:
+        "Click a joint to hold it at 90°; click again to free it. Held joints stay square as you drag.",
     };
     const pt = (e) => {
       const ctm = svg.getScreenCTM();
@@ -1462,38 +1583,23 @@
       const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
       return { z: (p.x - PAD) / PX, y: S.H - (p.y - PAD) / PX };
     };
-    // an end snapped to the grid, then onto a wall or a board's face if near
-    // an end snapped to the grid (and square to `anchor` when Square only is on), then onto another board's end (a
-    // corner joint), a wall, or a board's face
-    function snapEnd(p, skip = -1, anchor = null) {
+    // an end snapped to the grid, then onto another board's end (a corner joint), a wall, or a board's face
+    function snapEnd(p, skip = -1) {
       let q = { z: clamp(snap(p.z), 0, S.D), y: clamp(snap(p.y), 0, S.H) };
-      const level =
-        anchor && squareOnly
-          ? Math.abs(q.z - anchor.z) >= Math.abs(q.y - anchor.y)
-            ? "z"
-            : "y"
-          : null;
-      if (level === "z") q.y = anchor.y;
-      if (level === "y") q.z = anchor.z;
-      const aligned = (r) =>
-        !level ||
-        (level === "z" ? Math.abs(r.y - anchor.y) < JOIN : Math.abs(r.z - anchor.z) < JOIN);
       for (const [i, bd] of S.boards.entries()) {
         if (i === skip) continue;
-        for (const e of ["a", "b"])
-          if (len(sub(q, bd[e])) < SNAP_TO * 1.5 && aligned(bd[e])) return { ...bd[e] };
+        for (const e of ["a", "b"]) if (len(sub(q, bd[e])) < SNAP_TO * 1.5) return { ...bd[e] };
       }
-      if (level !== "y" && q.z < SNAP_TO) q.z = 0;
-      if (level !== "y" && q.z > S.D - SNAP_TO) q.z = S.D;
-      if (level !== "z" && q.y < SNAP_TO) q.y = 0;
-      if (level !== "z" && q.y > S.H - SNAP_TO) q.y = S.H;
+      if (q.z < SNAP_TO) q.z = 0;
+      if (q.z > S.D - SNAP_TO) q.z = S.D;
+      if (q.y < SNAP_TO) q.y = 0;
+      if (q.y > S.H - SNAP_TO) q.y = S.H;
       S.boards.forEach((bd, i) => {
         if (i === skip) return;
         const { d, t } = segDist(q, bd.a, bd.b);
         if (d < T / 2 + SNAP_TO && d > 0.01) {
           const on = add(bd.a, sub(bd.b, bd.a), t);
-          const r = add(on, unit(sub(q, on)), T / 2);
-          if (aligned(r)) q = r;
+          q = add(on, unit(sub(q, on)), T / 2);
         }
       });
       return q;
@@ -1531,6 +1637,15 @@
         S.mouth = { wall, a: clamp(snap(along - 4), 0, span), b: clamp(snap(along + 4), 0, span) };
         render();
         return;
+      } else if (tool === "square") {
+        if (!tgt.dataset.sq) return;
+        push();
+        const [i, end] = tgt.dataset.sq.split(":");
+        const on = !isSquare(+i, end);
+        setSquare(+i, end, on);
+        if (on) squareUp(+i, end);
+        render();
+        return;
       } else if (tool === "board") {
         push();
         const a = snapEnd(p);
@@ -1538,8 +1653,20 @@
       } else if (tgt.dataset.end) {
         push();
         const [i, end] = tgt.dataset.end.split(":");
-        const at = S.boards[+i][end];
-        drag = { kind: "end", i: +i, end, joined: jointAt(at, +i) };
+        const bd = S.boards[+i],
+          other = end === "a" ? "b" : "a";
+        drag = {
+          kind: "end",
+          i: +i,
+          end,
+          joined: jointAt(bd[end], +i),
+          // held joints at either end, as they are when the drag starts
+          mine: isSquare(+i, end),
+          theirs: isSquare(+i, other),
+          P0: { ...bd[end] },
+          Q0: { ...bd[other] },
+          joinedOther: jointAt(bd[other], +i),
+        };
       } else if (tgt.dataset.drivers && tool === "delete") {
         push();
         S.driver = null;
@@ -1576,20 +1703,42 @@
           return;
         }
         push();
-        // the boards joined at its ends, and the ends butting into its edges, come along
-        const host = S.boards[i];
-        const butting = S.boards.flatMap((o, j) =>
-          j === i
-            ? []
-            : ["a", "b"]
-                .filter((e) => {
-                  const { d, t } = segDist(o[e], host.a, host.b);
-                  return d <= T / 2 + 0.05 && t > 0 && t < 1;
-                })
-                .map((e) => ({ j, e })),
+        // boards held square to it move whole; the ends joined to them, or butting their edges, come along
+        const group = rigidGroup(i);
+        const joined = [...group].flatMap((g) => {
+          const host = S.boards[g];
+          const butting = S.boards.flatMap((o, j) =>
+            group.has(j)
+              ? []
+              : ["a", "b"]
+                  .filter((e) => {
+                    const { d, t } = segDist(o[e], host.a, host.b);
+                    return d <= T / 2 + 0.05 && t > 0 && t < 1;
+                  })
+                  .map((e) => ({ j, e })),
+          );
+          return [
+            ...["a", "b"].flatMap((e) => jointAt(host[e], g).filter((o) => !group.has(o.j))),
+            ...butting,
+          ];
+        });
+        // a held joint on a wall or another board's edge slides along it
+        const slides = [...group].flatMap((g) =>
+          ["a", "b"].flatMap((e) => {
+            const pr = isSquare(g, e);
+            return pr && pr.kind !== "corner" && !(pr.kind === "edge" && group.has(pr.j))
+              ? [pr.d]
+              : [];
+          }),
         );
-        const joined = [...["a", "b"].flatMap((e) => jointAt(host[e], i)), ...butting];
-        drag = { kind: "board", i, from: p, start: JSON.parse(JSON.stringify(S.boards)), joined };
+        drag = {
+          kind: "board",
+          group: [...group],
+          from: p,
+          start: JSON.parse(JSON.stringify(S.boards)),
+          joined,
+          slides,
+        };
       } else return;
       svg.setPointerCapture(e.pointerId);
       render();
@@ -1609,18 +1758,31 @@
         return;
       }
       const p = pt(e);
-      if (drawing) drawing.b = snapEnd(p, -1, drawing.a);
+      if (drawing) drawing.b = snapEnd(p);
       else if (drag.kind === "end") {
-        const other = S.boards[drag.i][drag.end === "a" ? "b" : "a"];
-        const q = snapEnd(p, drag.i, other);
-        S.boards[drag.i][drag.end] = q;
+        const { i, end, mine, theirs, P0, Q0 } = drag;
+        const other = end === "a" ? "b" : "a";
+        let q;
+        if (mine?.kind === "corner") q = thales(Q0, mine.far, p);
+        else if (mine) {
+          // held square to a wall or an edge: the end slides along it, and the board moves with it
+          q = inBox(add(P0, mine.d, snap(dot(sub(p, P0), mine.d))));
+          const to = inBox(add(Q0, sub(q, P0)));
+          S.boards[i][other] = to;
+          drag.joinedOther.forEach(({ j, e }) => (S.boards[j][e] = { ...to }));
+        } else if (theirs) {
+          // the far end is held square: this end moves only straight out from it
+          const n = left(theirs.d);
+          q = inBox(add(Q0, n, snap(dot(sub(p, Q0), n))));
+        } else q = snapEnd(p, i);
+        S.boards[i][end] = q;
         drag.joined.forEach(({ j, e }) => (S.boards[j][e] = { ...q }));
       } else if (drag.kind === "board") {
-        const dz = snap(p.z - drag.from.z),
-          dy = snap(p.y - drag.from.y);
-        const mv = (pt) => ({ z: clamp(pt.z + dz, 0, S.D), y: clamp(pt.y + dy, 0, S.H) });
+        let dv = { z: snap(p.z - drag.from.z), y: snap(p.y - drag.from.y) };
+        drag.slides.forEach((d) => (dv = { z: d.z * dot(dv, d), y: d.y * dot(dv, d) }));
+        const mv = (pt) => inBox(add(pt, dv));
         const s0 = drag.start;
-        S.boards[drag.i] = { a: mv(s0[drag.i].a), b: mv(s0[drag.i].b) };
+        drag.group.forEach((g) => (S.boards[g] = { ...s0[g], a: mv(s0[g].a), b: mv(s0[g].b) }));
         drag.joined.forEach(({ j, e }) => (S.boards[j][e] = mv(s0[j][e])));
       } else if (drag.kind === "drivers") {
         const bd = S.boards[S.driver.board];
@@ -1739,9 +1901,6 @@
       syncInputs();
       render();
     };
-    document.getElementById("in-square").addEventListener("change", (e) => {
-      squareOnly = e.target.checked;
-    });
     const shLen = document.getElementById("sh-len"),
       shS1 = document.getElementById("sh-s1"),
       shS2 = document.getElementById("sh-s2"),
