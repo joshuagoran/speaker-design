@@ -9,7 +9,14 @@ import path from "node:path";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { hornGoalCheck, withGoalHorn, withHornDrive } from "../src/pages/speaker/chamberLoad";
-import { areaAtShare, driveAfterRemoval, withDriveKind } from "../src/pages/speaker/hornSections";
+import {
+  areaAtShare,
+  driveAfterRemoval,
+  withDriveKind,
+  withFoldMouth,
+  withFoldShape,
+} from "../src/pages/speaker/hornSections";
+import { FOLD_SHAPE } from "../src/constants/hornBoards";
 import { hornFromRecord } from "../src/pages/speaker/hornrespImport";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { hornGoalFit } from "../src/lib/speaker/hornGoals";
@@ -305,4 +312,30 @@ test("horn drive: a new drive drops the horn's own boards, so the automatic boar
   assert.equal(front.boards, undefined);
   // the same drive keeps them
   assert.ok(withDriveKind(hornOf(found.chamber), HORN_DRIVE.tapped).boards);
+});
+
+test("folded horn: the mouth setting flips designed boards; the layout setting gives way to automatic boards", () => {
+  const found = withGoalHorn(
+    BIN_SPEC.cabinet,
+    TAPPED,
+    PLACED,
+    HORN_DRIVE.tapped,
+    HORN_GOALS_DEFAULT,
+  );
+  assert.ok(found);
+  const horn = hornOf(found.chamber);
+  assert.ok(horn.boards);
+  const roomH = 30;
+  const flipped = withFoldMouth(horn, true, found.chamber.dims.h, roomH);
+  assert.equal(flipped.mouthPosition?.yIn, 0);
+  assert.ok(flipped.boards);
+  assert.equal(flipped.boards.corners[0].y, roomH - horn.boards.corners[0].y);
+  // the same end again changes nothing in the boards
+  assert.deepEqual(
+    withFoldMouth(flipped, true, found.chamber.dims.h, roomH).boards,
+    flipped.boards,
+  );
+  const spiral = withFoldShape(horn, FOLD_SHAPE.spiral);
+  assert.equal(spiral.boards, undefined);
+  assert.equal(spiral.foldShape, FOLD_SHAPE.spiral);
 });

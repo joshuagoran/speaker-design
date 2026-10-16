@@ -98,9 +98,11 @@ import {
   withHornDrive,
 } from "./chamberLoad";
 import { hornFromRecord } from "./hornrespImport";
+import { withFoldMouth, withFoldShape } from "./hornSections";
 import {
   defaultHornPlacement,
   driversOnBaffle,
+  foldRoomOf,
   hornFits,
   onTop,
   type PlacedChamber,
@@ -356,17 +358,17 @@ export function ChamberSettings({
               : FOLD_MOUTH.top
           }
           onChange={(end) =>
-            onEdit((c) =>
-              c.load.kind === CHAMBER_LOAD.horn
-                ? {
-                    ...c,
-                    load: withMouthPosition(c.load, {
-                      xIn: 0,
-                      yIn: end === FOLD_MOUTH.bottom ? 0 : c.dims.h,
-                    }),
-                  }
-                : c,
-            )
+            onEdit((c) => {
+              if (c.load.kind !== CHAMBER_LOAD.horn) return c;
+              const roomHeightIn = foldRoomOf(cabinet, c)?.room.heightIn ?? c.dims.h;
+              const horn = withFoldMouth(
+                c.load.horn,
+                end === FOLD_MOUTH.bottom,
+                c.dims.h,
+                roomHeightIn,
+              );
+              return { ...c, load: { ...c.load, horn } };
+            })
           }
           options={entriesOf(FOLD_MOUTH_NAMES)}
         />
@@ -378,7 +380,7 @@ export function ChamberSettings({
           onChange={(foldShape) =>
             onEdit((c) =>
               c.load.kind === CHAMBER_LOAD.horn
-                ? { ...c, load: { ...c.load, horn: { ...c.load.horn, foldShape } } }
+                ? { ...c, load: { ...c.load, horn: withFoldShape(c.load.horn, foldShape) } }
                 : c,
             )
           }

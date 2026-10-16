@@ -360,3 +360,18 @@ test("horn boards: refining keeps a better score and keeps a resting corner on i
   );
   assert.ok(foldPasses(layoutOf(refined.plan)));
 });
+
+test("horn boards: drivers far from the closed end leave a dead end behind them, and fail", () => {
+  // a six-leg zigzag with its drivers on its last board: the fronts open near the mouth
+  const plan = zigzagBoards(ROOM, 6);
+  const last = plan.boards.length - 1;
+  const board = plan.boards[last];
+  const lengthIn = Math.abs(plan.corners[board.b].z - plan.corners[board.a].z);
+  const late = layoutOf({
+    ...plan,
+    drivers: { board: last, alongIn: lengthIn / 2, coneFace: FOLD_FACE.line },
+  });
+  assert.equal(late.checks.drivers?.nearClosed, false);
+  assert.equal(foldPasses(late), false);
+  assert.equal(layoutOf(plan).checks.drivers?.nearClosed, true);
+});

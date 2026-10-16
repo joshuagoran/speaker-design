@@ -236,8 +236,8 @@ export function foldNeeds(
 const DRIVER_SPOT_STEPS = 5;
 
 /**
- * The plan with its drivers on its first or last board, at each place they fit along it (`DRIVER_SPOT_STEPS` of them,
- * the cutout and its margin on the board), each way round: the taps Design from goals tries.
+ * The plan with its drivers on their board (the layout's, near the closed end), at each place they fit along it
+ * (`DRIVER_SPOT_STEPS` of them, the cutout and its margin on the board), each way round: the taps Design from goals tries.
  */
 function withDriverSpots(
   plan: HornBoards,
@@ -247,9 +247,7 @@ function withDriverSpots(
   const drivers = plan.drivers;
   if (!drivers || !body) return [plan];
   const need = body.cutoutIn / 2 + FOLD_CUTOUT_MARGIN_IN;
-  // the first board (the fronts near the closed end) and the last (the backs into the mouth's leg, the tallest)
-  const last = plan.boards.length - 1;
-  return [...new Set([0, last])].flatMap((at) => {
+  return [drivers.board].flatMap((at) => {
     const board = plan.boards[at];
     const lengthIn = Math.hypot(
       plan.corners[board.b].z - plan.corners[board.a].z,

@@ -17,6 +17,7 @@ import {
   FOLD_CUTOUT_MARGIN_IN,
   FOLD_FACE,
   FOLD_MAGNET_CLEARANCE_IN,
+  FOLD_TAP_MAX_SHARE,
   FOLD_MIN_PASSAGE_IN,
   FOLD_TOUCH_IN,
   FOLD_WALL,
@@ -120,6 +121,8 @@ export interface FoldChecks {
     cutoutFits: boolean;
     magnetClear: boolean;
     coneRoom: boolean;
+    /** the cones' first tap within `FOLD_TAP_MAX_SHARE` of the path: the passage behind them is no long dead end */
+    nearClosed: boolean;
   } | null;
 }
 
@@ -744,8 +747,11 @@ function checksOf(
       (best, s) => Math.min(best, rayTo(start, out, s)),
       Infinity,
     );
+    const pathIn = gates.length ? gates[gates.length - 1].alongIn : 0;
+    const firstTap = Math.min(taps?.front ?? Infinity, taps?.rear ?? Infinity);
     driverChecks = {
       facesPassage: taps?.front != null,
+      nearClosed: firstTap <= FOLD_TAP_MAX_SHARE * pathIn,
       // at least one cutout across the chamber, with the margin either side
       widthFits: across > 0,
       // every row's cutout on the board, with the margin to spare, and no other board joined across it

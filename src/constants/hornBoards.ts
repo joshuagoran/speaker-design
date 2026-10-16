@@ -65,6 +65,12 @@ export const FOLD_SHAPE_NAMES = {
   spiral: "Spiral",
 } as const satisfies Record<keyof typeof FOLD_SHAPE, string>;
 
+/**
+ * How far along the path the drivers' first tap may be, as a share of it: further, and most of the passage is a dead
+ * end behind the cones.
+ */
+export const FOLD_TAP_MAX_SHARE = 0.4;
+
 /** What a passage narrowing along its legs costs Design from goals, in dB of score for a leg all the way closed. */
 export const FOLD_NARROWING_DB = 4;
 

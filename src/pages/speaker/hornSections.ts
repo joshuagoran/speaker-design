@@ -1,11 +1,12 @@
 // A horn's flare sections as the Speaker page's Horn settings show and edit them: areas in in² and lengths in in, the
 // spec's own cm² and cm (the horn engine's, Hornresp's) converted here only. Pure.
-import type { HornSegment, SpeakerHorn } from "../../types";
+import type { FoldShape, HornSegment, SpeakerHorn } from "../../types";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { shownIn, shownTenth } from "./speakerFields";
 import { throatAreaCm2 } from "../../lib/speaker/hornThroat";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
+import { mirroredBoards, mouthAtBottom } from "../../lib/speaker/foldLayouts";
 
 /** A new section's end area over its start area: it doubles, as a flare step. */
 const NEW_SECTION_AREA_RATIO = 2;
@@ -207,6 +208,32 @@ export function withDriveKind(horn: SpeakerHorn, kind: SpeakerHorn["drive"]["kin
     path,
     ...(boards && kind === horn.drive.kind ? { boards } : {}),
   };
+}
+
+/**
+ * The folded horn with its mouth at the top or the bottom of the baffle (`bottom`, its chamber `heightIn` high): boards
+ * of its own flip top to bottom in its side section, `roomHeightIn` high, so the design keeps its shape.
+ */
+export function withFoldMouth(
+  horn: SpeakerHorn,
+  bottom: boolean,
+  heightIn: number,
+  roomHeightIn: number,
+): SpeakerHorn {
+  const flips = horn.boards && mouthAtBottom(horn, heightIn) !== bottom;
+  return {
+    ...horn,
+    mouthPosition: { xIn: 0, yIn: bottom ? 0 : heightIn },
+    ...(horn.boards
+      ? { boards: flips ? mirroredBoards(horn.boards, roomHeightIn) : horn.boards }
+      : {}),
+  };
+}
+
+/** The folded horn's layout choice set: boards of its own give way to automatic boards of that kind. */
+export function withFoldShape(horn: SpeakerHorn, foldShape: FoldShape): SpeakerHorn {
+  const { boards: _old, ...rest } = horn;
+  return { ...rest, foldShape };
 }
 
 /** `x` kept from `lo` to `hi`. */

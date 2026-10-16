@@ -261,6 +261,8 @@ export const SPEAKER_TEXT = {
       : "No folded layout fits these drivers in this box, even at twice its depth and height.",
   foldBroken: "The boards do not make one passage from the closed end to the mouth.",
   foldNotFacing: "The drivers do not face the passage. Move them to a board along it.",
+  foldDeadEnd:
+    "The cones open far from the closed end, so most of the passage is a dead end behind them. Move the drivers nearer the closed end.",
   foldWidth: "The drivers' cutout is wider than the inside of the box. Make the box wider.",
   foldCutout:
     "The drivers' cutout runs off their board. Move them along it, or make the board longer.",

@@ -18,5 +18,6 @@ export function foldNotices(checks: FoldChecks): string[] {
   if (d && !d.cutoutFits) out.push(SPEAKER_TEXT.foldCutout);
   if (d && !d.magnetClear) out.push(SPEAKER_TEXT.foldMagnet);
   if (d && !d.coneRoom) out.push(SPEAKER_TEXT.foldCone);
+  if (d && !d.nearClosed) out.push(SPEAKER_TEXT.foldDeadEnd);
   return out;
 }
