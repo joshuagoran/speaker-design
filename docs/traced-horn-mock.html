@@ -285,7 +285,7 @@
       <span class="label">Tool</span>
       <button id="t-move" data-tool="move" aria-pressed="true">Move</button>
       <button id="t-board" data-tool="board" aria-pressed="false">Add board</button>
-      <button id="t-delete" data-tool="delete" aria-pressed="false">Delete board</button>
+      <button id="t-delete" data-tool="delete" aria-pressed="false">Delete</button>
       <button id="t-driver" data-tool="driver" aria-pressed="false">Place drivers</button>
       <button id="t-mouth" data-tool="mouth" aria-pressed="false">Set mouth</button>
       <button id="t-square" data-tool="square" aria-pressed="false">Square joint</button>
@@ -1310,16 +1310,20 @@
             h.dataset.end = `${i}:${end}`;
           }),
         );
-      // joints: in the Square joint tool, one handle per joint; elsewhere, a mark on each held joint
+      // joints: in the Square joint tool, one handle per joint; in Delete, one per corner; elsewhere, a mark on each held
+      // joint
       const seen = [];
       S.boards.forEach((bd, i) =>
         ["a", "b"].forEach((end) => {
           const P = bd[end];
-          if (!partnerAt(i, end) || seen.some((q) => len(sub(q, P)) < JOIN)) return;
+          const pr = partnerAt(i, end);
+          if (!pr || seen.some((q) => len(sub(q, P)) < JOIN)) return;
           seen.push(P);
           const held = !!isSquare(i, end);
-          if (!held && tool !== "square") return;
-          const r = tool === "square" ? 7 : 4;
+          const unjoin = tool === "delete" && pr.kind === "corner";
+          if (!held && tool !== "square" && !unjoin) return;
+          const handle = tool === "square" || unjoin;
+          const r = handle ? 7 : 4;
           const h = el("rect", {
             x: X(P.z) - r,
             y: Y(P.y) - r,
@@ -1329,9 +1333,10 @@
             fill: held ? css("--yellow") : css("--panel"),
             stroke: css("--ink"),
             "stroke-width": 1.5,
-            style: tool === "square" ? "cursor:pointer" : "pointer-events:none",
+            style: handle ? "cursor:pointer" : "pointer-events:none",
           });
           if (tool === "square") h.dataset.sq = `${i}:${end}`;
+          if (unjoin) h.dataset.unjoin = `${i}:${end}`;
         }),
       );
       // a board being drawn
@@ -1570,7 +1575,8 @@
     const hints = {
       move: "Drag a board, an end of a board (circles), or the drivers (magenta dot). Ends snap onto walls, onto another board's end (a corner) or its edge, and stay joined when you move that board.",
       board: "Press and drag to draw a board. It snaps onto walls and other boards.",
-      delete: "Click a board to delete it, or the drivers' dot to take the drivers out.",
+      delete:
+        "Click a board to delete it, a corner (square) to pull its boards apart, or the drivers' dot to take the drivers out.",
       driver:
         "Click a board to put the drivers there. Click the drivers' dot or their board again to turn the cones the other way.",
       mouth: "Click a wall to open the mouth there, then drag its two ends.",
@@ -1583,11 +1589,12 @@
       const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
       return { z: (p.x - PAD) / PX, y: S.H - (p.y - PAD) / PX };
     };
-    // an end snapped to the grid, then onto another board's end (a corner joint), a wall, or a board's face
-    function snapEnd(p, skip = -1) {
+    // an end snapped to the grid, then onto another board's end (a corner joint), a wall, or a board's face; the boards
+    // in `skip` (the one dragged and those joined to it) are not snapped to
+    function snapEnd(p, skip = []) {
       let q = { z: clamp(snap(p.z), 0, S.D), y: clamp(snap(p.y), 0, S.H) };
       for (const [i, bd] of S.boards.entries()) {
-        if (i === skip) continue;
+        if (skip.includes(i)) continue;
         for (const e of ["a", "b"]) if (len(sub(q, bd[e])) < SNAP_TO * 1.5) return { ...bd[e] };
       }
       if (q.z < SNAP_TO) q.z = 0;
@@ -1595,7 +1602,7 @@
       if (q.y < SNAP_TO) q.y = 0;
       if (q.y > S.H - SNAP_TO) q.y = S.H;
       S.boards.forEach((bd, i) => {
-        if (i === skip) return;
+        if (skip.includes(i)) return;
         const { d, t } = segDist(q, bd.a, bd.b);
         if (d < T / 2 + SNAP_TO && d > 0.01) {
           const on = add(bd.a, sub(bd.b, bd.a), t);
@@ -1667,6 +1674,19 @@
           Q0: { ...bd[other] },
           joinedOther: jointAt(bd[other], +i),
         };
+      } else if (tgt.dataset.unjoin) {
+        // pull the other boards' ends at this corner back 1 in along themselves, and drop the corner's hold
+        push();
+        const [i, end] = tgt.dataset.unjoin.split(":");
+        const P = S.boards[+i][end];
+        setSquare(+i, end, false);
+        jointAt(P, +i).forEach(({ j, e }) => {
+          const o = S.boards[j];
+          const far = e === "a" ? o.b : o.a;
+          o[e] = add(P, unit(sub(far, P)), Math.min(1, len(sub(far, P)) / 2));
+        });
+        render();
+        return;
       } else if (tgt.dataset.drivers && tool === "delete") {
         push();
         S.driver = null;
@@ -1774,7 +1794,7 @@
           // the far end is held square: this end moves only straight out from it
           const n = left(theirs.d);
           q = inBox(add(Q0, n, snap(dot(sub(p, Q0), n))));
-        } else q = snapEnd(p, i);
+        } else q = snapEnd(p, [i, ...drag.joined.map((o) => o.j)]);
         S.boards[i][end] = q;
         drag.joined.forEach(({ j, e }) => (S.boards[j][e] = { ...q }));
       } else if (drag.kind === "board") {

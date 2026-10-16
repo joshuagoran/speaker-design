@@ -19,6 +19,7 @@ A working mock shows the model: `docs/traced-horn-mock.html`.
 | ---------------- | ----------------------------------------------------------------- |
 | Add a board      | Drag in the side view. The ends snap onto walls and other boards. |
 | Join boards      | Drop an end on another board's end (corner) or edge (butt).       |
+| Unjoin a corner  | Delete tool, then click the corner. The boards pull apart.        |
 | Move a board     | Drag the board, or drag one end. Joined ends move with it.        |
 | Square a joint   | Click a joint to hold it at 90°. It stays square as you drag.     |
 | Delete a board   | Delete tool, then click the board.                                |
