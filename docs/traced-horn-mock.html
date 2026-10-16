@@ -235,6 +235,20 @@
     height: auto;
     display: block;
   }
+  #cuts th,
+  #cuts td {
+    text-align: left;
+    padding: 4px 10px 4px 0;
+    border-bottom: 1px solid var(--edge);
+    font-size: 14px;
+  }
+  #cuts th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    font-weight: 600;
+  }
   .legend {
     display: flex;
     flex-wrap: wrap;
@@ -283,6 +297,9 @@
       <button id="p-empty">Empty box</button>
     </div>
     <div class="group">
+      <label style="display: flex; gap: 6px; align-items: center; padding: 0 6px"
+        ><input id="in-square" type="checkbox" style="width: auto" /> Square only (90°)</label
+      >
       <button id="undo">Undo</button>
     </div>
   </div>
@@ -327,6 +344,22 @@
     <div class="card">
       <div class="type" id="htype">–</div>
       <div class="stats" id="stats"></div>
+      <div class="bar">
+        <div class="group">
+          <span class="label">Straight horn</span>
+          <label for="sh-len">Length</label
+          ><input id="sh-len" type="number" step="1" min="10" max="200" />
+          <label for="sh-s1">Start, in²</label
+          ><input id="sh-s1" type="number" step="5" min="5" max="1500" />
+          <label for="sh-s2">Mouth, in²</label
+          ><input id="sh-s2" type="number" step="5" min="5" max="1500" />
+          <select id="sh-flare" aria-label="Flare">
+            <option value="par">Parabolic</option>
+            <option value="exp">Exponential</option>
+            <option value="con">Conical</option>
+          </select>
+        </div>
+      </div>
       <svg
         id="chart"
         viewBox="0 0 420 220"
@@ -334,8 +367,9 @@
         aria-label="Passage area along the path"
       ></svg>
       <p class="hint">
-        Area along the path, from the closed end to the mouth. Fixed axes: 0–200 in, 0–1500 in².
-        Magenta marks: where the cones open.
+        Blue: the folded passage. Dashed: the straight horn it should match. Magenta: where the
+        cones open. Point at the chart or the drawing to find a place in the other. Fixed axes:
+        0–200 in, 0–1500 in².
       </p>
       <ul class="notes" id="notes"></ul>
       <p class="hint">
@@ -343,6 +377,19 @@
         model.
       </p>
     </div>
+  </div>
+  <div class="card">
+    <div class="type">Cutlist</div>
+    <div style="overflow-x: auto">
+      <table
+        id="cuts"
+        style="border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 520px"
+      ></table>
+    </div>
+    <p class="hint">
+      Each board is as wide as the box inside. Length is the long edge. An end cut of 0° is square;
+      a mitre splits the angle where two boards join.
+    </p>
   </div>
 </div>
 
@@ -367,6 +414,7 @@
       21: { cut: 19.7, depth: 9.6, motor: 8.8 },
     };
     const WALLS = ["baffle", "bottom", "back", "top"];
+    const JOIN = 0.01; // ends this close are one joint
 
     // ---- state
     let S = null;
@@ -449,6 +497,86 @@
       const t = l2 > 0 ? clamp(((p.z - a.z) * ab.z + (p.y - a.y) * ab.y) / l2, 0, 1) : 0;
       return { d: len(sub(p, add(a, ab, t))), t };
     }
+    const cross = (v, w) => v.z * w.y - v.y * w.z;
+    /** the other boards' ends joined to this point */
+    const jointAt = (pt, skip) =>
+      S.boards.flatMap((o, j) =>
+        j === skip
+          ? []
+          : ["a", "b"].filter((e) => len(sub(o[e], pt)) < JOIN).map((e) => ({ j, e })),
+      );
+    /** a board as drawn and traced: each end joined to another board runs on half a board, so the corner closes */
+    function drawnSeg(bd, i) {
+      const dir = unit(sub(bd.b, bd.a));
+      const a = jointAt(bd.a, i).length ? add(bd.a, dir, -T / 2) : bd.a;
+      const b = jointAt(bd.b, i).length ? add(bd.b, dir, T / 2) : bd.b;
+      return { a, b };
+    }
+    /** the straight horn's area at `x` in along it, in² */
+    function targetArea(x) {
+      const t = S.target;
+      const u = clamp(x / t.len, 0, 1);
+      if (t.flare === "exp") return t.s1 * (t.s2 / t.s1) ** u;
+      if (t.flare === "con") return t.s1 * (1 + (Math.sqrt(t.s2 / t.s1) - 1) * u) ** 2;
+      return t.s1 + (t.s2 - t.s1) * u;
+    }
+    /** each board's cut: its long edge, and at each end what it meets and the angle of its cut */
+    function cutlist() {
+      return S.boards.map((bd, i) => {
+        const dir = unit(sub(bd.b, bd.a)),
+          n = left(dir);
+        const Lc = len(sub(bd.b, bd.a));
+        const ends = ["a", "b"].map((e) => {
+          const P = bd[e];
+          const away = e === "a" ? dir : { z: -dir.z, y: -dir.y };
+          let line = null,
+            what = "free end";
+          const joint = jointAt(P, i)[0];
+          if (joint) {
+            const o = S.boards[joint.j];
+            const oAway = unit(sub(joint.e === "a" ? o.b : o.a, o[joint.e]));
+            const bis = add(away, oAway);
+            line = { p: P, d: len(bis) > 1e-6 ? unit(bis) : left(away) };
+            what = `joins board ${joint.j + 1}`;
+          }
+          if (!line) {
+            if (Math.abs(P.z) < JOIN) ((line = { p: P, d: { z: 0, y: 1 } }), (what = "baffle"));
+            else if (Math.abs(P.z - S.D) < JOIN)
+              ((line = { p: P, d: { z: 0, y: 1 } }), (what = "back"));
+            else if (Math.abs(P.y) < JOIN)
+              ((line = { p: P, d: { z: 1, y: 0 } }), (what = "bottom"));
+            else if (Math.abs(P.y - S.H) < JOIN)
+              ((line = { p: P, d: { z: 1, y: 0 } }), (what = "top"));
+          }
+          // butting into another board: cut to that board's near face
+          if (!line)
+            S.boards.forEach((o, j) => {
+              if (line || j === i) return;
+              const { d, t } = segDist(P, o.a, o.b);
+              if (d > T / 2 + 0.05 || t <= 0 || t >= 1) return;
+              const od = unit(sub(o.b, o.a)),
+                on = add(o.a, sub(o.b, o.a), t),
+                nn = left(od);
+              const far = e === "a" ? bd.b : bd.a;
+              const side = (far.z - on.z) * nn.z + (far.y - on.y) * nn.y >= 0 ? 1 : -1;
+              line = { p: add(on, nn, (side * T) / 2), d: od };
+              what = `butts board ${j + 1}`;
+            });
+          if (!line) line = { p: P, d: n };
+          const ang =
+            (Math.acos(Math.min(1, Math.abs(dir.z * line.d.z + dir.y * line.d.y))) * 180) / Math.PI;
+          const cut = Math.abs(90 - ang);
+          // where each face meets the cut line, along the board from its first end
+          const u = [T / 2, -T / 2].map((h) => {
+            const q = add(bd.a, n, h);
+            return cross(sub(line.p, q), line.d) / cross(dir, line.d);
+          });
+          return { what, cut, u };
+        });
+        const faces = [0, 1].map((k) => ends[1].u[k] - ends[0].u[k]);
+        return { i, long: Math.max(...faces, Lc), ends, Lc };
+      });
+    }
     function inPoly(p, poly) {
       let c = false;
       for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -523,7 +651,8 @@
         for (let j = j0; j <= j1; j++)
           for (let i = i0; i <= i1; i++) if (pred(cellPt(i, j))) solid[at(i, j)] = 1;
       };
-      S.boards.forEach((bd) => {
+      S.boards.forEach((bd0, bi) => {
+        const bd = drawnSeg(bd0, bi);
         const pad = T / 2 + CELL;
         mark((p) => segDist(p, bd.a, bd.b).d <= T / 2 + 0.01, {
           z0: Math.min(bd.a.z, bd.b.z) - pad,
@@ -1001,8 +1130,19 @@
           h.dataset.mouth = end;
         });
       }
+      // the place pointed at on the chart: the band of air at that distance along the path
+      bandEl = el("image", {
+        x: PAD,
+        y: PAD,
+        width: S.D * PX,
+        height: S.H * PX,
+        preserveAspectRatio: "none",
+        style: "image-rendering:pixelated;pointer-events:none",
+      });
+      updateBand();
       // the boards
-      S.boards.forEach((bd, i) => {
+      S.boards.forEach((bd0, i) => {
+        const bd = drawnSeg(bd0, i);
         const n = left(unit(sub(bd.b, bd.a)));
         const poly = [
           add(bd.a, n, T / 2),
@@ -1093,9 +1233,11 @@
         const cz = (i + 0.5) * CELL,
           cy = (j + 0.5) * CELL;
         el("circle", { cx: X(cz), cy: Y(cy), r: 4, fill: css("--ink") });
+        const nearRight = cz > S.D - 8;
         const t = el("text", {
-          x: X(cz) + 7,
-          y: Y(cy) + 4,
+          x: X(cz) + (nearRight ? -7 : 7),
+          y: Y(cy) + (cy < 2 ? -6 : 4),
+          "text-anchor": nearRight ? "end" : "start",
           "font-size": 12,
           fill: css("--ink"),
           "font-family": "Inconsolata, monospace",
@@ -1119,6 +1261,7 @@
           ? [["cones open at", ro.tapInfo.map((s) => `${s.toFixed(1)}`).join(" and ") + " in"]]
           : []),
         ...(rear > 0 ? [["sealed air", `${rear.toFixed(1)} L`]] : []),
+        ...(matchDb() !== null ? [["off the straight horn", `±${matchDb().toFixed(1)} dB`]] : []),
       ];
       const box = document.getElementById("stats");
       box.replaceChildren(
@@ -1141,6 +1284,28 @@
         }),
       );
       drawChart();
+      drawCuts();
+    }
+
+    /** how far the passage's area strays from the straight horn's, as an rms of their ratio in dB; null without overlap */
+    function matchDb() {
+      const pts = tr.profile.filter((p) => p.s >= 2 && p.s <= Math.min(tr.L, S.target.len) - 2);
+      if (pts.length < 4) return null;
+      const sq = pts.reduce((sum, p) => sum + (20 * Math.log10(p.area / targetArea(p.s))) ** 2, 0);
+      return Math.sqrt(sq / pts.length);
+    }
+
+    function drawCuts() {
+      const table = document.getElementById("cuts");
+      const head =
+        "<tr><th>Board</th><th>Long edge, in</th><th>Width, in</th><th>First end</th><th>Second end</th></tr>";
+      const endText = (e) => `${e.what} · ${e.cut < 0.5 ? "square" : e.cut.toFixed(1) + "°"}`;
+      const rows = cutlist().map(
+        (c) =>
+          `<tr><td>${c.i + 1}</td><td>${(Math.round(c.long * 8) / 8).toFixed(3)}</td><td>${S.W}</td><td>${endText(c.ends[0])}</td><td>${endText(c.ends[1])}</td></tr>`,
+      );
+      table.innerHTML =
+        head + (rows.length ? rows.join("") : `<tr><td colspan="5">No boards yet.</td></tr>`);
     }
 
     function drawChart() {
@@ -1200,6 +1365,43 @@
           "stroke-width": 2,
         });
       }
+      // the straight horn it should match, dashed
+      const tp = [];
+      for (let k = 0; k <= 60; k++) {
+        const xs = (k / 60) * S.target.len;
+        tp.push(`${x(xs)},${y(targetArea(xs))}`);
+      }
+      mk("polyline", {
+        points: tp.join(" "),
+        fill: "none",
+        stroke: css("--ink"),
+        "stroke-width": 1.5,
+        "stroke-dasharray": "5 4",
+      });
+      // the place pointed at
+      if (hoverS !== null && hoverS >= 0 && hoverS <= tr.L) {
+        const near = tr.profile.reduce(
+          (best, p) => (Math.abs(p.s - hoverS) < Math.abs(best.s - hoverS) ? p : best),
+          tr.profile[0],
+        );
+        mk("line", {
+          x1: x(hoverS),
+          y1: T0,
+          x2: x(hoverS),
+          y2: B,
+          stroke: css("--ink"),
+          "stroke-width": 1,
+        });
+        mk("circle", { cx: x(hoverS), cy: y(near.area), r: 3.5, fill: css("--ink") });
+        const lab = mk("text", {
+          x: Math.min(x(hoverS) + 6, R - 120),
+          y: T0 + 12,
+          "font-size": 11,
+          fill: css("--ink"),
+          "font-family": "Inconsolata, monospace",
+        });
+        lab.textContent = `${hoverS.toFixed(1)} in · ${(near.area / S.W).toFixed(1)} in wide`;
+      }
       ro.tapInfo.forEach((s) =>
         mk("line", {
           x1: x(s),
@@ -1217,8 +1419,37 @@
     let tool = "move";
     let drag = null,
       drawing = null;
+    /** the place along the path pointed at, in from the closed end; null: none */
+    let hoverS = null;
+    let bandEl = null;
+    let squareOnly = false;
+    /** the hover band: the air within half an inch of the place pointed at */
+    function updateBand() {
+      if (!bandEl || !tr) return;
+      if (hoverS === null) {
+        bandEl.setAttribute("href", "data:,");
+        return;
+      }
+      const cv = document.createElement("canvas");
+      cv.width = tr.nz;
+      cv.height = tr.ny;
+      const g = cv.getContext("2d");
+      const img = g.createImageData(tr.nz, tr.ny);
+      for (let j = 0; j < tr.ny; j++)
+        for (let i = 0; i < tr.nz; i++) {
+          const k = tr.at(i, j);
+          if (tr.dist[k] === Infinity || Math.abs(tr.L - tr.dist[k] - hoverS) > 0.4) continue;
+          const o = ((tr.ny - 1 - j) * tr.nz + i) * 4;
+          img.data[o] = 255;
+          img.data[o + 1] = 212;
+          img.data[o + 2] = 0;
+          img.data[o + 3] = 255;
+        }
+      g.putImageData(img, 0, 0);
+      bandEl.setAttribute("href", cv.toDataURL());
+    }
     const hints = {
-      move: "Drag a board, an end of a board (circles), or the drivers (magenta dot). Ends snap onto walls and boards.",
+      move: "Drag a board, an end of a board (circles), or the drivers (magenta dot). Ends snap onto walls, onto another board's end (a corner) or its edge, and stay joined when you move that board.",
       board: "Press and drag to draw a board. It snaps onto walls and other boards.",
       delete: "Click a board to delete it, or the drivers' dot to take the drivers out.",
       driver:
@@ -1232,19 +1463,37 @@
       return { z: (p.x - PAD) / PX, y: S.H - (p.y - PAD) / PX };
     };
     // an end snapped to the grid, then onto a wall or a board's face if near
-    function snapEnd(p, skip = -1) {
+    // an end snapped to the grid (and square to `anchor` when Square only is on), then onto another board's end (a
+    // corner joint), a wall, or a board's face
+    function snapEnd(p, skip = -1, anchor = null) {
       let q = { z: clamp(snap(p.z), 0, S.D), y: clamp(snap(p.y), 0, S.H) };
-      if (q.z < SNAP_TO) q.z = 0;
-      if (q.z > S.D - SNAP_TO) q.z = S.D;
-      if (q.y < SNAP_TO) q.y = 0;
-      if (q.y > S.H - SNAP_TO) q.y = S.H;
+      const level =
+        anchor && squareOnly
+          ? Math.abs(q.z - anchor.z) >= Math.abs(q.y - anchor.y)
+            ? "z"
+            : "y"
+          : null;
+      if (level === "z") q.y = anchor.y;
+      if (level === "y") q.z = anchor.z;
+      const aligned = (r) =>
+        !level ||
+        (level === "z" ? Math.abs(r.y - anchor.y) < JOIN : Math.abs(r.z - anchor.z) < JOIN);
+      for (const [i, bd] of S.boards.entries()) {
+        if (i === skip) continue;
+        for (const e of ["a", "b"])
+          if (len(sub(q, bd[e])) < SNAP_TO * 1.5 && aligned(bd[e])) return { ...bd[e] };
+      }
+      if (level !== "y" && q.z < SNAP_TO) q.z = 0;
+      if (level !== "y" && q.z > S.D - SNAP_TO) q.z = S.D;
+      if (level !== "z" && q.y < SNAP_TO) q.y = 0;
+      if (level !== "z" && q.y > S.H - SNAP_TO) q.y = S.H;
       S.boards.forEach((bd, i) => {
         if (i === skip) return;
         const { d, t } = segDist(q, bd.a, bd.b);
         if (d < T / 2 + SNAP_TO && d > 0.01) {
           const on = add(bd.a, sub(bd.b, bd.a), t);
-          const n = unit(sub(q, on));
-          q = add(on, n, T / 2);
+          const r = add(on, unit(sub(q, on)), T / 2);
+          if (aligned(r)) q = r;
         }
       });
       return q;
@@ -1289,7 +1538,8 @@
       } else if (tgt.dataset.end) {
         push();
         const [i, end] = tgt.dataset.end.split(":");
-        drag = { kind: "end", i: +i, end };
+        const at = S.boards[+i][end];
+        drag = { kind: "end", i: +i, end, joined: jointAt(at, +i) };
       } else if (tgt.dataset.drivers && tool === "delete") {
         push();
         S.driver = null;
@@ -1326,24 +1576,52 @@
           return;
         }
         push();
-        drag = { kind: "board", i, from: p, start: JSON.parse(JSON.stringify(S.boards[i])) };
+        // the boards joined at its ends, and the ends butting into its edges, come along
+        const host = S.boards[i];
+        const butting = S.boards.flatMap((o, j) =>
+          j === i
+            ? []
+            : ["a", "b"]
+                .filter((e) => {
+                  const { d, t } = segDist(o[e], host.a, host.b);
+                  return d <= T / 2 + 0.05 && t > 0 && t < 1;
+                })
+                .map((e) => ({ j, e })),
+        );
+        const joined = [...["a", "b"].flatMap((e) => jointAt(host[e], i)), ...butting];
+        drag = { kind: "board", i, from: p, start: JSON.parse(JSON.stringify(S.boards)), joined };
       } else return;
       svg.setPointerCapture(e.pointerId);
       render();
     });
     svg.addEventListener("pointermove", (e) => {
-      if (!drag && !drawing) return;
+      if (!drag && !drawing) {
+        // pointing at the passage: show the place on the chart
+        const q = pt(e);
+        const i = Math.floor(q.z / CELL),
+          j = Math.floor(q.y / CELL);
+        const k = i >= 0 && j >= 0 && i < tr.nz && j < tr.ny ? tr.at(i, j) : -1;
+        const next = k >= 0 && tr.dist[k] < Infinity ? tr.L - tr.dist[k] : null;
+        if (next !== hoverS) {
+          hoverS = next;
+          drawChart();
+        }
+        return;
+      }
       const p = pt(e);
-      if (drawing) drawing.b = snapEnd(p);
-      else if (drag.kind === "end") S.boards[drag.i][drag.end] = snapEnd(p, drag.i);
-      else if (drag.kind === "board") {
+      if (drawing) drawing.b = snapEnd(p, -1, drawing.a);
+      else if (drag.kind === "end") {
+        const other = S.boards[drag.i][drag.end === "a" ? "b" : "a"];
+        const q = snapEnd(p, drag.i, other);
+        S.boards[drag.i][drag.end] = q;
+        drag.joined.forEach(({ j, e }) => (S.boards[j][e] = { ...q }));
+      } else if (drag.kind === "board") {
         const dz = snap(p.z - drag.from.z),
           dy = snap(p.y - drag.from.y);
+        const mv = (pt) => ({ z: clamp(pt.z + dz, 0, S.D), y: clamp(pt.y + dy, 0, S.H) });
         const s0 = drag.start;
-        S.boards[drag.i] = {
-          a: { z: clamp(s0.a.z + dz, 0, S.D), y: clamp(s0.a.y + dy, 0, S.H) },
-          b: { z: clamp(s0.b.z + dz, 0, S.D), y: clamp(s0.b.y + dy, 0, S.H) },
-        };
+        S.boards[drag.i] = { a: mv(s0[drag.i].a), b: mv(s0[drag.i].b) };
+        drag.joined.forEach(({ j, e }) => (S.boards[j][e] = mv(s0[j][e])));
       } else if (drag.kind === "drivers") {
         const bd = S.boards[S.driver.board];
         S.driver.u = clamp(segDist(p, bd.a, bd.b).t, 0, 1);
@@ -1365,6 +1643,26 @@
       drag = null;
       render();
     };
+    svg.addEventListener("pointerleave", () => {
+      if (drag || drawing || hoverS === null) return;
+      hoverS = null;
+      drawChart();
+    });
+    const chartEl = document.getElementById("chart");
+    chartEl.addEventListener("pointermove", (e) => {
+      const ctm = chartEl.getScreenCTM();
+      if (!ctm) return;
+      const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+      const sNow = ((q.x - 44) / (410 - 44)) * X_MAX;
+      hoverS = sNow >= 0 && sNow <= tr.L ? sNow : null;
+      drawChart();
+      updateBand();
+    });
+    chartEl.addEventListener("pointerleave", () => {
+      hoverS = null;
+      drawChart();
+      updateBand();
+    });
     svg.addEventListener("pointerup", finish);
     svg.addEventListener("pointercancel", finish);
 
@@ -1380,6 +1678,10 @@
       inW.value = S.W;
       inSize.value = S.size;
       inN.value = S.n;
+      shLen.value = S.target.len;
+      shS1.value = S.target.s1;
+      shS2.value = S.target.s2;
+      shFlare.value = S.target.flare;
     };
     const onNum = (input, key, lo, hi) =>
       input.addEventListener("change", () => {
@@ -1424,12 +1726,40 @@
       S.size = +inSize.value;
       render();
     });
+    const TARGETS = {
+      tapped: { len: 75, s1: 120, s2: 345, flare: "par" },
+      offset: { len: 68, s1: 140, s2: 185, flare: "par" },
+      front: { len: 68, s1: 140, s2: 185, flare: "par" },
+      empty: { len: 45, s1: 60, s2: 200, flare: "con" },
+    };
     const load = (name) => {
       push();
       S = presets[name]();
+      S.target = { ...TARGETS[name] };
       syncInputs();
       render();
     };
+    document.getElementById("in-square").addEventListener("change", (e) => {
+      squareOnly = e.target.checked;
+    });
+    const shLen = document.getElementById("sh-len"),
+      shS1 = document.getElementById("sh-s1"),
+      shS2 = document.getElementById("sh-s2"),
+      shFlare = document.getElementById("sh-flare");
+    const onTarget = (input, key, lo, hi) =>
+      input.addEventListener("change", () => {
+        const v = parseFloat(input.value);
+        if (Number.isFinite(v)) S.target[key] = clamp(v, lo, hi);
+        syncInputs();
+        render();
+      });
+    onTarget(shLen, "len", 10, 200);
+    onTarget(shS1, "s1", 5, 1500);
+    onTarget(shS2, "s2", 5, 1500);
+    shFlare.addEventListener("change", () => {
+      S.target.flare = shFlare.value;
+      render();
+    });
     document.getElementById("p-tapped").addEventListener("click", () => load("tapped"));
     document.getElementById("p-offset").addEventListener("click", () => load("offset"));
     document.getElementById("p-front").addEventListener("click", () => load("front"));
@@ -1445,6 +1775,7 @@
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
 
     S = presets.tapped();
+    S.target = { ...TARGETS.tapped };
     syncInputs();
     setTool("move");
   })();

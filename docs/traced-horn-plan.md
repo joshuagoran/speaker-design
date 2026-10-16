@@ -7,22 +7,28 @@ A working mock shows the model: `docs/traced-horn-mock.html`.
 
 ## The goal
 
-- The user draws the horn: boards, drivers and the mouth.
-- The app finds the passage, measures it and plays it.
+- A folded horn is a straight horn, folded. The design starts from the straight horn.
+- The user draws the fold: boards, drivers and the mouth.
+- The app finds the passage, measures it, compares it with the straight horn and plays it.
 - No layout limits what the user can draw.
+- Every drawing gives a cutlist.
 
 ## What the user does
 
 | Action           | How                                                               |
 | ---------------- | ----------------------------------------------------------------- |
 | Add a board      | Drag in the side view. The ends snap onto walls and other boards. |
-| Move a board     | Drag the board, or drag one end. Any angle.                       |
+| Join boards      | Drop an end on another board's end (corner) or edge (butt).       |
+| Move a board     | Drag the board, or drag one end. Joined ends move with it.        |
+| Square only      | A switch. Board ends then move only across or up and down.        |
 | Delete a board   | Delete tool, then click the board.                                |
 | Place drivers    | Click a board. Click again to turn the cones the other way.       |
 | Move the drivers | Drag them along their board.                                      |
 | Set the mouth    | Click any outer wall. Drag the opening's two ends.                |
 | Size the box     | Depth, height and width fields; drag the back or top wall.        |
 | Start a design   | A starting layout or Design from goals. Both give boards to edit. |
+| Read the path    | Point in the side view: the chart marks that spot on the path.    |
+| Find a spot      | Point at the chart: the side view lights that band of air.        |
 
 ## What the app works out
 
@@ -36,6 +42,8 @@ A working mock shows the model: `docs/traced-horn-mock.html`.
 | Sealed chambers  | Air the mouth does not reach. Each one is a separate volume.           |
 | Taps             | The path distance where each side of the cones opens into the passage. |
 | Horn type        | From the taps (next table).                                            |
+| Match            | How far the traced sections stray from the straight horn, in dB.       |
+| Cutlist          | Each board's long edge and the cut at each end (next section).         |
 
 ### Horn type from the taps
 
@@ -47,6 +55,24 @@ A working mock shows the model: `docs/traced-horn-mock.html`.
 | Blocked             | Blocked             | No horn: a notice says why                                |
 
 The Horn type setting goes away for folded horns. The drawing sets it.
+
+## Straight horn first
+
+1. Design from goals sizes the straight horn: length, start and mouth area, flare.
+2. The app places boards so the traced passage follows it.
+3. The chart shows the straight horn (dashed) and the traced passage.
+4. The user edits the boards by hand. The match readout updates.
+
+## Cutlist
+
+| End meets      | Cut                                             |
+| -------------- | ----------------------------------------------- |
+| Another end    | Mitre on the line that halves the corner        |
+| A wall         | Square or bevel to the wall                     |
+| Another's edge | Butt: cut to that board's face, square or bevel |
+| Nothing        | Square                                          |
+
+The long edge comes from the board's faces between its two cuts. The bevel angle is shown when it is not 0°.
 
 ## How the trace works
 
@@ -79,16 +105,18 @@ passage any more: the trace follows the air.
 
 ## The rest of the app
 
-| Part                | Change                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------ |
-| Data                | Boards (two ends each), drivers (board, place along it, cone side), mouth (wall, two ends) |
-| Sound model         | Reads the traced sections, the taps and the sealed chamber's volume                        |
-| Rear chamber vents  | Open from the sealed chamber that holds the backs of the cones                             |
-| Starting layouts    | Give boards, drivers and a mouth only                                                      |
-| Design from goals   | Moves board ends and the drivers; scores the traced passage                                |
-| Side view           | As the mock: passage shaded along the path, closed end marked                              |
-| 3D view and cutlist | Boards as now                                                                              |
-| Saved designs       | Boards from #190 convert: their ends, the drivers' spot, the mouth from the mouth wall     |
+| Part               | Change                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| Data               | Boards (two ends each), drivers (board, place along it, cone side), mouth (wall, two ends) |
+| Sound model        | Reads the traced sections, the taps and the sealed chamber's volume                        |
+| Rear chamber vents | Open from the sealed chamber that holds the backs of the cones                             |
+| Starting layouts   | Give boards, drivers and a mouth only                                                      |
+| Design from goals  | Moves board ends and the drivers; scores the traced passage                                |
+| Side view          | As the mock: passage shaded along the path, closed end marked, linked to the path chart    |
+| Path chart         | Traced width along the path, the straight horn dashed, fixed axes                          |
+| 3D view            | Boards as now, with mitres and butts                                                       |
+| Cutlist            | From the joints (Cutlist section)                                                          |
+| Saved designs      | Boards from #190 convert: their ends, the drivers' spot, the mouth from the mouth wall     |
 
 ## Risks
 
@@ -110,13 +138,16 @@ The owner does these on the page. I do them in the browser before every hand-ove
 5. Delete a board. Nothing breaks.
 6. Port the sealed chamber of an offset horn. The port stays in that chamber.
 7. Run Design from goals, then edit its boards by hand.
+8. Join two boards at a corner and one at an edge. The cutlist shows a mitre and a butt.
+9. Turn on Square only. Drag an end. It stays square.
+10. Point at the chart. The side view lights the right band.
 
 ## Steps
 
-| Step | Work                                                                      | PR  |
-| ---- | ------------------------------------------------------------------------- | --- |
-| 1    | Owner tests the mock and approves this plan                               | -   |
-| 2    | The trace, its checks, the new data and the sound model input, with tests | 1   |
-| 3    | The side view editor (the mock's tools), the 3D view and the cutlist      | 1   |
-| 4    | Rear chamber vents, starting layouts and Design from goals on the trace   | 2   |
-| 5    | Convert saved boards; remove the recipe model                             | 2   |
+| Step | Work                                                                                                      | PR  |
+| ---- | --------------------------------------------------------------------------------------------------------- | --- |
+| 1    | Owner tests the mock and approves this plan                                                               | -   |
+| 2    | The trace, its checks, the new data and the sound model input, with tests                                 | 1   |
+| 3    | The side view editor (the mock's tools, joints, Square only), the path chart, the 3D view and the cutlist | 1   |
+| 4    | Rear chamber vents, starting layouts, Design from goals (straight horn first)                             | 2   |
+| 5    | Convert saved boards; remove the recipe model                                                             | 2   |
