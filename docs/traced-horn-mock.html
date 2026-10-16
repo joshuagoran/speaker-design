@@ -359,6 +359,9 @@
         </div>
       </div>
       <p class="hint" id="goal-out"></p>
+      <ul class="notes">
+        <li id="goal-loud"></li>
+      </ul>
       <div class="bar" id="sh-row">
         <div class="group">
           <span class="label">Straight horn</span>
@@ -467,20 +470,33 @@
       };
     }
     /**
-     * the loudest the drivers reach at the low end, dB at 1 m on the floor, limited by how far the cones move, with
-     * the horn's gain; and how many drivers the loudness goal needs. Rough.
+     * the loudest one driver of `size` reaches at the low end, dB at 1 m on the floor, limited by how far its cone
+     * moves, with the horn's gain. Rough.
+     */
+    function oneDriverDb(size) {
+      const c = CONES[size];
+      const vd = c.sd * c.xmax * 1.6387e-5; // m³ moved by one cone
+      const w = 2 * Math.PI * S.goal.lowHz;
+      const pa = (1.2 * w * w * vd) / (2 * Math.PI) / Math.SQRT2; // rms pressure at 1 m, half space
+      return 20 * Math.log10(pa / 2e-5) + HORN_GAIN_DB;
+    }
+    /** how many drivers of `size` the loudness goal needs */
+    const driversNeeded = (size) =>
+      Math.max(1, Math.ceil(10 ** ((S.goal.db - oneDriverDb(size)) / 20)));
+    /**
+     * the drivers' loudest at the low end, and when that falls short of the goal, what would reach it: more of the
+     * same size, or the next larger size that needs fewer
      */
     function goalLoudness() {
-      const c = CONES[S.size],
-        f = S.goal.lowHz;
-      const vd = c.sd * c.xmax * 1.6387e-5; // m³ moved by one cone
-      const w = 2 * Math.PI * f;
-      const pa = (1.2 * w * w * vd) / (2 * Math.PI) / Math.SQRT2; // rms pressure at 1 m, half space
-      const one = 20 * Math.log10(pa / 2e-5) + HORN_GAIN_DB;
-      return {
-        now: one + 20 * Math.log10(S.n),
-        need: Math.max(1, Math.ceil(10 ** ((S.goal.db - one) / 20))),
-      };
+      const now = oneDriverDb(S.size) + 20 * Math.log10(S.n);
+      if (now >= S.goal.db) return { now, short: false };
+      const more = driversNeeded(S.size);
+      const larger = Object.keys(CONES)
+        .map(Number)
+        .filter((size) => size > S.size)
+        .map((size) => ({ size, n: driversNeeded(size) }))
+        .find((o) => o.n < more);
+      return { now, short: true, more, larger };
     }
     const WALLS = ["baffle", "bottom", "back", "top"];
     const JOIN = 0.01; // ends this close are one joint
@@ -1953,8 +1969,13 @@
         l = goalLoudness();
       const flare = { par: "parabolic", exp: "exponential", con: "conical" }[t.flare];
       const horn = `Straight horn: ${t.len.toFixed(0)} in long, ${t.s1.toFixed(0)} → ${t.s2.toFixed(0)} in², ${flare}${t.capped && !S.advanced ? " (mouth held to the opening you set)" : ""}.`;
-      const loud = `${S.n} × ${S.size}″ reach about ${l.now.toFixed(0)} dB at ${S.goal.lowHz} Hz; ${S.goal.db} dB needs about ${l.need}.`;
-      document.getElementById("goal-out").textContent = S.advanced ? loud : `${horn} ${loud}`;
+      const reach = `${S.n} × ${S.size}″ reach about ${l.now.toFixed(0)} dB at ${S.goal.lowHz} Hz`;
+      const loudEl = document.getElementById("goal-loud");
+      loudEl.className = l.short ? "" : "ok";
+      loudEl.textContent = l.short
+        ? `${reach}, short of ${S.goal.db} dB. Use ${l.more} × ${S.size}″${l.larger ? `, or ${l.larger.n} × ${l.larger.size}″` : ""}.`
+        : `${reach}: enough for ${S.goal.db} dB.`;
+      document.getElementById("goal-out").textContent = S.advanced ? "" : horn;
       document.getElementById("sh-row").style.display = S.advanced ? "" : "none";
       [gType, gLow, gDb].forEach((x) => (x.disabled = S.advanced));
       if (!S.advanced) {
