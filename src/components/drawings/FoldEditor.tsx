@@ -710,7 +710,7 @@ function foldTiles(
 ): StatTileItem[] {
   if (!trace.sections.length) return [];
   const mouth = trace.sections[trace.sections.length - 1];
-  const fmt = (t: number | null) => (t === null ? null : formatInches(t));
+  const fmt = (t: number | null) => (t === null ? null : `${t.toFixed(1)} in`);
   const rear = traceModel(trace).rearLiters;
   const off = offTargetDb(trace.sections, target);
   return [
