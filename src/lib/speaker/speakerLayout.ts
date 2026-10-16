@@ -39,7 +39,7 @@ import {
 import { byId } from "../tables";
 import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
-import { clearDepthIn, sharedWalls, slotRunIn, TOUCH_IN } from "./chamberAir";
+import { clearDepthIn, sharedWalls, slotRunIn, TOUCH_IN, tubeDriverOf } from "./chamberAir";
 import { RADIATOR_PANEL } from "../hifi/hifi";
 import { subVentOpenings, subVentPlan } from "../pa/subVentPlan";
 import {
@@ -394,8 +394,8 @@ export type PortRule =
 export function portRule(chamber: SpeakerChamber): PortRule | null {
   if (chamber.vent.kind !== VENT_KIND.vented) return null;
   const port: SpeakerPort = chamber.vent.port;
-  const subEntry = chamber.drivers.find((d) => d.kind === DRIVER_KIND.sub);
-  const sub = (subEntry && byId(SUB_OPTIONS, subEntry.driverId)) ?? null;
+  // the chamber's cone, as the PA vents are laid out round it
+  const sub = tubeDriverOf(chamber);
   const pa = (portStyle: PortStyle, portGeom: Partial<PaPortGeometry>): PortRule => ({
     rule: PORT_RULE.pa,
     portStyle,

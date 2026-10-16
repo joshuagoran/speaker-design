@@ -137,6 +137,7 @@ export function withGoalHorn(
       drive,
       room: {
         face: chamberClearFace(cabinet, searched),
+        wallIn: cabinet.panel.thicknessIn,
         setbackIn: chamberSetbackIn(cabinet.panel, searched),
       },
       airLiters,
@@ -214,7 +215,12 @@ export function hornGoalCheck(
       : hornDesignOf(
           chamber,
           { count: 1, angle: 2 },
-          { netLiters, face: chamberClearFace(cabinet, chamber), setbackIn },
+          {
+            netLiters,
+            face: chamberClearFace(cabinet, chamber),
+            wallIn: cabinet.panel.thicknessIn,
+            setbackIn,
+          },
         );
   const fit =
     read?.ok && throat

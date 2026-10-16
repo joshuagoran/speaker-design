@@ -381,7 +381,7 @@ export const SPEAKER_TEXT = {
   tubeEnds: "Tube ends",
   tubeEndsTip:
     "Flared: tubes with flared ends. They need a sub driver in this chamber. Plain: plain round tubes.",
-  tubeEndsNoSub: "Flared tubes need a sub driver in this chamber. Until then, the tubes are plain.",
+  tubeEndsNoSub: "Flared tubes need a cone driver in this chamber.",
   tubeLayout: "Tube position",
   elbows: "Elbows",
   elbowsTip:
@@ -415,9 +415,9 @@ export const SPEAKER_TEXT = {
   hornPath: "Path",
   hornPathTip:
     "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box. Only the sections set the response.",
-  hornDrive: "Drive",
+  hornDrive: "Horn type",
   hornDriveTip:
-    "Where the cones meet the path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
+    "Where the cones meet the horn's path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
   hornDriveNote: "A back-loaded horn is not calculated yet.",
   hornTap: "Cones open after section",
   hornTapTip:
@@ -445,7 +445,7 @@ export const SPEAKER_TEXT = {
   hornDesign: "Design from goals",
   hornDesigning: "Designing…",
   hornDesignTip:
-    "Sets the sections, where the cones open and the chamber volume for these goals and this drive. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
+    "Sets the sections, where the cones open and the chamber volume for these goals and this horn type. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
   hornDesignFailed: "No horn for these goals can be calculated in this chamber.",
   hornGoalsOrder: "Set the highest frequency above the lowest.",
   /** the goals check: how flat the response is over the goals' band */
@@ -463,7 +463,7 @@ export const SPEAKER_TEXT = {
     `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,
   hornImport: "Import a horn record",
   hornImportTip:
-    "Paste the text of a record file from a horn simulation program. It sets the sections, the drive, the chamber volume and the vent. The drivers stay as set in this chamber.",
+    "Paste the text of a record file from a horn simulation program. It sets the sections, the horn type, the chamber volume and the vent. The drivers stay as set in this chamber.",
   hornImportField: "Record text",
   hornImportAction: "Import",
   hornImportDone: "Imported. The drivers stay as set in this chamber.",
@@ -504,8 +504,9 @@ export const SPEAKER_TEXT = {
     "The corner frequency of the filter. A highpass cuts below it, and a lowpass cuts above it.",
   netAirTip:
     "The air the drivers work against. Auto: the inside volume minus the walls, the braces, the drivers and the vent. Custom: you type the value.",
+  stuffing: "Stuffing: acts larger by, %",
   stuffingTip:
-    "Fiber fill in the chamber, in percent. Fill makes the box act larger. 10% is normal, and 15% is heavy.",
+    "Fiber fill makes the box act larger than its air. Light fill: about 10%. Heavy fill: about 15%. Packed full: about 25%, the most real fill gives.",
   airSpeedTip:
     "The highest air speed in the port at full power. Above it, the port makes noise. The maximum output stops at this limit.",
   radiatorMassTip: "Mass that you add to each passive radiator. More mass tunes the box lower.",

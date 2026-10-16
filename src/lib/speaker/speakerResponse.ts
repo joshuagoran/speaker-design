@@ -175,6 +175,7 @@ function modelChamber(
       {
         netLiters,
         face: chamberClearFace(cabinet, chamber),
+        wallIn: cabinet.panel.thicknessIn,
         setbackIn: chamberSetbackIn(cabinet.panel, chamber),
       },
     );
