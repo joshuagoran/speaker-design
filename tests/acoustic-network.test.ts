@@ -6,6 +6,9 @@
 //   and 0.1 % in excursion; the checks hold it to rounding (1e-9).
 // - Physics: an offset-driver horn tapped at its throat is the front-loaded horn; a tapped horn's response moves
 //   smoothly as its taps move; every node's flows add to zero; a tapped horn rolls off below its path's quarter wave.
+// - Equivalents: a chamber's loss is a non-radiating leak; a duct with no sections is its loss; a driver bank is its
+//   drivers side by side; two boxes in half space are one in quarter space; a prepared network solves as a fresh one.
+// - Singular and nearly singular networks give null.
 //
 // Words used below: "flow" is volume velocity (m³/s); a "tap" is a segment boundary where a driver side meets the path.
 import { test } from "vite-plus/test";
@@ -14,7 +17,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { hornModel } from "../src/lib/acoustics/hornModel";
 import { abs, add, complex, scale } from "../src/lib/acoustics/complex";
-import { networkResponse, solveNetworkAt } from "../src/lib/acoustics/network/solve";
+import {
+  networkResponse,
+  prepareNetwork,
+  solveNetworkAt,
+  solvePreparedAt,
+} from "../src/lib/acoustics/network/solve";
 import {
   frontLoadedHorn,
   offsetDriverHorn,
@@ -23,10 +31,10 @@ import {
   tappedHorn,
   ventedBox,
 } from "../src/lib/acoustics/network/presets";
-import { NETWORK_PART } from "../src/constants/acousticNetwork";
+import { NETWORK_PART, OPENING_LOAD } from "../src/constants/acousticNetwork";
 import { SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { CM_PER_M } from "../src/constants/units";
+import { CM_PER_M, SQ_CM_PER_SQ_M } from "../src/constants/units";
 import { boxModel, closedBox, highpassGain } from "../src/lib/pa/calc";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import type {
@@ -36,6 +44,8 @@ import type {
   HornModel,
   HornPoint,
   HornSegment,
+  NetworkPart,
+  NetworkResponse,
   PresetNetwork,
   TappedHornDesign,
 } from "../src/types";
@@ -67,6 +77,35 @@ function modeled(model: HornModel | null): HornModel {
   assert.ok(model, "the design should be modelable");
   return model;
 }
+/** A network response that must exist. */
+function responded(response: NetworkResponse | null): NetworkResponse {
+  assert.ok(response, "the network should solve");
+  return response;
+}
+
+/**
+ * Asserts that two network responses agree point by point: SPL, power SPL, and each driver's excursion and Ze (the
+ * first driver's of `expected` against driver `driver` of `actual`).
+ */
+function sameResponse(
+  actual: NetworkResponse,
+  expected: NetworkResponse,
+  what: string,
+  driver = 0,
+) {
+  assert.strictEqual(actual.curve.length, expected.curve.length);
+  expected.curve.forEach((e, i) => {
+    const a = actual.curve[i];
+    const at = `${what} at ${e.f.toFixed(1)} Hz`;
+    near(a.spl, e.spl, SAME_DB, `${at}: SPL`);
+    near(a.powerSpl, e.powerSpl, SAME_DB, `${at}: power SPL`);
+    nearRelative(a.xmm[driver], e.xmm[0], SAME_RELATIVE, `${at}: excursion`);
+    nearRelative(a.ze[driver], e.ze[0], SAME_RELATIVE, `${at}: Ze`);
+  });
+}
+/** The largest gap in SPL between two responses, dB. */
+const largestSplGap = (a: NetworkResponse, b: NetworkResponse) =>
+  Math.max(...a.curve.map((p, i) => Math.abs(p.spl - b.curve[i].spl)));
 
 /** Asserts that two horn curves agree point by point, every readout. */
 function sameCurve(network: HornPoint[], engine: HornPoint[], what: string) {
@@ -230,9 +269,10 @@ const grid = (from: number, to: number, count: number) =>
 test("an offset-driver horn tapped at its throat is the front-loaded horn", () => {
   const freqs = grid(15, 1000, 80);
   const front = modeled(presetModel(built(frontLoadedHorn(SUB_BIN)), freqs, 10));
-  // tap 0: the very same network
+  // tap 0: the horn engine's front-loaded horn, built by its own code (lib/acoustics/hornModel), not by the presets
+  const engine = modeled(hornModel(SUB_BIN, freqs, 10));
   const atThroat = modeled(presetModel(built(offsetDriverHorn({ ...SUB_BIN, tap: 0 })), freqs, 10));
-  sameCurve(atThroat.curve, front.curve, "tap 0");
+  sameCurve(atThroat.curve, engine.curve, "tap 0");
   // a closed stub that shrinks to nothing converges on it: 10 µm of path before the tap
   const stub: HornSegment = { profile: HORN_PROFILE.parabolic, s1: 499.99, s2: 500, length: 0.001 };
   const nearThroat = modeled(
@@ -462,4 +502,231 @@ test("a network with a size it divides by at zero, or a node out of range, is no
     tappedHorn({ ...atTaps(30, 120), frontChamber: { liters: 1, area: 0 } }),
     null,
   );
+});
+
+test("a network with a node that nothing sets the pressure of cannot be solved", () => {
+  const base = sealedBox(DEFAULT_PA.mid.ts, 30).network;
+  // an extra node that no part touches: its row is empty
+  const loose: AcousticNetwork = { ...base, nodeCount: base.nodeCount + 1 };
+  assert.strictEqual(solveNetworkAt(loose, 100, 10), null);
+  assert.strictEqual(networkResponse(loose, [50, 100], 10), null);
+  // two extra nodes joined only to each other: their pressures float, so a pivot is zero
+  const floating: AcousticNetwork = {
+    ...base,
+    nodeCount: base.nodeCount + 2,
+    parts: [
+      ...base.parts,
+      {
+        kind: NETWORK_PART.mass,
+        from: base.nodeCount,
+        to: base.nodeCount + 1,
+        mass: 1,
+        resistance: 1,
+      },
+    ],
+  };
+  assert.strictEqual(solveNetworkAt(floating, 100, 10), null);
+  assert.strictEqual(networkResponse(floating, [50, 100], 10), null);
+});
+
+test("a chamber's loss is a resistance to the outside air whose flow does not radiate", () => {
+  const freqs = grid(15, 1000, 60);
+  const sealed = sealedBox(DEFAULT_PA.mid.ts, 30).network;
+  /** the box's node and a loss near a QL of 7's leak, Pa·s/m³ */
+  const box = 1,
+    loss = 5e4;
+  const withLoss: AcousticNetwork = {
+    ...sealed,
+    parts: sealed.parts.map((part) =>
+      part.kind === NETWORK_PART.chamber ? { ...part, loss } : part,
+    ),
+  };
+  const leak = (radiates: boolean): AcousticNetwork => ({
+    ...sealed,
+    parts: [
+      ...sealed.parts,
+      {
+        kind: NETWORK_PART.opening,
+        node: box,
+        load: { kind: OPENING_LOAD.resistance, resistance: loss },
+        radiates,
+        setback: 0,
+      },
+    ],
+  });
+  const lossy = responded(networkResponse(withLoss, freqs, 10));
+  sameResponse(responded(networkResponse(leak(false), freqs, 10)), lossy, "non-radiating leak");
+  // the loss acts: the response moves
+  const plain = responded(networkResponse(sealed, freqs, 10));
+  assert.ok(largestSplGap(plain, lossy) > 0.1, "the chamber's loss changes the response");
+  // a radiating leak moves the same air (the same excursion) but adds its flow to the sum
+  const radiating = responded(networkResponse(leak(true), freqs, 10));
+  radiating.curve.forEach((p, i) =>
+    nearRelative(
+      p.xmm[0],
+      lossy.curve[i].xmm[0],
+      SAME_RELATIVE,
+      `excursion at ${p.f.toFixed(1)} Hz`,
+    ),
+  );
+  assert.ok(largestSplGap(radiating, lossy) > 0.1, "a radiating leak changes the level");
+});
+
+test("a horn preset's leak radiates by default and is a pure loss with leakRadiates false", () => {
+  const vented: HornDesign = {
+    ...SUB_BIN,
+    rear: { liters: 120, port: { area: 200, length: 30 } },
+    portOffset: 10,
+  };
+  const freqs = grid(15, 500, 60);
+  /** the preset's leak: its rear chamber's resistance opening */
+  const leakOf = (preset: PresetNetwork) => {
+    const leak = preset.network.parts.find(
+      (part) => part.kind === NETWORK_PART.opening && part.load.kind === OPENING_LOAD.resistance,
+    );
+    assert.ok(leak && leak.kind === NETWORK_PART.opening, "the vented rear chamber should leak");
+    return leak;
+  };
+  const radiating = built(frontLoadedHorn(vented)),
+    lossOnly = built(frontLoadedHorn(vented, { leakRadiates: false }));
+  assert.strictEqual(leakOf(radiating).radiates, true);
+  assert.strictEqual(leakOf(lossOnly).radiates, false);
+  const a = modeled(presetModel(radiating, freqs, 10)),
+    b = modeled(presetModel(lossOnly, freqs, 10));
+  // the same circuit, so the same excursion and Ze; only the summed level differs
+  a.curve.forEach((p, i) => {
+    nearRelative(b.curve[i].xmm, p.xmm, SAME_RELATIVE, `excursion at ${p.f.toFixed(1)} Hz`);
+    nearRelative(b.curve[i].ze, p.ze, SAME_RELATIVE, `Ze at ${p.f.toFixed(1)} Hz`);
+  });
+  assert.ok(
+    Math.max(...a.curve.map((p, i) => Math.abs(p.powerSpl - b.curve[i].powerSpl))) > 0.01,
+    "the leak's flow should reach the level only when it radiates",
+  );
+});
+
+test("a duct with no segments is its loss alone: a resistance in series", () => {
+  const ts = DEFAULT_PA.mid.ts;
+  const freqs = grid(20, 2000, 50);
+  /** the cone's front, the box, and the far side of the series part */
+  const front = 0,
+    box = 1,
+    far = 2;
+  /** a network with `series` between the cone's front and a piston of the cone's area */
+  const withSeries = (series: NetworkPart): AcousticNetwork => ({
+    nodeCount: 3,
+    parts: [
+      { kind: NETWORK_PART.driver, front, rear: box, ts, drivers: 1, airMassOff: 0 },
+      { kind: NETWORK_PART.chamber, node: box, liters: 30 },
+      series,
+      {
+        kind: NETWORK_PART.opening,
+        node: far,
+        load: { kind: OPENING_LOAD.piston, area: ts.Sd / SQ_CM_PER_SQ_M, reactanceRatio: 1 },
+        radiates: true,
+        setback: 0,
+      },
+    ],
+    angle: 2,
+    count: 1,
+  });
+  const duct = (loss: number): NetworkPart => ({
+    kind: NETWORK_PART.duct,
+    from: front,
+    to: far,
+    segments: [],
+    loss,
+  });
+  const resistance = (value: number): NetworkPart => ({
+    kind: NETWORK_PART.mass,
+    from: front,
+    to: far,
+    mass: 0,
+    resistance: value,
+  });
+  for (const loss of [0, 400, 2e4]) {
+    const viaDuct = responded(networkResponse(withSeries(duct(loss)), freqs, 10));
+    sameResponse(
+      viaDuct,
+      responded(networkResponse(withSeries(resistance(loss)), freqs, 10)),
+      `loss ${loss}`,
+    );
+  }
+  // the loss acts
+  assert.ok(
+    largestSplGap(
+      responded(networkResponse(withSeries(duct(0)), freqs, 10)),
+      responded(networkResponse(withSeries(duct(2e4)), freqs, 10)),
+    ) > 0.1,
+  );
+});
+
+test("a tapped horn's bank of drivers and its stacked boxes", () => {
+  const freqs = grid(15, 400, 50);
+  const design: TappedHornDesign = {
+    ...atTaps(30, 120),
+    frontChamber: { liters: 1, area: 200 },
+    rearChamber: { liters: 4, area: 300 },
+  };
+  // two drivers as one bank are two driver parts side by side between the same nodes
+  const bank = built(tappedHorn({ ...design, drivers: 2 })).network;
+  const [driverPart, ...rest] = bank.parts;
+  assert.ok(driverPart.kind === NETWORK_PART.driver && driverPart.drivers === 2);
+  const single = { ...driverPart, drivers: 1 };
+  const pair: AcousticNetwork = { ...bank, parts: [single, ...rest, single] };
+  const banked = responded(networkResponse(bank, freqs, 2.83)),
+    parted = responded(networkResponse(pair, freqs, 2.83));
+  sameResponse(parted, banked, "first of two drivers", 0);
+  sameResponse(parted, banked, "second of two drivers", 1);
+  // two boxes side by side in half space play as one box in quarter space (stacking by images)
+  const stacked = responded(
+    networkResponse(built(tappedHorn({ ...design, count: 2 })).network, freqs, 2.83),
+  );
+  const quarter = responded(
+    networkResponse(built(tappedHorn({ ...design, angle: 1 })).network, freqs, 2.83),
+  );
+  sameResponse(stacked, quarter, "two boxes in half space");
+  // and they are louder than one box in half space
+  const one = responded(networkResponse(built(tappedHorn(design)).network, freqs, 2.83));
+  stacked.curve.forEach((p, i) =>
+    assert.ok(p.spl > one.curve[i].spl, `two boxes louder at ${p.f.toFixed(1)} Hz`),
+  );
+});
+
+test("a prepared network solves each frequency as the one-shot solve does", () => {
+  const network = built(tappedHorn(atTaps(30, 120))).network;
+  const prepared = prepareNetwork(network, 2.83);
+  assert.ok(prepared);
+  for (const f of [20, 45, 90, 300]) {
+    const once = solveNetworkAt(network, f, 2.83),
+      again = solvePreparedAt(prepared, f);
+    assert.ok(once && again);
+    assert.deepStrictEqual(again, once);
+  }
+  assert.strictEqual(solvePreparedAt(prepared, 0), null);
+  assert.strictEqual(prepareNetwork({ ...network, count: 0 }, 2.83), null);
+});
+
+test("a nearly singular network is not solved: a node held only by a vanishing chamber", () => {
+  const base = sealedBox(DEFAULT_PA.mid.ts, 30).network;
+  /** two extra nodes joined by a mass, the first one on a chamber of `liters` to the outside air */
+  const held = (liters: number): AcousticNetwork => ({
+    ...base,
+    nodeCount: base.nodeCount + 2,
+    parts: [
+      ...base.parts,
+      {
+        kind: NETWORK_PART.mass,
+        from: base.nodeCount,
+        to: base.nodeCount + 1,
+        mass: 1,
+        resistance: 1,
+      },
+      { kind: NETWORK_PART.chamber, node: base.nodeCount, liters },
+    ],
+  });
+  // a liter holds the nodes' pressure: the system solves
+  assert.ok(solveNetworkAt(held(1), 100, 10));
+  // a nanoliter leaves them all but floating: singular to rounding
+  assert.strictEqual(solveNetworkAt(held(1e-9), 100, 10), null);
+  assert.strictEqual(networkResponse(held(1e-9), [50, 100], 10), null);
 });

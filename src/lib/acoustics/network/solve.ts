@@ -46,10 +46,13 @@ import {
 import { coilFactor, coilImpedance, driverCircuit } from "../driverCircuit";
 import { chainMatrix, isSizedSegment } from "../hornSegments";
 import { mouthImpedance } from "../radiation";
-import { AIR_STIFFNESS, SPL_REFERENCE_PA, powerScale, setPhaseAndDelay } from "../hornModel";
+import { AIR_STIFFNESS, MILLI, SPL_REFERENCE_PA, powerScale, setPhaseAndDelay } from "../hornModel";
 
-/** Millimeters per meter. */
-const MM_PER_M = 1000;
+/**
+ * The smallest pivot the elimination takes, against rows scaled to 1: below it the system is singular to rounding (a
+ * node with almost nothing to set its pressure), and its result would be noise.
+ */
+const SINGULAR_PIVOT = 1e-12;
 
 /** How many flow unknowns each kind of part adds to the system. */
 const FLOW_UNKNOWNS: Record<NetworkPart["kind"], number> = {
@@ -96,7 +99,7 @@ const isModelableLoad = (load: OpeningLoad) =>
  * Whether every part's nodes exist and every size it divides by is positive and finite (as the horn engine's
  * `isModelable`), and the network has at least one driver.
  */
-function isModelable(network: AcousticNetwork, freqs: readonly number[]) {
+function isModelable(network: AcousticNetwork) {
   const isNode = (node: number) => Number.isInteger(node) && node >= 0 && node < network.nodeCount;
   const partOk = (part: NetworkPart) => {
     switch (part.kind) {
@@ -144,8 +147,7 @@ function isModelable(network: AcousticNetwork, freqs: readonly number[]) {
     network.nodeCount >= 1 &&
     isPositive(network.count) &&
     network.parts.some((part) => part.kind === NETWORK_PART.driver) &&
-    network.parts.every(partOk) &&
-    freqs.every(isPositive)
+    network.parts.every(partOk)
   );
 }
 
@@ -165,7 +167,8 @@ function openingImpedance(load: OpeningLoad, network: AcousticNetwork, f: number
 
 /**
  * The network made ready to solve at one drive voltage: where each part's flow unknowns sit (`flowIndex`, after the
- * node pressures), the system's size, each driver part's bank (null for other parts), and the work arrays.
+ * node pressures), the system's size, each driver part's bank (null for other parts), each opening's load impedance
+ * at the last frequency solved (null for other parts), and the work arrays.
  */
 function prepare(network: AcousticNetwork, volts: number) {
   const flowIndex: number[] = [];
@@ -181,6 +184,7 @@ function prepare(network: AcousticNetwork, volts: number) {
     banks: network.parts.map((part) =>
       part.kind === NETWORK_PART.driver ? bankOf(part, volts) : null,
     ),
+    loads: network.parts.map((): Complex | null => null),
     /** the system's matrix, row by row, real and imaginary parts apart; and its right-hand side */
     matrixRe: new Float64Array(size * size),
     matrixIm: new Float64Array(size * size),
@@ -191,12 +195,28 @@ function prepare(network: AcousticNetwork, volts: number) {
 type Prepared = ReturnType<typeof prepare>;
 
 /**
+ * A network made ready to solve at one drive voltage (`prepareNetwork`), to solve at many frequencies with
+ * `solvePreparedAt`. Callers only pass it back: this module alone reads it.
+ */
+export type PreparedNetwork = Prepared;
+
+/**
+ * The network made ready to solve with `volts` RMS on every driver, once for any number of frequencies; null when a
+ * size it divides by is not positive (see `isModelable`).
+ */
+export const prepareNetwork = (network: AcousticNetwork, volts: number): PreparedNetwork | null =>
+  isModelable(network) ? prepare(network, volts) : null;
+
+/**
  * Solves the prepared network at frequency `f` (Hz): fills the system, then eliminates. Returns the unknowns (node
- * pressures, then part flows) as complex numbers, or null when the system is singular (a node with nothing to set
- * its pressure).
+ * pressures, then part flows) as complex numbers, or null when the system is singular or nearly (a node with nothing to set
+ * its pressure). It keeps each opening's load impedance at `f` in `prepared.loads`.
+ *
+ * Left for the optimizer phase: each call still allocates (a complex number per stamp, each duct's chain matrix, the
+ * result array). A search over many designs should stamp into the work arrays directly and reuse the result.
  */
 function solveAt(prepared: Prepared, f: number): Complex[] | null {
-  const { network, flowIndex, size, banks, matrixRe, matrixIm, rhsRe, rhsIm } = prepared;
+  const { network, flowIndex, size, banks, loads, matrixRe, matrixIm, rhsRe, rhsIm } = prepared;
   matrixRe.fill(0);
   matrixIm.fill(0);
   rhsRe.fill(0);
@@ -268,8 +288,10 @@ function solveAt(prepared: Prepared, f: number): Complex[] | null {
       }
       case NETWORK_PART.opening: {
         // p = Z·U, U out to the air
+        const load = openingImpedance(part.load, network, f);
+        loads[index] = load;
         stamp(flow, part.node, one);
-        stamp(flow, flow, scale(openingImpedance(part.load, network, f), -1));
+        stamp(flow, flow, scale(load, -1));
         stamp(part.node, flow, one);
         return;
       }
@@ -280,7 +302,8 @@ function solveAt(prepared: Prepared, f: number): Complex[] | null {
 
 /**
  * Gaussian elimination with partial pivoting on the prepared system, each row first scaled to its largest entry (the
- * node rows hold flows and admittances, the part rows impedances: many decades apart). Null when a pivot is zero.
+ * node rows hold flows and admittances, the part rows impedances: many decades apart). Null when a pivot is zero or
+ * below `SINGULAR_PIVOT` (singular to rounding).
  */
 function eliminate({ size, matrixRe, matrixIm, rhsRe, rhsIm }: Prepared): Complex[] | null {
   for (let row = 0; row < size; row++) {
@@ -309,7 +332,7 @@ function eliminate({ size, matrixRe, matrixIm, rhsRe, rhsIm }: Prepared): Comple
         bestSize = entry;
       }
     }
-    if (bestSize === 0) return null;
+    if (bestSize < SINGULAR_PIVOT) return null;
     if (best !== pivot) {
       for (let column = 0; column < size; column++) {
         const i = pivot * size + column,
@@ -382,22 +405,31 @@ function flowsOf(prepared: Prepared, unknowns: Complex[], f: number): NetworkSta
 }
 
 /**
+ * A prepared network's state at frequency `f` (Hz): each node's pressure and each part's flows. Null when `f` is not
+ * positive or the network cannot be solved there.
+ */
+export function solvePreparedAt(prepared: PreparedNetwork, f: number): NetworkState | null {
+  if (!isPositive(f)) return null;
+  const unknowns = solveAt(prepared, f);
+  if (!unknowns) return null;
+  return {
+    pressures: unknowns.slice(0, prepared.network.nodeCount),
+    flows: flowsOf(prepared, unknowns, f),
+  };
+}
+
+/**
  * The network's state at frequency `f` (Hz) with `volts` RMS on every driver: each node's pressure and each part's
- * flows. Null when a size it divides by is not positive or the network cannot be solved.
+ * flows. Null when a size it divides by is not positive or the network cannot be solved. For many frequencies,
+ * prepare the network once (`prepareNetwork`) and call `solvePreparedAt`.
  */
 export function solveNetworkAt(
   network: AcousticNetwork,
   f: number,
   volts: number,
 ): NetworkState | null {
-  if (!isModelable(network, [f])) return null;
-  const prepared = prepare(network, volts);
-  const unknowns = solveAt(prepared, f);
-  if (!unknowns) return null;
-  return {
-    pressures: unknowns.slice(0, network.nodeCount),
-    flows: flowsOf(prepared, unknowns, f),
-  };
+  const prepared = prepareNetwork(network, volts);
+  return prepared && solvePreparedAt(prepared, f);
 }
 
 /**
@@ -411,8 +443,8 @@ export function networkResponse(
   freqs: readonly number[],
   volts: number,
 ): NetworkResponse | null {
-  if (!isModelable(network, freqs)) return null;
-  const prepared = prepare(network, volts);
+  const prepared = prepareNetwork(network, volts);
+  if (!prepared || !freqs.every(isPositive)) return null;
   /** Ω, the solid angle, sr */
   const solidAngle = network.angle * Math.PI;
   const curve: NetworkPoint[] = [];
@@ -432,7 +464,9 @@ export function networkResponse(
     const xmm: number[] = [],
       ze: number[] = [];
     network.parts.forEach((part, index) => {
-      if (part.kind === NETWORK_PART.opening && part.radiates) {
+      /** the opening's load impedance at f, as the solve stamped it (null for other parts) */
+      const load = prepared.loads[index];
+      if (part.kind === NETWORK_PART.opening && part.radiates && load) {
         // the opening's flow, delayed by its setback behind the mouth
         const delayed = multiply(flows[index].out, exp(complex(0, (-k * part.setback) / CM_PER_M)));
         const own = pressureOf(delayed);
@@ -441,15 +475,7 @@ export function networkResponse(
         powerPressure = add(
           powerPressure,
           part.load.kind === OPENING_LOAD.piston
-            ? scale(
-                own,
-                powerScale(
-                  openingImpedance(part.load, network, f).re,
-                  omega,
-                  solidAngle,
-                  network.count,
-                ),
-              )
+            ? scale(own, powerScale(load.re, omega, solidAngle, network.count))
             : own,
         );
       }
@@ -457,7 +483,7 @@ export function networkResponse(
       if (part.kind === NETWORK_PART.driver && bank) {
         const coneFlow = flows[index].out;
         // volts are RMS: √2 turns RMS travel into a sine's peak, as the box models do
-        xmm.push(Math.SQRT2 * (abs(coneFlow) / (omega * bank.Sd)) * MM_PER_M);
+        xmm.push(Math.SQRT2 * (abs(coneFlow) / (omega * bank.Sd)) * MILLI);
         // one voice coil's Ze: the coil plus (Bl/Sd)² over one cone's acoustic load without its electrical damping,
         // the load the bank's source sees (source / flow) less that damping, times the number of cones
         const motor = coilFactor(part.ts, omega);

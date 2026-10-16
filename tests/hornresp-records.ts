@@ -3,9 +3,10 @@
 // engine against them, tests/acoustic-network.test.ts the acoustic network.
 import assert from "node:assert";
 import path from "node:path";
-import { AIR_DENSITY, BOX_LEAK_Q } from "../src/constants/acoustics";
+import { BOX_LEAK_Q } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
+import { GRAMS_PER_KG } from "../src/constants/units";
+import { oneSideAirMass } from "../src/lib/acoustics/hornModel";
 import type { BoxModelTS, HornDesign, HornSegment, RadiationAngle } from "../src/types";
 
 /** The folder of the reference cases: each one's record and Hornresp's results. */
@@ -104,7 +105,7 @@ export function designOf(text: string, boxes: number, drivers: number) {
     Cms = num("Cms") * cones,
     Rms = num("Rms") / cones;
   /** one side's air load on the cone, kg: 8/3·ρa³, which the engine takes back off its Mms */
-  const frontAirMass = (8 / 3) * AIR_DENSITY * Math.pow(Sd / SQ_CM_PER_SQ_M / Math.PI, 1.5);
+  const frontAirMass = oneSideAirMass(Sd);
   const Mms = num("Mmd") / cones / GRAMS_PER_KG + frontAirMass;
   /** the driver's free-air resonance, Hz */
   const Fs = 1 / (2 * Math.PI * Math.sqrt(Mms * Cms));

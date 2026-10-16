@@ -48,7 +48,11 @@ export const AIR_STIFFNESS = AIR_DENSITY * SPEED_OF_SOUND * SPEED_OF_SOUND;
 /** The reference pressure for SPL, Pa (0 dB SPL). */
 export const SPL_REFERENCE_PA = 2e-5;
 /** Millimeters per meter, and milliseconds per second. */
-const MILLI = 1000;
+export const MILLI = 1000;
+
+/** One side's air load on a piston of one cone's area Sd (cm²): 8/3·ρa³, kg, a the cone's radius. */
+export const oneSideAirMass = (coneAreaCm2: number) =>
+  (8 / 3) * AIR_DENSITY * Math.pow(coneAreaCm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
 /** The vent's tuning search (duct vent): from this frequency, Hz, up in steps of this ratio, to the ceiling. */
 const TUNING_SEARCH = { from: 1, step: 1.01, ceiling: 20000 } as const;
 
@@ -290,10 +294,8 @@ export function hornModel(
   if (!isModelable(design, freqs)) return null;
   const { radiationLoad = true, QL = BOX_LEAK_Q, Qp = BOX_PORT_Q } = opts;
   const { driver, drivers, segments, count, angle } = design;
-  /** one side's air load on a piston of one cone's radius a: 8/3·ρa³, kg */
-  const frontAirMass = radiationLoad
-    ? (8 / 3) * AIR_DENSITY * Math.pow(driver.Sd / SQ_CM_PER_SQ_M / Math.PI, 1.5)
-    : 0;
+  /** one side's air load on one cone, kg */
+  const frontAirMass = radiationLoad ? oneSideAirMass(driver.Sd) : 0;
   /** one cone's circuit, its own air load off its moving mass */
   const cone = driverCircuit(driver, volts, frontAirMass);
   // the `drivers` cones in parallel on one throat, as one: their areas add, their impedances divide, the source stays

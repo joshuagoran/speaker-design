@@ -19,7 +19,12 @@ import {
   inputImpedance,
   outputFlowRatio,
 } from "../src/lib/acoustics/hornSegments";
-import { hornModel, hornGrid, hornFrontImpedance } from "../src/lib/acoustics/hornModel";
+import {
+  hornModel,
+  hornGrid,
+  hornFrontImpedance,
+  oneSideAirMass,
+} from "../src/lib/acoustics/hornModel";
 import { abs, add, arg, complex, divide, multiply, subtract } from "../src/lib/acoustics/complex";
 import { AIR_DENSITY, SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
@@ -472,8 +477,7 @@ test("two drivers on one throat are one driver of twice the cone, each cone with
   // losses scaled to keep the cones' own (half the compliance's acoustic share, half the resistance)
   const ts = noInductance(DEFAULT_PA.sub.ts);
   /** one side's air load on a piston of `cm2` cm², kg */
-  const airLoad = (cm2: number) =>
-    (8 / 3) * AIR_DENSITY * Math.pow(cm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
+  const airLoad = oneSideAirMass;
   const mms = ts.Mms / GRAMS_PER_KG;
   const bankMms = 2 * (mms - airLoad(ts.Sd)) + airLoad(2 * ts.Sd);
   /** one cone's suspension compliance, m/N; the bank's is half */

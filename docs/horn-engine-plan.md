@@ -203,7 +203,7 @@ For code that calls `hornModel` (the Designer, a future page):
   merged round exit: an approximation.
 - **Folds and back-loaded horns.** Not modeled. Tapped horns are modeled by the network only: no page uses it yet
   (`hornDesignOf` still names the gap).
-- **Tapped and offset-driver horns against Hornresp.** Checked on the acoustic network: five reference records meet
+- **Tapped and offset-driver horns against Hornresp.** Checked on the acoustic network. Five reference records meet
   Hornresp's results (see [Reference records for Hornresp](#reference-records-for-hornresp)).
 
 ## The acoustic network
@@ -227,8 +227,11 @@ No UI yet.
 - **Ducts keep their transfer matrix.** The solver never inverts it. So a duct where B = 0 (half a wavelength) or of
   zero length still solves.
 - **Elimination.** Gaussian, with partial pivoting and row scaling. A horn box has 10 to 20 unknowns.
-- **Outputs.** Node pressures, part flows, cone excursion, Ze, and SPL at 1 m: on axis (`spl`) and from radiated power
-  (`powerSpl`). Openings sum by flow and setback, as the horn engine.
+- **Singular systems.** A pivot below 1e-12 of its scaled row gives null. A node that nothing holds is singular.
+- **Many frequencies.** `prepareNetwork` checks and prepares a network once. `solvePreparedAt` solves it at each
+  frequency. `solveNetworkAt` does both for one frequency.
+- **Outputs.** Node pressures, part flows, cone excursion, Ze, and SPL at 1 m. SPL is on axis (`spl`) and from radiated
+  power (`powerSpl`). Openings sum by flow and setback, as the horn engine.
 - **Pure.** No DOM and no globals: it can run in a web worker.
 
 ### Presets
@@ -267,11 +270,14 @@ the closed end and the mouth get a node. Ducts join them in order.
 
 ### Physics checks
 
-- An offset-driver horn tapped at its throat is the front-loaded horn: tap 0 exactly, a 10 µm stub within 0.01 dB.
+- An offset-driver horn tapped at its throat is the front-loaded horn. Tap 0 meets the horn engine to rounding.
+  A 10 µm stub comes within 0.01 dB.
 - A tapped horn's response moves smoothly as a tap moves. A 1 mm move changes it less than a fifth of a 1 cm move.
 - A section split where no driver taps changes nothing.
 - A tapped horn with both taps at one point plays nothing: the two sides cancel.
 - Every node's flows add to zero, to 1e-12.
+- A chamber's loss is a leak whose flow does not radiate. A duct with no sections is its loss alone.
+- Two drivers in one bank are two driver parts side by side. Two boxes in half space are one box in quarter space.
 - A tapped horn rolls off below its path's quarter-wave resonance: 12 dB per octave or more at the bottom.
 
 ### Hornresp reader
@@ -294,9 +300,12 @@ the closed end and the mouth get a node. Ducts join them in order.
   leak and needs 0.6 dB there.
 - **Every committed record** reads and meets Hornresp's results: SPL within 0.0003 dB, Ze within 0.005 %.
 - **Layouts.** The key of the driver count line (the line after Re) names the layout: `Nd`, `OD` or `TH`. Its value
-  is the number of drivers. Hornresp writes it so. The caller can give another layout.
+  is the number of drivers. Hornresp writes it so. The caller can give another layout, also for an unknown key.
 - **TH chambers.** Hornresp's TH takes Vtc and Vrc as passages, masked or not. Vtc has the area Atc. Vrc has the length
   Lrc, so its area is Vrc / Lrc. Either value at zero gives no chamber.
+- **Invalid records.** A blank or non-numeric value, a negative length, or a driver value of zero or less fails. So
+  do horn rows with the wrong keys, or a row that does not start at the end of the row before it. The reason starts
+  "invalid record: ".
 - **End correction flag.** Hornresp sets it on every TH record. The reader checks it only when the record has a vent.
 - **SKRAM.** `tests/hornresp-layouts/skram-od.txt` is hand-written from its FreeCAD model. Its Vrc is a placeholder,
   so its test is structural only.

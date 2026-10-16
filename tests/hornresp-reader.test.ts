@@ -10,6 +10,9 @@ import { readHornrespRecord } from "../src/lib/acoustics/network/hornrespRecord"
 import { presetModel } from "../src/lib/acoustics/network/presets";
 import {
   HORN_LAYOUT,
+  HORNRESP_KEY,
+  HORNRESP_LAYOUT_KEY,
+  INVALID_RECORD,
   MISSING_VALUE,
   NETWORK_PART,
   NOT_SUPPORTED_YET,
@@ -110,16 +113,16 @@ test("the reader names what it cannot model yet", () => {
     return reading.reason;
   };
   const unsupported: [string, string, string][] = [
-    ["Rg", "4.00", "Rg"],
-    ["Ang", "4.0 x Pi", "solid angle"],
-    ["Semi-Inductance Model Flag", "1", "semi-inductance"],
-    ["End Correction Flag", "1", "End Correction Flag"],
-    ["Acoustic Path Length", "12.0", "path length"],
-    ["Added Mass", "50.00", "passive radiator"],
-    ["High Pass Frequency", "30", "high-pass"],
+    [HORNRESP_KEY.sourceResistance, "4.00", HORNRESP_KEY.sourceResistance],
+    [HORNRESP_KEY.angle, "4.0 x Pi", "solid angle"],
+    [HORNRESP_KEY.semiInductance, "1", "semi-inductance"],
+    [HORNRESP_KEY.endCorrection, "1", HORNRESP_KEY.endCorrection],
+    [HORNRESP_KEY.pathLength, "12.0", "path length"],
+    [HORNRESP_KEY.addedMass, "50.00", "passive radiator"],
+    [HORNRESP_KEY.highPass, "30", "high-pass"],
     ["Band 2 Frequency", "80", "equalizer"],
-    ["Nd", "2", "Nd"],
-    ["Vrc", "0.00", "open rear"],
+    [HORNRESP_LAYOUT_KEY.frontLoaded, "2", HORNRESP_LAYOUT_KEY.frontLoaded],
+    [HORNRESP_KEY.rearVolume, "0.00", "open rear"],
   ];
   for (const [key, value, named] of unsupported) {
     const reason = reasonFor(withValue(base, key, value));
@@ -137,7 +140,58 @@ test("the reader names what it cannot model yet", () => {
   assert.ok(tapped.startsWith(NOT_SUPPORTED_YET) && tapped.includes("three sections"), tapped);
   // a missing value
   const missing = reasonFor(base.replace(/^Sd = .*$/m, ""));
-  assert.strictEqual(missing, `${MISSING_VALUE}Sd`);
+  assert.strictEqual(missing, `${MISSING_VALUE}${HORNRESP_KEY.coneArea}`);
+});
+
+test("the reader names a record's values it cannot read", () => {
+  const base = recordText("mid-vented");
+  const reasonFor = (text: string) => {
+    const reading = readHornrespRecord(text);
+    assert.ok(!reading.ok, "the record should not map");
+    return reading.reason;
+  };
+  /** asserts that `text` gives an invalid-record reason that names `named` */
+  const assertInvalid = (text: string, named: string) => {
+    const reason = reasonFor(text);
+    assert.ok(reason.startsWith(INVALID_RECORD) && reason.includes(named), reason);
+  };
+  // a value that is not a number, in a horn row and in the driver
+  assertInvalid(withValue(base, "Exp", "abc"), "Exp = abc");
+  assertInvalid(withValue(base, "S2", "wide"), "S2 = wide");
+  assertInvalid(withValue(base, HORNRESP_KEY.forceFactor, "strong"), HORNRESP_KEY.forceFactor);
+  // a blank length, and a row whose lines are out of order
+  assertInvalid(withValue(base, "Exp", ""), "Exp =");
+  assertInvalid(base.replace(/^Exp = .*$/m, ""), "row 1");
+  // a negative length
+  assertInvalid(withValue(base, "Exp", "-35.00"), "Exp = -35.00");
+  // driver values that must be positive
+  for (const key of [
+    HORNRESP_KEY.coneArea,
+    HORNRESP_KEY.movingMass,
+    HORNRESP_KEY.compliance,
+    HORNRESP_KEY.mechanicalResistance,
+  ]) {
+    assertInvalid(withValue(base, key, "0.00"), key);
+    assertInvalid(withValue(base, key, "-1.00"), key);
+  }
+  // a row keyed with the wrong areas
+  assertInvalid(base.replace(/^S2 = 1400\.00$/m, "S3 = 1400.00"), "S2");
+  // a row that does not start where the row before it ends
+  const lines = referenceText("th-15").split(/\r?\n/);
+  /** the second row's start: the second S2 line */
+  const secondStart = lines.findIndex(
+    (line, i) => line.startsWith("S2 = ") && lines.slice(0, i).some((l) => l.startsWith("S2 = ")),
+  );
+  assert.ok(secondStart > 0);
+  lines[secondStart] = "S2 = 650.00";
+  assertInvalid(lines.join("\n"), "row 2 starts at S2 = 650");
+});
+
+test("the reader takes the caller's layout for a record whose layout key it does not know", () => {
+  const ripole = recordText("mid-vented").replace(/^Nd = 1$/m, "OD3 = 1");
+  const reading = readOk(readHornrespRecord(ripole, { layout: HORN_LAYOUT.frontLoaded }));
+  assert.strictEqual(reading.design.layout, HORN_LAYOUT.frontLoaded);
+  assertMatchesHornresp("mid-vented", reading);
 });
 
 test("the reader takes a hand-written offset-driver record: SKRAM (structural: its rear chamber is a placeholder)", () => {

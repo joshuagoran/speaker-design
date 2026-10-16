@@ -67,3 +67,65 @@ export const NOT_SUPPORTED_YET = "not supported yet: ";
 
 /** The start of the reason the Hornresp reader gives for a record that misses a value it needs. */
 export const MISSING_VALUE = "missing value: ";
+
+/** The start of the reason the Hornresp reader gives for a value it cannot read (blank, not a number, out of range). */
+export const INVALID_RECORD = "invalid record: ";
+
+/**
+ * The Hornresp record keys the reader reads or checks, by what each one is. A record's horn rows are keyed S1 to S5
+ * (`HORNRESP_AREA_KEYS`), its flares by `HORNRESP_FLARE_KEY`, and its driver count line by `HORNRESP_LAYOUT_KEY`.
+ */
+export const HORNRESP_KEY = {
+  // the source and the radiation
+  angle: "Ang",
+  drive: "Eg",
+  sourceResistance: "Rg",
+  // the driver
+  coneArea: "Sd",
+  forceFactor: "Bl",
+  compliance: "Cms",
+  mechanicalResistance: "Rms",
+  movingMass: "Mmd",
+  inductance: "Le",
+  coilResistance: "Re",
+  excursion: "Xmax",
+  addedMass: "Added Mass",
+  // the chambers and the vent
+  rearVolume: "Vrc",
+  rearLength: "Lrc",
+  ventArea: "Ap",
+  ventLength: "Lpt",
+  throatVolume: "Vtc",
+  throatArea: "Atc",
+  endCorrection: "End Correction Flag",
+  pathLength: "Acoustic Path Length",
+  // the models and the filling the reader does not take yet
+  lossyInductance: "Lossy Inductance Model Flag",
+  semiInductance: "Semi-Inductance Model Flag",
+  dampingModel: "Damping Model Flag",
+  closedMouth: "Closed Mouth Flag",
+  rearFilling: "Fr",
+  rearFillingLength: "Tal",
+  hornFilling1: "Fr1",
+  hornFilling2: "Fr2",
+  hornFilling3: "Fr3",
+  hornFilling4: "Fr4",
+  highPass: "High Pass Frequency",
+  lowPass: "Low Pass Frequency",
+} as const;
+
+/** Hornresp's horn area keys, by segment boundary: S1 is the first row's start, S5 the fourth row's end. */
+export const HORNRESP_AREA_KEYS = ["S1", "S2", "S3", "S4", "S5"] as const;
+
+/** Hornresp's flare keys, as a horn row names its length. */
+export const HORNRESP_FLARE_KEY = {
+  conical: "Con",
+  exponential: "Exp",
+  parabolic: "Par",
+} as const;
+
+/** Hornresp's horn row cutoff keys (each row's flare cutoff, Hz, not read), by row. */
+export const HORNRESP_CUTOFF_KEYS = ["F12", "F23", "F34", "F45"] as const;
+
+/** The keys a horn row's length takes when the row is unused (zero length), by row. */
+export const HORNRESP_UNUSED_LENGTH_KEYS = ["L12", "L23", "L34", "L45"] as const;

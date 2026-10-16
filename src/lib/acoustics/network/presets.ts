@@ -39,14 +39,18 @@ import {
   CM_PER_M,
   LITERS_PER_CUBIC_M,
   SQ_CM_PER_SQ_M,
+  SQ_M_PER_SQ_IN,
 } from "../../../constants/units";
 import { ventResistances } from "../driverCircuit";
-import { AIR_STIFFNESS, ventDuct, ventOf, type HornModelOptions } from "../hornModel";
+import {
+  AIR_STIFFNESS,
+  oneSideAirMass,
+  ventDuct,
+  ventOf,
+  type HornModelOptions,
+} from "../hornModel";
 import { ventTuning, type BoxModelOptions } from "../../pa/calc";
 import { networkResponse } from "./solve";
-
-/** Square meters per square inch. */
-const SQ_M_PER_SQ_IN = 0.00064516;
 
 /** The horn presets' options: the horn engine's, and whether a leak's flow radiates. */
 export interface HornNetworkOptions extends HornModelOptions {
@@ -56,10 +60,6 @@ export interface HornNetworkOptions extends HornModelOptions {
    */
   leakRadiates?: boolean;
 }
-
-/** One side's air load on a piston of one cone's area Sd (cm²): 8/3·ρa³, kg, a the cone's radius. */
-const oneSideAirMass = (coneAreaCm2: number) =>
-  (8 / 3) * AIR_DENSITY * Math.pow(coneAreaCm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
 
 /** What the driver's rear drives: a sealed or vented chamber of its own, or a tap on the path (through a passage). */
 type RearSide =
