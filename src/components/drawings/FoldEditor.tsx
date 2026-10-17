@@ -521,18 +521,26 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
                 strokeWidth={T * PX + 2}
               />
               <line
-                data-hit={tool === TOOL.remove && hit === HIT.vent ? hit : undefined}
                 x1={X(line[0].zIn)}
                 y1={Y(line[0].yIn)}
                 x2={X(line[1].zIn)}
                 y2={Y(line[1].yIn)}
                 stroke={color}
-                strokeWidth={(tool === TOOL.remove && hit === HIT.vent ? 8 : 4) * u}
+                strokeWidth={4 * u}
                 strokeLinecap="round"
-                style={
-                  tool === TOOL.remove && hit === HIT.vent ? { cursor: "not-allowed" } : undefined
-                }
               />
+              {tool === TOOL.remove && hit === HIT.vent && (
+                <line
+                  data-hit={hit}
+                  x1={X(line[0].zIn)}
+                  y1={Y(line[0].yIn)}
+                  x2={X(line[1].zIn)}
+                  y2={Y(line[1].yIn)}
+                  stroke="transparent"
+                  strokeWidth={T * PX + 16 * u}
+                  style={{ cursor: "not-allowed" }}
+                />
+              )}
             </g>
           ))}
           {band && (
