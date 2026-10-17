@@ -109,7 +109,6 @@ import { formatInches } from "../../lib/format";
 import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
-import { isDrawn } from "../../lib/speaker/foldHorn";
 import { withSlotKind, withSlotPlace } from "../../lib/speaker/slotPort";
 import { SPEAKER_STEPS, STUFFING_MAX_PCT } from "../../constants/speakerSteps";
 import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
@@ -174,11 +173,9 @@ export function ChamberSettings({
   /** a tapped horn: its chamber takes no vent */
   const tapped =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
-  /** a drawn folded horn: its vent is in its side view */
+  /** a folded horn: its vent is drawn in its side view, so the chamber's vent settings are hidden */
   const folded =
-    chamber.load.kind === CHAMBER_LOAD.horn &&
-    chamber.load.horn.path === HORN_PATH.folded &&
-    isDrawn(chamber.load.horn.fold);
+    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.path === HORN_PATH.folded;
   /** how the horn meets its goals, and whether it holds more air than the chamber has */
   const netLiters = result?.netLiters ?? chamber.netLiters ?? undefined;
   /** the clear face, as numbers: the layout is new each render, the face often is not */
@@ -295,11 +292,16 @@ export function ChamberSettings({
           fit={goalCheck?.fit ?? null}
           overAir={goalCheck?.overAir ?? null}
           onEdit={(edit) =>
-            onEdit((c) =>
-              c.load.kind === CHAMBER_LOAD.horn
-                ? { ...c, load: { ...c.load, horn: edit(c.load.horn) } }
-                : c,
-            )
+            onEdit((c) => {
+              if (c.load.kind !== CHAMBER_LOAD.horn) return c;
+              const horn = edit(c.load.horn);
+              return {
+                ...c,
+                load: { ...c.load, horn },
+                // a folded horn's vent is drawn: its chamber is sealed (its vent settings are hidden)
+                ...(horn.path === HORN_PATH.folded ? { vent: DEFAULT_VENTS.sealed } : {}),
+              };
+            })
           }
           onDrive={(kind) => onEdit((c) => withHornDrive(c, kind))}
           onDesign={(goals) => {
@@ -320,7 +322,7 @@ export function ChamberSettings({
                 ...c,
                 load: { kind: CHAMBER_LOAD.horn, horn: read.horn },
                 netLiters: read.netLiters,
-                vent: read.vent,
+                vent: read.horn.path === HORN_PATH.folded ? DEFAULT_VENTS.sealed : read.vent,
               }));
             return read;
           }}
@@ -335,100 +337,108 @@ export function ChamberSettings({
           onChange={(p) => onEdit((c) => ({ ...c, load: withMouthPosition(c.load, p) }))}
         />
       )}
-      <ToggleGroup
-        label="Vent"
-        value={vent.kind}
-        onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
-        options={entriesOf(VENT_KIND_NAMES)}
-        disabled={
-          tapped || folded
-            ? {
-                values: [VENT_KIND.vented, VENT_KIND.radiator],
-                why: tapped ? SPEAKER_TEXT.ventTapped : SPEAKER_TEXT.ventDrawn,
-              }
-            : undefined
-        }
-      />
-      {vent.kind === VENT_KIND.vented && (
+      {!folded && (
         <>
           <ToggleGroup
-            label="Port"
-            value={vent.port.shape ?? PORT_SHAPE.round}
-            onChange={(shape) =>
-              setPort(
-                shape === (vent.port.shape ?? PORT_SHAPE.round) ? vent.port : DEFAULT_PORTS[shape],
-              )
+            label="Vent"
+            value={vent.kind}
+            onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
+            options={entriesOf(VENT_KIND_NAMES)}
+            disabled={
+              tapped
+                ? { values: [VENT_KIND.vented, VENT_KIND.radiator], why: SPEAKER_TEXT.ventTapped }
+                : undefined
             }
-            options={entriesOf(PORT_SHAPE_NAMES)}
           />
-          <PortFields
-            port={vent.port}
-            walls={cabinet.panel}
-            chamber={chamber}
-            clearW={placed?.clear.w ?? chamber.dims.w - 2 * cabinet.panel.thicknessIn}
-            onChange={setPort}
-          />
-          {!vents && <p className="text-xs text-stone-500">{SPEAKER_TEXT.ventFixed}</p>}
-          <NumberField
-            label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
-            value={vent.maxSpeedMs}
-            min={1}
-            step={0.5}
-            unit="m/s"
-            onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
-          />
-        </>
-      )}
-      {vent.kind === VENT_KIND.radiator && (
-        <>
-          <SelectField
-            label="Passive radiator"
-            options={HIFI_PASSIVES_BY_SIZE}
-            value={byId(HIFI_PASSIVES_BY_SIZE, vent.radiators.id)}
-            onChange={(p) => setVent({ ...vent, radiators: { ...vent.radiators, id: p.id } })}
-          />
-          <div className={FIELD_ROW}>
-            <NumberField
-              label="Count"
-              value={vent.radiators.n}
-              min={1}
-              step={1}
-              onChange={(n) => setVent({ ...vent, radiators: { ...vent.radiators, n } })}
-            />
-            <NumberField
-              label={<Tooltip tip={SPEAKER_TEXT.radiatorMassTip}>Added mass, g</Tooltip>}
-              value={vent.radiators.addG}
-              min={0}
-              step={SPEAKER_STEPS.addG}
-              onChange={(addG) => setVent({ ...vent, radiators: { ...vent.radiators, addG } })}
-            />
-          </div>
-        </>
-      )}
-      {vents && (
-        <PlaceFields
-          label={
-            vents.what === VENT_KIND.radiator ? SPEAKER_TEXT.radiatorPlace : SPEAKER_TEXT.portPlace
-          }
-          value={vents.position}
-          auto={vents.auto}
-          widthIn={chamber.dims.w}
-          onChange={(p) => onEdit((c) => ({ ...c, vent: withVentPosition(c.vent, p) }))}
-        >
-          {vents.position && (
-            <ToggleGroup
-              label={SPEAKER_TEXT.panel}
-              value={vents.position.panel}
-              onChange={(panel) =>
-                onEdit((c) => ({
-                  ...c,
-                  vent: withVentPosition(c.vent, vents.position && { ...vents.position, panel }),
-                }))
-              }
-              options={entriesOf(VENT_PANEL_NAMES)}
-            />
+          {vent.kind === VENT_KIND.vented && (
+            <>
+              <ToggleGroup
+                label="Port"
+                value={vent.port.shape ?? PORT_SHAPE.round}
+                onChange={(shape) =>
+                  setPort(
+                    shape === (vent.port.shape ?? PORT_SHAPE.round)
+                      ? vent.port
+                      : DEFAULT_PORTS[shape],
+                  )
+                }
+                options={entriesOf(PORT_SHAPE_NAMES)}
+              />
+              <PortFields
+                port={vent.port}
+                walls={cabinet.panel}
+                chamber={chamber}
+                clearW={placed?.clear.w ?? chamber.dims.w - 2 * cabinet.panel.thicknessIn}
+                onChange={setPort}
+              />
+              {!vents && <p className="text-xs text-stone-500">{SPEAKER_TEXT.ventFixed}</p>}
+              <NumberField
+                label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
+                value={vent.maxSpeedMs}
+                min={1}
+                step={0.5}
+                unit="m/s"
+                onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
+              />
+            </>
           )}
-        </PlaceFields>
+          {vent.kind === VENT_KIND.radiator && (
+            <>
+              <SelectField
+                label="Passive radiator"
+                options={HIFI_PASSIVES_BY_SIZE}
+                value={byId(HIFI_PASSIVES_BY_SIZE, vent.radiators.id)}
+                onChange={(p) => setVent({ ...vent, radiators: { ...vent.radiators, id: p.id } })}
+              />
+              <div className={FIELD_ROW}>
+                <NumberField
+                  label="Count"
+                  value={vent.radiators.n}
+                  min={1}
+                  step={1}
+                  onChange={(n) => setVent({ ...vent, radiators: { ...vent.radiators, n } })}
+                />
+                <NumberField
+                  label={<Tooltip tip={SPEAKER_TEXT.radiatorMassTip}>Added mass, g</Tooltip>}
+                  value={vent.radiators.addG}
+                  min={0}
+                  step={SPEAKER_STEPS.addG}
+                  onChange={(addG) => setVent({ ...vent, radiators: { ...vent.radiators, addG } })}
+                />
+              </div>
+            </>
+          )}
+          {vents && (
+            <PlaceFields
+              label={
+                vents.what === VENT_KIND.radiator
+                  ? SPEAKER_TEXT.radiatorPlace
+                  : SPEAKER_TEXT.portPlace
+              }
+              value={vents.position}
+              auto={vents.auto}
+              widthIn={chamber.dims.w}
+              onChange={(p) => onEdit((c) => ({ ...c, vent: withVentPosition(c.vent, p) }))}
+            >
+              {vents.position && (
+                <ToggleGroup
+                  label={SPEAKER_TEXT.panel}
+                  value={vents.position.panel}
+                  onChange={(panel) =>
+                    onEdit((c) => ({
+                      ...c,
+                      vent: withVentPosition(
+                        c.vent,
+                        vents.position && { ...vents.position, panel },
+                      ),
+                    }))
+                  }
+                  options={entriesOf(VENT_PANEL_NAMES)}
+                />
+              )}
+            </PlaceFields>
+          )}
+        </>
       )}
       <CardHeading sub>Drivers</CardHeading>
       {chamber.drivers.map((driver, i) => (
