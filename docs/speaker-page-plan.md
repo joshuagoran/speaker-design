@@ -36,7 +36,7 @@ Each setting sits at the level it belongs to.
 | Horn chamber | Goals, Design from goals, horn type, the side view editor, drivers |
 
 - Bracing and back panel move from Construction to each Box chamber. A horn chamber gets no added braces: its boards brace the panels.
-- Arched top: open question (below).
+- Arched top: Box-only speakers (Decisions).
 
 ### Results pane
 
@@ -112,10 +112,10 @@ Run each in the mock first, then in the app before every hand-over.
 8. Add a second driver, then delete it with its trash icon.
 9. Move a driver on the baffle by dragging it in the Front view. Read its position in the fields.
 
-## Questions
+## Decisions
 
-1. Arched top: remove it, or keep it for speakers with only Box chambers?
-2. Chamber checks: chips with tooltips, or a short table?
+1. Arched top: keep it, for speakers with only Box chambers. A speaker with a horn chamber does not show it.
+2. Chamber checks: chips, as now. Their long text goes into each chip's tooltip, so no text blocks stay on the page.
 
 ## Steps
 
