@@ -628,6 +628,7 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
   if (ventLeaks) checks.push({ id: FOLD_CHECK.ventLeak });
   if (ventedChamber && !ventedChamber.opensToBack && !ventedChamber.opensToFront)
     checks.push({ id: FOLD_CHECK.ventStray });
+  else if (ventedChamber && !(ventedChamber.liters > 0)) checks.push({ id: FOLD_CHECK.ventNoAir });
 
   // chokes: the area falls under 3/4 of its usual size over the 15 in before (the median, so a turn's bulge does not
   // count; the ends left out)

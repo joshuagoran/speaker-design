@@ -313,6 +313,7 @@ export const FOLD_CHECK_TEXT = {
   ventBlocked: () => "The vent opens onto a board. Move the vent or the board.",
   ventLeak: () => "The vent opens into the horn's passage. Move the vent or add a board.",
   ventStray: () => "The vent opens into air that no driver uses.",
+  ventNoAir: () => "The vent's duct fills all the air behind it. Leave a chamber behind the duct.",
   /** the drawing makes a different horn type than the Horn type setting */
   typeDiffers: (drawn: string, set: string) =>
     `The drawing traces as ${drawn}. Horn type is set to ${set}.`,

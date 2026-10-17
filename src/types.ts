@@ -2414,7 +2414,8 @@ export type FoldCheck =
     }
   | { id: (typeof FOLD_CHECK)["ventBlocked"] }
   | { id: (typeof FOLD_CHECK)["ventLeak"] }
-  | { id: (typeof FOLD_CHECK)["ventStray"] };
+  | { id: (typeof FOLD_CHECK)["ventStray"] }
+  | { id: (typeof FOLD_CHECK)["ventNoAir"] };
 
 /** A pocket of air the mouth does not reach. */
 export interface FoldSealedPocket {

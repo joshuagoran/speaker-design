@@ -1,6 +1,8 @@
 // A drawn horn as the sound model reads it (lib/speaker/foldHorn `traceModel`): sections from the trace, taps on their
 // boundaries, and the sealed air behind the cones as the rear chamber.
 import { expect, test } from "vite-plus/test";
+import assert from "node:assert";
+import { withHornFold } from "../src/pages/speaker/chamberLoad";
 import {
   CHAMBER_LOAD,
   FOLD_WALL,
@@ -264,4 +266,11 @@ test("the sound model reads the traced horn in place of the stored one", () => {
     { ...roomOf(bin), traced: modelOf(EMPTY) },
   );
   expect(none.ok).toBe(false);
+});
+
+test("drawing the first board seals the chamber's own vent; an undrawn fold keeps it", () => {
+  const [bin] = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne).cabinet.chambers;
+  assert.notEqual(bin.vent.kind, VENT_KIND.sealed);
+  assert.equal(withHornFold(bin, EMPTY).vent, bin.vent);
+  assert.equal(withHornFold(bin, OFFSET).vent.kind, VENT_KIND.sealed);
 });

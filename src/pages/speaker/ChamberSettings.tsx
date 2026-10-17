@@ -109,6 +109,7 @@ import { formatInches } from "../../lib/format";
 import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
+import { isDrawn } from "../../lib/speaker/foldHorn";
 import { withSlotKind, withSlotPlace } from "../../lib/speaker/slotPort";
 import { SPEAKER_STEPS, STUFFING_MAX_PCT } from "../../constants/speakerSteps";
 import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
@@ -173,9 +174,11 @@ export function ChamberSettings({
   /** a tapped horn: its chamber takes no vent */
   const tapped =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
-  /** a folded horn: its vent is drawn in its side view */
+  /** a drawn folded horn: its vent is in its side view */
   const folded =
-    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.path === HORN_PATH.folded;
+    chamber.load.kind === CHAMBER_LOAD.horn &&
+    chamber.load.horn.path === HORN_PATH.folded &&
+    isDrawn(chamber.load.horn.fold);
   /** how the horn meets its goals, and whether it holds more air than the chamber has */
   const netLiters = result?.netLiters ?? chamber.netLiters ?? undefined;
   /** the clear face, as numbers: the layout is new each render, the face often is not */
@@ -292,18 +295,11 @@ export function ChamberSettings({
           fit={goalCheck?.fit ?? null}
           overAir={goalCheck?.overAir ?? null}
           onEdit={(edit) =>
-            onEdit((c) => {
-              if (c.load.kind !== CHAMBER_LOAD.horn) return c;
-              const horn = edit(c.load.horn);
-              // a folded horn's vent is drawn in its side view: the chamber's own vent goes
-              const drawnVent =
-                horn.path === HORN_PATH.folded && c.load.horn.path !== HORN_PATH.folded;
-              return {
-                ...c,
-                load: { ...c.load, horn },
-                ...(drawnVent ? { vent: DEFAULT_VENTS[VENT_KIND.sealed] } : {}),
-              };
-            })
+            onEdit((c) =>
+              c.load.kind === CHAMBER_LOAD.horn
+                ? { ...c, load: { ...c.load, horn: edit(c.load.horn) } }
+                : c,
+            )
           }
           onDrive={(kind) => onEdit((c) => withHornDrive(c, kind))}
           onDesign={(goals) => {

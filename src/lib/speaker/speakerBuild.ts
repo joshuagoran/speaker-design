@@ -976,8 +976,11 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
       clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
       // a drawn horn's vent is its drawing's (the chamber's own is not read: lib/speaker/hornDesign)
       ventL: vent && !drawnFoldOf(chamber) ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
-      hornL: hornAirL(cabinet, chamber),
-      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f) + foldBoardL(cabinet, f),
+      // a drawn horn's air is the chamber's less its boards: the straight horn's flare and driver board are not built
+      hornL: drawnFoldOf(chamber) ? 0 : hornAirL(cabinet, chamber),
+      woodL:
+        insideWoodL(cabinet, f, bracing) +
+        (drawnFoldOf(chamber) ? foldBoardL(cabinet, f) : driverBoardL(cabinet, f)),
       recessL: hardware?.liters ?? 0,
       lb: { wood, drivers, hardware: hardwareLb, total: wood + drivers + hardwareLb },
     };

@@ -27,6 +27,8 @@ export const FOLD_CHECK = {
   ventLeak: "ventLeak",
   /** the vented chamber is not where the cones' closed side opens */
   ventStray: "ventStray",
+  /** the vent's duct fills all the air behind it: no chamber is left */
+  ventNoAir: "ventNoAir",
 } as const;
 
 /** Why the drivers check fails (`FOLD_CHECK.drivers`). */

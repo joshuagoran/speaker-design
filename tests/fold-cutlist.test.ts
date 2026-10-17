@@ -181,15 +181,17 @@ describe("a drawn horn's wood in the chamber's net air", () => {
   });
   const netOf = (spec: SpeakerSpec) => chamberNetLiters(spec.cabinet, spec.cabinet.chambers[0], 0);
 
-  test("each drawn board's wood comes off the net air", () => {
-    const bare = auto(folded(foldOf([])));
+  test("each drawn board's wood comes off the net air, and the straight horn's air does not", () => {
+    const one = auto(folded(foldOf([board(pt(0, 5), pt(20, 5))])));
     const drawn = auto(folded(L));
-    // the L's boards, as drawn: the level one runs on half a board past the corner, the upright one back half a board
+    // the L's upright board, as drawn: from half a board below the corner (the level one runs on past it)
     const t = BIN.cabinet.panel.thicknessIn;
     const room = foldRoom(drawn.cabinet, drawn.cabinet.chambers[0]);
-    const wood = (20 + t / 2 + (10 + t / 2)) * t * room.widthIn * LITERS_PER_CUBIC_IN;
-    expect(netOf(bare)).toBeGreaterThan(wood + 10);
-    expect(netOf(bare) - netOf(drawn)).toBeCloseTo(wood, 6);
+    const wood = (10 + t / 2) * t * room.widthIn * LITERS_PER_CUBIC_IN;
+    const levelGrows = (t / 2) * t * room.widthIn * LITERS_PER_CUBIC_IN;
+    expect(netOf(one) - netOf(drawn)).toBeCloseTo(wood + levelGrows, 6);
+    // the undrawn fold's straight horn takes its flare's air; the drawing does not
+    expect(netOf(one)).toBeGreaterThan(netOf(auto(folded(foldOf([])))));
   });
 
   test("a fold not drawn yet, or a set net air, is as it was", () => {
