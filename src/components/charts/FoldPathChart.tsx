@@ -7,8 +7,7 @@ import {
   FOLD_PATH_MAX_IN,
 } from "../../constants/chartScales";
 import { FOLD_CHART_TEXT } from "../../constants/speakerPage";
-import { CM2_PER_IN2, CM_PER_IN } from "../../constants/units";
-import { isSizedSegment, segmentAreaAt } from "../../lib/acoustics/hornSegments";
+import { targetPathPoints } from "../../lib/speaker/foldMatch";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { usePalette } from "../../hooks/useTheme";
 import { FONT, SVG_FONT } from "../../styles/fonts";
@@ -31,33 +30,8 @@ interface Props {
   onHover: (sIn: number | null) => void;
 }
 
-/** The target line is sampled about this often along each segment, in. */
-const TARGET_STEP_IN = 0.5;
-
 /** Chart height, px. */
 const HEIGHT = 240;
-
-/**
- * The straight horn's area along its length, sampled about every `TARGET_STEP_IN` and at each segment's ends, with the
- * distance from the throat in inches and the area in in². Each segment follows its own flare (`segmentAreaAt`). A
- * segment without sizes (a gap) is left out, so the line never carries NaN.
- */
-export function targetPathPoints(target: readonly HornSegment[]): PathPoint[] {
-  const points: PathPoint[] = [];
-  let startCm = 0;
-  for (const segment of target.filter(isSizedSegment)) {
-    const steps = Math.max(1, Math.ceil(segment.length / CM_PER_IN / TARGET_STEP_IN));
-    for (let k = 0; k <= steps; k++) {
-      const alongCm = (k / steps) * segment.length;
-      points.push({
-        sIn: (startCm + alongCm) / CM_PER_IN,
-        areaIn2: segmentAreaAt(segment, alongCm) / CM2_PER_IN2,
-      });
-    }
-    startCm += segment.length;
-  }
-  return points;
-}
 
 /**
  * The distance along the path, in from the closed end, under a pointer at `xPx` on an axis that runs from `x0` to `x1`

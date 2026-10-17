@@ -39,7 +39,8 @@ import { StatTileGrid, type StatTileItem } from "../stats/StatTileGrid";
 import { Notice } from "../ui/Notice";
 import { formatInches } from "../../lib/format";
 import { tracedFold } from "../../lib/speaker/foldHorn";
-import { FoldPathChart, targetPathPoints } from "../charts/FoldPathChart";
+import { FoldPathChart } from "../charts/FoldPathChart";
+import { offTargetDb } from "../../lib/speaker/foldMatch";
 import { Icon, IconButton } from "../ui/IconButton";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
@@ -707,30 +708,6 @@ function checkText(c: FoldCheck): string {
     default:
       return FOLD_CHECK_TEXT[c.id]();
   }
-}
-
-/**
- * How far the traced passage strays from the straight horn, dB: the rms of 20·log10 of their areas' ratio at each traced
- * section along both; null when they share no length.
- */
-export function offTargetDb(
-  sections: ReturnType<typeof foldTrace>["sections"],
-  target: readonly HornSegment[],
-): number | null {
-  const points = targetPathPoints(target);
-  const end = points.length ? points[points.length - 1].sIn : 0;
-  const ratios = sections.flatMap((q) => {
-    if (q.sIn > end || q.areaIn2 <= 0) return [];
-    const after = points.findIndex((p) => p.sIn >= q.sIn);
-    if (after < 0) return [];
-    const p0 = points[Math.max(0, after - 1)];
-    const p1 = points[after];
-    const k = p1.sIn > p0.sIn ? (q.sIn - p0.sIn) / (p1.sIn - p0.sIn) : 0;
-    const area = p0.areaIn2 + (p1.areaIn2 - p0.areaIn2) * k;
-    return area > 0 ? [20 * Math.log10(q.areaIn2 / area)] : [];
-  });
-  if (!ratios.length) return null;
-  return Math.sqrt(ratios.reduce((sum, r) => sum + r * r, 0) / ratios.length);
 }
 
 /** The fold's figures: path, mouth area, where the cones open, the rear chamber's air and the match. */

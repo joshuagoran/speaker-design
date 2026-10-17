@@ -8,8 +8,8 @@ import {
   FoldPathDrawing,
   distanceAtPointer,
   nearestSection,
-  targetPathPoints,
 } from "../src/components/charts/FoldPathChart";
+import { targetPathPoints } from "../src/lib/speaker/foldMatch";
 import { FOLD_AREA_MAX_IN2, FOLD_PATH_MAX_IN } from "../src/constants/chartScales";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { FOLD_CHART_TEXT } from "../src/constants/speakerPage";
