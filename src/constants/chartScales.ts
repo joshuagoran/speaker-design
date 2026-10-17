@@ -71,16 +71,11 @@ export const SHEET_PX_PER_IN = 4;
 export const SHEET_LABEL_PX = 12;
 
 /**
- * Right end of the folded-horn path chart's x axis, in from the closed end: a bass bin's folded path runs about 100 in
- * to 150 in, so 200 in leaves room and every path compares by eye.
+ * The folded-horn path chart's gridline spacings to pick from, in along the path and in² of area (owner-approved
+ * exception to fixed axes: the chart scales to its drawing and its straight horn, `foldPathAxes`).
  */
-export const FOLD_PATH_MAX_IN = 200;
+export const FOLD_PATH_GRID_STEPS_IN = [5, 10, 20, 25, 50, 100] as const;
+export const FOLD_AREA_GRID_STEPS_IN2 = [25, 50, 100, 200, 250, 500, 1000] as const;
 
-/** Top of the folded-horn path chart's y axis, in²: the area a bass horn's mouth reaches (a path starts near 0). */
-export const FOLD_AREA_MAX_IN2 = 1500;
-
-/** Gridlines on the folded-horn path chart's distance axis, in apart. */
-export const FOLD_PATH_GRID_IN = 25;
-
-/** Gridlines on the folded-horn path chart's area axis, in² apart. */
-export const FOLD_AREA_GRID_IN2 = 300;
+/** The most gridlines the folded-horn path chart draws on each axis. */
+export const FOLD_CHART_MAX_LINES = 8;

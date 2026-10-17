@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { roundedRectShape, archOutlinePath } from "./geometry";
 import { ROUNDOVER_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
+import { NO_WALL_OPENINGS, openingRect, panelPieces, type WallOpenings } from "./wallCuts";
 import type { Dims3 } from "../../types";
 
 /** The baffle's thickness, in: ¾″ ply, whatever the walls are. */
@@ -15,6 +16,9 @@ export const BAFFLE_CORNER_IN = 0.12;
  * cleats, painted, and a back panel. With `archTop` the top is a semicircle the full width of the cabinet. `baffleHoles`
  * are in the baffle's centered coordinates; `baffleBottom` leaves that much of the baffle's lower edge open. `backHoles`
  * (a passive radiator's or a port's cutout) are in the box's centered front-view coordinates, on either top.
+ * `wallOpenings` are clear openings in the top and the bottom (a drawn horn's mouth or vent), in x across from the
+ * cabinet's center line and in back from the baffle's inside face; with any, the perimeter is built as plain panels
+ * (no roundover on the front and back edges) so the openings are real holes; an arched top takes none.
  * Returns the z of the baffle face and the y of the top.
  */
 export function buildCabinet(
@@ -26,6 +30,7 @@ export function buildCabinet(
     archTop = false,
     baffleBottom = 0,
     backHoles = [],
+    wallOpenings = NO_WALL_OPENINGS,
     x = 0,
     parent = ctx.group,
   }: {
@@ -35,6 +40,7 @@ export function buildCabinet(
     archTop?: boolean;
     baffleBottom?: number;
     backHoles?: THREE.Path[];
+    wallOpenings?: WallOpenings;
     x?: number;
     parent?: THREE.Object3D;
   },
@@ -84,18 +90,43 @@ export function buildCabinet(
   } else {
     const iw = w - 2 * T,
       ih = h - 2 * T - baffleBottom;
-    const shape = roundedRectShape(w, h, RO * 1.5);
-    shape.holes.push(roundedRectShape(iw + 2 * RO, h - 2 * T + 2 * RO, 0.12));
-    const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: d - 2 * RO,
-      bevelEnabled: true,
-      bevelSize: RO,
-      bevelThickness: RO,
-      bevelSegments: 4,
-    });
-    const frame = new THREE.Mesh(geo, shell);
-    frame.position.set(x, y + h / 2, -d / 2 + RO);
-    parent.add(frame);
+    if (wallOpenings.top.length + wallOpenings.bottom.length > 0) {
+      // the sides as plain panels, and the top and bottom each as the pieces round their openings
+      const innerZ = d / 2 - REVEAL - BT;
+      for (const side of [-1, 1]) {
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(T, h, d), shell);
+        panel.position.set(x + side * (w / 2 - T / 2), y + h / 2, 0);
+        parent.add(panel);
+      }
+      for (const [openings, cy] of [
+        [wallOpenings.bottom, y + T / 2],
+        [wallOpenings.top, y + h - T / 2],
+      ] as const)
+        for (const piece of panelPieces(
+          { x0: x - iw / 2, x1: x + iw / 2, z0: -d / 2, z1: d / 2 },
+          openings.map((o) => openingRect(innerZ, o)),
+        )) {
+          const panel = new THREE.Mesh(
+            new THREE.BoxGeometry(piece.x1 - piece.x0, T, piece.z1 - piece.z0),
+            shell,
+          );
+          panel.position.set((piece.x0 + piece.x1) / 2, cy, (piece.z0 + piece.z1) / 2);
+          parent.add(panel);
+        }
+    } else {
+      const shape = roundedRectShape(w, h, RO * 1.5);
+      shape.holes.push(roundedRectShape(iw + 2 * RO, h - 2 * T + 2 * RO, 0.12));
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: d - 2 * RO,
+        bevelEnabled: true,
+        bevelSize: RO,
+        bevelThickness: RO,
+        bevelSegments: 4,
+      });
+      const frame = new THREE.Mesh(geo, shell);
+      frame.position.set(x, y + h / 2, -d / 2 + RO);
+      parent.add(frame);
+    }
     const bshape = roundedRectShape(iw, ih, BAFFLE_CORNER_IN);
     baffleHoles.forEach((hp) => bshape.holes.push(hp));
     const baffle = new THREE.Mesh(

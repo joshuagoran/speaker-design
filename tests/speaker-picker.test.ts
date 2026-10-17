@@ -9,16 +9,16 @@ import {
   wooferFor,
   wooferSizeOf,
 } from "../src/pages/speaker/speakerParts";
-import { HIFI_WOOFERS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import { HIFI_WOOFERS, MID_OPTIONS, SPEAKER_SUB_OPTIONS } from "../src/lib/data";
 import { DRIVER_KIND } from "../src/constants/speakerSpec";
 import type { SpeakerDriver } from "../src/types";
 
-test("driver picker: every woofer of the three catalog tables is in the one list, smallest first", () => {
+test("driver picker: every woofer of the catalog tables (the Speaker page's subs, mids and hi-fi woofers) is in the one list, smallest first", () => {
   assert.equal(
     WOOFER_OPTIONS.length,
-    SUB_OPTIONS.length + MID_OPTIONS.length + HIFI_WOOFERS.length,
+    SPEAKER_SUB_OPTIONS.length + MID_OPTIONS.length + HIFI_WOOFERS.length,
   );
-  for (const d of [...SUB_OPTIONS, ...MID_OPTIONS, ...HIFI_WOOFERS])
+  for (const d of [...SPEAKER_SUB_OPTIONS, ...MID_OPTIONS, ...HIFI_WOOFERS])
     assert.equal(wooferSizeOf({ driverId: d.id }), d.size, d.name);
   assert.deepEqual(
     WOOFER_SIZES,

@@ -32,6 +32,25 @@ import {
 const INNER_END_RATIO = BOTH_ENDS_CORRECTION_RATIO - 1;
 
 /**
+ * A slot as the engine's port: `n` openings `heightIn` high and `runIn` long, a duct `lengthIn` long. Its length adds
+ * the inner end's correction (the engine's radiation load adds the outer end's, from the opening's rectangle).
+ */
+function slotPort(slot: {
+  n: number;
+  heightIn: number;
+  runIn: number;
+  lengthIn: number;
+}): HornPort {
+  const { n, heightIn, runIn, lengthIn } = slot;
+  return {
+    area: n * heightIn * runIn * CM2_PER_IN2,
+    length: (lengthIn + INNER_END_RATIO * rectangleEndCorrection(heightIn, runIn)) * CM_PER_IN,
+    // the exit's end correction is the opening's rectangle's
+    slot: { width: runIn * CM_PER_IN, height: heightIn * CM_PER_IN },
+  };
+}
+
+/**
  * The rear chamber's vent as the engine's port: none when sealed; round tubes or slots (each running the chamber's
  * clear `face`, `slotRunIn`) as their open area and their path length plus the inner end's correction (the engine's
  * radiation load adds the outer end's, a slot's from its opening's rectangle). Null: a vent the engine doesn't take yet
@@ -53,14 +72,7 @@ function rearPort(
       port.fins === undefined
         ? faceRun
         : faceRun - slotFinsOf({ fins: port.fins, slotH: port.h }, faceRun, wallIn) * wallIn;
-    return {
-      port: {
-        area: port.n * port.h * run * CM2_PER_IN2,
-        length: (port.len + INNER_END_RATIO * rectangleEndCorrection(port.h, run)) * CM_PER_IN,
-        // the exit's end correction is the opening's rectangle's
-        slot: { width: run * CM_PER_IN, height: port.h * CM_PER_IN },
-      },
-    };
+    return { port: slotPort({ n: port.n, heightIn: port.h, runIn: run, lengthIn: port.len }) };
   }
   return {
     port: {
@@ -97,7 +109,8 @@ export interface HornDesignRoom {
   /**
    * a drawn horn's traced passage (lib/speaker/foldHorn `tracedHorn`): its sections, its taps and the sealed air behind
    * the cones, L. When given, these replace the horn's stored sections (its straight horn) and drive, the passage
-   * holds the cones' front air, and the sealed air is the rear chamber. A null drive: the cones open into no passage.
+   * holds the cones' front air, and the sealed air is the rear chamber, with the drawn vent as its port. A null drive:
+   * the cones open into no passage.
    */
   traced?: TracedHornModel;
 }
@@ -107,6 +120,11 @@ export interface TracedHornModel {
   segments: readonly HornSegment[];
   drive: HornDrive | null;
   rearLiters: number | null;
+  /**
+   * the rear chamber's drawn vent, a slot: its open area, its length (the run and the wall), its height and its width
+   * (the chamber's inside width), in. Null: the rear chamber is sealed. A drawn horn's vent is only this.
+   */
+  rearVent: { areaIn2: number; lengthIn: number; heightIn: number; widthIn: number } | null;
 }
 
 /**
@@ -168,7 +186,8 @@ export function hornDesignOf(
     angle: at.angle,
   };
   if (drive?.kind === HORN_DRIVE.tapped) {
-    if (chamber.vent.kind !== VENT_KIND.sealed) return gap(HORN_ENGINE_GAP.tappedVent);
+    // a drawn horn has no vent here: the drawing sets the air; only a stored, undrawn horn reads the chamber's vent
+    if (!traced && chamber.vent.kind !== VENT_KIND.sealed) return gap(HORN_ENGINE_GAP.tappedVent);
     /** each passage's cross-section: the cones' area */
     const area = throat.cone.Sd * throat.count;
     return {
@@ -183,8 +202,19 @@ export function hornDesignOf(
       },
     };
   }
-  /** the rear chamber's vent as the engine's port */
-  const rear = rearPort(chamber.vent, room.face, room.wallIn);
+  /** the rear chamber's vent as the engine's port: a drawn horn's from its drawing, else the chamber's */
+  const rear = traced
+    ? {
+        port: traced.rearVent
+          ? slotPort({
+              n: 1,
+              heightIn: traced.rearVent.heightIn,
+              runIn: traced.rearVent.widthIn,
+              lengthIn: traced.rearVent.lengthIn,
+            })
+          : null,
+      }
+    : rearPort(chamber.vent, room.face, room.wallIn);
   if (!rear) return gap(HORN_ENGINE_GAP.vent);
   const front = {
     ...common,

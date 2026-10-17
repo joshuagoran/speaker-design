@@ -129,7 +129,15 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
           "speakerExcursion",
         ],
   ];
-  if (port)
+  // a drawn horn's vent: its air speed shown, with no limit
+  if (port && !Number.isFinite(port.limit))
+    chips.push([
+      "ok",
+      "Vent air speed",
+      `At most ${port.peak.toFixed(1)} m/s at full power (${formatHz(port.hz)}).`,
+      "speakerPortSpeed",
+    ]);
+  else if (port)
     chips.push(
       port.peak > port.limit
         ? [
@@ -145,22 +153,14 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
             "speakerPortSpeed",
           ],
     );
+  // a horn's throat air speed: shown, with no guide (no common figure for a horn throat)
   if (throat)
-    chips.push(
-      throat.peak > throat.limit
-        ? [
-            "warn",
-            "Throat air too fast at full power",
-            `${throat.peak.toFixed(1)} m/s at the horn throat at ${formatHz(throat.hz)}, over the ${throat.limit.toFixed(1)} m/s the box takes. Use a lower compression ratio.`,
-            "speakerThroatSpeed",
-          ]
-        : [
-            "ok",
-            "Throat air speed inside its limit",
-            `At most ${throat.peak.toFixed(1)} m/s at the horn throat (${formatHz(throat.hz)}), under the ${throat.limit.toFixed(1)} m/s the box takes.`,
-            "speakerThroatSpeed",
-          ],
-    );
+    chips.push([
+      "ok",
+      "Throat air speed",
+      `At most ${throat.peak.toFixed(1)} m/s at the horn throat at full power (${formatHz(throat.hz)}).`,
+      "speakerThroatSpeed",
+    ]);
   if (radiator)
     chips.push(
       radiator.peak > radiator.limit

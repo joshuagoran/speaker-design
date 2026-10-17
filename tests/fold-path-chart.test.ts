@@ -7,10 +7,10 @@ import {
   FoldPathChart,
   FoldPathDrawing,
   distanceAtPointer,
+  foldPathAxes,
   nearestSection,
-  targetPathPoints,
 } from "../src/components/charts/FoldPathChart";
-import { FOLD_AREA_MAX_IN2, FOLD_PATH_MAX_IN } from "../src/constants/chartScales";
+import { targetPathPoints } from "../src/lib/speaker/foldMatch";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { FOLD_CHART_TEXT } from "../src/constants/speakerPage";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
@@ -32,6 +32,7 @@ const target: HornSegment[] = [
 
 const taps = { front: 12, back: 40 };
 const frame = { W: 760, H: 240, L: 52, R: 14, T: 16, B: 36 };
+const axes = foldPathAxes(sections, target);
 
 /** the chart's drawing in one theme, as markup */
 const draw = (theme: keyof typeof PALETTES, hoverIn: number | null = null) =>
@@ -47,6 +48,7 @@ const draw = (theme: keyof typeof PALETTES, hoverIn: number | null = null) =>
         target,
         taps,
         hoverIn,
+        axes,
       }),
     ),
   );
@@ -90,6 +92,7 @@ describe("FoldPathChart", () => {
           target,
           taps: { front: null, back: 40 },
           hoverIn: null,
+          axes,
         }),
       ),
     );
@@ -122,6 +125,7 @@ describe("FoldPathChart", () => {
           target,
           taps,
           hoverIn: null,
+          axes,
         }),
       ),
     );
@@ -164,20 +168,17 @@ describe("pointer mapping", () => {
   const x0 = 52,
     x1 = 746;
 
-  test("maps the plot's ends to the fixed axis", () => {
-    expect(distanceAtPointer(x0, x0, x1, 150)).toBe(0);
-    expect(distanceAtPointer((x0 + x1) / 2, x0, x1, 150)).toBeCloseTo(FOLD_PATH_MAX_IN / 2, 9);
+  test("maps the plot's ends to the axis", () => {
+    expect(distanceAtPointer(x0, x0, x1, 150, 200)).toBe(0);
+    expect(distanceAtPointer((x0 + x1) / 2, x0, x1, 150, 200)).toBeCloseTo(100, 9);
   });
 
   test("is null off the plot and past the path's end", () => {
-    expect(distanceAtPointer(x0 - 1, x0, x1, 150)).toBeNull();
-    expect(distanceAtPointer(x1 + 1, x0, x1, 250)).toBeNull();
+    expect(distanceAtPointer(x0 - 1, x0, x1, 150, 200)).toBeNull();
+    expect(distanceAtPointer(x1 + 1, x0, x1, 250, 200)).toBeNull();
     // 160 in is past a 150 in path
-    expect(distanceAtPointer(x0 + (160 / FOLD_PATH_MAX_IN) * (x1 - x0), x0, x1, 150)).toBeNull();
-    expect(distanceAtPointer(x0 + (100 / FOLD_PATH_MAX_IN) * (x1 - x0), x0, x1, 150)).toBeCloseTo(
-      100,
-      9,
-    );
+    expect(distanceAtPointer(x0 + (160 / 200) * (x1 - x0), x0, x1, 150, 200)).toBeNull();
+    expect(distanceAtPointer(x0 + (100 / 200) * (x1 - x0), x0, x1, 150, 200)).toBeCloseTo(100, 9);
   });
 
   test("the nearest section is the one at the distance", () => {
@@ -185,8 +186,14 @@ describe("pointer mapping", () => {
     expect(nearestSection([], 5)).toBeNull();
   });
 
-  test("the axes are the fixed ones", () => {
-    expect(FOLD_PATH_MAX_IN).toBe(200);
-    expect(FOLD_AREA_MAX_IN2).toBe(1500);
+  test("the axes fit the passage and the straight horn, to the next gridline", () => {
+    const points = [...sections, ...targetPathPoints(target)];
+    const longest = Math.max(...points.map((q) => q.sIn));
+    const widest = Math.max(...points.map((q) => q.areaIn2));
+    expect(axes.pathMaxIn).toBeGreaterThanOrEqual(longest);
+    expect(axes.pathMaxIn - longest).toBeLessThan(axes.pathGridIn);
+    expect(axes.areaMaxIn2).toBeGreaterThanOrEqual(widest);
+    expect(axes.areaMaxIn2 - widest).toBeLessThan(axes.areaGridIn2);
+    expect(axes.pathMaxIn / axes.pathGridIn).toBeLessThanOrEqual(8);
   });
 });

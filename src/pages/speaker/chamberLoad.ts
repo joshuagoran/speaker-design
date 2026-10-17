@@ -15,16 +15,17 @@ import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { frontChamber, throatCones, wallClearanceIn } from "../../lib/speaker/hornThroat";
 import { hornDesignOf } from "../../lib/speaker/hornDesign";
-import { tracedHorn } from "../../lib/speaker/foldHorn";
+import { foldRoom, isDrawn, tracedHorn } from "../../lib/speaker/foldHorn";
 import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
 import { withDriveKind } from "./hornSections";
 import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
 import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
 import { goalHorn, hornGoalFit, type GoalDrive } from "../../lib/speaker/hornGoals";
+import { foldLayout } from "../../lib/speaker/foldLayout";
 import { DEFAULT_VENTS } from "./speakerParts";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
-import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH, VENT_KIND } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { segmentsAirLiters } from "../../lib/acoustics/hornSegments";
 import { CM_PER_IN, CM2_PER_IN2, LITERS_PER_CUBIC_IN } from "../../constants/units";
@@ -119,7 +120,8 @@ export function withChamberLoad(
 /**
  * The chamber with a starting layout sized from `goals` for `drive` (lib/speaker/hornGoals `goalHorn`): its horn, its
  * net air (the rear chamber) to the tenth, and a sealed vent for a tapped horn (it has none). The search reads the
- * chamber's room (`hornRoom`), less the drivers' displacement. Null when no layout can be modeled.
+ * chamber's room (`hornRoom`), less the drivers' displacement. A folded horn also gets boards (`foldLayout`) and a
+ * sealed chamber (its vent is drawn). Null when no layout can be modeled.
  */
 export function withGoalHorn(
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
@@ -131,33 +133,74 @@ export function withGoalHorn(
   const throat = throatCones(chamber.drivers);
   if (!throat) return null;
   const { room, displacementLiters, airLiters } = chamberAirLiters(cabinet, chamber, placed);
-  const vent: ChamberVent = drive === HORN_DRIVE.tapped ? DEFAULT_VENTS.sealed : chamber.vent;
-  const searched = { ...chamber, vent };
-  const found = goalHorn(
-    {
-      chamber: searched,
-      drive,
-      room: {
-        face: chamberClearFace(cabinet, searched),
-        wallIn: cabinet.panel.thicknessIn,
-        setbackIn: chamberSetbackIn(cabinet.panel, searched),
+  /** the goals' horn in the chamber with `vent`, as `goalHorn` finds it */
+  const search = (vent: ChamberVent) => {
+    const searched = { ...chamber, vent };
+    const found = goalHorn(
+      {
+        chamber: searched,
+        drive,
+        room: {
+          face: chamberClearFace(cabinet, searched),
+          wallIn: cabinet.panel.thicknessIn,
+          setbackIn: chamberSetbackIn(cabinet.panel, searched),
+        },
+        airLiters,
+        displacementLiters,
+        power: throat.parts.ts,
+        goals,
       },
-      airLiters,
-      displacementLiters,
-      power: throat.parts.ts,
-      goals,
-    },
-    room.depthIn * CM_PER_IN,
-  );
+      room.depthIn * CM_PER_IN,
+    );
+    return (
+      found && {
+        chamber: {
+          ...searched,
+          load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
+          netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+        },
+        fit: found.fit,
+        horn: found.horn,
+      }
+    );
+  };
+  const found = search(drive === HORN_DRIVE.tapped ? DEFAULT_VENTS.sealed : chamber.vent);
   if (!found) return null;
+  const wasFolded =
+    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.path === HORN_PATH.folded;
+  /** the straight horn kept until the user draws: folded when it was or when it is too long, with the chamber's vent */
+  const straight = (): { chamber: SpeakerChamber; fit: HornGoalFit } => ({
+    chamber: wasFolded
+      ? { ...found.chamber, load: { kind: CHAMBER_LOAD.horn, horn: withoutFold(found.horn) } }
+      : found.chamber,
+    fit: found.fit,
+  });
+  if (!wasFolded && found.horn.path !== HORN_PATH.folded) return straight();
+  // a folded horn: boards placed so the traced passage follows the straight horn, sized for a sealed rear chamber (the
+  // vent is drawn, and the boards place none); none found: the straight horn with the chamber's vent plays until the
+  // user draws
+  const sealedFound =
+    found.chamber.vent.kind === VENT_KIND.sealed ? found : search(DEFAULT_VENTS.sealed);
+  if (!sealedFound) return straight();
+  const fold = foldLayout(
+    foldRoom(cabinet, sealedFound.chamber),
+    sealedFound.horn.segments,
+    sealedFound.horn.drive,
+  );
+  if (!fold) return straight();
   return {
     chamber: {
-      ...searched,
-      load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
-      netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+      ...sealedFound.chamber,
+      load: { kind: CHAMBER_LOAD.horn, horn: { ...withoutFold(sealedFound.horn), fold } },
     },
-    fit: found.fit,
+    fit: sealedFound.fit,
   };
+}
+
+/** The horn folded, with no drawing. */
+function withoutFold(horn: SpeakerHorn): SpeakerHorn {
+  const { fold: _fold, ...rest } = horn;
+  return { ...rest, path: HORN_PATH.folded };
 }
 
 /**
@@ -235,8 +278,13 @@ export function hornGoalCheck(
   return { fit, overAir: hornL > chamberL ? { hornL, chamberL } : null };
 }
 
-/** The chamber with its horn's drawing set to `fold`; unchanged without a horn. */
+/** The chamber with its horn's drawing set to `fold`, sealed once drawn (the drawing holds the vent); unchanged without a horn. */
 export function withHornFold(chamber: SpeakerChamber, fold: HornFold): SpeakerChamber {
   if (chamber.load.kind !== CHAMBER_LOAD.horn) return chamber;
-  return { ...chamber, load: { kind: CHAMBER_LOAD.horn, horn: { ...chamber.load.horn, fold } } };
+  return {
+    ...chamber,
+    load: { kind: CHAMBER_LOAD.horn, horn: { ...chamber.load.horn, fold } },
+    // a drawn horn's vent is in its drawing: the chamber's own goes
+    ...(isDrawn(fold) ? { vent: DEFAULT_VENTS.sealed } : {}),
+  };
 }

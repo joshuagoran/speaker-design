@@ -72,7 +72,7 @@ const FLOW_UNKNOWNS: Record<NetworkPart["kind"], number> = {
  * - `forcePerArea`: Bl/Sd for one cone, N/(m²·A).
  */
 function bankOf(part: NetworkDriver, volts: number) {
-  const cone = driverCircuit(part.ts, volts, part.airMassOff);
+  const cone = driverCircuit(motorOf(part), volts, part.airMassOff);
   return {
     Sd: cone.Sd * part.drivers,
     Mas: cone.Mas / part.drivers,
@@ -83,6 +83,10 @@ function bankOf(part: NetworkDriver, volts: number) {
     forcePerArea: part.ts.Bl / cone.Sd,
   };
 }
+
+/** The driver's parameters as its motor sees them: the amplifier's output resistance, if any, added to Re. */
+const motorOf = (part: NetworkDriver) =>
+  part.sourceResistance ? { ...part.ts, Re: part.ts.Re + part.sourceResistance } : part.ts;
 
 /** Whether a number is finite and positive. */
 const isPositive = (value: number) => Number.isFinite(value) && value > 0;
@@ -114,6 +118,8 @@ function isModelable(network: AcousticNetwork) {
           part.drivers >= 1 &&
           Number.isFinite(part.airMassOff) &&
           part.airMassOff >= 0 &&
+          (part.sourceResistance === undefined ||
+            (Number.isFinite(part.sourceResistance) && part.sourceResistance >= 0)) &&
           ts.Mms / GRAMS_PER_KG > part.airMassOff
         );
       }
@@ -236,7 +242,7 @@ function solveAt(prepared: Prepared, f: number): Complex[] | null {
         const bank = banks[index];
         if (!bank) return;
         // the coil's inductance turns the source and the electrical damping (lib/acoustics/driverCircuit coilFactor)
-        const motor = coilFactor(part.ts, omega);
+        const motor = coilFactor(motorOf(part), omega);
         /** the bank's own impedance: losses, electrical damping, mass against suspension */
         const driverImpedance = add(
           complex(bank.Ras, omega * bank.Mas - 1 / (omega * bank.Cas)),
@@ -486,7 +492,7 @@ export function networkResponse(
         xmm.push(Math.SQRT2 * (abs(coneFlow) / (omega * bank.Sd)) * MILLI);
         // one voice coil's Ze: the coil plus (Bl/Sd)² over one cone's acoustic load without its electrical damping,
         // the load the bank's source sees (source / flow) less that damping, times the number of cones
-        const motor = coilFactor(part.ts, omega);
+        const motor = coilFactor(motorOf(part), omega);
         const totalImpedance = divide(scale(motor, bank.Pg), coneFlow);
         const motionalLoad = scale(subtract(totalImpedance, scale(motor, bank.Rae)), part.drivers);
         const electrical = add(

@@ -357,6 +357,12 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                     horn={c.load.horn}
                     name={spec.cabinet.chambers.length === 1 ? null : `${i + 1}`}
                     onFold={(fold) => speakerPage.editChamber(i, (ch) => withHornFold(ch, fold))}
+                    onResize={({ depthIn, heightIn }) =>
+                      speakerPage.editChamber(i, (ch) => ({
+                        ...ch,
+                        dims: { ...ch.dims, d: ch.dims.d + depthIn, h: ch.dims.h + heightIn },
+                      }))
+                    }
                   />
                 ) : null,
               )}

@@ -39,6 +39,7 @@ import {
   HIFI_WOOFERS,
   HORN_OPTIONS,
   MID_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
   SUB_OPTIONS,
   hornById,
 } from "../../data";
@@ -717,7 +718,7 @@ export function partFacts(
 ): { price: number; priced: boolean; lb: number } {
   const row: { price: number | null; lb: number | null } | undefined =
     kind === DRIVER_KIND.sub
-      ? byId(SUB_OPTIONS, id)
+      ? byId(SPEAKER_SUB_OPTIONS, id)
       : kind === DRIVER_KIND.mid
         ? byId(MID_OPTIONS, id)
         : kind === DRIVER_KIND.woofer
@@ -769,7 +770,7 @@ export function topAmps(
       for (const id of u.drivers) {
         const ts =
           u.driverKind === DRIVER_KIND.sub
-            ? byId(SUB_OPTIONS, id)?.ts
+            ? byId(SPEAKER_SUB_OPTIONS, id)?.ts
             : u.driverKind === DRIVER_KIND.mid
               ? byId(MID_OPTIONS, id)?.ts
               : u.driverKind === DRIVER_KIND.woofer
