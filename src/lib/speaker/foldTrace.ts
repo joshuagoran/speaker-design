@@ -715,6 +715,21 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
       { zIn: 0, yIn: FOLD_MAGNET_CLEAR_IN },
       { zIn: 0, yIn: -FOLD_MAGNET_CLEAR_IN },
     ];
+    /** whether a point past a wall is in that wall's mouth or vent opening: open air, not a wall */
+    const throughOpening = (q: SidePoint) =>
+      [fold.mouth, fold.vent].some((o) => {
+        if (!o) return false;
+        const along = o.wall === FOLD_WALL.baffle || o.wall === FOLD_WALL.back ? q.yIn : q.zIn;
+        const past =
+          o.wall === FOLD_WALL.baffle
+            ? q.zIn < 0
+            : o.wall === FOLD_WALL.back
+              ? q.zIn > depthIn
+              : o.wall === FOLD_WALL.bottom
+                ? q.yIn < 0
+                : q.yIn > heightIn;
+        return past && along >= Math.min(o.fromIn, o.toIn) && along <= Math.max(o.fromIn, o.toIn);
+      });
     const mountBoard = fold.drivers?.board;
     const nearBoard = (q: SidePoint) =>
       fold.boards.some(
@@ -727,7 +742,11 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
           const p = add(a, sub(c, a), u);
           for (const o of probes) {
             const q = add(p, o);
-            if (q.zIn < 0 || q.yIn < 0 || q.zIn > depthIn || q.yIn > heightIn) return true;
+            if (
+              (q.zIn < 0 || q.yIn < 0 || q.zIn > depthIn || q.yIn > heightIn) &&
+              !throughOpening(q)
+            )
+              return true;
             if (nearBoard(q)) return true;
           }
         }
