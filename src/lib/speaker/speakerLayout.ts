@@ -695,6 +695,8 @@ export function hornFlare(
 ): HornFlare | null {
   const { load } = placed.chamber;
   if (load.kind !== CHAMBER_LOAD.horn || !load.horn.segments.length) return null;
+  // a folded horn is drawn by hand: its boards, not a flare, make its passage (lib/speaker/foldHorn)
+  if (load.horn.path === HORN_PATH.folded) return null;
   // a zero, negative or missing size draws nothing (the model names it a gap), never a NaN flare
   if (!load.horn.segments.every(isSizedSegment)) return null;
   const horn: SpeakerHorn = load.horn;

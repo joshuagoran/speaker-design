@@ -28,6 +28,8 @@ import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
 import { SpeakerFront } from "../../components/drawings/SpeakerFront";
 import { SpeakerSection } from "../../components/drawings/SpeakerSection";
+import { FoldHornCard } from "./FoldHornCard";
+import { withHornFold } from "./chamberLoad";
 import {
   BaffleColorPicker,
   CabinetFinishPicker,
@@ -85,6 +87,8 @@ import {
   CABINET_CONSTRUCTION_NAMES,
   CABINET_TOP,
   CABINET_TOP_NAMES,
+  CHAMBER_LOAD,
+  HORN_PATH,
 } from "../../constants/speakerSpec";
 import {
   SPEAKER_START,
@@ -343,6 +347,18 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   </div>
                   <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.sectionNote}</p>
                 </Card>
+              )}
+              {spec.cabinet.chambers.map((c, i) =>
+                c.load.kind === CHAMBER_LOAD.horn && c.load.horn.path === HORN_PATH.folded ? (
+                  <FoldHornCard
+                    key={`fold${i}`}
+                    cabinet={spec.cabinet}
+                    chamber={c}
+                    horn={c.load.horn}
+                    name={spec.cabinet.chambers.length === 1 ? null : `${i + 1}`}
+                    onFold={(fold) => speakerPage.editChamber(i, (ch) => withHornFold(ch, fold))}
+                  />
+                ) : null,
               )}
             </div>
             {flares

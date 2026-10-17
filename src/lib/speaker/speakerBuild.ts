@@ -29,6 +29,7 @@ import type {
   CutPart,
   Dims3,
   FacePoint,
+  HornFold,
   PlateHole,
   PortStyle,
   RadiatorPanel,
@@ -114,6 +115,8 @@ import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls, slotRunIn } fro
 import { coneDepthIn, driverListing, sourceOf } from "./driverParts";
 import { conesAreaCm2, frontChamber, throatCones } from "./hornThroat";
 import { chamberSetbackIn, driverBoardPieces } from "./driverBoard";
+import { foldCutlist, type FoldCutEnd } from "./foldBoards";
+import { foldRoom } from "./foldHorn";
 import { segmentsAirLiters } from "../acoustics/hornSegments";
 import {
   PORT_RULE,
@@ -143,7 +146,8 @@ import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../..
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { CM2_PER_IN2, KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
-import { SPEAKER_TEXT, DRIVER_KIND_NAMES } from "../../constants/speakerPage";
+import { SPEAKER_TEXT, DRIVER_KIND_NAMES, FOLD_WALL_NAMES } from "../../constants/speakerPage";
+import { FOLD_END, FOLD_SQUARE_TOL_DEG } from "../../constants/foldHorn";
 import { HARDWARE_BOX } from "../../constants/hardware";
 import {
   PURCHASED_PART,
@@ -155,7 +159,9 @@ import {
   CABINET_CONSTRUCTION,
   CHAMBER_LOAD,
   DRIVER_KIND,
+  FOLD_WALL,
   HORN_DRIVE,
+  HORN_PATH,
   PORT_SHAPE,
   SLOT_PLACE,
   VENT_KIND,
@@ -293,6 +299,15 @@ interface ConeBuild {
   depthIn: number;
   lb: number;
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp">;
+}
+
+/**
+ * A cone driver's cutout and motor diameters and its depth behind the board's front, in, as a folded horn's trace reads
+ * them (lib/speaker/foldHorn); null for another kind.
+ */
+export function coneShapeOf(driver: SpeakerDriver): (ConeBody & Pick<ConeBuild, "depthIn">) | null {
+  const c = coneBuild(driver);
+  return c && { ...c.body, depthIn: c.depthIn };
 }
 
 /** A cone driver's body (its catalog's, or the Hi-fi estimates where the catalog has none); null for another kind. */
@@ -820,7 +835,9 @@ function woodLb(
     : isBase
       ? HIFI_FIXINGS_LB
       : 0;
-  return (panels + boardIn2 * wallRate) / SQ_IN_PER_SQ_FT + braces + fixings;
+  /** a folded horn's boards, in², of the walls' plywood */
+  const foldIn2 = foldBoardParts(cabinet, f).reduce((sum, p) => sum + p.qty * p.a * p.b, 0);
+  return (panels + (boardIn2 + foldIn2) * wallRate) / SQ_IN_PER_SQ_FT + braces + fixings;
 }
 
 /** The chamber's radiators' weight, lb (none for another vent, or a radiator the catalog doesn't have). */
@@ -1012,6 +1029,47 @@ function driverBoardL(cabinet: SpeakerCabinet, f: ChamberFrame): number {
   return board ? board.netIn2 * board.pieces * cabinet.panel.thicknessIn * LITERS_PER_CUBIC_IN : 0;
 }
 
+/** The chamber's drawn horn (a folded horn with its fold drawn), or null. */
+function foldedOf(chamber: SpeakerChamber): HornFold | null {
+  const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
+  return horn?.fold && horn.path === HORN_PATH.folded ? horn.fold : null;
+}
+
+/** How a cut reads in a horn board's note: its angle off square and what it meets (`FoldCutEnd`). */
+function foldEndWords({ meets, cutDeg }: FoldCutEnd): string {
+  // one decimal, none when square
+  const deg = cutDeg < FOLD_SQUARE_TOL_DEG ? "" : String(Number(cutDeg.toFixed(1)));
+  if (meets.kind === FOLD_END.corner) return SPEAKER_TEXT.foldEndCorner(deg, meets.board + 1);
+  if (meets.kind === FOLD_END.butt) return SPEAKER_TEXT.foldEndButt(deg, meets.board + 1);
+  if (meets.kind === FOLD_END.wall)
+    return SPEAKER_TEXT.foldEndWall(deg, FOLD_WALL_NAMES[meets.wall]);
+  return SPEAKER_TEXT.foldEndFree;
+}
+
+/**
+ * A chamber's drawn horn's boards as cutlist rows, one per board (lib/speaker/foldBoards `foldCutlist`): its long edge
+ * by the chamber's clear width, of the walls' plywood, its note naming the board and each end's cut. None for a chamber
+ * with no drawn fold.
+ */
+function foldBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
+  const { chamber } = f.placed;
+  const fold = foldedOf(chamber);
+  if (!fold) return [];
+  const { depthIn, heightIn, widthIn, boardIn } = foldRoom(cabinet, chamber);
+  return foldCutlist(fold, { depthIn, heightIn, widthIn }, boardIn).map((cut) => {
+    const [first, second] = [cut.ends.a, cut.ends.b].map(foldEndWords);
+    return {
+      box: chamberCutBox(f.index),
+      part: "hornBoard",
+      qty: 1,
+      a: cut.longIn,
+      b: cut.widthIn,
+      t: boardIn,
+      note: SPEAKER_TEXT.foldBoardNote(cut.board + 1, first, second),
+    };
+  });
+}
+
 /** A horn chamber's driver board as a cutlist row, `qty` pieces (two when doubled) of the walls' plywood; null for none. */
 function driverBoardPart(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart | null {
   const board = driverBoardOf(cabinet, f);
@@ -1178,11 +1236,25 @@ function chamberNotes(
   const flare = hornFlare(cabinet, placed);
   if (flare)
     baffle.push(
-      `horn mouth: ${formatInches(flare.mouth.w)} × ${formatInches(flare.mouth.h)}″ opening, ${at({
-        xIn: flare.mouth.x + flare.mouth.w / 2,
-        yIn: flare.mouth.y + flare.mouth.h / 2,
-      })}`,
+      SPEAKER_TEXT.hornMouthNote(
+        formatInches(flare.mouth.w),
+        formatInches(flare.mouth.h),
+        at({ xIn: flare.mouth.x + flare.mouth.w / 2, yIn: flare.mouth.y + flare.mouth.h / 2 }),
+      ),
     );
+  // a folded horn's mouth in the baffle or the back (one in the top or the bottom has no note to go in yet)
+  const fold = foldedOf(chamber);
+  if (fold && (fold.mouth.wall === FOLD_WALL.baffle || fold.mouth.wall === FOLD_WALL.back)) {
+    const { widthIn } = foldRoom(cabinet, chamber);
+    const { fromIn, toIn } = fold.mouth;
+    (fold.mouth.wall === FOLD_WALL.baffle ? baffle : back).push(
+      SPEAKER_TEXT.hornMouthNote(
+        formatInches(widthIn),
+        formatInches(toIn - fromIn),
+        at({ xIn: placed.clear.x + placed.clear.w / 2, yIn: placed.clear.y + (fromIn + toIn) / 2 }),
+      ),
+    );
+  }
   const rule = portRule(chamber);
   if (rule?.rule === PORT_RULE.hifi) {
     const { port } = rule;
@@ -1411,7 +1483,7 @@ export function speakerCutParts(
           ),
         });
       }
-      parts.push(...insideParts(f), ...driverBoardParts(f));
+      parts.push(...insideParts(f), ...driverBoardParts(f), ...foldBoardParts(cabinet, f));
     }
     return { parts, also, vent: ventLines };
   }
@@ -1452,7 +1524,7 @@ export function speakerCutParts(
     // a frame's own box already carries its braces (boxParts)
     if (frame) parts.push(...ventPartsOf(f));
     else parts.push(...insideParts(f));
-    parts.push(...driverBoardParts(f));
+    parts.push(...driverBoardParts(f), ...foldBoardParts(cabinet, f));
   }
   return { parts, also, vent: ventLines };
 

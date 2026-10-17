@@ -28,6 +28,7 @@ import type {
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   HORN_PATH,
+  FOLD_WALL,
   HORN_PLACEMENT,
   PORT_SHAPE,
   SLOT_PLACE,
@@ -37,6 +38,7 @@ import type {
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
+import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
 import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
@@ -2291,6 +2293,182 @@ export type HornDrive =
 export type HornPath = (typeof HORN_PATH)[keyof typeof HORN_PATH];
 
 /**
+ * A point in a chamber's side section, in: `zIn` back from the inside face of the baffle, `yIn` up from the inside face
+ * of the bottom.
+ */
+export interface SidePoint {
+  zIn: number;
+  yIn: number;
+}
+
+/** A side-section wall of a chamber (`FOLD_WALL`): the baffle, the bottom, the back or the top. */
+export type FoldWall = (typeof FOLD_WALL)[keyof typeof FOLD_WALL];
+
+/**
+ * A board in a folded horn's side section: its center line's two ends, as wide as the chamber. `square` marks the ends
+ * held at 90° to what they meet (a wall, another board's end or another board's edge).
+ */
+export interface FoldBoard {
+  a: SidePoint;
+  b: SidePoint;
+  square?: { a?: boolean; b?: boolean };
+}
+
+/**
+ * Where a folded horn's drivers sit: the board they mount on (an index into `boards`), the spot along it (0 at its end
+ * `a`, 1 at `b`), and the side their cones face: 1 to the left of the line from `a` to `b`, −1 to the right.
+ */
+export interface FoldDrivers {
+  board: number;
+  along: number;
+  face: 1 | -1;
+}
+
+/**
+ * A folded horn's mouth: an opening in one wall, from `fromIn` to `toIn` along it. The baffle and the back run from the
+ * bottom up; the bottom and the top run from the baffle back.
+ */
+export interface FoldMouth {
+  wall: FoldWall;
+  fromIn: number;
+  toIn: number;
+}
+
+/**
+ * A folded horn as the user draws it in the side section: its boards, its drivers and its mouth. The app traces the
+ * passage from these (lib/speaker/foldTrace); nothing about the passage is stored.
+ */
+export interface HornFold {
+  boards: FoldBoard[];
+  drivers: FoldDrivers | null;
+  mouth: FoldMouth;
+}
+
+/** One row of drivers in a traced fold (`foldDriverParts`): where it sits and how it is drawn. */
+export interface FoldDriverPart {
+  /** the row's center along its board, in from the board's end `a` */
+  alongIn: number;
+  /** the center of the row on the board's center line */
+  mid: SidePoint;
+  /** the center of the cones' face (the board's face the cones look out of) */
+  coneFace: SidePoint;
+  /** the board's other face, where the basket starts */
+  backFace: SidePoint;
+  /** the unit vector the cones face */
+  out: SidePoint;
+  /** the unit vector the baskets reach back along (the opposite of `out`) */
+  back: SidePoint;
+  /** the basket and motor, as a closed polygon */
+  body: SidePoint[];
+  /** the cone as a line across the cutout */
+  coneLine: { from: SidePoint; to: SidePoint };
+  /** the cutout's radius */
+  cutoutRadiusIn: number;
+  /** the board's length */
+  boardLengthIn: number;
+}
+
+/** What a traced fold's checks say; each carries its id and the numbers a UI needs to word it. */
+export type FoldCheck =
+  | { id: (typeof FOLD_CHECK)["mouth"] }
+  | {
+      id: (typeof FOLD_CHECK)["drivers"];
+      reason: (typeof FOLD_DRIVERS_REASON)[keyof typeof FOLD_DRIVERS_REASON];
+    }
+  | { id: (typeof FOLD_CHECK)["rearChamber"] }
+  | {
+      id: (typeof FOLD_CHECK)["deadEnd"];
+      /** where the cones first open, in from the closed end */
+      fromClosedEndIn: number;
+      /** that distance as a share of the path, 0 to 1 */
+      share: number;
+    }
+  | {
+      id: (typeof FOLD_CHECK)["choke"];
+      /** where the passage chokes, in from the closed end */
+      fromClosedEndIn: number;
+    }
+  | { id: (typeof FOLD_CHECK)["magnet"] }
+  | {
+      id: (typeof FOLD_CHECK)["cutout"];
+      /** the row of drivers, from 0 */
+      row: number;
+    }
+  | {
+      id: (typeof FOLD_CHECK)["strayAir"];
+      /** how many sealed pockets no driver uses */
+      count: number;
+    }
+  | {
+      id: (typeof FOLD_CHECK)["thin"];
+      /** the first place the passage is thin, in from the closed end */
+      fromClosedEndIn: number;
+      /** the width there */
+      widthIn: number;
+    };
+
+/** A pocket of air the mouth does not reach. */
+export interface FoldSealedPocket {
+  /** how many grid cells the pocket holds */
+  cells: number;
+  /** its volume, using the box's inside width */
+  liters: number;
+  /** the backs of the first row of cones open into it */
+  opensToBack: boolean;
+  /** the fronts of the first row of cones open into it */
+  opensToFront: boolean;
+}
+
+/** The air around a fold on a grid: the distance of each cell from the mouth, through the air. */
+export interface FoldGrid {
+  /** a cell's side, in */
+  cellIn: number;
+  /** the cells across the depth (`zIn`) */
+  nz: number;
+  /** the cells up the height (`yIn`) */
+  ny: number;
+  /** by `yIndex * nz + zIndex`: 1 for a board or a driver body, else 0 */
+  solid: Uint8Array;
+  /** by the same index: the path distance from the mouth, in; Infinity for solid cells and sealed air */
+  dist: Float64Array;
+  /** by the same index: the sealed pocket's index in `FoldTrace.sealed`, or -1 */
+  pocket: Int32Array;
+}
+
+/** The traced passage of a folded horn (lib/speaker/foldTrace). */
+export interface FoldTrace {
+  grid: FoldGrid;
+  /** the path's length from the mouth to the closed end, in; 0 with no passage */
+  pathIn: number;
+  /** the air farthest from the mouth; null with no passage */
+  closedEnd: SidePoint | null;
+  /** the width and area every `FOLD_SECTION_STEP_IN` along the path, `sIn` measured from the closed end */
+  sections: FoldPathSection[];
+  /** where each side of the first row of cones opens into the passage, in from the closed end; null when it does not */
+  taps: { front: number | null; back: number | null };
+  /** the air the mouth does not reach, as separate volumes */
+  sealed: FoldSealedPocket[];
+  /** the horn type the taps make; null with no mouth, no drivers, or drivers that open nowhere */
+  hornType: HornDrive["kind"] | null;
+  /** the drivers' rows, for drawing; empty with no drivers */
+  parts: FoldDriverPart[];
+  checks: FoldCheck[];
+}
+
+/**
+ * One section of a folded horn's traced passage, every 0.5 in from the closed end: how far along the path it is, how
+ * wide the passage is there across its section, and its area.
+ */
+export interface FoldPathSection {
+  /** the distance along the path from the closed end, in */
+  sIn: number;
+  /** the passage's width across the section there, in */
+  widthIn: number;
+  /** the passage's area there, in² */
+  areaIn2: number;
+}
+
+/**
  * A horn built into the box: the horn engine's segments and vent offset (`HornDesign`). The chamber's own net air and
  * vent are the horn's rear chamber. Its front chamber is not a setting: it comes from the walls over the cones
  * (lib/speaker/hornThroat); an older save's `throatChamber` is not read. The first segment's start area is the throat,
@@ -2312,6 +2490,8 @@ export interface SpeakerHorn extends Pick<HornDesign, "segments" | "portOffset">
   doubleBoard?: boolean;
   /** what the horn is designed for (lib/speaker/hornGoals); absent: the defaults (`HORN_GOALS_DEFAULT`) */
   goals?: HornGoals;
+  /** a folded horn's drawing (`HornFold`); absent: the horn is not drawn yet */
+  fold?: HornFold;
 }
 
 /**

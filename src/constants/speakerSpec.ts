@@ -173,6 +173,14 @@ export const HORN_PATH = {
   folded: "folded",
 } as const;
 
+/** A side-section wall of a chamber, where a folded horn's mouth can open. */
+export const FOLD_WALL = {
+  baffle: "baffle",
+  bottom: "bottom",
+  back: "back",
+  top: "top",
+} as const;
+
 /** A first-order filter's type (6 dB/oct): a series capacitor or coil, as a super tweeter on the HF channel. */
 export const FIRST_ORDER_FILTER = "1st";
 
@@ -205,6 +213,8 @@ export const HORN_ENGINE_GAP = {
   segment: "segment",
   /** a vent the engine doesn't take yet: side ducts or radiators */
   vent: "vent",
+  /** a drawn (folded) horn whose cones open into no passage to the mouth */
+  drawing: "drawing",
 } as const;
 
 /** The Fills model's walls: ½″ ply (lib/pa/calc `fillSystem` takes an inch off each outside size). */

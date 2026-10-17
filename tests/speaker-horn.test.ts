@@ -163,12 +163,10 @@ test("speaker horn: editing a section changes the response, the 3D flare and the
     Math.abs(narrow.path.legs[0].sections[0].w * 2 - wide.path.legs[0].sections[0].w) < 1e-9,
     "the walls start half as far apart",
   );
-  // a folded path: the same sound, the flare drawn in legs that add up to the same path
+  // a folded horn not drawn yet: the same sound (its straight horn), and no flare (its boards are drawn by hand)
   const folded = withHorn(BIN, (h) => ({ ...h, path: HORN_PATH.folded }));
   assert.equal(maxDiff(BIN, folded), 0);
-  const foldedPath = flareOf(folded)?.path;
-  assert.ok(foldedPath && foldedPath.folds >= 1, "the path folds");
-  assert.ok(Math.abs(foldedPath.pathIn - lengthIn(BIN)) < 1e-9, "the path is as long");
+  assert.equal(flareOf(folded), null, "a folded horn has no flare");
 });
 
 test("speaker horn: a shown area typed back in keeps the joint (the PA v2 bin's 489.6 in²)", () => {

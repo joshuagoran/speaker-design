@@ -24,6 +24,7 @@ import type {
 } from "../../types";
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { hornLayoutModel } from "./hornLayoutModel";
+import { tracedHorn } from "./foldHorn";
 import { boxModel, closedBox } from "../pa/calc";
 import { logSpacedFrequencies, passiveRadiatorBox } from "../hifi/hifi";
 import { HIFI_PASSIVES, HIFI_WAVEGUIDES, HORN_OPTIONS, passiveRadiatorMassMax } from "../data";
@@ -177,6 +178,7 @@ function modelChamber(
         face: chamberClearFace(cabinet, chamber),
         wallIn: cabinet.panel.thicknessIn,
         setbackIn: chamberSetbackIn(cabinet.panel, chamber),
+        traced: tracedHorn(cabinet, chamber) ?? undefined,
       },
     );
     if (!read.ok) return empty([read.gap]);

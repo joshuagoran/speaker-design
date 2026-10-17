@@ -1,5 +1,5 @@
 // The Speaker page's names and choices (src/pages/speaker): the spec's ids as the page shows them.
-import type { SLOT_KIND, SLOT_PLACE, TUBE_ENDS, TUBE_LAYOUT } from "./speakerSpec";
+import type { FOLD_WALL, SLOT_KIND, SLOT_PLACE, TUBE_ENDS, TUBE_LAYOUT } from "./speakerSpec";
 import type {
   ArchBlock,
   ChamberLoad,
@@ -18,6 +18,7 @@ import type {
 } from "../types";
 import { FIRST_ORDER_FILTER } from "./speakerSpec";
 import { UI_TEXT } from "./uiText";
+import { FOLD_DRIVERS_REASON, FOLD_MAGNET_CLEAR_IN } from "./foldHorn";
 
 /** Each driver kind as the Speaker page names it: the catalog table it picks from. */
 export const DRIVER_KIND_NAMES = {
@@ -234,7 +235,81 @@ export const MODEL_GAP_TEXT = {
     why: "a horn with this vent is not calculated",
     fix: "Use a sealed chamber, round tubes or a slot.",
   },
+  drawing: {
+    why: "the drawn horn has no passage from the cones to the mouth",
+    fix: "Put the drivers on a board so that one side of the cones opens into the passage.",
+  },
 } as const satisfies Record<SpeakerModelGap, { why: string; fix: string }>;
+
+/** The folded-horn path chart's labels. */
+export const FOLD_CHART_TEXT = {
+  label: "Passage area against distance from the closed end",
+  xAxis: "distance from the closed end, in",
+  yAxis: "area, in²",
+  traced: "Traced path",
+  target: "Straight horn",
+  taps: "Cones open",
+  front: "front",
+  back: "back",
+  /** the readout at the place pointed at: distance, width, area (numbers as formatted text) */
+  at: (distanceIn: string, widthIn: string, areaIn2: string) =>
+    `${distanceIn} in · ${widthIn} in wide · ${areaIn2} in²`,
+} as const;
+
+/** The folded horn editor's tools, as their buttons and tooltips name them, and its marks. */
+export const FOLD_EDITOR_TEXT = {
+  heading: "Folded horn",
+  tools: "Drawing tools",
+  move: "Move: drag a board, the end of a board, or the drivers.",
+  board: "Add board: press and drag. The ends snap onto walls and other boards.",
+  remove: "Delete: click a board, a corner or the drivers.",
+  drivers: "Drivers: click a board to put them there. Click again to turn them.",
+  mouth: "Mouth: click a wall to open the mouth there. Drag its two ends.",
+  square: "Square joint: click a joint to hold it at 90°. Click again to free it.",
+  undo: "Undo (Ctrl+Z or Cmd+Z)",
+  closedEnd: "closed end",
+  label: "Side view of the folded horn. The baffle is at the left.",
+  notDrawn: "Draw the folded horn. Until then, the response shows the straight horn.",
+  key: "Blue: the passage. Yellow: sealed air. Yellow circle: a joint. Yellow square: held at 90°.",
+} as const;
+
+/** The folded horn's figures, as their tiles name them. */
+export const FOLD_STAT_TEXT = {
+  path: "Path",
+  mouth: "Mouth",
+  taps: "Cones open at",
+  rear: "Rear chamber",
+  match: "Off the straight horn",
+  /** where the cones open, in from the closed end: one or two formatted lengths */
+  tapsAt: (front: string | null, back: string | null) =>
+    [front, back].filter((t) => t !== null).join(" and ") || "nowhere",
+} as const;
+
+/** What each check on a drawn horn says (`FOLD_CHECK`), from its figures (lengths formatted). */
+export const FOLD_CHECK_TEXT = {
+  mouth: () => "The mouth opens onto a board. Move the mouth or the board.",
+  drivers: (reason: (typeof FOLD_DRIVERS_REASON)[keyof typeof FOLD_DRIVERS_REASON]) =>
+    reason === FOLD_DRIVERS_REASON.none
+      ? "Place the drivers: use the Drivers tool on a board."
+      : reason === FOLD_DRIVERS_REASON.blocked
+        ? "Both sides of the cones face a board. Move the drivers or the boards."
+        : "Neither side of the cones opens into the passage. Move the drivers or the mouth.",
+  rearChamber: () => "One side of the cones faces a board with no air behind it.",
+  deadEnd: (at: string) =>
+    `The cones first open ${at} from the closed end. That is a long dead end behind them. Move them nearer the closed end.`,
+  choke: (at: string) => `The passage narrows sharply ${at} from the closed end.`,
+  magnet: () => `A driver's motor is within ${FOLD_MAGNET_CLEAR_IN} in of a board or a wall.`,
+  cutout: () => "A driver's cutout runs off its board.",
+  strayAir: (count: number) =>
+    count === 1
+      ? "One pocket of sealed air does nothing."
+      : `${count} pockets of sealed air do nothing.`,
+  thin: (at: string, width: string) =>
+    `The passage is only ${width} wide ${at} from the closed end.`,
+  /** the drawing makes a different horn type than the Horn type setting */
+  typeDiffers: (drawn: string, set: string) =>
+    `The drawing traces as ${drawn}. Horn type is set to ${set}.`,
+} as const;
 
 /** The Speaker page's results headings and chart labels. */
 export const SPEAKER_TEXT = {
@@ -302,6 +377,25 @@ export const SPEAKER_TEXT = {
     `${count} × ${kind.toLowerCase()} cutout, ${cutout}`,
   hornNoFitNote:
     "the horn does not fit where it is mounted; no cutout until you change the mounting",
+  /** the horn mouth's opening on a wall's cutlist note: its size and where it sits */
+  hornMouthNote: (w: string, h: string, where: string) =>
+    `horn mouth: ${w} × ${h}″ opening, ${where}`,
+  /**
+   * a folded horn board's cutlist note: its number, then its two ends' cuts, or one cut when both ends are alike. A
+   * semicolon starts a new line of the row's notes, so the note has none.
+   */
+  foldBoardNote: (board: number, first: string, second: string) =>
+    first === second
+      ? `Horn board ${board}: ${first} at both ends`
+      : `Horn board ${board}: ${first} at one end, ${second} at the other`,
+  /** a folded horn board's end cut, `deg` off square (empty: square), by what it meets (`board` counts from 1) */
+  foldEndFree: "square",
+  foldEndCorner: (deg: string, board: number) =>
+    deg ? `${deg}° miter to board ${board}` : `square to board ${board}`,
+  foldEndWall: (deg: string, wall: string) =>
+    deg ? `${deg}° bevel to the ${wall}` : `square to the ${wall}`,
+  foldEndButt: (deg: string, board: number) =>
+    deg ? `${deg}° bevel butt on board ${board}` : `square butt on board ${board}`,
   portTooLong: "too long for this chamber: make it shorter",
   slotTooLong: "too long to run straight in this chamber: make it shorter, or fold it",
   slotTooLongFolded: "too long to fold in this chamber: make it shorter",
@@ -517,3 +611,11 @@ export const SPEAKER_TEXT = {
   addSection: "Add section",
   removeSection: "Remove section",
 } as const;
+
+/** A chamber's walls by id, as a cutlist note names them. */
+export const FOLD_WALL_NAMES = {
+  baffle: "baffle",
+  bottom: "bottom",
+  back: "back",
+  top: "top",
+} as const satisfies Record<keyof typeof FOLD_WALL, string>;
