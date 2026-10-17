@@ -819,8 +819,8 @@ Each PR stands alone. Lowest risk first.
       front of the cones by their clearance: 1.5 × Xmax (`CONE_TRAVEL_MARGIN`) and the surround (6% of the cone's
       radius). Each cone holds its area times the clearance, and the air in its dish (a cone 40% of the driver's
       catalog depth deep, `CONE_DISH_PER_DEPTH`). Older saves' throat chamber is not read.
-    - The throat's air speed at full power is a check under the chamber. Its guide is the box's air speed limit (its
-      vent's, or the PA's port limit when sealed). It does not limit the maximum SPL.
+    - The throat's air speed at full power is shown under the chamber. It has no guide and does not limit the maximum
+      SPL: there is no common figure for a horn throat.
     - The path: straight or folded.
     - The drive: front-loaded can be picked; tapped and back-loaded show, but cannot be picked, with a note that the
       horn engine takes only a front-loaded horn today.

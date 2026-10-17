@@ -18,8 +18,8 @@
 //   itself: the sum follows it, and nothing is pushed harder outside it. In a stack the feed is the member's crossover,
 //   ahead of every amp: it lifts the sum's ceilings as an active band's own filters do (`stackCrossover`).
 // - Each vent takes its own air-speed limit (`maxSpeedMs`, set by the spec); a drawn horn's vent has none. A horn's
-//   throat air speed is shown against a guide, the box's (its vent's, or the PA's port limit in a sealed box:
-//   `throatSpeedMax`), and does not limit: a throat does not chuff like a port, and its distortion has no sharp edge.
+//   throat air speed is shown, with no limit or guide: a throat does not chuff like a port, and there is no common
+//   figure for it.
 import type {
   BandId,
   NominalImpedance,
@@ -53,7 +53,6 @@ import {
   SPEAKER_RESPONSE_VOLTS,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DEFAULT_PA } from "../defaults";
 import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 
 /** Where the input range ends, as a gain: its filters −6 dB down (a Linkwitz-Riley filter's corner). */
@@ -121,13 +120,6 @@ const portSpeedMax = (
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
   chamber: SpeakerChamber,
 ) => ventSpeedMax(chamber) ?? (tracedHorn(cabinet, chamber)?.rearVent ? Infinity : null);
-
-/**
- * The air speed guide for a horn chamber's throat, m/s: the box's air speed limit (its vent's), or the PA's port limit
- * in a sealed box; null without a horn. It is shown, and does not limit.
- */
-const throatSpeedMax = (chamber: SpeakerChamber) =>
-  chamber.load.kind === CHAMBER_LOAD.horn ? (ventSpeedMax(chamber) ?? DEFAULT_PA.portMax) : null;
 
 /** The radiators' Xmax, mm; null without radiators (or with an id the catalog doesn't have). */
 const radiatorXmax = (chamber: SpeakerChamber) =>
@@ -276,11 +268,11 @@ export function speakerLimits(
     /** from the model's drive to the band's, before the filters */
     const toDrive = driveV / volts;
     const portMax = portSpeedMax(spec.cabinet, chamber);
-    const throatMax = throatSpeedMax(chamber);
     const xR = radiatorXmax(chamber);
     const excursion = startPeak(parts.ts.Xmax);
     const port = portMax === null ? null : startPeak(portMax);
-    const throat = throatMax === null ? null : startPeak(throatMax);
+    // a horn's throat: its peak shown, with no limit
+    const throat = chamber.load.kind === CHAMBER_LOAD.horn ? startPeak(Infinity) : null;
     const radiator = xR === null ? null : startPeak(xR);
     const sc = scaleIn(scales, id),
       sumSc = scaleIn(sumScales, id);

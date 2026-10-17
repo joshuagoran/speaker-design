@@ -85,7 +85,7 @@ The chain multiplies them per frequency.
 - **Cone excursion, port and throat air speed, electrical impedance.**
 - **Group delay,** for the front end's alignment.
 - **Limits:** the existing thermal, excursion and port-speed logic, on the new curves (phase 2). The throat's air
-  speed is a check against the box's air speed limit. It does not limit the maximum SPL.
+  speed is shown, with no guide. It does not limit the maximum SPL.
 
 ### Stacking
 
