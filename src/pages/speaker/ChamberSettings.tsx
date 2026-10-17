@@ -111,7 +111,7 @@ import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
 import { withSlotKind, withSlotPlace } from "../../lib/speaker/slotPort";
-import { SPEAKER_STEPS, STUFFING_MAX_PCT } from "../../constants/speakerSteps";
+import { FILL_LEVEL_PCT, SPEAKER_STEPS } from "../../constants/speakerSteps";
 import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
 import { tubeDriverOf } from "../../lib/speaker/chamberAir";
 import { ELBOW_COUNTS, elbowCountOf } from "../../lib/tubeFold";
@@ -146,6 +146,15 @@ interface Props {
   onRemove?: () => void;
 }
 
+/** The Fiber fill buttons: each level's %, named. */
+const FILL_OPTIONS = keysOf(FILL_LEVEL_PCT).map(
+  (k) => [FILL_LEVEL_PCT[k], SPEAKER_TEXT.fillNames[k]] as const,
+);
+
+/** The fill level nearest a chamber's %: a saved value between levels shows as the nearest. */
+const nearestFill = (pct: number) =>
+  Object.values(FILL_LEVEL_PCT).reduce((a, b) => (Math.abs(b - pct) < Math.abs(a - pct) ? b : a));
+
 /** One chamber's settings: size, air, place, horn, vent and drivers. */
 export function ChamberSettings({
   index,
@@ -166,6 +175,10 @@ export function ChamberSettings({
   const setVent = (v: ChamberVent) => onEdit((c) => ({ ...c, vent: v }));
   const setPort = (port: SpeakerPort) =>
     setVent(vent.kind === VENT_KIND.vented ? { ...vent, port } : { ...DEFAULT_VENTS.vented, port });
+  const removeDriver = (i: number) => {
+    setDriverRound((r) => r + 1);
+    onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }));
+  };
   const editDriver = (i: number, edit: (d: SpeakerDriver) => SpeakerDriver) =>
     onEdit((c) => ({ ...c, drivers: c.drivers.map((d, k) => (k === i ? edit(d) : d)) }));
   const firstBand = bands[0]?.id;
@@ -303,14 +316,15 @@ export function ChamberSettings({
           />
         </>
       )}
-      <NumberField
-        label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>{SPEAKER_TEXT.stuffing}</Tooltip>}
-        value={chamber.stuffingPct}
-        min={0}
-        max={STUFFING_MAX_PCT}
-        step={5}
-        onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
-      />
+      {/* a drawn tapped horn has no rear chamber to fill */}
+      {!(folded && tapped) && (
+        <ToggleGroup
+          label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>{SPEAKER_TEXT.stuffing}</Tooltip>}
+          value={nearestFill(chamber.stuffingPct)}
+          onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
+          options={FILL_OPTIONS}
+        />
+      )}
       {chamber.load.kind === CHAMBER_LOAD.horn && (
         <HornSettings
           horn={chamber.load.horn}
@@ -478,37 +492,42 @@ export function ChamberSettings({
           inBay={!driversOnBaffle(chamber)}
           bandOptions={bandOptions}
           onEdit={(edit) => editDriver(i, edit)}
-          onRemove={() => {
-            setDriverRound((r) => r + 1);
-            onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }));
-          }}
+          // the last driver's Remove sits beside Add driver
+          onRemove={i === chamber.drivers.length - 1 ? undefined : () => removeDriver(i)}
         />
       ))}
-      {firstBand && (
-        <Button
-          variant="primary"
-          size="xs"
-          onClick={() =>
-            onEdit((c) => ({
-              ...c,
-              drivers: [
-                ...c.drivers,
-                // a woofer of the largest size that fits the chamber
-                withWoofer(
-                  driverOfKind(DRIVER_KIND.woofer, {
-                    count: 1,
-                    position: { xIn: 0, yIn: c.dims.h / 2 },
-                    bands: [firstBand],
-                  }),
-                  wooferFor(clearIn),
-                ),
-              ],
-            }))
-          }
-        >
-          Add driver
-        </Button>
-      )}
+      <div className={FIELD_ROW}>
+        {firstBand && (
+          <Button
+            variant="primary"
+            size="xs"
+            onClick={() =>
+              onEdit((c) => ({
+                ...c,
+                drivers: [
+                  ...c.drivers,
+                  // a woofer of the largest size that fits the chamber
+                  withWoofer(
+                    driverOfKind(DRIVER_KIND.woofer, {
+                      count: 1,
+                      position: { xIn: 0, yIn: c.dims.h / 2 },
+                      bands: [firstBand],
+                    }),
+                    wooferFor(clearIn),
+                  ),
+                ],
+              }))
+            }
+          >
+            Add driver
+          </Button>
+        )}
+        {chamber.drivers.length > 0 && (
+          <Button size="xs" onClick={() => removeDriver(chamber.drivers.length - 1)}>
+            Remove driver
+          </Button>
+        )}
+      </div>
       {result &&
         [...new Set(result.gaps)].map((g) => (
           <Notice key={g}>{SPEAKER_TEXT.speakerGap(MODEL_GAP_TEXT[g])}</Notice>
@@ -784,7 +803,8 @@ interface DriverProps {
   inBay: boolean;
   bandOptions: readonly (readonly [BandId, string])[];
   onEdit: (edit: (d: SpeakerDriver) => SpeakerDriver) => void;
-  onRemove: () => void;
+  /** removes it; absent: its Remove sits beside Add driver */
+  onRemove?: () => void;
 }
 
 /**
@@ -869,33 +889,35 @@ function DriverFields({
           />
         )}
       </div>
-      {woofer ? (
-        <SelectField
-          label="Model"
-          options={woofers}
-          value={byId(woofers, driver.driverId)}
-          onChange={(o) => onEdit((d) => withWoofer(d, o))}
-          group={size === null ? (o) => wooferSizeName(o.size) : undefined}
+      <div className={FIELD_ROW}>
+        {woofer ? (
+          <SelectField
+            label="Model"
+            className="flex-1 min-w-48"
+            options={woofers}
+            value={byId(woofers, driver.driverId)}
+            onChange={(o) => onEdit((d) => withWoofer(d, o))}
+            group={size === null ? (o) => wooferSizeName(o.size) : undefined}
+          />
+        ) : (
+          <SelectField
+            label="Model"
+            className="flex-1 min-w-48"
+            options={DRIVER_OPTIONS[driver.kind]}
+            value={byId(DRIVER_OPTIONS[driver.kind], driver.driverId)}
+            onChange={(o) => onEdit((d) => ({ ...d, driverId: o.id }))}
+          />
+        )}
+        <NumberField
+          label="Count"
+          value={driver.count}
+          min={1}
+          step={1}
+          onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
         />
-      ) : (
-        <SelectField
-          label="Model"
-          options={DRIVER_OPTIONS[driver.kind]}
-          value={byId(DRIVER_OPTIONS[driver.kind], driver.driverId)}
-          onChange={(o) => onEdit((d) => ({ ...d, driverId: o.id }))}
-        />
-      )}
-      <NumberField
-        label="Count"
-        value={driver.count}
-        min={1}
-        step={1}
-        onChange={(count) => onEdit((d) => ({ ...d, count: Math.max(1, Math.round(count)) }))}
-      />
-      {inBay && !onTop(driver) ? (
-        // in a horn's bay the layout stacks and centers the drivers: no position to set
-        <p className="text-xs text-stone-500">{SPEAKER_TEXT.driversInBay}</p>
-      ) : (
+      </div>
+      {/* in a horn's bay the layout stacks and centers the drivers: no position to set */}
+      {!(inBay && !onTop(driver)) && (
         <div className={FIELD_ROW}>
           {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
           <NumberField
@@ -978,9 +1000,11 @@ function DriverFields({
           onChange={(mount) => onEdit((d) => (d.horn ? { ...d, horn: { ...d.horn, mount } } : d))}
         />
       )}
-      <Button size="xs" onClick={onRemove}>
-        Remove driver
-      </Button>
+      {onRemove && (
+        <Button size="xs" onClick={onRemove}>
+          Remove driver
+        </Button>
+      )}
     </div>
   );
 }

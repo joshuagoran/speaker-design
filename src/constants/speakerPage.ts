@@ -474,7 +474,6 @@ export const SPEAKER_TEXT = {
   fromLeft: "From left, in",
   fromBottom: "From bottom, in",
   backFromFront: "Back from front, in",
-  driversInBay: "The horn places the drivers in the bay behind the throat, stacked and centered.",
   placeTip:
     "Seen from the front. The position of the center, from the left side and the bottom of the chamber.",
   portPlace: "Port position",
@@ -541,7 +540,6 @@ export const SPEAKER_TEXT = {
   hornDrive: "Horn type",
   hornDriveTip:
     "Where the cones meet the horn's path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
-  hornDriveNote: "A back-loaded horn is not calculated yet.",
   hornTap: "Cones open after section",
   hornTapTip:
     "The front of the cones opens into the path after this section. The path before it is closed at its start.",
@@ -629,9 +627,11 @@ export const SPEAKER_TEXT = {
     "The corner frequency of the filter. A highpass cuts below it, and a lowpass cuts above it.",
   netAirTip:
     "The air the drivers work against. Auto: the inside volume minus the walls, the braces, the drivers and the vent. Custom: you type the value.",
-  stuffing: "Stuffing: acts larger by, %",
+  stuffing: "Fiber fill",
   stuffingTip:
-    "Fiber fill makes the box act larger than its air. Light fill: about 10%. Heavy fill: about 15%. Packed full: about 25%, the most real fill gives.",
+    "Fill in the chamber's air makes the box act larger, so it tunes a little lower. More fill does more.",
+  /** the fill levels, as the Fiber fill buttons name them (`FILL_LEVEL_PCT`) */
+  fillNames: { none: "None", light: "Light", heavy: "Heavy", packed: "Packed" },
   airSpeedTip:
     "The highest air speed in the port at full power. Above it, the port makes noise. The maximum output stops at this limit.",
   radiatorMassTip: "Mass that you add to each passive radiator. More mass tunes the box lower.",

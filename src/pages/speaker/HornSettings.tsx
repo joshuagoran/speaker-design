@@ -45,7 +45,8 @@ import {
 } from "./hornSections";
 
 /** The drives the engines don't take yet: shown, not picked. */
-const DRIVES_NOT_MODELED = [HORN_DRIVE.back];
+/** The horn types to pick: a back-loaded horn is not calculated, so it is not offered. */
+const DRIVE_OPTIONS = entriesOf(HORN_DRIVE_NAMES).filter(([kind]) => kind !== HORN_DRIVE.back);
 
 /** An offset drive's one tap, by its key in the drive. */
 const OFFSET_TAP = "tap" satisfies keyof Extract<SpeakerHorn["drive"], { kind: "offset" }>;
@@ -278,8 +279,7 @@ export function HornSettings({
         onChange={(kind) => {
           if (kind !== drive.kind && kind !== HORN_DRIVE.back) onDrive(kind);
         }}
-        options={entriesOf(HORN_DRIVE_NAMES)}
-        disabled={{ values: DRIVES_NOT_MODELED, why: SPEAKER_TEXT.hornDriveNote }}
+        options={DRIVE_OPTIONS}
       />
       {!folded &&
         (drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) &&
