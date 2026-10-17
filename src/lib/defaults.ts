@@ -16,6 +16,7 @@ import {
   HORN_OPTIONS,
   MID_OPTIONS,
   N314T,
+  PD1850,
   SB17NRX,
   SB26STCN,
   ST260,
@@ -48,12 +49,28 @@ import type {
   SpeakerChamber,
   SpeakerDriverParts,
   SpeakerSpec,
+  SpeakerSubDriver,
   SubDriver,
+  FoldBoard,
+  HornDrive,
+  HornFold,
+  HornGoals,
+  HornSegment,
+  SidePoint,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../constants/panelSizes";
 import { HIFI_DRIVE } from "../constants/hifiEngine";
-import { PORT_SHAPE, SPEAKER_BAND, SPEAKER_BAND_NAMES, VENT_KIND } from "../constants/speakerSpec";
+import {
+  FOLD_WALL,
+  HORN_DRIVE,
+  PORT_SHAPE,
+  SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
+  VENT_KIND,
+} from "../constants/speakerSpec";
+import { HORN_PROFILE } from "../constants/hornEngine";
+import { MM_PER_IN } from "../constants/units";
 import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
 import {
   DIRECT_LOAD,
@@ -326,6 +343,84 @@ export const PA_V2_SUB_BIN = {
   sub: SubDriver;
   subsonic: BandFilter;
   [figure: string]: number | SubDriver | BandFilter;
+};
+
+/** A point of a side section given in mm (`zMm` back from the baffle's inside face, `yMm` up from the inside bottom). */
+const mmPoint = (zMm: number, yMm: number): SidePoint => ({
+  zIn: zMm / MM_PER_IN,
+  yIn: yMm / MM_PER_IN,
+});
+/** A board between two side-section points given in mm: its center line's ends. */
+const mmBoard = (a: readonly [number, number], b: readonly [number, number]): FoldBoard => ({
+  a: mmPoint(...a),
+  b: mmPoint(...b),
+});
+/** TH18's joints, mm: each is two boards' center lines meeting at a corner (the same point on both). */
+const TH18_JOINT = {
+  /** the driver board's back end and the long back board's foot */
+  driverFoot: [446.2, 309.2],
+  /** the front board's foot and the closed-end leg's top board */
+  frontFoot: [113.3, 606.7],
+} as const;
+
+/**
+ * TH18 by Xoc1: a tapped horn for one Precision Devices PD.1850/3, from its plans (side section, mm, 18 mm birch ply)
+ * and its Hornresp record (tools/hornresp/records/th18-xoc1.txt). The box is 724 mm deep and 1016 mm tall outside; the
+ * plans give no width, so the clear width is the published 535 mm. The boards are the plans' boards, as center lines
+ * in the clear side section (688 × 980 mm): each from the plans' faces, offset half a board. A free end stops half a
+ * board short of the plans' end (the trace rounds it by that much). The cones face up into the closed-end leg at the
+ * plans' spot (260 mm along the driver board from the front); the motor hangs in the mouth leg. The two corner boards
+ * (the chamfer at the bottom back and the brace at the top back) are full-width boards: the air behind them is sealed.
+ */
+export const TH18_XOC1 = {
+  driver: PD1850,
+  /** the box's outside size, mm: its clear width (535 mm) and two walls, its depth and height from the plans */
+  outerMm: { w: 571, h: 1016, d: 724 },
+  wallMm: 18,
+  /** the record's sections (cm², cm): conical, the fronts tap S2 and the rears S4 */
+  segments: [
+    { profile: HORN_PROFILE.conical, s1: 283.55, s2: 455.34, length: 21.76 },
+    { profile: HORN_PROFILE.conical, s1: 455.34, s2: 1248.53, length: 217.59 },
+    { profile: HORN_PROFILE.conical, s1: 1248.53, s2: 2150.7, length: 44.87 },
+    { profile: HORN_PROFILE.conical, s1: 2150.7, s2: 2717.8, length: 24.22 },
+  ],
+  drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 3 },
+  /**
+   * the band it is built for: from the record's tuning (3 dB down at 36 Hz in Hornresp) to about where its response
+   * first dips (115 Hz), at the most the straight horn reaches over it at full power (127 dB at 1 m)
+   */
+  goals: { lowHz: 36, highHz: 115, targetDb: 127 },
+  fold: {
+    boards: [
+      // the driver board: its lower face from the mouth's top (526 mm up outside) down at 24.2° to the back board
+      mmBoard([0, 509.8], TH18_JOINT.driverFoot),
+      // the long back board: its front face 489 mm back outside at the top (811 mm up), 497 long, leaning 4° forward
+      mmBoard(TH18_JOINT.driverFoot, [479.4, 784]),
+      // the front board: its front face from 139 mm (869 mm up) to 122 mm (620 mm up) back outside, 250 long
+      mmBoard(TH18_JOINT.frontFoot, [129.4, 842]),
+      // the closed-end leg's top board: its lower face 407 long, 9.6° steeper than the driver board, to the back board
+      mmBoard(TH18_JOINT.frontFoot, [451.2, 380.6]),
+      // the short board down from the top: its front face 295 mm back outside, 297 long
+      mmBoard([286, 980], [286, 692]),
+      // the 186 board: from the closed-end leg's top board (306 mm back, 519 mm up) to the back board (599 mm up)
+      mmBoard([269.5, 502.2], [466.2, 595.7]),
+      // the chamfer at the bottom back: 159 × 159 outside, at 45°
+      mmBoard([552.3, 0], [688, 135.7]),
+      // the brace at the top back: 113 × 113, at 45°
+      mmBoard([587.7, 980], [688, 879.7]),
+    ],
+    // the cones' center 260 mm along the driver board's lower face from the front: half way along its center line
+    drivers: { board: 0, along: 0.4994, face: 1 },
+    // the front is open from the inside bottom to the driver board (526 mm up outside)
+    mouth: { wall: FOLD_WALL.baffle, fromIn: 0, toIn: 508 / MM_PER_IN },
+  },
+} satisfies {
+  driver: SpeakerSubDriver;
+  segments: HornSegment[];
+  drive: HornDrive;
+  goals: HornGoals;
+  fold: HornFold;
+  [figure: string]: unknown;
 };
 
 /**

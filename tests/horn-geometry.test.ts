@@ -8,7 +8,7 @@ import { hornPath, type HornPath, type HornPathInput } from "../src/lib/speaker/
 import { hornFlare, slotOpeningsAt, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { CHAMBER_LOAD, PORT_SHAPE, SLOT_PLACE } from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD, HORN_PATH, PORT_SHAPE, SLOT_PLACE } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { CM_PER_IN, CM2_PER_IN2, MM_PER_IN } from "../src/constants/units";
 import { CONE_TRAVEL_MARGIN } from "../src/constants/hornThroat";
@@ -453,7 +453,8 @@ test("horn geometry: every template horn draws the model's area at the throat, t
     const spec = templateSpeaker(template);
     for (const placed of speakerLayout(spec.cabinet).chambers) {
       const { load } = placed.chamber;
-      if (load.kind !== CHAMBER_LOAD.horn) continue;
+      // a folded horn is drawn by hand, not as a flare (tests/fold-*, th18-drawn)
+      if (load.kind !== CHAMBER_LOAD.horn || load.horn.path === HORN_PATH.folded) continue;
       horns++;
       const flare = hornFlare(spec.cabinet, placed);
       assert.ok(flare, template);

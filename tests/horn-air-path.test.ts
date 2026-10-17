@@ -14,7 +14,7 @@ import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speaker
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { hornFlare, slotOpeningsAt, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { portRule, PORT_RULE } from "../src/lib/speaker/speakerLayout";
-import { CHAMBER_LOAD, PORT_SHAPE } from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD, HORN_PATH, PORT_SHAPE } from "../src/constants/speakerSpec";
 import type { HornPath } from "../src/lib/speaker/hornGeometry";
 import type { SpeakerSpec } from "../src/types";
 
@@ -128,7 +128,10 @@ function surfacePoints(mesh: THREE.Mesh): THREE.Vector3[] {
 /** The template horns: each as a spec and its name. (A folded horn is drawn by hand: tests/fold-*.) */
 function hornSpecs(): [string, SpeakerSpec][] {
   const specs = SPEAKER_TEMPLATES.map((t): [string, SpeakerSpec] => [t, templateSpeaker(t)]).filter(
-    ([, spec]) => spec.cabinet.chambers.some((c) => c.load.kind === CHAMBER_LOAD.horn),
+    ([, spec]) =>
+      spec.cabinet.chambers.some(
+        (c) => c.load.kind === CHAMBER_LOAD.horn && c.load.horn.path !== HORN_PATH.folded,
+      ),
   );
   return specs;
 }

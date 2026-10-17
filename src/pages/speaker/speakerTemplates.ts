@@ -20,7 +20,13 @@ import type {
 import { layersFromPa } from "../../lib/speaker/paSpec";
 import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerFromFill } from "../../lib/speaker/fillSpec";
-import { DIRECT_LOAD, lrFilter, speakerIdentity } from "../../lib/speaker/specParts";
+import {
+  DIRECT_LOAD,
+  FLUSH_BOX,
+  flushBracing,
+  lrFilter,
+  speakerIdentity,
+} from "../../lib/speaker/specParts";
 import { hornFace, settledCabinet, speakerLayout } from "../../lib/speaker/speakerLayout";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
 import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
@@ -36,6 +42,7 @@ import {
   DEFAULT_PA,
   PA_V2_MID_BOX,
   PA_V2_SUB_BIN,
+  TH18_XOC1,
 } from "../../lib/defaults";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
@@ -65,6 +72,7 @@ import {
   type SpeakerTemplate,
 } from "../../constants/speakerStarts";
 import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useSpeakerPage";
+import { DEFAULT_VENTS } from "./speakerParts";
 import { conesAreaCm2, throatAreaCm2 } from "../../lib/speaker/hornThroat";
 
 /** The PA layout with the tower's one speaker. */
@@ -417,6 +425,67 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
   };
 }
 
+/**
+ * TH18 (`TH18_XOC1`): its box from its plans (a flush box of 18 mm birch ply, the walls' ¾″ size measured at 18 mm), its
+ * one PD.1850/3, its record's sections as the straight horn and its drive, the plans' boards drawn as its fold (sealed:
+ * a drawn horn's vent is in its drawing), and its goals. On the PA's sub band with the sub bin's subsonic, below the
+ * PA's crossover.
+ */
+function th18(identity: SpecIdentity): SpeakerSpec {
+  const th = TH18_XOC1;
+  const t = inches(th.wallMm);
+  const h = inches(th.outerMm.h);
+  const chamber: SpeakerChamber = {
+    at: { xIn: 0, yIn: 0 },
+    dims: { w: inches(th.outerMm.w), h, d: inches(th.outerMm.d) },
+    netLiters: null,
+    stuffingPct: 0,
+    vent: DEFAULT_VENTS.sealed,
+    load: {
+      kind: CHAMBER_LOAD.horn,
+      horn: {
+        segments: th.segments,
+        portOffset: 0,
+        drive: th.drive,
+        path: HORN_PATH.folded,
+        goals: th.goals,
+        fold: th.fold,
+      },
+    },
+    drivers: [
+      {
+        kind: DRIVER_KIND.sub,
+        driverId: th.driver.id,
+        count: 1,
+        position: { xIn: 0, yIn: h / 2 },
+        bands: [SPEAKER_BAND.low],
+        horn: null,
+      },
+    ],
+  };
+  return {
+    ...identity,
+    cabinet: {
+      chambers: [chamber],
+      panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: t },
+      ...FLUSH_BOX,
+      ...flushBracing(t),
+      hardware: null,
+      roundoverIn: 0,
+      tiltDeg: 0,
+    },
+    bands: [
+      paV2Band(
+        SPEAKER_BAND.low,
+        { highpass: PA_V2_SUB_BIN.subsonic, lowpass: null },
+        DEFAULT_PA.ampW,
+      ),
+    ],
+    input: { highpass: null, lowpass: lrFilter(DEFAULT_PA.xoLo, DEFAULT_PA.xoLoOrder) },
+    look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
+  };
+}
+
 /** Each template's speaker, from its identity. */
 const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec> = {
   empty: (identity) => ({ ...emptySpeaker(), ...identity }),
@@ -431,6 +500,7 @@ const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec
   paV2SubBinOne: (identity) => paV2SubBin(1, identity),
   paV2SubBinTwo: (identity) => paV2SubBin(2, identity),
   paV2MidBox,
+  th18,
 };
 
 /** The templates in the picker's order. */
