@@ -9,7 +9,7 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
-import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/speakerPage";
+import { SPEAKER_TEXT, HORN_DRIVE_NAMES } from "../../constants/speakerPage";
 import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { COMPRESSION_RATIO } from "../../constants/hornThroat";
 import {
@@ -265,12 +265,6 @@ export function HornSettings({
         <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
         <p className="text-xs text-stone-500">{hornText(horn)}</p>
       </div>
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
-        value={horn.path}
-        onChange={(path) => onEdit((h) => ({ ...h, path }))}
-        options={entriesOf(HORN_PATH_NAMES)}
-      />
       <HornGoalsFields
         goals={horn.goals ?? HORN_GOALS_DEFAULT}
         fit={fit}

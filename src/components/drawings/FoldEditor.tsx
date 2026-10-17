@@ -500,12 +500,8 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
     {
       id: TOOL.drivers,
       label: FOLD_EDITOR_TEXT.drivers,
-      icon: (
-        <>
-          <circle cx="8" cy="8" r="5.5" />
-          <circle cx="8" cy="8" r="1.5" />
-        </>
-      ),
+      // a driver from the side: the magnet behind, the cone opening to the front
+      icon: <path d="M2 6h3v4H2zM5 6l8-4v12l-8-4" />,
     },
     {
       id: TOOL.opening,

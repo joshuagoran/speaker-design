@@ -48,6 +48,7 @@ import {
   ELBOW_COUNT_NAMES,
   VENT_KIND_NAMES,
   VENT_PANEL_NAMES,
+  HORN_PATH_NAMES,
 } from "../../constants/speakerPage";
 import {
   CHAMBER_LOAD,
@@ -212,17 +213,38 @@ export function ChamberSettings({
       >
         Chamber {index + 1}
       </CardHeading>
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.loadTip}>{SPEAKER_TEXT.load}</Tooltip>}
-        value={chamber.load.kind}
-        onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
-        options={entriesOf(CHAMBER_LOAD_NAMES)}
-        disabled={
-          chamber.load.kind === CHAMBER_LOAD.direct && !startingHorn(chamber, room)
-            ? { values: [CHAMBER_LOAD.horn], why: SPEAKER_TEXT.loadNoCone }
-            : undefined
-        }
-      />
+      <div className={FIELD_ROW}>
+        <ToggleGroup
+          label={<Tooltip tip={SPEAKER_TEXT.loadTip}>{SPEAKER_TEXT.load}</Tooltip>}
+          value={chamber.load.kind}
+          onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
+          options={entriesOf(CHAMBER_LOAD_NAMES)}
+          disabled={
+            chamber.load.kind === CHAMBER_LOAD.direct && !startingHorn(chamber, room)
+              ? { values: [CHAMBER_LOAD.horn], why: SPEAKER_TEXT.loadNoCone }
+              : undefined
+          }
+        />
+        {chamber.load.kind === CHAMBER_LOAD.horn && (
+          <ToggleGroup
+            label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
+            value={chamber.load.horn.path}
+            onChange={(path) =>
+              onEdit((c) =>
+                c.load.kind === CHAMBER_LOAD.horn
+                  ? {
+                      ...c,
+                      load: { ...c.load, horn: { ...c.load.horn, path } },
+                      // a folded horn's vent is drawn: its chamber is sealed (its vent settings are hidden)
+                      ...(path === HORN_PATH.folded ? { vent: DEFAULT_VENTS.sealed } : {}),
+                    }
+                  : c,
+              )
+            }
+            options={entriesOf(HORN_PATH_NAMES)}
+          />
+        )}
+      </div>
       <div className={FIELD_ROW}>
         {(["w", "h", "d"] as const).map((k) => (
           <NumberField
