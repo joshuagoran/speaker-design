@@ -68,6 +68,8 @@ test("prices and weights are positive where given; ids are unique", (t) => {
 const XMAX_KNOWN: Record<string, string> = {
   by12lx60:
     "Beyma's sheet prints Xmax 9 but its own Lvc 20 / Hag 10 give 7.86 by its printed formula",
+  by15p1000fev2:
+    "Beyma's sheet prints Xmax 8 but its own Lvc 20 / Hag 12 give 7.43 by its printed formula",
   ciare_hwb200:
     "Ciare prints Xmax 7 but its own Hvc 16 / Hg 8 give 6.0 by its printed Hg/4 formula (HW205, same motor, prints 6)",
 };
