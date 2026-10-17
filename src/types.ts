@@ -207,6 +207,12 @@ export interface HifiWooferTS extends ThieleSmall {
 /** A driver maker's id (`MAKER_NAMES` holds its name). */
 export type MakerId = keyof typeof MAKER_NAMES;
 
+/**
+ * A sub driver the Speaker page alone offers (data/catalog/speaker-subs): one with no price from a US vendor (null; the
+ * note says so).
+ */
+export type SpeakerSubDriver = Omit<SubDriver, "price"> & { price: number | null };
+
 export interface SubDriver {
   id: string;
   lb: number;

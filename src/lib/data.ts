@@ -29,6 +29,7 @@ import type {
   OwnGuide,
   PassiveRadiator,
   RawTS,
+  SpeakerSubDriver,
   SubDriver,
   SubSize,
   ThieleSmall,
@@ -45,6 +46,7 @@ import { HIFI_WOOFERS_RAW, SB17NRX_RAW } from "../data/catalog/hifi-woofers";
 import { HORN_RAW } from "../data/catalog/horns";
 import { BC15NDL76_RAW, F12PR300_RAW, MID_RAW } from "../data/catalog/mids";
 import { BC18NBX_RAW, SUB_RAW } from "../data/catalog/subs";
+import { PD1850_RAW, SPEAKER_SUB_RAW } from "../data/catalog/speaker-subs";
 import { passiveWithXmax, withXmax } from "./xmax";
 import { AMP_SERIES } from "../data/catalog/amps";
 import { DSP_UNITS } from "../data/catalog/dsp-units";
@@ -76,6 +78,12 @@ export const BC18NBX: SubDriver = withTsXmax(BC18NBX_RAW);
 export const SUB_OPTIONS: SubDriver[] = SUB_RAW.map((d) =>
   d === BC18NBX_RAW ? BC18NBX : withTsXmax(d),
 );
+/** TH18's driver (no US price), and the sub drivers the Speaker page offers: the PA's, then its own. */
+export const PD1850: SpeakerSubDriver = withTsXmax(PD1850_RAW);
+export const SPEAKER_SUB_OPTIONS: SpeakerSubDriver[] = [
+  ...SUB_OPTIONS,
+  ...SPEAKER_SUB_RAW.map((d) => (d === PD1850_RAW ? PD1850 : withTsXmax(d))),
+];
 
 export const F12PR300: MidDriver = withTsXmax(F12PR300_RAW);
 export const BC15NDL76: MidDriver = withTsXmax(BC15NDL76_RAW);

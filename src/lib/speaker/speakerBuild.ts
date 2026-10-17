@@ -108,6 +108,7 @@ import {
   FILL_OPTIONS,
   HIFI_PASSIVES,
   MID_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
   SUB_OPTIONS,
   hifiDriverById,
 } from "../data";
@@ -327,7 +328,7 @@ function coneBuild(driver: SpeakerDriver): ConeBuild | null {
   };
   switch (driver.kind) {
     case DRIVER_KIND.sub: {
-      const sub = byId(SUB_OPTIONS, driver.driverId);
+      const sub = byId(SPEAKER_SUB_OPTIONS, driver.driverId);
       return sub ? { body: paConeBody(sub.size), depthIn, lb: sub.lb, ts: sub.ts } : null;
     }
     case DRIVER_KIND.mid: {
@@ -360,7 +361,7 @@ function driverLb(driver: SpeakerDriver): number {
   const hornLb = driverHorn(driver)?.lb || 0;
   switch (driver.kind) {
     case DRIVER_KIND.sub:
-      return (byId(SUB_OPTIONS, driver.driverId)?.lb || 0) + hornLb;
+      return (byId(SPEAKER_SUB_OPTIONS, driver.driverId)?.lb || 0) + hornLb;
     case DRIVER_KIND.mid:
       return (byId(MID_OPTIONS, driver.driverId)?.lb || 0) + hornLb;
     case DRIVER_KIND.compression:
@@ -1226,7 +1227,7 @@ function chamberNotes(
           case DRIVER_KIND.mid: {
             const size =
               driver.kind === DRIVER_KIND.sub
-                ? byId(SUB_OPTIONS, driver.driverId)?.size
+                ? byId(SPEAKER_SUB_OPTIONS, driver.driverId)?.size
                 : byId(MID_OPTIONS, driver.driverId)?.size;
             if (size)
               baffle.push(

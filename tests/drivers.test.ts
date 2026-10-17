@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
-  SUB_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
   MID_OPTIONS,
   FILL_OPTIONS,
   CD_OPTIONS,
@@ -30,7 +30,8 @@ const KNOWN: Record<string, string> = {
   "lv123f:Vas": "datasheet Vas 42 L vs 37.3 L",
   "cindcx10:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.53x",
 };
-const all = [...SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS];
+// the Speaker page's subs: the PA's and its own
+const all = [...SPEAKER_SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS];
 const need = ["Fs", "Qms", "Sd", "Mms", "Bl", "Re", "Xmax", "aes"] as const;
 
 test("every driver with T/S has the fields the models use", (t) => {
@@ -167,7 +168,7 @@ test("xmax: the maker id, not the driver's name, picks the hi-fi estimate band",
     );
   }
   // every table row with an estimated Xmax got its band from its maker
-  for (const d of [...SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS, ...HIFI_WOOFERS]) {
+  for (const d of [...SPEAKER_SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS, ...HIFI_WOOFERS]) {
     const { pub, xmax } = d.ts;
     if (xmax.basis !== "estimated" || pub.Xmax == null || pub.formula !== "unstated") continue;
     const k = HIFI_MAKERS.has(d.maker) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro;
