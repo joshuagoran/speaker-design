@@ -1,5 +1,13 @@
 import { useMemo, useRef, useState } from "react";
-import type { FoldCheck, FoldWall, HornDrive, HornFold, HornSegment, SidePoint } from "../../types";
+import type {
+  FoldCheck,
+  FoldMouth,
+  FoldWall,
+  HornDrive,
+  HornFold,
+  HornSegment,
+  SidePoint,
+} from "../../types";
 import type { FoldTraceInput, foldTrace } from "../../lib/speaker/foldTrace";
 import {
   addBoard,
@@ -53,23 +61,30 @@ const TOOL = {
   remove: "remove",
   drivers: "drivers",
   mouth: "mouth",
+  vent: "vent",
   square: "square",
 } as const;
 type Tool = (typeof TOOL)[keyof typeof TOOL];
 
-/** What a press lands on, as its `data-hit` starts: a board, a board's end, the drivers or a mouth handle. */
+/** What a press lands on, as its `data-hit` starts: a board, a board's end, the drivers, or a mouth or vent handle. */
 const HIT = {
   board: "board",
   joint: "joint",
   drivers: "drivers",
   mouth: "mouth",
+  vent: "vent",
 } as const;
+
+/** The fold's openings in a wall: the horn's mouth and the rear chamber's vent. */
+type OpeningKey = keyof Pick<HornFold, "mouth" | "vent">;
 
 /** The drawing's scale, px per inch of the viewBox, and its margin round the walls, px. */
 const PX = 10;
 const PAD_PX = 14;
 /** The mouth a new click opens: this far each side of the click, in. */
 const NEW_MOUTH_HALF_IN = 4;
+/** The vent a new click opens: this far each side of the click, in. */
+const NEW_VENT_HALF_IN = 1.5;
 /** The band of air the chart's pointer lights: this far each side of its distance, in. */
 const BAND_IN = 0.4;
 /** The steps undo keeps. */
@@ -142,7 +157,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
     | { kind: typeof HIT.joint; drag: EndDrag }
     | { kind: typeof HIT.board; drag: BoardDrag }
     | { kind: typeof HIT.drivers }
-    | { kind: typeof HIT.mouth; fixedIn: number }
+    | { kind: typeof HIT.mouth; key: OpeningKey; fixedIn: number }
     | null
   >(null);
   /** the held pointer, so a second touch neither starts nor ends a press */
@@ -220,11 +235,19 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       svg.current?.setPointerCapture(e.pointerId);
     };
     switch (tool) {
-      case TOOL.mouth: {
-        if (what === HIT.mouth && (rest[0] === "fromIn" || rest[0] === "toIn")) {
+      case TOOL.mouth:
+      case TOOL.vent: {
+        const key: OpeningKey = tool === TOOL.vent ? "vent" : "mouth";
+        const at = fold[key];
+        if (
+          at &&
+          what === (key === "vent" ? HIT.vent : HIT.mouth) &&
+          (rest[0] === "fromIn" || rest[0] === "toIn")
+        ) {
           press.current = {
             kind: HIT.mouth,
-            fixedIn: rest[0] === "fromIn" ? fold.mouth.toIn : fold.mouth.fromIn,
+            key,
+            fixedIn: rest[0] === "fromIn" ? at.toIn : at.fromIn,
           };
           setLatest(fold);
           capture();
@@ -241,13 +264,10 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
         const span = upright(wall) ? H : D;
         const snap = (v: number) =>
           Math.min(span, Math.max(0, Math.round(v / FOLD_SNAP_IN) * FOLD_SNAP_IN));
+        const half = key === "vent" ? NEW_VENT_HALF_IN : NEW_MOUTH_HALF_IN;
         commit({
           ...fold,
-          mouth: {
-            wall,
-            fromIn: snap(along - NEW_MOUTH_HALF_IN),
-            toIn: snap(along + NEW_MOUTH_HALF_IN),
-          },
+          [key]: { wall, fromIn: snap(along - half), toIn: snap(along + half) },
         });
         return;
       }
@@ -261,6 +281,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       case TOOL.remove:
         if (what === HIT.joint && end) commit(unjoinCorner(fold, box, T, i, end));
         else if (what === HIT.drivers) commit({ ...fold, drivers: null });
+        else if (what === HIT.vent) commit(withoutVent(fold));
         else if (what === HIT.board) commit(deleteBoard(fold, i));
         return;
       case TOOL.drivers:
@@ -308,7 +329,8 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       const bd = now.boards[now.drivers.board];
       setLatest({ ...now, drivers: { ...now.drivers, along: segDist(p, bd.a, bd.b).t } });
     } else if (held.kind === HIT.mouth) {
-      const m = now.mouth;
+      const m = now[held.key];
+      if (!m) return;
       const span = upright(m.wall) ? H : D;
       const along = Math.min(
         span,
@@ -316,7 +338,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       );
       setLatest({
         ...now,
-        mouth: {
+        [held.key]: {
           ...m,
           fromIn: Math.min(held.fixedIn, along),
           toIn: Math.max(held.fixedIn, along),
@@ -343,6 +365,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
     const { grid, pathIn } = trace;
     return gridImage(grid, (k) => {
       if (grid.solid[k]) return null;
+      if (grid.vented[k]) return [yr, yg, yb, 0.2];
       const d = grid.dist[k];
       if (!Number.isFinite(d)) return [yr, yg, yb, 0.45];
       /** 0 at the mouth, 1 at the closed end; a band every 6 in along the path */
@@ -362,8 +385,8 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
     );
   }, [trace, hoverIn, pal]);
 
-  const m = shown.mouth;
-  const mouthLine: [SidePoint, SidePoint] =
+  /** an opening's line along its wall, in the middle of the wall's thickness */
+  const openingLine = (m: FoldMouth): [SidePoint, SidePoint] =>
     m.wall === FOLD_WALL.baffle
       ? [
           { zIn: -T / 2, yIn: m.fromIn },
@@ -383,6 +406,12 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
               { zIn: m.fromIn, yIn: H + T / 2 },
               { zIn: m.toIn, yIn: H + T / 2 },
             ];
+  const openings = (
+    [
+      { key: "mouth", hit: HIT.mouth, tool: TOOL.mouth, color: pal.cyan, at: shown.mouth },
+      { key: "vent", hit: HIT.vent, tool: TOOL.vent, color: pal.yellow, at: shown.vent },
+    ] as const
+  ).flatMap((o) => (o.at ? [{ ...o, line: openingLine(o.at) }] : []));
 
   const tools: { id: Tool; label: string; icon: React.ReactNode }[] = [
     {
@@ -410,6 +439,11 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       id: TOOL.mouth,
       label: FOLD_EDITOR_TEXT.mouth,
       icon: <path d="M3 2v4M3 10v4M6 8h7M10 5l3 3-3 3" />,
+    },
+    {
+      id: TOOL.vent,
+      label: FOLD_EDITOR_TEXT.vent,
+      icon: <path d="M3 2v5M3 9v5M3 7h9M3 9h9" />,
     },
     { id: TOOL.square, label: FOLD_EDITOR_TEXT.square, icon: <path d="M3 2v11h11M3 9h4v4" /> },
   ];
@@ -476,23 +510,31 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
               style={{ imageRendering: "pixelated" }}
             />
           )}
-          <line
-            x1={X(mouthLine[0].zIn)}
-            y1={Y(mouthLine[0].yIn)}
-            x2={X(mouthLine[1].zIn)}
-            y2={Y(mouthLine[1].yIn)}
-            stroke={pal.panel}
-            strokeWidth={T * PX + 2}
-          />
-          <line
-            x1={X(mouthLine[0].zIn)}
-            y1={Y(mouthLine[0].yIn)}
-            x2={X(mouthLine[1].zIn)}
-            y2={Y(mouthLine[1].yIn)}
-            stroke={pal.cyan}
-            strokeWidth={4 * u}
-            strokeLinecap="round"
-          />
+          {openings.map(({ key, hit, color, line }) => (
+            <g key={key}>
+              <line
+                x1={X(line[0].zIn)}
+                y1={Y(line[0].yIn)}
+                x2={X(line[1].zIn)}
+                y2={Y(line[1].yIn)}
+                stroke={pal.panel}
+                strokeWidth={T * PX + 2}
+              />
+              <line
+                data-hit={tool === TOOL.remove && hit === HIT.vent ? hit : undefined}
+                x1={X(line[0].zIn)}
+                y1={Y(line[0].yIn)}
+                x2={X(line[1].zIn)}
+                y2={Y(line[1].yIn)}
+                stroke={color}
+                strokeWidth={(tool === TOOL.remove && hit === HIT.vent ? 8 : 4) * u}
+                strokeLinecap="round"
+                style={
+                  tool === TOOL.remove && hit === HIT.vent ? { cursor: "not-allowed" } : undefined
+                }
+              />
+            </g>
+          ))}
           {band && (
             <image
               href={band}
@@ -558,20 +600,23 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
             </g>
           ))}
           <JointMarks fold={shown} box={box} boardIn={T} tool={tool} X={X} Y={Y} pal={pal} u={u} />
-          {tool === TOOL.mouth &&
-            (["fromIn", "toIn"] as const).map((end, k) => (
-              <circle
-                key={end}
-                data-hit={`${HIT.mouth}:${end}`}
-                cx={X(mouthLine[k].zIn)}
-                cy={Y(mouthLine[k].yIn)}
-                r={7 * u}
-                fill={pal.panel}
-                stroke={pal.cyan}
-                strokeWidth={2 * u}
-                style={{ cursor: "grab" }}
-              />
-            ))}
+          {openings
+            .filter((o) => o.tool === tool)
+            .flatMap(({ hit, color, line }) =>
+              (["fromIn", "toIn"] as const).map((end, k) => (
+                <circle
+                  key={end}
+                  data-hit={`${hit}:${end}`}
+                  cx={X(line[k].zIn)}
+                  cy={Y(line[k].yIn)}
+                  r={7 * u}
+                  fill={pal.panel}
+                  stroke={color}
+                  strokeWidth={2 * u}
+                  style={{ cursor: "grab" }}
+                />
+              )),
+            )}
           {drawing && (
             <line
               x1={X(drawing.a.zIn)}
@@ -691,6 +736,12 @@ function JointMarks({
   );
 }
 
+/** The fold with no vent. */
+function withoutVent(fold: HornFold): HornFold {
+  const { vent: _vent, ...rest } = fold;
+  return rest;
+}
+
 /** A check's notice text. */
 function checkText(c: FoldCheck): string {
   switch (c.id) {
@@ -749,6 +800,18 @@ function foldTiles(
     [FOLD_STAT_TEXT.mouth, mouth.areaIn2.toFixed(0), "in²"],
     [FOLD_STAT_TEXT.taps, FOLD_STAT_TEXT.tapsAt(fmt(trace.taps.front), fmt(trace.taps.back)), ""],
     ...(rear !== null ? [[FOLD_STAT_TEXT.rear, rear.toFixed(1), "L"] satisfies StatTileItem] : []),
+    ...(trace.vented
+      ? [
+          [
+            FOLD_STAT_TEXT.vent,
+            FOLD_STAT_TEXT.ventSize(
+              trace.vented.duct.heightIn.toFixed(1),
+              trace.vented.duct.lengthIn.toFixed(1),
+            ),
+            "",
+          ] satisfies StatTileItem,
+        ]
+      : []),
     ...(off !== null
       ? [[FOLD_STAT_TEXT.match, `±${off.toFixed(1)}`, "dB"] satisfies StatTileItem]
       : []),

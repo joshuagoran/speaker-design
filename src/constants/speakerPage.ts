@@ -262,15 +262,16 @@ export const FOLD_EDITOR_TEXT = {
   tools: "Drawing tools",
   move: "Move: drag a board, the end of a board, or the drivers.",
   board: "Add board: press and drag. The ends snap onto walls and other boards.",
-  remove: "Delete: click a board, a corner or the drivers.",
+  remove: "Delete: click a board, a corner, the drivers or the vent.",
   drivers: "Drivers: click a board to put them there. Click again to turn them.",
   mouth: "Mouth: click a wall to open the mouth there. Drag its two ends.",
+  vent: "Vent: click a wall of the rear chamber to open a vent there. Drag its two ends. Add boards to make its duct.",
   square: "Square joint: click a joint to hold it at 90°. Click again to free it.",
   undo: "Undo (Ctrl+Z or Cmd+Z)",
   closedEnd: "closed end",
   label: "Side view of the folded horn. The baffle is at the left.",
   notDrawn: "Draw the folded horn. Until then, the response shows the straight horn.",
-  key: "Blue: the passage. Yellow: sealed air. Yellow circle: a joint. Yellow square: held at 90°.",
+  key: "Blue: the passage. Yellow: sealed air. Pale yellow: ported air. Yellow circle: a joint. Yellow square: held at 90°.",
 } as const;
 
 /** The folded horn's figures, as their tiles name them. */
