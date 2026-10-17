@@ -2335,13 +2335,19 @@ export interface FoldMouth {
 }
 
 /**
- * A folded horn as the user draws it in the side section: its boards, its drivers and its mouth. The app traces the
- * passage from these (lib/speaker/foldTrace); nothing about the passage is stored.
+ * A folded horn as the user draws it in the side section: its boards, its drivers, its mouth and, when the rear chamber
+ * has one, its vent. The app traces the passage and the vent from these (lib/speaker/foldTrace); nothing about them is
+ * stored.
  */
 export interface HornFold {
   boards: FoldBoard[];
   drivers: FoldDrivers | null;
   mouth: FoldMouth;
+  /**
+   * the rear chamber's vent opening, drawn as the mouth is: a wall and two ends along it. The boards the user draws
+   * round it form the vent's duct (a slot as wide as the chamber). Absent: the rear chamber has no vent.
+   */
+  vent?: FoldMouth;
 }
 
 /** One row of drivers in a traced fold (`foldDriverParts`): where it sits and how it is drawn. */
@@ -2405,7 +2411,10 @@ export type FoldCheck =
       fromClosedEndIn: number;
       /** the width there */
       widthIn: number;
-    };
+    }
+  | { id: (typeof FOLD_CHECK)["ventBlocked"] }
+  | { id: (typeof FOLD_CHECK)["ventLeak"] }
+  | { id: (typeof FOLD_CHECK)["ventStray"] };
 
 /** A pocket of air the mouth does not reach. */
 export interface FoldSealedPocket {
@@ -2417,6 +2426,27 @@ export interface FoldSealedPocket {
   opensToBack: boolean;
   /** the fronts of the first row of cones open into it */
   opensToFront: boolean;
+}
+
+/**
+ * The rear chamber's vent as a slot port: the duct from the vent's opening inward. Its height is the mean width over the
+ * run, its area that times the chamber's inside width, its length the run plus the wall's thickness.
+ */
+export interface FoldVentDuct {
+  /** the duct's length, in: the run from the opening plus the wall the opening is cut in */
+  lengthIn: number;
+  /** the duct's height across its section, in (its width is the chamber's inside width) */
+  heightIn: number;
+  /** the duct's open area, in² */
+  areaIn2: number;
+}
+
+/**
+ * The air the vent's opening reaches: the rear chamber's vented air. It is a sealed pocket (`FoldSealedPocket`) that has
+ * a vent; its `liters` are the chamber's air less the duct's.
+ */
+export interface FoldVentedChamber extends FoldSealedPocket {
+  duct: FoldVentDuct;
 }
 
 /** The air around a fold on a grid: the distance of each cell from the mouth, through the air. */
@@ -2433,6 +2463,8 @@ export interface FoldGrid {
   dist: Float64Array;
   /** by the same index: the sealed pocket's index in `FoldTrace.sealed`, or -1 */
   pocket: Int32Array;
+  /** by the same index: 1 for the air the vent's opening reaches (`FoldTrace.vented`), else 0 */
+  vented: Uint8Array;
 }
 
 /** The traced passage of a folded horn (lib/speaker/foldTrace). */
@@ -2448,6 +2480,8 @@ export interface FoldTrace {
   taps: { front: number | null; back: number | null };
   /** the air the mouth does not reach, as separate volumes */
   sealed: FoldSealedPocket[];
+  /** the air the vent reaches and its duct; null with no vent, or a vent that opens onto a board or into the passage */
+  vented: FoldVentedChamber | null;
   /** the horn type the taps make; null with no mouth, no drivers, or drivers that open nowhere */
   hornType: HornDrive["kind"] | null;
   /** the drivers' rows, for drawing; empty with no drivers */

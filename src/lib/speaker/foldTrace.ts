@@ -19,6 +19,7 @@ import {
   FOLD_SECTION_STEP_IN,
   FOLD_SMOOTH_SECTIONS,
   FOLD_THIN_IN,
+  FOLD_VENT_END_RATIO,
 } from "../../constants/foldHorn";
 import { FOLD_WALL, HORN_DRIVE } from "../../constants/speakerSpec";
 import { LITERS_PER_CUBIC_IN } from "../../constants/units";
@@ -29,6 +30,7 @@ import type {
   FoldMouth,
   FoldSealedPocket,
   FoldTrace,
+  FoldVentedChamber,
   HornFold,
   SidePoint,
 } from "../../types";
@@ -210,7 +212,13 @@ const CHAMFER_BACKWARD: readonly (readonly [number, number, number])[] = [
   [-1, 1, Math.SQRT2],
 ];
 
-/** What the air just off a side of the cones is: the passage (`horn`, `sIn` in from the closed end) or a sealed pocket. */
+/** The `Sample` pocket index of the vented chamber (a sealed pocket's is its index in `FoldTrace.sealed`). */
+const VENTED = -1;
+
+/**
+ * What the air just off a side of the cones is: the passage (`horn`, `sIn` in from the closed end), a sealed pocket
+ * (`pocket`: its index) or the vented chamber (`pocket` is `VENTED`).
+ */
 type Sample = { horn: true; sIn: number } | { horn: false; pocket: number };
 
 /** Whether `cell` of the grid is on the mouth's opening: on its wall, between `fromIn` and `toIn`. */
@@ -236,6 +244,11 @@ function onMouth(
  * neighbors, √2 on the diagonal), and takes air with no distance as sealed. The width at each distance is twice the
  * largest clearance (distance to the nearest solid cell) in its 0.5 in band, smoothed over 2.5 in; the area is that
  * times the inside width. The taps are the air just off each side of the first row of cones.
+ *
+ * The vent (`fold.vent`) is traced the same way from its own opening: the air it reaches that the mouth does not is the
+ * vented chamber, not a sealed pocket. Its duct runs from the opening inward until the width first passes
+ * `FOLD_VENT_END_RATIO` times the opening's: its height is the mean width over the run, its length the run and the
+ * wall's thickness (`boardIn`). A vent whose opening the mouth reaches leaks (no vented chamber).
  */
 export function foldTrace(input: FoldTraceInput): FoldTrace {
   const { depthIn, heightIn, widthIn, boardIn, fold, driver } = input;
@@ -291,45 +304,73 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
     );
   }
 
-  // the mouth: the air cells along the opening
-  const mouthCells: number[] = [];
-  for (let j = 0; j < ny; j++)
-    for (let i = 0; i < nz; i++)
-      if (!solid[at(i, j)] && onMouth(fold.mouth, i, j, nz, ny, cellIn)) mouthCells.push(at(i, j));
+  /** whether a cell is on the mouth's or the vent's opening: no wall there */
+  const onOpening = (i: number, j: number) =>
+    onMouth(fold.mouth, i, j, nz, ny, cellIn) ||
+    (fold.vent !== undefined && onMouth(fold.vent, i, j, nz, ny, cellIn));
 
-  // the distance from the mouth through the air
-  const dist = new Float64Array(count).fill(Infinity);
-  const heap = createHeap();
-  for (const cell of mouthCells) {
-    dist[cell] = 0;
-    heap.push(0, cell);
-  }
-  while (heap.size) {
-    const { key, cell } = heap.pop();
-    if (key > dist[cell]) continue;
-    const i = cell % nz;
-    const j = Math.floor(cell / nz);
-    for (const [di, dj, step] of NEIGHBORS) {
-      const a = i + di;
-      const b = j + dj;
-      if (a < 0 || b < 0 || a >= nz || b >= ny) continue;
-      const next = at(a, b);
-      if (solid[next]) continue;
-      // no squeezing diagonally between two solid cells
-      if (di && dj && (solid[at(i + di, j)] || solid[at(i, j + dj)])) continue;
-      const nextDist = key + step * cellIn;
-      if (nextDist < dist[next]) {
-        dist[next] = nextDist;
-        heap.push(nextDist, next);
+  /** The distance from `sources` through the air, in (eight neighbors, √2 on the diagonal); Infinity where it never reaches. */
+  const flood = (sources: readonly number[]) => {
+    const reach = new Float64Array(count).fill(Infinity);
+    const heap = createHeap();
+    for (const cell of sources) {
+      reach[cell] = 0;
+      heap.push(0, cell);
+    }
+    while (heap.size) {
+      const { key, cell } = heap.pop();
+      if (key > reach[cell]) continue;
+      const i = cell % nz;
+      const j = Math.floor(cell / nz);
+      for (const [di, dj, step] of NEIGHBORS) {
+        const a = i + di;
+        const b = j + dj;
+        if (a < 0 || b < 0 || a >= nz || b >= ny) continue;
+        const next = at(a, b);
+        if (solid[next]) continue;
+        // no squeezing diagonally between two solid cells
+        if (di && dj && (solid[at(i + di, j)] || solid[at(i, j + dj)])) continue;
+        const nextDist = key + step * cellIn;
+        if (nextDist < reach[next]) {
+          reach[next] = nextDist;
+          heap.push(nextDist, next);
+        }
       }
     }
-  }
+    return reach;
+  };
+  /** the air cells along an opening */
+  const openingCells = (opening: FoldMouth) => {
+    const cells: number[] = [];
+    for (let j = 0; j < ny; j++)
+      for (let i = 0; i < nz; i++)
+        if (!solid[at(i, j)] && onMouth(opening, i, j, nz, ny, cellIn)) cells.push(at(i, j));
+    return cells;
+  };
 
-  // sealed pockets: air the mouth never reaches
+  // the mouth: the air cells along the opening, and the distance from them through the air
+  const mouthCells = openingCells(fold.mouth);
+  const dist = flood(mouthCells);
+
+  // the vent: the distance from its opening through the air the mouth did not reach; an opening the mouth reaches leaks
+  const ventCells = fold.vent ? openingCells(fold.vent) : [];
+  const ventLeaks = ventCells.some((cell) => dist[cell] < Infinity);
+  const ventDist = ventCells.length && !ventLeaks ? flood(ventCells) : null;
+  const vented = new Uint8Array(count);
+  let ventedCells = 0;
+  if (ventDist)
+    for (let k = 0; k < count; k++)
+      if (ventDist[k] < Infinity) {
+        vented[k] = 1;
+        ventedCells++;
+      }
+
+  // sealed pockets: air neither the mouth nor the vent reaches
   const pocket = new Int32Array(count).fill(-1);
   const sealed: FoldSealedPocket[] = [];
+  const isSealedAir = (k: number) => !solid[k] && dist[k] === Infinity && !vented[k];
   for (let k = 0; k < count; k++) {
-    if (solid[k] || dist[k] < Infinity || pocket[k] >= 0) continue;
+    if (!isSealedAir(k) || pocket[k] >= 0) continue;
     const id = sealed.length;
     const stack = [k];
     let cells = 0;
@@ -344,7 +385,7 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
         const b = j + dj;
         if (a < 0 || b < 0 || a >= nz || b >= ny) continue;
         const next = at(a, b);
-        if (!solid[next] && dist[next] === Infinity && pocket[next] < 0) {
+        if (isSealedAir(next) && pocket[next] < 0) {
           pocket[next] = id;
           stack.push(next);
         }
@@ -368,16 +409,13 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
     }
   const closedEnd = endCell >= 0 ? cellPoint(endCell % nz, Math.floor(endCell / nz)) : null;
 
-  // the clearance: each air cell's distance to the nearest board, driver or wall (the mouth's opening is no wall)
+  // the clearance: each air cell's distance to the nearest board, driver or wall (the mouth's and the vent's openings are no wall)
   const clearance = new Float64Array(count).fill(Infinity);
   for (let j = 0; j < ny; j++)
     for (let i = 0; i < nz; i++) {
       const k = at(i, j);
       if (solid[k]) clearance[k] = 0;
-      else if (
-        (i === 0 || i === nz - 1 || j === 0 || j === ny - 1) &&
-        !onMouth(fold.mouth, i, j, nz, ny, cellIn)
-      )
+      else if ((i === 0 || i === nz - 1 || j === 0 || j === ny - 1) && !onOpening(i, j))
         clearance[k] = cellIn / 2;
     }
   // two sweeps of the chamfer distance (forward and back) settle it on this grid
@@ -430,6 +468,43 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
         .reverse()
     : [];
 
+  // the vented chamber and its duct: the width at each distance from the vent's opening, as the path's, unsmoothed (a
+  // smoothed width would blur where the duct opens into the chamber); the duct runs until the width first passes
+  // `FOLD_VENT_END_RATIO` times the opening's
+  const litersOf = (cells: number) => cells * cellIn * cellIn * widthIn * LITERS_PER_CUBIC_IN;
+  let ventedChamber: FoldVentedChamber | null = null;
+  if (ventDist) {
+    let reach = 0;
+    for (let k = 0; k < count; k++) if (vented[k] && ventDist[k] > reach) reach = ventDist[k];
+    const ventBands = Math.floor(reach / step) + 1;
+    const ventWidest = new Float64Array(ventBands);
+    /** the opening's width: its open cells' sides */
+    const openingIn = ventCells.length * cellIn;
+    const limitIn = FOLD_VENT_END_RATIO * openingIn;
+    let runIn = Infinity;
+    for (let k = 0; k < count; k++)
+      if (vented[k]) {
+        const band = Math.floor(ventDist[k] / step);
+        ventWidest[band] = Math.max(ventWidest[band], 2 * clearance[k]);
+        if (2 * clearance[k] > limitIn && ventDist[k] < runIn) runIn = ventDist[k];
+      }
+    // a duct with no wide air past it is the whole vented air: the chamber has none left
+    const run = Math.min(runIn, reach + cellIn);
+    /** the sections that lie wholly inside the run: none when the opening is wide open to the chamber */
+    const inRun = Math.min(ventBands, Math.floor(run / step));
+    const heightIn =
+      inRun > 0 ? ventWidest.slice(0, inRun).reduce((sum, w) => sum + w, 0) / inRun : openingIn;
+    let ductCells = 0;
+    for (let k = 0; k < count; k++) if (vented[k] && ventDist[k] < run) ductCells++;
+    ventedChamber = {
+      cells: ventedCells,
+      liters: litersOf(ventedCells - ductCells),
+      opensToBack: false,
+      opensToFront: false,
+      duct: { lengthIn: run + boardIn, heightIn, areaIn2: heightIn * widthIn },
+    };
+  }
+
   // the taps: the air just off each side of the first row of cones
   const sample = (p: SidePoint): Sample | null => {
     const i = Math.floor(p.zIn / cellIn);
@@ -437,9 +512,16 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
     if (i < 0 || j < 0 || i >= nz || j >= ny) return null;
     const k = at(i, j);
     if (solid[k]) return null;
+    if (vented[k]) return { horn: false, pocket: VENTED };
     return dist[k] < Infinity
       ? { horn: true, sIn: pathIn - dist[k] }
       : { horn: false, pocket: pocket[k] };
+  };
+  /** the air a side of the cones opens into, a sealed pocket or the vented chamber: it opens to that side */
+  const opensInto = (air: Sample | null, side: "opensToFront" | "opensToBack") => {
+    if (!air || air.horn) return;
+    const target = air.pocket === VENTED ? ventedChamber : sealed[air.pocket];
+    if (target) target[side] = true;
   };
   const first = parts.length ? parts[0] : null;
   let front: Sample | null = null;
@@ -458,8 +540,8 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
     );
     front = sample(add(first.coneFace, first.out, cellIn * 1.5));
     rear = beside.find((s) => s?.horn) ?? beside.find((s) => s) ?? null;
-    if (front && !front.horn) sealed[front.pocket].opensToFront = true;
-    if (rear && !rear.horn) sealed[rear.pocket].opensToBack = true;
+    opensInto(front, "opensToFront");
+    opensInto(rear, "opensToBack");
   }
   const taps = {
     front: front?.horn ? front.sIn : null,
@@ -541,6 +623,11 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
   }
   const strayAir = sealed.filter((s) => !s.opensToBack && !s.opensToFront).length;
   if (strayAir) checks.push({ id: FOLD_CHECK.strayAir, count: strayAir });
+  // the vent: an opening on a board, an opening into the passage, or a chamber no driver uses
+  if (fold.vent && !ventCells.length) checks.push({ id: FOLD_CHECK.ventBlocked });
+  if (ventLeaks) checks.push({ id: FOLD_CHECK.ventLeak });
+  if (ventedChamber && !ventedChamber.opensToBack && !ventedChamber.opensToFront)
+    checks.push({ id: FOLD_CHECK.ventStray });
 
   // chokes: the area falls under 3/4 of its usual size over the 15 in before (the median, so a turn's bulge does not
   // count; the ends left out)
@@ -571,12 +658,13 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
   if (thin) checks.push({ id: FOLD_CHECK.thin, fromClosedEndIn: thin.sIn, widthIn: thin.widthIn });
 
   return {
-    grid: { cellIn, nz, ny, solid, dist, pocket },
+    grid: { cellIn, nz, ny, solid, dist, pocket, vented },
     pathIn,
     closedEnd,
     sections,
     taps,
     sealed,
+    vented: ventedChamber,
     hornType,
     parts,
     checks,

@@ -29,6 +29,7 @@ import type {
   CutPart,
   Dims3,
   FacePoint,
+  FoldMouth,
   HornFold,
   PlateHole,
   PortStyle,
@@ -116,7 +117,8 @@ import { coneDepthIn, driverListing, sourceOf } from "./driverParts";
 import { conesAreaCm2, frontChamber, throatCones } from "./hornThroat";
 import { chamberSetbackIn, driverBoardPieces } from "./driverBoard";
 import { foldCutlist, type FoldCutEnd } from "./foldBoards";
-import { foldRoom } from "./foldHorn";
+import { drawnSeg, len, sub } from "./foldGeometry";
+import { foldRoom, isDrawn } from "./foldHorn";
 import { segmentsAirLiters } from "../acoustics/hornSegments";
 import {
   PORT_RULE,
@@ -972,9 +974,10 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
       paSub: f.paSub && { ...f.paSub, box: f.box },
       inside: f.inside,
       clearL: f.inside.iw * f.inside.ih * f.inside.inD * LITERS_PER_CUBIC_IN,
-      ventL: vent ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
+      // a drawn horn's vent is its drawing's (the chamber's own is not read: lib/speaker/hornDesign)
+      ventL: vent && !drawnFoldOf(chamber) ? vent.areaIn2 * vent.lenIn * LITERS_PER_CUBIC_IN : 0,
       hornL: hornAirL(cabinet, chamber),
-      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f),
+      woodL: insideWoodL(cabinet, f, bracing) + driverBoardL(cabinet, f) + foldBoardL(cabinet, f),
       recessL: hardware?.liters ?? 0,
       lb: { wood, drivers, hardware: hardwareLb, total: wood + drivers + hardwareLb },
     };
@@ -1035,6 +1038,28 @@ function foldedOf(chamber: SpeakerChamber): HornFold | null {
   return horn?.fold && horn.path === HORN_PATH.folded ? horn.fold : null;
 }
 
+/** The chamber's drawn horn when it has a board (`isDrawn`), else null: the horn the views and the sound model read as drawn. */
+function drawnFoldOf(chamber: SpeakerChamber): HornFold | null {
+  const fold = foldedOf(chamber);
+  return fold && isDrawn(fold) ? fold : null;
+}
+
+/**
+ * The wood of a drawn horn's boards, L (0 for none): each board's drawn length (`drawnSeg`) by the walls' thickness by the
+ * chamber's clear width. The drivers' bodies are not taken off here: the cones' displacement is (`chamberNetLiters`).
+ */
+function foldBoardL(cabinet: SpeakerCabinet, f: ChamberFrame): number {
+  const fold = drawnFoldOf(f.placed.chamber);
+  if (!fold) return 0;
+  const { widthIn, boardIn } = foldRoom(cabinet, f.placed.chamber);
+  return (
+    fold.boards.reduce((sum, _, i) => {
+      const seg = drawnSeg(fold.boards, i, boardIn);
+      return sum + len(sub(seg.b, seg.a)) * boardIn * widthIn;
+    }, 0) * LITERS_PER_CUBIC_IN
+  );
+}
+
 /** How a cut reads in a horn board's note: its angle off square and what it meets (`FoldCutEnd`). */
 function foldEndWords({ meets, cutDeg }: FoldCutEnd): string {
   // one decimal, none when square
@@ -1055,9 +1080,14 @@ function foldBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
   const { chamber } = f.placed;
   const fold = foldedOf(chamber);
   if (!fold) return [];
-  const { depthIn, heightIn, widthIn, boardIn } = foldRoom(cabinet, chamber);
+  const { depthIn, heightIn, widthIn, boardIn, driver } = foldRoom(cabinet, chamber);
   return foldCutlist(fold, { depthIn, heightIn, widthIn }, boardIn).map((cut) => {
     const [first, second] = [cut.ends.a, cut.ends.b].map(foldEndWords);
+    // the drivers' cutouts go on the board they mount on
+    const cutouts =
+      driver && fold.drivers?.board === cut.board
+        ? SPEAKER_TEXT.foldDriverCutNote(driver.count, formatInches(driver.cutoutIn))
+        : null;
     return {
       box: chamberCutBox(f.index),
       part: "hornBoard",
@@ -1065,7 +1095,7 @@ function foldBoardParts(cabinet: SpeakerCabinet, f: ChamberFrame): CutPart[] {
       a: cut.longIn,
       b: cut.widthIn,
       t: boardIn,
-      note: SPEAKER_TEXT.foldBoardNote(cut.board + 1, first, second),
+      note: joinNotes([SPEAKER_TEXT.foldBoardNote(cut.board + 1, first, second), cutouts]),
     };
   });
 }
@@ -1152,13 +1182,15 @@ function chamberNotes(
   f: ChamberFrame,
   marks: BaffleMarks,
   ownBox: boolean,
-): { baffle: string[]; back: string[]; side: string[] } {
+): { baffle: string[]; back: string[]; side: string[]; top: string[]; bottom: string[] } {
   const { placed } = f;
   const { chamber } = placed;
   const t = cabinet.panel.thicknessIn;
   const baffle: string[] = [],
     back: string[] = [],
-    side: string[] = [];
+    side: string[] = [],
+    top: string[] = [],
+    bottom: string[] = [];
   const at = (p: FacePoint) => `centered ${marks.up(p.yIn)}${marks.across(p.xIn)}`;
   if (f.paSub) {
     const { sub, style, vent } = f.paSub;
@@ -1242,18 +1274,37 @@ function chamberNotes(
         at({ xIn: flare.mouth.x + flare.mouth.w / 2, yIn: flare.mouth.y + flare.mouth.h / 2 }),
       ),
     );
-  // a folded horn's mouth in the baffle or the back (one in the top or the bottom has no note to go in yet)
-  const fold = foldedOf(chamber);
-  if (fold && (fold.mouth.wall === FOLD_WALL.baffle || fold.mouth.wall === FOLD_WALL.back)) {
-    const { widthIn } = foldRoom(cabinet, chamber);
-    const { fromIn, toIn } = fold.mouth;
-    (fold.mouth.wall === FOLD_WALL.baffle ? baffle : back).push(
-      SPEAKER_TEXT.hornMouthNote(
-        formatInches(widthIn),
-        formatInches(toIn - fromIn),
-        at({ xIn: placed.clear.x + placed.clear.w / 2, yIn: placed.clear.y + (fromIn + toIn) / 2 }),
-      ),
-    );
+  // a drawn horn's mouth and its rear chamber's vent, each on the panel its wall is: the baffle or the back by its
+  // place up the wall, the top or the bottom (one of the two panels of the row) by its place back from the baffle
+  const fold = drawnFoldOf(chamber);
+  if (fold) {
+    const { widthIn, depthIn } = foldRoom(cabinet, chamber);
+    const openingNote = (
+      opening: FoldMouth,
+      words: (w: string, h: string, where: string) => string,
+    ) => {
+      const up = opening.wall === FOLD_WALL.baffle || opening.wall === FOLD_WALL.back;
+      const from = Math.max(0, Math.min(opening.fromIn, opening.toIn));
+      const to = Math.min(up ? placed.clear.h : depthIn, Math.max(opening.fromIn, opening.toIn));
+      if (!(to > from)) return;
+      const size = [formatInches(widthIn), formatInches(to - from)] as const;
+      if (up)
+        (opening.wall === FOLD_WALL.baffle ? baffle : back).push(
+          words(
+            ...size,
+            at({ xIn: placed.clear.x + placed.clear.w / 2, yIn: placed.clear.y + (from + to) / 2 }),
+          ),
+        );
+      else
+        (opening.wall === FOLD_WALL.top ? top : bottom).push(
+          SPEAKER_TEXT.foldWallOnly(
+            FOLD_WALL_NAMES[opening.wall],
+            words(...size, SPEAKER_TEXT.foldOpeningDepth(formatInches(from), formatInches(to))),
+          ),
+        );
+    };
+    openingNote(fold.mouth, SPEAKER_TEXT.hornMouthNote);
+    if (fold.vent) openingNote(fold.vent, SPEAKER_TEXT.hornVentNote);
   }
   const rule = portRule(chamber);
   if (rule?.rule === PORT_RULE.hifi) {
@@ -1291,16 +1342,21 @@ function chamberNotes(
       (panel === PANEL.back ? back : panel === PANEL.side ? side : baffle).push(note);
     }
   }
-  return { baffle, back, side };
+  return { baffle, back, side, top, bottom };
 }
 
 /** The hardware's cutout notes on a box's panels, with more notes on its sides and back (vents, radiators). */
 function withNotes(
   hw: HardwareCutNotes | undefined,
-  more: { back: readonly string[]; side: readonly string[] },
+  more: { back: readonly string[]; side: readonly string[]; top?: readonly string[] },
 ): HardwareCutNotes {
   const join = (a: string | undefined, b: readonly string[]) => joinNotes([a, ...b]) || undefined;
-  return { ...hw, side: join(hw?.side, more.side), back: join(hw?.back, more.back) };
+  return {
+    ...hw,
+    side: join(hw?.side, more.side),
+    back: join(hw?.back, more.back),
+    top: join(hw?.top, more.top ?? []),
+  };
 }
 
 /**
@@ -1429,6 +1485,7 @@ export function speakerCutParts(
     const hw = withNotes(plan ? hardwareCutNotes(plan, base.box, t) : undefined, {
       back: notes.flatMap((n) => n.back),
       side: notes.flatMap((n) => n.side),
+      top: notes.flatMap((n) => [...n.top, ...n.bottom]),
     });
     if (frame) {
       const shell = boxParts(SHELL_CUT_BOX, size.w, size.h, size.d, t, inset, joint, {
@@ -1451,6 +1508,7 @@ export function speakerCutParts(
       parts.push(
         ...flushBoxPanels(SHELL_CUT_BOX, size, t, joint, {
           side: hw.side,
+          top: joinNotes(notes.flatMap((n) => [...n.top, ...n.bottom])),
           baffle: [...notes.flatMap((n) => n.baffle), roundover],
           back: flushBack(
             hw.back,
@@ -1497,7 +1555,10 @@ export function speakerCutParts(
       : flushMarks(boxY, centerX, joint, t);
     const notes = chamberNotes(cabinet, f, marks, true);
     const { bracing, hardware } = build.chambers[f.index];
-    const hw = withNotes(hardware ? hardwareCutNotes(hardware, f.box, t) : undefined, notes);
+    const hw = withNotes(hardware ? hardwareCutNotes(hardware, f.box, t) : undefined, {
+      ...notes,
+      top: [...notes.top, ...notes.bottom],
+    });
     const own = frame
       ? boxParts(box, f.box.w, f.box.h, f.box.d, t, inset, joint, {
           band: f.inside.band,
@@ -1508,6 +1569,7 @@ export function speakerCutParts(
         }).P
       : flushBoxPanels(box, f.box, t, joint, {
           side: hw.side,
+          top: joinNotes([...notes.top, ...notes.bottom]),
           baffle: [...notes.baffle, roundover],
           back: flushBack(hw.back, railsOnBack(bracing)),
         });

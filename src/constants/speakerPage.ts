@@ -279,10 +279,13 @@ export const FOLD_STAT_TEXT = {
   mouth: "Mouth",
   taps: "Cones open at",
   rear: "Rear chamber",
+  vent: "Vent",
   match: "Off the straight horn",
   /** where the cones open, in from the closed end: one or two formatted lengths */
   tapsAt: (front: string | null, back: string | null) =>
     [front, back].filter((t) => t !== null).join(" and ") || "nowhere",
+  /** the vent's duct: its height and its length (both formatted, in inches), as "1.5 × 6 in" */
+  ventSize: (height: string, length: string) => `${height} × ${length} in`,
 } as const;
 
 /** What each check on a drawn horn says (`FOLD_CHECK`), from its figures (lengths formatted). */
@@ -306,6 +309,9 @@ export const FOLD_CHECK_TEXT = {
       : `${count} pockets of sealed air do nothing.`,
   thin: (at: string, width: string) =>
     `The passage is only ${width} wide ${at} from the closed end.`,
+  ventBlocked: () => "The vent opens onto a board. Move the vent or the board.",
+  ventLeak: () => "The vent opens into the horn's passage. Move the vent or add a board.",
+  ventStray: () => "The vent opens into air that no driver uses.",
   /** the drawing makes a different horn type than the Horn type setting */
   typeDiffers: (drawn: string, set: string) =>
     `The drawing traces as ${drawn}. Horn type is set to ${set}.`,
@@ -380,6 +386,16 @@ export const SPEAKER_TEXT = {
   /** the horn mouth's opening on a wall's cutlist note: its size and where it sits */
   hornMouthNote: (w: string, h: string, where: string) =>
     `horn mouth: ${w} × ${h}″ opening, ${where}`,
+  /** the drawn rear chamber's vent opening on a wall's cutlist note: its size and where it sits */
+  hornVentNote: (w: string, h: string, where: string) => `vent: ${w} × ${h}″ opening, ${where}`,
+  /** where an opening in the top or the bottom sits: its two ends, back from the baffle's inside face */
+  foldOpeningDepth: (from: string, to: string) =>
+    `${from}″ to ${to}″ back from the baffle's inside face`,
+  /** a note on the top and bottom row that applies to one of the two panels: `wall` is its name */
+  foldWallOnly: (wall: string, note: string) => `${wall} only: ${note}`,
+  /** the drivers' cutouts on the board they mount on: how many, and each one's diameter (formatted, in inches) */
+  foldDriverCutNote: (count: number, diameter: string) =>
+    `${count} × ${diameter}″ round driver cutout${count > 1 ? "s" : ""}`,
   /**
    * a folded horn board's cutlist note: its number, then its two ends' cuts, or one cut when both ends are alike. A
    * semicolon starts a new line of the row's notes, so the note has none.

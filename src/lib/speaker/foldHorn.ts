@@ -121,13 +121,14 @@ export function tracedFold(room: TraceRoom, fold: HornFold): TracedHorn {
 
 /**
  * What the sound model reads of a trace: conical sections at most `SECTION_IN` long, with a boundary at each tap, and
- * the drive on those boundaries; the sealed air the cones' other side opens into. A tapped or offset horn starts at the
+ * the drive on those boundaries; the air the cones' other side opens into (the vented chamber with its duct as the
+ * rear vent, else a sealed pocket). A tapped or offset horn starts at the
  * closed end; a front-loaded one starts at the cones (the stub behind them is part of the cones' air). No drive when
  * the trace finds no horn.
  */
 export function traceModel(trace: ReturnType<typeof foldTrace>): TracedHornModel {
-  const { hornType, taps, sections, pathIn, sealed, grid } = trace;
-  const none: TracedHornModel = { segments: [], drive: null, rearLiters: null };
+  const { hornType, taps, sections, pathIn, sealed, vented, grid } = trace;
+  const none: TracedHornModel = { segments: [], drive: null, rearLiters: null, rearVent: null };
   if (!hornType || !sections.length || !(pathIn > 0)) return none;
   const opened = [taps.front, taps.back]
     .filter((t): t is number => t !== null)
@@ -155,12 +156,30 @@ export function traceModel(trace: ReturnType<typeof foldTrace>): TracedHornModel
           ? { kind: HORN_DRIVE.front }
           : null;
   if (!drive) return none;
-  if (hornType === HORN_DRIVE.tapped) return { segments, drive, rearLiters: null };
+  if (hornType === HORN_DRIVE.tapped) return { segments, drive, rearLiters: null, rearVent: null };
+  /** which side of the cones is closed */
+  const closedSide = taps.front === null ? "opensToFront" : "opensToBack";
+  // the vented chamber when it holds the cones' closed side: its duct is the rear chamber's slot port
+  if (vented?.[closedSide] && vented.liters > 0) {
+    const { duct } = vented;
+    return {
+      segments,
+      drive,
+      rearLiters: vented.liters,
+      // the duct's width is the chamber's inside width: its area over its height
+      rearVent: {
+        areaIn2: duct.areaIn2,
+        lengthIn: duct.lengthIn,
+        heightIn: duct.heightIn,
+        widthIn: duct.areaIn2 / duct.heightIn,
+      },
+    };
+  }
   /** the sealed air the cones' closed side opens into: a front-loaded or offset horn's rear chamber */
-  const rear = sealed.find((p) => (taps.front === null ? p.opensToFront : p.opensToBack));
+  const rear = sealed.find((p) => p[closedSide]);
   // no air behind the cones: no horn to play (the trace's rear chamber check says why)
   if (!rear || !(rear.liters > 0)) return none;
-  return { segments, drive, rearLiters: rear.liters };
+  return { segments, drive, rearLiters: rear.liters, rearVent: null };
 }
 
 /**
