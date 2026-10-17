@@ -108,7 +108,7 @@ Run each in the mock first, then in the app before every hand-over.
 4. Find what the response chart includes, in Details.
 5. Change a chamber from Box to Horn. Bracing and back panel go away; the horn settings come.
 6. Set fiber fill. Read what it does without a tooltip.
-7. Set a band's highpass and lowpass without long button rows.
+7. Set a band's high-pass and low-pass without long button rows.
 8. Add a second driver, then delete it with its trash icon.
 9. Move a driver on the baffle by dragging it in the Front view. Read its position in the fields.
 
