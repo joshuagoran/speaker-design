@@ -74,8 +74,10 @@ function parabolic(
 /**
  * Each case: the target, its drive and the limits it meets: the area match (dB), the taps' distance from the target's
  * (in, summed) and the path's (in). The starts' limits are tight: the search reaches them. The parabolic ones are
- * looser: the trace narrows to a point at the closed end (over 1 dB of the match by itself), and a fold's taps sit
- * where its drivers fit.
+ * looser: the trace narrows to a point at the closed end (over 1 dB of the match by itself), a fold's taps sit where
+ * its drivers fit, and its legs fill the room. The path runs along the passage's middle, so a leg gives about the
+ * room's 30 in depth: the front-loaded parabolic horn (60 in from the cones) falls between two legs (about 48 in) and
+ * three (about 77 in), and the tapped one's legs come out wider than its areas.
  */
 const CASES: {
   name: string;
@@ -92,7 +94,7 @@ const CASES: {
     name: "tapped parabolic",
     target: parabolic(80, 100, 300, [0.1, 0.55]),
     drive: { kind: HORN_DRIVE.tapped, frontTap: 1, rearTap: 2 },
-    offDb: 2.25,
+    offDb: 2.75,
     tapIn: 12,
     pathIn: 8,
   },
@@ -110,7 +112,7 @@ const CASES: {
     drive: { kind: HORN_DRIVE.front },
     offDb: 0.75,
     tapIn: 0,
-    pathIn: 4,
+    pathIn: 12,
   },
 ];
 

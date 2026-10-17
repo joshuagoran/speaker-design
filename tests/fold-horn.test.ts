@@ -72,7 +72,7 @@ test("a tapped spiral: both taps on section boundaries, the whole path long, no 
   expect(m.drive.frontTap).toBeGreaterThan(0);
   expect(m.drive.rearTap).toBeGreaterThan(m.drive.frontTap);
   expect(m.drive.rearTap).toBeLessThan(m.segments.length);
-  expect(lengthIn(m)).toBeCloseTo(75, 0);
+  expect(lengthIn(m)).toBeCloseTo(traceOf(TAPPED).pathIn, 6);
   expect(m.rearLiters).toBeNull();
   expect(m.segments.every((s) => s.s1 > 0 && s.s2 > 0 && s.length > 0)).toBe(true);
 });
@@ -84,9 +84,11 @@ test("an offset horn: one tap, and the sealed air behind the cones as its rear c
 });
 
 test("a front-loaded horn starts at the cones", () => {
-  const m = modelOf(FRONT);
+  const t = traceOf(FRONT);
+  const m = traceModel(t);
   expect(m.drive?.kind).toBe(HORN_DRIVE.front);
-  expect(lengthIn(m)).toBeLessThan(67);
+  expect(t.taps.front).toBeGreaterThan(0);
+  expect(lengthIn(m)).toBeCloseTo(t.pathIn - (t.taps.front ?? 0), 6);
   expect(m.rearLiters).toBeGreaterThan(50);
 });
 
@@ -160,7 +162,9 @@ test("a horn with no vent, or a vent no driver uses, has a sealed rear chamber",
   expect(modelOf(OFFSET).rearVent).toBeNull();
   const stray: HornFold = {
     ...OFFSET,
-    boards: [...SERPENTINE_BOARDS, board(pt(20, 0), pt(20, 12))],
+    // an upright board, clear of the basket, splits the rear chamber: the vent is in front of it, the cones' back
+    // opens behind it
+    boards: [...SERPENTINE_BOARDS, board(pt(8, 0), pt(8, 12))],
     vent: { wall: FOLD_WALL.baffle, fromIn: 3, toIn: 4.5 },
   };
   const m = modelOf(stray);
