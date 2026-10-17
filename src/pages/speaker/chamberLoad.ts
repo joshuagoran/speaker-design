@@ -15,12 +15,13 @@ import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { frontChamber, throatCones, wallClearanceIn } from "../../lib/speaker/hornThroat";
 import { hornDesignOf } from "../../lib/speaker/hornDesign";
-import { tracedHorn } from "../../lib/speaker/foldHorn";
+import { foldRoom, tracedHorn } from "../../lib/speaker/foldHorn";
 import { HORN_GOALS_DEFAULT } from "../../constants/hornGoals";
 import { withDriveKind } from "./hornSections";
 import { clearDepthIn, chamberClearFace } from "../../lib/speaker/chamberAir";
 import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
 import { goalHorn, hornGoalFit, type GoalDrive } from "../../lib/speaker/hornGoals";
+import { foldLayout } from "../../lib/speaker/foldLayout";
 import { DEFAULT_VENTS } from "./speakerParts";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
@@ -150,11 +151,26 @@ export function withGoalHorn(
     room.depthIn * CM_PER_IN,
   );
   if (!found) return null;
+  const sized: SpeakerChamber = {
+    ...searched,
+    load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
+    netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+  };
+  const wasFolded =
+    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.path === HORN_PATH.folded;
+  if (!wasFolded && found.horn.path !== HORN_PATH.folded) return { chamber: sized, fit: found.fit };
+  // a folded horn: boards placed so the traced passage follows the straight horn (none found: the straight horn plays
+  // until the user draws), and its vent drawn, so the chamber's own goes
+  const fold = foldLayout(foldRoom(cabinet, sized), found.horn.segments, found.horn.drive);
+  const { fold: _old, ...straight } = found.horn;
   return {
     chamber: {
-      ...searched,
-      load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
-      netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+      ...sized,
+      vent: DEFAULT_VENTS.sealed,
+      load: {
+        kind: CHAMBER_LOAD.horn,
+        horn: { ...straight, path: HORN_PATH.folded, ...(fold ? { fold } : {}) },
+      },
     },
     fit: found.fit,
   };
