@@ -158,14 +158,14 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
       throat.peak > throat.limit
         ? [
             "warn",
-            "Throat air too fast at full power",
-            `${throat.peak.toFixed(1)} m/s at the horn throat at ${formatHz(throat.hz)}, over the ${throat.limit.toFixed(1)} m/s the box takes. Use a lower compression ratio.`,
+            "Fast air at the horn throat",
+            `${throat.peak.toFixed(1)} m/s at the horn throat at full power (${formatHz(throat.hz)}). Above ${throat.limit.toFixed(1)} m/s, the throat adds distortion. Use a lower compression ratio.`,
             "speakerThroatSpeed",
           ]
         : [
             "ok",
-            "Throat air speed inside its limit",
-            `At most ${throat.peak.toFixed(1)} m/s at the horn throat (${formatHz(throat.hz)}), under the ${throat.limit.toFixed(1)} m/s the box takes.`,
+            "Throat air speed under the guide",
+            `At most ${throat.peak.toFixed(1)} m/s at the horn throat at full power (${formatHz(throat.hz)}). The guide is ${throat.limit.toFixed(1)} m/s.`,
             "speakerThroatSpeed",
           ],
     );

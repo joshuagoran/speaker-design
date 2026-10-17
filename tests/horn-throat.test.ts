@@ -1,6 +1,6 @@
 // A front-loaded horn's throat (lib/speaker/hornThroat): the walls' back edges cover the cones' outer parts, the
 // compression ratio sets the throat (the first section's start area), the front chamber is the cones' air under the
-// edges, and the throat's air speed at full power is a limit, as a vent's.
+// edges, and the throat's air speed at full power is shown against a guide, with no limit.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
@@ -123,7 +123,7 @@ function atRatio(spec: SpeakerSpec, ratio: number): SpeakerSpec {
 const limitsOf = (spec: SpeakerSpec) =>
   speakerLimits(spec, speakerResponse(spec, { feed: spec.input }), { feed: spec.input });
 
-test("horn throat: the throat's air speed at full power is a limit against the box's, with its check", () => {
+test("horn throat: the throat's air speed at full power is checked against the box's, and does not limit", () => {
   const base = templateSpeaker(SPEAKER_TEMPLATE.paV2MidBox);
   const [chamber] = base.cabinet.chambers;
   assert.ok(chamber.vent.kind === VENT_KIND.vented);
@@ -131,7 +131,7 @@ test("horn throat: the throat's air speed at full power is a limit against the b
   // the template: inside the limit, the check passes
   const ok = limitsOf(base).chambers[0];
   assert.ok(ok?.throat, "a horn has a throat check");
-  assert.equal(ok.throat.limit, boxMax, "the box's air speed limit");
+  assert.equal(ok.throat.limit, boxMax, "the box's air speed, as the guide");
   assert.ok(ok.throat.peak > 0 && ok.throat.peak < boxMax, `${ok.throat.peak} m/s`);
   const okChip = chamberChips(ok, "Mid").find((c) => c[3] === "speakerThroatSpeed");
   assert.equal(okChip?.[0], "ok");
@@ -142,11 +142,11 @@ test("horn throat: the throat's air speed at full power is a limit against the b
   assert.ok(fast?.throat && fast.throat.peak > ok.throat.peak);
   assert.ok(fast.throat.peak > boxMax, `${fast.throat.peak} m/s at ${ratio}:1`);
   const chip = chamberChips(fast, "Mid").find((c) => c[3] === "speakerThroatSpeed");
-  assert.equal(chip?.[0], "warn", "the limit check fails");
-  // and it sets the maximum level somewhere in the band
+  assert.equal(chip?.[0], "warn", "the guide check warns");
+  // and it never sets the maximum level
   assert.ok(
-    tight.sum.some((p) => p.who === LIMIT_NAMES.throat),
-    "the throat speed binds",
+    !tight.sum.some((p) => p.who === LIMIT_NAMES.throat),
+    "the throat speed does not limit",
   );
   // a direct chamber has none
   const direct: SpeakerSpec = {
