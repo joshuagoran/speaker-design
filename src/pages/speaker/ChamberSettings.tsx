@@ -53,6 +53,7 @@ import {
   CHAMBER_LOAD,
   DRIVER_KIND,
   HORN_DRIVE,
+  HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
   SLOT_KIND,
@@ -172,6 +173,9 @@ export function ChamberSettings({
   /** a tapped horn: its chamber takes no vent */
   const tapped =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.drive.kind === HORN_DRIVE.tapped;
+  /** a folded horn: its vent is drawn in its side view */
+  const folded =
+    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.path === HORN_PATH.folded;
   /** how the horn meets its goals, and whether it holds more air than the chamber has */
   const netLiters = result?.netLiters ?? chamber.netLiters ?? undefined;
   /** the clear face, as numbers: the layout is new each render, the face often is not */
@@ -288,11 +292,18 @@ export function ChamberSettings({
           fit={goalCheck?.fit ?? null}
           overAir={goalCheck?.overAir ?? null}
           onEdit={(edit) =>
-            onEdit((c) =>
-              c.load.kind === CHAMBER_LOAD.horn
-                ? { ...c, load: { ...c.load, horn: edit(c.load.horn) } }
-                : c,
-            )
+            onEdit((c) => {
+              if (c.load.kind !== CHAMBER_LOAD.horn) return c;
+              const horn = edit(c.load.horn);
+              // a folded horn's vent is drawn in its side view: the chamber's own vent goes
+              const drawnVent =
+                horn.path === HORN_PATH.folded && c.load.horn.path !== HORN_PATH.folded;
+              return {
+                ...c,
+                load: { ...c.load, horn },
+                ...(drawnVent ? { vent: DEFAULT_VENTS[VENT_KIND.sealed] } : {}),
+              };
+            })
           }
           onDrive={(kind) => onEdit((c) => withHornDrive(c, kind))}
           onDesign={(goals) => {
@@ -334,8 +345,11 @@ export function ChamberSettings({
         onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
         options={entriesOf(VENT_KIND_NAMES)}
         disabled={
-          tapped
-            ? { values: [VENT_KIND.vented, VENT_KIND.radiator], why: SPEAKER_TEXT.ventTapped }
+          tapped || folded
+            ? {
+                values: [VENT_KIND.vented, VENT_KIND.radiator],
+                why: tapped ? SPEAKER_TEXT.ventTapped : SPEAKER_TEXT.ventDrawn,
+              }
             : undefined
         }
       />

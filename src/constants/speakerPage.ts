@@ -526,6 +526,7 @@ export const SPEAKER_TEXT = {
   hornTappedAir: "The chamber volume is the air behind the cones.",
   /** why a tapped horn's chamber takes no vent */
   ventTapped: "A tapped horn has no vent.",
+  ventDrawn: "Draw a folded horn's vent in its side view.",
   hornGoals: "Goals",
   hornGoalsTip:
     "What the horn is for. Design from goals sizes the horn to fit inside this chamber and meet them.",
