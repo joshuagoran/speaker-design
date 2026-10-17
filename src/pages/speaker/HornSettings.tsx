@@ -10,7 +10,7 @@ import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
 import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/speakerPage";
-import { HORN_DRIVE } from "../../constants/speakerSpec";
+import { HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { COMPRESSION_RATIO } from "../../constants/hornThroat";
 import {
   compressionRatio,
@@ -21,7 +21,7 @@ import {
 import { driverSetbackIn } from "../../lib/speaker/driverBoard";
 import { shownIn } from "./speakerFields";
 import { FIELD_ROW, HEADING_GROUP, GAP_Y, GAP_Y_TIGHT } from "../../styles/layout";
-import { hornText } from "./speakerText";
+import { hornText, straightHornText } from "./speakerText";
 import { HornGoalsFields } from "./HornGoalsFields";
 import { HornImportFold } from "./HornImportFold";
 import type { HornImport } from "./hornrespImport";
@@ -156,17 +156,121 @@ export function HornSettings({
   /** Steps on: latched while the horn has a step, so a field typed back to smooth stays; only Off turns it off */
   const [stepsOn, setStepsOn] = useState(() => stepsLatched(false, segments));
   if (stepsLatched(stepsOn, segments) !== stepsOn) setStepsOn(true);
+  /** a folded horn: its drawing sets the taps, the throat and the shape; the sections are only its target */
+  const folded = horn.path === HORN_PATH.folded;
   const editSegments = (edit: (list: readonly HornSegment[]) => HornSegment[] | null) =>
     onEdit((h) => {
       const next = edit(h.segments);
       return next ? { ...h, segments: next } : h;
     });
+  const sectionsBlock = (
+    <div className={GAP_Y_TIGHT}>
+      <div className="text-sm font-label text-stone-500">
+        <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
+      </div>
+      {segments.map((s, i) => (
+        <div key={i} className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${GAP_Y}`}>
+          <CardHeading
+            sub
+            action={
+              // a drive's taps need their sections: no Remove at the fewest
+              segments.length > SECTIONS_NEEDED[drive.kind] && (
+                <Button
+                  size="xs"
+                  onClick={() =>
+                    onEdit((h) => ({
+                      ...h,
+                      segments: withSectionRemoved(h.segments, i),
+                      drive: driveAfterRemoval(h.drive, i, h.segments.length - 1),
+                    }))
+                  }
+                >
+                  {SPEAKER_TEXT.removeSection}
+                </Button>
+              )
+            }
+          >
+            {SPEAKER_TEXT.hornSection(i + 1)}
+          </CardHeading>
+          <ToggleGroup
+            label={<Tooltip tip={SPEAKER_TEXT.hornProfileTip}>{SPEAKER_TEXT.hornProfile}</Tooltip>}
+            value={s.profile}
+            onChange={(profile) => editSegments((list) => withSectionProfile(list, i, profile))}
+            options={entriesOf(HORN_PROFILE_NAMES)}
+          />
+          <div className={FIELD_ROW}>
+            {/* a smooth horn's starts follow the previous ends: only the throat's shows */}
+            {SECTION_FIELDS.filter(({ size }) => stepsOn || i === 0 || size !== "s1").map(
+              ({ size, label, tip, step }) => (
+                // `contents`: the wrapper only hears the field's focus, the row lays out the field
+                <div
+                  key={size}
+                  className="contents"
+                  onFocus={() => {
+                    joinedAtFocus.current = size === "s2" ? joinsNext(segments, i) : null;
+                  }}
+                  onBlur={() => {
+                    joinedAtFocus.current = null;
+                  }}
+                >
+                  <NumberField
+                    label={<Tooltip tip={tip}>{label}</Tooltip>}
+                    value={shownSize(s, size)}
+                    min={0}
+                    step={step}
+                    onChange={(v) =>
+                      editSegments((list) =>
+                        withSectionSize(
+                          list,
+                          i,
+                          size,
+                          v,
+                          // smooth: the next start always follows
+                          !stepsOn || (joinedAtFocus.current ?? joinsNext(list, i)),
+                        ),
+                      )
+                    }
+                  />
+                </div>
+              ),
+            )}
+          </div>
+          {stepsIn(segments, i) && (
+            <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornStep(i + 1)}</p>
+          )}
+        </div>
+      ))}
+      <Button variant="primary" size="xs" onClick={() => editSegments(withSectionAdded)}>
+        {SPEAKER_TEXT.addSection}
+      </Button>
+    </div>
+  );
+  const stepsFold = (
+    <SettingsFold title={SPEAKER_TEXT.advanced} summary={SPEAKER_TEXT.hornSteps(steps)}>
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.hornStepsTip}>{SPEAKER_TEXT.hornStepsSetting}</Tooltip>}
+        value={stepsOn}
+        onChange={(on) => {
+          setStepsOn(on);
+          // off: every start back to the previous end
+          if (!on) editSegments(withStepsSmoothed);
+        }}
+        options={STEPS_OPTIONS}
+      />
+    </SettingsFold>
+  );
   return (
     <section className={`border-t border-stone-300 pt-3 ${GAP_Y}`}>
       <div className={HEADING_GROUP}>
         <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
         <p className="text-xs text-stone-500">{hornText(horn)}</p>
       </div>
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
+        value={horn.path}
+        onChange={(path) => onEdit((h) => ({ ...h, path }))}
+        options={entriesOf(HORN_PATH_NAMES)}
+      />
       <HornGoalsFields
         goals={horn.goals ?? HORN_GOALS_DEFAULT}
         fit={fit}
@@ -183,7 +287,8 @@ export function HornSettings({
         options={entriesOf(HORN_DRIVE_NAMES)}
         disabled={{ values: DRIVES_NOT_MODELED, why: SPEAKER_TEXT.hornDriveNote }}
       />
-      {(drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) &&
+      {!folded &&
+        (drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) &&
         TAP_FIELDS[drive.kind].map(({ key, label, tip }) => (
           <ToggleGroup
             key={key}
@@ -193,152 +298,67 @@ export function HornSettings({
             options={segments.slice(0, -1).map((_, i) => [i + 1, String(i + 1)] as const)}
           />
         ))}
-      {drive.kind === HORN_DRIVE.tapped && (
+      {!folded && drive.kind === HORN_DRIVE.tapped && (
         <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornTappedAir}</p>
       )}
-      <div className={FIELD_ROW}>
-        {/* the ratio is the cones' area over the path's start: a front-loaded horn's throat only */}
-        {ratio !== null && drive.kind === HORN_DRIVE.front && (
-          <NumberField
-            label={
-              <Tooltip tip={SPEAKER_TEXT.hornCompressionTip}>
-                {SPEAKER_TEXT.hornCompression}
-              </Tooltip>
-            }
-            value={shownIn(ratio)}
-            min={COMPRESSION_RATIO.min}
-            max={COMPRESSION_RATIO.max}
-            step={COMPRESSION_RATIO.step}
-            unit=": 1"
-            onChange={(r) => {
-              if (r > 0) editSegments((list) => withCompressionRatio(list, conesCm2, r));
-            }}
-          />
-        )}
-        {front && (
-          <ReadOnlyField
-            label={
-              <Tooltip
-                tip={
-                  front.estimated
-                    ? `${SPEAKER_TEXT.hornFrontChamberTip} ${SPEAKER_TEXT.hornFrontChamberEstimate}`
-                    : SPEAKER_TEXT.hornFrontChamberTip
-                }
-              >
-                {SPEAKER_TEXT.hornFrontChamber}
-              </Tooltip>
-            }
-            value={shownIn(front.liters)}
-            unit="L"
-          />
-        )}
-      </div>
-      <div className={GAP_Y_TIGHT}>
-        <div className="text-sm font-label text-stone-500">
-          <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
-        </div>
-        {segments.map((s, i) => (
-          <div key={i} className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${GAP_Y}`}>
-            <CardHeading
-              sub
-              action={
-                // a drive's taps need their sections: no Remove at the fewest
-                segments.length > SECTIONS_NEEDED[drive.kind] && (
-                  <Button
-                    size="xs"
-                    onClick={() =>
-                      onEdit((h) => ({
-                        ...h,
-                        segments: withSectionRemoved(h.segments, i),
-                        drive: driveAfterRemoval(h.drive, i, h.segments.length - 1),
-                      }))
-                    }
-                  >
-                    {SPEAKER_TEXT.removeSection}
-                  </Button>
-                )
-              }
-            >
-              {SPEAKER_TEXT.hornSection(i + 1)}
-            </CardHeading>
-            <ToggleGroup
+      {!folded && (
+        <div className={FIELD_ROW}>
+          {/* the ratio is the cones' area over the path's start: a front-loaded horn's throat only */}
+          {ratio !== null && drive.kind === HORN_DRIVE.front && (
+            <NumberField
               label={
-                <Tooltip tip={SPEAKER_TEXT.hornProfileTip}>{SPEAKER_TEXT.hornProfile}</Tooltip>
+                <Tooltip tip={SPEAKER_TEXT.hornCompressionTip}>
+                  {SPEAKER_TEXT.hornCompression}
+                </Tooltip>
               }
-              value={s.profile}
-              onChange={(profile) => editSegments((list) => withSectionProfile(list, i, profile))}
-              options={entriesOf(HORN_PROFILE_NAMES)}
+              value={shownIn(ratio)}
+              min={COMPRESSION_RATIO.min}
+              max={COMPRESSION_RATIO.max}
+              step={COMPRESSION_RATIO.step}
+              unit=": 1"
+              onChange={(r) => {
+                if (r > 0) editSegments((list) => withCompressionRatio(list, conesCm2, r));
+              }}
             />
-            <div className={FIELD_ROW}>
-              {/* a smooth horn's starts follow the previous ends: only the throat's shows */}
-              {SECTION_FIELDS.filter(({ size }) => stepsOn || i === 0 || size !== "s1").map(
-                ({ size, label, tip, step }) => (
-                  // `contents`: the wrapper only hears the field's focus, the row lays out the field
-                  <div
-                    key={size}
-                    className="contents"
-                    onFocus={() => {
-                      joinedAtFocus.current = size === "s2" ? joinsNext(segments, i) : null;
-                    }}
-                    onBlur={() => {
-                      joinedAtFocus.current = null;
-                    }}
-                  >
-                    <NumberField
-                      label={<Tooltip tip={tip}>{label}</Tooltip>}
-                      value={shownSize(s, size)}
-                      min={0}
-                      step={step}
-                      onChange={(v) =>
-                        editSegments((list) =>
-                          withSectionSize(
-                            list,
-                            i,
-                            size,
-                            v,
-                            // smooth: the next start always follows
-                            !stepsOn || (joinedAtFocus.current ?? joinsNext(list, i)),
-                          ),
-                        )
-                      }
-                    />
-                  </div>
-                ),
-              )}
-            </div>
-            {stepsIn(segments, i) && (
-              <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornStep(i + 1)}</p>
-            )}
-          </div>
-        ))}
-        <Button variant="primary" size="xs" onClick={() => editSegments(withSectionAdded)}>
-          {SPEAKER_TEXT.addSection}
-        </Button>
-      </div>
-      <SettingsFold title={SPEAKER_TEXT.advanced} summary={SPEAKER_TEXT.hornSteps(steps)}>
+          )}
+          {front && (
+            <ReadOnlyField
+              label={
+                <Tooltip
+                  tip={
+                    front.estimated
+                      ? `${SPEAKER_TEXT.hornFrontChamberTip} ${SPEAKER_TEXT.hornFrontChamberEstimate}`
+                      : SPEAKER_TEXT.hornFrontChamberTip
+                  }
+                >
+                  {SPEAKER_TEXT.hornFrontChamber}
+                </Tooltip>
+              }
+              value={shownIn(front.liters)}
+              unit="L"
+            />
+          )}
+        </div>
+      )}
+      {folded ? (
+        <SettingsFold title={SPEAKER_TEXT.straightHorn} summary={straightHornText(horn)}>
+          <p className="text-xs text-stone-500">{SPEAKER_TEXT.straightHornNote}</p>
+          {sectionsBlock}
+        </SettingsFold>
+      ) : (
+        <>
+          {sectionsBlock}
+          {stepsFold}
+        </>
+      )}
+      {!folded && (
         <ToggleGroup
-          label={<Tooltip tip={SPEAKER_TEXT.hornStepsTip}>{SPEAKER_TEXT.hornStepsSetting}</Tooltip>}
-          value={stepsOn}
-          onChange={(on) => {
-            setStepsOn(on);
-            // off: every start back to the previous end
-            if (!on) editSegments(withStepsSmoothed);
-          }}
-          options={STEPS_OPTIONS}
+          label={<Tooltip tip={SPEAKER_TEXT.hornBoardTip}>{SPEAKER_TEXT.hornBoard}</Tooltip>}
+          value={horn.doubleBoard === true}
+          onChange={(doubleBoard) => onEdit((h) => ({ ...h, doubleBoard }))}
+          options={BOARD_OPTIONS}
         />
-      </SettingsFold>
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.hornBoardTip}>{SPEAKER_TEXT.hornBoard}</Tooltip>}
-        value={horn.doubleBoard === true}
-        onChange={(doubleBoard) => onEdit((h) => ({ ...h, doubleBoard }))}
-        options={BOARD_OPTIONS}
-      />
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
-        value={horn.path}
-        onChange={(path) => onEdit((h) => ({ ...h, path }))}
-        options={entriesOf(HORN_PATH_NAMES)}
-      />
+      )}
       <HornImportFold onImport={onImport} />
     </section>
   );

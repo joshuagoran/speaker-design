@@ -95,6 +95,9 @@ export type FoldEndKind = (typeof FOLD_END)[keyof typeof FOLD_END];
 /** The step a board end moves in while drawing or dragging, in. */
 export const FOLD_SNAP_IN = 0.25;
 
+/** The least clear depth or height a wall drag leaves the folded horn's room, in. */
+export const FOLD_MIN_ROOM_IN = 6;
+
 /** An end this close to a wall, another board's end or another board's face snaps onto it, in. */
 export const FOLD_SNAP_TO_IN = 0.6;
 

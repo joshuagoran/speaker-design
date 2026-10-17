@@ -144,9 +144,9 @@ export const HORN_PLACEMENT_NO_FIT = {
   top: "Another chamber is on the top of this chamber.",
 } as const satisfies Record<HornPlacement, string>;
 
-/** How a chamber's drivers meet the air, as the chamber's Load setting names it (`CHAMBER_LOAD`). */
+/** How a chamber's drivers meet the air, as the chamber's Type setting names it (`CHAMBER_LOAD`). */
 export const CHAMBER_LOAD_NAMES = {
-  direct: "Direct",
+  direct: "Box",
   horn: "Horn",
 } as const satisfies Record<ChamberLoad["kind"], string>;
 
@@ -246,9 +246,9 @@ export const FOLD_CHART_TEXT = {
   label: "Passage area against distance from the closed end",
   xAxis: "distance from the closed end, in",
   yAxis: "area, in²",
-  traced: "Traced path",
+  traced: "Drawn passage",
   target: "Straight horn",
-  taps: "Cones open",
+  taps: "Taps",
   front: "front",
   back: "back",
   /** the readout at the place pointed at: distance, width, area (numbers as formatted text) */
@@ -264,27 +264,38 @@ export const FOLD_EDITOR_TEXT = {
   board: "Add board: press and drag. The ends snap onto walls and other boards.",
   remove: "Delete: click a board, a corner, the drivers or the vent.",
   drivers: "Drivers: click a board to put them there. Click again to turn them.",
-  mouth: "Mouth: click a wall to open the mouth there. Drag its two ends.",
-  vent: "Vent: click a wall of the rear chamber to open a vent there. Drag its two ends. Add boards to make its duct.",
+  opening:
+    "Opening: click a wall next to the passage to move the mouth, or next to the rear chamber to open a vent. Drag the ends of either.",
   square: "Square joint: click a joint to hold it at 90°. Click again to free it.",
   undo: "Undo (Ctrl+Z or Cmd+Z)",
   closedEnd: "closed end",
   label: "Side view of the folded horn. The baffle is at the left.",
   notDrawn: "Draw the folded horn. Until then, the response shows the straight horn.",
-  key: "Blue: the passage. Yellow: sealed air. Pale yellow: ported air. Yellow circle: a joint. Yellow square: held at 90°.",
+  /** the drawing's legend, under it */
+  legend: {
+    boards: "boards",
+    passage: "passage, dark at the closed end",
+    sealed: "sealed air",
+    ported: "ported air",
+    drivers: "drivers (the line is the cone)",
+    mouth: "mouth",
+    vent: "vent",
+    joint: "joint",
+    held: "held at 90°",
+  },
 } as const;
 
 /** The folded horn's figures, as their tiles name them. */
 export const FOLD_STAT_TEXT = {
   path: "Path",
   mouth: "Mouth",
-  taps: "Cones open at",
+  taps: "Taps from closed end",
   rear: "Rear chamber",
   vent: "Vent",
   match: "Off the straight horn",
   /** where the cones open, in from the closed end: one or two formatted lengths */
   tapsAt: (front: string | null, back: string | null) =>
-    [front, back].filter((t) => t !== null).join(" and ") || "nowhere",
+    [front, back].filter((t) => t !== null).join(" and ") || "none",
   /** the vent's duct: its height and its length (both formatted, in inches), as "1.5 × 6 in" */
   ventSize: (height: string, length: string) => `${height} × ${length} in`,
 } as const;
@@ -501,9 +512,9 @@ export const SPEAKER_TEXT = {
   /** the side ducts' dividers' tooltip: the shared tip, and which thickness each size takes */
   ductDividersTip: `${UI_TEXT.ductDividersTip} Dividers of the wall size have the thickness of the walls. You can measure it on the Cutlist page. Dividers of a different size have the default thickness.`,
   ventFixed: "The shape of this port sets its position.",
-  load: "Load",
+  load: "Type",
   loadTip:
-    "Direct: the cones radiate from the baffle. Horn: a horn in the box. A new horn has one conical section from the cones to the clear face. The net air is then the rear chamber.",
+    "Box: the cones radiate from the baffle, sealed or ported. Horn: a horn in the box, straight or folded. A new horn has one conical section from the cones to the clear face. The net air is then the rear chamber.",
   loadNoCone: "A horn needs a cone driver with Thiele/Small parameters in this chamber.",
   horn: "Horn",
   hornSections: "Flare sections",
@@ -589,6 +600,8 @@ export const SPEAKER_TEXT = {
     `Section ${n} starts at a different area than section ${n - 1} ends. This makes a step in the horn.`,
   /** the closed fold for settings most designs leave alone (a horn's steps, a chamber's position) */
   advanced: "Advanced",
+  straightHorn: "Straight horn",
+  straightHornNote: "The shape the drawing should follow. The path chart shows it dashed.",
   /** the chamber Advanced fold's summary: its position, in */
   chamberAt: (x: number, y: number) => `${x} in from left, ${y} in up`,
   /** the Advanced fold's summary: the steps in the horn now */

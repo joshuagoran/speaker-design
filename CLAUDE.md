@@ -9,7 +9,8 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - UI text never mentions another page by name when that page may go away (today: the PA, Hi-fi, Coverage and Fills pages). Say what is true instead.
 - UI text never names internal rules, models or code. Say what is true for the user.
 - **Charts use fixed axes.** Never autoscale a chart to its data; give it a fixed range for its purpose so designs compare
-  by eye as settings change.
+  by eye as settings change. Exception (owner-approved): the folded horn's path chart scales its axes to the drawing and its
+  straight horn.
 - **Charts on the same view share the same scales**, x and y. Frequency charts use the PA stack's x axis (15 Hz–20 kHz);
   every maximum-output chart (the PA response chart, the PA optimizer cards, the Hi-fi and Speaker page maximum-output
   charts) uses 80–140 dB (`MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`); every sensitivity or response chart (the Hi-fi

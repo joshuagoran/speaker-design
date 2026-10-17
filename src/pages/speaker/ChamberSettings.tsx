@@ -212,6 +212,17 @@ export function ChamberSettings({
       >
         Chamber {index + 1}
       </CardHeading>
+      <ToggleGroup
+        label={<Tooltip tip={SPEAKER_TEXT.loadTip}>{SPEAKER_TEXT.load}</Tooltip>}
+        value={chamber.load.kind}
+        onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
+        options={entriesOf(CHAMBER_LOAD_NAMES)}
+        disabled={
+          chamber.load.kind === CHAMBER_LOAD.direct && !startingHorn(chamber, room)
+            ? { values: [CHAMBER_LOAD.horn], why: SPEAKER_TEXT.loadNoCone }
+            : undefined
+        }
+      />
       <div className={FIELD_ROW}>
         {(["w", "h", "d"] as const).map((k) => (
           <NumberField
@@ -245,26 +256,31 @@ export function ChamberSettings({
           />
         </div>
       </SettingsFold>
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.netAirTip}>Net air</Tooltip>}
-        value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
-        onChange={(v) =>
-          onEdit((c) => ({
-            ...c,
-            netLiters: v === NET_AIR.auto ? null : shownTenth(result?.netLiters ?? 20),
-          }))
-        }
-        options={entriesOf(SET_BY_NAMES)}
-      />
-      <NumberField
-        label="Volume, L"
-        // Auto: the model's value, read-only
-        value={chamber.netLiters ?? shownTenth(result?.netLiters ?? 0)}
-        disabled={chamber.netLiters === null}
-        min={0.5}
-        step={SPEAKER_STEPS.netL}
-        onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
-      />
+      {/* a folded horn's rear chamber is the air its drawing leaves: no net air to set */}
+      {!folded && (
+        <>
+          <ToggleGroup
+            label={<Tooltip tip={SPEAKER_TEXT.netAirTip}>Net air</Tooltip>}
+            value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
+            onChange={(v) =>
+              onEdit((c) => ({
+                ...c,
+                netLiters: v === NET_AIR.auto ? null : shownTenth(result?.netLiters ?? 20),
+              }))
+            }
+            options={entriesOf(SET_BY_NAMES)}
+          />
+          <NumberField
+            label="Volume, L"
+            // Auto: the model's value, read-only
+            value={chamber.netLiters ?? shownTenth(result?.netLiters ?? 0)}
+            disabled={chamber.netLiters === null}
+            min={0.5}
+            step={SPEAKER_STEPS.netL}
+            onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
+          />
+        </>
+      )}
       <NumberField
         label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>{SPEAKER_TEXT.stuffing}</Tooltip>}
         value={chamber.stuffingPct}
@@ -272,17 +288,6 @@ export function ChamberSettings({
         max={STUFFING_MAX_PCT}
         step={5}
         onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
-      />
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.loadTip}>{SPEAKER_TEXT.load}</Tooltip>}
-        value={chamber.load.kind}
-        onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
-        options={entriesOf(CHAMBER_LOAD_NAMES)}
-        disabled={
-          chamber.load.kind === CHAMBER_LOAD.direct && !startingHorn(chamber, room)
-            ? { values: [CHAMBER_LOAD.horn], why: SPEAKER_TEXT.loadNoCone }
-            : undefined
-        }
       />
       {chamber.load.kind === CHAMBER_LOAD.horn && (
         <HornSettings

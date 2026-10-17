@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   FoldCheck,
   FoldMouth,
@@ -34,7 +34,7 @@ import {
   unit,
   JOIN_IN,
 } from "../../lib/speaker/foldGeometry";
-import { FOLD_END, FOLD_SNAP_IN } from "../../constants/foldHorn";
+import { FOLD_END, FOLD_MIN_ROOM_IN, FOLD_SNAP_IN } from "../../constants/foldHorn";
 import { FOLD_WALL } from "../../constants/speakerSpec";
 import {
   FOLD_CHECK_TEXT,
@@ -51,7 +51,8 @@ import { FoldPathChart } from "../charts/FoldPathChart";
 import { offTargetDb } from "../../lib/speaker/foldMatch";
 import { Icon, IconButton } from "../ui/IconButton";
 import { usePalette } from "../../hooks/useTheme";
-import { useElementWidth } from "../../hooks/useElementWidth";
+import { useWidthAtLeast } from "../../hooks/useElementWidth";
+import { FOLD_TWO_COLUMN_PX } from "../../styles/layout";
 import { SVG_FONT } from "../../styles/fonts";
 import type { Palette } from "../../styles/palette";
 
@@ -61,8 +62,7 @@ const TOOL = {
   board: "board",
   remove: "remove",
   drivers: "drivers",
-  mouth: "mouth",
-  vent: "vent",
+  opening: "opening",
   square: "square",
 } as const;
 type Tool = (typeof TOOL)[keyof typeof TOOL];
@@ -74,6 +74,7 @@ const HIT = {
   drivers: "drivers",
   mouth: "mouth",
   vent: "vent",
+  wall: "wall",
 } as const;
 
 /** The fold's openings in a wall: the horn's mouth and the rear chamber's vent. */
@@ -100,6 +101,8 @@ interface Props {
   onChange: (fold: HornFold) => void;
   /** the Horn type setting, for the notice when the drawing makes another type */
   setType: HornDrive["kind"];
+  /** a wall dragged: how much to add to the chamber's depth and height, in */
+  onResize: (grow: { depthIn: number; heightIn: number }) => void;
 }
 
 /** The walls a mouth runs up (baffle, back) rather than across (bottom, top). */
@@ -143,9 +146,11 @@ function gridImage(
  * Ctrl+Z or Cmd+Z undoes. Under it, the passage's area along the path against the straight horn; pointing at either
  * marks the same place in the other. A drag edits a draft and hands the fold over when it ends.
  */
-export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
+export function FoldEditor({ room, fold, target, onChange, setType, onResize }: Props) {
   const pal = usePalette();
-  const [frame, widthPx] = useElementWidth(800);
+  /** the drawing's width on screen, px: below the frame's when its height cap narrows it */
+  const [widthPx, setWidthPx] = useState(800);
+  const [wideRef, wide] = useWidthAtLeast(FOLD_TWO_COLUMN_PX);
   const [tool, setTool] = useState<Tool>(TOOL.move);
   /** the fold while a press is held; null between presses */
   const [draft, setDraft] = useState<HornFold | null>(null);
@@ -159,6 +164,14 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
     | { kind: typeof HIT.board; drag: BoardDrag }
     | { kind: typeof HIT.drivers }
     | { kind: typeof HIT.mouth; key: OpeningKey; fixedIn: number }
+    | {
+        kind: typeof HIT.wall;
+        wall: typeof FOLD_WALL.back | typeof FOLD_WALL.top;
+        /** where the press started on screen, px, and the drawing's inches per screen px then */
+        x: number;
+        y: number;
+        inPerPx: number;
+      }
     | null
   >(null);
   /** the held pointer, so a second touch neither starts nor ends a press */
@@ -167,12 +180,27 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
   const latest = useRef<HornFold | null>(null);
   const history = useRef<HornFold[]>([]);
   const svg = useRef<SVGSVGElement | null>(null);
+  useEffect(() => {
+    const el = svg.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      const w = el.getBoundingClientRect().width;
+      if (w) setWidthPx(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const keys = useRef<HTMLDivElement | null>(null);
 
   const shown = draft ?? fold;
   const traced = useMemo(() => tracedFold(room, shown), [room, shown]);
   const { trace } = traced;
   const { depthIn: D, heightIn: H, boardIn: T } = room;
+  /** a wall being dragged: what it adds to the depth and the height so far, in */
+  const [grow, setGrow] = useState<{ depthIn: number; heightIn: number } | null>(null);
+  /** the room as drawn: its size with a dragged wall's change */
+  const Dv = D + (grow?.depthIn ?? 0);
+  const Hv = H + (grow?.heightIn ?? 0);
   const box = { depthIn: D, heightIn: H };
 
   const commit = (next: HornFold) => {
@@ -200,19 +228,29 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
     pointer.current = null;
     setLatest(null);
     setDrawing(null);
+    setGrow(null);
   };
 
   const X = (z: number) => PAD_PX + (z + T) * PX;
-  const Y = (y: number) => PAD_PX + (H - y + T) * PX;
-  const W = (D + 2 * T) * PX + 2 * PAD_PX;
-  const Hpx = (H + 2 * T) * PX + 2 * PAD_PX;
+  const Y = (y: number) => PAD_PX + (Hv - y + T) * PX;
+  const W = (Dv + 2 * T) * PX + 2 * PAD_PX;
+  const Hpx = (Hv + 2 * T) * PX + 2 * PAD_PX;
   /** viewBox units per screen pixel: marks, handles and text keep their size on screen at any drawing width */
   const u = W / Math.max(1, widthPx);
   const toPoint = (e: React.PointerEvent): SidePoint => {
     const ctm = svg.current?.getScreenCTM();
     if (!ctm) return { zIn: 0, yIn: 0 };
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
-    return { zIn: (p.x - PAD_PX) / PX - T, yIn: H + T - (p.y - PAD_PX) / PX };
+    return { zIn: (p.x - PAD_PX) / PX - T, yIn: Hv + T - (p.y - PAD_PX) / PX };
+  };
+  /** whether `p` is air the mouth does not reach (sealed or vented air) */
+  const sealedAt = (p: SidePoint): boolean => {
+    const { grid } = trace;
+    const i = Math.floor(p.zIn / grid.cellIn);
+    const j = Math.floor(p.yIn / grid.cellIn);
+    if (i < 0 || j < 0 || i >= grid.nz || j >= grid.ny) return false;
+    const k = j * grid.nz + i;
+    return !grid.solid[k] && !Number.isFinite(grid.dist[k]);
   };
   const pathAt = (p: SidePoint): number | null => {
     const { grid, pathIn } = trace;
@@ -236,18 +274,14 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       svg.current?.setPointerCapture(e.pointerId);
     };
     switch (tool) {
-      case TOOL.mouth:
-      case TOOL.vent: {
-        const key: OpeningKey = tool === TOOL.vent ? "vent" : "mouth";
-        const at = fold[key];
-        if (
-          at &&
-          what === (key === "vent" ? HIT.vent : HIT.mouth) &&
-          (rest[0] === "fromIn" || rest[0] === "toIn")
-        ) {
+      case TOOL.opening: {
+        const handle: OpeningKey | null =
+          what === HIT.vent ? "vent" : what === HIT.mouth ? "mouth" : null;
+        const at = handle && fold[handle];
+        if (handle && at && (rest[0] === "fromIn" || rest[0] === "toIn")) {
           press.current = {
             kind: HIT.mouth,
-            key,
+            key: handle,
             fixedIn: rest[0] === "fromIn" ? at.toIn : at.fromIn,
           };
           setLatest(fold);
@@ -263,6 +297,16 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
         const wall = Object.values(FOLD_WALL).reduce((a, b) => (dists[b] < dists[a] ? b : a));
         const along = upright(wall) ? p.yIn : p.zIn;
         const span = upright(wall) ? H : D;
+        // next to the horn's passage it is the mouth; next to air the mouth does not reach, the vent
+        const inside: SidePoint =
+          wall === FOLD_WALL.baffle
+            ? { zIn: trace.grid.cellIn / 2, yIn: p.yIn }
+            : wall === FOLD_WALL.back
+              ? { zIn: D - trace.grid.cellIn / 2, yIn: p.yIn }
+              : wall === FOLD_WALL.bottom
+                ? { zIn: p.zIn, yIn: trace.grid.cellIn / 2 }
+                : { zIn: p.zIn, yIn: H - trace.grid.cellIn / 2 };
+        const key: OpeningKey = sealedAt(inside) ? "vent" : "mouth";
         const snap = (v: number) =>
           Math.min(span, Math.max(0, Math.round(v / FOLD_SNAP_IN) * FOLD_SNAP_IN));
         const half = key === "vent" ? NEW_VENT_HALF_IN : NEW_MOUTH_HALF_IN;
@@ -305,7 +349,19 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
         else if (what === HIT.drivers) press.current = { kind: HIT.drivers };
         else if (what === HIT.board)
           press.current = { kind: HIT.board, drag: startBoardDrag(fold, box, T, i, p) };
-        else return;
+        else if (what === HIT.wall && (rest[0] === FOLD_WALL.back || rest[0] === FOLD_WALL.top)) {
+          const ctm = svg.current?.getScreenCTM();
+          press.current = {
+            kind: HIT.wall,
+            wall: rest[0],
+            x: e.clientX,
+            y: e.clientY,
+            inPerPx: ctm ? 1 / (ctm.a * PX) : 1 / PX,
+          };
+          setGrow({ depthIn: 0, heightIn: 0 });
+          capture();
+          return;
+        } else return;
         setLatest(fold);
         capture();
     }
@@ -319,6 +375,20 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       return;
     }
     const held = press.current;
+    if (held?.kind === HIT.wall) {
+      /** the drag, in, to the snap, no smaller than the least room */
+      const by = (px: number, size: number) =>
+        Math.max(
+          FOLD_MIN_ROOM_IN - size,
+          Math.round((px * held.inPerPx) / FOLD_SNAP_IN) * FOLD_SNAP_IN,
+        );
+      setGrow(
+        held.wall === FOLD_WALL.back
+          ? { depthIn: by(e.clientX - held.x, D), heightIn: 0 }
+          : { depthIn: 0, heightIn: by(held.y - e.clientY, H) },
+      );
+      return;
+    }
     const now = latest.current;
     if (!held || !now) {
       setHoverIn(pathAt(p));
@@ -352,6 +422,7 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
     if (pointer.current !== e.pointerId) return;
     if (drawing) commit(addBoard(fold, box, T, drawing.a, toPoint(e)));
+    else if (grow && (grow.depthIn || grow.heightIn)) onResize(grow);
     else if (latest.current) commit(latest.current);
     endPress();
   };
@@ -409,8 +480,8 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
             ];
   const openings = (
     [
-      { key: "mouth", hit: HIT.mouth, tool: TOOL.mouth, color: pal.cyan, at: shown.mouth },
-      { key: "vent", hit: HIT.vent, tool: TOOL.vent, color: pal.yellow, at: shown.vent },
+      { key: "mouth", hit: HIT.mouth, color: pal.cyan, at: shown.mouth },
+      { key: "vent", hit: HIT.vent, color: pal.yellow, at: shown.vent },
     ] as const
   ).flatMap((o) => (o.at ? [{ ...o, line: openingLine(o.at) }] : []));
 
@@ -437,26 +508,24 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
       ),
     },
     {
-      id: TOOL.mouth,
-      label: FOLD_EDITOR_TEXT.mouth,
+      id: TOOL.opening,
+      label: FOLD_EDITOR_TEXT.opening,
       icon: <path d="M3 2v4M3 10v4M6 8h7M10 5l3 3-3 3" />,
-    },
-    {
-      id: TOOL.vent,
-      label: FOLD_EDITOR_TEXT.vent,
-      icon: <path d="M3 2v5M3 9v5M3 7h9M3 9h9" />,
     },
     { id: TOOL.square, label: FOLD_EDITOR_TEXT.square, icon: <path d="M3 2v11h11M3 9h4v4" /> },
   ];
 
   return (
     <div
-      className="flex flex-col gap-3 min-w-0 outline-none"
-      ref={keys}
+      className={`${wide ? "grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-4 items-start" : "flex flex-col gap-3"} min-w-0 outline-none`}
+      ref={(el) => {
+        keys.current = el;
+        wideRef(el);
+      }}
       tabIndex={-1}
       onKeyDown={onKeyDown}
     >
-      <div className="relative" ref={frame}>
+      <div className="relative min-w-0">
         <div
           className="absolute top-2 left-2 flex flex-wrap gap-1"
           role="toolbar"
@@ -493,8 +562,8 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
           <rect
             x={PAD_PX}
             y={PAD_PX}
-            width={(D + 2 * T) * PX}
-            height={(H + 2 * T) * PX}
+            width={(Dv + 2 * T) * PX}
+            height={(Hv + 2 * T) * PX}
             rx={3}
             fill={pal.muted}
             fillOpacity={0.35}
@@ -610,11 +679,11 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
           ))}
           <JointMarks fold={shown} box={box} boardIn={T} tool={tool} X={X} Y={Y} pal={pal} u={u} />
           {openings
-            .filter((o) => o.tool === tool)
+            .filter(() => tool === TOOL.opening)
             .flatMap(({ hit, color, line }) =>
               (["fromIn", "toIn"] as const).map((end, k) => (
                 <circle
-                  key={end}
+                  key={`${hit}${end}`}
                   data-hit={`${hit}:${end}`}
                   cx={X(line[k].zIn)}
                   cy={Y(line[k].yIn)}
@@ -626,6 +695,46 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
                 />
               )),
             )}
+          {tool === TOOL.move &&
+            (
+              [
+                {
+                  wall: FOLD_WALL.back,
+                  a: { zIn: Dv + T / 2, yIn: 0 },
+                  b: { zIn: Dv + T / 2, yIn: Hv },
+                },
+                {
+                  wall: FOLD_WALL.top,
+                  a: { zIn: 0, yIn: Hv + T / 2 },
+                  b: { zIn: Dv, yIn: Hv + T / 2 },
+                },
+              ] as const
+            ).map(({ wall, a, b }) => (
+              <line
+                key={wall}
+                data-hit={`${HIT.wall}:${wall}`}
+                x1={X(a.zIn)}
+                y1={Y(a.yIn)}
+                x2={X(b.zIn)}
+                y2={Y(b.yIn)}
+                stroke="transparent"
+                strokeWidth={T * PX + 8 * u}
+                style={{ cursor: wall === FOLD_WALL.back ? "ew-resize" : "ns-resize" }}
+              />
+            ))}
+          {grow && (
+            <rect
+              x={X(0)}
+              y={Y(Hv)}
+              width={Dv * PX}
+              height={Hv * PX}
+              fill="none"
+              stroke={pal.ink}
+              strokeDasharray={`${4 * u} ${3 * u}`}
+              strokeWidth={1.5 * u}
+              pointerEvents="none"
+            />
+          )}
           {drawing && (
             <line
               x1={X(drawing.a.zIn)}
@@ -658,23 +767,29 @@ export function FoldEditor({ room, fold, target, onChange, setType }: Props) {
             </g>
           )}
         </svg>
+        <FoldLegend pal={pal} />
       </div>
-      <FoldPathChart
-        sections={trace.sections}
-        target={target}
-        taps={trace.taps}
-        hoverIn={hoverIn}
-        onHover={setHoverIn}
-      />
-      <StatTileGrid tiles={foldTiles(trace, traced.rearLiters, target)} />
-      {trace.checks.map((c, k) => (
-        <Notice key={k}>{checkText(c)}</Notice>
-      ))}
-      {trace.hornType && trace.hornType !== setType && (
-        <Notice>
-          {FOLD_CHECK_TEXT.typeDiffers(HORN_DRIVE_NAMES[trace.hornType], HORN_DRIVE_NAMES[setType])}
-        </Notice>
-      )}
+      <div className="flex flex-col gap-3 min-w-0">
+        <FoldPathChart
+          sections={trace.sections}
+          target={target}
+          taps={trace.taps}
+          hoverIn={hoverIn}
+          onHover={setHoverIn}
+        />
+        <StatTileGrid tiles={foldTiles(trace, traced.rearLiters, target)} />
+        {trace.checks.map((c, k) => (
+          <Notice key={k}>{checkText(c)}</Notice>
+        ))}
+        {trace.hornType && trace.hornType !== setType && (
+          <Notice>
+            {FOLD_CHECK_TEXT.typeDiffers(
+              HORN_DRIVE_NAMES[trace.hornType],
+              HORN_DRIVE_NAMES[setType],
+            )}
+          </Notice>
+        )}
+      </div>
     </div>
   );
 }
@@ -716,7 +831,7 @@ function JointMarks({
           const unjoin = tool === TOOL.remove && partner?.kind === FOLD_END.corner;
           const handle = tool === TOOL.move || (tool === TOOL.square && partner !== null) || unjoin;
           if (!partner && !handle) return [];
-          const r = (handle ? 6 : 4) * u;
+          const r = (handle ? 7 : 5) * u;
           const look = {
             "data-hit": handle ? `${HIT.joint}:${i}:${end}` : undefined,
             fill: partner ? pal.yellow : pal.panel,
@@ -742,6 +857,38 @@ function JointMarks({
         }),
       )}
     </>
+  );
+}
+
+/** The drawing's legend: a swatch for each thing it draws. */
+function FoldLegend({ pal }: { pal: Palette }) {
+  const text = FOLD_EDITOR_TEXT.legend;
+  const items: { label: string; style: React.CSSProperties }[] = [
+    { label: text.boards, style: { background: pal.muted, opacity: 0.6 } },
+    {
+      label: text.passage,
+      style: { background: `linear-gradient(90deg, ${pal.cyan}, ${pal.cyan}33)` },
+    },
+    { label: text.sealed, style: { background: pal.yellow, opacity: 0.6 } },
+    { label: text.ported, style: { background: pal.yellow, opacity: 0.25 } },
+    { label: text.drivers, style: { background: pal.magenta } },
+    { label: text.mouth, style: { background: pal.cyan } },
+    { label: text.vent, style: { background: pal.yellow } },
+    {
+      label: text.joint,
+      style: { background: pal.yellow, borderRadius: "50%", border: `1px solid ${pal.ink}` },
+    },
+    { label: text.held, style: { background: pal.yellow, border: `1px solid ${pal.ink}` } },
+  ];
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-stone-500">
+      {items.map(({ label, style }) => (
+        <span key={label} className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded-sm" style={style} />
+          {label}
+        </span>
+      ))}
+    </div>
   );
 }
 
