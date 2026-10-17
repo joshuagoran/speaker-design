@@ -64,9 +64,24 @@ Each setting sits at the level it belongs to.
 ### Driver position
 
 - Drag the drivers in the Front view. The fields follow.
-- The fields name the driver's center and say from where: "Center from left side, in" and "Center up from bottom, in".
-- A horn on the top: "Center back from front edge, in".
-- The Front view marks the center the fields measure, while a field has focus.
+- The labels follow the convention in #173 (owner approved). The code keeps x, y and z.
+
+| Axis                           | Label                    | Measured from (in the tooltip)            |
+| ------------------------------ | ------------------------ | ----------------------------------------- |
+| Left/right                     | Left (−) / Right (+), in | The chamber's center, seen from the front |
+| Up/down                        | Down (−) / Up (+), in    | The chamber's bottom                      |
+| Front/back (a horn on the top) | Front (−) / Back (+), in | The front edge                            |
+
+- The Front view marks the point a field measures from, while the field has focus.
+- The first PR that uses these labels adds them to CLAUDE.md as a UI rule.
+
+### Input range
+
+From #173 (owner, Oct 2026):
+
+- Rename "Input range" to "External crossover". Tooltip: "The filters in your DSP or amp, before this speaker."
+- Remove the line under the heading. The tooltip says the same.
+- One spelling for filter names: "High-pass" and "Low-pass".
 
 ### Fiber fill
 
