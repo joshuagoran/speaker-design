@@ -429,11 +429,15 @@ describe("where no driver bolt can pass through the plate", () => {
       cds.filter((cd) => !fitOf(horn, cd)).map((cd) => `${horn.id} + ${cd.id}`),
     );
     // the ST260's neck leaves the DE360's 57 mm pair no room; on the DIY OS 90×70, the DE360's circle and the
-    // DF10.171K's four bolts miss its two holes
+    // DF10.171K's four bolts miss its two holes; the SMC225/ND has only three bolts on a 57 mm circle, which miss
+    // the two-hole 1 in horns
     expect(fallbacks.sort()).toEqual([
       "diy_os90x70 + de360",
       "diy_os90x70 + lavoce171",
+      "diy_os90x70 + smc225nd",
+      "me45 + smc225nd",
       "st260 + de360",
+      "st260 + smc225nd",
     ]);
   });
 });
