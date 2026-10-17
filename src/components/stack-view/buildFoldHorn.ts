@@ -1,6 +1,6 @@
 // A folded (drawn) horn's parts in its chamber: each board of its side section as a panel the clear width, the drivers'
-// cutouts in the board they mount on and, in the cutaway, the drivers' baskets and motors behind them, and the mouth where
-// it opens in the top or the bottom (an opening in the baffle or the back is cut in that panel by the chamber's builder).
+// cutouts in the board they mount on and, in the cutaway, the drivers' baskets and motors behind them. The mouth and the
+// vent are holes in their wall, cut in that panel by the chamber's builder (buildSpeakerScene).
 // The side section's coordinates (`SidePoint`) map to the chamber group's: `zIn` back from the baffle's inside face,
 // `yIn` up from the clear face's bottom, across from the clear face's center.
 import * as THREE from "three";
@@ -9,7 +9,6 @@ import { circlePath } from "./geometry";
 import { drawnSeg, len, left, sub, unit } from "../../lib/speaker/foldGeometry";
 import { foldAcross } from "../../lib/speaker/foldTrace";
 import { FOLD_DRIVER_GAP_IN, FOLD_BASKET_FLARE, FOLD_BASKET_SHARE } from "../../constants/foldHorn";
-import { FOLD_WALL } from "../../constants/speakerSpec";
 import type { FoldDrawing } from "../../lib/speaker/foldHorn";
 import type { FaceRect } from "../../lib/speaker/speakerLayout";
 import type { SidePoint } from "../../types";
@@ -18,11 +17,8 @@ import type { SidePoint } from "../../types";
 export interface FoldMeshNames {
   board: string;
   driver: string;
-  mouth: string;
 }
 
-/** How thick the plate marking a mouth in the top or the bottom is, in. */
-const MOUTH_PLATE_IN = 0.02;
 /** How many sides a driver's round body has. */
 const DRIVER_SIDES = 32;
 
@@ -127,26 +123,6 @@ export function buildFoldHorn(
         body.name = names.driver;
         ctx.group.add(body);
       }
-    }
-  }
-
-  // a mouth in the top or the bottom: a plate on the wall's inside face over the opening (no panel of the shell is cut)
-  const { mouth } = fold;
-  if (mouth.wall === FOLD_WALL.bottom || mouth.wall === FOLD_WALL.top) {
-    const from = Math.max(0, Math.min(mouth.fromIn, mouth.toIn));
-    const to = Math.min(room.depthIn, Math.max(mouth.fromIn, mouth.toIn));
-    if (to > from) {
-      const plate = new THREE.Mesh(
-        new THREE.BoxGeometry(clear.w, MOUTH_PLATE_IN, to - from),
-        ctx.materials.black,
-      );
-      const faceY = mouth.wall === FOLD_WALL.bottom ? 0 : room.heightIn;
-      const sign = mouth.wall === FOLD_WALL.bottom ? 1 : -1;
-      plate.position.copy(
-        world({ zIn: (from + to) / 2, yIn: faceY + (sign * MOUTH_PLATE_IN) / 2 }),
-      );
-      plate.name = names.mouth;
-      ctx.group.add(plate);
     }
   }
 }

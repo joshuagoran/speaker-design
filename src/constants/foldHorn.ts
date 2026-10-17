@@ -21,6 +21,12 @@ export const FOLD_CHECK = {
   strayAir: "strayAir",
   /** the width falls under `FOLD_THIN_IN` */
   thin: "thin",
+  /** the vent's opening is on a board or a driver: no air at the opening */
+  ventBlocked: "ventBlocked",
+  /** the vent's opening is in air the mouth reaches: it opens into the horn's passage */
+  ventLeak: "ventLeak",
+  /** the vented chamber is not where the cones' closed side opens */
+  ventStray: "ventStray",
 } as const;
 
 /** Why the drivers check fails (`FOLD_CHECK.drivers`). */
@@ -63,6 +69,11 @@ export const FOLD_MAGNET_CLEAR_IN = 1;
 export const FOLD_CUTOUT_SPARE_IN = 0.5;
 /** A width under this is thin, in. */
 export const FOLD_THIN_IN = 1.5;
+/**
+ * The vent's duct ends where the air around it first measures more than this times the opening's width (the width
+ * is the widest circle at that distance from the opening, as the horn's sections are measured).
+ */
+export const FOLD_VENT_END_RATIO = 2;
 
 /** Where a folded horn's board end stops, as code compares it (the cutlist and the editor's holds). */
 export const FOLD_END = {

@@ -129,6 +129,8 @@ export const roundoverNote = (r: number, t: number, joint: CornerJoint) =>
 /** The notes a flush box's panels carry: their cutouts and fittings, by panel. */
 export interface FlushBoxNotes {
   side?: string;
+  /** a note on the top and bottom row */
+  top?: string;
   baffle: readonly (string | false | null | undefined)[];
   back?: string;
 }
@@ -183,7 +185,15 @@ export function flushBoxPanels(
       t,
       note: joinNotes([sideNote, notes.side]),
     },
-    { box, part: "topBottom", qty: 2, a: s.top[0], b: s.top[1], t, note: topNote },
+    {
+      box,
+      part: "topBottom",
+      qty: 2,
+      a: s.top[0],
+      b: s.top[1],
+      t,
+      note: joinNotes([topNote, notes.top]),
+    },
     {
       box,
       part: "baffle",

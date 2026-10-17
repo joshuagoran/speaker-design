@@ -2,12 +2,14 @@
 // its long edge by the chamber's clear width, with each end's cut in its note; the boards count in the wood and the
 // weight, and the mouth's opening goes on the wall it is in.
 import { describe, expect, test } from "vite-plus/test";
-import { FOLD_WALL, HORN_PATH } from "../src/constants/speakerSpec";
+import { FOLD_WALL, HORN_PATH, VENT_KIND } from "../src/constants/speakerSpec";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { cutRows } from "../src/lib/pa/cutlist";
 import { panelLbPerSqFt } from "../src/lib/panel";
 import { foldRoom } from "../src/lib/speaker/foldHorn";
-import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
+import { formatInches } from "../src/lib/pa/calc";
+import { LITERS_PER_CUBIC_IN } from "../src/constants/units";
+import { cabinetBuild, chamberNetLiters, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import type { CutPart, FoldBoard, HornFold, SidePoint, SpeakerSpec } from "../src/types";
 
@@ -113,5 +115,99 @@ describe("a drawn horn's boards in the cutlist", () => {
     const baffle = partsOf(folded(L)).find((p) => p.part === "baffle");
     expect(baffle?.note).toContain("horn mouth: 45 × 10″ opening");
     expect(partsOf(folded()).find((p) => p.part === "baffle")?.note).not.toContain("horn mouth");
+  });
+});
+
+describe("the vent and the top and bottom openings in the cutlist", () => {
+  const withOpenings = (over: Partial<HornFold>) => folded({ ...L, ...over });
+  const noteOf = (spec: SpeakerSpec, part: CutPart["part"]) =>
+    partsOf(spec).find((p) => p.part === part)?.note ?? "";
+
+  test("a vent in the baffle or the back puts its opening on that panel", () => {
+    const onBaffle = withOpenings({ vent: { wall: FOLD_WALL.baffle, fromIn: 1, toIn: 3 } });
+    expect(noteOf(onBaffle, "baffle")).toContain("vent: 45 × 2″ opening, centered");
+    expect(noteOf(onBaffle, "baffle")).toContain("horn mouth: 45 × 10″ opening");
+    expect(noteOf(onBaffle, "back")).not.toContain("vent:");
+    const onBack = withOpenings({ vent: { wall: FOLD_WALL.back, fromIn: 1, toIn: 3 } });
+    expect(noteOf(onBack, "back")).toContain("vent: 45 × 2″ opening, centered");
+    expect(noteOf(onBack, "baffle")).not.toContain("vent:");
+    expect(noteOf(withOpenings({}), "baffle")).not.toContain("vent:");
+  });
+
+  test("a mouth or a vent in the top or the bottom goes on the top and bottom row, naming the panel", () => {
+    const spec = withOpenings({
+      mouth: { wall: FOLD_WALL.top, fromIn: 2, toIn: 12 },
+      vent: { wall: FOLD_WALL.bottom, fromIn: 1, toIn: 4 },
+    });
+    const note = noteOf(spec, "topBottom");
+    expect(note).toContain(
+      "top only: horn mouth: 45 × 10″ opening, 2″ to 12″ back from the baffle's inside face",
+    );
+    expect(note).toContain(
+      "bottom only: vent: 45 × 3″ opening, 1″ to 4″ back from the baffle's inside face",
+    );
+    // the baffle carries neither
+    expect(noteOf(spec, "baffle")).not.toContain("horn mouth");
+    // no opening in the top or the bottom: no such note
+    expect(noteOf(withOpenings({}), "topBottom")).not.toContain("only:");
+  });
+
+  test("a drawn horn's drivers put their cutouts on the board they mount on", () => {
+    const spec = withOpenings({ drivers: { board: 1, along: 0.5, face: 1 } });
+    const { driver } = foldRoom(BIN.cabinet, BIN.cabinet.chambers[0]);
+    if (!driver) throw new Error("the sub bin has a cone driver");
+    const [first, second] = hornBoards(spec);
+    expect(first.note).not.toContain("driver cutout");
+    expect(second.note).toContain(
+      `${driver.count} × ${formatInches(driver.cutoutIn)}″ round driver cutout`,
+    );
+    // the board's own note stays first
+    expect(second.note?.startsWith("Horn board 2:")).toBe(true);
+  });
+});
+
+describe("a drawn horn's wood in the chamber's net air", () => {
+  /** the sub bin with its air set to Auto and a sealed vent (a drawn horn does not read the chamber's own vent) */
+  const auto = (spec: SpeakerSpec): SpeakerSpec => ({
+    ...spec,
+    cabinet: {
+      ...spec.cabinet,
+      chambers: spec.cabinet.chambers.map((c) => ({
+        ...c,
+        netLiters: null,
+        vent: { kind: VENT_KIND.sealed },
+      })),
+    },
+  });
+  const netOf = (spec: SpeakerSpec) => chamberNetLiters(spec.cabinet, spec.cabinet.chambers[0], 0);
+
+  test("each drawn board's wood comes off the net air", () => {
+    const bare = auto(folded(foldOf([])));
+    const drawn = auto(folded(L));
+    // the L's boards, as drawn: the level one runs on half a board past the corner, the upright one back half a board
+    const t = BIN.cabinet.panel.thicknessIn;
+    const room = foldRoom(drawn.cabinet, drawn.cabinet.chambers[0]);
+    const wood = (20 + t / 2 + (10 + t / 2)) * t * room.widthIn * LITERS_PER_CUBIC_IN;
+    expect(netOf(bare)).toBeGreaterThan(wood + 10);
+    expect(netOf(bare) - netOf(drawn)).toBeCloseTo(wood, 6);
+  });
+
+  test("a fold not drawn yet, or a set net air, is as it was", () => {
+    expect(netOf(auto(folded()))).toBeCloseTo(netOf(auto(folded(foldOf([])))), 9);
+    const set = folded(L);
+    const withSet: SpeakerSpec = {
+      ...set,
+      cabinet: {
+        ...set.cabinet,
+        chambers: set.cabinet.chambers.map((c) => ({ ...c, netLiters: 77 })),
+      },
+    };
+    expect(netOf(withSet)).toBe(77);
+  });
+
+  test("a drawn horn's vent air is its drawing's, not the chamber's own vent's", () => {
+    const ventL = (spec: SpeakerSpec) => cabinetBuild(spec.cabinet).chambers[0].ventL;
+    expect(ventL(folded())).toBeGreaterThan(0);
+    expect(ventL(folded(L))).toBe(0);
   });
 });

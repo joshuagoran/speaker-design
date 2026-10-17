@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { SceneContext } from "./sceneContext";
 import type { RadiatorSide } from "../../lib/hifi/boxLayout";
+import { NO_WALL_OPENINGS, openingRect, panelPieces, type WallOpenings } from "./wallCuts";
 import type { Dims3 } from "../../types";
 
 /** The Hi-fi cabinet's meshes: the painted front (its flat face and its edges) and the shell behind it. */
@@ -42,11 +43,22 @@ export interface HifiCabinetHoles {
  * face, its outline clipped where it reaches the roundover, which then reads as solid there.
  *
  * Units: inches; the box centered on x = 0 and z = 0, its bottom on y = 0, the front face at z = d / 2. Holes: the
- * baffle's and the back's in (x, y), the sides' in (z, y).
+ * baffle's and the back's in (x, y), the sides' in (z, y). `wallOpenings` are clear openings in the top and the bottom
+ * (a drawn horn's mouth or vent), in x across from the center line and in back from the baffle's inside face.
  */
 export function buildHifiCabinet(
   ctx: SceneContext,
-  { dim, roundover, holes }: { dim: Dims3; roundover: number; holes: HifiCabinetHoles },
+  {
+    dim,
+    roundover,
+    holes,
+    wallOpenings = NO_WALL_OPENINGS,
+  }: {
+    dim: Dims3;
+    roundover: number;
+    holes: HifiCabinetHoles;
+    wallOpenings?: WallOpenings;
+  },
 ): { group: THREE.Group; frontZ: number; shellFrontZ: number } {
   const { w, h, d } = dim;
   const T = ctx.wall;
@@ -124,7 +136,8 @@ export function buildHifiCabinet(
     return s;
   };
   const depth = shellFrontZ + d / 2;
-  if (holes.sides[-1].length + holes.sides[1].length === 0) {
+  const openings = wallOpenings.top.length + wallOpenings.bottom.length > 0;
+  if (holes.sides[-1].length + holes.sides[1].length === 0 && !openings) {
     const inside = new THREE.Path();
     inside.moveTo(-w / 2 + T, T);
     inside.lineTo(w / 2 - T, T);
@@ -143,11 +156,18 @@ export function buildHifiCabinet(
       m.position.x = side > 0 ? w / 2 : -w / 2 + T;
     }
     // top and bottom: drawn in (x, z), extruded downward from their top face
-    for (const top of [T, h]) {
-      const m = slab(rect(-w / 2 + T, -d / 2, w / 2 - T, shellFrontZ), T);
-      m.rotation.x = Math.PI / 2; // local (u, v, w) -> world (u, −w, v)
-      m.position.y = top;
-    }
+    for (const [top, cuts] of [
+      [T, wallOpenings.bottom],
+      [h, wallOpenings.top],
+    ] as const)
+      for (const piece of panelPieces(
+        { x0: -w / 2 + T, x1: w / 2 - T, z0: -d / 2, z1: shellFrontZ },
+        cuts.map((o) => openingRect(shellFrontZ, o)),
+      )) {
+        const m = slab(rect(piece.x0, piece.z0, piece.x1, piece.z1), T);
+        m.rotation.x = Math.PI / 2; // local (u, v, w) -> world (u, −w, v)
+        m.position.y = top;
+      }
     const back = slab(rect(-w / 2 + T, T, w / 2 - T, h - T, holes.back), T);
     back.position.z = -d / 2;
   }

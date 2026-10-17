@@ -13,6 +13,13 @@ import { buildHifiCabinet } from "./buildHifiCabinet";
 import { buildCone, paConeRadius } from "./buildCone";
 import { buildHorn } from "./buildHorn";
 import { buildFoldHorn } from "./buildFoldHorn";
+import {
+  NO_WALL_OPENINGS,
+  openingRect,
+  panelPieces,
+  type WallOpening,
+  type WallOpenings,
+} from "./wallCuts";
 import { buildBracesAt, buildDriverBody } from "./buildBraces";
 import { buildHardware } from "./buildHardware";
 import { hornBaffleHole } from "./towerParts";
@@ -110,8 +117,6 @@ export const SPEAKER_MESH_NAMES = {
   foldBoard: "chamberFoldBoard",
   /** a drawn horn's driver behind its board, one mesh per driver, drawn in the cutaway */
   foldDriver: "chamberFoldDriver",
-  /** a drawn horn's mouth in the top or the bottom: a plate over the opening (in the baffle or the back it is a hole) */
-  foldMouth: "chamberFoldMouth",
   /** a chamber's own panel in a stepped shell: an outside wall, its back or its baffle */
   wall: "chamberWall",
 } as const;
@@ -250,6 +255,12 @@ interface ChamberParts {
   baffle: Holes[];
   back: Holes[];
   /**
+   * openings across its top and bottom walls (a drawn horn's mouth or vent), from its center line (x = 0): clear in the
+   * panel where the wall is the shell's, none where another chamber is
+   */
+  top: WallOpening[];
+  bottom: WallOpening[];
+  /**
    * a slot band and its openings, its height up from the chamber's clear face: the PA letterbox's, or a plain slot stack
    * the clear face's width. A frame's baffle starts above the band where the chamber spans its shell's bottom (as the
    * PA sub's does) or stands in a stepped shell, else the openings are cut in the baffle
@@ -340,6 +351,22 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           panel === PANEL.baffle && m !== band && parts.slotBand ? [parts.slotBand.hole] : [];
         return [...parts[panel], ...slot].flatMap((h) => h(g.position.x, g.position.y - y0));
       });
+    /**
+     * the openings in the shell's top and bottom: each chamber's, where its wall is the shell's (a chamber that stands
+     * on or under another has the partition there), in the shell group's x
+     */
+    const wallOpenings: WallOpenings = {
+      top: members.flatMap(({ placed, g, parts }) =>
+        Math.abs(placed.y0 + placed.dims.h - (shell.y0 + dims.h)) < SAME_IN
+          ? parts.top.map((o) => ({ ...o, x0: o.x0 + g.position.x, x1: o.x1 + g.position.x }))
+          : [],
+      ),
+      bottom: members.flatMap(({ placed, g, parts }) =>
+        Math.abs(placed.y0 - shell.y0) < SAME_IN
+          ? parts.bottom.map((o) => ({ ...o, x0: o.x0 + g.position.x, x1: o.x1 + g.position.x }))
+          : [],
+      ),
+    };
     let at: BaffleAt;
     if (shell.stepped) {
       const [placed] = shell.members;
@@ -349,6 +376,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
         { baffle: holes(0, PANEL.baffle), back: holes(0, PANEL.back) },
         frame,
         baffleBottom,
+        wallOpenings,
       );
     } else if (frame) {
       // the frame's baffle holes are centered on the baffle, its back's on the box
@@ -359,6 +387,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
           dims,
           baffleHoles: holes(baffleCy, PANEL.baffle),
           backHoles: holes(dims.h / 2, PANEL.back),
+          wallOpenings,
           y: 0,
           archTop: drawsArchedTop(cabinet, layout),
           baffleBottom,
@@ -376,6 +405,7 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
             back: holes(0, PANEL.back),
             sides: { [-1]: [], 1: [] },
           },
+          wallOpenings,
         },
       );
       at = { zf: built.frontZ, innerZ: built.shellFrontZ, banded: false };
@@ -434,7 +464,8 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
  * builds (lib/speaker/speakerLayout `PlacedChamber.walls`: a partition where another chamber stands on it or right of it,
  * none where another gives it one), each the chamber's depth; its back and its baffle over its clear face, the baffle set
  * back by the frame's inset, ¾″ in the PA's frame and a wall thick in the Hi-fi box, its lower edge `bottom` above the
- * clear face's (a slot band's). Returns where its baffle is.
+ * clear face's (a slot band's). A wall of its own that has openings (`wallOpenings`: a drawn horn's mouth or vent in the
+ * top or the bottom) is built as the pieces round them. Returns where its baffle is.
  */
 function buildSteppedPanels(
   ctx: SceneContext,
@@ -442,6 +473,7 @@ function buildSteppedPanels(
   holes: { baffle: THREE.Path[]; back: THREE.Path[] },
   frame: boolean,
   bottom: number,
+  wallOpenings: WallOpenings = NO_WALL_OPENINGS,
 ): BaffleAt {
   const T = ctx.wall;
   const { d } = placed.dims;
@@ -449,17 +481,33 @@ function buildSteppedPanels(
     x: r.x + r.w / 2 - placed.cx,
     y: r.y + r.h / 2 - placed.y0,
   });
-  for (const w of placed.walls) {
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(w.w, w.h, d),
-      w.shared ? ctx.materials.inner : ctx.materials.shell,
-    );
-    const at = local(w);
-    m.position.set(at.x, at.y, 0);
-    m.name = w.shared ? SPEAKER_MESH_NAMES.partition : SPEAKER_MESH_NAMES.wall;
-    ctx.group.add(m);
-  }
   const { clear } = placed;
+  const innerAt = d / 2 - ctx.inset - (frame ? BAFFLE_THICKNESS_IN : T);
+  for (const w of placed.walls) {
+    const at = local(w);
+    // a level wall of its own above or below the clear face takes that side's openings
+    const level = w.w >= w.h && !w.shared;
+    const openings = !level
+      ? []
+      : w.y >= clear.y + clear.h - SAME_IN
+        ? wallOpenings.top
+        : w.y + w.h <= clear.y + SAME_IN
+          ? wallOpenings.bottom
+          : [];
+    const pieces = panelPieces(
+      { x0: at.x - w.w / 2, x1: at.x + w.w / 2, z0: -d / 2, z1: d / 2 },
+      openings.map((o) => openingRect(innerAt, o)),
+    );
+    for (const piece of pieces) {
+      const m = new THREE.Mesh(
+        new THREE.BoxGeometry(piece.x1 - piece.x0, w.h, piece.z1 - piece.z0),
+        w.shared ? ctx.materials.inner : ctx.materials.shell,
+      );
+      m.position.set((piece.x0 + piece.x1) / 2, at.y, (piece.z0 + piece.z1) / 2);
+      m.name = w.shared ? SPEAKER_MESH_NAMES.partition : SPEAKER_MESH_NAMES.wall;
+      ctx.group.add(m);
+    }
+  }
   const c = local(clear);
   /** a panel over the clear face above `lo`, `depth` thick from `z` back, with its holes */
   const panel = (
@@ -561,6 +609,8 @@ function chamberParts(
   const drawing = foldDrawing(cabinet, chamber);
   const baffle: Holes[] = [],
     back: Holes[] = [],
+    top: WallOpening[] = [],
+    bottom: WallOpening[] = [],
     builds: ((at: BaffleAt) => void)[] = [];
   let slotBand: ChamberParts["slotBand"] = null;
   /**
@@ -909,27 +959,41 @@ function chamberParts(
     });
   }
 
-  // a drawn horn: its boards, its drivers on theirs, and its mouth in its wall (a hole where the wall is a panel)
+  // a drawn horn: its boards, its drivers on theirs, and its mouth and vent in their walls (a hole where the wall is a panel)
   if (drawing) {
-    const { mouth } = drawing.fold;
     const { clear } = placed;
-    const up = mouth.wall === FOLD_WALL.baffle || mouth.wall === FOLD_WALL.back;
-    const from = Math.max(0, Math.min(mouth.fromIn, mouth.toIn));
-    const to = Math.min(up ? clear.h : drawing.room.depthIn, Math.max(mouth.fromIn, mouth.toIn));
-    // across the clear width, from `from` to `to` up the wall (the baffle and the back run up)
-    if (to > from && up) {
-      const hole: Holes = (ox, oy) => [
-        openingPath(
-          ox,
-          oy,
-          clear.x + clear.w / 2 - placed.cx,
-          clear.y - placed.y0 + (from + to) / 2,
-          clear.w,
-          to - from,
-          HORN_MOUTH_CORNER_IN,
-        ),
-      ];
-      (mouth.wall === FOLD_WALL.baffle ? baffle : back).push(hole);
+    for (const opening of [drawing.fold.mouth, drawing.fold.vent]) {
+      if (!opening) continue;
+      const up = opening.wall === FOLD_WALL.baffle || opening.wall === FOLD_WALL.back;
+      const from = Math.max(0, Math.min(opening.fromIn, opening.toIn));
+      const to = Math.min(
+        up ? clear.h : drawing.room.depthIn,
+        Math.max(opening.fromIn, opening.toIn),
+      );
+      if (!(to > from)) continue;
+      if (up) {
+        // across the clear width, from `from` to `to` up the wall (the baffle and the back run up)
+        const hole: Holes = (ox, oy) => [
+          openingPath(
+            ox,
+            oy,
+            clear.x + clear.w / 2 - placed.cx,
+            clear.y - placed.y0 + (from + to) / 2,
+            clear.w,
+            to - from,
+            HORN_MOUTH_CORNER_IN,
+          ),
+        ];
+        (opening.wall === FOLD_WALL.baffle ? baffle : back).push(hole);
+      } else {
+        // across the clear width, from `from` to `to` back from the baffle's inside face (the top and the bottom run back)
+        (opening.wall === FOLD_WALL.top ? top : bottom).push({
+          x0: clear.x - placed.cx,
+          x1: clear.x + clear.w - placed.cx,
+          fromIn: from,
+          toIn: to,
+        });
+      }
     }
     builds.push(({ innerZ }) =>
       buildFoldHorn(ctx, {
@@ -940,7 +1004,6 @@ function chamberParts(
         names: {
           board: SPEAKER_MESH_NAMES.foldBoard,
           driver: SPEAKER_MESH_NAMES.foldDriver,
-          mouth: SPEAKER_MESH_NAMES.foldMouth,
         },
       }),
     );
@@ -1055,7 +1118,7 @@ function chamberParts(
     });
   }
 
-  return { baffle, back, slotBand, build: (at) => builds.forEach((b) => b(at)) };
+  return { baffle, back, top, bottom, slotBand, build: (at) => builds.forEach((b) => b(at)) };
 }
 
 /**
