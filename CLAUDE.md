@@ -65,6 +65,16 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - A PR that finishes an issue says `Closes #N` so merging closes it.
 - PR titles and descriptions are short and in STE. The title names what changes for the user (e.g. "Space: add speakers or stacks, kept drafts"). The description has two sections: "What changes" (short bullets by area, written for the user, no internal names or code unless the change is internal) and "Tests" (one or two lines). Keep the description current: rewrite it when the PR changes, do not append.
 
+## New features
+
+- Before code, build a working mock of the core task. The owner tests it with real tasks.
+- The plan lists the owner's tasks as acceptance tests. Run each in the browser before every hand-over.
+- Hand editing first, automation second.
+- Three reported bugs in one area: stop, check the model, tell the owner before the next fix.
+- Physical checks come before any score. A score never decides what is buildable.
+- One feature per PR.
+- A rule reused from another page gets checked on the new page.
+
 ## Agents and usage
 
 Keep token use low. These rules apply to every session and every subagent.
