@@ -253,8 +253,8 @@ function placeOnBoard(pos: number, lengthIn: number, driver: DriverShape): numbe
 /**
  * Where drivers on a serpentine's inner board `carrier` go, in from its wall end (`alongIn`), to put the taps nearest
  * the target's, and how far off the taps then fall, in, summed (`offIn`): the fronts open in the leg under the board
- * at that distance along it, the backs beside the basket in the leg over it, which runs back the other way. Each leg
- * is taken as `legIn` of path, its board as 4/5 of the depth `depthIn`.
+ * at that distance along it, the backs at the same place in the leg over it (the basket's middle), which runs back the
+ * other way. Each leg is taken as `legIn` of path, its board as 4/5 of the depth `depthIn`.
  */
 function innerPlace(
   shape: TargetShape,
@@ -269,8 +269,7 @@ function innerPlace(
   let bestOff = Infinity;
   for (let u = snapUp(cutoutEndIn(driver)); u <= boardIn - cutoutEndIn(driver); u += FOLD_SNAP_IN) {
     const off =
-      Math.abs((carrier - 1) * legIn + u - front) +
-      Math.abs(carrier * legIn + boardIn - u - driver.cutoutIn / 2 - back);
+      Math.abs((carrier - 1) * legIn + u - front) + Math.abs(carrier * legIn + boardIn - u - back);
     if (off < bestOff) {
       bestOff = off;
       best = u;

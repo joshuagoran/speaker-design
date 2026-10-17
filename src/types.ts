@@ -2464,7 +2464,7 @@ export interface FoldVentedChamber extends FoldSealedPocket {
   duct: FoldVentDuct;
 }
 
-/** The air around a fold on a grid: the distance of each cell from the mouth, through the air. */
+/** The air around a fold on a grid: the distance of each cell from the mouth, along the passage's middle. */
 export interface FoldGrid {
   /** a cell's side, in */
   cellIn: number;
@@ -2472,9 +2472,12 @@ export interface FoldGrid {
   nz: number;
   /** the cells up the height (`yIn`) */
   ny: number;
-  /** by `yIndex * nz + zIndex`: 1 for a board or a driver body, else 0 */
+  /** by `yIndex * nz + zIndex`: 1 for a board, else 0 (a driver's open basket and its motor are air) */
   solid: Uint8Array;
-  /** by the same index: the path distance from the mouth, in; Infinity for solid cells and sealed air */
+  /**
+   * by the same index: the distance from the mouth along the path (the passage's middle) of the cell's nearest point on
+   * it, in; Infinity for solid cells and sealed air
+   */
   dist: Float64Array;
   /** by the same index: the sealed pocket's index in `FoldTrace.sealed`, or -1 */
   pocket: Int32Array;

@@ -130,8 +130,11 @@ export const FOLD_LAYOUT_HARD_CHECKS: readonly (typeof FOLD_CHECK)[keyof typeof 
   FOLD_CHECK.magnet,
 ];
 
-/** The score a laid-out fold adds for each inch its taps sit from the target's, dB per in. */
-export const FOLD_LAYOUT_TAP_DB_PER_IN = 0.05;
+/**
+ * The score a laid-out fold adds for each inch its taps sit from the target's, dB per in: three times the path's, so a
+ * fold with its taps far off cannot win on its areas alone (it plays far from the straight horn).
+ */
+export const FOLD_LAYOUT_TAP_DB_PER_IN = 0.15;
 /** The score a laid-out fold adds for each inch its path is longer or shorter than the target's, dB per in. */
 export const FOLD_LAYOUT_PATH_DB_PER_IN = 0.05;
 /** The score a laid-out fold adds for each other check it fails (dead end, choke, stray air, thin), dB. */
@@ -155,7 +158,7 @@ export const FOLD_LAYOUT_TAPPED_PLANS = 3;
 /** The serpentine's most legs. */
 export const FOLD_LAYOUT_MAX_LEGS = 6;
 /**
- * How much of a serpentine leg's path its turn cuts off, as a share of the leg's height: the traced path hugs the board
- * ends, so a leg gives about the depth less this share of its height.
+ * How much of a serpentine leg's path its turn cuts off, as a share of the leg's height: the traced path keeps to the
+ * middle of each leg and turn, so a leg gives about the depth less this share of its height.
  */
-export const FOLD_LAYOUT_TURN_SHARE = 0.9;
+export const FOLD_LAYOUT_TURN_SHARE = 0.15;

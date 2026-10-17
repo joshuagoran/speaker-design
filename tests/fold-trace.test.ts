@@ -55,8 +55,9 @@ describe("horn type from the taps", () => {
   test("a tapped spiral: both sides of the cones open into the passage", () => {
     const t = trace(TAPPED);
     expect(t.hornType).toBe(HORN_DRIVE.tapped);
-    expect(t.pathIn).toBeGreaterThan(72);
-    expect(t.pathIn).toBeLessThan(78);
+    // along the passage's middle (its center line, with rounded turns, measures about 105–110 in)
+    expect(t.pathIn).toBeGreaterThan(100);
+    expect(t.pathIn).toBeLessThan(106);
     expect(t.taps.front).not.toBeNull();
     expect(t.taps.back).not.toBeNull();
     expect(t.closedEnd).not.toBeNull();
@@ -229,10 +230,11 @@ describe("the rear chamber's vent", () => {
   });
 
   test("a vent into air that no driver uses fails the stray check", () => {
-    // an upright board splits the rear chamber: the cones' back opens behind it, the vent is in front of it
+    // an upright board splits the rear chamber, clear of the basket: the cones' back opens behind it, the vent is in
+    // front of it
     const fold: HornFold = {
       ...OFFSET,
-      boards: [...SERPENTINE_BOARDS, board(pt(20, 0), pt(20, 12))],
+      boards: [...SERPENTINE_BOARDS, board(pt(8, 0), pt(8, 12))],
       vent: { wall: FOLD_WALL.baffle, fromIn: 3, toIn: 4.5 },
     };
     const t = trace(fold);

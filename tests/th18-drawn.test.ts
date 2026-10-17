@@ -4,11 +4,12 @@
 // is modeled: the traced path, taps and areas against the record's, and the traced horn played through the network
 // against Hornresp. The record played straight separates the engine's error from the drawing's.
 //
-// The bounds are what the trace gives today, with a little room. Two known faults in the trace set them:
-// - The path is the shortest way through the air from the mouth: it hugs the inside of each bend, so it comes out 26%
-//   short of the record (and of the plans' center line). A path along the passage's middle measures within 2%.
-// - The rears are sampled beside the basket on its back side, about 20 cm farther from the mouth than the cone.
-// The driver's basket and motor are also solid across the whole width, so the mouth leg chokes under the motor.
+// The bounds are what the trace gives today, with a little room. The trace measures the path along the passage's
+// middle (as the record's center line), reads the fronts at the middle of the cones' face and the rears at the middle
+// of the basket, and takes only the motor's own cross-section off the area (the basket is open). An earlier trace
+// measured the shortest way through the air (26% short: it hugged each bend), read the rears beside the basket (8.7 in
+// too far from the mouth) and made the whole driver body solid across the width (the mouth leg choked): it tuned 5 Hz
+// high, 4.9 dB rms off Hornresp.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import fs from "node:fs";
@@ -22,8 +23,9 @@ import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
+import { FOLD_CHECK } from "../src/constants/foldHorn";
 import { CM_PER_IN, CM2_PER_IN2 } from "../src/constants/units";
-import type { FoldTrace, HornLayoutDesign, HornSegment } from "../src/types";
+import type { HornLayoutDesign, HornSegment } from "../src/types";
 import { HORNRESP_DIR, resultsOf } from "./hornresp-records";
 
 const RECORD = fs.readFileSync(
@@ -38,7 +40,7 @@ const HORNRESP = resultsOf(
 const BAND = { fromHz: 30, toHz: 150 };
 /** the band whose mean level the tuning's −3 and −6 dB points are read from, Hz */
 const PASSBAND = { fromHz: 40, toHz: 100 };
-/** where the tuning's points are read down from, Hz: above the traced horn's own fall (it is down 2 dB at 41 Hz) */
+/** where the tuning's points are read down from, Hz: above the tuning (Hornresp's −3 dB point is 36 Hz) */
 const TUNING_FROM_HZ = 50;
 /** the record's taps, cm from the closed end (its S2 and S4) */
 const RECORD_TAPS_CM = { front: 21.76, rear: 284.22 };
@@ -124,92 +126,6 @@ function lowPointHz(curve: readonly { f: number; spl: number }[], dropDb: number
   return NaN;
 }
 
-/**
- * A path along the passage's middle, in: from the closed end to the mouth on the trace's grid, each step costing its
- * length over the square of the clearance there (the distance to the nearest board or wall), so it keeps to the middle
- * of each leg and round each bend. A trace measured this way would follow the center line the record is drawn on.
- */
-function middlePathIn(trace: FoldTrace): number {
-  const { nz, ny, cellIn, solid, dist } = trace.grid;
-  const count = nz * ny;
-  /** the eight steps: across, up, and each diagonal, with their lengths in cells */
-  const steps = [
-    [1, 0, 1],
-    [-1, 0, 1],
-    [0, 1, 1],
-    [0, -1, 1],
-    [1, 1, Math.SQRT2],
-    [1, -1, Math.SQRT2],
-    [-1, 1, Math.SQRT2],
-    [-1, -1, Math.SQRT2],
-  ] as const;
-  // the clearance: spread from the boards and the walls until it settles (the mouth's cells, at distance 0, are open)
-  const clearance = new Float64Array(count).fill(Infinity);
-  for (let j = 0; j < ny; j++)
-    for (let i = 0; i < nz; i++) {
-      const k = j * nz + i;
-      const edge = i === 0 || j === 0 || i === nz - 1 || j === ny - 1;
-      if (solid[k]) clearance[k] = 0;
-      else if (edge && dist[k] !== 0) clearance[k] = cellIn / 2;
-    }
-  for (let changed = true; changed;) {
-    changed = false;
-    for (let k = 0; k < count; k++) {
-      const i = k % nz,
-        j = Math.floor(k / nz);
-      for (const [di, dj, step] of steps) {
-        const a = i + di,
-          b = j + dj;
-        if (a < 0 || b < 0 || a >= nz || b >= ny) continue;
-        const through = clearance[b * nz + a] + step * cellIn;
-        if (through < clearance[k] - 1e-9) {
-          clearance[k] = through;
-          changed = true;
-        }
-      }
-    }
-  }
-  // the cheapest way from the mouth to each air cell, and the cell it came from
-  const cost = new Float64Array(count).fill(Infinity);
-  const from = new Int32Array(count).fill(-1);
-  const queue: number[] = [];
-  for (let k = 0; k < count; k++)
-    if (dist[k] === 0) {
-      cost[k] = 0;
-      queue.push(k);
-    }
-  // a label-correcting search: a cell goes back on the queue whenever it gets cheaper
-  for (let at = 0; at < queue.length; at++) {
-    const k = queue[at];
-    const i = k % nz,
-      j = Math.floor(k / nz);
-    for (const [di, dj, step] of steps) {
-      const a = i + di,
-        b = j + dj;
-      if (a < 0 || b < 0 || a >= nz || b >= ny) continue;
-      const next = b * nz + a;
-      if (dist[next] === Infinity) continue;
-      // no squeezing diagonally between two solid cells, as the trace
-      if (di && dj && (solid[j * nz + a] || solid[b * nz + i])) continue;
-      const through = cost[k] + (step * cellIn) / Math.max(clearance[next], cellIn / 2) ** 2;
-      if (through < cost[next]) {
-        cost[next] = through;
-        from[next] = k;
-        queue.push(next);
-      }
-    }
-  }
-  const end = trace.closedEnd;
-  assert.ok(end);
-  let k = Math.floor(end.yIn / cellIn) * nz + Math.floor(end.zIn / cellIn);
-  let lengthIn = 0;
-  for (; from[k] >= 0; k = from[k]) {
-    const q = from[k];
-    lengthIn += Math.hypot((q % nz) - (k % nz), Math.floor(q / nz) - Math.floor(k / nz)) * cellIn;
-  }
-  return lengthIn;
-}
-
 test("TH18 template: a folded tapped horn that traces as tapped and plays on the page", () => {
   const { spec, chamber, drawn } = drawnTh18();
   assert.ok(chamber.load.kind === CHAMBER_LOAD.horn);
@@ -229,21 +145,22 @@ test("TH18 drawn: the traced path, taps and areas against the record's", () => {
   const { trace } = drawn;
   const { design } = recordDesign();
   const recordIn = lengthCm(design.segments) / CM_PER_IN;
-  // the path: 89.3 in against the record's 121.4 in (−26%): the shortest path hugs the inside of each bend
-  const short = 1 - trace.pathIn / recordIn;
-  assert.ok(short > 0 && short <= 0.27, `traced ${trace.pathIn} in vs ${recordIn} in`);
-  // a path along the passage's middle: 120.1 in (−1.1%)
-  const middle = middlePathIn(trace);
-  assert.ok(Math.abs(middle / recordIn - 1) <= 0.02, `middle ${middle} in vs ${recordIn} in`);
-  // the fronts: 9.22 in from the closed end against the record's 8.57 in
+  // the path, along the passage's middle: 119.6 in against the record's 121.4 in (−1.5%)
+  assert.ok(
+    Math.abs(trace.pathIn / recordIn - 1) <= 0.02,
+    `traced ${trace.pathIn} in vs ${recordIn} in`,
+  );
+  // the fronts: 9.86 in from the closed end against the record's 8.57 in
   assert.ok(trace.taps.front !== null && trace.taps.back !== null);
   const frontOff = trace.taps.front - RECORD_TAPS_CM.front / CM_PER_IN;
-  assert.ok(Math.abs(frontOff) <= 0.75, `fronts off by ${frontOff} in`);
-  // the rears, from the mouth (the end both paths share): 18.2 in against the record's 9.5 in; sampled beside the basket
+  assert.ok(Math.abs(frontOff) <= 1.5, `fronts off by ${frontOff} in`);
+  // the rears, from the mouth (the end both paths share): 7.91 in against the record's 9.54 in
   const rearOff = trace.pathIn - trace.taps.back - (recordIn - RECORD_TAPS_CM.rear / CM_PER_IN);
-  assert.ok(Math.abs(rearOff) <= 9, `rears off by ${rearOff} in`);
+  assert.ok(Math.abs(rearOff) <= 2, `rears off by ${rearOff} in`);
+  // the motor takes only its own share of the width: no choke in the mouth leg
+  assert.ok(!trace.checks.some((c) => c.id === FOLD_CHECK.choke), JSON.stringify(trace.checks));
   // the area at each share of the path (the paths' lengths differ), 4 in from each end left out (the trace's own
-  // ends): 1.0 dB rms, the worst −3.0 dB in the mouth leg, where the motor stands across the whole width
+  // ends): 0.40 dB rms, the worst +0.86 dB (16 in from the closed end)
   const offsets = trace.sections
     .filter((s) => s.sIn >= 4 && s.sIn <= trace.pathIn - 4)
     .map((s) => ({
@@ -257,8 +174,8 @@ test("TH18 drawn: the traced path, taps and areas against the record's", () => {
     }));
   const rms = Math.sqrt(offsets.reduce((sum, o) => sum + o.db ** 2, 0) / offsets.length);
   const worst = offsets.reduce((w, o) => (Math.abs(o.db) > Math.abs(w.db) ? o : w));
-  assert.ok(rms <= 1.1, `area ${rms} dB rms`);
-  assert.ok(Math.abs(worst.db) <= 3.1, `area ${worst.db} dB at ${worst.sIn} in`);
+  assert.ok(rms <= 0.5, `area ${rms} dB rms`);
+  assert.ok(Math.abs(worst.db) <= 1, `area ${worst.db} dB at ${worst.sIn} in`);
 });
 
 test("TH18 drawn: played against Hornresp, the record straight and the traced horn", () => {
@@ -286,14 +203,14 @@ test("TH18 drawn: played against Hornresp, the record straight and the traced ho
   assert.ok(differenceDb(straight).rms <= 0.02);
   const plain = differenceDb(noFrontChamber);
   assert.ok(plain.rms <= 0.45 && Math.abs(plain.worst.db) <= 1.2, JSON.stringify(plain));
-  // traced: 4.9 dB rms, −10.0 dB at worst (30 Hz): its path is 26% short, so it tunes higher
+  // traced: 0.89 dB rms, −3.1 dB at worst (129 Hz)
   const off = differenceDb(traced);
-  assert.ok(off.rms <= 5 && Math.abs(off.worst.db) <= 10.5, JSON.stringify(off));
+  assert.ok(off.rms <= 1 && Math.abs(off.worst.db) <= 3.5, JSON.stringify(off));
   // the tuning (−3 and −6 dB under Hornresp's 40–100 Hz level): Hornresp 36.0 and 33.0 Hz; without the front chamber
-  // 36.2 and 33.3 Hz; traced 41.2 and 39.6 Hz
+  // 36.2 and 33.3 Hz; traced 35.1 and 32.5 Hz
   const [hr3, hr6] = [lowPointHz(HORNRESP, 3), lowPointHz(HORNRESP, 6)];
   assert.ok(Math.abs(lowPointHz(noFrontChamber, 3) - hr3) <= 0.5);
   assert.ok(Math.abs(lowPointHz(noFrontChamber, 6) - hr6) <= 0.5);
-  assert.ok(Math.abs(lowPointHz(traced, 3) - hr3) <= 5.5, `${lowPointHz(traced, 3)} Hz`);
-  assert.ok(Math.abs(lowPointHz(traced, 6) - hr6) <= 7, `${lowPointHz(traced, 6)} Hz`);
+  assert.ok(Math.abs(lowPointHz(traced, 3) - hr3) <= 1.25, `${lowPointHz(traced, 3)} Hz`);
+  assert.ok(Math.abs(lowPointHz(traced, 6) - hr6) <= 1, `${lowPointHz(traced, 6)} Hz`);
 });
