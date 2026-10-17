@@ -129,7 +129,15 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
           "speakerExcursion",
         ],
   ];
-  if (port)
+  // a drawn horn's vent: its air speed shown, with no limit
+  if (port && !Number.isFinite(port.limit))
+    chips.push([
+      "ok",
+      "Vent air speed",
+      `At most ${port.peak.toFixed(1)} m/s at full power (${formatHz(port.hz)}).`,
+      "speakerPortSpeed",
+    ]);
+  else if (port)
     chips.push(
       port.peak > port.limit
         ? [

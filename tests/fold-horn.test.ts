@@ -3,6 +3,10 @@
 import { expect, test } from "vite-plus/test";
 import assert from "node:assert";
 import { withHornFold } from "../src/pages/speaker/chamberLoad";
+import { chamberChips } from "../src/pages/speaker/speakerChips";
+import { speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { DEFAULT_VENTS } from "../src/pages/speaker/speakerParts";
 import {
   CHAMBER_LOAD,
   FOLD_WALL,
@@ -15,7 +19,7 @@ import { HORN_LAYOUT } from "../src/constants/acousticNetwork";
 import { CM_PER_IN, CM2_PER_IN2 } from "../src/constants/units";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../src/lib/acoustics/radiation";
 import { foldTrace, type FoldDriverShape } from "../src/lib/speaker/foldTrace";
-import { isDrawn, roomFits, traceModel } from "../src/lib/speaker/foldHorn";
+import { isDrawn, roomFits, traceModel, tracedHorn } from "../src/lib/speaker/foldHorn";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
@@ -273,4 +277,18 @@ test("drawing the first board seals the chamber's own vent; an undrawn fold keep
   assert.notEqual(bin.vent.kind, VENT_KIND.sealed);
   assert.equal(withHornFold(bin, EMPTY).vent, bin.vent);
   assert.equal(withHornFold(bin, OFFSET).vent.kind, VENT_KIND.sealed);
+});
+
+test("a drawn vent's air speed is shown with no limit", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne);
+  const bin = drawnChamber(VENTED, { kind: HORN_DRIVE.offset, tap: 1 });
+  // a chamber 41.5 in high and 31.5 in deep: its clear room is the drawing's 30 × 40 in
+  const chamber = { ...bin, dims: { ...bin.dims, h: 41.5, d: 31.5 }, vent: DEFAULT_VENTS.sealed };
+  const drawn = { ...spec, cabinet: { ...spec.cabinet, chambers: [chamber] } };
+  expect(tracedHorn(drawn.cabinet, chamber)?.rearVent).not.toBeNull();
+  const [limits] = speakerLimits(drawn, speakerResponse(drawn)).chambers;
+  expect(limits?.port?.limit).toBe(Infinity);
+  expect(limits?.port?.peak).toBeGreaterThan(0);
+  const chips = limits ? chamberChips(limits, "Sub") : [];
+  expect(chips.some((c) => c[1] === "Vent air speed")).toBe(true);
 });

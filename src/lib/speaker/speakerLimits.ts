@@ -25,6 +25,7 @@ import type {
   LimitId,
   LimitPeak,
   SpeakerBand,
+  SpeakerCabinet,
   SpeakerChamber,
   SpeakerChamberLimits,
   SpeakerDriver,
@@ -43,6 +44,7 @@ import { coneParts, hfParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
 import { chamberCones, hfBandOf, passbandDb, type SpeakerResponseOptions } from "./speakerResponse";
+import { tracedHorn } from "./foldHorn";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import {
   CHAMBER_LOAD,
@@ -109,6 +111,15 @@ export function bandLoads(
 /** The most air speed the chamber's vent takes, m/s; null without a vent. */
 const ventSpeedMax = (chamber: SpeakerChamber) =>
   chamber.vent.kind === VENT_KIND.vented ? chamber.vent.maxSpeedMs : null;
+
+/**
+ * The air speed limit of the vent the cones see, m/s: the chamber's own (`ventSpeedMax`), or none (Infinity) for a drawn
+ * horn's vent, whose air speed is shown and does not limit; null without a vent.
+ */
+const portSpeedMax = (
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+) => ventSpeedMax(chamber) ?? (tracedHorn(cabinet, chamber)?.rearVent ? Infinity : null);
 
 /**
  * The most air speed a horn chamber's throat takes, m/s: the box's air speed limit (its vent's), or the PA's port limit
@@ -263,7 +274,7 @@ export function speakerLimits(
     const driveV = driveOf(band);
     /** from the model's drive to the band's, before the filters */
     const toDrive = driveV / volts;
-    const portMax = ventSpeedMax(chamber);
+    const portMax = portSpeedMax(spec.cabinet, chamber);
     const throatMax = throatSpeedMax(chamber);
     const xR = radiatorXmax(chamber);
     const excursion = startPeak(parts.ts.Xmax);
