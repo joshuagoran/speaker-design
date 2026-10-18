@@ -18,6 +18,7 @@ import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
+import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 import { SPEAKER_OPTIMIZER_TEXT } from "../src/constants/speakerOptimizerText.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
@@ -255,12 +256,15 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
   await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
   const closed = p.locator("aside button[aria-expanded=false]");
   for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
-  const start = p.getByLabel(START_PICKER_TEXT.startFrom);
+  // a page with a saving row starts from its "New from…" list (picking one replaces the design); else from its picker
+  const newFrom = p.getByLabel(SAVE_ROW_TEXT.newFrom);
+  const fromRow = (await newFrom.count()) > 0;
+  const start = fromRow ? newFrom : p.getByLabel(START_PICKER_TEXT.startFrom);
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => fallbackStart.test(o));
   if (many) {
     await start.selectOption({ label: many });
-    await p.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
+    if (!fromRow) await p.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
   }
   // the Keep list (a closed fold inside the Optimizer fold) open too: its long lines must wrap inside the pane
   const keep = p.locator("aside details:not([open]) > summary", {

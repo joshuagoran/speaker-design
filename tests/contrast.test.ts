@@ -25,6 +25,8 @@ const pairs = (p: Palette): [string, string, string, number][] => {
       [`ink on ${bg}`, p.ink, p[bg], 4.5],
       [`muted on ${bg}`, p.muted, p[bg], 4.5],
       [`faint line on ${bg}`, p.faint, p[bg], 3],
+      // the lowest band's chart line, and its drivers' outlines in the 2D views
+      [`yellow line on ${bg}`, p.yellowLine, p[bg], 3],
       [`cyan on ${bg}`, p.cyan, p[bg], 4.5],
       [`magenta on ${bg}`, p.magenta, p[bg], 4.5],
       [`green text on ${bg}`, s.green.text, p[bg], 4.5],

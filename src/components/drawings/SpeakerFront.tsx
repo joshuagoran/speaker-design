@@ -1,5 +1,19 @@
-import type { FoldWall, Horn, HornFold, SpeakerDriver, SpeakerSpec } from "../../types";
+import { useRef } from "react";
+import type {
+  BandId,
+  FacePoint,
+  FoldWall,
+  Horn,
+  HornFold,
+  PositionFocus,
+  SpeakerDriver,
+  SpeakerSpec,
+} from "../../types";
 import { usePalette } from "../../hooks/useTheme";
+import { alpha } from "../../styles/palette";
+import { bandColor } from "../../lib/speaker/bandColor";
+import { dragStart, draggedPosition, type DragBounds } from "../../lib/speaker/driverDrag";
+import { POSITION_AXIS } from "../../constants/speakerResults";
 import { AmtPlate, RibbonPlate } from "./HifiFront";
 import {
   driverAcrossIn,
@@ -45,7 +59,31 @@ import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { DRIVER_KIND, FOLD_WALL, PORT_SHAPE } from "../../constants/speakerSpec";
 
 interface Props {
-  spec: Pick<SpeakerSpec, "cabinet">;
+  spec: Pick<SpeakerSpec, "cabinet" | "bands">;
+  /**
+   * moves a driver entry dragged on the baffle to `position` (the spec's terms); absent: the drivers stay put (a card, a
+   * stack's drawing)
+   */
+  onMoveDriver?: (chamber: number, driver: number, position: FacePoint) => void;
+  /** the driver position field with focus: its point (the center line, or the bottom) is marked; null: none */
+  focus?: PositionFocus | null;
+}
+
+/** The light fill a driver takes inside its band's outline. */
+const DRIVER_FILL_ALPHA = 0.18;
+/** The marked point's dot radius and the measure line's dash, px. */
+const MARK_DOT_PX = 3;
+const MARK_DASH = "3 2";
+
+/** A driver dragged on the baffle: its entry, where its group started, where it may go, and the pointer's start. */
+interface Drag {
+  chamber: number;
+  driver: number;
+  start: FacePoint;
+  bounds: DragBounds;
+  from: { x: number; y: number };
+  /** the last position sent, so a move that rounds to it sends nothing */
+  last: FacePoint;
 }
 
 /** The points a curved vent opening is drawn with. */
@@ -82,9 +120,11 @@ export function speakerFrontFrame(
  * PA's as its front view draws it, the Hi-fi's), the radiators, and a horn-loaded chamber's mouth. A Hi-fi port or a
  * radiator on the back is drawn dashed (behind). The top is drawn flat (an arched top too, for now).
  */
-export function SpeakerFront({ spec }: Props) {
+export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
   const pal = usePalette();
   const { cabinet } = spec;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const drag = useRef<Drag | null>(null);
   const t = cabinet.panel.thicknessIn;
   const { layout, minX, maxX, maxY, k } = speakerFrontFrame(cabinet);
   if (!layout.chambers.length) return null;
@@ -132,6 +172,11 @@ export function SpeakerFront({ spec }: Props) {
     );
   const opening = { fill: pal.ink };
   const cone = { fill: pal.edge, stroke: pal.muted, strokeWidth: 1 };
+  /** a driver part in its band's color (lib/speaker/bandColor): the outline, and a light fill inside it */
+  const inBand = (band: BandId | undefined) => {
+    const { stroke } = bandColor(spec.bands, band ?? "", pal);
+    return { fill: alpha(stroke, DRIVER_FILL_ALPHA), stroke, strokeWidth: 1.2 };
+  };
   /** a part on the back, behind the baffle */
   const behind = { fill: "none", stroke: pal.muted, strokeDasharray: "3 2" };
 
@@ -192,6 +237,9 @@ export function SpeakerFront({ spec }: Props) {
   /** one driver at (x, y): on the baffle, or its horn standing on the top */
   const driver = (d: SpeakerDriver, placed: PlacedChamber, x: number, y: number, key: string) => {
     const horn = driverHorn(d);
+    /** its first band's color; a coaxial's HF takes its second band's */
+    const color = inBand(d.bands[0]);
+    const hfColor = inBand(d.bands[1] ?? d.bands[0]);
     if (horn && onTop(d)) {
       // its foot on the lid, a quarter of its width, as the Hi-fi front view draws a waveguide on the top
       const foot = horn.size.w / 4;
@@ -204,11 +252,7 @@ export function SpeakerFront({ spec }: Props) {
           y + HORN_LIFT_IN + horn.size.h / 2,
           horn.size.w,
           horn.size.h,
-          {
-            fill: pal.muted,
-            stroke: pal.ink,
-            strokeWidth: 1,
-          },
+          color,
         ),
       ];
     }
@@ -219,7 +263,7 @@ export function SpeakerFront({ spec }: Props) {
           d.kind === DRIVER_KIND.sub
             ? byId(SPEAKER_SUB_OPTIONS, d.driverId)?.size
             : byId(MID_OPTIONS, d.driverId)?.size;
-        return size === undefined ? [] : [circle(key, x, y, paConeRadius(size), cone)];
+        return size === undefined ? [] : [circle(key, x, y, paConeRadius(size), color)];
       }
       case DRIVER_KIND.woofer:
       case DRIVER_KIND.coaxial: {
@@ -231,14 +275,12 @@ export function SpeakerFront({ spec }: Props) {
         const r = (size * HIFI_FRONT_PARTS.wooferFramePerSize) / 2;
         const C = HIFI_FRONT_PARTS.coax;
         return [
-          circle(key, x, y, r, cone),
-          // a coaxial's HF in the woofer's center: its horn's mouth and the phase plug
+          circle(key, x, y, r, color),
+          // a coaxial's HF in the woofer's center, in its own band's color: its horn's mouth and the phase plug
           ...(d.kind === DRIVER_KIND.coaxial
             ? [
-                circle(`${key}m`, x, y, r * C.hornMouthPerCone, { fill: pal.muted }),
-                circle(`${key}p`, x, y, r * C.hornThroatPerCone * C.plugPerThroat, {
-                  fill: pal.edge,
-                }),
+                circle(`${key}m`, x, y, r * C.hornMouthPerCone, { ...hfColor, fill: pal.panel }),
+                circle(`${key}p`, x, y, r * C.hornThroatPerCone * C.plugPerThroat, hfColor),
               ]
             : []),
         ];
@@ -248,10 +290,17 @@ export function SpeakerFront({ spec }: Props) {
         if (!tw) return [];
         if (horn && !tw.ownGuide)
           return [
-            mouth(key, mouthShape(horn), x, y, horn.size.w, horn.size.h, { fill: pal.muted }),
-            circle(`${key}t`, x, y, 0.5, { fill: pal.edge }),
+            mouth(key, mouthShape(horn), x, y, horn.size.w, horn.size.h, color),
+            circle(`${key}t`, x, y, 0.5, { fill: color.stroke }),
           ];
         const face = tw.ownGuide ?? tw.faceplate;
+        /** the plate's outline in its band's color, over a ribbon's or an AMT's own drawing */
+        const outline = rect(`${key}o`, x, y, face.w, face.h, {
+          rx: HIFI_FRONT_PARTS.plateCornerIn * k,
+          fill: "none",
+          stroke: color.stroke,
+          strokeWidth: 1.5,
+        });
         if (isRibbon(tw))
           return [
             <RibbonPlate
@@ -262,30 +311,26 @@ export function SpeakerFront({ spec }: Props) {
               h={face.h * k}
               corner={HIFI_FRONT_PARTS.plateCornerIn * k}
             />,
+            outline,
           ];
-        if (isAmt(tw)) return [<AmtPlate key={key} cx={px(x)} cy={py(y)} plate={face} k={k} />];
+        if (isAmt(tw))
+          return [<AmtPlate key={key} cx={px(x)} cy={py(y)} plate={face} k={k} />, outline];
         return [
           rect(key, x, y, face.w, face.h, {
             rx: face.w === face.h ? (face.w * k) / 2 : 3,
-            fill: pal.muted,
+            ...color,
           }),
-          circle(`${key}t`, x, y, 0.5, { fill: pal.edge }),
+          circle(`${key}t`, x, y, 0.5, { fill: color.stroke }),
         ];
       }
       case DRIVER_KIND.compression: {
         if (horn) {
           // its cutout in the baffle, as the tower opens it inside the chamber's walls (the cutlist's and the 3D view's)
           const cut = towerHornCutout(hornCutoutBox(placed, t), t, horn);
-          return [
-            mouth(key, cut, x, y, cut.w, cut.h, {
-              fill: pal.muted,
-              stroke: pal.ink,
-              strokeWidth: 1.2,
-            }),
-          ];
+          return [mouth(key, cut, x, y, cut.w, cut.h, color)];
         }
         const cd = byId(CD_OPTIONS, d.driverId);
-        return cd ? [circle(key, x, y, cd.exit / 2, opening)] : [];
+        return cd ? [circle(key, x, y, cd.exit / 2, { ...opening, stroke: color.stroke })] : [];
       }
     }
   };
@@ -336,7 +381,12 @@ export function SpeakerFront({ spec }: Props) {
           if (across > 0) out.push(circle(`b${i}.${j}.${n}`, x, y, across / 2, behind));
           const sd = coneParts(d)?.ts.Sd;
           if (sd)
-            out.push(circle(`c${i}.${j}.${n}`, x, y, Math.sqrt(sd / CM2_PER_IN2 / Math.PI), line));
+            out.push(
+              circle(`c${i}.${j}.${n}`, x, y, Math.sqrt(sd / CM2_PER_IN2 / Math.PI), {
+                ...line,
+                stroke: inBand(d.bands[0]).stroke,
+              }),
+            );
         }),
       );
       // the throat: the walls' back edges, over the cones where the horn loads them
@@ -418,14 +468,98 @@ export function SpeakerFront({ spec }: Props) {
       }),
     );
   });
+  /** the pointer in the drawing's units (its viewBox), from a pointer event; null before the drawing is laid out */
+  const toDrawing = (e: React.PointerEvent) => {
+    const m = svgRef.current?.getScreenCTM();
+    if (!m) return null;
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    return { x: p.x, y: p.y };
+  };
+  /** the handlers a draggable driver entry's group takes */
+  const dragProps = (placed: PlacedChamber, chamber: number, entry: number) => {
+    if (!onMoveDriver) return {};
+    const d = placed.chamber.drivers[entry];
+    return {
+      style: { cursor: "grab", touchAction: "none" },
+      onPointerDown: (e: React.PointerEvent<SVGGElement>) => {
+        const from = toDrawing(e);
+        if (!from) return;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const { center, bounds } = dragStart(placed, driverSpots(placed, d), driverAcrossIn(d));
+        drag.current = { chamber, driver: entry, start: center, bounds, from, last: center };
+      },
+    };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const now = drag.current;
+    const at = now && toDrawing(e);
+    if (!now || !at || !onMoveDriver) return;
+    const next = draggedPosition(
+      now.start,
+      { xIn: (at.x - now.from.x) / k, yIn: -(at.y - now.from.y) / k },
+      now.bounds,
+    );
+    if (next.xIn === now.last.xIn && next.yIn === now.last.yIn) return;
+    now.last = next;
+    onMoveDriver(now.chamber, now.driver, next);
+  };
+  const endDrag = () => {
+    drag.current = null;
+  };
+
+  /** the point the focused position field measures from: the chamber's center line, or its bottom */
+  const mark = (() => {
+    if (!focus || focus.axis === POSITION_AXIS.back) return null;
+    const placed = layout.chambers[focus.chamber];
+    const d = placed?.chamber.drivers[focus.driver];
+    if (!placed || !d) return null;
+    const { center } = dragStart(placed, driverSpots(placed, d), driverAcrossIn(d));
+    const x = placed.cx + center.xIn,
+      y = placed.y0 + center.yIn;
+    const line = { stroke: pal.ink, strokeWidth: 1.2 };
+    const across = focus.axis === POSITION_AXIS.across;
+    /** the origin on the reference line, level with the driver (across) or under it (up) */
+    const origin = across ? { x: placed.cx, y } : { x, y: placed.y0 };
+    return (
+      <g aria-hidden="true">
+        {across ? (
+          <line
+            x1={px(placed.cx)}
+            x2={px(placed.cx)}
+            y1={py(placed.y0)}
+            y2={py(placed.y0 + placed.dims.h)}
+            {...line}
+            strokeDasharray={MARK_DASH}
+          />
+        ) : (
+          <line
+            x1={px(placed.x0)}
+            x2={px(placed.x0 + placed.dims.w)}
+            y1={py(placed.y0)}
+            y2={py(placed.y0)}
+            {...line}
+            strokeWidth={2.5}
+          />
+        )}
+        <line x1={px(origin.x)} y1={py(origin.y)} x2={px(x)} y2={py(y)} {...line} />
+        <circle cx={px(origin.x)} cy={py(origin.y)} r={MARK_DOT_PX} fill={pal.ink} />
+        <circle cx={px(x)} cy={py(y)} r={MARK_DOT_PX} fill="none" {...line} />
+      </g>
+    );
+  })();
+
   const ro = cabinet.roundoverIn;
   const shells = layout.oneShell
     ? [{ x0: -layout.size.w / 2, y0: 0, w: layout.size.w, h: layout.size.h }]
     : layout.chambers.map((c) => ({ x0: c.x0, y0: c.y0, w: c.dims.w, h: c.dims.h }));
   return (
     <svg
+      ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
       className="w-full h-full"
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
       role="img"
       aria-label={`Front view, ${layout.size.w} × ${layout.size.h}″, ${layout.chambers.length} chamber${layout.chambers.length === 1 ? "" : "s"}`}
     >
@@ -487,12 +621,23 @@ export function SpeakerFront({ spec }: Props) {
           if ((drawing || !driversOnBaffle(chamber)) && !onTop(d)) return;
           // a horn that no longer fits where it is set isn't drawn (the page says so)
           if (!hornFitsWhereSet(placed, d)) return;
-          driverSpots(placed, d).forEach((s, n) =>
-            parts.push(...driver(d, placed, s.xIn, s.yIn, `d${i}.${j}.${n}`)),
+          const drawn = driverSpots(placed, d).flatMap((s, n) =>
+            driver(d, placed, s.xIn, s.yIn, `d${i}.${j}.${n}`),
+          );
+          // a driver on the baffle drags as one group with its entry's other drivers (a horn on the top stays put)
+          parts.push(
+            onTop(d) ? (
+              <g key={`d${i}.${j}`}>{drawn}</g>
+            ) : (
+              <g key={`d${i}.${j}`} {...dragProps(placed, i, j)}>
+                {drawn}
+              </g>
+            ),
           );
         });
         return parts;
       })}
+      {mark}
     </svg>
   );
 }

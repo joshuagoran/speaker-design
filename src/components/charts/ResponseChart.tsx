@@ -7,6 +7,7 @@ import { useState } from "react";
 import { SVG_FONT, FONT } from "../../styles/fonts";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 import { HOVER_TRANSITION } from "../ui/buttonStyles";
+import { BandSwatch } from "../ui/BandSwatch";
 
 /**
  * One curve on the chart: its points, legend label, line color and fill color. `band` shades the curve at the low and
@@ -24,6 +25,8 @@ interface Series {
   dash?: string;
   /** the line's width, px; absent: 2 (a sum drawn over its parts takes more) */
   width?: number;
+  /** the legend's swatch: "dot", a band's dot (a hollow ring when dashed, `BandSwatch`); absent: a short line */
+  swatch?: "dot";
   /**
    * leave the line out where it is below the chart's floor, so it does not run along the axis as if it were data;
    * absent: drawn along the floor
@@ -382,10 +385,16 @@ export function ResponseChart({
               onFocus={() => setHot(keyOf(p))}
               onBlur={() => setHot(null)}
             >
-              <span
-                className="inline-block w-4 h-0.5"
-                style={p.dash ? { borderTop: `2px dashed ${p.stroke}` } : { background: p.stroke }}
-              />
+              {p.swatch === "dot" ? (
+                <BandSwatch stroke={p.stroke} ring={p.dash !== undefined} />
+              ) : (
+                <span
+                  className="inline-block w-4 h-0.5"
+                  style={
+                    p.dash ? { borderTop: `2px dashed ${p.stroke}` } : { background: p.stroke }
+                  }
+                />
+              )}
               {p.label}
             </span>
           ))}

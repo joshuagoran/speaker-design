@@ -6,6 +6,10 @@ import type { CabinetBuild } from "./speakerBuild";
 import { ductFitChip, hardwareFitChip, tubeFitChip } from "../pa/chips";
 import { baffleInsetIn } from "./chamberAir";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
+import { BRACING_CHIP_TEXT } from "../../constants/speakerResults";
+import { NO_BRACING } from "../../constants/bracing";
+import { braceShortfalls, strengthShortfalls } from "../bracing";
+import { formatHz } from "../format";
 
 /** A Speaker-page check. */
 type SpeakerChip = Chip<ChipId<"speaker">>;
@@ -35,5 +39,29 @@ export function chamberFitChips(
         "speakerHardwareFit",
       ]);
     return chips;
+  });
+}
+
+/** Whether chamber `index` has no bracing (`NO_BRACING`): no braces in its cutlist, its weight or its net air. */
+export const chamberUnbraced = (cabinet: Pick<SpeakerCabinet, "braceStyle">, _index: number) =>
+  cabinet.braceStyle === NO_BRACING;
+
+/**
+ * Each chamber's bracing check, in the spec's order: braced to its target, or under it (a panel under the target or over
+ * a strength limit: the Details fold lists them). Empty for a chamber with no bracing (`chamberUnbraced`).
+ */
+export function chamberBraceChips(
+  cabinet: Pick<SpeakerCabinet, "braceStyle">,
+  build: Pick<CabinetBuild, "chambers">,
+): SpeakerChip[][] {
+  return build.chambers.map(({ bracing }, i): SpeakerChip[] => {
+    if (chamberUnbraced(cabinet, i)) return [];
+    const target = formatHz(bracing.targetHz);
+    const short = braceShortfalls(bracing).length > 0 || strengthShortfalls(bracing).length > 0;
+    return [
+      short
+        ? ["warn", BRACING_CHIP_TEXT.under, BRACING_CHIP_TEXT.underTip(target), "speakerBracing"]
+        : ["ok", BRACING_CHIP_TEXT.meets, BRACING_CHIP_TEXT.meetsTip(target), "speakerBracing"],
+    ];
   });
 }

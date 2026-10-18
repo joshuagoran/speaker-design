@@ -35,7 +35,7 @@ export interface HifiCabinetHoles {
 /**
  * The Hi-fi box (butt-jointed, as the Cutlist page builds it): the baffle covering the whole front, its four front
  * edges rounded over by `roundover` (sharp at 0), painted; the sides, top, bottom and back in the cabinet finish, and,
- * outside the cutaway, a dark lining inside so the openings look into a closed box. A roundover deeper than the baffle
+ * outside the cutaway, a dark lining inside (unless `lining` is false) so the openings look into a closed box. A roundover deeper than the baffle
  * is drawn on a front that thick (the Hi-fi page's fix: a doubled baffle).
  *
  * The model and the cutlist place the drivers and vents whatever the roundover (a round port low on the baffle, say),
@@ -53,11 +53,17 @@ export function buildHifiCabinet(
     roundover,
     holes,
     wallOpenings = NO_WALL_OPENINGS,
+    lining = true,
   }: {
     dim: Dims3;
     roundover: number;
     holes: HifiCabinetHoles;
     wallOpenings?: WallOpenings;
+    /**
+     * the dark lining inside (default); false shows the panels' inner faces, as the PA's frame does (a horn chamber,
+     * whose mouth looks onto its boards)
+     */
+    lining?: boolean;
   },
 ): { group: THREE.Group; frontZ: number; shellFrontZ: number } {
   const { w, h, d } = dim;
@@ -173,8 +179,8 @@ export function buildHifiCabinet(
   }
 
   // the dark inside, seen through the openings (left out of the cutaway, which shows the inside)
-  if (!ctx.cutaway && depth > 2 * T) {
-    const lining = new THREE.Mesh(
+  if (lining && !ctx.cutaway && depth > 2 * T) {
+    const liner = new THREE.Mesh(
       new THREE.BoxGeometry(
         w - 2 * T - 2 * LINING_GAP_IN,
         h - 2 * T - 2 * LINING_GAP_IN,
@@ -186,9 +192,9 @@ export function buildHifiCabinet(
         side: THREE.BackSide,
       }),
     );
-    lining.position.set(0, h / 2, (-d / 2 + T + shellFrontZ) / 2);
-    lining.name = HIFI_CABINET_MESH_NAMES.shell;
-    group.add(lining);
+    liner.position.set(0, h / 2, (-d / 2 + T + shellFrontZ) / 2);
+    liner.name = HIFI_CABINET_MESH_NAMES.shell;
+    group.add(liner);
   }
   ctx.group.add(group);
   return { group, frontZ: zf, shellFrontZ };

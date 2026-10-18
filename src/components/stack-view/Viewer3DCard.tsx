@@ -1,24 +1,40 @@
 import { useEffect, useState } from "react";
-import { Icon, IconButton } from "../ui/IconButton";
+import { DRIVER_ICON_PATH, Icon, IconButton, STRIKE_ICON_PATH } from "../ui/IconButton";
 import { UI_TEXT } from "../../constants/uiText";
+
+/** What the card's buttons set: how the view draws the design. */
+export interface ViewerLook {
+  /** the cabinet as a ghost, the parts inside showing */
+  cutaway: boolean;
+  /** the drivers drawn; false leaves their cutouts open (always true where the card has no drivers button) */
+  drivers: boolean;
+}
 
 interface Props {
   /** the card's size and position while it isn't full screen */
   boxClassName: string;
   /** whether it opens in the cutaway (default: finished; the render tool sets it) */
   startCutaway?: boolean;
-  /** the 3D view, drawn finished or in the cutaway */
-  children: (cutaway: boolean) => React.ReactNode;
+  /** a button that shows or hides the drivers (the Speaker page's view) */
+  driversButton?: boolean;
+  /** the 3D view, drawn finished or in the cutaway, with or without its drivers */
+  children: (cutaway: boolean, look: ViewerLook) => React.ReactNode;
 }
 
 /**
  * A 3D view's card, the PA stack's, the Hi-fi speaker's and the Speaker page's alike: the view with its buttons laid over
- * it, the cutaway and full screen. Both are how you look at the design, not part of it, so they live here and are never
- * saved.
+ * it, the cutaway, the drivers (where the page asks for it) and full screen. They are how you look at the design, not
+ * part of it, so they live here and are never saved.
  */
-export function Viewer3DCard({ boxClassName, startCutaway = false, children }: Props) {
+export function Viewer3DCard({
+  boxClassName,
+  startCutaway = false,
+  driversButton = false,
+  children,
+}: Props) {
   const [isFull, setIsFull] = useState(false);
   const [cutaway, setCutaway] = useState(startCutaway);
+  const [drivers, setDrivers] = useState(true);
   useEffect(() => {
     if (!isFull) return;
     const esc = (e: KeyboardEvent) => {
@@ -43,6 +59,18 @@ export function Viewer3DCard({ boxClassName, startCutaway = false, children }: P
             <path d="M2.5 4.5L8 7.5l5.5-3M8 7.5v3" strokeDasharray="1.5 1.5" />
           </Icon>
         </IconButton>
+        {driversButton && (
+          <IconButton
+            label={drivers ? UI_TEXT.hideDrivers : UI_TEXT.showDrivers}
+            onClick={() => setDrivers((v) => !v)}
+          >
+            {/* a speaker seen from the side, struck through while the drivers are hidden */}
+            <Icon>
+              <path d={DRIVER_ICON_PATH} />
+              {!drivers && <path d={STRIKE_ICON_PATH} />}
+            </Icon>
+          </IconButton>
+        )}
         <IconButton
           label={isFull ? UI_TEXT.closeFullScreen : UI_TEXT.fullScreen}
           onClick={() => setIsFull((v) => !v)}
@@ -56,7 +84,7 @@ export function Viewer3DCard({ boxClassName, startCutaway = false, children }: P
           </Icon>
         </IconButton>
       </div>
-      {children(cutaway)}
+      {children(cutaway, { cutaway, drivers })}
     </section>
   );
 }

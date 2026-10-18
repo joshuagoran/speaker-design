@@ -26,6 +26,8 @@ export interface Palette {
   magenta: string;
   cyan: string;
   yellow: string;
+  /** a chart line in yellow: a deep gold on the light page (3:1 on white), the brand yellow on the dark one */
+  yellowLine: string;
   subTint: string;
   midTint: string;
   /** drop shadows */
@@ -45,6 +47,7 @@ const LIGHT: Palette = {
   magenta: "#e5007e",
   cyan: "#0077b8",
   yellow: "#ffd400",
+  yellowLine: "#b08000",
   subTint: "#fff3b0",
   midTint: "#cce6f4",
   shadow: "#111111",
@@ -69,6 +72,7 @@ const DARK: Palette = {
   magenta: "#ff4fae",
   cyan: "#45b6f2",
   yellow: "#ffd84d",
+  yellowLine: "#ffd84d",
   subTint: "#3a3410",
   midTint: "#12313f",
   shadow: "#000000",
@@ -89,16 +93,16 @@ const BAND_DASH = "6 4";
 export const TARGET_DASH = BAND_DASH;
 
 /**
- * A band's line on a chart, by its place among `count` bands, low to high: the lowest in the lighter gray (a sub, a
+ * A band's line on a chart, by its place among `count` bands, low to high: the lowest in yellow (`yellowLine`: a sub, a
  * woofer alone), the highest in cyan (horn and tweeter), the ones between in magenta (mid-bass and woofer), every second
  * one of those dashed. A single band is the lowest.
  */
 export function bandLine(
-  p: Pick<Palette, "faint" | "magenta" | "cyan">,
+  p: Pick<Palette, "yellowLine" | "magenta" | "cyan">,
   index: number,
   count: number,
 ): { stroke: string; dash?: string } {
-  if (index === 0) return { stroke: p.faint };
+  if (index === 0) return { stroke: p.yellowLine };
   if (index === count - 1) return { stroke: p.cyan };
   return index % 2 === 0 ? { stroke: p.magenta, dash: BAND_DASH } : { stroke: p.magenta };
 }
