@@ -10,13 +10,14 @@ import type {
   SpeakerChamber,
   SpeakerDriver,
 } from "../../types";
-import { foldTrace, type FoldDriverShape } from "./foldTrace";
+import { foldAcross, foldTrace, type FoldDriverShape } from "./foldTrace";
 import type { TracedHornModel } from "./hornDesign";
 import { chamberClearFace, clearDepthIn } from "./chamberAir";
 import { coneShapeOf } from "./speakerBuild";
 import { CHAMBER_LOAD, FOLD_WALL, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
+import { FOLD_DRIVER_GAP_IN } from "../../constants/foldHorn";
 
 /** The longest section the sound model gets from a trace, in: shorter where a tap falls. */
 const SECTION_IN = 2;
@@ -95,6 +96,23 @@ export function foldDrawing(
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
   if (!drawn || !horn?.fold) return null;
   return { fold: horn.fold, parts: drawn.trace.parts, room: foldRoom(cabinet, chamber) };
+}
+
+/**
+ * Each driver row's drivers across the boards, `widthIn` wide: their centers from the boards' center line, in. As many
+ * as fit stand side by side (`foldAcross`), a cutout and a gap apart; the last row holds what is left.
+ */
+export function foldRowsAcross(drawing: Pick<FoldDrawing, "parts" | "room">, widthIn: number) {
+  const { driver } = drawing.room;
+  const across = driver ? foldAcross(widthIn, driver.cutoutIn) : 1;
+  const pitch = driver ? driver.cutoutIn + FOLD_DRIVER_GAP_IN : 0;
+  return drawing.parts.map((part, row) => {
+    const n = driver ? Math.min(across, driver.count - row * across) : 0;
+    return {
+      part,
+      xs: Array.from({ length: Math.max(0, n) }, (_, k) => (k - (n - 1) / 2) * pitch),
+    };
+  });
 }
 
 /** The chamber's drawn horn, traced; null when its horn is not folded or not drawn, or its room is too small. */

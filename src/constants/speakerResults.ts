@@ -1,20 +1,25 @@
 // The Speaker page's results pane (src/pages/speaker): the saving row's nouns, the 2D views' ids and words, the checks' row
 // labels and the Details fold's bullets. It imports nothing, so the Node checks (tests/mobile-check.mjs) can read it.
 
-/** The 2D drawing's views, by id: the speaker seen from the front, or cut through its center from the side. */
-export const SPEAKER_VIEW = { front: "front", side: "side" } as const;
+/**
+ * The 2D drawing's views, by id: the speaker seen from the front, cut through its center from the side, or cut through
+ * each chamber's middle height from above.
+ */
+export const SPEAKER_VIEW = { front: "front", side: "side", top: "top" } as const;
 export type SpeakerView = (typeof SPEAKER_VIEW)[keyof typeof SPEAKER_VIEW];
 
 /** Each 2D view's button. */
 export const SPEAKER_VIEW_NAMES = {
   front: "Front",
   side: "Side",
+  top: "Top",
 } as const satisfies Record<SpeakerView, string>;
 
 /** The line under each 2D view. */
 export const SPEAKER_VIEW_HINTS = {
   front: "Drag a driver to move it.",
   side: "Cut through the center. Front at the left.",
+  top: "Cut through the middle. Front at the bottom.",
 } as const satisfies Record<SpeakerView, string>;
 
 /**
@@ -103,14 +108,18 @@ export const SPEAKER_DETAILS_TEXT = {
   viewsLines: [
     "Front: the speaker seen from the front.",
     "Side: cut through the center, the front at the left.",
+    "Top: each chamber cut through its middle height, the front at the bottom.",
+    "Top: stacked chambers show one above the other, the highest at the top.",
+    "Top: a drawn fold shows the boards where the cut crosses them.",
+    "Top: a dashed vent or horn is below or above the cut.",
     "Each driver shows in the color of its band.",
   ],
-  /** the straight horns' sections, under the views */
-  sectionLines: [
-    "Sections: top and side, cut through the center of the horn, the baffle at the left.",
+  /** a straight horn in the Side and Top views */
+  hornLines: [
+    "Side and Top show a straight horn cut through its center.",
     "The walls of a horn follow its flare sections.",
     "They start just in front of the cones and cover their outer parts.",
-    "The dashed box is the front chamber, between the cones and the back edges of the walls.",
+    "In Top, the dashed box is the front chamber, between the cones and the back edges of the walls.",
     "A folded path turns at the walls.",
     "A slot on a front side runs back along the side wall.",
   ],

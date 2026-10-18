@@ -7,9 +7,8 @@ import * as THREE from "three";
 import type { SceneContext } from "./sceneContext";
 import { circlePath } from "./geometry";
 import { drawnSeg, len, left, sub, unit } from "../../lib/speaker/foldGeometry";
-import { foldAcross } from "../../lib/speaker/foldTrace";
-import { FOLD_DRIVER_GAP_IN, FOLD_BASKET_FLARE, FOLD_BASKET_SHARE } from "../../constants/foldHorn";
-import type { FoldDrawing } from "../../lib/speaker/foldHorn";
+import { FOLD_BASKET_FLARE, FOLD_BASKET_SHARE } from "../../constants/foldHorn";
+import { foldRowsAcross, type FoldDrawing } from "../../lib/speaker/foldHorn";
 import type { FaceRect } from "../../lib/speaker/speakerLayout";
 import type { SidePoint } from "../../types";
 
@@ -43,7 +42,7 @@ export function buildFoldHorn(
     names: FoldMeshNames;
   },
 ) {
-  const { fold, parts, room } = drawing;
+  const { fold, room } = drawing;
   const T = ctx.wall;
   const centerX = clear.x + clear.w / 2 - origin.x;
   const floorY = clear.y - origin.y;
@@ -53,16 +52,7 @@ export function buildFoldHorn(
 
   // the drivers' cutouts in their board: each row's drivers side by side across the width
   const driver = room.driver;
-  const across = driver ? foldAcross(clear.w, driver.cutoutIn) : 1;
-  const pitch = driver ? driver.cutoutIn + FOLD_DRIVER_GAP_IN : 0;
-  /** each part's drivers' centers across the board's width, from its center line (x), with the part */
-  const rows = parts.map((part, row) => {
-    const n = driver ? Math.min(across, driver.count - row * across) : 0;
-    return {
-      part,
-      xs: Array.from({ length: Math.max(0, n) }, (_, k) => (k - (n - 1) / 2) * pitch),
-    };
-  });
+  const rows = foldRowsAcross(drawing, clear.w);
 
   fold.boards.forEach((board, i) => {
     const seg = drawnSeg(fold.boards, i, T);

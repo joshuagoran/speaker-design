@@ -19,8 +19,8 @@ import { priceText } from "../../lib/speaker/speakerTotals";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
 import { SpeakerFront } from "../../components/drawings/SpeakerFront";
-import { SpeakerSection } from "../../components/drawings/SpeakerSection";
 import { SpeakerSide } from "../../components/drawings/SpeakerSide";
+import { SpeakerTop } from "../../components/drawings/SpeakerTop";
 import { AssumptionsList } from "../../components/ui/AssumptionsList";
 import { UI_TEXT } from "../../constants/uiText";
 import { FoldHornCard } from "./FoldHornCard";
@@ -95,9 +95,6 @@ const SUM_LINE_PX = 4;
 
 /** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
-
-/** The sections' height: the top and the side section, side by side across the pane. */
-const SECTION_HEIGHT = "h-[260px] md:h-[clamp(280px,42vh,440px)]";
 
 /** The settings sections that start closed: only Chambers starts open. */
 const FOLDS_START = { construction: false, bands: false, look: false, optimizer: false } as const;
@@ -254,7 +251,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
     })),
     fb: fbMarks.length > 0,
     pricePartial: price.partial,
-    sections: flares.length > 0,
+    straightHorn: flares.length > 0,
   });
   /** the focused position field's driver, while it still exists (a field removed with focus sends no blur) */
   const focus =
@@ -311,17 +308,14 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
                       }
                       focus={focus}
                     />
-                  ) : (
+                  ) : view === SPEAKER_VIEW.side ? (
                     <SpeakerSide spec={spec} focus={focus} />
+                  ) : (
+                    <SpeakerTop spec={spec} />
                   )}
                 </div>
                 <p className="text-xs text-stone-500">{SPEAKER_VIEW_HINTS[view]}</p>
               </Card>
-              {flares.length > 0 && (
-                <Card gapY={false} className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
-                  <SpeakerSection spec={spec} />
-                </Card>
-              )}
               {spec.cabinet.chambers.map((c, i) =>
                 c.load.kind === CHAMBER_LOAD.horn && c.load.horn.path === HORN_PATH.folded ? (
                   <FoldHornCard

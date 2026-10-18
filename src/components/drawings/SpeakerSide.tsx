@@ -1,7 +1,15 @@
-import type { BandId, PositionFocus, SidePoint, SpeakerSpec } from "../../types";
+import type { PositionFocus, SidePoint, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
-import { alpha } from "../../styles/palette";
-import { bandColor } from "../../lib/speaker/bandColor";
+import {
+  BASKET_SHARE,
+  DASH,
+  MOTOR_SHARE,
+  PAD_PX,
+  SMALL_DRIVER_DEPTH_IN,
+  THROAT_SHARE,
+  VIEW_PX,
+  sectionStyles,
+} from "./speakerDrawing";
 import {
   PORT_RULE,
   driverAcrossIn,
@@ -36,21 +44,8 @@ interface Props {
   focus?: PositionFocus | null;
 }
 
-/** The drawing's size, px, and its margin (as the front drawing's). */
-const VIEW_PX = 150;
-const PAD_PX = 4;
-/** The light fill a driver takes inside its band's outline (as the front drawing's). */
-const DRIVER_FILL_ALPHA = 0.18;
-/** A cone's motor against its cutout, and where along its depth the basket meets it, as shares. */
-const MOTOR_SHARE = 0.4;
-const BASKET_SHARE = 0.55;
-/** How deep a tweeter or a compression driver with no horn is drawn behind the baffle, in. */
-const SMALL_DRIVER_DEPTH_IN = 2;
-/** A horn's throat against its mouth, drawn as a share of the mouth's height. */
-const THROAT_SHARE = 0.15;
-/** The marked point's dot radius and the measure line's dash, px. */
+/** The marked point's dot radius, px. */
 const MARK_DOT_PX = 3;
-const MARK_DASH = "3 2";
 
 /**
  * What the side drawing spans, in: front to back (the deepest chamber, a horn on the top, a straight horn past its
@@ -113,16 +108,7 @@ export function SpeakerSide({ spec, focus = null }: Props) {
   });
   const points = (list: readonly { z: number; y: number }[]) =>
     list.map((p) => `${px(p.z)},${py(p.y)}`).join(" ");
-  const inBand = (band: BandId | undefined) => {
-    const { stroke } = bandColor(spec.bands, band ?? "", pal);
-    return { fill: alpha(stroke, DRIVER_FILL_ALPHA), stroke, strokeWidth: 1.2 };
-  };
-  const wall = { fill: pal.edge, stroke: pal.ink, strokeWidth: 1.2 };
-  const inner = { fill: pal.panel, stroke: pal.muted, strokeWidth: 0.8 };
-  const air = { fill: alpha(pal.muted, 0.12), stroke: pal.ink, strokeWidth: 0.8 };
-  const vent = { fill: alpha(pal.muted, 0.3), stroke: pal.muted, strokeWidth: 0.8 };
-  const brace = { fill: alpha(pal.muted, 0.25), stroke: pal.muted, strokeWidth: 0.6 };
-  const gap = { fill: pal.white, stroke: "none" };
+  const { wall, inner, air, vent, brace, gap, inBand } = sectionStyles(pal, spec.bands);
 
   /** a cone driver's basket and motor in section: from the baffle's front face back, its cutout `r` round `y` */
   const conePolygon = (y: number, r: number, depthIn: number) => {
@@ -402,7 +388,7 @@ export function SpeakerSide({ spec, focus = null }: Props) {
     return (
       <g aria-hidden="true">
         <line x1={px(0)} x2={px(0)} y1={py(placed.y0)} y2={py(top)} {...line} strokeWidth={2.5} />
-        <line x1={px(0)} x2={px(0)} y1={py(top)} y2={py(y)} {...line} strokeDasharray={MARK_DASH} />
+        <line x1={px(0)} x2={px(0)} y1={py(top)} y2={py(y)} {...line} strokeDasharray={DASH} />
         <line x1={px(0)} y1={py(y)} x2={px(d.position.yIn)} y2={py(y)} {...line} />
         <circle cx={px(0)} cy={py(y)} r={MARK_DOT_PX} fill={pal.ink} />
       </g>
