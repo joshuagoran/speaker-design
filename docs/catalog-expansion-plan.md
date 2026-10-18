@@ -44,6 +44,7 @@ US Speaker inventory, Oct 2026: 439 models not in the catalog. Model lists: `doc
 - Hi-fi makers (Scan-Speak, Seas, SB Acoustics, Purifi, Dayton, Peerless, Fostex): not at US Speaker. Madisound sells them; its pages are readable.
 - Celestion pro drivers: US Speaker sells only Celestion guitar speakers.
 - Parts Express product pages need a browser (the price is drawn by script).
+- Global sources: some parts have no US vendor (e.g. B&C 15HTX100: Thomann, $749 plus shipping and import fees). Prices are US-only today. A later change can add foreign vendors with their shipping and import costs.
 
 ## Code changes first
 
