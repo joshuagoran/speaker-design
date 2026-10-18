@@ -34,11 +34,13 @@ import type {
   ThieleSmall,
   ThroatMountKind,
   ThroatThread,
+  TriaxDriver,
   WaveguideSpec,
 } from "../types";
 import { CABINET_FINISHES, PAINT_SWATCHES } from "../data/catalog/finishes";
 import { CD_RAW } from "../data/catalog/compression-drivers";
 import { BC10CXN64_RAW, FILL_RAW } from "../data/catalog/fills";
+import { TRIAX_RAW } from "../data/catalog/triaxials";
 import { HIFI_PASSIVES_RAW } from "../data/catalog/passive-radiators";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../data/catalog/hifi-tweeters";
 import { HIFI_WOOFERS_RAW, SB17NRX_RAW } from "../data/catalog/hifi-woofers";
@@ -153,6 +155,11 @@ export const BC10CXN64: FillDriver = withTsXmax(BC10CXN64_RAW);
 export const FILL_OPTIONS: readonly FillDriver[] = FILL_RAW.map((d) =>
   d === BC10CXN64_RAW ? BC10CXN64 : withTsXmax(d),
 ).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+
+/** The triaxials (a woofer with a midrange and HF section on one horn), A–Z. */
+export const TRIAX_OPTIONS: readonly TriaxDriver[] = TRIAX_RAW.map(withTsXmax).sort((a, b) =>
+  a.name.localeCompare(b.name, "en", { numeric: true }),
+);
 
 /** A cone's diameter from its area (Sd, cm²), inches. */
 const coneDiaIn = (sdCm2: number) => (2 * Math.sqrt(sdCm2 / Math.PI)) / 2.54;

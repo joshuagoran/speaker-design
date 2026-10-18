@@ -36,7 +36,7 @@ US Speaker inventory, Oct 2026: 439 models not in the catalog. Model lists: `doc
 | P.Audio, EV, Peavey       | –      | 1     | –     | 3     | 1     | –     | 4           | 5        | –        |
 
 - Compression counts include line-array drivers and coaxial HF units.
-- B&C triaxial: 18HTX100 ($1,359.90, US Speaker). The 15HTX100 has no US vendor.
+- B&C triaxials: 15HTX100 and 18HTX100 are in the catalog. The 15HTX100 has no US vendor.
 - The Beyma G40 line is a woofer line (Beyma datasheets), not a bass guitar line. US Speaker's index groups it with bass units.
 
 ## Gaps outside US Speaker
@@ -48,13 +48,13 @@ US Speaker inventory, Oct 2026: 439 models not in the catalog. Model lists: `doc
 
 ## Code changes first
 
-| Part                              | Change                                                                                          |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 21 in subs (11 models)            | Add 21 to the sub size type.                                                                    |
-| 12 in subs (e.g. Beyma 12SCF1300) | Add 12 to the sub size type.                                                                    |
-| 5–8 in pro midranges              | Add a size or table for them (the mid table is 10, 12 and 15 in).                               |
-| Triaxials                         | Add a type with a midrange section. Build with the modular Speaker page.                        |
-| Coaxials 12–15 in                 | Data fits the coaxial table now. The fill page is going away; the Speaker page builds coaxials. |
+| Part                              | Change                                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 21 in subs (11 models)            | Add 21 to the sub size type.                                                                              |
+| 12 in subs (e.g. Beyma 12SCF1300) | Add 12 to the sub size type.                                                                              |
+| 5–8 in pro midranges              | Add a size or table for them (the mid table is 10, 12 and 15 in).                                         |
+| Triaxials                         | Done: the triaxial type and table (B&C 15HTX100, 18HTX100). No page uses them yet; the Speaker page will. |
+| Coaxials 12–15 in                 | Data fits the coaxial table. Done for Beyma (12/15CXA400Fe/Nd). The Speaker page builds coaxials.         |
 
 ## Open questions
 
