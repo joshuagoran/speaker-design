@@ -313,6 +313,9 @@
         padding: 4px 10px;
         font-size: 12px;
       }
+      .btn.nowrap {
+        white-space: nowrap;
+      }
       .btn.primary {
         background: var(--cyan);
         border-color: var(--cyan);
@@ -481,16 +484,10 @@
         grid-column: span 2;
       }
       .goals {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
       .goals .lbl {
         white-space: nowrap;
-      }
-      .goals .btn {
-        max-width: 96px;
-        height: 38px;
-        line-height: 1.1;
-        padding: 2px 8px;
       }
       .startrow {
         display: grid;
@@ -536,13 +533,21 @@
         display: flex;
         flex-direction: column;
       }
+      /* the fold's summary wraps under its title, up to two lines */
       .sec .sum {
-        font-size: 14px;
+        font-size: 12px;
+        line-height: 1.35;
         font-weight: 400;
         color: var(--muted);
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
         overflow: hidden;
-        text-overflow: ellipsis;
+        margin-top: 2px;
+      }
+      .sec .sum[hidden] {
+        display: none;
       }
       .sec .pm {
         color: var(--muted);
@@ -561,6 +566,33 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
+      }
+      /* a chamber's sub-section: a small heading over one or more inset boxes */
+      .grp {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .grp > .grpbody {
+        gap: 12px;
+        padding: 8px;
+      }
+      .card[data-chamber] {
+        padding: 10px 8px;
+      }
+      .grp > .subhead {
+        color: var(--muted);
+      }
+      input:disabled,
+      select:disabled {
+        color: var(--muted);
+        background: var(--page);
+        opacity: 1;
+        cursor: default;
+      }
+      input:disabled:hover,
+      select:disabled:hover {
+        border-color: var(--edge);
       }
       .drvhead {
         display: flex;
@@ -634,9 +666,13 @@
       }
       .saved select {
         width: auto;
-        min-width: 220px;
+        min-width: 0;
+        max-width: 100%;
         height: 32px;
         padding: 4px 8px;
+      }
+      .saved select.savedlist {
+        min-width: 200px;
       }
       .views {
         display: grid;
@@ -737,6 +773,10 @@
         width: 100%;
         height: auto;
         display: block;
+      }
+      /* the Response and Maximum output charts: a fixed pixel height at any width, as in the app */
+      .chart.fixed svg {
+        height: 280px;
       }
       .chart text {
         fill: var(--muted);
@@ -1057,8 +1097,7 @@
         ["birch", "Birch ply", "#d7b98a"],
       ];
       const TIP = {
-        start:
-          "This replaces the current design. To open a saved speaker, use Saved configurations at the top.",
+        newFrom: "Starts a new speaker from a template. It replaces the current design.",
         inset: "How far the baffle is behind the front edge of the frame.",
         panel:
           "The panel size of the sides, top, bottom and back. On a frame box, the baffle stays ¾″. On a flush box, the baffle is this size too. Thinner walls get more braces.",
@@ -1082,16 +1121,21 @@
         high: "The crossover to the box above. The horn plays flat up to here.",
         level: "The level at 1 m at full power, from the lowest to the highest frequency.",
         design:
-          "Sets the sections, where the cones open and the chamber volume for these goals and this horn type. It keeps the drivers.",
+          "Reads the goals, the drivers and the chamber size. Sets the straight horn, the taps and, for a folded horn, the boards.",
         hornType:
-          "Where the cones meet the horn's path. Front-loaded: at the start. Offset: part way along. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
+          "Where the cones join the horn. Front-loaded: at the start. Offset: at one tap part way along. Tapped: the cone fronts and backs each join the horn at a tap. Back-loaded: the cone backs drive the horn.",
+        taps: "Where the front and back of the cones join the horn, counted from the closed end.",
+        tap: "Where the front of the cones joins the horn, counted from the closed end.",
+        shSet: "Set by Design from goals or a Hornresp import.",
+        secStart: "The area at the start of the section, in².",
+        secEnd: "The area at the end of the section, in².",
         compression:
           "How much of the cone the horn walls cover. A higher ratio loads the cone more.",
         frontChamber:
           "The air between the cones and the back edges of the horn walls. The drivers and the board set it.",
         board: "The board the drivers mount on. Double it for large drivers.",
         importRec:
-          "Paste the text of a record file from a horn simulation program. It sets the sections, the horn type and the chamber volume.",
+          "Paste the text of a Hornresp record. It sets the straight horn, the horn type, the taps and the chamber volume.",
         netAir:
           "The air the drivers work against. Auto: the inside volume minus the walls, braces, drivers and vent. Custom: you type the value.",
         x: "From the chamber's center, seen from the front. Left is negative.",
@@ -1341,7 +1385,6 @@
 
       let S = {};
       const view = {
-        start: "th18",
         v2d: "front",
         drivers: true,
         cutaway: true,
@@ -1349,6 +1392,8 @@
         finish: "birch",
         baffle: "green",
         imported: {},
+        /* chamber index → the straight horn's sections are editable by hand */
+        shEdit: {},
       };
       const folds = {
         speaker: true,
@@ -1390,6 +1435,19 @@
       const drawnTapped = (c) =>
         c.type === "horn" && c.path === "folded" && c.hornType === "tapped";
       const allBox = () => S.chambers.every((c) => c.type === "box");
+      /* a horn chamber's straight horn: [profile, start area in², end area in², length in] per section */
+      const hornSections = (c) =>
+        c.th18
+          ? TH18_SECTIONS
+          : [
+              ["Conical", 60, 180, 30],
+              ["Exponential", 180, 420, 40],
+            ];
+      /* the path length from the closed end to the end of section n (1-based) */
+      const tapAt = (c, n) =>
+        hornSections(c)
+          .slice(0, n)
+          .reduce((sum, x) => sum + x[3], 0);
       const panelIn = () => ({ "3/4": 0.71, "5/8": 0.59, "1/2": 0.47 })[S.panel];
       function netL(c) {
         if (c.netMode === "custom") return c.netL;
@@ -1571,21 +1629,23 @@
       };
 
       /* ---------- summaries ---------- */
-      const filterText = (f) => (f ? `${f.type} ${hz(f.hz)}` : "none");
+      /* a band's pass range from its filters, e.g. "90 Hz–1.2 kHz" */
+      const bandRange = (b) =>
+        b.hp && b.lp
+          ? `${hz(b.hp.hz)}–${hz(b.lp.hz)}`
+          : b.hp
+            ? `above ${hz(b.hp.hz)}`
+            : b.lp
+              ? `below ${hz(b.lp.hz)}`
+              : "full range";
       const chamberSummary = (c) =>
         [
           c.type === "box"
-            ? "Box"
-            : `Horn, ${c.path}, ${HORN_TYPES.find((h) => h[0] === c.hornType)[1].toLowerCase()}`,
+            ? `${{ sealed: "Sealed", ported: "Ported", radiator: "Radiator" }[c.vent]} box`
+            : `${HORN_TYPES.find((h) => h[0] === c.hornType)[1]} horn, ${c.path}`,
           `${fmt(c.w, 1)} × ${fmt(c.h, 1)} × ${fmt(c.d, 1)} in`,
-          c.type === "box"
-            ? { sealed: "sealed", ported: "ported", radiator: "radiator" }[c.vent]
-            : null,
-          fillAllowed(c) && c.fill !== "none" ? `fill ${c.fill}` : null,
           `${c.drivers.length} driver${c.drivers.length === 1 ? "" : "s"}`,
-        ]
-          .filter(Boolean)
-          .join(", ");
+        ].join(", ");
       function summary(id) {
         const n = (k, a, b) => `${k} ${k === 1 ? a : b}`;
         switch (id) {
@@ -1593,22 +1653,17 @@
             return `${S.name} · ${n(S.chambers.length, "chamber", "chambers")} · ${n(S.bands.length, "band", "bands")}`;
           case "construction":
             return [
-              S.construction === "frame"
-                ? `Frame and inset baffle, inset ${fmt(S.inset, 2)} in`
-                : "Flush box",
+              S.construction === "frame" ? "Frame" : "Flush",
               `${PANELS.find((p) => p[0] === S.panel)[2]} walls`,
               allBox() ? `${S.top} top` : null,
-              S.hardware === "on" ? "handles and input dish" : "no hardware",
+              S.hardware === "on" ? "hardware" : "no hardware",
             ]
               .filter(Boolean)
               .join(" · ");
           case "chambers":
             return S.chambers.map(chamberSummary).join("; ");
           case "bands":
-            return [
-              n(S.bands.length, "band", "bands"),
-              ...S.bands.map((b) => `${b.name} ${filterText(b.hp)} to ${filterText(b.lp)}`),
-            ].join(" · ");
+            return S.bands.map((b) => `${b.name} ${bandRange(b)}`).join(" · ");
           case "look":
             return `${FINISHES.find((f) => f[0] === view.finish)[1]} · baffle ${BAFFLES.find((f) => f[0] === view.baffle)[1].toLowerCase()}`;
           default:
@@ -1625,18 +1680,14 @@
         `<details class="${cls}" data-key="${key}"><summary data-dsum="${key}">${sum}</summary><div class="stack">${body}</div></details>`;
 
       function speakerBody() {
-        const id = uid();
-        return `${text("Name", "name")}
-          <div class="field"><label class="lbl" for="${id}">Start from</label>
-          <div class="startrow"><select id="${id}" data-view="start"><optgroup label="Templates">${START_NAMES.map(([v, n]) => `<option value="${v}" ${v === view.start ? "selected" : ""}>${esc(n)}</option>`).join("")}</optgroup></select>
-          <button type="button" class="btn primary" data-act="startOver" data-tip="${esc(TIP.start)}">Start over</button></div></div>`;
+        return text("Name", "name");
       }
       function constructionBody() {
         return `${tg("Construction", "construction", [
           ["frame", "Frame and inset baffle"],
           ["flush", "Flush box"],
         ])}
-          ${S.construction === "frame" ? num("Baffle inset, in", "inset", { step: 0.125, tip: TIP.inset }) : ""}
+          ${S.construction === "frame" ? num("Baffle inset", "inset", { step: 0.125, tip: TIP.inset }) : ""}
           ${tg(
             "Wall panels",
             "panel",
@@ -1687,13 +1738,15 @@
           {
             tip: TIP.fill,
             extra: `<span class="live" data-live="acts.${i}"></span>`,
-            after: `<p class="hint" data-live="what.${i}" style="margin-top:4px"></p>`,
           },
         );
       }
+      /* a chamber's sub-section: a small heading over a light inset box */
+      const group = (title, body) =>
+        `<div class="grp"><div class="subhead">${title}</div><div class="drvbox grpbody">${body}</div></div>`;
       function boxBody(c, i) {
         const p = `chambers.${i}`;
-        let h = tg("Vent", `${p}.vent`, [
+        let h = tg("Vent type", `${p}.vent`, [
           ["sealed", "Sealed"],
           ["ported", "Ported"],
           ["radiator", "Passive radiator"],
@@ -1704,7 +1757,7 @@
             ["slot", "Slot"],
             ["duct", "Side ducts"],
           ])}${num("Air speed limit, m/s", `${p}.airSpeed`, { step: 1, tip: TIP.airSpeed })}</div>
-            <div class="r3">${num("Count", `${p}.port.count`, { step: 1, min: 1 })}${num("Diameter, in", `${p}.port.dia`)}${num("Length, in", `${p}.port.len`)}</div>`;
+            <div class="r3">${num("Count", `${p}.port.count`, { step: 1, min: 1 })}${num("Diameter", `${p}.port.dia`)}${num("Length", `${p}.port.len`)}</div>`;
         if (c.vent === "radiator")
           h += `<div class="rmc">${sel(
             "Passive radiator",
@@ -1715,9 +1768,9 @@
             ],
             { value: "sd215", rebuild: false },
           )}${num("Count", `${p}.port.count`, { step: 1, min: 1 })}</div>`;
-        h += fillField(c, i);
-        h += `<div class="r2">${sel("Bracing", `${p}.bracing`, BRACING, { tip: TIP.bracing })}${c.bracing !== "none" ? num("Target, Hz", `${p}.target`, { step: 10, tip: TIP.target }) : ""}</div>`;
-        h += tg(
+        let fb = fillField(c, i);
+        fb += `<div class="r2">${sel("Bracing", `${p}.bracing`, BRACING, { tip: TIP.bracing })}${c.bracing !== "none" ? num("Target, Hz", `${p}.target`, { step: 10, tip: TIP.target }) : ""}</div>`;
+        fb += tg(
           "Back panel",
           `${p}.back`,
           [
@@ -1726,26 +1779,20 @@
           ],
           { tip: TIP.back },
         );
-        return h;
+        return group("Vent", h) + group("Fill and bracing", fb);
       }
       function hornBody(c, i) {
         const p = `chambers.${i}`;
-        const sections = c.th18
-          ? TH18_SECTIONS
-          : [
-              ["Conical", 60, 180, 30],
-              ["Exponential", 180, 420, 40],
-            ];
+        const sections = hornSections(c);
         const area = (v) => fmt(v, 1);
-        let h = `<div class="field"><div class="lbl"><span>${term("Goals", TIP.goals)}</span></div>
-          <div class="goals">${num("Low, Hz", `${p}.goals.low`, { step: 1, tip: TIP.low })}${num("High, Hz", `${p}.goals.high`, { step: 1, tip: TIP.high })}${num("Level, dB", `${p}.goals.target`, { step: 1, tip: TIP.level })}
-          <button type="button" class="btn primary xs" data-act="design" data-c="${i}" data-tip="${esc(TIP.design)}">Design from goals</button></div></div>`;
+        let h = `<div class="field"><div class="lbl"><span>${term("Goals", TIP.goals)}</span><button type="button" class="btn primary xs nowrap" data-act="design" data-c="${i}" data-tip="${esc(TIP.design)}">Design from goals</button></div>
+          <div class="goals">${num("Low, Hz", `${p}.goals.low`, { step: 1, tip: TIP.low })}${num("High, Hz", `${p}.goals.high`, { step: 1, tip: TIP.high })}${num("Level, dB", `${p}.goals.target`, { step: 1, tip: TIP.level })}</div></div>`;
         h += sel("Horn type", `${p}.hornType`, HORN_TYPES, { tip: TIP.hornType });
         const secs = sections.map((_, k) => [k + 1, `Section ${k + 1}`]);
         if (c.hornType === "tapped")
-          h += `<div class="r2">${sel("Fronts open after", `${p}.taps.front`, secs, { rebuild: false })}${sel("Backs open after", `${p}.taps.rear`, secs, { rebuild: false })}</div>`;
+          h += `${sel("Front tap after section", `${p}.taps.front`, secs, { tip: TIP.taps })}${sel("Back tap after section", `${p}.taps.rear`, secs, { tip: TIP.taps })}`;
         if (c.hornType === "offset")
-          h += sel("Cones open after", `${p}.taps.front`, secs, { rebuild: false });
+          h += sel("Tap after section", `${p}.taps.front`, secs, { tip: TIP.tap });
         h += `<div class="r2">${num("Compression ratio", `${p}.compression`, { step: 0.1, tip: TIP.compression })}${readonly("Front chamber, L", fmt(c.th18 ? 6.8 : 4.2, 1), TIP.frontChamber)}</div>`;
         if (c.path === "folded")
           h += tg(
@@ -1758,28 +1805,33 @@
             { tip: TIP.board },
           );
         if (fillAllowed(c)) h += fillField(c, i);
+        // the straight horn is calculated: read-only until "Edit by hand" is on
+        const edit = !!view.shEdit[i];
+        const off = edit ? "" : "disabled";
+        const cols = "grid-template-columns:minmax(0,1.5fr) repeat(3,minmax(0,1fr));gap:6px";
         const rows = sections
           .map(
             ([prof, s1, s2, len], k) =>
-              `<div class="r3 cmp" style="grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:6px"><select aria-label="Section ${k + 1} profile"><option>${prof}</option><option>Conical</option><option>Exponential</option><option>Parabolic</option></select><input type="number" aria-label="Section ${k + 1} start area" value="${area(s1)}"><input type="number" aria-label="Section ${k + 1} end area" value="${area(s2)}"><input type="number" aria-label="Section ${k + 1} length" value="${fmt(len, 2)}"></div>`,
+              `<div class="r3 cmp" style="${cols}"><select aria-label="Section ${k + 1} profile" ${off}><option>${prof}</option><option>Conical</option><option>Exponential</option><option>Parabolic</option></select><input type="number" aria-label="Section ${k + 1} start area" value="${area(s1)}" ${off}><input type="number" aria-label="Section ${k + 1} end area" value="${area(s2)}" ${off}><input type="number" aria-label="Section ${k + 1} length" value="${fmt(len, 2)}" ${off}></div>`,
           )
           .join("");
         h += details(
           `sh.${i}`,
           `Straight horn · ${sections.length} sections, ${area(sections[0][1])} to ${area(sections[sections.length - 1][2])} in²`,
-          `<p class="hint">The shape the drawing should follow. The path chart shows it dashed.</p>
-           <div class="r3 hint" style="grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:6px"><span>Profile</span><span>Start, in²</span><span>End, in²</span><span>Length, in</span></div>${rows}
-           <div><button type="button" class="btn primary xs" data-tip="${esc(TIP.placeholder)}">Add section</button></div>`,
+          `<div class="cardhead"><p class="hint">${TIP.shSet}</p><button type="button" class="btn xs nowrap" aria-pressed="${edit}" data-act="shEdit" data-c="${i}">Edit by hand</button></div>
+           ${c.path === "folded" ? '<p class="hint">The path chart shows it dashed.</p>' : ""}
+           <div class="r3 hint" style="${cols}"><span>Profile</span><span>${term("Start", TIP.secStart)}</span><span>${term("End", TIP.secEnd)}</span><span>Length</span></div>${rows}
+           ${edit ? `<div><button type="button" class="btn primary xs" data-tip="${esc(TIP.placeholder)}">Add section</button></div>` : ""}`,
         );
         const iid = uid();
         h += details(
           `imp.${i}`,
-          "Import a horn record",
+          "Import a Hornresp record",
           `<div class="field"><label class="lbl" for="${iid}"><span>${term("Record text", TIP.importRec)}</span></label><textarea id="${iid}"></textarea></div>
            <div><button type="button" class="btn primary xs" data-act="import" data-c="${i}">Import</button></div>
            ${view.imported[i] ? '<p class="hint">Imported. The drivers stay as set in this chamber.</p>' : ""}`,
         );
-        return h;
+        return group("Horn", h);
       }
       function driverBox(c, i, d, j) {
         const p = `chambers.${i}.drivers.${j}`;
@@ -1795,11 +1847,11 @@
         );
         let pos;
         if (c.type === "horn")
-          pos = num("Left (−) / Right (+), in", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.hornX });
+          pos = num("Left (−) / Right (+)", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.hornX });
         else if (d.mount === "top")
-          pos = `<div class="r2">${num("Left (−) / Right (+), in", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.x })}${num("Front (−) / Back (+), in", `${p}.z`, { pos: `${i}.${j}.z`, tip: TIP.z })}</div>`;
+          pos = `<div class="r2">${num("Left (−) / Right (+)", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.x })}${num("Front (−) / Back (+)", `${p}.z`, { pos: `${i}.${j}.z`, tip: TIP.z })}</div>`;
         else
-          pos = `<div class="r2">${num("Left (−) / Right (+), in", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.x })}${num("Down (−) / Up (+), in", `${p}.y`, { pos: `${i}.${j}.y`, tip: TIP.y })}</div>`;
+          pos = `<div class="r2">${num("Left (−) / Right (+)", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.x })}${num("Down (−) / Up (+)", `${p}.y`, { pos: `${i}.${j}.y`, tip: TIP.y })}</div>`;
         return `<div class="drvbox"><div class="drvhead"><b>Driver ${j + 1}</b><button type="button" class="ibtn sm" data-act="delDriver" data-c="${i}" data-d="${j}" aria-label="Delete driver ${j + 1}" data-tip="${TIP.delDriver}">${ICON.trash}</button></div>
           <div class="r2">${sel("Type", `${p}.type`, DRIVER_TYPES)}${d.type === "woofer" ? sel("Size", `${p}.size`, [["all", "All sizes"], ...SIZES.map((s) => [s, `${s} in`])]) : ""}</div>
           <div class="rmc">${sel("Model", `${p}.model`, models)}${num("Count", `${p}.count`, { step: 1, min: 1 })}</div>
@@ -1827,6 +1879,9 @@
           }
           ${c.type === "horn" ? `<div class="r2">${bandSel}${pos}</div>` : `${bandSel}${pos}`}</div>`;
       }
+      /* the Advanced fold's summary: the chamber's position (left, up) and the net air mode */
+      const advSummary = (c) =>
+        `Advanced · at ${+c.at.x.toFixed(2)}, ${+c.at.y.toFixed(2)} in · net air ${c.netMode}`;
       function chamberCard(c, i) {
         const p = `chambers.${i}`;
         const hasCone = c.drivers.some(isCone);
@@ -1853,8 +1908,8 @@
         }</div>`;
         const adv = details(
           `adv.${i}`,
-          `Advanced · ${fmt(c.at.x, 2)} in from left, ${fmt(c.at.y, 2)} in up`,
-          `<div class="r2">${num("Chamber from left, in", `${p}.at.x`)}${num("Chamber up from bottom, in", `${p}.at.y`)}</div>
+          advSummary(c),
+          `<div class="r2">${num("Chamber from left", `${p}.at.x`)}${num("Chamber up from bottom", `${p}.at.y`)}</div>
            <div class="r2" style="align-items:end">${tg(
              "Net air",
              `${p}.netMode`,
@@ -1867,13 +1922,11 @@
         );
         return `<div class="card" data-chamber="${i}">
           <div class="cardhead"><h3>Chamber ${i + 1}</h3>${S.chambers.length > 1 ? `<button type="button" class="btn xs" data-act="delChamber" data-c="${i}">Remove</button>` : ""}</div>
-          ${typeRow}
-          <div class="r3">${num("Width, in", `${p}.w`)}${num("Height, in", `${p}.h`)}${num("Depth, in", `${p}.d`)}</div>
+          ${group("Size", `${typeRow}<div class="r3">${num("Width", `${p}.w`)}${num("Height", `${p}.h`)}${num("Depth", `${p}.d`)}</div>${adv}`)}
           ${c.type === "box" ? boxBody(c, i) : hornBody(c, i)}
-          ${adv}
-          <div class="subhead">Drivers</div>
+          <div class="grp"><div class="subhead">Drivers</div>
           ${c.drivers.length ? c.drivers.map((d, j) => driverBox(c, i, d, j)).join("") : '<p class="hint">No drivers yet.</p>'}
-          <div><button type="button" class="btn primary" data-act="addDriver" data-c="${i}">Add driver</button></div>
+          <div><button type="button" class="btn primary" data-act="addDriver" data-c="${i}">Add driver</button></div></div>
         </div>`;
       }
       function filterRow(label, path) {
@@ -1972,11 +2025,8 @@
             const g = fillGain(c);
             a.textContent = `Acts as ${fmt(actsAs(c), 0)} L${g ? ` (+${Math.round(g * 100)}%)` : ""}`;
           }
-          const w = $(`[data-live="what.${i}"]`);
-          if (w) w.textContent = FILL[c.fill].what;
           const s = $(`[data-dsum="adv.${i}"]`);
-          if (s)
-            s.textContent = `Advanced · ${fmt(c.at.x, 2)} in from left, ${fmt(c.at.y, 2)} in up`;
+          if (s) s.textContent = advSummary(c);
         });
       }
 
@@ -2564,12 +2614,7 @@
         const a = hornDriverAt(c);
         ed += `<circle cx="${X(a.u)}" cy="${Y(a.v)}" r="${(model(c.drivers[0] || { type: "woofer", model: "pd1850" }).size || 12) * 0.2 * s}" fill="var(--magenta)" fill-opacity="0.2" class="s-mag" stroke-width="1.5"/>`;
         // path chart: area along the path, with the straight horn dashed (scaled to the drawing: owner-approved exception)
-        const secs = c.th18
-          ? TH18_SECTIONS
-          : [
-              ["", 60, 180, 30],
-              ["", 180, 420, 40],
-            ];
+        const secs = hornSections(c);
         const total = secs.reduce((sum, x) => sum + x[3], 0);
         const amax = Math.max(...secs.map((x) => x[2])) * 1.15;
         const CW = 300,
@@ -2595,9 +2640,14 @@
           <div class="foldgrid"><svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="Folded horn editor">${ed}</svg><svg viewBox="0 0 ${CW} ${CH}" role="img" aria-label="Path chart">${ch}</svg></div></section>`;
       }
 
+      /* the Response and Maximum output charts' drawn width: the results pane's width, one or two columns */
+      function chartWidth() {
+        const w = $("#resultsInner").clientWidth || 520;
+        return Math.max(240, Math.round(w >= 858 ? (w - 16) / 2 : w));
+      }
       function chart(top, bot, series, marks, ylabel) {
-        const W = 520,
-          H = 290,
+        const W = chartWidth(),
+          H = 280,
           L = 40,
           R = 10,
           T = 10,
@@ -2633,7 +2683,7 @@
               `<span><i style="border-color:var(${sr.color});${sr.dash ? "border-top-style:dashed" : ""}"></i>${esc(sr.label)}</span>`,
           )
           .join("");
-        return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ylabel} chart">${g}</svg></div><div class="legend">${legend}</div>`;
+        return `<div class="chart fixed"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${ylabel} chart">${g}</svg></div><div class="legend">${legend}</div>`;
       }
       const bandLine = (i, n) =>
         i === 0
@@ -2772,6 +2822,20 @@
           ["Parts price", `$${fmt(priceUsd())}`, ""],
           ["Weight", fmt(S.chambers.reduce((s, c) => s + weightLb(c), 0)), "lb"],
           ...S.chambers.map((c, i) => [`Bracing${one ? "" : ` ${i + 1}`}`, braceText(c), ""]),
+          // where to cut the taps: the path length from the closed end, front / back
+          ...S.chambers.flatMap((c, i) =>
+            c.type === "horn" && (c.hornType === "tapped" || c.hornType === "offset")
+              ? [
+                  [
+                    `Taps from closed end${one ? "" : ` ${i + 1}`}`,
+                    c.hornType === "tapped"
+                      ? `${fmt(tapAt(c, c.taps.front))} / ${fmt(tapAt(c, c.taps.rear))}`
+                      : fmt(tapAt(c, c.taps.front)),
+                    "in",
+                  ],
+                ]
+              : [],
+          ),
         ];
         const notices = S.chambers
           .map((c) =>
@@ -2841,9 +2905,10 @@
               "Green: OK. Orange: check it. Red: change it.",
             ],
           ],
+          ["Saved configurations", ["Save, open and templates: see #180."]],
         ];
         const h = `
-          <div class="saved"><b style="font-size:14px">Saved configurations</b><select aria-label="Saved speakers"><option>No saved speakers yet</option></select><button type="button" class="btn xs">Save</button><button type="button" class="btn xs">Manage</button></div>
+          <div class="saved"><b style="font-size:14px">Saved configurations</b><select class="savedlist" aria-label="Saved speakers"><option>No saved speakers yet</option></select><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Open</button><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Save</button><select data-newfrom aria-label="New from a template" data-tip="${esc(TIP.newFrom)}"><option value="" selected>New from…</option><optgroup label="Templates">${START_NAMES.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</optgroup></select></div>
           <div class="views">${view3d()}${view2d()}</div>
           ${S.chambers.map((c, i) => (c.type === "horn" && c.path === "folded" ? foldCard(c, i) : "")).join("")}
           ${notices}
@@ -2985,8 +3050,8 @@
             SECTIONS.forEach(([id]) => setFold(id, a.dataset.val === "1"));
             measure();
             return;
-          case "startOver":
-            load(view.start);
+          case "shEdit":
+            view.shEdit[c] = !view.shEdit[c];
             break;
           case "addDriver": {
             const ch = S.chambers[c];
@@ -3066,8 +3131,14 @@
       });
       document.addEventListener("change", (e) => {
         const el = e.target;
-        if (el.dataset.view === "start") {
-          view.start = el.value;
+        if (el.hasAttribute("data-newfrom")) {
+          if (el.value) {
+            load(el.value);
+            view.shEdit = {};
+            view.imported = {};
+            hideTip();
+            changed(true);
+          }
           return;
         }
         if (el.dataset.filter) {
@@ -3249,7 +3320,7 @@
           "Box → Horn",
           "Change a chamber from Box to Horn. Bracing and back panel go away; the horn settings come.",
         ],
-        ["Fiber fill", "Set fiber fill. Read what it does without a tooltip."],
+        ["Fiber fill", "Set fiber fill. Read what each choice does in its tooltip."],
         ["High-pass and low-pass", "Set a band's highpass and lowpass without long button rows."],
         ["Add a driver, delete it", "Add a second driver, then delete it with its trash icon."],
         [
@@ -3284,12 +3355,20 @@
           window.paneHeights = { results: r, settings: s };
         });
       }
-      window.addEventListener("resize", measure);
+      // the fixed-height charts are drawn to the pane's width: redraw them when it changes
+      let lastResW = 0;
+      window.addEventListener("resize", () => {
+        const w = $("#resultsInner").clientWidth;
+        if (w !== lastResW) {
+          lastResW = w;
+          renderResults();
+        }
+        measure();
+      });
 
       /* start */
       setTheme(store.get("speakerMock.theme", "system"));
       load("paMid");
-      view.start = "th18";
       renderSettings();
       renderResults();
       updateLive();
