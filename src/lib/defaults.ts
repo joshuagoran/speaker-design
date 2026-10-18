@@ -66,7 +66,7 @@ import {
   HORN_DRIVE,
   PORT_SHAPE,
   SPEAKER_BAND,
-  SPEAKER_BAND_NAMES,
+  AUTO_BAND_NAMES,
   VENT_KIND,
 } from "../constants/speakerSpec";
 import { HORN_PROFILE } from "../constants/hornEngine";
@@ -264,7 +264,7 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
     roundoverIn: 0,
     tiltDeg: 0,
   },
-  bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
+  bands: [{ id: SPEAKER_BAND.low, name: AUTO_BAND_NAMES.fullRange, ...DEFAULT_SPEAKER_BAND }],
   input: NO_FILTERS,
   look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
 };

@@ -6,7 +6,6 @@ import type { CabinetBuild } from "./speakerBuild";
 import { ductFitChip, hardwareFitChip, tubeFitChip } from "../pa/chips";
 import { baffleInsetIn } from "./chamberAir";
 import { bracingTaken } from "./chamberBracing";
-import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { BRACING_CHIP_TEXT } from "../../constants/speakerResults";
 import { NO_BRACING } from "../../constants/bracing";
 import { braceShortfalls, strengthShortfalls } from "../bracing";
@@ -25,7 +24,7 @@ export function chamberFitChips(
   build: CabinetBuild,
 ): SpeakerChip[][] {
   const t = cabinet.panel.thicknessIn;
-  return build.chambers.map((c, i) => {
+  return build.chambers.map((c) => {
     const chips: SpeakerChip[] = [];
     if (c.paSub) {
       const { box, style, vent, sub } = c.paSub;
@@ -36,7 +35,8 @@ export function chamberFitChips(
     }
     if (c.hardware)
       chips.push([
-        ...hardwareFitChip(c.hardware, `${SPEAKER_TEXT.chamber} ${i + 1}`),
+        // the checks' row already names the chamber
+        ...hardwareFitChip(c.hardware, null),
         "speakerHardwareFit",
       ]);
     return chips;

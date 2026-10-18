@@ -84,7 +84,7 @@ describe("a driver dragged on the front drawing", () => {
     const bounds = { x: [-2, 2] as const, y: [2, 20] as const };
     const at = draggedPosition({ xIn: 0, yIn: 10 }, { xIn: 0.33, yIn: -1.2 }, bounds);
     expect(at.xIn % DRAG_STEP_IN).toBe(0);
-    expect(at).toEqual({ xIn: 0.375, yIn: 8.75 });
+    expect(at).toEqual({ xIn: 0.25, yIn: 8.75 });
     expect(draggedPosition({ xIn: 0, yIn: 10 }, { xIn: 9, yIn: 99 }, bounds)).toEqual({
       xIn: 2,
       yIn: 20,
@@ -165,9 +165,9 @@ describe("the front drawing", () => {
   test("its drivers on the baffle drag when the page lets them, in their band's color", () => {
     const still = renderToString(createElement(SpeakerFront, { spec }));
     const moving = renderToString(createElement(SpeakerFront, { spec, onMoveDriver: () => {} }));
-    expect(still).not.toContain("cursor:grab");
+    expect(still).not.toContain("cursor:move");
     const groups = spec.cabinet.chambers.flatMap((c) => c.drivers).length;
-    expect(moving.match(/cursor:grab/g)?.length).toBe(groups);
+    expect(moving.match(/cursor:move/g)?.length).toBe(groups);
     expect(still).toContain(bandColor(spec.bands, spec.bands[0].id, light).stroke);
   });
   test("a position field with focus marks its point: the center line across, the bottom up", () => {

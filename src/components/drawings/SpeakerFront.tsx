@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type {
   BandId,
   FacePoint,
@@ -19,7 +19,7 @@ import {
   unblockedPosition,
   type DragBounds,
 } from "../../lib/speaker/driverDrag";
-import { POSITION_AXIS } from "../../constants/speakerResults";
+import { POSITION_AXIS, type PositionAxis } from "../../constants/speakerResults";
 import { AmtPlate, RibbonPlate } from "./HifiFront";
 import {
   driverAcrossIn,
@@ -80,6 +80,20 @@ const DRIVER_FILL_ALPHA = 0.18;
 /** The marked point's dot radius and the measure line's dash, px. */
 const MARK_DOT_PX = 3;
 const MARK_DASH = "3 2";
+/**
+ * The measure's label size, its gap from the line and its halo, and the half-length of the + at a driver's center, in the
+ * drawing's units (`VIEW_PX` across its longer side, scaled to its box).
+ */
+const MARK_FONT_PX = 7.5;
+const MARK_LABEL_GAP_PX = 3;
+const MARK_HALO_PX = 1.5;
+const CENTER_PLUS_PX = 3;
+
+/** A position as its field shows it, in, to the hundredth: signed across, plain up. */
+const markLabel = (v: number, signed: boolean) => {
+  const r = Math.round(v * 100) / 100;
+  return `${signed && r > 0 ? "+" : ""}${r}″`;
+};
 
 /** A driver dragged on the baffle: its entry, where its group started, where it may go, and the pointer's start. */
 interface Drag {
@@ -133,6 +147,8 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
   const { cabinet } = spec;
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<Drag | null>(null);
+  /** the driver entry being dragged, so the view shows its position while it moves */
+  const [dragging, setDragging] = useState<Pick<Drag, "chamber" | "driver"> | null>(null);
   const t = cabinet.panel.thicknessIn;
   const { layout, minX, maxX, maxY, k } = speakerFrontFrame(cabinet);
   if (!layout.chambers.length) return null;
@@ -488,7 +504,7 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
     if (!onMoveDriver) return {};
     const d = placed.chamber.drivers[entry];
     return {
-      style: { cursor: "grab", touchAction: "none" },
+      style: { cursor: "move", touchAction: "none" },
       onPointerDown: (e: React.PointerEvent<SVGGElement>) => {
         const from = toDrawing(e);
         if (!from) return;
@@ -503,6 +519,7 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
           last: center,
           others: othersKey(cabinet, chamber, entry, center),
         };
+        setDragging({ chamber, driver: entry });
       },
     };
   };
@@ -529,48 +546,77 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
   };
   const endDrag = () => {
     drag.current = null;
+    setDragging(null);
   };
 
-  /** the point the focused position field measures from: the chamber's center line, or its bottom */
-  const mark = (() => {
-    if (!focus || focus.axis === POSITION_AXIS.back) return null;
-    const placed = layout.chambers[focus.chamber];
-    const d = placed?.chamber.drivers[focus.driver];
+  /**
+   * The measures of one driver entry's position, each from its reference to the group's center with the field's value:
+   * across from the chamber's center line, up from its bottom. A focused field shows its own; a drag shows both.
+   */
+  const measures = (chamber: number, entry: number, axes: readonly PositionAxis[]) => {
+    const placed = layout.chambers[chamber];
+    const d = placed?.chamber.drivers[entry];
     if (!placed || !d) return null;
     const { center } = dragStart(placed, driverSpots(placed, d), driverAcrossIn(d));
     const x = placed.cx + center.xIn,
       y = placed.y0 + center.yIn;
     const line = { stroke: pal.ink, strokeWidth: 1.2 };
-    const across = focus.axis === POSITION_AXIS.across;
-    /** the origin on the reference line, level with the driver (across) or under it (up) */
-    const origin = across ? { x: placed.cx, y } : { x, y: placed.y0 };
+    const label = {
+      fontSize: MARK_FONT_PX,
+      fill: pal.ink,
+      stroke: pal.panel,
+      strokeWidth: MARK_HALO_PX,
+    };
     return (
-      <g aria-hidden="true">
-        {across ? (
-          <line
-            x1={px(placed.cx)}
-            x2={px(placed.cx)}
-            y1={py(placed.y0)}
-            y2={py(placed.y0 + placed.dims.h)}
-            {...line}
-            strokeDasharray={MARK_DASH}
-          />
-        ) : (
-          <line
-            x1={px(placed.x0)}
-            x2={px(placed.x0 + placed.dims.w)}
-            y1={py(placed.y0)}
-            y2={py(placed.y0)}
-            {...line}
-            strokeWidth={2.5}
-          />
-        )}
-        <line x1={px(origin.x)} y1={py(origin.y)} x2={px(x)} y2={py(y)} {...line} />
-        <circle cx={px(origin.x)} cy={py(origin.y)} r={MARK_DOT_PX} fill={pal.ink} />
+      <g aria-hidden="true" style={{ paintOrder: "stroke" }}>
+        {axes.map((axis) => {
+          const across = axis === POSITION_AXIS.across;
+          /** the origin on the reference line, level with the driver (across) or under it (up) */
+          const origin = across ? { x: placed.cx, y } : { x, y: placed.y0 };
+          return (
+            <g key={axis}>
+              {across ? (
+                <line
+                  x1={px(placed.cx)}
+                  x2={px(placed.cx)}
+                  y1={py(placed.y0)}
+                  y2={py(placed.y0 + placed.dims.h)}
+                  {...line}
+                  strokeDasharray={MARK_DASH}
+                />
+              ) : (
+                <line
+                  x1={px(placed.x0)}
+                  x2={px(placed.x0 + placed.dims.w)}
+                  y1={py(placed.y0)}
+                  y2={py(placed.y0)}
+                  {...line}
+                  strokeWidth={2.5}
+                />
+              )}
+              <line x1={px(origin.x)} y1={py(origin.y)} x2={px(x)} y2={py(y)} {...line} />
+              <circle cx={px(origin.x)} cy={py(origin.y)} r={MARK_DOT_PX} fill={pal.ink} />
+              <text
+                x={across ? px((origin.x + x) / 2) : px(x) + MARK_LABEL_GAP_PX}
+                y={across ? py(y) - MARK_LABEL_GAP_PX : py((origin.y + y) / 2)}
+                textAnchor={across ? "middle" : "start"}
+                dominantBaseline={across ? "auto" : "middle"}
+                {...label}
+              >
+                {markLabel(across ? d.position.xIn : d.position.yIn, across)}
+              </text>
+            </g>
+          );
+        })}
         <circle cx={px(x)} cy={py(y)} r={MARK_DOT_PX} fill="none" {...line} />
       </g>
     );
-  })();
+  };
+  const mark = dragging
+    ? measures(dragging.chamber, dragging.driver, [POSITION_AXIS.across, POSITION_AXIS.up])
+    : focus && focus.axis !== POSITION_AXIS.back
+      ? measures(focus.chamber, focus.driver, [focus.axis])
+      : null;
 
   const ro = cabinet.roundoverIn;
   const shells = layout.oneShell
@@ -645,9 +691,16 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
           if ((drawing || !driversOnBaffle(chamber)) && !onTop(d)) return;
           // a horn that no longer fits where it is set isn't drawn (the page says so)
           if (!hornFitsWhereSet(placed, d)) return;
-          const drawn = driverSpots(placed, d).flatMap((s, n) =>
-            driver(d, placed, s.xIn, s.yIn, `d${i}.${j}.${n}`),
-          );
+          const drawn = driverSpots(placed, d).flatMap((s, n) => [
+            ...driver(d, placed, s.xIn, s.yIn, `d${i}.${j}.${n}`),
+            // its center, as a +
+            <path
+              key={`d${i}.${j}.${n}+`}
+              d={`M${px(s.xIn) - CENTER_PLUS_PX} ${py(s.yIn)}h${2 * CENTER_PLUS_PX}M${px(s.xIn)} ${py(s.yIn) - CENTER_PLUS_PX}v${2 * CENTER_PLUS_PX}`}
+              stroke={pal.ink}
+              strokeWidth={1.2}
+            />,
+          ]);
           // a driver on the baffle drags as one group with its entry's other drivers (a horn on the top stays put)
           parts.push(
             onTop(d) ? (

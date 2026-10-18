@@ -639,8 +639,11 @@ export function hardwareChip(plan: BoxHardwarePlan): Chip<ChipId<"hardware">> {
   return [...hardwareFitChip(plan, PA_SETTINGS_TABS[plan.box]), id];
 }
 
-/** `hardwareChip` without its id, the box named `box` ("Sub", "Chamber 1"): the Speaker page's chamber checks share it. */
-export function hardwareFitChip(plan: BoxHardwarePlan, box: string): ChipBody {
+/** `hardwareChip` without its id, the box named `box` ("Sub"), or null where the row names it (the Speaker page's chamber checks). */
+export function hardwareFitChip(plan: BoxHardwarePlan, box: string | null): ChipBody {
+  /** text after the box's name, or starting the sentence where the row already names the box */
+  const lead = (text: string) =>
+    box ? `${box} ${text}` : `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
   // the two handles mirror each other: one line for both when they hit the same things
   const lines: string[] = [];
   for (const p of plan.parts) {
@@ -654,14 +657,15 @@ export function hardwareFitChip(plan: BoxHardwarePlan, box: string): ChipBody {
       : `${HARDWARE_PANEL_WORDS[p.panel]} ${HARDWARE_KIND_NAMES[p.kind]}`;
     lines.push(
       hardwareClashLine(
-        `${box} ${where} (${p.part.name})`,
+        lead(`${where} (${p.part.name})`),
         both,
         p.hits.map((h) => HARDWARE_OBSTACLE_NAMES[h]).join(", "),
         HARDWARE_ADVICE[p.kind],
       ),
     );
   }
+  const title = (t: string) => (box ? `${box}: ${t}` : t);
   return lines.length
-    ? ["warn", `${box}: ${HARDWARE_FIT_TITLES.clash}`, lines.join(" ")]
-    : ["ok", `${box}: ${HARDWARE_FIT_TITLES.fits}`, hardwareFitsLine(plan.liters.toFixed(2))];
+    ? ["warn", title(HARDWARE_FIT_TITLES.clash), lines.join(" ")]
+    : ["ok", title(HARDWARE_FIT_TITLES.fits), hardwareFitsLine(plan.liters.toFixed(2))];
 }

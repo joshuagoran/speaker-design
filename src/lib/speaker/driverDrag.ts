@@ -10,7 +10,7 @@ import {
 } from "./speakerLayout";
 
 /** The step a dragged position is rounded to, in. */
-export const DRAG_STEP_IN = 0.125;
+export const DRAG_STEP_IN = 0.25;
 
 /** A span, low to high, in. */
 type Span = readonly [lo: number, hi: number];

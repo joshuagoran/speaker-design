@@ -241,6 +241,17 @@ export function ChamberSettings({
   );
   /** the chamber's clear room, in: a new woofer's size fits it */
   const clearIn = wooferClearIn(chamber, cabinet.panel.thicknessIn);
+  /** the driver Add driver adds: a woofer of the largest size that fits the chamber */
+  const newWoofer =
+    firstBand &&
+    withWoofer(
+      driverOfKind(DRIVER_KIND.woofer, {
+        count: 1,
+        position: { xIn: 0, yIn: chamber.dims.h / 2 },
+        bands: [firstBand],
+      }),
+      wooferFor(clearIn),
+    );
   /**
    * how many times a driver was removed: each driver's fields take it with their index as their key, so no field state
    * (the woofer size filter) carries over to the next driver
@@ -370,10 +381,15 @@ export function ChamberSettings({
           <ToggleGroup
             label={<Tooltip tip={SPEAKER_TEXT.loadTip}>{SPEAKER_TEXT.load}</Tooltip>}
             value={chamber.load.kind}
-            onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
+            onChange={(kind) =>
+              onEdit((c) =>
+                withChamberLoad(c, kind, room, result?.netLiters, newWoofer || undefined),
+              )
+            }
             options={entriesOf(CHAMBER_LOAD_NAMES)}
             disabled={
-              chamber.load.kind === CHAMBER_LOAD.direct && !startingHorn(chamber, room)
+              chamber.load.kind === CHAMBER_LOAD.direct &&
+              !startingHorn(chamber, room, newWoofer || undefined)
                 ? { values: [CHAMBER_LOAD.horn], why: SPEAKER_TEXT.loadNoCone }
                 : undefined
             }
@@ -585,28 +601,12 @@ export function ChamberSettings({
             onRemove={() => removeDriver(i)}
           />
         ))}
-        {firstBand && (
+        {newWoofer && (
           <div>
             <Button
               variant="primary"
               size="xs"
-              onClick={() =>
-                onEdit((c) => ({
-                  ...c,
-                  drivers: [
-                    ...c.drivers,
-                    // a woofer of the largest size that fits the chamber
-                    withWoofer(
-                      driverOfKind(DRIVER_KIND.woofer, {
-                        count: 1,
-                        position: { xIn: 0, yIn: c.dims.h / 2 },
-                        bands: [firstBand],
-                      }),
-                      wooferFor(clearIn),
-                    ),
-                  ],
-                }))
-              }
+              onClick={() => onEdit((c) => ({ ...c, drivers: [...c.drivers, newWoofer] }))}
             >
               {SETTINGS_TEXT.addDriver}
             </Button>

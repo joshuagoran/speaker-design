@@ -30,6 +30,7 @@ import {
   ventSummary,
 } from "../src/pages/speaker/settingsSummaries";
 import { atXForOffset, atYForOffset, chamberOffset } from "../src/pages/speaker/chamberPlace";
+import { hornRoom, startingHorn, withChamberLoad } from "../src/pages/speaker/chamberLoad";
 import { DEFAULT_SPEAKER_CHAMBER, EMPTY_SPEAKER } from "../src/lib/defaults";
 
 const paSub = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
@@ -278,5 +279,23 @@ describe("a chamber's position: from the cabinet's center and its bottom", () =>
     expect(atYForOffset([lower, upper], 1, -5)).toBe(0);
     // one chamber is the cabinet: it keeps its place
     expect(atXForOffset([lower], 0, 5)).toBe(0);
+  });
+});
+
+describe("a horn picked before a driver", () => {
+  test("an empty chamber sizes its horn from the driver it would get first", () => {
+    const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
+    const [chamber] = spec.cabinet.chambers;
+    expect(chamber).toBeDefined();
+    if (!chamber) return;
+    const [first] = chamber.drivers;
+    const empty: SpeakerChamber = { ...chamber, drivers: [] };
+    const room = hornRoom(spec.cabinet, empty, undefined);
+    expect(startingHorn(empty, room)).toBeNull();
+    expect(startingHorn(empty, room, first)).not.toBeNull();
+    const horn = withChamberLoad(empty, CHAMBER_LOAD.horn, room, undefined, first);
+    expect(horn.load.kind).toBe(CHAMBER_LOAD.horn);
+    // the chamber stays empty: the driver only sizes the horn
+    expect(horn.drivers).toEqual([]);
   });
 });

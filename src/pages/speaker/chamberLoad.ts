@@ -9,6 +9,7 @@ import type {
   HornGoals,
   SpeakerCabinet,
   SpeakerChamber,
+  SpeakerDriver,
   SpeakerHorn,
 } from "../../types";
 import { coneDepthIn, coneParts } from "../../lib/speaker/driverParts";
@@ -60,13 +61,16 @@ export const hornRoom = (
  * A starting horn for the chamber: one conical section from its cones' total area (every cone's Sd times its count) to
  * a mouth the size of the clear face, as long as the clear depth less the deepest cone and the walls' clearance in
  * front of the cones (lib/speaker/hornThroat); a 1:1 compression ratio, a straight
- * path, front-loaded, its mouth centered. Null when the chamber has no cone with Thiele/Small parameters.
+ * path, front-loaded, its mouth centered. A chamber with no drivers yet sizes it from `firstDriver` (the driver it would
+ * get first), so a horn can be picked before a driver. Null when no cone has Thiele/Small parameters.
  */
 export function startingHorn(
   chamber: Pick<SpeakerChamber, "drivers">,
   room: HornRoom,
+  firstDriver?: SpeakerDriver,
 ): SpeakerHorn | null {
-  const cones = chamber.drivers.flatMap((d) => {
+  const drivers = chamber.drivers.length || !firstDriver ? chamber.drivers : [firstDriver];
+  const cones = drivers.flatMap((d) => {
     const sd = coneParts(d)?.ts.Sd;
     return sd ? [{ sd: sd * d.count, depthIn: coneDepthIn(d) ?? 0 }] : [];
   });
@@ -76,7 +80,7 @@ export function startingHorn(
   // the walls' back edges stand their clearance in front of the cones
   const pathIn = Math.max(
     MIN_PATH_IN,
-    room.depthIn - Math.max(...cones.map((c) => c.depthIn)) - wallClearanceIn(chamber.drivers),
+    room.depthIn - Math.max(...cones.map((c) => c.depthIn)) - wallClearanceIn(drivers),
   );
   return {
     segments: [
@@ -103,10 +107,11 @@ export function withChamberLoad(
   kind: ChamberLoad["kind"],
   room: HornRoom,
   netLiters: number | undefined,
+  firstDriver?: SpeakerDriver,
 ): SpeakerChamber {
   if (kind === chamber.load.kind) return chamber;
   if (kind === CHAMBER_LOAD.direct) return { ...chamber, load: DIRECT_LOAD, netLiters: null };
-  const horn = startingHorn(chamber, room);
+  const horn = startingHorn(chamber, room, firstDriver);
   if (!horn) return chamber;
   const now =
     netLiters ?? room.clear.w * room.clear.h * Math.max(0, room.depthIn) * LITERS_PER_CUBIC_IN;

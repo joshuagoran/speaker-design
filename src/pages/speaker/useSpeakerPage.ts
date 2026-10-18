@@ -15,7 +15,6 @@ import {
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
-import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { CABINET_TOP, SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { allBox } from "./settingsSummaries";
@@ -25,6 +24,7 @@ import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
+import { autoBandName, withAutoNames } from "../../lib/speaker/bandNames";
 import { useSpeakerOptimizer } from "./useSpeakerOptimizer";
 import type {
   BandId,
@@ -183,21 +183,22 @@ export function useSpeakerPage() {
       drivers: c.drivers.map((d) => ({ ...d, bands: d.bands.map((b) => (b === from ? to : b)) })),
     })),
   });
-  /** adds a band at the top, under a generated id and a name no band has ("Band 3") */
+  /** adds a band at the top, under a generated id; the bands the page named are renamed for the new count */
   const addBand = () =>
-    editBands((list) => {
-      const names = new Set(list.map((b) => b.name));
-      let n = list.length + 1;
-      while (names.has(SPEAKER_TEXT.newBandName(n))) n++;
-      return [
+    editBands((list) =>
+      withAutoNames([
         ...list,
-        { id: newBandId(list), name: SPEAKER_TEXT.newBandName(n), ...DEFAULT_SPEAKER_BAND },
-      ];
-    });
+        {
+          id: newBandId(list),
+          name: autoBandName(list.length, list.length + 1),
+          ...DEFAULT_SPEAKER_BAND,
+        },
+      ]),
+    );
   /** removes a band; its drivers move to the first band left */
   const removeBand = (id: BandId) =>
     setSpec((s) => {
-      const bands = s.bands.filter((b) => b.id !== id);
+      const bands = withAutoNames(s.bands.filter((b) => b.id !== id));
       return bands.length
         ? settledSpec({ ...s, cabinet: moveDrivers(s, id, bands[0].id), bands })
         : s;
