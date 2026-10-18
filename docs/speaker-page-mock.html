@@ -1202,7 +1202,6 @@
         ["birch", "Birch ply", "#d7b98a"],
       ];
       const TIP = {
-        name: "The name a save uses.",
         newFrom: "Starts a new speaker from a template. It replaces the current design.",
         inset: "How far the baffle is behind the front edge of the frame.",
         panel:
@@ -3202,7 +3201,7 @@
           ["Saved configurations", ["Save, open and templates: see #180."]],
         ];
         const h = `
-          <div class="saved" role="group" aria-label="Saved configurations"><input type="text" class="savedname" maxlength="60" value="${esc(S.name)}" placeholder="Speaker name" data-bind="name" data-noresults aria-label="Speaker name" data-tip="${esc(TIP.name)}"><select class="savedlist" aria-label="Saved speakers"><option>No saved speakers yet</option></select><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Open</button><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Save</button><select data-newfrom aria-label="New from a template" data-tip="${esc(TIP.newFrom)}"><option value="" selected>New from…</option><optgroup label="Templates">${START_NAMES.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</optgroup></select></div>
+          <div class="saved" role="group" aria-label="Saved configurations"><input type="text" class="savedname" maxlength="60" value="${esc(S.name)}" placeholder="Speaker name" data-bind="name" data-noresults aria-label="Speaker name"><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Save</button><select class="savedlist" aria-label="Saved speakers"><option>No saved speakers yet</option></select><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Open</button><select data-newfrom aria-label="New from a template" data-tip="${esc(TIP.newFrom)}"><option value="" selected>New from…</option><optgroup label="Templates">${START_NAMES.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</optgroup></select></div>
           <div class="views">${view3d()}${view2d()}</div>
           ${S.chambers.map((c, i) => (c.type === "horn" && c.path === "folded" ? foldCard(c, i) : "")).join("")}
           ${notices}
