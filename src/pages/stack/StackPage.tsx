@@ -50,7 +50,8 @@ import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
-import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
+import type { SpeakerPageState } from "../speaker/useSpeakerPage";
+import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
 import { stackKeepUpChips } from "./stackChips";
@@ -101,7 +102,8 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
   /** the library's speakers, as the picker lists them */
   const library = (speakerPage.store.saved ?? []).flatMap((c) => {
     const saved: unknown = Reflect.get(c, "speaker");
-    return isSavedSpeaker(saved) ? [{ id: c.id, name: c.name, spec: saved }] : [];
+    const spec = readSavedSpeaker(saved);
+    return spec ? [{ id: c.id, name: c.name, spec }] : [];
   });
   const [pick, setPick] = useState<string>("");
   const picked = library.find((o) => o.id === pick) ?? library[0];

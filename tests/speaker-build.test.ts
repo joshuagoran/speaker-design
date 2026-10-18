@@ -270,6 +270,11 @@ const chamberAt = (at: SpeakerChamber["at"], dims: SpeakerChamber["dims"]): Spea
   at,
   dims,
 });
+/** The chambers with `change` made to each one's bracing. */
+const bracedAs = (
+  chambers: readonly SpeakerChamber[],
+  change: Partial<SpeakerChamber["bracing"]>,
+): SpeakerChamber[] => chambers.map((c) => ({ ...c, bracing: { ...c.bracing, ...change } }));
 
 test("speaker build: chambers that fill one box share one shell; a stepped one builds only its own walls", () => {
   const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 16, h: 20, d: 14 });
@@ -491,7 +496,8 @@ test("speaker build: one shell's cutlist notes the hardware of the chamber that 
     chambers: [right, left],
     construction: CABINET_CONSTRUCTION.frameInset,
     insetIn: 0.75,
-    hardware: DEFAULT_HARDWARE.sub,
+    handles: DEFAULT_HARDWARE.sub,
+    inputDish: true,
   });
   const build = cabinetBuild(spec.cabinet);
   assert.deepEqual(
@@ -505,7 +511,7 @@ test("speaker build: one shell's cutlist notes the hardware of the chamber that 
   assert.ok(back && /input dish/.test(back.note), "the dish's cutout on the back");
 });
 
-test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamber's walls are braced", () => {
+test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamber takes no added braces", () => {
   const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 20, h: 24, d: 16 });
   const top = chamberAt({ xIn: 0, yIn: 24 }, { w: 20, h: 14, d: 16 });
   const arched = { chambers: [lower, top], top: CABINET_TOP.arched };
@@ -543,19 +549,24 @@ test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamb
       },
     ],
   });
-  // the rear chamber's walls round the flare are braced to the target; the flare holds itself
-  const braced = cabinetBuild(horn.cabinet).chambers[0].bracing;
-  assert.equal(braced.targetHz, horn.cabinet.braceTargetHz);
-  // the keep-out tapers from the mouth to the throat, so braces fit round a small horn in a big box
-  assert.ok(braced.windowIn3 + braced.ribIn3 > 0, "braced round its flare");
+  // a horn chamber's boards brace its panels: no braces or ribs, and no target to hold its panels to
+  const hornBracing = cabinetBuild(horn.cabinet).chambers[0].bracing;
+  assert.equal(hornBracing.targetHz, 0);
+  assert.equal(hornBracing.windowIn3 + hornBracing.ribIn3, 0, "no added braces");
+  // the same chamber as a Box is braced to its own target
+  const box = cabinetBuild(
+    withCabinet({ chambers: [chamberAt({ xIn: 0, yIn: 0 }, { w: 24, h: 30, d: 24 })] }).cabinet,
+  ).chambers[0].bracing;
+  assert.equal(box.targetHz, ONE.bracing.braceTargetHz);
+  assert.ok(box.windowIn3 + box.ribIn3 > 0, "a big box takes braces");
 });
 
 test("speaker build: the back joint sets the bracing and the back's and partitions' notes", () => {
   const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 16, h: 20, d: 14 });
   const upper = chamberAt({ xIn: 0, yIn: 20 }, { w: 16, h: 12, d: 14 });
-  assert.equal(EMPTY_SPEAKER.cabinet.backJoint, GLUED_BACK, "a flush box starts glued");
+  assert.equal(ONE.bracing.backJoint, GLUED_BACK, "a flush box starts glued");
   for (const backJoint of keysOf(BACK_JOINT_NAMES)) {
-    const spec = withCabinet({ chambers: [lower, upper], backJoint });
+    const spec = withCabinet({ chambers: bracedAs([lower, upper], { backJoint }) });
     const parts = speakerCutParts(spec.cabinet, "butt").parts;
     const back = parts.find((p) => p.part === "back");
     const partition = parts.find((p) => p.part === "partition");
@@ -570,10 +581,11 @@ test("speaker build: the back joint sets the bracing and the back's and partitio
 test("speaker build: the bracing target sets how hard the rule braces; the PA's is the default", () => {
   const box = (braceTargetHz: number) =>
     withCabinet({
-      chambers: [chamberAt({ xIn: 0, yIn: 0 }, { w: 30, h: 40, d: 30 })],
-      braceTargetHz,
+      chambers: bracedAs([chamberAt({ xIn: 0, yIn: 0 }, { w: 30, h: 40, d: 30 })], {
+        braceTargetHz,
+      }),
     });
-  assert.equal(EMPTY_SPEAKER.cabinet.braceTargetHz, PA_PANEL_TARGET_HZ);
+  assert.equal(ONE.bracing.braceTargetHz, PA_PANEL_TARGET_HZ);
   const wood = (hz: number) => {
     const [c] = cabinetBuild(box(hz).cabinet).chambers;
     assert.equal(c.bracing.targetHz, hz);
@@ -604,7 +616,7 @@ test("speaker build: the net air counts the braces; the build is worked out once
 test("speaker build: no bracing leaves the braces and ribs out of the cutlist, the weight and the net air", () => {
   const big = chamberAt({ xIn: 0, yIn: 0 }, { w: 24, h: 36, d: 20 });
   const braced = withCabinet({ chambers: [big] });
-  const bare = withCabinet({ chambers: [big], braceStyle: NO_BRACING });
+  const bare = withCabinet({ chambers: bracedAs([big], { braceStyle: NO_BRACING }) });
   const braceRows = (spec: SpeakerSpec) =>
     speakerCutParts(spec.cabinet, "butt").parts.filter(
       (p) => p.part === "windowBrace" || p.part === "rib",
@@ -617,5 +629,5 @@ test("speaker build: no bracing leaves the braces and ribs out of the cutlist, t
   assert.deepEqual(without.bracing.ribs, []);
   assert.ok(without.lb.wood < withBraces.lb.wood, "lighter without braces");
   assert.ok(without.woodL < withBraces.woodL, "more net air without braces");
-  assert.equal(without.bracing.targetHz, bare.cabinet.braceTargetHz);
+  assert.equal(without.bracing.targetHz, big.bracing.braceTargetHz);
 });

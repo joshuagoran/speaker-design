@@ -8,6 +8,7 @@ import type {
   StackMember,
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
+import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
 import { STACK_TEXT } from "../../constants/stack";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
@@ -77,7 +78,10 @@ export function stackFromSaved(c: SavedConfig): StackDesign | null {
     !speakers.every(isStackSpeaker)
   )
     return null;
-  return { stack: { id: c.id, name: c.name, members, notes }, speakers };
+  return {
+    stack: { id: c.id, name: c.name, members, notes },
+    speakers: speakers.map(readSpeakerCopy),
+  };
 }
 
 /** The Stack page's working design in the browser: the save document, with the stack's id and name. */

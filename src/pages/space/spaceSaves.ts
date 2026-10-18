@@ -10,6 +10,7 @@ import type {
   StackSpec,
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
+import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
 import { homeVenue } from "../../lib/speaker/specParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
@@ -151,7 +152,7 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
   return {
     space: { id: c.id, name: c.name, placements, venue },
     stacks,
-    speakers,
+    speakers: speakers.map(readSpeakerCopy),
   };
 }
 

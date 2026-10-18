@@ -25,6 +25,7 @@ import {
   DIRECT_LOAD,
   FLUSH_BOX,
   flushBracing,
+  NO_HARDWARE,
   NO_FILTERS,
   homeVenue,
   lrFilter,
@@ -94,6 +95,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
               horn: null,
             },
           ],
+          bracing: flushBracing(PANEL_STOCK[FILL_PANEL].in),
         },
       ],
       panel: {
@@ -102,9 +104,8 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
         thicknessIn: PANEL_STOCK[FILL_PANEL].in,
       },
       ...FLUSH_BOX,
-      ...flushBracing(PANEL_STOCK[FILL_PANEL].in),
       // the fill page counts no handles or input dish
-      hardware: null,
+      ...NO_HARDWARE,
       roundoverIn: 0,
       tiltDeg: 0,
     },

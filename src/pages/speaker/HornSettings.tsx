@@ -1,5 +1,15 @@
 import { CardHeading } from "../../components/ui/CardHeading";
 import { useRef, useState } from "react";
+import { FoldBox } from "../../components/ui/FoldBox";
+import { InsetGroup } from "../../components/ui/InsetGroup";
+import { SelectField, type SelectOption } from "../../components/ui/SelectField";
+import { ToggleButton } from "../../components/ui/ToggleButton";
+import { SETTINGS_TEXT } from "../../constants/speakerSettings";
+import { SPEAKER_STEPS } from "../../constants/speakerSteps";
+import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
+import { byId } from "../../lib/tables";
+import { keysOf } from "../../lib/records";
+import { hornSettingsSummary } from "./settingsSummaries";
 import type { HornGoalFit, HornGoals, HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
 import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
@@ -19,9 +29,9 @@ import {
   throatCones,
 } from "../../lib/speaker/hornThroat";
 import { driverSetbackIn } from "../../lib/speaker/driverBoard";
-import { shownIn } from "./speakerFields";
-import { FIELD_ROW, HEADING_GROUP, GAP_Y, GAP_Y_TIGHT } from "../../styles/layout";
-import { hornText, straightHornText } from "./speakerText";
+import { shownIn, shownTenth } from "./speakerFields";
+import { FIELD_ROW, GAP_Y, GAP_Y_TIGHT, PAIR_ROW } from "../../styles/layout";
+import { straightHornText } from "./speakerText";
 import { HornGoalsFields } from "./HornGoalsFields";
 import { HornImportFold } from "./HornImportFold";
 import type { HornImport } from "./hornrespImport";
@@ -44,19 +54,23 @@ import {
   type HornSectionSize,
 } from "./hornSections";
 
-/** The drives the engines don't take yet: shown, not picked. */
 /** The horn types to pick: a back-loaded horn is not calculated, so it is not offered. */
-const DRIVE_OPTIONS = entriesOf(HORN_DRIVE_NAMES).filter(([kind]) => kind !== HORN_DRIVE.back);
+const DRIVE_OPTIONS: readonly SelectOption[] = entriesOf(HORN_DRIVE_NAMES)
+  .filter(([kind]) => kind !== HORN_DRIVE.back)
+  .map(([id, name]) => ({ id, name }));
+
+/** The least rear chamber a straight horn takes, L (as Design from goals and an import set it). */
+const MIN_REAR_L = MIN_NET_L;
 
 /** An offset drive's one tap, by its key in the drive. */
 const OFFSET_TAP = "tap" satisfies keyof Extract<SpeakerHorn["drive"], { kind: "offset" }>;
 
 /** Each tap setting of a drive: where it is in the drive, its label and its tooltip. */
 const TAP_FIELDS = {
-  offset: [{ key: OFFSET_TAP, label: SPEAKER_TEXT.hornTap, tip: SPEAKER_TEXT.hornTapTip }],
+  offset: [{ key: OFFSET_TAP, label: SETTINGS_TEXT.tap, tip: SETTINGS_TEXT.tapTip }],
   tapped: [
-    { key: "frontTap", label: SPEAKER_TEXT.hornFrontTap, tip: SPEAKER_TEXT.hornFrontTapTip },
-    { key: "rearTap", label: SPEAKER_TEXT.hornRearTap, tip: SPEAKER_TEXT.hornRearTapTip },
+    { key: "frontTap", label: SETTINGS_TEXT.frontTap, tip: SETTINGS_TEXT.tapsTip },
+    { key: "rearTap", label: SETTINGS_TEXT.backTap, tip: SETTINGS_TEXT.tapsTip },
   ],
 } as const;
 
@@ -115,6 +129,11 @@ interface Props {
   fit: HornGoalFit | null;
   /** the horn's air and the chamber's, L, when the horn holds more than the chamber has; else null */
   overAir: { hornL: number; chamberL: number } | null;
+  /** a straight horn's rear chamber: the chamber's net air, L (`SpeakerChamber.netLiters`); null while not set */
+  rearLiters: number | null;
+  onRearLiters: (liters: number) => void;
+  /** more settings at the end of the Horn settings fold, before the straight horn (the fill, the mouth's place) */
+  children?: React.ReactNode;
   onEdit: (edit: (horn: SpeakerHorn) => SpeakerHorn) => void;
   /** sets the drive, with the chamber changes it needs (a tapped horn's chamber has no vent) */
   onDrive: (kind: SpeakerHorn["drive"]["kind"]) => void;
@@ -125,12 +144,14 @@ interface Props {
 }
 
 /**
- * A horn-loaded chamber's horn: its compression ratio (the throat: the first section's start area, the one figure both
- * fields edit), its flare sections (profile, start and end area, length), its front chamber (from the drivers and the
- * driver board, shown only), the driver board's thickness (a wall, or double), path and drive. The chamber's own net air and vent are the horn's rear chamber. The sections are smooth: each
- * starts at the previous section's end area, and only the first shows its start area. With Steps on (in the Advanced
- * fold, and always while the horn has a step) every section shows its start area, so a step can be made; Steps off
- * smooths them.
+ * A horn-loaded chamber's horn, in two parts: the Horn group (its goals, with Design from goals) and the Horn settings
+ * fold: its type and taps, its compression ratio (the throat: the first section's start area) and front chamber (from
+ * the drivers and the driver board, shown only), the driver board's thickness, the chamber's extra settings
+ * (`children`), the straight horn and the Hornresp import. Design from goals or an import set the straight horn and a
+ * straight horn's rear chamber (the chamber's net air): both show read-only until Edit manually is on. The sections are
+ * smooth: each starts at the previous section's end area, and only the first shows its start area. With Steps on (in
+ * the Advanced fold, and always while the horn has a step) every section shows its start area, so a step can be made;
+ * Steps off smooths them.
  */
 export function HornSettings({
   horn,
@@ -138,6 +159,9 @@ export function HornSettings({
   wallIn,
   fit,
   overAir,
+  rearLiters,
+  onRearLiters,
+  children,
   onEdit,
   onDrive,
   onDesign,
@@ -156,6 +180,8 @@ export function HornSettings({
   const steps = stepCount(segments);
   /** Steps on: latched while the horn has a step, so a field typed back to smooth stays; only Off turns it off */
   const [stepsOn, setStepsOn] = useState(() => stepsLatched(false, segments));
+  /** Edit manually: the straight horn's sections and the rear chamber unlocked (Design from goals or an import sets them) */
+  const [manual, setManual] = useState(false);
   if (stepsLatched(stepsOn, segments) !== stepsOn) setStepsOn(true);
   /** a folded horn: its drawing sets the taps, the throat and the shape; the sections are only its target */
   const folded = horn.path === HORN_PATH.folded;
@@ -260,100 +286,163 @@ export function HornSettings({
       />
     </SettingsFold>
   );
+  /** the sections a tap can open after: every boundary between two sections */
+  const tapOptions: readonly SelectOption[] = segments
+    .slice(0, -1)
+    .map((_, i) => ({ id: String(i + 1), name: SPEAKER_TEXT.hornSection(i + 1) }));
+  /** the line that says what sets the straight horn, and the one switch that unlocks it (and the rear chamber) */
+  const manualRow = (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-xs text-stone-500">{SETTINGS_TEXT.setByDesign}</p>
+      <ToggleButton size="xs" on={manual} className="shrink-0" onClick={() => setManual((m) => !m)}>
+        {SETTINGS_TEXT.editManually}
+      </ToggleButton>
+    </div>
+  );
+  /** the straight horn's sections, read-only: each one's profile, start and end area, and length */
+  const sectionsTable = (
+    <div className="grid grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] gap-1.5 text-sm">
+      <span className="text-xs text-stone-500">{SPEAKER_TEXT.hornProfile}</span>
+      {SECTION_FIELDS.map(({ size, label, tip }) => (
+        <span key={size} className="text-xs text-stone-500">
+          <Tooltip tip={tip}>{label}</Tooltip>
+        </span>
+      ))}
+      {segments.map((s, i) => (
+        <div key={i} className="contents font-value text-stone-500">
+          <span className="truncate">{HORN_PROFILE_NAMES[s.profile]}</span>
+          {SECTION_FIELDS.map(({ size }) => (
+            <span key={size}>{shownSize(s, size)}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
   return (
-    <section className={`border-t border-stone-300 pt-3 ${GAP_Y}`}>
-      <div className={HEADING_GROUP}>
-        <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
-        <p className="text-xs text-stone-500">{hornText(horn)}</p>
-      </div>
-      <HornGoalsFields
-        goals={horn.goals ?? HORN_GOALS_DEFAULT}
-        fit={fit}
-        overAir={overAir}
-        onGoals={(goals) => onEdit((h) => ({ ...h, goals }))}
-        onDesign={drive.kind === HORN_DRIVE.back ? undefined : onDesign}
-      />
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
-        value={drive.kind}
-        onChange={(kind) => {
-          if (kind !== drive.kind && kind !== HORN_DRIVE.back) onDrive(kind);
-        }}
-        options={DRIVE_OPTIONS}
-      />
-      {!folded &&
-        (drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) &&
-        TAP_FIELDS[drive.kind].map(({ key, label, tip }) => (
+    <>
+      <InsetGroup title={SETTINGS_TEXT.horn}>
+        <HornGoalsFields
+          goals={horn.goals ?? HORN_GOALS_DEFAULT}
+          fit={fit}
+          overAir={overAir}
+          onGoals={(goals) => onEdit((h) => ({ ...h, goals }))}
+          onDesign={drive.kind === HORN_DRIVE.back ? undefined : onDesign}
+        />
+      </InsetGroup>
+      <FoldBox title={SETTINGS_TEXT.hornSettings} summary={hornSettingsSummary(horn)}>
+        <SelectField
+          label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
+          options={DRIVE_OPTIONS}
+          value={byId(DRIVE_OPTIONS, drive.kind)}
+          onChange={(o) => {
+            // the picker lists exactly the drives it offers (DRIVE_OPTIONS)
+            const kind = keysOf(HORN_DRIVE_NAMES).find((k) => k === o.id);
+            if (kind && kind !== drive.kind && kind !== HORN_DRIVE.back) onDrive(kind);
+          }}
+        />
+        {!folded && (drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) && (
+          <div className={drive.kind === HORN_DRIVE.tapped ? PAIR_ROW : ""}>
+            {TAP_FIELDS[drive.kind].map(({ key, label, tip }) => {
+              const tap = tapOf(drive, key);
+              return (
+                <SelectField
+                  key={key}
+                  label={<Tooltip tip={tip}>{label}</Tooltip>}
+                  options={tapOptions}
+                  value={tap === null ? undefined : byId(tapOptions, String(tap))}
+                  onChange={(o) =>
+                    onEdit((h) => ({ ...h, drive: withTap(h.drive, key, Number(o.id)) }))
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+        {!folded && drive.kind === HORN_DRIVE.tapped && (
+          <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornTappedAir}</p>
+        )}
+        {!folded && (ratio !== null || front) && (
+          <div className={PAIR_ROW}>
+            {/* the ratio is the cones' area over the path's start: a front-loaded horn's throat only */}
+            {ratio !== null && drive.kind === HORN_DRIVE.front && (
+              <NumberField
+                label={
+                  <Tooltip tip={SPEAKER_TEXT.hornCompressionTip}>
+                    {SPEAKER_TEXT.hornCompression}
+                  </Tooltip>
+                }
+                value={shownIn(ratio)}
+                min={COMPRESSION_RATIO.min}
+                max={COMPRESSION_RATIO.max}
+                step={COMPRESSION_RATIO.step}
+                unit=": 1"
+                fill
+                onChange={(r) => {
+                  if (r > 0) editSegments((list) => withCompressionRatio(list, conesCm2, r));
+                }}
+              />
+            )}
+            {front && (
+              <ReadOnlyField
+                label={
+                  <Tooltip
+                    tip={
+                      front.estimated
+                        ? `${SPEAKER_TEXT.hornFrontChamberTip} ${SPEAKER_TEXT.hornFrontChamberEstimate}`
+                        : SPEAKER_TEXT.hornFrontChamberTip
+                    }
+                  >
+                    {SPEAKER_TEXT.hornFrontChamber}
+                  </Tooltip>
+                }
+                value={shownIn(front.liters)}
+                unit="L"
+              />
+            )}
+          </div>
+        )}
+        {!folded && (
           <ToggleGroup
-            key={key}
-            label={<Tooltip tip={tip}>{label}</Tooltip>}
-            value={tapOf(drive, key)}
-            onChange={(tap) => onEdit((h) => ({ ...h, drive: withTap(h.drive, key, tap) }))}
-            options={segments.slice(0, -1).map((_, i) => [i + 1, String(i + 1)] as const)}
+            label={<Tooltip tip={SPEAKER_TEXT.hornBoardTip}>{SPEAKER_TEXT.hornBoard}</Tooltip>}
+            value={horn.doubleBoard === true}
+            onChange={(doubleBoard) => onEdit((h) => ({ ...h, doubleBoard }))}
+            options={BOARD_OPTIONS}
           />
-        ))}
-      {!folded && drive.kind === HORN_DRIVE.tapped && (
-        <p className="text-xs text-stone-500">{SPEAKER_TEXT.hornTappedAir}</p>
-      )}
-      {!folded && (
-        <div className={FIELD_ROW}>
-          {/* the ratio is the cones' area over the path's start: a front-loaded horn's throat only */}
-          {ratio !== null && drive.kind === HORN_DRIVE.front && (
+        )}
+        {children}
+        {folded ? (
+          <SettingsFold title={SPEAKER_TEXT.straightHorn} summary={straightHornText(horn)}>
+            {manualRow}
+            <p className="text-xs text-stone-500">{SPEAKER_TEXT.straightHornNote}</p>
+            {manual ? sectionsBlock : sectionsTable}
+          </SettingsFold>
+        ) : (
+          <>
+            {manualRow}
+            {/* a straight horn's rear chamber: the chamber's net air, set with the horn */}
             <NumberField
               label={
-                <Tooltip tip={SPEAKER_TEXT.hornCompressionTip}>
-                  {SPEAKER_TEXT.hornCompression}
-                </Tooltip>
+                <Tooltip tip={SETTINGS_TEXT.rearChamberTip}>{SETTINGS_TEXT.rearChamber}</Tooltip>
               }
-              value={shownIn(ratio)}
-              min={COMPRESSION_RATIO.min}
-              max={COMPRESSION_RATIO.max}
-              step={COMPRESSION_RATIO.step}
-              unit=": 1"
-              onChange={(r) => {
-                if (r > 0) editSegments((list) => withCompressionRatio(list, conesCm2, r));
-              }}
-            />
-          )}
-          {front && (
-            <ReadOnlyField
-              label={
-                <Tooltip
-                  tip={
-                    front.estimated
-                      ? `${SPEAKER_TEXT.hornFrontChamberTip} ${SPEAKER_TEXT.hornFrontChamberEstimate}`
-                      : SPEAKER_TEXT.hornFrontChamberTip
-                  }
-                >
-                  {SPEAKER_TEXT.hornFrontChamber}
-                </Tooltip>
-              }
-              value={shownIn(front.liters)}
+              value={shownTenth(rearLiters ?? 0)}
+              min={MIN_REAR_L}
+              step={SPEAKER_STEPS.netL}
               unit="L"
+              disabled={!manual}
+              onChange={(liters) => onRearLiters(Math.max(MIN_REAR_L, liters))}
             />
-          )}
-        </div>
-      )}
-      {folded ? (
-        <SettingsFold title={SPEAKER_TEXT.straightHorn} summary={straightHornText(horn)}>
-          <p className="text-xs text-stone-500">{SPEAKER_TEXT.straightHornNote}</p>
-          {sectionsBlock}
-        </SettingsFold>
-      ) : (
-        <>
-          {sectionsBlock}
-          {stepsFold}
-        </>
-      )}
-      {!folded && (
-        <ToggleGroup
-          label={<Tooltip tip={SPEAKER_TEXT.hornBoardTip}>{SPEAKER_TEXT.hornBoard}</Tooltip>}
-          value={horn.doubleBoard === true}
-          onChange={(doubleBoard) => onEdit((h) => ({ ...h, doubleBoard }))}
-          options={BOARD_OPTIONS}
-        />
-      )}
-      <HornImportFold onImport={onImport} />
-    </section>
+            {manual ? (
+              <>
+                {sectionsBlock}
+                {stepsFold}
+              </>
+            ) : (
+              sectionsTable
+            )}
+          </>
+        )}
+        <HornImportFold onImport={onImport} />
+      </FoldBox>
+    </>
   );
 }

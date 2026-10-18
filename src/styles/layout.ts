@@ -60,6 +60,15 @@ export const FLEX_GAP_Y = "flex flex-col gap-3";
 /** A row of number fields that wraps onto more lines where the pane is narrow: 0.75 rem between fields, both ways. */
 export const FIELD_ROW = "flex flex-wrap gap-3";
 
+/** Two fields side by side in equal columns, their boxes level (a position's two fields; fields that `fill`). */
+export const PAIR_ROW = "grid grid-cols-2 gap-3 items-end";
+
+/** Three fields side by side in equal columns, their boxes level (a chamber's size; fields that `fill`). */
+export const TRIO_ROW = "grid grid-cols-3 gap-3 items-end";
+
+/** A wide pick and a narrow field beside it, their boxes level (a model and its count, a filter and its corner). */
+export const PICK_ROW = "grid grid-cols-[minmax(0,1fr)_6rem] gap-3 items-end";
+
 /** The settings column's body when it holds fold sections: 1 rem between one section and the next, on purpose wider than a field gap. */
 export const SECTION_GAP_Y = "space-y-4";
 

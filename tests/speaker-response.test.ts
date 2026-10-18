@@ -19,7 +19,7 @@ import {
 import { speakerResponse, SPEAKER_RESPONSE_FREQUENCIES } from "../src/lib/speaker/speakerResponse";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
-import { lrFilter } from "../src/lib/speaker/specParts";
+import { flushBracing, lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
 import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import {
@@ -358,6 +358,7 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
     dims: { w: 24, h: 32, d: 30 },
     netLiters: 120,
     stuffingPct: 0,
+    bracing: flushBracing(0.75),
     vent: {
       kind: VENT_KIND.vented,
       port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 },

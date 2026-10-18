@@ -1,20 +1,30 @@
 import { Tooltip } from "../../components/ui/Tooltip";
-import { AMP_POWER_LABEL, AMP_POWER_TIP } from "../../constants/ampPower";
+import { AMP_POWER_TIP } from "../../constants/ampPower";
 import type { SpeakerBand } from "../../types";
 import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
-import { CardHeading } from "../../components/ui/CardHeading";
+import { FoldBox } from "../../components/ui/FoldBox";
+import { BandDot } from "../../components/ui/BandDot";
 import { NumberField } from "../../components/ui/NumberField";
-import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { SelectField } from "../../components/ui/SelectField";
 import { TextField } from "../../components/ui/TextField";
-import { entriesOf } from "../../lib/records";
+import { byId } from "../../lib/tables";
+import { entriesOf, keysOf } from "../../lib/records";
 import { SPEAKER_TEXT, DRIVE_NAMES } from "../../constants/speakerPage";
+import { SETTINGS_TEXT } from "../../constants/speakerSettings";
 import { FilterFields } from "./FilterFields";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
+import { TRIO_ROW } from "../../styles/layout";
+import { bandSummary } from "./settingsSummaries";
+
+/** The crossover choices, as the band's picker lists them. */
+const DRIVE_OPTIONS = entriesOf(DRIVE_NAMES).map(([id, name]) => ({ id, name }));
 
 interface Props {
   band: SpeakerBand;
+  /** its place among the bands, low to high, and how many there are: its dot's color */
+  index: number;
+  count: number;
   /** a new filter's corner, Hz */
   newCornerHz: number;
   onEdit: (edit: (band: SpeakerBand) => SpeakerBand) => void;
@@ -22,21 +32,23 @@ interface Props {
   onRemove?: () => void;
 }
 
-/** One band's settings: its name, highpass and lowpass, level, drive and amp power. */
-export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
+/**
+ * One band, in a box that folds to its summary with its dot ("High · High-pass LR24 1200 Hz · Low-pass off · 100 W"):
+ * its name, high-pass and low-pass, level, crossover and amp power.
+ */
+export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove }: Props) {
   return (
-    <Card>
-      <CardHeading
-        action={
-          onRemove && (
-            <Button size="xs" onClick={onRemove}>
-              Remove band
-            </Button>
-          )
-        }
-      >
-        {band.name}
-      </CardHeading>
+    <FoldBox
+      summary={bandSummary(band)}
+      lead={<BandDot index={index} count={count} />}
+      actions={
+        onRemove && (
+          <Button size="xs" onClick={onRemove}>
+            {SETTINGS_TEXT.removeBand}
+          </Button>
+        )
+      }
+    >
       <TextField
         label="Name"
         value={band.name}
@@ -46,36 +58,43 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
       <FilterFields
         filters={band}
         newCornerHz={newCornerHz}
-        offName={SPEAKER_TEXT.noFilter}
         onEdit={(edit) => onEdit((b) => ({ ...b, ...edit(b) }))}
       />
-      <NumberField
-        label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Level</Tooltip>}
-        // shown to 0.1 dB (the Hi-fi level match is exact)
-        value={Math.round(band.levelDb * 10) / 10}
-        step={SPEAKER_STEPS.levelDb}
-        unit="dB"
-        onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
-      />
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Crossover</Tooltip>}
-        value={band.drive}
-        onChange={(drive) => onEdit((b) => ({ ...b, drive }))}
-        options={entriesOf(DRIVE_NAMES)}
-      />
-      <NumberField
-        // passive: the channel it shares
-        label={
-          <Tooltip tip={AMP_POWER_TIP}>
-            {band.drive === HIFI_DRIVE.passive ? SPEAKER_TEXT.sharedAmp : AMP_POWER_LABEL}
-          </Tooltip>
-        }
-        value={band.ampW}
-        min={1}
-        step={SPEAKER_STEPS.ampW}
-        unit="W"
-        onChange={(ampW) => onEdit((b) => ({ ...b, ampW }))}
-      />
-    </Card>
+      <div className={TRIO_ROW}>
+        <NumberField
+          label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Level</Tooltip>}
+          // shown to 0.1 dB (the Hi-fi level match is exact)
+          value={Math.round(band.levelDb * 10) / 10}
+          step={SPEAKER_STEPS.levelDb}
+          unit="dB"
+          fill
+          onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
+        />
+        <SelectField
+          label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Crossover</Tooltip>}
+          options={DRIVE_OPTIONS}
+          value={byId(DRIVE_OPTIONS, band.drive)}
+          onChange={(o) => {
+            // the picker lists exactly the drives (DRIVE_OPTIONS)
+            const drive = keysOf(DRIVE_NAMES).find((k) => k === o.id);
+            if (drive) onEdit((b) => ({ ...b, drive }));
+          }}
+        />
+        <NumberField
+          // passive: the channel it shares
+          label={
+            <Tooltip tip={AMP_POWER_TIP}>
+              {band.drive === HIFI_DRIVE.passive ? SPEAKER_TEXT.sharedAmp : SETTINGS_TEXT.ampPower}
+            </Tooltip>
+          }
+          value={band.ampW}
+          min={1}
+          step={SPEAKER_STEPS.ampW}
+          unit="W"
+          fill
+          onChange={(ampW) => onEdit((b) => ({ ...b, ampW }))}
+        />
+      </div>
+    </FoldBox>
   );
 }

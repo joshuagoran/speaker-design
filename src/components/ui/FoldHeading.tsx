@@ -62,7 +62,7 @@ interface Props<Id extends string> {
   buttonClassName?: string;
   /** the widths it folds at (default: phones only) */
   foldsAt?: FoldsAt;
-  /** one line of the section's current values, shown while it is folded */
+  /** the section's key facts, shown under its title while it is folded (two lines at most) */
   summary?: React.ReactNode;
   /** heading level: 2 for a page section, 3 for a section inside a panel */
   level?: 2 | 3;
@@ -97,7 +97,10 @@ export function FoldHeading<Id extends string>({
         <span className="min-w-0 flex-1 flex flex-col">
           <span>{title}</span>
           {summary != null && !open && (
-            <span className={`text-sm font-normal text-stone-500 truncate ${at.only}`}>
+            // the summary wraps under the title, two lines at most
+            <span
+              className={`text-xs leading-snug font-normal text-stone-500 line-clamp-2 mt-0.5 ${at.only}`}
+            >
               {summary}
             </span>
           )}

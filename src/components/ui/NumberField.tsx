@@ -12,6 +12,8 @@ interface Props {
   step?: number;
   /** shown grayed and read-only: a value worked out elsewhere */
   disabled?: boolean;
+  /** the box fills its row's cell (a grid of fields) instead of its own fixed width */
+  fill?: boolean;
   className?: string;
 }
 
@@ -25,6 +27,7 @@ export function NumberField({
   max,
   step,
   disabled = false,
+  fill = false,
   className = "",
 }: Props) {
   const id = useId();
@@ -34,7 +37,7 @@ export function NumberField({
   }, [value]);
   return (
     <FormField label={label} htmlFor={id} className={className}>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className={`flex items-center gap-2 text-sm ${fill ? "" : "flex-wrap"}`}>
         <input
           id={id}
           type="number"
@@ -50,7 +53,7 @@ export function NumberField({
             if (Number.isFinite(n)) onChange(n);
           }}
           onBlur={() => setRaw(String(value))}
-          className={`w-24 px-3 py-2 font-value rounded border border-stone-300 bg-panel ${HOVER_TRANSITION} ${disabled ? "text-stone-500 cursor-not-allowed" : "hover:border-stone-500"}`}
+          className={`${fill ? "w-full min-w-0" : "w-24"} px-3 py-2 font-value rounded border border-stone-300 bg-panel ${HOVER_TRANSITION} ${disabled ? "text-stone-500 cursor-not-allowed" : "hover:border-stone-500"}`}
         />
         {unit}
       </div>

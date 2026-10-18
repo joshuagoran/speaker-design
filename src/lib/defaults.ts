@@ -77,6 +77,7 @@ import {
   FLUSH_BOX,
   NO_FILTERS,
   flushBracing,
+  NO_HARDWARE,
   stuffingPctOf,
 } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
@@ -238,6 +239,7 @@ export const DEFAULT_SPEAKER_CHAMBER: SpeakerChamber = {
   vent: { kind: VENT_KIND.sealed },
   load: DIRECT_LOAD,
   drivers: [],
+  bracing: flushBracing(DEFAULT_PA.wall),
 };
 
 /** A band the Speaker page adds: no filters, at 0 dB, active, on the Hi-fi woofer's amp power. */
@@ -258,8 +260,7 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
     chambers: [DEFAULT_SPEAKER_CHAMBER],
     panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
     ...FLUSH_BOX,
-    ...flushBracing(DEFAULT_PA.wall),
-    hardware: null,
+    ...NO_HARDWARE,
     roundoverIn: 0,
     tiltDeg: 0,
   },

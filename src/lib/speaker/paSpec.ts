@@ -7,6 +7,8 @@
 // box's.
 import type {
   AdapterBandId,
+  BoxHandles,
+  ChamberBracing,
   CoverageLayout,
   FacePoint,
   HornPlacement,
@@ -38,6 +40,7 @@ import { takesHornMount } from "../pa/hornMount";
 import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
 import { defaultBraceStyleNear } from "../bracing";
 import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
+import { NO_HANDLES } from "../../constants/hardware";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
@@ -134,6 +137,7 @@ function subChamber(cfg: PaPlannerDesign): SpeakerChamber {
         horn: null,
       },
     ],
+    bracing: paBracing(cfg),
   };
 }
 
@@ -173,6 +177,7 @@ function hornDriver(
  * holds the mid, else bare (the horn section).
  */
 const sealedChamber = (
+  cfg: PaPlannerDesign,
   at: SpeakerChamber["at"],
   dims: SpeakerChamber["dims"],
   drivers: SpeakerChamber["drivers"],
@@ -186,20 +191,37 @@ const sealedChamber = (
   vent: { kind: VENT_KIND.sealed },
   load: DIRECT_LOAD,
   drivers,
+  bracing: paBracing(cfg),
+});
+
+/** Each PA box's bracing: the PA page's style (the plywood's where it sets none), back joint and panel target. */
+const paBracing = (cfg: PaPlannerDesign): ChamberBracing => ({
+  braceStyle: cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+  backJoint: cfg.backJoint ?? DEFAULT_BACK_JOINT,
+  braceTargetHz: PA_PANEL_TARGET_HZ,
 });
 
 /**
- * The plywood shell: the PA's frame with its inset baffle (an inset of 0 too), the design's panels, inset and bracing,
- * the box's `hardware` (its handles, as the PA page sets them), and the `top` given (flat but on the tower, whose horn
- * can arch it); the PA boxes stand upright with sharp-edged baffles.
+ * The PA box's handles as a cabinet takes them: its handles where it has a model, else none (the PA page's No handles
+ * keeps the dish). Every PA box has its input dish.
+ */
+const paHardware = (handles: BoxHandles): Pick<SpeakerCabinet, "handles" | "inputDish"> => ({
+  handles: handles.model === NO_HANDLES ? null : handles,
+  inputDish: true,
+});
+
+/**
+ * The plywood shell: the PA's frame with its inset baffle (an inset of 0 too), the design's panels and inset, the box's
+ * `handles` (as the PA page sets them) with its input dish, and the `top` given (flat but on the tower, whose horn can
+ * arch it); the PA boxes stand upright with sharp-edged baffles.
  */
 const paCabinet = (
   cfg: PaPlannerDesign,
   chambers: SpeakerCabinet["chambers"],
-  hardware: SpeakerCabinet["hardware"],
+  handles: BoxHandles,
   top: SpeakerCabinet["top"] = CABINET_TOP.flat,
 ): SpeakerCabinet => ({
-  hardware,
+  ...paHardware(handles),
   chambers,
   panel: { nominal: cfg.panel, material: PLYWOOD_MATERIAL, thicknessIn: cfg.wall },
   construction: CABINET_CONSTRUCTION.frameInset,
@@ -207,10 +229,6 @@ const paCabinet = (
   insetIn: cfg.inset,
   roundoverIn: 0,
   tiltDeg: 0,
-  // the PA page's style (the plywood's where it sets none), back joint and panel target
-  braceStyle: cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
-  backJoint: cfg.backJoint ?? DEFAULT_BACK_JOINT,
-  braceTargetHz: PA_PANEL_TARGET_HZ,
 });
 
 /** An active band: its own amp channel of `ampW`, its filters in the DSP. */
@@ -297,7 +315,7 @@ const topSpeaker = (cfg: PaPlannerDesign, design: SpecIdentity) =>
     paCabinet(
       cfg,
       [
-        sealedChamber({ xIn: 0, yIn: 0 }, cfg.mDim, [
+        sealedChamber(cfg, { xIn: 0, yIn: 0 }, cfg.mDim, [
           midDriver(cfg, cfg.mDim.h / 2),
           hornDriver(cfg, HORN_PLACEMENT.top, { xIn: 0, yIn: 0 }),
         ]),
@@ -335,10 +353,11 @@ function towerSpeaker(cfg: PaPlannerDesign, design: SpecIdentity): SpeakerSpec {
       cfg,
       [
         subChamber(cfg),
-        sealedChamber({ xIn: 0, yIn: cfg.cDim.h }, midDims, [
+        sealedChamber(cfg, { xIn: 0, yIn: cfg.cDim.h }, midDims, [
           midDriver(cfg, tower.midCenter - cfg.cDim.h),
         ]),
         sealedChamber(
+          cfg,
           { xIn: 0, yIn: hornFloor },
           { w: cfg.cDim.w, h: tower.hornSectionH, d: cfg.cDim.d },
           [hornDriver(cfg, HORN_PLACEMENT.baffle, { xIn: 0, yIn: tower.hornCenter - hornFloor })],

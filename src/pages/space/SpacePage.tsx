@@ -53,7 +53,8 @@ import {
   SPACE_SURFACE_NAMES,
   SPACE_TEXT,
 } from "../../constants/space";
-import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";
+import type { SpeakerPageState } from "../speaker/useSpeakerPage";
+import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { stackFromSaved } from "../stack/stackSaves";
 import type { StackPlanner } from "../stack/useStack";
 import { PlacementSettings } from "./PlacementSettings";
@@ -107,7 +108,8 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   });
   const speakers = (speakerPage.store.saved ?? []).flatMap((c) => {
     const saved: unknown = Reflect.get(c, "speaker");
-    return isSavedSpeaker(saved) ? [{ id: c.id, name: c.name, spec: saved }] : [];
+    const spec = readSavedSpeaker(saved);
+    return spec ? [{ id: c.id, name: c.name, spec }] : [];
   });
   /** signed in: the libraries are the person's (the stores hold a database) */
   const signedIn = Boolean(stack.store.db || speakerPage.store.db);

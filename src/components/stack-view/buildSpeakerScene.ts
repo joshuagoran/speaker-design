@@ -186,8 +186,9 @@ export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
     wall: cabinet.panel.thicknessIn,
     inset: baffleInsetIn(cabinet),
     roundover: cabinet.roundoverIn,
-    // the handles' model and offsets (the dish and the posts follow the cabinet)
-    hardware: cabinet.hardware,
+    // the handles' model and offsets, and the input dish (the posts follow the dish and the horn on the top)
+    handles: cabinet.handles,
+    inputDish: cabinet.inputDish,
     chambers: cabinet.chambers.map(({ at, dims, vent, drivers, load }, i) => ({
       at,
       dims,

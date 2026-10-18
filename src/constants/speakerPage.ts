@@ -436,55 +436,33 @@ export const SPEAKER_TEXT = {
   /** a chamber whose braces can't bring every panel to the target (or a panel over its strength limit), by its place */
   underTarget: (n: number, target: string) =>
     `Chamber ${n} does not get to the ${target} bracing target. Not enough braces fit around its drivers, vent and horn. These panels are below the target, or above a strength limit:`,
-  inputRange: "Input range",
-  inputHint: "Filters in front of the speaker. They are not part of the box.",
-  inputTip:
-    "The filters in front of the speaker, for example the crossover to a sub. They are not part of the box. In a stack, the crossover of the stack sets them.",
-  inputOff: "Off",
+  inputRange: "External crossover",
   construction: "Construction",
   top: "Top",
-  inset: "Baffle inset, in",
+  inset: "Baffle inset",
   insetTip: "How far the baffle is behind the front edge of the frame.",
-  braceStyle: "Bracing",
-  backJoint: "Back panel",
   wallPanel: "Wall panels",
   /** the wall panels' tooltip, with the frame box's baffle thickness in words */
   wallPanelTip: (baffle: string) =>
     `The panel size of the sides, top, bottom and back. On a frame box, the baffle stays ${baffle}. On a flush box, the baffle is this size too. Thinner walls get more braces.`,
   /** the construction summary's wall panels, by their thickness in words */
   wallPanelSummary: (t: string) => `${t} walls`,
-  hardware: "Hardware",
-  hardwareTip:
-    "Two handles, an input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell. None: no hardware.",
-  hardwareNone: "None",
-  hardwareOn: "Handles and input dish",
-  handles: "Handles",
-  /** where the hardware note (constants/hardware `hardwareNote`) puts the input dish, and the horn's posts */
-  hardwareDishBox: "The lowest chamber of each shell",
-  hardwarePostsBox: "Under a horn on its top",
-  /** the construction summary's hardware: the handles' name, or none */
-  hardwareSummary: (handles: string) => `hardware with ${handles}`,
-  noHardwareSummary: "no hardware",
   braceTarget: "Bracing target",
   /** the target's tooltip, with the default target in words */
   braceTargetTip: (def: string) =>
     `Braces are added until the first resonance of each panel is above this frequency. Default: ${def}.`,
   /** under the Top choice when an arched top cannot apply: the start of the reason (`ARCH_BLOCK_TEXT`) */
   archFlat: "The top stays flat.",
-  fromLeft: "From left, in",
-  fromBottom: "From bottom, in",
-  backFromFront: "Back from front, in",
-  placeTip:
-    "Seen from the front. The position of the center, from the left side and the bottom of the chamber.",
+  placeTip: "Auto: the chamber's layout places it. Custom: you set the position of its center.",
   portPlace: "Port position",
   radiatorPlace: "Radiator position",
   mouthPlace: "Horn mouth position",
   panel: "Panel",
-  slotNarrow: "Opening, narrow side, in",
+  slotNarrow: "Opening, narrow side",
   slotNarrowTip:
     "An open slot always runs the full inside width of the chamber, or the full inside height on the front sides. This size sets its area.",
-  slotHeight: "Slot height, in",
-  portLength: "Length, in",
+  slotHeight: "Slot height",
+  portLength: "Length",
   slotKind: "Slot type",
   slotKindTip:
     "Divided slot: a slot along the floor, split by fins. It folds up the back when it is too long. It needs the frame construction. Open slot: a rectangular opening with no fins. You can use more than one.",
@@ -519,8 +497,8 @@ export const SPEAKER_TEXT = {
   hornSections: "Flare sections",
   hornSection: (n: number) => `Section ${n}`,
   hornProfile: "Profile",
-  hornStart: "Start area, in²",
-  hornEnd: "End area, in²",
+  hornStart: "Start area",
+  hornEnd: "End area",
   hornCompression: "Compression ratio",
   hornCompressionTip:
     "How much of the cone the horn walls cover. A higher ratio loads the cone more. It gives more output low in the band but less at the top, and faster air at the throat.",
@@ -540,15 +518,14 @@ export const SPEAKER_TEXT = {
   hornDrive: "Horn type",
   hornDriveTip:
     "Where the cones meet the horn's path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
-  hornTap: "Cones open after section",
-  hornTapTip:
-    "The front of the cones opens into the path after this section. The path before it is closed at its start.",
-  hornFrontTap: "Cone fronts open after section",
+  hornTap: "Tap after section",
+  hornTapTip: "Where the front of the cones joins the horn, counted from the closed end.",
+  hornFrontTap: "Front tap after section",
   hornFrontTapTip:
-    "The front of the cones opens into the path after this section. The path before it is closed at its start.",
-  hornRearTap: "Cone backs open after section",
+    "Where the front and back of the cones join the horn, counted from the closed end.",
+  hornRearTap: "Back tap after section",
   hornRearTapTip:
-    "The back of the cones opens into the path after this section. It comes after the front.",
+    "Where the front and back of the cones join the horn, counted from the closed end.",
   /** the line under a tapped horn's settings: what the chamber's volume is */
   hornTappedAir: "The chamber volume is the air behind the cones.",
   /** why a tapped horn's chamber takes no vent */
@@ -556,17 +533,17 @@ export const SPEAKER_TEXT = {
   hornGoals: "Goals",
   hornGoalsTip:
     "What the horn is for. Design from goals sizes the horn to fit inside this chamber and meet them.",
-  hornGoalLow: "Lowest frequency, Hz",
-  hornGoalLowTip: "The horn plays flat down to here.",
-  hornGoalHigh: "Highest frequency, Hz",
-  hornGoalHighTip: "The crossover to the box above. The horn plays flat up to here.",
-  hornGoalTarget: "Target level, dB",
+  hornGoalLow: "Low",
+  hornGoalLowTip: "The horn plays flat down to here, Hz.",
+  hornGoalHigh: "High",
+  hornGoalHighTip: "The crossover to the box above. The horn plays flat up to here, Hz.",
+  hornGoalTarget: "Level",
   hornGoalTargetTip:
-    "The level at 1 m at full power, from the lowest to the highest frequency. The power rating or the cone travel of the drivers limits it.",
+    "The level at 1 m at full power, dB, from the lowest to the highest frequency. The power rating or the cone travel of the drivers limits it.",
   hornDesign: "Design from goals",
   hornDesigning: "Designing…",
   hornDesignTip:
-    "Sets the sections, where the cones open and the chamber volume for these goals and this horn type. It keeps the drivers and the vent. A tapped horn gets a sealed chamber.",
+    "Reads the goals, the drivers and the chamber size. Sets the straight horn, the taps and, for a folded horn, the boards.",
   hornDesignFailed: "No horn for these goals can be calculated in this chamber.",
   hornGoalsOrder: "Set the highest frequency above the lowest.",
   /** the goals check: how flat the response is over the goals' band */
@@ -582,9 +559,9 @@ export const SPEAKER_TEXT = {
   /** the goals check: the horn holds more air than the chamber has */
   hornFitAir: (horn: string, chamber: string) =>
     `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,
-  hornImport: "Import a horn record",
+  hornImport: "Import a Hornresp record",
   hornImportTip:
-    "Paste the text of a record file from a horn simulation program. It sets the sections, the horn type, the chamber volume and the vent. The drivers stay as set in this chamber.",
+    "Paste the text of a Hornresp record. It sets the straight horn, the horn type, the taps, the rear chamber and the vent. The drivers stay as set in this chamber.",
   hornImportField: "Record text",
   hornImportAction: "Import",
   hornImportDone: "Imported. The drivers stay as set in this chamber.",
@@ -600,8 +577,6 @@ export const SPEAKER_TEXT = {
   advanced: "Advanced",
   straightHorn: "Straight horn",
   straightHornNote: "The shape the drawing should follow. The path chart shows it dashed.",
-  /** the chamber Advanced fold's summary: its position, in */
-  chamberAt: (x: number, y: number) => `${x} in from left, ${y} in up`,
   /** the Advanced fold's summary: the steps in the horn now */
   hornSteps: (n: number) => `Steps: ${n === 0 ? "none" : n}`,
   hornStepsSetting: "Steps",
@@ -609,8 +584,8 @@ export const SPEAKER_TEXT = {
     "Off: each section starts at the end area of the section before it, so the horn is smooth. On: each section after the first shows its start area, so you can make a step. When you set Off, each start area goes back to the end area before it.",
   hornProfileTip:
     "The shape of the flare in this section: how its area grows from the start to the end. Conical: both sides grow together. Exponential: a flat top and bottom, curved sides. Parabolic: a flat top and bottom, straight sides.",
-  hornStartTip: "The area of the section at its throat end.",
-  hornEndTip: "The area of the section at its mouth end.",
+  hornStartTip: "The area of the section at its throat end, in².",
+  hornEndTip: "The area of the section at its mouth end, in².",
   hornLengthTip: "The length of the section along the horn path.",
   hornPathSectionsTip: "The horn is a row of sections, from the throat to the mouth.",
   driverHornTip:
@@ -622,16 +597,9 @@ export const SPEAKER_TEXT = {
   driveTip:
     "External: a crossover or DSP splits the signal before the amps. Each band has its own amp channel. Internal: a passive crossover in the box splits the signal after the amp. One amp channel drives these bands.",
   /** a passive band's amp power field: the one amp channel its network shares */
-  sharedAmp: "Shared amp channel, W",
+  sharedAmp: "Shared amp channel",
   cornerTip:
-    "The corner frequency of the filter. A highpass cuts below it, and a lowpass cuts above it.",
-  netAirTip:
-    "The air the drivers work against. Auto: the inside volume minus the walls, the braces, the drivers and the vent. Custom: you type the value.",
-  stuffing: "Fiber fill",
-  stuffingTip:
-    "Fill in the chamber's air makes the box act larger, so it tunes a little lower. More fill does more.",
-  /** the fill levels, as the Fiber fill buttons name them (`FILL_LEVEL_PCT`) */
-  fillNames: { none: "None", light: "Light", heavy: "Heavy", packed: "Packed" },
+    "The corner frequency of the filter. A high-pass cuts below it. A low-pass cuts above it.",
   airSpeedTip:
     "The highest air speed in the port at full power. Above it, the port makes noise. The maximum output stops at this limit.",
   radiatorMassTip: "Mass that you add to each passive radiator. More mass tunes the box lower.",

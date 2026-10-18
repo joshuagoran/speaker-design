@@ -3,6 +3,7 @@
 // template or role (docs/speaker-designer-plan.md, owner decisions). Pure.
 import type {
   AdapterBandId,
+  ChamberBracing,
   ChamberLoad,
   Dims2,
   HifiDesignState,
@@ -24,6 +25,7 @@ import {
   DIRECT_LOAD,
   FLUSH_BOX,
   flushBracing,
+  NO_HARDWARE,
   lrFilter,
   speakerIdentity,
 } from "../../lib/speaker/specParts";
@@ -253,12 +255,16 @@ const paV2Cabinet = (chamber: SpeakerChamber): SpeakerCabinet => ({
   insetIn: 0,
   roundoverIn: 0,
   tiltDeg: 0,
+  // the PA v2 boxes' handles are not designed yet
+  ...NO_HARDWARE,
+});
+
+/** A PA v2 box's chamber bracing, should it turn into a Box: the PA's back joint, its plywood's style and target. */
+const PA_V2_BRACING: ChamberBracing = {
   backJoint: DEFAULT_PA.backJoint,
   braceStyle: defaultBraceStyleNear(DEFAULT_PA.wall),
   braceTargetHz: PA_PANEL_TARGET_HZ,
-  // the PA v2 boxes' handles are not designed yet
-  hardware: null,
-});
+};
 
 /** A PA v2 box's horn load: front-loaded on a straight path, its segments (the front chamber follows its walls). */
 const paV2Horn = (segments: HornSegment[]): ChamberLoad => ({
@@ -346,6 +352,7 @@ function paV2SubBin(count: 1 | 2, identity: SpecIdentity): SpeakerSpec {
       bands: [SPEAKER_BAND.low],
       horn: null,
     })),
+    bracing: PA_V2_BRACING,
   };
   const face = paV2HornFace(chamber);
   const segments: HornSegment[] = [
@@ -398,6 +405,7 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
       bands: [SPEAKER_BAND.mid],
       horn: null,
     })),
+    bracing: PA_V2_BRACING,
   };
   const hfHz = box.hfHorn.hf?.minXo ?? DEFAULT_PA.xoHi;
   // the mouth fills the face between the slots, at the box's inside height
@@ -462,6 +470,7 @@ function th18(identity: SpecIdentity): SpeakerSpec {
         horn: null,
       },
     ],
+    bracing: flushBracing(t),
   };
   return {
     ...identity,
@@ -469,8 +478,7 @@ function th18(identity: SpecIdentity): SpeakerSpec {
       chambers: [chamber],
       panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: t },
       ...FLUSH_BOX,
-      ...flushBracing(t),
-      hardware: null,
+      ...NO_HARDWARE,
       roundoverIn: 0,
       tiltDeg: 0,
     },

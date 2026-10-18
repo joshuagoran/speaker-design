@@ -79,7 +79,7 @@ const CASES: Record<
       vent: { kind: VENT_KIND.radiator, radiators: { id: "not-a-radiator", n: 1, addG: 0 } },
     }),
   },
-  noModel: { scope: "chamber", spec: withChamber([woofer], { netLiters: -1 }) },
+  noModel: { scope: "chamber", spec: withChamber([{ ...woofer, count: 0 }]) },
   badFilter: {
     scope: "speaker",
     spec: {
@@ -122,7 +122,13 @@ describe("every model gap shows its notice", () => {
   test("a gap on the second chamber is named with its number", () => {
     const spec: SpeakerSpec = {
       ...base,
-      cabinet: { ...base.cabinet, chambers: [baseChamber, { ...baseChamber, netLiters: -1 }] },
+      cabinet: {
+        ...base.cabinet,
+        chambers: [
+          baseChamber,
+          { ...baseChamber, drivers: baseChamber.drivers.map((d) => ({ ...d, count: 0 })) },
+        ],
+      },
     };
     expect(render(spec)).toContain(markup(SPEAKER_TEXT.chamberGap(2, MODEL_GAP_TEXT.noModel)));
   });

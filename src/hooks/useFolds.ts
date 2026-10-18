@@ -9,21 +9,23 @@ export interface Folds<Id extends string> {
 }
 
 /**
- * Fold sections that start open and are remembered per viewer under `key` (a per-browser convenience: without storage
- * they start open each visit). A section a stored value doesn't name starts open.
+ * Fold sections that start open (or as `start` sets them) and are remembered per viewer under `key` (a per-browser
+ * convenience: without storage they start so each visit). A section a stored value doesn't name starts so.
  */
 export function useFolds<Id extends string>(
   key: string,
   ids: readonly Id[],
   /** sections stored under an older id, by that id: their state carries over to the new one */
   renamed: Partial<Record<string, Id>> = {},
+  /** the sections that start closed (false) or open; a section not named starts open */
+  start: Partial<Record<Id, boolean>> = {},
 ): Folds<Id> {
   const all = (v: boolean) => Object.fromEntries(ids.map((id) => [id, v])) as Record<Id, boolean>; // boundary cast: the entries are exactly `ids`
   const [open, setOpen] = useStoredStateFrom<Record<Id, boolean>, Partial<Record<Id, boolean>>>(
     key,
     {},
     (stored) => {
-      const out: Record<Id, boolean> = { ...all(true), ...stored };
+      const out: Record<Id, boolean> = { ...all(true), ...start, ...stored };
       for (const [old, id] of Object.entries(renamed)) {
         const v: unknown = stored && Reflect.get(stored, old);
         if (id && typeof v === "boolean" && stored[id] === undefined) out[id] = v;

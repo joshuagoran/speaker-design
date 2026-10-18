@@ -31,8 +31,8 @@ export const SPEAKER_STEPS = {
  */
 export const STUFFING_MAX_PCT = 25;
 
-/** How much a chamber's fiber fill makes it act larger, %, by how full it is: none, light, heavy, packed full. */
-export const FILL_LEVEL_PCT = { none: 0, light: 10, heavy: 15, packed: STUFFING_MAX_PCT } as const;
+/** How much a chamber's fiber fill makes it act larger, %, by how full it is: none, lined walls, half full, full. */
+export const FILL_LEVEL_PCT = { none: 0, lined: 10, half: 15, full: STUFFING_MAX_PCT } as const;
 
 /** The Stack page's member field steps: a member's level, dB, and its set delay, ms. The Stack optimizer builds on them. */
 export const STACK_STEPS = {

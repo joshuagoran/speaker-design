@@ -1,21 +1,36 @@
 import { useEffect, useRef, useState } from "react";
 import type { HornGoalFit, HornGoals } from "../../types";
-import { CardHeading } from "../../components/ui/CardHeading";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
 import { Notice } from "../../components/ui/Notice";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SPEAKER_TEXT, HORN_GOAL_LIMIT_NAMES } from "../../constants/speakerPage";
 import { HORN_GOAL_FIELDS, LOW_EDGE_DB } from "../../constants/hornGoals";
-import { FIELD_ROW, GAP_Y_TIGHT } from "../../styles/layout";
+import { GAP_Y_TIGHT, TRIO_ROW } from "../../styles/layout";
+import { SETTINGS_TEXT } from "../../constants/speakerSettings";
 import { shownTenth } from "./speakerFields";
 
-/** Each goal field: its goal, label, tooltip and range. */
+/** Each goal field: its goal, label, tooltip and unit. */
 const GOAL_FIELDS = [
-  { goal: "lowHz", label: SPEAKER_TEXT.hornGoalLow, tip: SPEAKER_TEXT.hornGoalLowTip },
-  { goal: "highHz", label: SPEAKER_TEXT.hornGoalHigh, tip: SPEAKER_TEXT.hornGoalHighTip },
-  { goal: "targetDb", label: SPEAKER_TEXT.hornGoalTarget, tip: SPEAKER_TEXT.hornGoalTargetTip },
-] as const satisfies readonly { goal: keyof HornGoals; label: string; tip: string }[];
+  { goal: "lowHz", label: SPEAKER_TEXT.hornGoalLow, tip: SPEAKER_TEXT.hornGoalLowTip, unit: "Hz" },
+  {
+    goal: "highHz",
+    label: SPEAKER_TEXT.hornGoalHigh,
+    tip: SPEAKER_TEXT.hornGoalHighTip,
+    unit: "Hz",
+  },
+  {
+    goal: "targetDb",
+    label: SPEAKER_TEXT.hornGoalTarget,
+    tip: SPEAKER_TEXT.hornGoalTargetTip,
+    unit: "dB",
+  },
+] as const satisfies readonly {
+  goal: keyof HornGoals;
+  label: string;
+  tip: string;
+  unit: string;
+}[];
 
 interface Props {
   goals: HornGoals;
@@ -47,31 +62,19 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
   /** the band is empty: nothing to design for or check */
   const outOfOrder = goals.highHz <= goals.lowHz;
   return (
-    <div className={`rounded border border-stone-300 px-3 pt-2 pb-3 ${GAP_Y_TIGHT}`}>
-      <CardHeading sub>
-        <Tooltip tip={SPEAKER_TEXT.hornGoalsTip}>{SPEAKER_TEXT.hornGoals}</Tooltip>
-      </CardHeading>
-      <div className={FIELD_ROW}>
-        {GOAL_FIELDS.map(({ goal, label, tip }) => (
-          <NumberField
-            key={goal}
-            label={<Tooltip tip={tip}>{label}</Tooltip>}
-            value={goals[goal]}
-            {...HORN_GOAL_FIELDS[goal]}
-            onChange={(v) => {
-              setFailed(false);
-              onGoals({ ...goals, [goal]: v });
-            }}
-          />
-        ))}
-      </div>
-      {onDesign && (
-        <div>
+    <div className={GAP_Y_TIGHT}>
+      {/* the Goals label with Design from goals on its row */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-label text-stone-500">
+          <Tooltip tip={SPEAKER_TEXT.hornGoalsTip}>{SPEAKER_TEXT.hornGoals}</Tooltip>
+        </span>
+        {onDesign && (
           <Button
             variant="primary"
             size="xs"
+            className="shrink-0"
             disabled={designing || outOfOrder}
-            title={SPEAKER_TEXT.hornDesignTip}
+            title={SETTINGS_TEXT.designTip}
             onClick={() => {
               setDesigning(true);
               // let the button show the work before the search holds the page
@@ -84,8 +87,24 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
           >
             {designing ? SPEAKER_TEXT.hornDesigning : SPEAKER_TEXT.hornDesign}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
+      <div className={TRIO_ROW}>
+        {GOAL_FIELDS.map(({ goal, label, tip, unit }) => (
+          <NumberField
+            key={goal}
+            label={<Tooltip tip={tip}>{label}</Tooltip>}
+            value={goals[goal]}
+            {...HORN_GOAL_FIELDS[goal]}
+            unit={unit}
+            fill
+            onChange={(v) => {
+              setFailed(false);
+              onGoals({ ...goals, [goal]: v });
+            }}
+          />
+        ))}
+      </div>
       {outOfOrder && <Notice>{SPEAKER_TEXT.hornGoalsOrder}</Notice>}
       {failed && <Notice>{SPEAKER_TEXT.hornDesignFailed}</Notice>}
       {fit && (

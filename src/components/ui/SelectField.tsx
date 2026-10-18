@@ -17,6 +17,8 @@ interface Props<T extends SelectOption> {
   onChange: (option: T) => void;
   extra?: React.ReactNode;
   group?: (option: T) => string;
+  /** the label at the left of the select on one short row (`FormField`'s inline) */
+  inline?: boolean;
   /** the row's classes: its bottom margin by default */
   className?: string;
 }
@@ -29,6 +31,7 @@ export function SelectField<T extends SelectOption>({
   onChange,
   extra,
   group,
+  inline,
   className,
 }: Props<T>) {
   const opt = (o: T) => (
@@ -45,7 +48,7 @@ export function SelectField<T extends SelectOption>({
     : null;
   const id = useId();
   return (
-    <FormField label={label} htmlFor={id} extra={extra} className={className}>
+    <FormField label={label} htmlFor={id} extra={extra} inline={inline} className={className}>
       <select
         id={id}
         value={value?.id ?? ""}
@@ -54,7 +57,7 @@ export function SelectField<T extends SelectOption>({
           if (picked) onChange(picked);
         }}
         // the same height as a text or number field, so a select and a field side by side line up
-        className={`w-full h-[38px] px-3 py-2 font-value rounded border border-stone-300 bg-panel text-sm hover:border-stone-500 ${HOVER_TRANSITION}`}
+        className={`w-full ${inline ? "h-[30px] py-1" : "h-[38px] py-2"} px-3 font-value rounded border border-stone-300 bg-panel text-sm hover:border-stone-500 ${HOVER_TRANSITION}`}
       >
         {groups
           ? groups.map(({ heading, items }) => (
