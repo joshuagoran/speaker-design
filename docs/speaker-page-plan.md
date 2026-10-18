@@ -63,6 +63,9 @@ Each setting sits at the level it belongs to.
 
 ### All sections
 
+- Drivers, Vent, Fill and bracing, Horn settings and each band fold to one summary line, for example "2 × B&C 18TBX100 · Low band". Click the line to open it. Size and Goals stay open.
+- A filter that is off is one short row.
+
 - Field labels carry no unit: every length is inches. A units setting comes later (#149).
 - A fold's summary wraps under its title in small text, up to two lines. Summaries keep to the key facts.
 - Taps: "Front tap after section", "Back tap after section", "Taps from closed end". Tooltip: "Where the front and back of the cones join the horn, counted from the closed end."
