@@ -40,14 +40,14 @@ Each setting sits at the level it belongs to.
 
 ### Results pane
 
-| Part                         | Change                                                                                                                                                                  |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Views                        | 3D and 2D side by side, as now. The 2D view has Front and Side buttons. The 3D view has a drivers button (icon).                                                        |
-| Folded horn                  | No change (editor and chart side by side).                                                                                                                              |
-| Response and Maximum output  | Side by side when the pane is wide. The tiles stay under each chart.                                                                                                    |
-| Chamber checks               | One compact row of chips per chamber. Each chip's text goes in its tooltip.                                                                                             |
-| Price, weight, bracing       | One row of tiles. Its notes go to Details.                                                                                                                              |
-| Details (new, at the bottom) | Every note now under a chart: what the response includes, what the price counts, how bracing is set, what the maximum output stops at. Short bullets, grouped by chart. |
+| Part                         | Change                                                                                                                                                                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Views                        | 3D and 2D side by side, as now. The 2D view has Front and Side buttons. The 3D view keeps its cutaway and full-screen buttons and adds a drivers button: the side-view speaker icon of the editor's Drivers tool, struck through while hidden. |
+| Folded horn                  | No change (editor and chart side by side).                                                                                                                                                                                                     |
+| Response and Maximum output  | Side by side when the pane is wide. The tiles stay under each chart.                                                                                                                                                                           |
+| Chamber checks               | One compact row of chips per chamber. Each chip's text goes in its tooltip.                                                                                                                                                                    |
+| Price, weight, bracing       | One row of tiles. Its notes go to Details.                                                                                                                                                                                                     |
+| Details (new, at the bottom) | Every note now under a chart: what the response includes, what the price counts, how bracing is set, what the maximum output stops at. Short bullets, grouped by chart.                                                                        |
 
 ### Settings column
 
