@@ -594,13 +594,98 @@
       select:disabled:hover {
         border-color: var(--edge);
       }
-      .drvhead {
+      /* a box that folds to one summary line: chevron, title, summary, actions at the right */
+      .fbox {
+        border: 1px solid var(--edge);
+        border-radius: 4px;
+        padding: 4px 4px 4px 6px;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin: -4px -4px -4px 0;
+        flex-direction: column;
+        transition: border-color 150ms;
       }
-      .drvhead b,
+      .fbox:focus-within {
+        border-color: var(--muted);
+      }
+      .fhead {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+      }
+      .fsum {
+        all: unset;
+        box-sizing: border-box;
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 4px 0;
+        cursor: pointer;
+      }
+      .fsum:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+      .fsum .chev {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        margin-top: 2px;
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        transition: transform 150ms;
+      }
+      .fsum[aria-expanded="true"] .chev {
+        transform: rotate(90deg);
+      }
+      .fsum:hover .chev {
+        stroke: var(--ink);
+      }
+      /* the line wraps to two lines at most */
+      .fsum .ftext {
+        min-width: 0;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        overflow: hidden;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+      .fsum .ftitle {
+        font-weight: 700;
+        margin-right: 8px;
+      }
+      .fsum .fs {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .fsum .fs.main {
+        color: var(--ink);
+        font-size: 14px;
+      }
+      .fbody {
+        gap: 12px;
+        padding: 6px 4px 6px 0;
+      }
+      /* a filter that is off: its label and dropdown on one short row */
+      .field.inline {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+      }
+      .field.inline .lbl {
+        margin: 0;
+      }
+      .field.inline select {
+        height: 30px;
+        padding: 4px 6px;
+      }
       .subhead {
         font-size: 14px;
         font-weight: 700;
@@ -1191,9 +1276,12 @@
       ];
 
       /* ---------- state ---------- */
+      /* seq: the last id given to a chamber or driver; the ids key each one's open or closed box */
+      let seq = 0;
       const chamber = (o) =>
         Object.assign(
           {
+            id: `c${++seq}`,
             type: "box",
             path: "folded",
             w: 15,
@@ -1223,6 +1311,7 @@
       const driver = (type, model, o) =>
         Object.assign(
           {
+            id: `d${++seq}`,
             type,
             size: (MODELS[type].find((m) => m.id === model) || {}).size || "all",
             model,
@@ -1413,6 +1502,11 @@
       ];
       const detailsOpen = {};
       let detailsDefault = false;
+      /* the boxes that fold to one summary line (drivers, vent, fill and bracing, horn settings,
+         bands): key → open; a key not set takes detailsDefault. In memory only. */
+      const boxOpen = {};
+      /* key → the function that writes that box's summary line, rebuilt with the settings */
+      const boxSums = new Map();
       const load = (id) => {
         S = TEMPLATES[id]();
         view.focus = null;
@@ -1626,6 +1720,7 @@
           '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".6"/></svg>',
         cutaway:
           '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5l6-3 6 3v6l-6 3-6-3z"/><path d="M8 8v6M8 8l6-3M8 8 2 5" stroke-dasharray="2 1.6"/></svg>',
+        chev: '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"/></svg>',
       };
 
       /* ---------- summaries ---------- */
@@ -1646,6 +1741,58 @@
           `${fmt(c.w, 1)} × ${fmt(c.h, 1)} × ${fmt(c.d, 1)} in`,
           `${c.drivers.length} driver${c.drivers.length === 1 ? "" : "s"}`,
         ].join(", ");
+      /* the summary lines of the boxes that fold */
+      const driverSum = (c, d) => {
+        const b = S.bands.find((x) => x.id === d.band);
+        const top =
+          c.type === "box" && d.mount === "top" && hornOf(d).w ? ` · ${hornOf(d).name} on top` : "";
+        return `${d.count} × ${model(d).name}${top} · ${b ? b.name : "No"} band`;
+      };
+      const PORT_NAMES = { round: "round", slot: "slot", duct: "side ducts" };
+      const ventSum = (c) =>
+        c.vent === "sealed"
+          ? "Sealed"
+          : c.vent === "ported"
+            ? `Ported · ${c.port.count} × ${+c.port.dia.toFixed(2)} in ${PORT_NAMES[c.port.shape]}, ${+c.port.len.toFixed(2)} in long`
+            : `Passive radiator · ${c.port.count} × Dayton SD215A-88`;
+      const FILL_SUM = {
+        none: "No fill",
+        lined: "Lined walls",
+        half: "Half fill",
+        full: "Full fill",
+      };
+      const BRACE_SUM = {
+        ribs: "ribs",
+        window: "window braces",
+        both: "ribs and window braces",
+      };
+      const fillSum = (c) =>
+        [
+          FILL_SUM[c.fill],
+          c.bracing === "none" ? "no braces" : `${BRACE_SUM[c.bracing]} to ${fmt(c.target)} Hz`,
+          `${c.back} back`,
+        ].join(" · ");
+      const hornSetSum = (c) => {
+        const name = HORN_TYPES.find((h) => h[0] === c.hornType)[1];
+        const at = (n) => fmt(tapAt(c, n));
+        if (c.hornType === "tapped")
+          return `${name} · taps ${at(c.taps.front)} / ${at(c.taps.rear)} in`;
+        if (c.hornType === "offset") return `${name} · tap ${at(c.taps.front)} in`;
+        const n = hornSections(c).length;
+        return `${name} · ${n} sections, ${at(n)} in long`;
+      };
+      const filterSum = (label, f) =>
+        f ? `${label} ${f.type === "BW6" ? "6 dB/oct" : f.type} ${hz(f.hz)}` : `${label} off`;
+      const bandSum = (b) =>
+        [
+          b.name,
+          filterSum("High-pass", b.hp),
+          filterSum("Low-pass", b.lp),
+          b.level ? `${b.level > 0 ? "+" : "−"}${+Math.abs(b.level).toFixed(1)} dB` : null,
+          `${fmt(b.amp)} W`,
+        ]
+          .filter(Boolean)
+          .join(" · ");
       function summary(id) {
         const n = (k, a, b) => `${k} ${k === 1 ? a : b}`;
         switch (id) {
@@ -1675,6 +1822,37 @@
       function section(id, title, body) {
         const open = folds[id];
         return `<section class="sec" data-sec="${id}"><h2><button type="button" data-fold="${id}" aria-expanded="${open}"><span class="ft"><span>${title}</span><span class="sum" data-sum="${id}" ${open ? "hidden" : ""}>${esc(summary(id))}</span></span><span class="pm" aria-hidden="true">${open ? "−" : "+"}</span></button></h2><div class="secbody stack" ${open ? "" : "hidden"}>${body}</div></section>`;
+      }
+      const isBoxOpen = (key) => boxOpen[key] ?? detailsDefault;
+      /* a box that folds to one summary line. o.title: a bold title, open and closed; o.sum: writes
+         the summary, shown closed (always, as the main text, when there is no title); o.actions:
+         buttons at the right of the line */
+      function foldBox(key, o, body) {
+        const open = isBoxOpen(key);
+        boxSums.set(key, o.sum);
+        const sumHidden = o.title && open ? "hidden" : "";
+        return `<div class="fbox" data-box="${key}"><div class="fhead"><button type="button" class="fsum" data-box-toggle="${key}" aria-expanded="${open}">${ICON.chev}<span class="ftext">${o.title ? `<span class="ftitle">${o.title}</span>` : ""}<span class="${o.title ? "fs" : "fs main"}" data-bsum ${sumHidden}>${esc(o.sum())}</span></span></button>${o.actions || ""}</div><div class="fbody stack" ${open ? "" : "hidden"}>${body}</div></div>`;
+      }
+      function setBox(key, open) {
+        boxOpen[key] = open;
+        const el = $(`[data-box="${key}"]`);
+        if (!el) return;
+        const btn = $(":scope > .fhead > .fsum", el);
+        btn.setAttribute("aria-expanded", String(open));
+        if ($(".ftitle", btn)) $("[data-bsum]", btn).hidden = open;
+        $(":scope > .fbody", el).hidden = !open;
+      }
+      /* opens one driver's box and closes the other drivers' boxes in its chamber */
+      /* where a driver id is: its chamber and driver indexes, or null */
+      function driverAt(id) {
+        for (let c = 0; c < S.chambers.length; c++) {
+          const d = S.chambers[c].drivers.findIndex((x) => x.id === id);
+          if (d >= 0) return { c, d };
+        }
+        return null;
+      }
+      function openDriver(c, d) {
+        S.chambers[c].drivers.forEach((x, j) => setBox(`drv.${x.id}`, j === d));
       }
       const details = (key, sum, body, cls = "fold") =>
         `<details class="${cls}" data-key="${key}"><summary data-dsum="${key}">${sum}</summary><div class="stack">${body}</div></details>`;
@@ -1779,7 +1957,10 @@
           ],
           { tip: TIP.back },
         );
-        return group("Vent", h) + group("Fill and bracing", fb);
+        return (
+          foldBox(`vent.${c.id}`, { title: "Vent", sum: () => ventSum(c) }, h) +
+          foldBox(`fb.${c.id}`, { title: "Fill and bracing", sum: () => fillSum(c) }, fb)
+        );
       }
       function hornBody(c, i) {
         const p = `chambers.${i}`;
@@ -1787,7 +1968,8 @@
         const area = (v) => fmt(v, 1);
         let h = `<div class="field"><div class="lbl"><span>${term("Goals", TIP.goals)}</span><button type="button" class="btn primary xs nowrap" data-act="design" data-c="${i}" data-tip="${esc(TIP.design)}">Design from goals</button></div>
           <div class="goals">${num("Low, Hz", `${p}.goals.low`, { step: 1, tip: TIP.low })}${num("High, Hz", `${p}.goals.high`, { step: 1, tip: TIP.high })}${num("Level, dB", `${p}.goals.target`, { step: 1, tip: TIP.level })}</div></div>`;
-        h += sel("Horn type", `${p}.hornType`, HORN_TYPES, { tip: TIP.hornType });
+        const goals = h;
+        h = sel("Horn type", `${p}.hornType`, HORN_TYPES, { tip: TIP.hornType });
         const secs = sections.map((_, k) => [k + 1, `Section ${k + 1}`]);
         if (c.hornType === "tapped")
           h += `${sel("Front tap after section", `${p}.taps.front`, secs, { tip: TIP.taps })}${sel("Back tap after section", `${p}.taps.rear`, secs, { tip: TIP.taps })}`;
@@ -1831,7 +2013,10 @@
            <div><button type="button" class="btn primary xs" data-act="import" data-c="${i}">Import</button></div>
            ${view.imported[i] ? '<p class="hint">Imported. The drivers stay as set in this chamber.</p>' : ""}`,
         );
-        return group("Horn", h);
+        return (
+          group("Horn", goals) +
+          foldBox(`hs.${c.id}`, { title: "Horn settings", sum: () => hornSetSum(c) }, h)
+        );
       }
       function driverBox(c, i, d, j) {
         const p = `chambers.${i}.drivers.${j}`;
@@ -1852,8 +2037,11 @@
           pos = `<div class="r2">${num("Left (−) / Right (+)", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.x })}${num("Front (−) / Back (+)", `${p}.z`, { pos: `${i}.${j}.z`, tip: TIP.z })}</div>`;
         else
           pos = `<div class="r2">${num("Left (−) / Right (+)", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.x })}${num("Down (−) / Up (+)", `${p}.y`, { pos: `${i}.${j}.y`, tip: TIP.y })}</div>`;
-        return `<div class="drvbox"><div class="drvhead"><b>Driver ${j + 1}</b><button type="button" class="ibtn sm" data-act="delDriver" data-c="${i}" data-d="${j}" aria-label="Delete driver ${j + 1}" data-tip="${TIP.delDriver}">${ICON.trash}</button></div>
-          <div class="r2">${sel("Type", `${p}.type`, DRIVER_TYPES)}${d.type === "woofer" ? sel("Size", `${p}.size`, [["all", "All sizes"], ...SIZES.map((s) => [s, `${s} in`])]) : ""}</div>
+        const trash = `<button type="button" class="ibtn sm" data-act="delDriver" data-c="${i}" data-d="${j}" aria-label="Delete driver ${j + 1}" data-tip="${TIP.delDriver}">${ICON.trash}</button>`;
+        return foldBox(
+          `drv.${d.id}`,
+          { sum: () => driverSum(c, d), actions: trash },
+          `<div class="r2">${sel("Type", `${p}.type`, DRIVER_TYPES)}${d.type === "woofer" ? sel("Size", `${p}.size`, [["all", "All sizes"], ...SIZES.map((s) => [s, `${s} in`])]) : ""}</div>
           <div class="rmc">${sel("Model", `${p}.model`, models)}${num("Count", `${p}.count`, { step: 1, min: 1 })}</div>
           ${
             hf
@@ -1877,7 +2065,8 @@
                 }</div>`
               : ""
           }
-          ${c.type === "horn" ? `<div class="r2">${bandSel}${pos}</div>` : `${bandSel}${pos}`}</div>`;
+          ${c.type === "horn" ? `<div class="r2">${bandSel}${pos}</div>` : `${bandSel}${pos}`}`,
+        );
       }
       /* the Advanced fold's summary: the chamber's position (left, up) and the net air mode */
       const advSummary = (c) =>
@@ -1931,17 +2120,24 @@
       }
       function filterRow(label, path) {
         const f = getPath(path);
-        return `<div class="frow">${sel(label, path, [["", "None"], ...FILTERS], { value: f ? f.type : "", filter: true, cls: f ? "" : "wide" })}${f ? num("Corner, Hz", `${path}.hz`, { step: 10, min: 10, tip: TIP.corner }) : ""}</div>`;
+        const options = [["", "Off"], ...FILTERS];
+        if (!f) return sel(label, path, options, { value: "", filter: true, cls: "inline" });
+        return `<div class="frow">${sel(label, path, options, { value: f.type, filter: true })}${num("Corner, Hz", `${path}.hz`, { step: 10, min: 10, tip: TIP.corner })}</div>`;
       }
       function bandsBody() {
         const xo = `<div class="card"><h3 style="font-size:16px">${term("External crossover", TIP.xover)}</h3>${filterRow("High-pass", "xover.hp")}${filterRow("Low-pass", "xover.lp")}</div>`;
         const bands = S.bands
-          .map(
-            (
-              b,
-              k,
-            ) => `<div class="card"><div class="cardhead"><h3>${esc(b.name)}</h3>${S.bands.length > 1 ? `<button type="button" class="btn xs" data-act="delBand" data-b="${k}">Remove</button>` : ""}</div>
-            ${text("Name", `bands.${k}.name`)}
+          .map((b, k) =>
+            foldBox(
+              `band.${b.id}`,
+              {
+                sum: () => bandSum(b),
+                actions:
+                  S.bands.length > 1
+                    ? `<button type="button" class="btn xs" data-act="delBand" data-b="${k}">Remove</button>`
+                    : "",
+              },
+              `${text("Name", `bands.${k}.name`)}
             ${filterRow("High-pass", `bands.${k}.hp`)}
             ${filterRow("Low-pass", `bands.${k}.lp`)}
             <div class="r3">${num("Level, dB", `bands.${k}.level`, { step: 0.5, tip: TIP.bandLevel })}${sel(
@@ -1952,7 +2148,8 @@
                 ["passive", "Internal"],
               ],
               { tip: TIP.drive, rebuild: false },
-            )}${num("Amp, W", `bands.${k}.amp`, { step: 50, tip: TIP.amp })}</div></div>`,
+            )}${num("Amp, W", `bands.${k}.amp`, { step: 50, tip: TIP.amp })}</div>`,
+            ),
           )
           .join("");
         return `${xo}${bands}<div class="tg"><button type="button" class="btn primary" data-act="addBand">Add band</button><button type="button" class="btn" data-tip="${esc(TIP.placeholder)}">Balance levels</button></div>`;
@@ -1982,6 +2179,7 @@
             active.dataset.filter ||
             (active.dataset.set ? active.dataset.set + "=" + active.dataset.val : null) ||
             active.dataset.act);
+        boxSums.clear();
         const bodies = {
           speaker: speakerBody,
           construction: constructionBody,
@@ -2018,6 +2216,10 @@
         SECTIONS.forEach(([id]) => {
           const el = $(`[data-sum="${id}"]`);
           if (el) el.textContent = summary(id);
+        });
+        boxSums.forEach((write, key) => {
+          const el = $(`[data-box="${key}"] > .fhead [data-bsum]`);
+          if (el) el.textContent = write();
         });
         S.chambers.forEach((c, i) => {
           const a = $(`[data-live="acts.${i}"]`);
@@ -3001,7 +3203,10 @@
             tweeter: "sb26",
             coaxial: "12cxn",
           }[val];
-          Object.assign(d, driver(val, first, { band: d.band, x: d.x, y: d.y, count: 1 }));
+          Object.assign(
+            d,
+            driver(val, first, { id: d.id, band: d.band, x: d.x, y: d.y, count: 1 }),
+          );
         } else if ((m = path.match(/^chambers\.(\d+)\.drivers\.(\d+)\.size$/))) {
           const d = S.chambers[+m[1]].drivers[+m[2]];
           if (val !== "all") {
@@ -3019,6 +3224,16 @@
         const f = e.target.closest("[data-fold]");
         if (f) {
           setFold(f.dataset.fold, !folds[f.dataset.fold]);
+          measure();
+          return;
+        }
+        const bt = e.target.closest("[data-box-toggle]");
+        if (bt) {
+          const key = bt.dataset.boxToggle;
+          const open = !isBoxOpen(key);
+          const at = key.startsWith("drv.") ? driverAt(key.slice(4)) : null;
+          if (at && open) openDriver(at.c, at.d);
+          else setBox(key, open);
           measure();
           return;
         }
@@ -3055,13 +3270,15 @@
             break;
           case "addDriver": {
             const ch = S.chambers[c];
-            ch.drivers.push(
-              driver("woofer", "12ndl", {
-                band: S.bands[0].id,
-                x: 0,
-                y: Math.min(ch.h - 6, 6 + ch.drivers.length * 8),
-              }),
-            );
+            const d = driver("woofer", "12ndl", {
+              band: S.bands[0].id,
+              x: 0,
+              y: Math.min(ch.h - 6, 6 + ch.drivers.length * 8),
+            });
+            // a new driver opens, and the others in its chamber close
+            ch.drivers.forEach((x) => (boxOpen[`drv.${x.id}`] = false));
+            boxOpen[`drv.${d.id}`] = true;
+            ch.drivers.push(d);
             break;
           }
           case "delDriver":
@@ -3166,6 +3383,17 @@
         },
         true,
       );
+      // a field that gets focus inside a closed box opens that box
+      document.addEventListener("focusin", (e) => {
+        const box = e.target.closest && e.target.closest(".fbody[hidden]");
+        if (box) {
+          const key = box.parentElement.dataset.box;
+          const at = key.startsWith("drv.") ? driverAt(key.slice(4)) : null;
+          if (at) openDriver(at.c, at.d);
+          else setBox(key, true);
+          measure();
+        }
+      });
       // the position fields: the 2D view marks the point each one measures from while it has focus
       document.addEventListener("focusin", (e) => {
         const p = e.target.dataset && e.target.dataset.pos;
@@ -3200,6 +3428,8 @@
         Object.keys(detailsOpen).forEach((k) => delete detailsOpen[k]);
         SECTIONS.forEach(([id]) => setFold(id, open));
         $$("details[data-key]").forEach((d) => (d.open = open));
+        Object.keys(boxOpen).forEach((k) => delete boxOpen[k]);
+        $$("[data-box]").forEach((el) => setBox(el.dataset.box, open));
         $("#allFolds").textContent = open ? "Close all folds" : "Open all folds";
         measure();
       });
@@ -3217,6 +3447,12 @@
         const svg = $("#v2d");
         const [c, d] = g.dataset.drv.split(".").map(Number);
         drag = { c, d, id: e.pointerId };
+        // dragging a driver opens its box in the settings
+        setFold("chambers", true);
+        openDriver(c, d);
+        const box = $(`[data-box="drv.${S.chambers[c].drivers[d].id}"]`);
+        if (box && window.innerWidth >= 768) box.scrollIntoView({ block: "nearest" });
+        measure();
         svg.setPointerCapture(e.pointerId);
         svg.classList.add("dragging");
         e.preventDefault();
