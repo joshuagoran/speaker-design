@@ -309,7 +309,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
       sensRef: "a Beyma 50° × 50° horn (model not named)",
       aes: 90,
       aesXo: 800,
-      minXo: 900,
+      minXo: 800,
       imp: 8,
     },
     exit: 2,
@@ -320,7 +320,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     },
     price: 254.95,
     src: "usspeaker.com, Oct 2026",
-    note: "[beyma.com datasheet, Oct 2026] Preliminary sheet, 10/24. Ferrite, titanium dome and surround, 3 in CCAW coil on Nomex, copper shorting cap. 90 W AES above 800 Hz / 130 W AES above 1.2 kHz (180 W / 260 W program). 110 dB 1 W/1 m on a 50° × 50° horn, averaged 1–7 kHz; Beyma does not name the horn. 500 Hz–18 kHz. Minimum crossover 800 Hz at 12 dB/oct. 12.8 lb. Curve check: impedance peaks at about 460 Hz, 915 Hz and 1.45 kHz (the tallest, and narrow). The response is about 4.5 dB down at 800 Hz and 3 dB down at about 900 Hz. So the catalog uses 900 Hz, the −3 dB point, as the reliable minimum, as for the CP855/ND. The 90 W rating is Beyma's 800 Hz figure. Exit flare angle not published. Body: ⌀165 × 97 mm, 4×M6 on a 101.6 mm circle (Beyma datasheet).",
+    note: "[beyma.com datasheet, Oct 2026] Preliminary sheet, 10/24. Ferrite, titanium dome and surround, 3 in CCAW coil on Nomex, copper shorting cap. 90 W AES above 800 Hz / 130 W AES above 1.2 kHz (180 W / 260 W program). 110 dB 1 W/1 m on a 50° × 50° horn, averaged 1–7 kHz; Beyma does not name the horn. 500 Hz–18 kHz. Minimum crossover 800 Hz at 12 dB/oct. 12.8 lb. Curve check: impedance peaks at about 460 Hz, 915 Hz and 1.45 kHz (the tallest, and narrow). The response is about 4.5 dB down at 800 Hz and 3 dB down at about 900 Hz. The catalog uses Beyma's 800 Hz. Expect a small shelf near 800 Hz: the response reaches its 1–7 kHz average only near 1 kHz. Exit flare angle not published. Body: ⌀165 × 97 mm, 4×M6 on a 101.6 mm circle (Beyma datasheet).",
   },
   {
     id: "cd320nd",
