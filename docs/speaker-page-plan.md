@@ -54,7 +54,7 @@ Each setting sits at the level it belongs to.
 | Section           | Change                                                                                                                                                                  |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Speaker           | Removed. The name and "New from…" sit in the saved configurations row (full save and open redesign: #180).                                                              |
-| Construction      | Construction, wall panels and hardware only.                                                                                                                            |
+| Construction      | Construction, wall panels, Top (flat or arched) when every chamber is a Box. Hardware splits into Handles and Input dish, each its own choice.                          |
 | Chamber           | Sub-sections, each a light inset box with a small heading: Size, Vent, Fill and bracing (Box), Horn (Horn), Drivers. Type and Path on one row; dimensions on one row.   |
 | Horn              | Goals on one row with Design from goals (its tooltip says what it reads and sets). Horn type. Straight horn read-only, with "Edit by hand". "Import a Hornresp record". |
 | Drivers           | Each driver is a box with a trash icon at its top right. Type and Size on one row. Model and Count on one row. Band. Add driver on its own line under the last driver.  |
@@ -68,7 +68,7 @@ Each band keeps one color everywhere: its chart line. Low to high: the lowest ye
 - Yellow lines need a new palette token, "yellow line": a deep gold (#b08000) in the light theme, so a line passes 3:1 on white; the brand yellow in the dark theme.
 
 - The 2D views draw each driver in its band's color. A coaxial driver shows both of its bands.
-- The Bands menu shows the color as a swatch before each band's name.
+- The Bands menu shows the color as a small dot before each band's name. A dashed band shows a hollow ring.
 - Each driver's summary line shows its band's swatch. The chart legends use the same swatches.
 
 ### All sections
