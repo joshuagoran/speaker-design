@@ -61,6 +61,14 @@ Each setting sits at the level it belongs to.
 | Bands and filters | Filter types in dropdowns, not six-button rows. Corner and level fields beside them.                                                                                    |
 | Optimizer         | No change.                                                                                                                                                              |
 
+### Band colors
+
+Each band keeps one color everywhere: its chart line (lowest band gray, highest cyan, the ones between magenta, every second one dashed).
+
+- The 2D views draw each driver in its band's color. A coaxial driver shows both of its bands.
+- The Bands menu shows the color as a swatch before each band's name.
+- Each driver's summary line shows its band's swatch. The chart legends use the same swatches.
+
 ### All sections
 
 - Drivers, Vent, Fill and bracing, Horn settings and each band fold to one summary line, for example "2 × B&C 18TBX100 · Low band". Click the line to open it. Size and Goals stay open.
