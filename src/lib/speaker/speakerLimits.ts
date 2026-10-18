@@ -17,14 +17,16 @@
 //   both engines take it, so the summed load doesn't move it). The feed (the speaker's input range) shapes the signal
 //   itself: the sum follows it, and nothing is pushed harder outside it. In a stack the feed is the member's crossover,
 //   ahead of every amp: it lifts the sum's ceilings as an active band's own filters do (`stackCrossover`).
-// - Each vent takes its own air-speed limit (`maxSpeedMs`, set by the spec). A horn's throat takes the box's: its
-//   vent's, or the PA's port limit in a sealed box (`throatSpeedMax`), as a vent takes it at each frequency.
+// - Each vent takes its own air-speed limit (`maxSpeedMs`, set by the spec); a drawn horn's vent has none. A horn's
+//   throat air speed is shown, with no limit or guide: a throat does not chuff like a port, and there is no common
+//   figure for it.
 import type {
   BandId,
   NominalImpedance,
   LimitId,
   LimitPeak,
   SpeakerBand,
+  SpeakerCabinet,
   SpeakerChamber,
   SpeakerChamberLimits,
   SpeakerDriver,
@@ -43,6 +45,7 @@ import { coneParts, hfParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
 import { chamberCones, hfBandOf, passbandDb, type SpeakerResponseOptions } from "./speakerResponse";
+import { tracedHorn } from "./foldHorn";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import {
   CHAMBER_LOAD,
@@ -50,7 +53,6 @@ import {
   SPEAKER_RESPONSE_VOLTS,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DEFAULT_PA } from "../defaults";
 import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 
 /** Where the input range ends, as a gain: its filters −6 dB down (a Linkwitz-Riley filter's corner). */
@@ -111,11 +113,13 @@ const ventSpeedMax = (chamber: SpeakerChamber) =>
   chamber.vent.kind === VENT_KIND.vented ? chamber.vent.maxSpeedMs : null;
 
 /**
- * The most air speed a horn chamber's throat takes, m/s: the box's air speed limit (its vent's), or the PA's port limit
- * in a sealed box; null without a horn.
+ * The air speed limit of the vent the cones see, m/s: the chamber's own (`ventSpeedMax`), or none (Infinity) for a drawn
+ * horn's vent, whose air speed is shown and does not limit; null without a vent.
  */
-const throatSpeedMax = (chamber: SpeakerChamber) =>
-  chamber.load.kind === CHAMBER_LOAD.horn ? (ventSpeedMax(chamber) ?? DEFAULT_PA.portMax) : null;
+const portSpeedMax = (
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
+  chamber: SpeakerChamber,
+) => ventSpeedMax(chamber) ?? (tracedHorn(cabinet, chamber)?.rearVent ? Infinity : null);
 
 /** The radiators' Xmax, mm; null without radiators (or with an id the catalog doesn't have). */
 const radiatorXmax = (chamber: SpeakerChamber) =>
@@ -263,12 +267,12 @@ export function speakerLimits(
     const driveV = driveOf(band);
     /** from the model's drive to the band's, before the filters */
     const toDrive = driveV / volts;
-    const portMax = ventSpeedMax(chamber);
-    const throatMax = throatSpeedMax(chamber);
+    const portMax = portSpeedMax(spec.cabinet, chamber);
     const xR = radiatorXmax(chamber);
     const excursion = startPeak(parts.ts.Xmax);
     const port = portMax === null ? null : startPeak(portMax);
-    const throat = throatMax === null ? null : startPeak(throatMax);
+    // a horn's throat: its peak shown, with no limit
+    const throat = chamber.load.kind === CHAMBER_LOAD.horn ? startPeak(Infinity) : null;
     const radiator = xR === null ? null : startPeak(xR);
     const sc = scaleIn(scales, id),
       sumSc = scaleIn(sumScales, id);
@@ -283,14 +287,10 @@ export function speakerLimits(
       const cone = sineLimitAt(point, parts.ts, driveV, portMax ?? Infinity);
       // the radiators' travel, as the Hi-fi engine reads it
       const vr = xR !== null && point.prx ? (driveV * xR) / point.prx : Infinity;
-      // the horn's throat air speed, as a vent's
-      const vth =
-        throatMax !== null && point.throat ? (driveV * throatMax) / point.throat : Infinity;
       const [ownWho, ownV] = (
         [
           [cone.who, cone.V],
           [LIMIT_NAMES.radiator, vr],
-          [LIMIT_NAMES.throat, vth],
         ] satisfies [LimitId, number][]
       ).reduce((a, b) => (b[1] < a[1] ? b : a));
       lower(sc, i, ownV / driveV, ownWho);
@@ -299,7 +299,6 @@ export function speakerLimits(
         [LIMIT_NAMES.port, cone.vp],
         [LIMIT_NAMES.Xmax, cone.vx],
         [LIMIT_NAMES.radiator, vr],
-        [LIMIT_NAMES.throat, vth],
         [LIMIT_NAMES.thermal, cone.vt / ceilingGain(id, i)],
         [LIMIT_NAMES.amp, driveV / ampGain(band, i)],
       ];

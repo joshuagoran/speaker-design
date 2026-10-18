@@ -32,7 +32,7 @@ import {
   FILL_OPTIONS,
   HIFI_PASSIVES,
   MID_OPTIONS,
-  SUB_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
   hifiDriverById,
   hornById,
 } from "../data";
@@ -312,7 +312,7 @@ export function driverAcrossIn(driver: SpeakerDriver): number {
   const frame = (size: number) => size * HIFI_FRONT_PARTS.wooferFramePerSize;
   switch (driver.kind) {
     case DRIVER_KIND.sub:
-      return byId(SUB_OPTIONS, driver.driverId)?.size ?? 0;
+      return byId(SPEAKER_SUB_OPTIONS, driver.driverId)?.size ?? 0;
     case DRIVER_KIND.mid:
       return byId(MID_OPTIONS, driver.driverId)?.size ?? 0;
     case DRIVER_KIND.woofer: {
@@ -796,7 +796,7 @@ export function driverFootprint(driver: SpeakerDriver, clear: Dims2): Dims2 {
     round(HIFI_DRIVER_CUTOUT_IN[size] ?? size * HIFI_GENERIC_BODIES.cutoutPerSize);
   switch (driver.kind) {
     case DRIVER_KIND.sub: {
-      const sub = byId(SUB_OPTIONS, driver.driverId);
+      const sub = byId(SPEAKER_SUB_OPTIONS, driver.driverId);
       return sub ? round(DRIVER_CUTOUT_IN[sub.size]) : round(0);
     }
     case DRIVER_KIND.mid: {

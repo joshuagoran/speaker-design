@@ -24,6 +24,7 @@ import {
   CHAMBER_LOAD,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
+  HORN_PATH,
   SPEAKER_RESPONSE_VOLTS,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
@@ -33,6 +34,7 @@ import { HORN_GOAL_LIMIT, HORN_GOALS_DEFAULT } from "../src/constants/hornGoals"
 import { CM_PER_IN } from "../src/constants/units";
 import type { HornSegment, SpeakerChamber, SpeakerHorn, SpeakerSpec } from "../src/types";
 import { roomOf } from "./horn-room";
+import { tracedHorn } from "../src/lib/speaker/foldHorn";
 
 /** The two-18″ PA v2 sub bin: one horn-loaded chamber with a vent. */
 const BIN_SPEC = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
@@ -242,13 +244,36 @@ test("horn goals: a tapped horn sized for 40–100 Hz plays flat in the box and 
   );
 });
 
-test("horn goals: a front-loaded horn keeps its vent and shares the air with its rear chamber", () => {
+test("horn goals: a front-loaded horn shares the air with its rear chamber; folded, its vent is drawn", () => {
   const found = withGoalHorn(BIN_SPEC.cabinet, BIN, PLACED, HORN_DRIVE.front, HORN_GOALS_DEFAULT);
   assert.ok(found);
-  assert.equal(found.chamber.vent, BIN.vent);
+  // a straight horn keeps the chamber's vent; a folded one's vent is drawn in its side view, so the chamber's goes
+  if (hornOf(found.chamber).path === HORN_PATH.folded)
+    assert.equal(found.chamber.vent.kind, VENT_KIND.sealed);
+  else assert.equal(found.chamber.vent, BIN.vent);
   assert.equal(hornOf(found.chamber).segments.length, 1);
   assert.ok((found.chamber.netLiters ?? 0) > MIN_NET_L);
   assert.ok(found.fit.spreadDb < 6, `spread ${found.fit.spreadDb} dB`);
+});
+
+test("horn goals: a folded horn gets boards whose traced passage is the drive's", () => {
+  const folded: SpeakerChamber = {
+    ...TAPPED,
+    load: { kind: CHAMBER_LOAD.horn, horn: { ...hornOf(TAPPED), path: HORN_PATH.folded } },
+  };
+  const found = withGoalHorn(
+    BIN_SPEC.cabinet,
+    folded,
+    PLACED,
+    HORN_DRIVE.tapped,
+    HORN_GOALS_DEFAULT,
+  );
+  assert.ok(found);
+  const horn = hornOf(found.chamber);
+  assert.equal(horn.path, HORN_PATH.folded);
+  assert.ok(horn.fold && horn.fold.boards.length > 0, "boards placed");
+  assert.equal(found.chamber.vent.kind, VENT_KIND.sealed);
+  assert.equal(tracedHorn(BIN_SPEC.cabinet, found.chamber)?.drive?.kind, HORN_DRIVE.tapped);
 });
 
 test("Hornresp import: a tapped record sets the sections, the taps and a sealed chamber", () => {

@@ -22,6 +22,7 @@ import { CARD_LABELS, NEAR_MISS_YOURS } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
 import { driverName } from "./speakerParts";
 import { pathIn } from "./hornSections";
+import { CM2_PER_IN2 } from "../../constants/units";
 
 /** "1 chamber", "2 chambers". */
 export const countText = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -37,6 +38,13 @@ export const hornText = (horn: Pick<SpeakerHorn, "drive" | "path" | "segments">)
     `${pathIn(horn)} in`,
     HORN_PATH_NAMES[horn.path].toLowerCase(),
   ].join(", ");
+
+/** A folded horn's straight horn (the shape its drawing should follow) in one line: its length and its end areas. */
+export const straightHornText = (horn: Pick<SpeakerHorn, "segments">) => {
+  const { segments } = horn;
+  const areaIn2 = (cm2: number | undefined) => Math.round((cm2 ?? 0) / CM2_PER_IN2);
+  return `${pathIn(horn)} in, ${areaIn2(segments[0]?.s1)} to ${areaIn2(segments[segments.length - 1]?.s2)} in²`;
+};
 
 /** A chamber in one line: its size, vent, horn and drivers. */
 export function chamberText(chamber: SpeakerChamber) {

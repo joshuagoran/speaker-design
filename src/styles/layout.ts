@@ -25,6 +25,9 @@ export const MD_UP = "(min-width: 768px)";
  */
 export const RESULTS_TWO_COLUMN_PX = 858;
 
+/** The folded horn editor's width, px, from which its drawing and its path chart sit side by side. */
+export const FOLD_TWO_COLUMN_PX = 700;
+
 /** The results grid of PA and Hi-fi Design: two columns with aligned rows when `wide`, else one column. */
 export const resultsGridClass = (wide: boolean) =>
   wide ? "grid grid-cols-2 gap-x-4 gap-y-5 items-start" : "flex flex-col gap-5";

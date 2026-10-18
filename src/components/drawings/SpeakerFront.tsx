@@ -1,4 +1,4 @@
-import type { Horn, SpeakerDriver, SpeakerSpec } from "../../types";
+import type { FoldWall, Horn, HornFold, SpeakerDriver, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { AmtPlate, RibbonPlate } from "./HifiFront";
 import {
@@ -25,7 +25,13 @@ import { foldDrawing } from "../../lib/speaker/foldHorn";
 import { hardwareFrontMarks } from "../stack-view/buildHardware";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
-import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
+import {
+  CD_OPTIONS,
+  FILL_OPTIONS,
+  hifiDriverById,
+  MID_OPTIONS,
+  SPEAKER_SUB_OPTIONS,
+} from "../../lib/data";
 import { coneParts } from "../../lib/speaker/driverParts";
 import { CM2_PER_IN2 } from "../../constants/units";
 import { byId } from "../../lib/tables";
@@ -211,7 +217,7 @@ export function SpeakerFront({ spec }: Props) {
       case DRIVER_KIND.mid: {
         const size =
           d.kind === DRIVER_KIND.sub
-            ? byId(SUB_OPTIONS, d.driverId)?.size
+            ? byId(SPEAKER_SUB_OPTIONS, d.driverId)?.size
             : byId(MID_OPTIONS, d.driverId)?.size;
         return size === undefined ? [] : [circle(key, x, y, paConeRadius(size), cone)];
       }
@@ -354,22 +360,23 @@ export function SpeakerFront({ spec }: Props) {
   /**
    * A drawn (folded) horn's mouth where it is on the baffle: the clear width, from its lower to its upper edge up the
    * baffle, as the flare's mouth is drawn, inside the panel edges. Its boards and drivers are inside: none on the face.
+   * The rear chamber's vent opening is drawn the same way, dark on the baffle and dashed (behind) on the back.
    */
-  const foldParts = (
-    placed: PlacedChamber,
-    mouthIn: { fromIn: number; toIn: number },
-    i: number,
-  ) => {
+  const foldParts = (placed: PlacedChamber, fold: Pick<HornFold, "mouth" | "vent">, i: number) => {
     const { clear } = placed;
+    const mouthIn = fold.mouth;
     const from = Math.max(0, Math.min(mouthIn.fromIn, mouthIn.toIn));
     const to = Math.min(clear.h, Math.max(mouthIn.fromIn, mouthIn.toIn));
+    const { vent } = fold;
+    const ventFrom = vent ? Math.max(0, Math.min(vent.fromIn, vent.toIn)) : 0;
+    const ventTo = vent ? Math.min(clear.h, Math.max(vent.fromIn, vent.toIn)) : 0;
     return [
       rect(`e${i}`, clear.x + clear.w / 2, clear.y + clear.h / 2, clear.w, clear.h, {
         fill: "none",
         stroke: pal.muted,
         strokeWidth: 0.8,
       }),
-      ...(to > from
+      ...(mouthIn.wall === FOLD_WALL.baffle && to > from
         ? [
             rect(`m${i}`, clear.x + clear.w / 2, clear.y + (from + to) / 2, clear.w, to - from, {
               rx: 2,
@@ -377,6 +384,20 @@ export function SpeakerFront({ spec }: Props) {
               stroke: pal.ink,
               strokeWidth: 1.2,
             }),
+          ]
+        : []),
+      ...(vent &&
+      (vent.wall === FOLD_WALL.baffle || vent.wall === FOLD_WALL.back) &&
+      ventTo > ventFrom
+        ? [
+            rect(
+              `fv${i}`,
+              clear.x + clear.w / 2,
+              clear.y + (ventFrom + ventTo) / 2,
+              clear.w,
+              ventTo - ventFrom,
+              { rx: 1, ...(vent.wall === FOLD_WALL.back ? behind : opening) },
+            ),
           ]
         : []),
     ];
@@ -444,10 +465,14 @@ export function SpeakerFront({ spec }: Props) {
         // seen through it (each segment's end, the straight walls between), and the drivers behind its throat
         const flare = hornFlare(cabinet, placed);
         if (flare) parts.push(...hornParts(placed, flare, i));
-        // a drawn horn: its mouth, where it is on the baffle
+        // a drawn horn: its mouth where it is on the baffle, and its vent where it is on the baffle or the back
         const drawing = foldDrawing(cabinet, chamber);
-        if (drawing?.fold.mouth.wall === FOLD_WALL.baffle)
-          parts.push(...foldParts(placed, drawing.fold.mouth, i));
+        const onFace = (w: FoldWall | undefined) => w === FOLD_WALL.baffle || w === FOLD_WALL.back;
+        if (
+          drawing &&
+          (drawing.fold.mouth.wall === FOLD_WALL.baffle || onFace(drawing.fold.vent?.wall))
+        )
+          parts.push(...foldParts(placed, drawing.fold, i));
         // the passive radiators: on the baffle as a cone, on the back dashed
         radiatorsAt(cabinet, placed).spots.forEach((s, j) =>
           parts.push(

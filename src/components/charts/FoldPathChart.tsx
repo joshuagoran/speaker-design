@@ -1,14 +1,12 @@
 import { useId } from "react";
 import type { FoldPathSection, HornSegment } from "../../types";
 import {
-  FOLD_AREA_GRID_IN2,
-  FOLD_AREA_MAX_IN2,
-  FOLD_PATH_GRID_IN,
-  FOLD_PATH_MAX_IN,
+  FOLD_AREA_GRID_STEPS_IN2,
+  FOLD_CHART_MAX_LINES,
+  FOLD_PATH_GRID_STEPS_IN,
 } from "../../constants/chartScales";
 import { FOLD_CHART_TEXT } from "../../constants/speakerPage";
-import { CM2_PER_IN2, CM_PER_IN } from "../../constants/units";
-import { isSizedSegment, segmentAreaAt } from "../../lib/acoustics/hornSegments";
+import { targetPathPoints } from "../../lib/speaker/foldMatch";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { usePalette } from "../../hooks/useTheme";
 import { FONT, SVG_FONT } from "../../styles/fonts";
@@ -31,46 +29,53 @@ interface Props {
   onHover: (sIn: number | null) => void;
 }
 
-/** The target line is sampled about this often along each segment, in. */
-const TARGET_STEP_IN = 0.5;
-
 /** Chart height, px. */
 const HEIGHT = 240;
 
-/**
- * The straight horn's area along its length, sampled about every `TARGET_STEP_IN` and at each segment's ends, with the
- * distance from the throat in inches and the area in in². Each segment follows its own flare (`segmentAreaAt`). A
- * segment without sizes (a gap) is left out, so the line never carries NaN.
- */
-export function targetPathPoints(target: readonly HornSegment[]): PathPoint[] {
-  const points: PathPoint[] = [];
-  let startCm = 0;
-  for (const segment of target.filter(isSizedSegment)) {
-    const steps = Math.max(1, Math.ceil(segment.length / CM_PER_IN / TARGET_STEP_IN));
-    for (let k = 0; k <= steps; k++) {
-      const alongCm = (k / steps) * segment.length;
-      points.push({
-        sIn: (startCm + alongCm) / CM_PER_IN,
-        areaIn2: segmentAreaAt(segment, alongCm) / CM2_PER_IN2,
-      });
-    }
-    startCm += segment.length;
-  }
-  return points;
+/** The chart's axes: each one's top and gridline spacing, in along the path and in² of area. */
+export interface FoldPathAxes {
+  pathMaxIn: number;
+  pathGridIn: number;
+  areaMaxIn2: number;
+  areaGridIn2: number;
+}
+
+/** The smallest spacing in `steps` that covers `top` in at most `FOLD_CHART_MAX_LINES` gridlines, and the axis top. */
+function axisOf(top: number, steps: readonly number[]): { max: number; grid: number } {
+  const grid =
+    steps.find((g) => Math.ceil(top / g) <= FOLD_CHART_MAX_LINES) ?? steps[steps.length - 1];
+  return { max: Math.max(grid, Math.ceil(top / grid) * grid), grid };
+}
+
+/** The axes that fit the traced passage and the straight horn: each to the next gridline past the larger. */
+export function foldPathAxes(
+  sections: readonly FoldPathSection[],
+  target: Props["target"],
+): FoldPathAxes {
+  const points = [...sections, ...targetPathPoints(target)];
+  const path = axisOf(Math.max(1, ...points.map((p) => p.sIn)), FOLD_PATH_GRID_STEPS_IN);
+  const area = axisOf(Math.max(1, ...points.map((p) => p.areaIn2)), FOLD_AREA_GRID_STEPS_IN2);
+  return {
+    pathMaxIn: path.max,
+    pathGridIn: path.grid,
+    areaMaxIn2: area.max,
+    areaGridIn2: area.grid,
+  };
 }
 
 /**
  * The distance along the path, in from the closed end, under a pointer at `xPx` on an axis that runs from `x0` to `x1`
- * (the chart's fixed `FOLD_PATH_MAX_IN`); null off the plot or past the path's end `pathEndIn`.
+ * (0 to `maxIn`); null off the plot or past the path's end `pathEndIn`.
  */
 export function distanceAtPointer(
   xPx: number,
   x0: number,
   x1: number,
   pathEndIn: number,
+  maxIn: number,
 ): number | null {
-  const sIn = ((xPx - x0) / (x1 - x0)) * FOLD_PATH_MAX_IN;
-  return sIn >= 0 && sIn <= Math.min(pathEndIn, FOLD_PATH_MAX_IN) ? sIn : null;
+  const sIn = ((xPx - x0) / (x1 - x0)) * maxIn;
+  return sIn >= 0 && sIn <= Math.min(pathEndIn, maxIn) ? sIn : null;
 }
 
 /** The section nearest a distance along the path, in; null for a path with no sections. */
@@ -104,9 +109,11 @@ export function FoldPathDrawing({
   target,
   taps,
   hoverIn,
+  axes,
 }: Pick<Props, "sections" | "target" | "taps" | "hoverIn"> & {
   pal: Palette;
   frame: Frame;
+  axes: FoldPathAxes;
   /** the id of the plot area's clip, unique on the page */
   clipId: string;
 }) {
@@ -115,27 +122,26 @@ export function FoldPathDrawing({
     x1 = W - R,
     y0 = T,
     y1 = H - B;
-  // past the axes nothing is drawn (the clip); the fixed ranges never follow the data
-  const px = (sIn: number) => x0 + (sIn / FOLD_PATH_MAX_IN) * (x1 - x0);
-  const py = (areaIn2: number) => y1 - (areaIn2 / FOLD_AREA_MAX_IN2) * (y1 - y0);
+  const { pathMaxIn, pathGridIn, areaMaxIn2, areaGridIn2 } = axes;
+  // past the axes nothing is drawn (the clip)
+  const px = (sIn: number) => x0 + (sIn / pathMaxIn) * (x1 - x0);
+  const py = (areaIn2: number) => y1 - (areaIn2 / areaMaxIn2) * (y1 - y0);
   const line = (points: readonly PathPoint[]) =>
     points
       .map((p, i) => `${i ? "L" : "M"}${px(p.sIn).toFixed(1)},${py(p.areaIn2).toFixed(1)}`)
       .join("");
-  const traced = sections.filter((s) => s.sIn <= FOLD_PATH_MAX_IN + 1);
-  const targetPoints = targetPathPoints(target).filter((p) => p.sIn <= FOLD_PATH_MAX_IN + 1);
+  const traced = sections.filter((s) => s.sIn <= pathMaxIn + 1);
+  const targetPoints = targetPathPoints(target).filter((p) => p.sIn <= pathMaxIn + 1);
   // a cone with no tap (null) or one past the axis draws no marker
   const tapMarks = [
     { sIn: taps.front, label: FOLD_CHART_TEXT.front },
     { sIn: taps.back, label: FOLD_CHART_TEXT.back },
   ].flatMap((t) =>
-    t.sIn !== null && t.sIn >= 0 && t.sIn <= FOLD_PATH_MAX_IN
-      ? [{ sIn: t.sIn, label: t.label }]
-      : [],
+    t.sIn !== null && t.sIn >= 0 && t.sIn <= pathMaxIn ? [{ sIn: t.sIn, label: t.label }] : [],
   );
   const near = hoverIn === null ? null : nearestSection(sections, hoverIn);
   const grid: React.ReactElement[] = [];
-  for (let s = 0; s <= FOLD_PATH_MAX_IN; s += FOLD_PATH_GRID_IN) {
+  for (let s = 0; s <= pathMaxIn; s += pathGridIn) {
     grid.push(
       <line
         key={"v" + s}
@@ -150,7 +156,7 @@ export function FoldPathDrawing({
         key={"vt" + s}
         x={px(s)}
         y={y1 + 18}
-        textAnchor={s === FOLD_PATH_MAX_IN ? "end" : "middle"}
+        textAnchor={s === pathMaxIn ? "end" : "middle"}
         fill={pal.muted}
         fontSize="12"
         fontFamily={SVG_FONT}
@@ -159,7 +165,7 @@ export function FoldPathDrawing({
       </text>,
     );
   }
-  for (let a = 0; a <= FOLD_AREA_MAX_IN2; a += FOLD_AREA_GRID_IN2) {
+  for (let a = 0; a <= areaMaxIn2; a += areaGridIn2) {
     grid.push(
       <line
         key={"h" + a}
@@ -289,8 +295,8 @@ export function FoldPathDrawing({
 }
 
 /**
- * A folded horn's passage area along its path, in² against in from the closed end, on fixed axes (`FOLD_PATH_MAX_IN`,
- * `FOLD_AREA_MAX_IN2`) so folds compare by eye: the traced passage solid, the straight horn it should match dashed, the
+ * A folded horn's passage area along its path, in² against in from the closed end, on axes that fit the passage and the
+ * straight horn (`foldPathAxes`): the traced passage solid, the straight horn it should match dashed, the
  * places the cones open marked. The hover is linked: the pointer reports the distance it is over, and `hoverIn` draws it.
  */
 export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Props) {
@@ -308,6 +314,7 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
     B: 36,
   };
   const pathEndIn = sections.length ? sections[sections.length - 1].sIn : 0;
+  const axes = foldPathAxes(sections, target);
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     onHover(
@@ -316,6 +323,7 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
         frame.L,
         frame.W - frame.R,
         pathEndIn,
+        axes.pathMaxIn,
       ),
     );
   };
@@ -339,6 +347,7 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
           target={target}
           taps={taps}
           hoverIn={hoverIn}
+          axes={axes}
         />
       </svg>
       <div
