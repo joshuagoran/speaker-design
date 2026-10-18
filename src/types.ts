@@ -576,6 +576,24 @@ export interface FillDriver {
   note: string;
 }
 
+// ---- Triaxials ----
+
+/** A triaxial's midrange section: the HF section's ratings that apply to it, and its band. It shares the HF horn, so its coverage is `hf.cov`. */
+export type TriaxMf = Pick<FillHf, "sens" | "aes" | "imp"> & {
+  /** the maker's lowest recommended crossover (its high-pass), Hz */
+  xoLo: number;
+  /** the highest crossover to the HF section (its low-pass), Hz: the top of the maker's MF frequency range */
+  xoHi: number;
+};
+
+/** A triaxial: a woofer with a coaxial compression driver that has a midrange and an HF section on one horn. */
+export type TriaxDriver = Omit<FillDriver, "hf"> & {
+  /** the HF section: every triaxial has one */
+  hf: FillHf;
+  /** the midrange section */
+  mf: TriaxMf;
+};
+
 // ---- Hi-fi ----
 
 /** An HF figure a coaxial's maker doesn't publish, by id (`COAX_GAP_NAMES`): the whole HF section, its crossover or its coverage. */
