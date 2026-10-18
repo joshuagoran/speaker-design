@@ -891,7 +891,16 @@
         display: inline-flex;
         align-items: center;
       }
-      /* a band's swatch: a short line in the band's color and dash (bandLine in palette.ts) */
+      /* a band's swatch: a small dot in the band's color, a ring for a dashed band */
+      .bdot {
+        display: inline-block;
+        flex: none;
+        width: 9px;
+        height: 9px;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      /* the Sum's swatch in a chart legend: a short ink line (it is not a band) */
       .bsw {
         display: inline-block;
         flex: none;
@@ -1207,8 +1216,8 @@
         panel:
           "The panel size of the sides, top, bottom and back. On a frame box, the baffle stays ¾″. On a flush box, the baffle is this size too. Thinner walls get more braces.",
         top: "Flat, or a semicircle the full width of the cabinet. Only for speakers where every chamber is a Box.",
-        hardware:
-          "Two handles, an input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell.",
+        handles: "Two handles, one on each side. They go on the lowest chamber of each shell.",
+        dish: "An input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell.",
         load: "Box: the cones radiate from the baffle, sealed or ported. Horn: a horn in the box, straight or folded.",
         loadNoCone: "A horn needs a cone driver in this chamber.",
         path: "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box.",
@@ -1359,7 +1368,8 @@
           inset: 0.75,
           panel: "3/4",
           top: "flat",
-          hardware: "none",
+          handles: "none",
+          dish: "none",
           chambers: [chamber({ w: 12, h: 18, d: 12 })],
           bands: [band("b1", "Band 1")],
           xover: { hp: null, lp: null },
@@ -1370,7 +1380,8 @@
           inset: 0.75,
           panel: "3/4",
           top: "flat",
-          hardware: "on",
+          handles: "on",
+          dish: "back",
           chambers: [
             chamber({
               w: 24,
@@ -1397,7 +1408,8 @@
           inset: 0.75,
           panel: "3/4",
           top: "flat",
-          hardware: "none",
+          handles: "none",
+          dish: "none",
           chambers: [
             chamber({
               w: 15.5,
@@ -1428,7 +1440,8 @@
           inset: 0.75,
           panel: "3/4",
           top: "flat",
-          hardware: "none",
+          handles: "none",
+          dish: "none",
           chambers: [
             chamber({
               w: 8.5,
@@ -1461,7 +1474,8 @@
           inset: 0.75,
           panel: "3/4",
           top: "flat",
-          hardware: "none",
+          handles: "none",
+          dish: "none",
           chambers: [
             chamber({
               type: "horn",
@@ -1687,10 +1701,10 @@
         if (c.type === "horn") lb += (((c.th18 ? 8 : 3) * (c.w * c.d)) / 144) * ply;
         else if (c.bracing !== "none") lb += area * ply * (c.bracing === "both" ? 0.18 : 0.1);
         c.drivers.forEach((d) => (lb += model(d).lb * d.count + (hornOf(d).w ? 3 : 0)));
-        return lb + (S.hardware === "on" ? 4 : 0);
+        return lb + (S.handles === "on" ? 2 : 0) + (S.dish === "back" ? 2 : 0);
       }
       function priceUsd() {
-        let p = S.hardware === "on" ? 120 : 0;
+        let p = (S.handles === "on" ? 60 : 0) + (S.dish === "back" ? 60 : 0);
         S.chambers.forEach((c) => {
           c.drivers.forEach((d) => (p += (model(d).price + hornOf(d).price) * d.count));
           if (c.type === "box" && c.vent === "ported") p += 12 * c.port.count;
@@ -1750,9 +1764,11 @@
         trash:
           '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.75 6.5v4.5M9.25 6.5v4.5"/></svg>',
         drivers:
-          '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".6"/></svg>',
+          '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3v4H2zM5 6l8-4v12l-8-4"/></svg>',
+        driversOff:
+          '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3v4H2zM5 6l8-4v12l-8-4"/><path d="M1.5 14.5l13-13"/></svg>',
         cutaway:
-          '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5l6-3 6 3v6l-6 3-6-3z"/><path d="M8 8v6M8 8l6-3M8 8 2 5" stroke-dasharray="2 1.6"/></svg>',
+          '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l5.5 3v7L8 14.5l-5.5-3v-7z"/><path d="M2.5 4.5L8 7.5l5.5-3M8 7.5v3" stroke-dasharray="1.5 1.5"/></svg>',
         chev: '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"/></svg>',
       };
 
@@ -1780,8 +1796,11 @@
         );
       /* a coaxial driver's HF band: the one it names, else the highest band */
       const hfBandOf = (d) => S.bands.find((b) => b.id === d.hfBand) || S.bands[S.bands.length - 1];
-      /* a short line in a band's color and dash, before the band's name; width: the line width, px */
-      const swatch = (st, width = 3) =>
+      /* a small dot in a band's color before the band's name; a dashed band shows a hollow ring */
+      const swatch = (st) =>
+        `<svg class="bdot" viewBox="0 0 10 10" aria-hidden="true">${st.dash ? `<circle cx="5" cy="5" r="3.9" fill="none" stroke="var(${st.color})" stroke-width="1.8"/>` : `<circle cx="5" cy="5" r="5" fill="var(${st.color})"/>`}</svg>`;
+      /* a short line in a series' color and dash (the Sum's legend swatch); width: the line width, px */
+      const lineSwatch = (st, width = 3) =>
         `<svg class="bsw" viewBox="0 0 20 8" aria-hidden="true"><line x1="1" y1="4" x2="19" y2="4" stroke="var(${st.color})" stroke-width="${width}" ${st.dash ? `stroke-dasharray="${st.dash}"` : ""}/></svg>`;
       /* the swatches before a driver's summary line: its band, and a coaxial driver's HF band */
       const driverSwatches = (d) =>
@@ -1858,6 +1877,11 @@
         ]
           .filter(Boolean)
           .join(" · ");
+      /* the hardware part of the Construction summary, e.g. "handles, input dish" */
+      const hardwareSummary = () =>
+        [S.handles === "on" ? "handles" : null, S.dish === "back" ? "input dish" : null]
+          .filter(Boolean)
+          .join(", ") || "no hardware";
       function summary(id) {
         const n = (k, a, b) => `${k} ${k === 1 ? a : b}`;
         switch (id) {
@@ -1866,7 +1890,7 @@
               S.construction === "frame" ? "Frame" : "Flush",
               `${PANELS.find((p) => p[0] === S.panel)[2]} walls`,
               allBox() ? `${S.top} top` : null,
-              S.hardware === "on" ? "hardware" : "no hardware",
+              hardwareSummary(),
             ]
               .filter(Boolean)
               .join(" · ");
@@ -1956,27 +1980,36 @@
               : ""
           }
           ${tg(
-            "Hardware",
-            "hardware",
+            "Handles",
+            "handles",
             [
               ["none", "None"],
-              ["on", "Handles and input dish"],
+              ["on", "Handles"],
             ],
-            { tip: TIP.hardware },
+            { tip: TIP.handles },
           )}
           ${
-            S.hardware === "on"
+            S.handles === "on"
               ? sel(
-                  "Handles",
-                  "handles",
+                  "Handle type",
+                  "handleType",
                   [
                     ["pa", "Penn Elcom recessed handle"],
                     ["bar", "Bar handle"],
                   ],
-                  { value: "pa", rebuild: false },
+                  { value: S.handleType || "pa", rebuild: false },
                 )
               : ""
-          }`;
+          }
+          ${tg(
+            "Input dish",
+            "dish",
+            [
+              ["none", "None"],
+              ["back", "On the back"],
+            ],
+            { tip: TIP.dish },
+          )}`;
       }
       function fillField(c, i) {
         return tg(
@@ -2673,7 +2706,7 @@
         });
         return `<div class="v3d vh"><svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="3D view of the speaker${view.cutaway ? ", cut away" : ""}">${g}</svg>
           <div class="tools"><button type="button" class="ibtn" data-act="cutaway" aria-pressed="${view.cutaway}" aria-label="${TIP.cutaway}" data-tip="${TIP.cutaway}">${ICON.cutaway}</button>
-          <button type="button" class="ibtn" data-act="drivers" aria-pressed="${view.drivers}" aria-label="${view.drivers ? TIP.hideDrivers : TIP.showDrivers}" data-tip="${view.drivers ? TIP.hideDrivers : TIP.showDrivers}">${ICON.drivers}</button></div></div>`;
+          <button type="button" class="ibtn" data-act="drivers" aria-pressed="${view.drivers}" aria-label="${view.drivers ? TIP.hideDrivers : TIP.showDrivers}" data-tip="${view.drivers ? TIP.hideDrivers : TIP.showDrivers}">${view.drivers ? ICON.drivers : ICON.driversOff}</button></div></div>`;
       }
 
       function view2d() {
@@ -2982,7 +3015,9 @@
           g += `<path d="${d}" fill="none" class="${sr.cls}" stroke-width="${sr.width}" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ""} stroke-linejoin="round"/>`;
         });
         const legend = series
-          .map((sr) => `<span>${swatch(sr, sr.width > 2 ? 4 : 3)}${esc(sr.label)}</span>`)
+          .map(
+            (sr) => `<span>${sr.lineKey ? lineSwatch(sr, 4) : swatch(sr)}${esc(sr.label)}</span>`,
+          )
           .join("");
         return `<div class="chart fixed"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${ylabel} chart">${g}</svg></div><div class="legend">${legend}</div>`;
       }
@@ -3004,6 +3039,8 @@
               color: "--ink",
               width: 4,
               label: "Sum",
+              /* the Sum is not a band: its legend shows a line, not a dot */
+              lineKey: true,
             });
           curves.forEach(
             (c, i) =>
@@ -3086,9 +3123,13 @@
                   ),
             );
           }
-          if (S.hardware === "on" && i === 0)
+          if ((S.handles === "on" || S.dish === "back") && i === 0)
             chips.push(
-              chip("ok", "Hardware fits", "The handles and the input dish fit on this chamber."),
+              chip(
+                "ok",
+                "Hardware fits",
+                `The ${[S.handles === "on" ? "handles" : null, S.dish === "back" ? "input dish" : null].filter(Boolean).join(" and the ")} ${S.handles === "on" ? "fit" : "fits"} on this chamber.`,
+              ),
             );
           if (c.type === "box" && c.bracing !== "none")
             chips.push(
