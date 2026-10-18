@@ -2090,11 +2090,11 @@
             { tip: TIP.board },
           );
         if (fillAllowed(c)) h += fillField(c, i);
-        // the straight horn is calculated: read-only until "Edit by hand" is on
+        // the straight horn is calculated: read-only until "Edit manually" is on
         const edit = !!view.shEdit[i];
         const off = edit ? "" : "disabled";
-        // the line and the one "Edit by hand" toggle for what Design from goals or an import sets
-        const editHead = `<div class="cardhead"><p class="hint">${TIP.shSet}</p><button type="button" class="btn xs nowrap" aria-pressed="${edit}" data-act="shEdit" data-c="${i}">Edit by hand</button></div>`;
+        // the line and the one "Edit manually" toggle for what Design from goals or an import sets
+        const editHead = `<div class="cardhead"><p class="hint">${TIP.shSet}</p><button type="button" class="btn xs nowrap" aria-pressed="${edit}" data-act="shEdit" data-c="${i}">Edit manually</button></div>`;
         // a straight horn's rear chamber, under the same toggle; a folded horn has none (its drawing sets it)
         if (c.path === "straight") {
           const rid = uid();

@@ -51,20 +51,21 @@ Each setting sits at the level it belongs to.
 
 ### Settings column
 
-| Section           | Change                                                                                                                                                                  |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Speaker           | Removed. The name and "New from…" sit in the saved configurations row (full save and open redesign: #180).                                                              |
-| Construction      | Construction, wall panels, Top (flat or arched) when every chamber is a Box. Hardware splits into Handles and Input dish, each its own choice.                          |
-| Chamber           | Sub-sections, each a light inset box with a small heading: Size, Vent, Fill and bracing (Box), Horn (Horn), Drivers. Type and Path on one row; dimensions on one row.   |
-| Horn              | Goals on one row with Design from goals (its tooltip says what it reads and sets). Horn type. Straight horn read-only, with "Edit by hand". "Import a Hornresp record". |
-| Drivers           | Each driver is a box with a trash icon at its top right. Type and Size on one row. Model and Count on one row. Band. Add driver on its own line under the last driver.  |
-| Bands and filters | Filter types in dropdowns, not six-button rows. Corner and level fields beside them.                                                                                    |
-| Optimizer         | No change.                                                                                                                                                              |
+| Section           | Change                                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Speaker           | Removed. The name and "New from…" sit in the saved configurations row (full save and open redesign: #180).                                                               |
+| Construction      | Construction, wall panels, Top (flat or arched) when every chamber is a Box. Hardware splits into Handles and Input dish, each its own choice.                           |
+| Chamber           | Sub-sections, each a light inset box with a small heading: Size, Vent, Fill and bracing (Box), Horn (Horn), Drivers. Type and Path on one row; dimensions on one row.    |
+| Horn              | Goals on one row with Design from goals (its tooltip says what it reads and sets). Horn type. Straight horn read-only, with "Edit manually". "Import a Hornresp record". |
+| Drivers           | Each driver is a box with a trash icon at its top right. Type and Size on one row. Model and Count on one row. Band. Add driver on its own line under the last driver.   |
+| Bands and filters | Filter types in dropdowns, not six-button rows. Corner and level fields beside them.                                                                                     |
+| Optimizer         | No change.                                                                                                                                                               |
 
 ### Band colors
 
 Each band keeps one color everywhere: its chart line. Low to high: the lowest yellow, the highest cyan, the ones between magenta (every second one dashed). A single band is yellow.
 
+- Three bands get three different colors. A fourth band repeats magenta, dashed (a hollow dot); a fourth hue waits until a design needs it.
 - Yellow lines need a new palette token, "yellow line": a deep gold (#b08000) in the light theme, so a line passes 3:1 on white; the brand yellow in the dark theme.
 
 - The 2D views draw each driver in its band's color. A coaxial driver shows both of its bands.
@@ -78,7 +79,9 @@ Each band keeps one color everywhere: its chart line. Low to high: the lowest ye
 
 - Field labels carry no unit: every length is inches. A units setting comes later (#149).
 - A fold's summary wraps under its title in small text, up to two lines. Summaries keep to the key facts.
-- Net air is always worked out for a Box chamber: no Auto/Custom control. A straight horn shows "Rear chamber" in Horn settings, set by Design from goals or a Hornresp import, with "Edit by hand".
+- Net air is always worked out for a Box chamber: no Auto/Custom control. A straight horn shows "Rear chamber" in Horn settings, set by Design from goals or a Hornresp import, with "Edit manually".
+- A straight horn has one "Edit manually" switch. It unlocks the sections and the rear chamber.
+- A multi-way driver picks a band for each section: two for a coaxial (cone, HF), three for a triaxial (cone, mid, HF). Each section shows in its band's color; the summary shows one dot per section.
 - A driver's Band tooltip: "The band from Bands and filters that plays this driver."
 - The chamber's position uses the same labels: "Left (−) / Right (+)" from the cabinet's center, "Down (−) / Up (+)" from its bottom.
 - Taps: "Front tap after section", "Back tap after section", "Taps from closed end". Tooltip: "Where the front and back of the cones join the horn, counted from the closed end."
