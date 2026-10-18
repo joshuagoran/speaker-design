@@ -2,7 +2,12 @@
 // `position` keeps it (across from the chamber's center line, up from its bottom), kept on the chamber's clear face and
 // rounded to the drag's step.
 import type { FacePoint } from "../../types";
-import type { PlacedChamber } from "./speakerLayout";
+import {
+  driverSpots,
+  speakerLayout,
+  type LayoutCabinet,
+  type PlacedChamber,
+} from "./speakerLayout";
 
 /** The step a dragged position is rounded to, in. */
 export const DRAG_STEP_IN = 0.125;
@@ -64,4 +69,63 @@ export function draggedPosition(
     return snapped < span[0] - 1e-9 || snapped > span[1] + 1e-9 ? clamp(v, span) : snapped;
   };
   return { xIn: at(start.xIn + delta.xIn, bounds.x), yIn: at(start.yIn + delta.yIn, bounds.y) };
+}
+
+/** The steps that find how far a blocked drag may go toward where it was aimed (halving the step each time). */
+const BLOCKED_STEPS = 6;
+
+/**
+ * Where the other drivers of chamber `chamber` stand with entry `driver` at `position`, as one key (the layout keeps
+ * drivers apart, so an entry moved onto another pushes that one aside).
+ */
+export function othersKey(
+  cabinet: LayoutCabinet,
+  chamber: number,
+  driver: number,
+  position: FacePoint,
+): string {
+  const chambers = cabinet.chambers.map((c, i) =>
+    i === chamber
+      ? { ...c, drivers: c.drivers.map((d, j) => (j === driver ? { ...d, position } : d)) }
+      : c,
+  );
+  const placed = speakerLayout({ ...cabinet, chambers }).chambers[chamber];
+  if (!placed) return "";
+  return JSON.stringify(
+    placed.chamber.drivers.flatMap((d, j) =>
+      j === driver ? [] : driverSpots(placed, d).map((s) => [s.xIn.toFixed(2), s.yIn.toFixed(2)]),
+    ),
+  );
+}
+
+/**
+ * The position a drag from `last` toward `next` takes without moving any other driver (`othersKey` stays `others`):
+ * `next` when it moves none, else the farthest point toward it that moves none, rounded to `step`.
+ */
+export function unblockedPosition(
+  cabinet: LayoutCabinet,
+  chamber: number,
+  driver: number,
+  others: string,
+  last: FacePoint,
+  next: FacePoint,
+  step = DRAG_STEP_IN,
+): FacePoint {
+  const clearAt = (p: FacePoint) => othersKey(cabinet, chamber, driver, p) === others;
+  if (clearAt(next)) return next;
+  /** the share of the way from `last` to `next` known clear */
+  let clear = 0;
+  for (let i = 1, span = 0.5; i <= BLOCKED_STEPS; i++, span /= 2) {
+    const tryAt = clear + span;
+    const p = {
+      xIn: last.xIn + (next.xIn - last.xIn) * tryAt,
+      yIn: last.yIn + (next.yIn - last.yIn) * tryAt,
+    };
+    if (clearAt(p)) clear = tryAt;
+  }
+  const p = {
+    xIn: snap(last.xIn + (next.xIn - last.xIn) * clear, step),
+    yIn: snap(last.yIn + (next.yIn - last.yIn) * clear, step),
+  };
+  return clearAt(p) ? p : last;
 }

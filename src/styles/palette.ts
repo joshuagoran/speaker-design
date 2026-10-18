@@ -20,7 +20,7 @@ export interface Palette {
   /** cards, inputs and buttons on the page */
   panel: string;
   muted: string;
-  /** the lighter gray for a chart line beside the ink and the muted gray (3:1 on the page) */
+  /** a lighter gray for a chart line beside the ink and the muted gray (3:1 on the page); a spare: no chart uses it now */
   faint: string;
   edge: string;
   magenta: string;

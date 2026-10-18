@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 
 // UI text never names a page that may go away, or an internal rule or engine (CLAUDE.md, "UI rules"). Hornresp may be
-// named: it is the program whose records the horn import reads (owner approved, docs/speaker-page-plan.md Decisions).
+// named: it is the program whose records the horn import reads (owner approved, Oct 2026).
 const BANNED =
   /\b(PA|Hi-?fi|Coverage|Fills?)( Coverage)? (page|tab|planner)\b|\bthe (horn engine|bracing rule|port rule|slot rule|brace estimate)\b/i;
 

@@ -17,7 +17,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
   response charts and optimizer cards, the Speaker page's response chart) uses 50–120 dB (`HIFI_TOP` / `HIFI_BOT`).
   The coverage map colors the level against the target on a fixed −12 to +6 dB scale (`COVERAGE_MAP_DB`).
 - Colors: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
-  grays (and a lighter gray, `faint`, for one chart line beside them); status colors stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's color names are remapped from it in `tailwind.config.js`.
+  grays (and a lighter gray, `faint`, kept as a spare: no chart uses it now); status colors stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's color names are remapped from it in `tailwind.config.js`.
 - Light and dark themes (follows the device, with the header's System / Light / Dark switch): every color comes from the
   palette tokens and works in both. Classes switch through CSS variables (no `dark:` variants, no `bg-white`; cards use
   `bg-panel`); colors drawn from code read `usePalette()` (`src/hooks/useTheme.ts`). Data colors (`DISPERSION_SCALE`,

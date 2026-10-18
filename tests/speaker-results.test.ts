@@ -7,7 +7,13 @@ import { renderToString } from "react-dom/server";
 import * as THREE from "three";
 import { PALETTES, bandLine } from "../src/styles/palette";
 import { bandColor } from "../src/lib/speaker/bandColor";
-import { DRAG_STEP_IN, dragStart, draggedPosition } from "../src/lib/speaker/driverDrag";
+import {
+  DRAG_STEP_IN,
+  dragStart,
+  draggedPosition,
+  othersKey,
+  unblockedPosition,
+} from "../src/lib/speaker/driverDrag";
 import { SpeakerSide, speakerSideFrame } from "../src/components/drawings/SpeakerSide";
 import { SpeakerFront } from "../src/components/drawings/SpeakerFront";
 import {
@@ -83,6 +89,28 @@ describe("a driver dragged on the front drawing", () => {
       xIn: 2,
       yIn: 20,
     });
+  });
+  test("stops where it would push another driver aside", () => {
+    const { cabinet } = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
+    const placed = speakerLayout(cabinet).chambers[0];
+    expect(placed).toBeDefined();
+    if (!placed) return;
+    // the lowest driver dragged straight up onto the one above it
+    const spots = placed.chamber.drivers.map((d) =>
+      dragStart(placed, driverSpots(placed, d), driverAcrossIn(d)),
+    );
+    const low = spots.reduce(
+      (lo, s, i) => (s.center.yIn < (spots[lo]?.center.yIn ?? Infinity) ? i : lo),
+      0,
+    );
+    const from = spots[low]?.center ?? { xIn: 0, yIn: 0 };
+    const others = othersKey(cabinet, 0, low, from);
+    const aim = { xIn: from.xIn, yIn: placed.dims.h };
+    expect(othersKey(cabinet, 0, low, aim)).not.toBe(others);
+    const at = unblockedPosition(cabinet, 0, low, others, from, aim);
+    expect(at.yIn).toBeGreaterThan(from.yIn);
+    expect(at.yIn).toBeLessThan(aim.yIn);
+    expect(othersKey(cabinet, 0, low, at)).toBe(others);
   });
 });
 

@@ -12,7 +12,13 @@ import type {
 import { usePalette } from "../../hooks/useTheme";
 import { alpha } from "../../styles/palette";
 import { bandColor } from "../../lib/speaker/bandColor";
-import { dragStart, draggedPosition, type DragBounds } from "../../lib/speaker/driverDrag";
+import {
+  dragStart,
+  draggedPosition,
+  othersKey,
+  unblockedPosition,
+  type DragBounds,
+} from "../../lib/speaker/driverDrag";
 import { POSITION_AXIS } from "../../constants/speakerResults";
 import { AmtPlate, RibbonPlate } from "./HifiFront";
 import {
@@ -84,6 +90,8 @@ interface Drag {
   from: { x: number; y: number };
   /** the last position sent, so a move that rounds to it sends nothing */
   last: FacePoint;
+  /** where the chamber's other drivers stood when the drag began (`othersKey`): the drag never moves them */
+  others: string;
 }
 
 /** The points a curved vent opening is drawn with. */
@@ -486,7 +494,15 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
         if (!from) return;
         e.currentTarget.setPointerCapture(e.pointerId);
         const { center, bounds } = dragStart(placed, driverSpots(placed, d), driverAcrossIn(d));
-        drag.current = { chamber, driver: entry, start: center, bounds, from, last: center };
+        drag.current = {
+          chamber,
+          driver: entry,
+          start: center,
+          bounds,
+          from,
+          last: center,
+          others: othersKey(cabinet, chamber, entry, center),
+        };
       },
     };
   };
@@ -494,10 +510,18 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
     const now = drag.current;
     const at = now && toDrawing(e);
     if (!now || !at || !onMoveDriver) return;
-    const next = draggedPosition(
-      now.start,
-      { xIn: (at.x - now.from.x) / k, yIn: -(at.y - now.from.y) / k },
-      now.bounds,
+    // stopped where it would push another driver aside
+    const next = unblockedPosition(
+      cabinet,
+      now.chamber,
+      now.driver,
+      now.others,
+      now.last,
+      draggedPosition(
+        now.start,
+        { xIn: (at.x - now.from.x) / k, yIn: -(at.y - now.from.y) / k },
+        now.bounds,
+      ),
     );
     if (next.xIn === now.last.xIn && next.yIn === now.last.yIn) return;
     now.last = next;

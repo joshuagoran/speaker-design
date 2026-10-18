@@ -153,7 +153,7 @@ function splitSpan(span: Span, marks: readonly Span[]): { span: Span; marked: bo
 }
 
 /** What the layout reads of a cabinet: its chambers and panels, and the frame a horn's path is cut for. */
-type LayoutCabinet = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
+export type LayoutCabinet = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
 
 /** The cabinet's chambers placed in its front view, with the walls they build and share. */
 export function speakerLayout(cabinet: LayoutCabinet): SpeakerLayout {
