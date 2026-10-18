@@ -11,7 +11,7 @@ import type { BoxBracing } from "../../types";
 /** One group of the fold: its heading and its bullets. */
 export type DetailsGroup = readonly [heading: string, lines: readonly string[]];
 
-/** What the fold reads: each chamber's bracing, whether a chart marks a tuning, the price, and a straight horn's sections. */
+/** What the fold reads: each chamber's bracing, whether a chart marks a tuning, the price, and whether a view shows a straight horn. */
 export interface SpeakerDetailsInput {
   /**
    * each chamber's bracing, in the spec's order (lib/speaker/speakerBuild), and whether it has none
@@ -25,8 +25,8 @@ export interface SpeakerDetailsInput {
   fb: boolean;
   /** some parts have no price: the total is a lower bound */
   pricePartial: boolean;
-  /** the views show a straight horn's sections */
-  sections: boolean;
+  /** the Side and Top views show a straight horn */
+  straightHorn: boolean;
 }
 
 /** The fold's groups, in the results pane's order. */
@@ -34,7 +34,7 @@ export function speakerDetails({
   bracing,
   fb,
   pricePartial,
-  sections,
+  straightHorn,
 }: SpeakerDetailsInput): DetailsGroup[] {
   const bracingLines = bracing.flatMap(({ unbraced, bracing: b }, i) => {
     const n = i + 1;
@@ -54,7 +54,7 @@ export function speakerDetails({
     [T.maxOutput, T.maxOutputLines],
     [T.price, [...T.priceLines, ...(pricePartial ? [T.partialLine] : [])]],
     [T.bracing, [...bracingLines, T.netAirLine, T.weightLine]],
-    [T.views, [...T.viewsLines, ...(sections ? T.sectionLines : [])]],
+    [T.views, [...T.viewsLines, ...(straightHorn ? T.hornLines : [])]],
     [T.checks, T.checksLines],
   ];
 }

@@ -1,5 +1,5 @@
 // The Speaker page's results pane: each band's one color (lib/speaker/bandColor), a driver dragged on the front drawing
-// (lib/speaker/driverDrag), the side drawing (drawings/SpeakerSide), the point a position field marks, the 3D view's
+// (lib/speaker/driverDrag), the side and top drawings (drawings/SpeakerSide, drawings/SpeakerTop), the point a position field marks, the 3D view's
 // drivers hidden and a horn chamber's inside, the bracing check and the Details fold's bullets.
 import { describe, expect, test } from "vite-plus/test";
 import { createElement } from "react";
@@ -16,6 +16,8 @@ import {
 } from "../src/lib/speaker/driverDrag";
 import { SpeakerSide, speakerSideFrame } from "../src/components/drawings/SpeakerSide";
 import { SpeakerFront } from "../src/components/drawings/SpeakerFront";
+import { SpeakerTop, speakerTopFrame } from "../src/components/drawings/SpeakerTop";
+import { VIEW_PX } from "../src/components/drawings/speakerDrawing";
 import {
   buildSpeakerScene,
   SPEAKER_GROUP_NAMES,
@@ -27,7 +29,12 @@ import { speakerDetails } from "../src/pages/speaker/speakerDetails";
 import { shownView } from "../src/pages/speaker/positionFocus";
 import { chamberBraceChips, chamberUnbraced } from "../src/lib/speaker/fitChips";
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
-import { driverAcrossIn, driverSpots, speakerLayout } from "../src/lib/speaker/speakerLayout";
+import {
+  driverAcrossIn,
+  driverSpots,
+  hornFlare,
+  speakerLayout,
+} from "../src/lib/speaker/speakerLayout";
 import { foldDrawing } from "../src/lib/speaker/foldHorn";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { POSITION_AXIS, SPEAKER_DETAILS_TEXT, SPEAKER_VIEW } from "../src/constants/speakerResults";
@@ -160,6 +167,51 @@ describe("the side drawing", () => {
   });
 });
 
+describe("the top drawing", () => {
+  const html = (s: Parameters<typeof SpeakerTop>[0]["spec"]) =>
+    renderToString(createElement(SpeakerTop, { spec: s }));
+  const ids = [
+    SPEAKER_TEMPLATE.paSubBox,
+    SPEAKER_TEMPLATE.hifiTwoWay,
+    SPEAKER_TEMPLATE.th18,
+    SPEAKER_TEMPLATE.paV2SubBinTwo,
+  ];
+  test.each(ids)("%s: it renders with its label and its drivers in their band's color", (id) => {
+    const spec = templateSpeaker(id);
+    const out = html(spec);
+    expect(out).toMatch(/aria-label="Top view, each chamber cut through the middle, [^"]+"/);
+    expect(out).toMatch(/viewBox="0 0 [\d.]+ [\d.]+"/);
+    const used = spec.cabinet.chambers.flatMap((c) => c.drivers.flatMap((d) => d.bands));
+    expect(used.length).toBeGreaterThan(0);
+    for (const band of used) expect(out).toContain(bandColor(spec.bands, band, light).stroke);
+  });
+  test("a straight horn shows its legs and the front chamber (dashed)", () => {
+    const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinTwo);
+    expect(speakerLayout(spec.cabinet).chambers.some((p) => hornFlare(spec.cabinet, p))).toBe(true);
+    const out = html(spec);
+    expect(out).toContain("<polygon");
+    expect(out).toContain('stroke-dasharray="3 2"');
+  });
+  test("a drawn fold shows the boards the cut crosses", () => {
+    const spec = templateSpeaker(SPEAKER_TEMPLATE.th18);
+    expect(foldDrawing(spec.cabinet, spec.cabinet.chambers[0])).not.toBeNull();
+    // the chamber's walls are one rect in the wall's colors; each board the cut crosses is one more
+    const walls = html(spec).match(/<rect[^>]*fill="#e6e6e6"/g) ?? [];
+    expect(walls.length).toBeGreaterThan(1);
+  });
+  test("stacked chambers take one level each, the highest at the top; every drawing fits its frame", () => {
+    const tower = speakerTopFrame(templateSpeaker(SPEAKER_TEMPLATE.paTowerBaffleHorn).cabinet);
+    expect(tower.levels.map((l) => l.chambers.length)).toEqual([1, 1, 1]);
+    const highest = tower.layout.chambers[tower.levels[0].chambers[0]];
+    expect(highest.y0).toBe(Math.max(...tower.layout.chambers.map((c) => c.y0)));
+    for (const id of ids) {
+      const frame = speakerTopFrame(templateSpeaker(id).cabinet);
+      expect(frame.levels.length).toBe(1);
+      expect(Math.max(frame.W, frame.H)).toBeLessThanOrEqual(VIEW_PX + 1e-9);
+    }
+  });
+});
+
 describe("the front drawing", () => {
   const spec = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
   test("its drivers on the baffle drag when the page lets them, in their band's color", () => {
@@ -183,10 +235,14 @@ describe("the front drawing", () => {
   });
   test("the view a focused field shows: front across and up, side for the depth", () => {
     expect(shownView(SPEAKER_VIEW.side, null)).toBe(SPEAKER_VIEW.side);
+    expect(shownView(SPEAKER_VIEW.top, null)).toBe(SPEAKER_VIEW.top);
     const f = { chamber: 0, driver: 0 };
     expect(shownView(SPEAKER_VIEW.side, { ...f, axis: POSITION_AXIS.up })).toBe(SPEAKER_VIEW.front);
     expect(shownView(SPEAKER_VIEW.front, { ...f, axis: POSITION_AXIS.back })).toBe(
       SPEAKER_VIEW.side,
+    );
+    expect(shownView(SPEAKER_VIEW.top, { ...f, axis: POSITION_AXIS.across })).toBe(
+      SPEAKER_VIEW.front,
     );
   });
 });
@@ -259,7 +315,7 @@ describe("the bracing check and the Details fold", () => {
       bracing: build.chambers.map((c) => ({ unbraced: false, bracing: c.bracing })),
       fb: false,
       pricePartial: false,
-      sections: false,
+      straightHorn: false,
     };
     const T = SPEAKER_DETAILS_TEXT;
     const groups = speakerDetails(input);
@@ -278,8 +334,9 @@ describe("the bracing check and the Details fold", () => {
     expect(lines(speakerDetails({ ...input, pricePartial: true }), T.price)).toContain(
       T.partialLine,
     );
-    expect(lines(speakerDetails({ ...input, sections: true }), T.views)).toEqual(
-      expect.arrayContaining([...T.sectionLines]),
+    expect(lines(groups, T.views)).not.toContain(T.hornLines[0]);
+    expect(lines(speakerDetails({ ...input, straightHorn: true }), T.views)).toEqual(
+      expect.arrayContaining([...T.hornLines]),
     );
     const unbraced = speakerDetails({
       ...input,
