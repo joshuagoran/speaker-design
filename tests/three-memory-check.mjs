@@ -17,7 +17,8 @@ import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 const REBUILDS = 30;
 /** The pages with a 3D view: the PA stack (the default view), Hi-fi, the Speaker and Stack pages, and the control each steps. */
 const SLIDER = { control: 'input[type="range"]', up: "ArrowRight", down: "ArrowLeft" };
-const NUMBER = { control: 'input[type="number"]', up: "ArrowUp", down: "ArrowDown" };
+// the first one shown: a closed settings fold keeps its fields in the page, hidden
+const NUMBER = { control: 'input[type="number"]:visible', up: "ArrowUp", down: "ArrowDown" };
 /** Waits for the view's second build: built empty when the page opens, then as the start. */
 const builtTwice = (page) =>
   page.waitForFunction(
