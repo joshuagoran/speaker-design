@@ -4,6 +4,7 @@ import {
   SPEAKER_SUB_OPTIONS,
   MID_OPTIONS,
   FILL_OPTIONS,
+  TRIAX_OPTIONS,
   CD_OPTIONS,
   HIFI_WOOFERS,
   HIFI_PASSIVES,
@@ -29,9 +30,10 @@ const KNOWN: Record<string, string> = {
   "es12nlw9300:Qes": "datasheet Qes 0.45 vs 0.394 from Bl/Mms/Re/Fs; Qtc reads ~12% low",
   "lv123f:Vas": "datasheet Vas 42 L vs 37.3 L",
   "cindcx10:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.53x",
+  "by12cxa400fe:Qes": "datasheet Qes 0.26 vs 0.29 from Bl/Mms/Re/Fs; noted on the driver",
 };
 // the Speaker page's subs: the PA's and its own
-const all = [...SPEAKER_SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS];
+const all = [...SPEAKER_SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS, ...TRIAX_OPTIONS];
 const need = ["Fs", "Qms", "Sd", "Mms", "Bl", "Re", "Xmax", "aes"] as const;
 
 test("every driver with T/S has the fields the models use", (t) => {
@@ -69,6 +71,8 @@ test("prices and weights are positive where given; ids are unique", (t) => {
 const XMAX_KNOWN: Record<string, string> = {
   by12lx60:
     "Beyma's sheet prints Xmax 9 but its own Lvc 20 / Hag 10 give 7.86 by its printed formula",
+  by15p1000fev2:
+    "Beyma's sheet prints Xmax 8 but its own Lvc 20 / Hag 12 give 7.43 by its printed formula",
   ciare_hwb200:
     "Ciare prints Xmax 7 but its own Hvc 16 / Hg 8 give 6.0 by its printed Hg/4 formula (HW205, same motor, prints 6)",
 };
@@ -168,7 +172,13 @@ test("xmax: the maker id, not the driver's name, picks the hi-fi estimate band",
     );
   }
   // every table row with an estimated Xmax got its band from its maker
-  for (const d of [...SPEAKER_SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS, ...HIFI_WOOFERS]) {
+  for (const d of [
+    ...SPEAKER_SUB_OPTIONS,
+    ...MID_OPTIONS,
+    ...FILL_OPTIONS,
+    ...TRIAX_OPTIONS,
+    ...HIFI_WOOFERS,
+  ]) {
     const { pub, xmax } = d.ts;
     if (xmax.basis !== "estimated" || pub.Xmax == null || pub.formula !== "unstated") continue;
     const k = HIFI_MAKERS.has(d.maker) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro;

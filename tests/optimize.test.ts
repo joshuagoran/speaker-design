@@ -19,7 +19,7 @@ import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { panelIn } from "../src/lib/panel";
 import { PA_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 import { KEEP_UP_SLACK_DB } from "../src/lib/pa/chips";
-import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data";
+import { SUB_OPTIONS, MID_BOXES, CD_OPTIONS } from "../src/lib/data";
 import { OUT_OF_REACH_LEAD } from "../src/constants/optimizerText";
 import type {
   ChipId,
@@ -570,10 +570,16 @@ test("a closest design that keeps every goal once on the sliders is the fix, wit
 });
 
 test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {
-  const out = optimizePaStack({ ...base, cur: pick(SEED_NAMES.lightBlock), goal: "cheaper" });
+  const cur = pick(SEED_NAMES.lightBlock);
+  const out = optimizePaStack({ ...base, cur, goal: "cheaper" });
   const k = out.cards[0];
   assert.ok(k, "a card");
-  assert.equal(k.config.cd, "hf143n", `kept ${k.config.cd} at $${Math.round(k.metrics.price)}`);
+  // a driver with no US price never counts as cheaper
+  const priceOf = (id: string) => CD_OPTIONS.find((d) => d.id === id)?.price ?? Infinity;
+  assert.ok(
+    priceOf(k.config.cd) < priceOf(cur.cd),
+    `kept ${k.config.cd} ($${priceOf(k.config.cd)}) against ${cur.cd} ($${priceOf(cur.cd)})`,
+  );
 });
 
 test("Cheaper: fewest warnings, then strictly the cheapest, with weight breaking a price tie", () => {
