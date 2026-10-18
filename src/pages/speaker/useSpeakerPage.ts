@@ -24,7 +24,7 @@ import { usePageDraft, type PageDraft } from "../../hooks/usePageDraft";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
-import { isSavedSpeakerShape, readSavedSpeaker } from "../../lib/speaker/speakerSaves";
+import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { useSpeakerOptimizer } from "./useSpeakerOptimizer";
 import type {
   BandId,
@@ -49,12 +49,6 @@ export const emptySpeaker = (): SpeakerSpec => ({
 
 /** What the library's row says when a document holds no speaker. */
 const MISSING_SPEAKER_TEXT = "That save holds no speaker";
-
-/**
- * Whether a library document's `speaker` reads as a spec: an object with a cabinet of chambers and a list of bands.
- * Its fields are trusted from there: `snapshot` wrote them, and `readSavedSpeaker` brings an earlier build's up to date.
- */
-export const isSavedSpeaker = isSavedSpeakerShape;
 
 /** What the library saves: the spec without its id and name, undefined fields dropped (the stores reject them). */
 export function speakerSnapshot(spec: SpeakerSpec): SavedSpeakerData {

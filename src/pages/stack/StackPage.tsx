@@ -52,7 +52,7 @@ import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
-import { paPlannerDesign } from "../speaker/SpeakerPage";
+import { paPlannerDesign } from "../speaker/paPlannerDesign";
 import { MemberSettings } from "./MemberSettings";
 import { stackKeepUpChips } from "./stackChips";
 import { stackSummary } from "./stackSummary";

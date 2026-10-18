@@ -74,6 +74,9 @@ const offset = (x: unknown) =>
     ? Math.min(HANDLE_OFFSET_SLIDER.max, Math.max(HANDLE_OFFSET_SLIDER.min, x))
     : 0;
 /** One box's saved handles: its model and offsets where they read right, else `fallback`'s model and no offsets. */
+/** No handles: a hardware plan with the input dish alone, or an old save whose handle model doesn't read. */
+export const NO_HANDLE_SET: BoxHandles = { model: NO_HANDLES, upIn: 0, backIn: 0 };
+
 export const savedBox = (x: unknown, fallback: BoxHandles): BoxHandles => {
   if (typeof x !== "object" || x === null) return fallback;
   const model = Reflect.get(x, "model");

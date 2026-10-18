@@ -1,6 +1,6 @@
 import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
 import { SPEAKER_START_NAMES, type SpeakerStart } from "../../constants/speakerStarts";
-import { paPlannerDesign } from "./SpeakerPage";
+import { paPlannerDesign } from "./paPlannerDesign";
 import type { SpeakerPageState } from "./useSpeakerPage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import type { HifiPlanner } from "../hifi/useHifiPlanner";

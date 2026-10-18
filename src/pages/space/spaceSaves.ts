@@ -9,7 +9,7 @@ import type {
   SpeakerSpec,
   StackSpec,
 } from "../../types";
-import { isSavedSpeaker } from "../speaker/useSpeakerPage";
+import { isSavedSpeakerShape } from "../../lib/speaker/speakerSaves";
 import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
 import { homeVenue } from "../../lib/speaker/specParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
@@ -81,7 +81,7 @@ const hasFields = (value: unknown, fields: Record<string, string>): value is obj
 
 /** Whether a value reads as a saved speaker with its id (a space's copy keeps the id its placements name). */
 const isSpaceSpeaker = (value: unknown): value is SpeakerSpec =>
-  isSavedSpeaker(value) && typeof Reflect.get(value, "id") === "string";
+  isSavedSpeakerShape(value) && typeof Reflect.get(value, "id") === "string";
 
 /** Whether a value reads as a stack: its id, name, members and notes. */
 const isStack = (value: unknown): value is StackSpec =>

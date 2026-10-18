@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { BandId, DispersionPlane, FrequencyPoint, PaPlannerDesign } from "../../types";
+import type { BandId, DispersionPlane, FrequencyPoint } from "../../types";
 import { alpha } from "../../styles/palette";
 import { bandColor } from "../../lib/speaker/bandColor";
 import { usePalette } from "../../hooks/useTheme";
@@ -101,16 +101,6 @@ const SECTION_HEIGHT = "h-[260px] md:h-[clamp(280px,42vh,440px)]";
 
 /** The settings sections that start closed: only Chambers starts open. */
 const FOLDS_START = { construction: false, bands: false, look: false, optimizer: false } as const;
-
-/** The PA design as the planner holds it, every field set. */
-export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
-  ...planner.snapshot(),
-  panel: planner.wallPanel,
-  hornMount: planner.hornMount,
-  spacerH: planner.spacerHeightIn,
-  hardware: planner.hardware,
-  divider: planner.ductDividerPanel,
-});
 
 /**
  * The Speaker page: one speaker from its chambers, drivers and bands, its response and its maximum output on fixed axes
@@ -266,7 +256,13 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
     pricePartial: price.partial,
     sections: flares.length > 0,
   });
-  const view = shownView(picked2d, positionFocus.focus);
+  /** the focused position field's driver, while it still exists (a field removed with focus sends no blur) */
+  const focus =
+    positionFocus.focus &&
+    chambers[positionFocus.focus.chamber]?.drivers[positionFocus.focus.driver]
+      ? positionFocus.focus
+      : null;
+  const view = shownView(picked2d, focus);
   return (
     <SettingsLayout
       results={
@@ -313,10 +309,10 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
                           drivers: ch.drivers.map((d, k) => (k === j ? { ...d, position } : d)),
                         }))
                       }
-                      focus={positionFocus.focus}
+                      focus={focus}
                     />
                   ) : (
-                    <SpeakerSide spec={spec} focus={positionFocus.focus} />
+                    <SpeakerSide spec={spec} focus={focus} />
                   )}
                 </div>
                 <p className="text-xs text-stone-500">{SPEAKER_VIEW_HINTS[view]}</p>

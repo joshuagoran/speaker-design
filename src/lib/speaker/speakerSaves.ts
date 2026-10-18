@@ -23,7 +23,7 @@ import {
 import { NO_HANDLES } from "../../constants/hardware";
 import { CHAMBER_LOAD } from "../../constants/speakerSpec";
 import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
-import { savedBox } from "../pa/hardware";
+import { NO_HANDLE_SET, savedBox } from "../pa/hardware";
 import { defaultBraceStyleNear } from "../bracing";
 
 /** A saved speaker's spec, as the library holds it (no id or name). */
@@ -73,9 +73,6 @@ function legacyHandles(hardware: unknown): BoxHandles | null {
   const handles = savedBox(hardware, NO_HANDLE_SET);
   return handles.model === NO_HANDLES ? null : handles;
 }
-
-/** No handles: what an old hardware choice whose model doesn't read takes (its dish stays). */
-const NO_HANDLE_SET: BoxHandles = { model: NO_HANDLES, upIn: 0, backIn: 0 };
 
 /**
  * A chamber as the page holds it now: its own bracing (the cabinet's old choice, `fallback`, where it has none), and a

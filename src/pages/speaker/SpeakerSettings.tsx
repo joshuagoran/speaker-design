@@ -231,9 +231,13 @@ export function SpeakerSettings({ speakerPage, folds }: Props) {
               variant="primary"
               onClick={() =>
                 speakerPage.editChambers((list) => {
-                  // stacked on the highest chamber
+                  // stacked on the highest chamber, braced as the last one (its walls and back panel)
                   const height = Math.max(0, ...list.map((c) => c.at.yIn + c.dims.h));
-                  return [...list, { ...DEFAULT_SPEAKER_CHAMBER, at: { xIn: 0, yIn: height } }];
+                  const bracing = list.at(-1)?.bracing ?? DEFAULT_SPEAKER_CHAMBER.bracing;
+                  return [
+                    ...list,
+                    { ...DEFAULT_SPEAKER_CHAMBER, bracing, at: { xIn: 0, yIn: height } },
+                  ];
                 })
               }
             >

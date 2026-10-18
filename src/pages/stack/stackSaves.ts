@@ -7,7 +7,7 @@ import type {
   StackDesign,
   StackMember,
 } from "../../types";
-import { isSavedSpeaker } from "../speaker/useSpeakerPage";
+import { isSavedSpeakerShape } from "../../lib/speaker/speakerSaves";
 import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
 import { STACK_TEXT } from "../../constants/stack";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
@@ -47,7 +47,7 @@ export function stackSnapshot(design: StackDesign): SavedStackData {
 
 /** Whether a value reads as a saved speaker with its id (a stack's copy keeps the id its members name). */
 const isStackSpeaker = (value: unknown): value is SpeakerSpec =>
-  isSavedSpeaker(value) && typeof Reflect.get(value, "id") === "string";
+  isSavedSpeakerShape(value) && typeof Reflect.get(value, "id") === "string";
 
 /** Whether a value reads as a list of members: each names a speaker and has a pose and a crossover. */
 const isMembers = (value: unknown): value is StackMember[] =>

@@ -22,7 +22,3 @@ export function shellBackJoint(chambers: readonly Pick<SpeakerChamber, "load" | 
   const joints = chambers.map((c) => bracingTaken(c).backJoint);
   return joints.find((j): j is BackJointId => j !== GLUED_BACK) ?? GLUED_BACK;
 }
-
-/** Whether no chamber takes braces (every Box chamber unbraced, or only horn chambers). */
-export const noChamberBraced = (chambers: readonly Pick<SpeakerChamber, "load" | "bracing">[]) =>
-  chambers.every((c) => bracingTaken(c).braceStyle === NO_BRACING);

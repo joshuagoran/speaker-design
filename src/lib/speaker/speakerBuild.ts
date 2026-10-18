@@ -20,7 +20,6 @@ import type {
   PurchasedPart,
   BraceStyleId,
   BoxBracing,
-  BoxHandles,
   BackJointId,
   BoxHardwarePlan,
   ChamberBracing,
@@ -80,7 +79,7 @@ import {
 } from "../pa/calc";
 import { subTubeKit } from "../pa/tubes";
 import { towerHornCutout } from "../pa/tower";
-import { hardwareKeepOut, planBoxHardware, withoutDish } from "../pa/hardware";
+import { NO_HANDLE_SET, hardwareKeepOut, planBoxHardware, withoutDish } from "../pa/hardware";
 import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
 import { MIN_BAY_IN, braceShortfalls, defaultBraceStyleNear, panelStock } from "../bracing";
 import { bracingTaken, shellBackJoint } from "./chamberBracing";
@@ -154,7 +153,7 @@ import { CM2_PER_IN2, KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/uni
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
 import { SPEAKER_TEXT, DRIVER_KIND_NAMES, FOLD_WALL_NAMES } from "../../constants/speakerPage";
 import { FOLD_END, FOLD_SQUARE_TOL_DEG } from "../../constants/foldHorn";
-import { HARDWARE_BOX, NO_HANDLES } from "../../constants/hardware";
+import { HARDWARE_BOX } from "../../constants/hardware";
 import {
   PURCHASED_PART,
   purchasedElbowName,
@@ -615,9 +614,6 @@ function bracedShell(shell: BraceShell, inputs: BraceInputs): BoxBracing {
 
 /** The hardware a shell's lowest chamber takes: its handles and whether it has the input dish (`SpeakerCabinet`). */
 type ShellHardware = Pick<SpeakerCabinet, "handles" | "inputDish">;
-
-/** The handles as the PA hardware plan takes them: the cabinet's, or none (the dish alone). */
-const NO_HANDLE_SET: BoxHandles = { model: NO_HANDLES, upIn: 0, backIn: 0 };
 
 /**
  * A chamber's braces and ribs and its hardware. The hardware is placed first (the handles at the center of gravity,
