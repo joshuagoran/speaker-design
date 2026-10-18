@@ -22,6 +22,8 @@
         --magenta: #e5007e;
         --cyan: #0077b8;
         --yellow: #ffd400;
+        /* the lowest band's line: a deep gold that reads as a line on white (3:1) */
+        --yellow-line: #b08000;
         --sub-tint: #fff3b0;
         --mid-tint: #cce6f4;
         --shadow: #111111;
@@ -52,6 +54,7 @@
           --magenta: #ff4fae;
           --cyan: #45b6f2;
           --yellow: #ffd84d;
+          --yellow-line: #ffd84d;
           --sub-tint: #3a3410;
           --mid-tint: #12313f;
           --shadow: #000000;
@@ -80,6 +83,7 @@
         --magenta: #ff4fae;
         --cyan: #45b6f2;
         --yellow: #ffd84d;
+        --yellow-line: #ffd84d;
         --sub-tint: #3a3410;
         --mid-tint: #12313f;
         --shadow: #000000;
@@ -883,13 +887,18 @@
         font-size: 12px;
         color: var(--muted);
       }
-      .legend i {
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+      }
+      /* a band's swatch: a short line in the band's color and dash (bandLine in palette.ts) */
+      .bsw {
         display: inline-block;
-        width: 18px;
-        height: 0;
-        border-top: 3px solid;
-        vertical-align: 3px;
-        margin-right: 4px;
+        flex: none;
+        width: 20px;
+        height: 8px;
+        vertical-align: middle;
+        margin-right: 6px;
       }
       .tiles {
         display: grid;
@@ -1030,6 +1039,9 @@
       }
       .s-cyan {
         stroke: var(--cyan);
+      }
+      .s-yline {
+        stroke: var(--yellow-line);
       }
       @media (prefers-reduced-motion: reduce) {
         * {
@@ -1250,6 +1262,7 @@
           "External: a DSP splits the signal before the amps, one amp channel per band. Internal: a passive crossover in the box, after one amp channel.",
         amp: "The amp channel's power into this band, W.",
         band: "The band from Bands and filters that plays this driver.",
+        hfBand: "The band from Bands and filters that plays the HF center of this driver.",
         delDriver: "Delete this driver",
         showDrivers: "Show the drivers",
         hideDrivers: "Hide the drivers",
@@ -1333,6 +1346,8 @@
             z: 4,
             horn: type === "compression" ? "rosse" : "none",
             mount: "baffle",
+            /* a coaxial driver's HF band; null or a removed band: the highest band */
+            hfBand: null,
           },
           o,
         );
@@ -1590,10 +1605,13 @@
       };
       const roll = (fc, f, order, side) =>
         -10 * Math.log10(1 + (side === "hp" ? fc / f : f / fc) ** (2 * order));
-      function driverResp(c, d, f) {
+      /* part: "hf" for a coaxial driver's HF center, else the driver (or a coaxial driver's cone) */
+      function driverResp(c, d, f, part) {
         const m = model(d);
         let L = m.sens + 6 * Math.log2(Math.max(1, d.count));
-        if (d.type === "woofer" || d.type === "coaxial") {
+        if (part === "hf") {
+          L += roll(1100, f, 2, "hp") + roll(18000, f, 2, "lp");
+        } else if (d.type === "woofer" || d.type === "coaxial") {
           const lo = lowCorner(c, d);
           const order = c.type === "horn" || c.vent !== "sealed" ? 4 : 2;
           L += roll(lo, f, order, "hp") + roll(2600 * (10 / m.size), f, 2, "lp");
@@ -1613,12 +1631,19 @@
       function bandCurves() {
         return S.bands.map((b) => {
           const users = [];
+          // [chamber, driver, part]: a coaxial driver's HF center plays in its own band
           S.chambers.forEach((c) =>
-            c.drivers.forEach((d) => d.band === b.id && users.push([c, d])),
+            c.drivers.forEach((d) => {
+              if (d.band === b.id) users.push([c, d, "main"]);
+              if (d.type === "coaxial" && hfBandOf(d).id === b.id) users.push([c, d, "hf"]);
+            }),
           );
           if (!users.length) return null;
           const resp = FREQS.map((f) => {
-            const p = users.reduce((s, [c, d]) => s + 10 ** (driverResp(c, d, f) / 10), 0);
+            const p = users.reduce(
+              (s, [c, d, part]) => s + 10 ** (driverResp(c, d, f, part) / 10),
+              0,
+            );
             return (
               10 * Math.log10(p) +
               b.level +
@@ -1628,7 +1653,7 @@
               filt(S.xover.lp, "lp", f)
             );
           });
-          const cone = users.find(([, d]) => isCone(d));
+          const cone = users.find(([, d, part]) => isCone(d) && part !== "hf");
           const fx = cone ? lowCorner(cone[0], cone[1]) * 1.5 : 0;
           const ceiling = 10 * Math.log10(b.amp) + (cone ? 0 : -3);
           const max = resp.map((L, i) => {
@@ -1732,6 +1757,37 @@
         chev: '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"/></svg>',
       };
 
+      /* ---------- band colors ---------- */
+      /* a band's line by its place among n bands, low to high (as bandLine in palette.ts, with the owner's
+         change: the lowest band in yellowLine, not the lighter gray): the lowest in yellowLine, the highest
+         in cyan, the ones between in magenta, every second one dashed. One band is the lowest.
+         cls: the stroke class, color: the palette variable, dash: the dash pattern */
+      const bandLine = (i, n) =>
+        i === 0
+          ? { cls: "s-yline", color: "--yellow-line" }
+          : i === n - 1
+            ? { cls: "s-cyan", color: "--cyan" }
+            : i % 2 === 0
+              ? { cls: "s-mag", color: "--magenta", dash: "6 4" }
+              : { cls: "s-mag", color: "--magenta" };
+      /* a band's line by its id: the band order sets it */
+      const bandStyle = (id) =>
+        bandLine(
+          Math.max(
+            0,
+            S.bands.findIndex((b) => b.id === id),
+          ),
+          S.bands.length,
+        );
+      /* a coaxial driver's HF band: the one it names, else the highest band */
+      const hfBandOf = (d) => S.bands.find((b) => b.id === d.hfBand) || S.bands[S.bands.length - 1];
+      /* a short line in a band's color and dash, before the band's name; width: the line width, px */
+      const swatch = (st, width = 3) =>
+        `<svg class="bsw" viewBox="0 0 20 8" aria-hidden="true"><line x1="1" y1="4" x2="19" y2="4" stroke="var(${st.color})" stroke-width="${width}" ${st.dash ? `stroke-dasharray="${st.dash}"` : ""}/></svg>`;
+      /* the swatches before a driver's summary line: its band, and a coaxial driver's HF band */
+      const driverSwatches = (d) =>
+        swatch(bandStyle(d.band)) + (d.type === "coaxial" ? swatch(bandStyle(hfBandOf(d).id)) : "");
+
       /* ---------- summaries ---------- */
       /* a band's pass range from its filters, e.g. "90 Hz–1.2 kHz" */
       const bandRange = (b) =>
@@ -1755,7 +1811,8 @@
         const b = S.bands.find((x) => x.id === d.band);
         const top =
           c.type === "box" && d.mount === "top" && hornOf(d).w ? ` · ${hornOf(d).name} on top` : "";
-        return `${d.count} × ${model(d).name}${top} · ${b ? b.name : "No"} band`;
+        const hf = d.type === "coaxial" ? `, HF ${hfBandOf(d).name} band` : "";
+        return `${d.count} × ${model(d).name}${top} · ${b ? b.name : "No"} band${hf}`;
       };
       const PORT_NAMES = { round: "round", slot: "slot", duct: "side ducts" };
       const ventSum = (c) =>
@@ -1824,21 +1881,31 @@
             return "Not run";
         }
       }
+      /* a section's summary as HTML: the bands' line carries each band's swatch */
+      const summaryHtml = (id) =>
+        id === "bands"
+          ? S.bands
+              .map(
+                (b, i) =>
+                  `${swatch(bandLine(i, S.bands.length))}${esc(b.name)} ${esc(bandRange(b))}`,
+              )
+              .join(" · ")
+          : esc(summary(id));
 
       /* ---------- settings column ---------- */
       function section(id, title, body) {
         const open = folds[id];
-        return `<section class="sec" data-sec="${id}"><h2><button type="button" data-fold="${id}" aria-expanded="${open}"><span class="ft"><span>${title}</span><span class="sum" data-sum="${id}" ${open ? "hidden" : ""}>${esc(summary(id))}</span></span><span class="pm" aria-hidden="true">${open ? "−" : "+"}</span></button></h2><div class="secbody stack" ${open ? "" : "hidden"}>${body}</div></section>`;
+        return `<section class="sec" data-sec="${id}"><h2><button type="button" data-fold="${id}" aria-expanded="${open}"><span class="ft"><span>${title}</span><span class="sum" data-sum="${id}" ${open ? "hidden" : ""}>${summaryHtml(id)}</span></span><span class="pm" aria-hidden="true">${open ? "−" : "+"}</span></button></h2><div class="secbody stack" ${open ? "" : "hidden"}>${body}</div></section>`;
       }
       const isBoxOpen = (key) => boxOpen[key] ?? detailsDefault;
       /* a box that folds to one summary line. o.title: a bold title, open and closed; o.sum: writes
-         the summary, shown closed (always, as the main text, when there is no title); o.actions:
-         buttons at the right of the line */
+         the summary, shown closed (always, as the main text, when there is no title); o.lead: HTML
+         before the summary (a band's swatch); o.actions: buttons at the right of the line */
       function foldBox(key, o, body) {
         const open = isBoxOpen(key);
         boxSums.set(key, o.sum);
         const sumHidden = o.title && open ? "hidden" : "";
-        return `<div class="fbox" data-box="${key}"><div class="fhead"><button type="button" class="fsum" data-box-toggle="${key}" aria-expanded="${open}">${ICON.chev}<span class="ftext">${o.title ? `<span class="ftitle">${o.title}</span>` : ""}<span class="${o.title ? "fs" : "fs main"}" data-bsum ${sumHidden}>${esc(o.sum())}</span></span></button>${o.actions || ""}</div><div class="fbody stack" ${open ? "" : "hidden"}>${body}</div></div>`;
+        return `<div class="fbox" data-box="${key}"><div class="fhead"><button type="button" class="fsum" data-box-toggle="${key}" aria-expanded="${open}">${ICON.chev}<span class="ftext">${o.title ? `<span class="ftitle">${o.title}</span>` : ""}${o.lead || ""}<span class="${o.title ? "fs" : "fs main"}" data-bsum ${sumHidden}>${esc(o.sum())}</span></span></button>${o.actions || ""}</div><div class="fbody stack" ${open ? "" : "hidden"}>${body}</div></div>`;
       }
       function setBox(key, open) {
         boxOpen[key] = open;
@@ -2041,6 +2108,17 @@
           S.bands.map((b) => [b.id, b.name]),
           { tip: TIP.band },
         );
+        // a coaxial driver's HF center plays in its own band
+        const hfSel =
+          d.type === "coaxial"
+            ? sel(
+                "HF's band",
+                `${p}.hfBand`,
+                S.bands.map((b) => [b.id, b.name]),
+                { tip: TIP.hfBand, value: hfBandOf(d).id },
+              )
+            : "";
+        const bands = hfSel ? `<div class="r2">${bandSel}${hfSel}</div>` : bandSel;
         let pos;
         if (c.type === "horn")
           pos = num("Left (−) / Right (+)", `${p}.x`, { pos: `${i}.${j}.x`, tip: TIP.hornX });
@@ -2051,7 +2129,7 @@
         const trash = `<button type="button" class="ibtn sm" data-act="delDriver" data-c="${i}" data-d="${j}" aria-label="Delete driver ${j + 1}" data-tip="${TIP.delDriver}">${ICON.trash}</button>`;
         return foldBox(
           `drv.${d.id}`,
-          { sum: () => driverSum(c, d), actions: trash },
+          { sum: () => driverSum(c, d), lead: driverSwatches(d), actions: trash },
           `<div class="r2">${sel("Type", `${p}.type`, DRIVER_TYPES)}${d.type === "woofer" ? sel("Size", `${p}.size`, [["all", "All sizes"], ...SIZES.map((s) => [s, `${s} in`])]) : ""}</div>
           <div class="rmc">${sel("Model", `${p}.model`, models)}${num("Count", `${p}.count`, { step: 1, min: 1 })}</div>
           ${
@@ -2076,7 +2154,7 @@
                 }</div>`
               : ""
           }
-          ${c.type === "horn" ? `<div class="r2">${bandSel}${pos}</div>` : `${bandSel}${pos}`}`,
+          ${c.type === "horn" ? (hfSel ? `${bands}${pos}` : `<div class="r2">${bandSel}${pos}</div>`) : `${bands}${pos}`}`,
         );
       }
       /* the Advanced fold's summary: the chamber's position (left or right of the cabinet's center, up from its bottom) */
@@ -2133,6 +2211,7 @@
               `band.${b.id}`,
               {
                 sum: () => bandSum(b),
+                lead: swatch(bandLine(k, S.bands.length)),
                 actions:
                   S.bands.length > 1
                     ? `<button type="button" class="btn xs" data-act="delBand" data-b="${k}">Remove</button>`
@@ -2215,7 +2294,7 @@
       function updateLive() {
         SECTIONS.forEach(([id]) => {
           const el = $(`[data-sum="${id}"]`);
-          if (el) el.textContent = summary(id);
+          if (el) el.innerHTML = summaryHtml(id);
         });
         boxSums.forEach((write, key) => {
           const el = $(`[data-box="${key}"] > .fhead [data-bsum]`);
@@ -2655,13 +2734,19 @@
             c.drivers.forEach((d, j) => {
               const fz = focus && focus.c === i && focus.d === j ? focus : null;
               const dragging = drag && drag.c === i && drag.d === j;
-              const col = isCone(d) ? "s-mag" : "s-cyan";
-              const fill = isCone(d) ? "var(--magenta)" : "var(--cyan)";
+              // the driver in its band's color; a coaxial driver's HF center in its HF band's color
+              const st = bandStyle(d.band);
+              const col = `stroke="var(${st.color})"`;
+              const fill = `var(${st.color})`;
+              const dash = st.dash ? `stroke-dasharray="${lw * 6} ${lw * 4}"` : "";
+              const hfSt = d.type === "coaxial" ? bandStyle(hfBandOf(d).id) : st;
               if (c.type === "horn") {
                 const r = (model(d).size || 6) * 0.47;
                 const a = hornDriverAt(c);
                 const cy = Y(c.at.y + t + a.v * (c.h - 2 * t));
-                g += `<circle cx="${cx0 + d.x}" cy="${cy}" r="${r}" fill="none" class="${col}" stroke-width="${lw * 1.4}" stroke-dasharray="${lw * 4} ${lw * 3}"/>`;
+                g += `<circle cx="${cx0 + d.x}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="0.08" ${col} stroke-width="${lw * 1.4}" stroke-dasharray="${lw * 4} ${lw * 3}"/>`;
+                if (d.type === "coaxial")
+                  g += `<circle cx="${cx0 + d.x}" cy="${cy}" r="${r * 0.42}" fill="var(${hfSt.color})" fill-opacity="0.2" stroke="var(${hfSt.color})" stroke-width="${lw}"/>`;
                 if (fz)
                   g +=
                     `<line x1="${cx0}" x2="${cx0}" y1="${yt}" y2="${yb}" stroke="var(--cyan)" stroke-width="${lw}" stroke-dasharray="${lw * 4} ${lw * 3}"/>` +
@@ -2675,16 +2760,20 @@
               if (d.mount === "top") {
                 const h = hornOf(d);
                 gy = Y(c.at.y + c.h) - h.h / 2;
-                shape = `<rect x="${-h.w / 2}" y="${-h.h / 2}" width="${h.w}" height="${h.h}" rx="${h.h * 0.3}" fill="${fill}" fill-opacity="0.15" class="${col}" stroke-width="${lw * 1.6}"/>`;
+                shape = `<rect x="${-h.w / 2}" y="${-h.h / 2}" width="${h.w}" height="${h.h}" rx="${h.h * 0.3}" fill="${fill}" fill-opacity="0.15" ${col} ${dash} stroke-width="${lw * 1.6}"/>`;
               } else {
                 const size = isCone(d) ? model(d).size : hornOf(d).w ? 0 : 4;
                 for (let k = 0; k < d.count; k++) {
                   const oy = -(k - (d.count - 1) / 2) * (size || hornOf(d).h) * 1.05;
                   if (size)
-                    shape += `<circle cx="0" cy="${oy}" r="${size * 0.47}" fill="${fill}" fill-opacity="0.12" class="${col}" stroke-width="${lw * 1.6}"/><circle cx="0" cy="${oy}" r="${size * 0.2}" fill="none" class="${col}" stroke-width="${lw}"/>`;
+                    shape +=
+                      `<circle cx="0" cy="${oy}" r="${size * 0.47}" fill="${fill}" fill-opacity="0.12" ${col} ${dash} stroke-width="${lw * 1.6}"/>` +
+                      (d.type === "coaxial"
+                        ? `<circle cx="0" cy="${oy}" r="${size * 0.2}" fill="var(${hfSt.color})" fill-opacity="0.25" stroke="var(${hfSt.color})" stroke-width="${lw * 1.4}"/>`
+                        : `<circle cx="0" cy="${oy}" r="${size * 0.2}" fill="none" ${col} stroke-width="${lw}"/>`);
                   else {
                     const h = hornOf(d);
-                    shape += `<rect x="${-h.w / 2}" y="${oy - h.h / 2}" width="${h.w}" height="${h.h}" rx="${h.h * 0.3}" fill="${fill}" fill-opacity="0.12" class="${col}" stroke-width="${lw * 1.6}"/><circle cx="0" cy="${oy}" r="0.8" fill="${fill}"/>`;
+                    shape += `<rect x="${-h.w / 2}" y="${oy - h.h / 2}" width="${h.w}" height="${h.h}" rx="${h.h * 0.3}" fill="${fill}" fill-opacity="0.12" ${col} ${dash} stroke-width="${lw * 1.6}"/><circle cx="0" cy="${oy}" r="0.8" fill="${fill}"/>`;
                   }
                 }
               }
@@ -2759,7 +2848,8 @@
                   [px - tx * r * 0.3 - nx * dep, py - ty * r * 0.3 - ny * dep],
                   [px + tx * r * 0.3 - nx * dep, py + ty * r * 0.3 - ny * dep],
                 ];
-                g += `<polygon points="${q.map((p) => p.join(",")).join(" ")}" fill="var(--magenta)" fill-opacity="0.15" class="s-mag" stroke-width="${lw * 1.6}"/>`;
+                const hc = bandStyle(c.drivers[0].band).color;
+                g += `<polygon points="${q.map((p) => p.join(",")).join(" ")}" fill="var(${hc})" fill-opacity="0.15" stroke="var(${hc})" stroke-width="${lw * 1.6}"/>`;
               }
               g += `<rect x="${X(0.02)}" y="${YY(0.95)}" width="${X(0.25) - X(0.02)}" height="${YY(0.62) - YY(0.95)}" fill="none" class="s-faint" stroke-width="${lw}" stroke-dasharray="${lw * 3} ${lw * 2}"/>`;
             } else {
@@ -2778,13 +2868,15 @@
               }
               c.drivers.forEach((d, j) => {
                 const fz = focus && focus.c === i && focus.d === j && focus.axis === "z";
-                const hf = !isCone(d);
-                const col = hf ? "s-cyan" : "s-mag";
-                const fill = hf ? "var(--cyan)" : "var(--magenta)";
+                // the driver in its band's color; a coaxial driver's HF center in its HF band's color
+                const st = bandStyle(d.band);
+                const col = `stroke="var(${st.color})"`;
+                const fill = `var(${st.color})`;
+                const dash = st.dash ? `stroke-dasharray="${lw * 6} ${lw * 4}"` : "";
                 if (d.mount === "top") {
                   const h = hornOf(d);
                   const zc = d.z;
-                  g += `<path d="M${zc - h.h * 0.9} ${yt - h.h / 2 - h.h / 2} L${zc + h.h} ${yt - h.h / 2 - h.h * 0.15} L${zc + h.h} ${yt - h.h / 2 + h.h * 0.15} L${zc - h.h * 0.9} ${yt} Z" fill="${fill}" fill-opacity="0.15" class="${col}" stroke-width="${lw * 1.6}"/>`;
+                  g += `<path d="M${zc - h.h * 0.9} ${yt - h.h / 2 - h.h / 2} L${zc + h.h} ${yt - h.h / 2 - h.h * 0.15} L${zc + h.h} ${yt - h.h / 2 + h.h * 0.15} L${zc - h.h * 0.9} ${yt} Z" fill="${fill}" fill-opacity="0.15" ${col} ${dash} stroke-width="${lw * 1.6}"/>`;
                   if (fz)
                     g += ref(0, yt) + mark(0, yt - h.h / 2, zc, yt - h.h / 2, signed(d.z), true);
                   return;
@@ -2794,9 +2886,14 @@
                   const cy = Y(c.at.y + d.y) - (k - (d.count - 1) / 2) * size * 1.05;
                   const r = size * 0.45,
                     dep = isCone(d) ? size * 0.42 : hornOf(d).w ? 6 : 2;
-                  g += `<polygon points="${t},${cy - r} ${t},${cy + r} ${t + dep},${cy + r * 0.3} ${t + dep},${cy - r * 0.3}" fill="${fill}" fill-opacity="0.15" class="${col}" stroke-width="${lw * 1.6}"/>`;
+                  g += `<polygon points="${t},${cy - r} ${t},${cy + r} ${t + dep},${cy + r * 0.3} ${t + dep},${cy - r * 0.3}" fill="${fill}" fill-opacity="0.15" ${col} ${dash} stroke-width="${lw * 1.6}"/>`;
                   if (isCone(d))
-                    g += `<rect x="${t + dep}" y="${cy - r * 0.35}" width="${size * 0.2}" height="${r * 0.7}" fill="${fill}" fill-opacity="0.3" class="${col}" stroke-width="${lw}"/>`;
+                    g += `<rect x="${t + dep}" y="${cy - r * 0.35}" width="${size * 0.2}" height="${r * 0.7}" fill="${fill}" fill-opacity="0.3" ${col} stroke-width="${lw}"/>`;
+                  // a coaxial driver's HF center: its throat through the cone's center
+                  if (d.type === "coaxial") {
+                    const hc = bandStyle(hfBandOf(d).id).color;
+                    g += `<rect x="${t}" y="${cy - r * 0.18}" width="${dep + size * 0.2}" height="${r * 0.36}" fill="var(${hc})" fill-opacity="0.25" stroke="var(${hc})" stroke-width="${lw * 1.4}"/>`;
+                  }
                 }
               });
             }
@@ -2818,7 +2915,9 @@
           ed += `<circle cx="${X(u0)}" cy="${Y(v0)}" r="4" fill="var(--panel)" class="s-cyan" stroke-width="1.5"/><circle cx="${X(u1)}" cy="${Y(v1)}" r="4" fill="var(--panel)" class="s-cyan" stroke-width="1.5"/>`;
         });
         const a = hornDriverAt(c);
-        ed += `<circle cx="${X(a.u)}" cy="${Y(a.v)}" r="${(model(c.drivers[0] || { type: "woofer", model: "pd1850" }).size || 12) * 0.2 * s}" fill="var(--magenta)" fill-opacity="0.2" class="s-mag" stroke-width="1.5"/>`;
+        // the drivers in their band's color
+        const dc = c.drivers[0] ? bandStyle(c.drivers[0].band).color : "--muted";
+        ed += `<circle cx="${X(a.u)}" cy="${Y(a.v)}" r="${(model(c.drivers[0] || { type: "woofer", model: "pd1850" }).size || 12) * 0.2 * s}" fill="var(${dc})" fill-opacity="0.2" stroke="var(${dc})" stroke-width="1.5"/>`;
         // path chart: area along the path, with the straight horn dashed (scaled to the drawing: owner-approved exception)
         const secs = hornSections(c);
         const total = secs.reduce((sum, x) => sum + x[3], 0);
@@ -2884,21 +2983,10 @@
           g += `<path d="${d}" fill="none" class="${sr.cls}" stroke-width="${sr.width}" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ""} stroke-linejoin="round"/>`;
         });
         const legend = series
-          .map(
-            (sr) =>
-              `<span><i style="border-color:var(${sr.color});${sr.dash ? "border-top-style:dashed" : ""}"></i>${esc(sr.label)}</span>`,
-          )
+          .map((sr) => `<span>${swatch(sr, sr.width > 2 ? 4 : 3)}${esc(sr.label)}</span>`)
           .join("");
         return `<div class="chart fixed"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${ylabel} chart">${g}</svg></div><div class="legend">${legend}</div>`;
       }
-      const bandLine = (i, n) =>
-        i === 0
-          ? { cls: "s-faint", color: "--faint" }
-          : i === n - 1
-            ? { cls: "s-cyan", color: "--cyan" }
-            : i % 2 === 0
-              ? { cls: "s-mag", color: "--magenta", dash: "6 4" }
-              : { cls: "s-mag", color: "--magenta" };
       const tiles = (list) =>
         `<div class="tiles">${list.map(([l, v, u]) => `<div class="tile"><div class="tl">${l}</div><div class="tv">${v}<span class="tu">${u || ""}</span></div></div>`).join("")}</div>`;
       const chip = (kind, head, body) =>
@@ -3019,7 +3107,7 @@
         });
         curves.forEach((c) => {
           if (!c) return;
-          const hasCone = c.users.some(([, d]) => isCone(d));
+          const hasCone = c.users.some(([, d, part]) => isCone(d) && part !== "hf");
           rows.push(
             `<div class="chiprow"><span class="rl">${esc(c.b.name)} band</span>${hasCone ? chip("warn", "Limited by cone travel", `The band plays clean up to ${fmt(c.peakMax - 3)} dB at 1 m, with one drive for the whole band from the ${fmt(c.b.amp)} W amp.`) : chip("ok", "Amp-limited", `The band takes ${fmt(c.b.amp)} W from the amp, under its program rating.`)}${chip("ok", "Keeps up", "This band keeps up with the other bands at full power.")}</div>`,
           );

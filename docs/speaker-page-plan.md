@@ -63,7 +63,9 @@ Each setting sits at the level it belongs to.
 
 ### Band colors
 
-Each band keeps one color everywhere: its chart line (lowest band gray, highest cyan, the ones between magenta, every second one dashed).
+Each band keeps one color everywhere: its chart line. Low to high: the lowest yellow, the highest cyan, the ones between magenta (every second one dashed). A single band is yellow.
+
+- Yellow lines need a new palette token, "yellow line": a deep gold (#b08000) in the light theme, so a line passes 3:1 on white; the brand yellow in the dark theme.
 
 - The 2D views draw each driver in its band's color. A coaxial driver shows both of its bands.
 - The Bands menu shows the color as a swatch before each band's name.
