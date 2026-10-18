@@ -29,7 +29,7 @@ Each setting sits at the level it belongs to.
 
 | Level        | Settings                                                           |
 | ------------ | ------------------------------------------------------------------ |
-| Speaker      | Name, start from, bands, amps, input range                         |
+| Speaker      | Name, bands, amps, external crossover                              |
 | Cabinet      | Construction, wall panels, hardware, look                          |
 | Chamber      | Type (Box or Horn), Path, size, then only what that type uses      |
 | Box chamber  | Vent, fiber fill, bracing, back panel, drivers                     |
@@ -51,26 +51,32 @@ Each setting sits at the level it belongs to.
 
 ### Settings column
 
-| Section           | Change                                                                                                                                                                 |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Speaker           | "Start from" and its button on one row. The warning goes into the button's tooltip.                                                                                    |
-| Construction      | Construction, wall panels and hardware only.                                                                                                                           |
-| Chamber           | Type and Path on one row. Width, height and depth on one row. Fiber fill with its effect (below).                                                                      |
-| Horn              | Goals on one row with Design from goals. Horn type. Straight horn and Import in folds.                                                                                 |
-| Drivers           | Each driver is a box with a trash icon at its top right. Type and Size on one row. Model and Count on one row. Band. Add driver on its own line under the last driver. |
-| Bands and filters | Filter types in dropdowns, not six-button rows. Corner and level fields beside them.                                                                                   |
-| Optimizer         | No change.                                                                                                                                                             |
+| Section           | Change                                                                                                                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Speaker           | Name only. "Start from" moves to the saved configurations row as "New from…" (full save and open redesign: #180).                                                       |
+| Construction      | Construction, wall panels and hardware only.                                                                                                                            |
+| Chamber           | Sub-sections, each a light inset box with a small heading: Size, Vent, Fill and bracing (Box), Horn (Horn), Drivers. Type and Path on one row; dimensions on one row.   |
+| Horn              | Goals on one row with Design from goals (its tooltip says what it reads and sets). Horn type. Straight horn read-only, with "Edit by hand". "Import a Hornresp record". |
+| Drivers           | Each driver is a box with a trash icon at its top right. Type and Size on one row. Model and Count on one row. Band. Add driver on its own line under the last driver.  |
+| Bands and filters | Filter types in dropdowns, not six-button rows. Corner and level fields beside them.                                                                                    |
+| Optimizer         | No change.                                                                                                                                                              |
+
+### All sections
+
+- Field labels carry no unit: every length is inches. A units setting comes later (#149).
+- A fold's summary wraps under its title in small text, up to two lines. Summaries keep to the key facts.
+- Taps: "Front tap after section", "Back tap after section", "Taps from closed end". Tooltip: "Where the front and back of the cones join the horn, counted from the closed end."
 
 ### Driver position
 
 - Drag the drivers in the Front view. The fields follow.
 - The labels follow the convention in #173 (owner approved). The code keeps x, y and z.
 
-| Axis                           | Label                    | Measured from (in the tooltip)            |
-| ------------------------------ | ------------------------ | ----------------------------------------- |
-| Left/right                     | Left (−) / Right (+), in | The chamber's center, seen from the front |
-| Up/down                        | Down (−) / Up (+), in    | The chamber's bottom                      |
-| Front/back (a horn on the top) | Front (−) / Back (+), in | The front edge                            |
+| Axis                           | Label                | Measured from (in the tooltip)            |
+| ------------------------------ | -------------------- | ----------------------------------------- |
+| Left/right                     | Left (−) / Right (+) | The chamber's center, seen from the front |
+| Up/down                        | Down (−) / Up (+)    | The chamber's bottom                      |
+| Front/back (a horn on the top) | Front (−) / Back (+) | The front edge                            |
 
 - The Front view marks the point a field measures from, while the field has focus.
 - The first PR that uses these labels adds them to CLAUDE.md as a UI rule.
@@ -85,7 +91,7 @@ From #173 (owner, Oct 2026):
 
 ### Fiber fill
 
-The control names what to do, and a line shows what it does.
+The buttons name what to do; each button's tooltip says how. A readout beside them shows what it does.
 
 | Choice | What you do                      |
 | ------ | -------------------------------- |
@@ -107,7 +113,7 @@ Run each in the mock first, then in the app before every hand-over.
 3. Switch the 2D view between Front and Side.
 4. Find what the response chart includes, in Details.
 5. Change a chamber from Box to Horn. Bracing and back panel go away; the horn settings come.
-6. Set fiber fill. Read what it does without a tooltip.
+6. Set fiber fill. Read its effect beside the buttons.
 7. Set a band's high-pass and low-pass without long button rows.
 8. Add a second driver, then delete it with its trash icon.
 9. Move a driver on the baffle by dragging it in the Front view. Read its position in the fields.
@@ -116,6 +122,7 @@ Run each in the mock first, then in the app before every hand-over.
 
 1. Arched top: keep it, for speakers with only Box chambers. A speaker with a horn chamber does not show it.
 2. Chamber checks: chips, as now. Their long text goes into each chip's tooltip, so no text blocks stay on the page.
+3. Mock comments (Oct 18): units off the labels, fill hints as tooltips, sub-section boxes, wrapped summaries, Hornresp named, straight horn read-only, taps wording, Start from moves to saved configurations, charts at the app's fixed height.
 
 ## Steps
 
