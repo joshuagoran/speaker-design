@@ -759,6 +759,14 @@
       .saved select.savedlist {
         min-width: 200px;
       }
+      .saved input.savedname {
+        flex: 1 1 180px;
+        width: auto;
+        min-width: 0;
+        max-width: 280px;
+        height: 32px;
+        padding: 4px 8px;
+      }
       .views {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
@@ -1182,6 +1190,7 @@
         ["birch", "Birch ply", "#d7b98a"],
       ];
       const TIP = {
+        name: "The name a save uses.",
         newFrom: "Starts a new speaker from a template. It replaces the current design.",
         inset: "How far the baffle is behind the front edge of the frame.",
         panel:
@@ -1221,8 +1230,9 @@
         board: "The board the drivers mount on. Double it for large drivers.",
         importRec:
           "Paste the text of a Hornresp record. It sets the straight horn, the horn type, the taps and the chamber volume.",
-        netAir:
-          "The air the drivers work against. Auto: the inside volume minus the walls, braces, drivers and vent. Custom: you type the value.",
+        chamberX: "From the cabinet's center, seen from the front.",
+        chamberY: "From the bottom of the cabinet.",
+        rearChamber: "The closed air behind the cones.",
         x: "From the chamber's center, seen from the front. Left is negative.",
         y: "From the chamber's bottom edge, seen from the front.",
         z: "From the chamber's front edge, seen from the side. Back is positive.",
@@ -1239,6 +1249,7 @@
         drive:
           "External: a DSP splits the signal before the amps, one amp channel per band. Internal: a passive crossover in the box, after one amp channel.",
         amp: "The amp channel's power into this band, W.",
+        band: "The band from Bands and filters that plays this driver.",
         delDriver: "Delete this driver",
         showDrivers: "Show the drivers",
         hideDrivers: "Hide the drivers",
@@ -1295,8 +1306,8 @@
             bracing: "both",
             target: 200,
             back: "screwed",
-            netMode: "auto",
-            netL: 30,
+            /* a straight horn's rear chamber, L (set by Design from goals or an import) */
+            rearL: 12,
             hornType: "front",
             taps: { front: 1, rear: 3 },
             goals: { low: 40, high: 120, target: 125 },
@@ -1485,7 +1496,6 @@
         shEdit: {},
       };
       const folds = {
-        speaker: true,
         construction: false,
         chambers: true,
         bands: false,
@@ -1493,7 +1503,6 @@
         optimizer: false,
       };
       const SECTIONS = [
-        ["speaker", "Speaker"],
         ["construction", "Construction"],
         ["chambers", "Chambers"],
         ["bands", "Bands and filters"],
@@ -1543,8 +1552,8 @@
           .slice(0, n)
           .reduce((sum, x) => sum + x[3], 0);
       const panelIn = () => ({ "3/4": 0.71, "5/8": 0.59, "1/2": 0.47 })[S.panel];
+      /* the net air, always worked out: the inside volume minus the walls, braces, drivers and vent */
       function netL(c) {
-        if (c.netMode === "custom") return c.netL;
         const t = panelIn() * 2;
         let v = Math.max(0, (c.w - t) * (c.h - t) * (c.d - t)) * 0.016387;
         v *= c.type === "horn" ? 0.42 : c.bracing === "none" ? 0.97 : 0.93;
@@ -1796,8 +1805,6 @@
       function summary(id) {
         const n = (k, a, b) => `${k} ${k === 1 ? a : b}`;
         switch (id) {
-          case "speaker":
-            return `${S.name} · ${n(S.chambers.length, "chamber", "chambers")} · ${n(S.bands.length, "band", "bands")}`;
           case "construction":
             return [
               S.construction === "frame" ? "Frame" : "Flush",
@@ -1857,9 +1864,6 @@
       const details = (key, sum, body, cls = "fold") =>
         `<details class="${cls}" data-key="${key}"><summary data-dsum="${key}">${sum}</summary><div class="stack">${body}</div></details>`;
 
-      function speakerBody() {
-        return text("Name", "name");
-      }
       function constructionBody() {
         return `${tg("Construction", "construction", [
           ["frame", "Frame and inset baffle"],
@@ -1990,6 +1994,13 @@
         // the straight horn is calculated: read-only until "Edit by hand" is on
         const edit = !!view.shEdit[i];
         const off = edit ? "" : "disabled";
+        // the line and the one "Edit by hand" toggle for what Design from goals or an import sets
+        const editHead = `<div class="cardhead"><p class="hint">${TIP.shSet}</p><button type="button" class="btn xs nowrap" aria-pressed="${edit}" data-act="shEdit" data-c="${i}">Edit by hand</button></div>`;
+        // a straight horn's rear chamber, under the same toggle; a folded horn has none (its drawing sets it)
+        if (c.path === "straight") {
+          const rid = uid();
+          h += `${editHead}<div class="field"><label class="lbl" for="${rid}"><span>${term("Rear chamber, L", TIP.rearChamber)}</span></label><input id="${rid}" type="number" inputmode="decimal" step="0.5" min="0" value="${esc(Math.round(c.rearL * 10) / 10)}" data-bind="${p}.rearL" ${edit ? "" : "readonly"}></div>`;
+        }
         const cols = "grid-template-columns:minmax(0,1.5fr) repeat(3,minmax(0,1fr));gap:6px";
         const rows = sections
           .map(
@@ -2000,8 +2011,7 @@
         h += details(
           `sh.${i}`,
           `Straight horn · ${sections.length} sections, ${area(sections[0][1])} to ${area(sections[sections.length - 1][2])} in²`,
-          `<div class="cardhead"><p class="hint">${TIP.shSet}</p><button type="button" class="btn xs nowrap" aria-pressed="${edit}" data-act="shEdit" data-c="${i}">Edit by hand</button></div>
-           ${c.path === "folded" ? '<p class="hint">The path chart shows it dashed.</p>' : ""}
+          `${c.path === "folded" ? `${editHead}<p class="hint">The path chart shows it dashed.</p>` : ""}
            <div class="r3 hint" style="${cols}"><span>Profile</span><span>${term("Start", TIP.secStart)}</span><span>${term("End", TIP.secEnd)}</span><span>Length</span></div>${rows}
            ${edit ? `<div><button type="button" class="btn primary xs" data-tip="${esc(TIP.placeholder)}">Add section</button></div>` : ""}`,
         );
@@ -2029,6 +2039,7 @@
           d.type === "coaxial" ? "Cone's band" : "Band",
           `${p}.band`,
           S.bands.map((b) => [b.id, b.name]),
+          { tip: TIP.band },
         );
         let pos;
         if (c.type === "horn")
@@ -2068,9 +2079,8 @@
           ${c.type === "horn" ? `<div class="r2">${bandSel}${pos}</div>` : `${bandSel}${pos}`}`,
         );
       }
-      /* the Advanced fold's summary: the chamber's position (left, up) and the net air mode */
-      const advSummary = (c) =>
-        `Advanced · at ${+c.at.x.toFixed(2)}, ${+c.at.y.toFixed(2)} in · net air ${c.netMode}`;
+      /* the Advanced fold's summary: the chamber's position (left or right of the cabinet's center, up from its bottom) */
+      const advSummary = (c) => `Advanced · at ${+c.at.x.toFixed(2)}, ${+c.at.y.toFixed(2)}`;
       function chamberCard(c, i) {
         const p = `chambers.${i}`;
         const hasCone = c.drivers.some(isCone);
@@ -2098,16 +2108,7 @@
         const adv = details(
           `adv.${i}`,
           advSummary(c),
-          `<div class="r2">${num("Chamber from left", `${p}.at.x`)}${num("Chamber up from bottom", `${p}.at.y`)}</div>
-           <div class="r2" style="align-items:end">${tg(
-             "Net air",
-             `${p}.netMode`,
-             [
-               ["auto", "Auto"],
-               ["custom", "Custom"],
-             ],
-             { tip: TIP.netAir },
-           )}${c.netMode === "custom" ? num("Volume, L", `${p}.netL`, { step: 0.5 }) : readonly("Volume, L", fmt(netL(c), 1))}</div>`,
+          `<div class="r2">${num("Left (−) / Right (+)", `${p}.at.x`, { tip: TIP.chamberX })}${num("Down (−) / Up (+)", `${p}.at.y`, { tip: TIP.chamberY })}</div>`,
         );
         return `<div class="card" data-chamber="${i}">
           <div class="cardhead"><h3>Chamber ${i + 1}</h3>${S.chambers.length > 1 ? `<button type="button" class="btn xs" data-act="delChamber" data-c="${i}">Remove</button>` : ""}</div>
@@ -2181,7 +2182,6 @@
             active.dataset.act);
         boxSums.clear();
         const bodies = {
-          speaker: speakerBody,
           construction: constructionBody,
           chambers: () =>
             S.chambers.map(chamberCard).join("") +
@@ -2233,12 +2233,16 @@
       }
 
       /* ---------- results pane ---------- */
+      /* the cabinet's left edge: chamber x is its center's offset from the cabinet's center line (0) */
+      const cabLeft = () => Math.min(...S.chambers.map((c) => c.at.x - c.w / 2));
+      /* a chamber's left edge in the drawings, from the cabinet's left edge */
+      const leftOf = (c) => c.at.x - c.w / 2 - cabLeft();
       const cabBounds = () => {
         let W = 0,
           H = 0,
           D = 0;
         S.chambers.forEach((c) => {
-          W = Math.max(W, c.at.x + c.w);
+          W = Math.max(W, leftOf(c) + c.w);
           H = Math.max(H, c.at.y + c.h);
           D = Math.max(D, c.d);
         });
@@ -2297,7 +2301,7 @@
         g += `<ellipse cx="${fx0}" cy="${fy0 + 4}" rx="${(W * 0.62 + D * 0.3) * s}" ry="${D * 0.22 * s + 6}" fill="var(--shadow)" opacity="0.08"/>`;
         const driverCircles = (c, front) => {
           let out = "";
-          const cx0 = c.at.x + c.w / 2;
+          const cx0 = leftOf(c) + c.w / 2;
           c.drivers.forEach((d) => {
             if (c.type === "horn") {
               const a = hornDriverAt(c);
@@ -2351,7 +2355,7 @@
             : c.drivers
                 .filter((d) => d.mount !== "top")
                 .map((d) => {
-                  const cx0 = c.at.x + c.w / 2;
+                  const cx0 = leftOf(c) + c.w / 2;
                   const size = isCone(d) ? model(d).size : hornOf(d).w ? 0 : 4;
                   let o = "";
                   for (let k = 0; k < d.count; k++) {
@@ -2367,7 +2371,7 @@
                 .join("");
         const sorted = S.chambers.map((c, i) => [c, i]).sort((a, b) => a[0].at.y - b[0].at.y);
         sorted.forEach(([c]) => {
-          const x0 = c.at.x,
+          const x0 = leftOf(c),
             x1 = x0 + c.w,
             y0 = c.at.y,
             y1 = y0 + c.h,
@@ -2630,7 +2634,7 @@
           $("#v2dhint").textContent = "Drag a driver to move it.";
           svg.setAttribute("viewBox", `${-2} ${-topExtra - 2} ${W + 4} ${H + topExtra + 4}`);
           S.chambers.forEach((c, i) => {
-            const x0 = c.at.x,
+            const x0 = leftOf(c),
               yb = Y(c.at.y),
               yt = Y(c.at.y + c.h),
               cx0 = x0 + c.w / 2;
@@ -2699,7 +2703,7 @@
           if (archR()) {
             const top = S.chambers.reduce((a, c) => (c.at.y + c.h > a.at.y + a.h ? c : a));
             const yt = Y(top.at.y + top.h);
-            g += `<path d="M${top.at.x} ${yt} A ${top.w / 2} ${top.w / 2} 0 0 1 ${top.at.x + top.w} ${yt}" fill="var(--panel)" class="s-ink" stroke-width="${lw * 1.5}"/>`;
+            g += `<path d="M${leftOf(top)} ${yt} A ${top.w / 2} ${top.w / 2} 0 0 1 ${leftOf(top) + top.w} ${yt}" fill="var(--panel)" class="s-ink" stroke-width="${lw * 1.5}"/>`;
           }
         } else {
           $("#v2dhint").textContent = "Cut through the center. Front at the left.";
@@ -3110,7 +3114,7 @@
           ["Saved configurations", ["Save, open and templates: see #180."]],
         ];
         const h = `
-          <div class="saved"><b style="font-size:14px">Saved configurations</b><select class="savedlist" aria-label="Saved speakers"><option>No saved speakers yet</option></select><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Open</button><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Save</button><select data-newfrom aria-label="New from a template" data-tip="${esc(TIP.newFrom)}"><option value="" selected>New from…</option><optgroup label="Templates">${START_NAMES.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</optgroup></select></div>
+          <div class="saved" role="group" aria-label="Saved configurations"><input type="text" class="savedname" maxlength="60" value="${esc(S.name)}" placeholder="Speaker name" data-bind="name" data-noresults aria-label="Speaker name" data-tip="${esc(TIP.name)}"><select class="savedlist" aria-label="Saved speakers"><option>No saved speakers yet</option></select><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Open</button><button type="button" class="btn xs" data-tip="${esc(TIP.placeholder)}">Save</button><select data-newfrom aria-label="New from a template" data-tip="${esc(TIP.newFrom)}"><option value="" selected>New from…</option><optgroup label="Templates">${START_NAMES.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</optgroup></select></div>
           <div class="views">${view3d()}${view2d()}</div>
           ${S.chambers.map((c, i) => (c.type === "horn" && c.path === "folded" ? foldCard(c, i) : "")).join("")}
           ${notices}
@@ -3344,6 +3348,7 @@
         if (!el.dataset || !el.dataset.bind || el.tagName === "SELECT") return;
         const old = getPath(el.dataset.bind);
         setPath(el.dataset.bind, coerce(old, el.value));
+        if (el.hasAttribute("data-noresults")) return;
         changed(el.hasAttribute("data-rebuild"));
       });
       document.addEventListener("change", (e) => {
@@ -3469,7 +3474,7 @@
         const rh = isCone(d)
           ? r * (1 + (d.count - 1) * 1.05)
           : ((hornOf(d).h || 4) / 2) * (1 + (d.count - 1) * 1.05 * 2);
-        d.x = q4(clamp(p.x - (c.at.x + c.w / 2), -c.w / 2 + r, c.w / 2 - r));
+        d.x = q4(clamp(p.x - (leftOf(c) + c.w / 2), -c.w / 2 + r, c.w / 2 - r));
         if (d.mount !== "top") d.y = q4(clamp(H - p.y - c.at.y, rh, c.h - rh));
         const base = `chambers.${drag.c}.drivers.${drag.d}`;
         const fx = $(`[data-bind="${base}.x"]`),
