@@ -38,6 +38,7 @@ import type {
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
+import type { POSITION_AXIS } from "./constants/speakerResults";
 import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
 import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
@@ -2180,6 +2181,16 @@ export interface HornAttachment {
 export interface FacePoint {
   xIn: number;
   yIn: number;
+}
+
+/**
+ * A driver position field with focus on the Speaker page (src/pages/speaker/positionFocus): its chamber and driver
+ * entry, by their place in the spec, and the axis it sets (`POSITION_AXIS`). The 2D view marks the point it measures from.
+ */
+export interface PositionFocus {
+  chamber: number;
+  driver: number;
+  axis: (typeof POSITION_AXIS)[keyof typeof POSITION_AXIS];
 }
 
 /** A panel a vent can be cut into (`PANEL`): the baffle, or the back. */

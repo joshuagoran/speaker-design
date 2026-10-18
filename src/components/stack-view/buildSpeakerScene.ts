@@ -162,11 +162,20 @@ const braceRegionsOf = (cabinet: SpeakerSpec["cabinet"], index: number) => {
     : [];
 };
 
-/** What the scene draws: the spec's cabinet and look, and the view's cutaway. */
+/** What the scene draws: the spec's cabinet and look, the view's cutaway, and whether it shows the drivers. */
 export interface SpeakerSceneProps {
   spec: Pick<SpeakerSpec, "cabinet" | "look">;
   cutaway: boolean;
+  /** the drivers, their horns and their bodies drawn (default); false leaves their cutouts open */
+  drivers?: boolean;
 }
+
+/** The meshes and groups a driver is drawn with, which the view leaves out while the drivers are hidden. */
+const DRIVER_PART_NAMES: ReadonlySet<string> = new Set([
+  SPEAKER_GROUP_NAMES.driver,
+  SPEAKER_MESH_NAMES.hornDriver,
+  SPEAKER_MESH_NAMES.foldDriver,
+]);
 
 /**
  * What the scene reads of its props, as a key that changes exactly when the scene does: the construction, the top, the
@@ -176,10 +185,11 @@ export interface SpeakerSceneProps {
  * rebuild it); the look and the cutaway.
  * The model's own inputs (stuffing, net air, bands, a port's elbows and a horn's throat chamber) are left out.
  */
-export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
+export function speakerSceneKey({ spec, cutaway, drivers = true }: SpeakerSceneProps): string {
   const { cabinet, look } = spec;
   return JSON.stringify({
     cutaway,
+    drivers,
     look,
     construction: cabinet.construction,
     top: cabinet.top,
@@ -275,7 +285,11 @@ interface ChamberParts {
  * x = 0, its front at z = half the deepest chamber's depth. Chambers that fill one box of one depth get one shell, one
  * baffle and the shared walls inside it (as the PA tower is built); otherwise each chamber is its own box at its place.
  */
-export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.Group {
+export function buildSpeakerScene({
+  spec,
+  cutaway,
+  drivers = true,
+}: SpeakerSceneProps): THREE.Group {
   const { cabinet, look } = spec;
   const T = cabinet.panel.thicknessIn;
   /** the PA's frame, its baffle set back by the inset; else the Hi-fi box, its baffle over the whole front */
@@ -407,6 +421,8 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
             sides: { [-1]: [], 1: [] },
           },
           wallOpenings,
+          // a horn chamber's mouth looks onto its boards: the panels' inner faces show, as in the PA's frame
+          lining: !members.some(({ placed }) => placed.chamber.load.kind === CHAMBER_LOAD.horn),
         },
       );
       at = { zf: built.frontZ, innerZ: built.shellFrontZ, banded: false };
@@ -456,6 +472,14 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       wall.name = SPEAKER_MESH_NAMES.partition;
       group.add(wall);
     }
+  }
+  if (!drivers) {
+    // the drivers hidden: their parts come out, their cutouts stay open in the baffle and the boards
+    const hidden: THREE.Object3D[] = [];
+    ctx.group.traverse((o) => {
+      if (DRIVER_PART_NAMES.has(o.name)) hidden.push(o);
+    });
+    for (const o of hidden) o.removeFromParent();
   }
   return ctx.group;
 }

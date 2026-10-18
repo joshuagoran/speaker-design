@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
-import type { BandId, DispersionPlane, PaPlannerDesign } from "../../types";
-import { alpha, bandLine } from "../../styles/palette";
+import type { BandId, DispersionPlane, FrequencyPoint, PaPlannerDesign } from "../../types";
+import { alpha } from "../../styles/palette";
+import { bandColor } from "../../lib/speaker/bandColor";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { SectionHeading } from "../../components/ui/SectionHeading";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
@@ -14,12 +16,13 @@ import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/disp
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
 import { priceText } from "../../lib/speaker/speakerTotals";
-import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
-import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
 import { SpeakerFront } from "../../components/drawings/SpeakerFront";
 import { SpeakerSection } from "../../components/drawings/SpeakerSection";
+import { SpeakerSide } from "../../components/drawings/SpeakerSide";
+import { AssumptionsList } from "../../components/ui/AssumptionsList";
+import { UI_TEXT } from "../../constants/uiText";
 import { FoldHornCard } from "./FoldHornCard";
 import { withHornFold } from "./chamberLoad";
 import { Card } from "../../components/ui/Card";
@@ -32,7 +35,6 @@ import {
 import { keysOf } from "../../lib/records";
 import { formatInches } from "../../lib/format";
 import {
-  READING_WIDTH,
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
   GAP_Y,
@@ -54,21 +56,27 @@ import { SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { CHAMBER_LOAD, HORN_PATH } from "../../constants/speakerSpec";
 import {
-  SPEAKER_START,
-  SPEAKER_START_NAMES,
-  type SpeakerStart,
-} from "../../constants/speakerStarts";
+  BRACING_TILE_TEXT,
+  CHECK_ROW_TEXT,
+  SPEAKER_SAVE_WORDS,
+  SPEAKER_VIEW,
+  SPEAKER_VIEW_HINTS,
+  SPEAKER_VIEW_NAMES,
+  type SpeakerView,
+} from "../../constants/speakerResults";
 import { SpeakerSettings } from "./SpeakerSettings";
-import { bracingTaken, noChamberBraced } from "../../lib/speaker/chamberBracing";
 import { SpeakerOptimizerResults } from "./SpeakerOptimizerResults";
-import { bracingText } from "./speakerText";
-import { braceNoteLines } from "../../lib/bracingNotes";
-import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
-import { formatHz } from "../../lib/format";
-import { NO_BRACING } from "../../constants/bracing";
 import { bandChips, chamberChips } from "./speakerChips";
-import { chamberFitChips } from "../../lib/speaker/fitChips";
-import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
+import { chamberBraceChips, chamberFitChips, chamberUnbraced } from "../../lib/speaker/fitChips";
+import { useSpeakerStart } from "./useSpeakerStart";
+import { SaveRow } from "../../components/saved-configs/SaveRow";
+import { speakerDetails } from "./speakerDetails";
+import {
+  PositionFocusContext,
+  shownView,
+  usePositionFocus,
+  usePositionFocusState,
+} from "./positionFocus";
 import type { SpeakerPageState } from "./useSpeakerPage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import type { HifiPlanner } from "../hifi/useHifiPlanner";
@@ -109,7 +117,18 @@ export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
  * with the limits' checks, and the speaker library. A design starts from a template (empty, the PA, Hi-fi, monitor,
  * fill and PA v2 boxes), from a saved speaker, or from the current PA or Hi-fi design.
  */
-export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
+export function SpeakerPage(props: Props) {
+  // which driver position field has focus: the settings set it, the 2D view marks its point
+  const positionFocus = usePositionFocusState();
+  return (
+    <PositionFocusContext.Provider value={positionFocus}>
+      <SpeakerPageBody {...props} />
+    </PositionFocusContext.Provider>
+  );
+}
+
+/** The page inside its position focus (`SpeakerPage`). */
+function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
   const pal = usePalette();
   const { spec, response, limits, build, price, optimizer, store, snapshot, restore } = speakerPage;
   const folds = useFolds(
@@ -118,37 +137,18 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
     {},
     FOLDS_START,
   );
-  const starts = speakerStarts(planner.layout);
-  const startOptions = starts.map((id) => ({
-    id,
-    name: SPEAKER_START_NAMES[id],
-    group: startGroup(id),
-  }));
-  const [start, setStart] = useState<SpeakerStart>(SPEAKER_START.empty);
-  const startFrom = () =>
-    speakerPage.setSpec(
-      startSpeaker(start, {
-        pa: paPlannerDesign(planner),
-        hifi,
-        hifiLook: { cabFinish: hifi.cabinetFinish, baffleColor: hifi.baffleColor },
-      }),
-    );
-  /** each band's line, by its place in the spec (lighter gray, magenta, cyan); the sum in ink */
-  const lineOf = (id: BandId) =>
-    bandLine(
-      pal,
-      spec.bands.findIndex((b) => b.id === id),
-      spec.bands.length,
-    );
+  const { options: startOptions, startWith } = useSpeakerStart(speakerPage, planner, hifi);
+  /** the 2D view picked (a position field with focus shows the one that marks its point: `shownView`) */
+  const [picked2d, setPicked2d] = useState<SpeakerView>(SPEAKER_VIEW.front);
+  const positionFocus = usePositionFocus();
+  /** each band's line, by its place in the spec (yellow, magenta, cyan: `bandColor`); the sum in ink */
+  const lineOf = (id: BandId) => {
+    const { stroke, dash } = bandColor(spec.bands, id, pal);
+    return { stroke, dash };
+  };
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
   const { chambers } = spec.cabinet;
-  /** no chamber takes braces: every Box chamber unbraced, or only horn chambers */
-  const unbraced = noChamberBraced(chambers);
-  /** the bracing target the notes name: the first braced Box chamber's */
-  const braceTargetHz =
-    chambers.map(bracingTaken).find((b) => b.braceStyle !== NO_BRACING)?.braceTargetHz ??
-    PA_PANEL_TARGET_HZ;
   const layout = speakerLayout(spec.cabinet);
   /** the horns built into the chambers, as the views draw them */
   const flares = layout.chambers.flatMap((c) => hornFlare(spec.cabinet, c) ?? []);
@@ -186,6 +186,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
     () => (response.bands.length ? speakerDispersionMap(spec, response, plane) : null),
     [spec, response, plane],
   );
+  /** price, weight and bracing in one row of tiles */
   const buildTiles: StatTileItem[] = [
     [STATS.partsPrice, priceText(price), ""],
     [SPEAKER_TEXT.weight, build.lb.toFixed(0), "lb"],
@@ -196,9 +197,18 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
           c.lb.total.toFixed(0),
           "lb",
         ])),
+    ...build.chambers.map(({ bracing }, i): StatTileItem => {
+      const label = BRACING_TILE_TEXT.label(one ? null : i + 1);
+      if (chamberUnbraced(spec.cabinet, i)) return [label, BRACING_TILE_TEXT.none, ""];
+      const windows =
+        bracing.windows.x.length + bracing.windows.y.length + bracing.windows.z.length;
+      const ribs = bracing.ribs.reduce((sum, r) => sum + r.at.length, 0);
+      return [label, windows + ribs, BRACING_TILE_TEXT.unit];
+    }),
   ];
-  /** each chamber's duct and hardware fit checks */
+  /** each chamber's fit and bracing checks */
   const fitChips = chamberFitChips(spec.cabinet, build);
+  const braceChips = chamberBraceChips(spec.cabinet, build);
   const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   const cell = (place: string) => resultsCellClass(wide, place);
   /** the model left a chamber or a filter out: its notices say which and why (the empty-chart notice stays quiet) */
@@ -206,42 +216,114 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
   const fbMarks = response.chambers.flatMap((c, i) =>
     c.fb !== null ? [{ f: c.fb, label: one ? "Fb" : `Fb ${i + 1}` }] : [],
   );
+  /** each band's curve on a chart: its line, and its dot in the legend */
+  const bandSeries = (curves: readonly { id: BandId; curve: FrequencyPoint[] }[]) =>
+    curves.map((b) => ({
+      curve: b.curve,
+      clipAtFloor: true,
+      id: b.id,
+      label: nameOf(b.id),
+      ...lineOf(b.id),
+      swatch: "dot" as const,
+      tint: "transparent",
+    }));
+  const sumSeries = (curve: FrequencyPoint[]) => ({
+    curve,
+    id: SUM_SERIES_ID,
+    label: SPEAKER_TEXT.sum,
+    stroke: pal.ink,
+    width: SUM_LINE_PX,
+    tint: alpha(pal.ink, 0.05),
+    // below the floor it would run along the axis as if it were data
+    clipAtFloor: true,
+  });
+  /** the checks, one compact row per band, then per chamber (its limits, fit and bracing checks) */
+  const checkRows = [
+    ...bandChips(spec, limits, response).map(({ id, chips }) => ({
+      key: `band:${id}`,
+      row: CHECK_ROW_TEXT.band(nameOf(id)),
+      chips,
+    })),
+    ...chambers.map((_, i) => {
+      const c = limits.chambers[i];
+      return {
+        key: `chamber:${i}`,
+        row: CHECK_ROW_TEXT.chamber(i + 1),
+        chips: [
+          ...(c ? chamberChips(c, nameOf(c.band)) : []),
+          ...(fitChips[i] ?? []),
+          ...(braceChips[i] ?? []),
+        ],
+      };
+    }),
+  ].filter((r) => r.chips.length > 0);
+  const details = speakerDetails({
+    bracing: build.chambers.map((c, i) => ({
+      unbraced: chamberUnbraced(spec.cabinet, i),
+      bracing: c.bracing,
+    })),
+    fb: fbMarks.length > 0,
+    pricePartial: price.partial,
+    sections: flares.length > 0,
+  });
+  const view = shownView(picked2d, positionFocus.focus);
   return (
     <SettingsLayout
       results={
-        <>
-          <SavedConfigs
-            bare
+        <div className="flex flex-col gap-5">
+          <SaveRow
             store={store}
             snapshot={snapshot}
             restore={restore}
-            saveName={spec.name}
-            manage
+            name={spec.name}
+            onName={speakerPage.setName}
+            words={SPEAKER_SAVE_WORDS}
+            starts={startOptions}
+            group={(o) => o.group}
+            onStart={(o) => startWith(o.id)}
           />
           <SpeakerOptimizerResults optimizer={optimizer} />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
-            <SectionHeading>{SPEAKER_TEXT.views}</SectionHeading>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
-              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
-                {(cutaway) => (
+              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`} driversButton>
+                {(cutaway, look) => (
                   <SpeakerView3D
                     spec={{ cabinet: spec.cabinet, look: spec.look }}
                     cutaway={cutaway}
+                    drivers={look.drivers}
                   />
                 )}
               </Viewer3DCard>
-              <Card gapY={false} className={`flex flex-col ${VIEW_HEIGHT}`}>
+              <Card gapY={false} className={`flex flex-col gap-2 ${VIEW_HEIGHT}`}>
+                <ToggleGroup
+                  value={view}
+                  onChange={setPicked2d}
+                  options={keysOf(SPEAKER_VIEW_NAMES).map(
+                    (id) => [id, SPEAKER_VIEW_NAMES[id]] as const,
+                  )}
+                  size="xs"
+                />
                 <div className="flex-1 min-h-0">
-                  <SpeakerFront spec={spec} />
+                  {view === SPEAKER_VIEW.front ? (
+                    <SpeakerFront
+                      spec={spec}
+                      onMoveDriver={(i, j, position) =>
+                        speakerPage.editChamber(i, (ch) => ({
+                          ...ch,
+                          drivers: ch.drivers.map((d, k) => (k === j ? { ...d, position } : d)),
+                        }))
+                      }
+                      focus={positionFocus.focus}
+                    />
+                  ) : (
+                    <SpeakerSide spec={spec} focus={positionFocus.focus} />
+                  )}
                 </div>
-                <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.front}</p>
+                <p className="text-xs text-stone-500">{SPEAKER_VIEW_HINTS[view]}</p>
               </Card>
               {flares.length > 0 && (
                 <Card gapY={false} className={`flex flex-col sm:col-span-2 ${SECTION_HEIGHT}`}>
-                  <div className="flex-1 min-h-0">
-                    <SpeakerSection spec={spec} />
-                  </div>
-                  <p className="text-xs text-stone-500 mt-2">{SPEAKER_TEXT.sectionNote}</p>
+                  <SpeakerSection spec={spec} />
                 </Card>
               )}
               {spec.cabinet.chambers.map((c, i) =>
@@ -288,8 +370,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               <Notice>{SPEAKER_TEXT.ventMoved}</Notice>
             )}
           </section>
-          {/* Response beside Maximum output (and Price, weight and bracing under Response) once the pane is wide enough */}
-          <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} mt-5 ${resultsGridClass(wide)}`}>
+          {/* Response beside Maximum output once the pane is wide enough, the tiles under each */}
+          <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} ${resultsGridClass(wide)}`}>
             <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
               <SectionHeading>{SPEAKER_TEXT.response}</SectionHeading>
               <ResponseChart
@@ -300,27 +382,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 step={10}
                 yLabel={SPEAKER_TEXT.yLabel}
                 series={[
-                  ...(response.bands.length
-                    ? [
-                        {
-                          curve: response.sum,
-                          id: SUM_SERIES_ID,
-                          label: SPEAKER_TEXT.sum,
-                          stroke: pal.ink,
-                          width: SUM_LINE_PX,
-                          tint: alpha(pal.ink, 0.05),
-                          clipAtFloor: true,
-                        },
-                      ]
-                    : []),
-                  ...response.bands.map((b) => ({
-                    curve: b.curve,
-                    clipAtFloor: true,
-                    id: b.id,
-                    label: nameOf(b.id),
-                    ...lineOf(b.id),
-                    tint: "transparent",
-                  })),
+                  ...(response.bands.length ? [sumSeries(response.sum)] : []),
+                  ...bandSeries(response.bands),
                 ]}
                 marks={fbMarks}
               />
@@ -337,63 +400,9 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               ))}
               {response.bands.length === 0 && !hasGaps && <Notice>{SPEAKER_TEXT.noBands}</Notice>}
               <StatTileGrid tiles={tiles} />
-              <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.modelNote}</p>
-            </section>
-            <section
-              className={`${cell(
-                limits.bands.length > 0 ? "col-start-1 row-start-2" : "col-start-2 row-start-1",
-              )} ${GAP_Y}`}
-            >
-              <SectionHeading>{SPEAKER_TEXT.build}</SectionHeading>
-              <StatTileGrid tiles={buildTiles} />
-              {price.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
-              {unbraced ? (
-                <Notice>{SPEAKER_TEXT.notBraced}</Notice>
-              ) : (
-                <ul className="text-sm">
-                  {build.chambers.map((c, i) => (
-                    <li key={c.box}>
-                      {SPEAKER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!unbraced &&
-                build.chambers.flatMap((c, i) => {
-                  const lines = braceNoteLines(`${SPEAKER_TEXT.chamber} ${i + 1}`, c.bracing);
-                  return lines.length
-                    ? [
-                        <Notice key={`under${i}`}>
-                          {SPEAKER_TEXT.underTarget(i + 1, formatHz(c.bracing.targetHz))}
-                        </Notice>,
-                        ...lines.map((line) => <Notice key={line}>{line}</Notice>),
-                      ]
-                    : [];
-                })}
-              {fitChips.some((chips) => chips.length > 0) && (
-                <div className={`${READING_WIDTH} flex flex-col gap-3`}>
-                  {fitChips.map(
-                    (chips, i) =>
-                      chips.length > 0 && (
-                        <div key={i}>
-                          <h4 className="text-xs font-semibold text-stone-500 mb-1">
-                            {SPEAKER_TEXT.chamber} {i + 1}
-                          </h4>
-                          <WarningChips chips={chips} />
-                        </div>
-                      ),
-                  )}
-                </div>
-              )}
-              <p className={`${READING_WIDTH} text-sm text-stone-500`}>
-                {SPEAKER_TEXT.priceNote}{" "}
-                {unbraced
-                  ? SPEAKER_TEXT.buildNoteUnbraced
-                  : SPEAKER_TEXT.buildNote(formatHz(braceTargetHz))}
-              </p>
             </section>
             {limits.bands.length > 0 && (
-              <section className={`${cell("col-start-2 row-start-1 row-span-2")} ${GAP_Y}`}>
+              <section className={`${cell("col-start-2 row-start-1")} ${GAP_Y}`}>
                 <SectionHeading>{SPEAKER_TEXT.maxOutput}</SectionHeading>
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
@@ -403,53 +412,33 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   step={10}
                   yLabel={SPEAKER_TEXT.maxYLabel}
                   series={[
-                    {
-                      curve: limits.sum,
-                      id: SUM_SERIES_ID,
-                      label: SPEAKER_TEXT.sum,
-                      stroke: pal.ink,
-                      width: SUM_LINE_PX,
-                      tint: alpha(pal.ink, 0.05),
-                      // below the floor it would run along the axis as if it were data
-                      clipAtFloor: true,
-                    },
-                    ...limits.bands.map((b) => ({
-                      curve: b.max,
-                      clipAtFloor: true,
-                      id: b.id,
-                      label: nameOf(b.id),
-                      ...lineOf(b.id),
-                      tint: "transparent",
-                    })),
+                    sumSeries(limits.sum),
+                    ...bandSeries(limits.bands.map((b) => ({ id: b.id, curve: b.max }))),
                   ]}
                   marks={fbMarks}
                 />
                 <StatTileGrid tiles={maxTiles} />
-                <div className={`${READING_WIDTH} flex flex-col gap-3`}>
-                  {bandChips(spec, limits, response).map(({ id, chips }) => (
-                    <div key={id}>
-                      <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
-                      <WarningChips chips={chips} tips={{ speakerKeepsUp: KEEP_UP_TEXT.tip }} />
-                    </div>
-                  ))}
-                  {limits.chambers.map(
-                    (c, i) =>
-                      c && (
-                        <div key={i}>
-                          <h4 className="text-xs font-semibold text-stone-500 mb-1">
-                            {SPEAKER_TEXT.chamber} {i + 1}
-                          </h4>
-                          <WarningChips chips={chamberChips(c, nameOf(c.band))} />
-                        </div>
-                      ),
-                  )}
-                </div>
-                <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.maxNote}</p>
               </section>
             )}
           </div>
+          {checkRows.length > 0 && (
+            <section
+              aria-label={CHECK_ROW_TEXT.checks}
+              className={`${RESULT_MAX_WIDTH} flex flex-col gap-2`}
+            >
+              {checkRows.map(({ key, row, chips }) => (
+                <WarningChips
+                  key={key}
+                  row={row}
+                  chips={chips}
+                  tips={{ speakerKeepsUp: KEEP_UP_TEXT.tip }}
+                />
+              ))}
+            </section>
+          )}
+          <StatTileGrid tiles={buildTiles} />
           {dispersion && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
               <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
               <DispersionBlock
                 map={dispersion}
@@ -460,7 +449,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               />
             </section>
           )}
-        </>
+          <AssumptionsList groups={details} summary={UI_TEXT.details} columns />
+        </div>
       }
       settings={<SpeakerSettings speakerPage={speakerPage} folds={folds} />}
     />

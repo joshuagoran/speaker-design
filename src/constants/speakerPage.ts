@@ -332,11 +332,6 @@ export const FOLD_CHECK_TEXT = {
 
 /** The Speaker page's results headings and chart labels. */
 export const SPEAKER_TEXT = {
-  views: "The speaker",
-  front: "Front",
-  section: "Sections",
-  sectionNote:
-    "Top and side, cut through the horn's center, the baffle at the left. The horn's walls follow its flare sections. They start just in front of the cones and cover their outer parts. The dashed box is the front chamber, between the cones and the back edges of the walls. A folded path turns at the walls. A slot on a front side runs back along the side wall.",
   /** the horn's path does not fit its chamber: what it needs and what the chamber gives, as formatted lengths */
   hornNoRoom: (needs: { depth: string; height: string }, room: { depth: string; height: string }) =>
     `A horn path does not fit its chamber. It needs ${needs.depth} of depth and ${needs.height} of height. The chamber gives ${room.depth} and ${room.height}. The views draw the horn as it is, past the walls. Make the chamber larger, shorten the path, or set the path to Folded.`,
@@ -351,8 +346,6 @@ export const SPEAKER_TEXT = {
   bands: "Bands",
   sum: "Sum",
   yLabel: "dB SPL, 2.83 V, 1 m",
-  modelNote:
-    "On axis at 1 m in half space. Every band gets 2.83 V. The response does not include the baffle step, the room or the driver positions yet. The Space page adds them.",
   noBands: "No band has a modeled driver. Add a driver to a chamber and select its band.",
   /** a chamber the model leaves out: its number, why, and what to change */
   chamberGap: (n: number, gap: { why: string; fix: string }) =>
@@ -362,29 +355,15 @@ export const SPEAKER_TEXT = {
   maxOutput: "Maximum output",
   maxYLabel: "max dB SPL, 1 m",
   speakerMax: "Speaker max",
-  maxNote:
-    "On axis at 1 m. Each band gets its amp's full power, up to the first limit: cone travel, port air speed, radiator travel, the driver's program rating (2 × AES) or the amp. You set the port air speed limit in the chamber. A band's max is for music, with one drive for the whole band. The sum uses one input for all bands. A band limits the sum only where the band has signal.",
   chamber: "Chamber",
   noFilter: "None",
   /** a band the user adds, by its place among the bands */
   newBandName: (n: number) => `Band ${n}`,
-  build: "Price, weight and bracing",
   weight: "Weight",
-  /** under the price, weight and bracing, before the bracing words */
-  priceNote:
-    "The price is the total of the purchased parts on the Cutlist tab: the drivers, the horns, the radiators, the port tubes and the hardware. It does not include the plywood.",
   /** a chamber's weight tile, by its place */
   chamberWeight: (n: number) => `Chamber ${n} weight`,
-  /** under the weight and bracing, with the bracing rule's panel target in words */
-  buildNote: (target: string) =>
-    `Each chamber gets braces until every panel is above ${target}. The notices above show the panels that do not get there. The net air of each chamber subtracts the braces, the vent walls, the baffle cleats and the hardware. The weight includes the panels, the braces, the drivers with their horns, the radiators and the hardware. The Cutlist tab lists every part.`,
   noBraces: "no braces",
-  /** the Build notice and summary when the cabinet has no bracing (`NO_BRACING`) */
-  notBraced:
-    "The panels are not braced. The cutlist, the weight and the net air have no braces. Brace the box later, or from the outside.",
-  notBracedSummary: "not braced",
-  buildNoteUnbraced:
-    "The net air of each chamber subtracts the vent walls, the baffle cleats and the hardware. The weight includes the panels, the drivers with their horns, the radiators and the hardware. The Cutlist tab lists every part.",
+  /** the Construction summary when the cabinet has no bracing (`NO_BRACING`) */
   hornNoFit:
     "A horn does not fit where it is mounted. Another chamber is on its top, or its mouth is larger than the baffle of its chamber. Select the other mounting in the driver settings. Until you do, the views and the cutlist do not show the horn.",
   /** the driver board's cutlist note: where the drivers mount, how a doubled board is glued, and each cone's cutout */
@@ -433,9 +412,6 @@ export const SPEAKER_TEXT = {
     `${n} × slot up the front sides, one side then the other: ${w}″ wide, ${h}″ tall openings against the side walls, standing on the bottom panel`,
   sideSlotWalls: (n: number, w: string) =>
     `walls of the ${n} side slots: each ${w}″ in from its side wall, as tall as its opening, running back from the baffle`,
-  /** a chamber whose braces can't bring every panel to the target (or a panel over its strength limit), by its place */
-  underTarget: (n: number, target: string) =>
-    `Chamber ${n} does not get to the ${target} bracing target. Not enough braces fit around its drivers, vent and horn. These panels are below the target, or above a strength limit:`,
   inputRange: "External crossover",
   construction: "Construction",
   top: "Top",
@@ -603,8 +579,6 @@ export const SPEAKER_TEXT = {
   airSpeedTip:
     "The highest air speed in the port at full power. Above it, the port makes noise. The maximum output stops at this limit.",
   radiatorMassTip: "Mass that you add to each passive radiator. More mass tunes the box lower.",
-  startOverHint:
-    "This replaces the current design. To open a saved speaker, use the saved configurations above.",
   hornStepsOff: "Off",
   hornStepsOn: "On",
   addSection: "Add section",

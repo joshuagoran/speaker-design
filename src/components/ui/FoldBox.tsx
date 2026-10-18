@@ -46,7 +46,7 @@ export function FoldBox({ title, summary, lead, actions, defaultOpen = false, ch
           </svg>
           <span className="min-w-0 line-clamp-2 text-sm leading-snug">
             {title && <span className="font-bold mr-2">{title}</span>}
-            {lead}
+            {lead && <span className="inline-flex gap-1 mr-1.5 align-middle">{lead}</span>}
             {title ? (
               !open && <span className="text-[13px] text-stone-500">{summary}</span>
             ) : (

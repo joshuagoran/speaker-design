@@ -91,7 +91,9 @@ export function SpeakerSettings({ speakerPage, folds }: Props) {
     bands: spec.bands.map((b, i) => (
       <span key={b.id} className="whitespace-nowrap">
         {i > 0 && " · "}
-        <BandDot index={i} count={spec.bands.length} />
+        <span className="mr-1.5">
+          <BandDot index={i} count={spec.bands.length} />
+        </span>
         {b.name} {bandRange(b)}
       </span>
     )),

@@ -98,6 +98,8 @@ import {
 } from "./speakerParts";
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./speakerPlaces";
 import { PlaceFields } from "./PlaceFields";
+import { positionFocusProps, usePositionFocus } from "./positionFocus";
+import { POSITION_AXIS } from "../../constants/speakerResults";
 import { HornSettings } from "./HornSettings";
 import { onFieldStep, shownIn, shownTenth } from "./speakerFields";
 import { FIELD_ROW, PAIR_ROW, PICK_ROW, TRIO_ROW } from "../../styles/layout";
@@ -571,6 +573,7 @@ export function ChamberSettings({
         {chamber.drivers.map((driver, i) => (
           <DriverFields
             key={`${driverRound}:${i}`}
+            chamberIndex={index}
             index={i}
             driver={driver}
             widthIn={chamber.dims.w}
@@ -912,6 +915,8 @@ function RoundFields({
 }
 
 interface DriverProps {
+  /** its chamber's place in the cabinet, from 0: the 2D view marks the point its position fields measure from */
+  chamberIndex: number;
   /** its place in the chamber, from 0 */
   index: number;
   driver: SpeakerDriver;
@@ -935,6 +940,7 @@ interface DriverProps {
  * woofer's own size. (The catalog has no triaxial type yet, so no driver picks three bands.)
  */
 function DriverFields({
+  chamberIndex,
   index,
   driver,
   widthIn,
@@ -945,6 +951,7 @@ function DriverFields({
   onEdit,
   onRemove,
 }: DriverProps) {
+  const { setFocus } = usePositionFocus();
   const woofer = isWooferKind(driver.kind);
   const type = isWooferKind(driver.kind) ? DRIVER_KIND.woofer : driver.kind;
   /** every woofer size shows; else only the woofer's own size */
@@ -1124,27 +1131,45 @@ function DriverFields({
       {!(inBay && !top) && (
         <div className={PAIR_ROW}>
           {/* the group's center (`SpeakerDriver.position`): across from the chamber's center line */}
-          <NumberField
-            label={<Tooltip tip={POSITION_TIPS.partX}>{POSITION_LABELS.x}</Tooltip>}
-            value={shownIn(driver.position.xIn)}
-            step={SPEAKER_STEPS.sizeIn}
-            fill
-            onChange={(xIn) => onEdit((d) => ({ ...d, position: { ...d.position, xIn } }))}
-          />
-          <NumberField
-            // a horn on the top: back from the chamber's front edge
-            label={
-              top ? (
-                <Tooltip tip={POSITION_TIPS.partZ}>{POSITION_LABELS.z}</Tooltip>
-              ) : (
-                <Tooltip tip={POSITION_TIPS.partY}>{POSITION_LABELS.y}</Tooltip>
-              )
-            }
-            value={shownIn(driver.position.yIn)}
-            step={SPEAKER_STEPS.sizeIn}
-            fill
-            onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
-          />
+          <div
+            className="min-w-0"
+            {...positionFocusProps(setFocus, {
+              chamber: chamberIndex,
+              driver: index,
+              axis: POSITION_AXIS.across,
+            })}
+          >
+            <NumberField
+              label={<Tooltip tip={POSITION_TIPS.partX}>{POSITION_LABELS.x}</Tooltip>}
+              value={shownIn(driver.position.xIn)}
+              step={SPEAKER_STEPS.sizeIn}
+              fill
+              onChange={(xIn) => onEdit((d) => ({ ...d, position: { ...d.position, xIn } }))}
+            />
+          </div>
+          <div
+            className="min-w-0"
+            {...positionFocusProps(setFocus, {
+              chamber: chamberIndex,
+              driver: index,
+              axis: top ? POSITION_AXIS.back : POSITION_AXIS.up,
+            })}
+          >
+            <NumberField
+              // a horn on the top: back from the chamber's front edge
+              label={
+                top ? (
+                  <Tooltip tip={POSITION_TIPS.partZ}>{POSITION_LABELS.z}</Tooltip>
+                ) : (
+                  <Tooltip tip={POSITION_TIPS.partY}>{POSITION_LABELS.y}</Tooltip>
+                )
+              }
+              value={shownIn(driver.position.yIn)}
+              step={SPEAKER_STEPS.sizeIn}
+              fill
+              onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}
+            />
+          </div>
         </div>
       )}
     </FoldBox>

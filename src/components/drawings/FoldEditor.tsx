@@ -49,7 +49,7 @@ import { formatInches } from "../../lib/format";
 import { tracedFold } from "../../lib/speaker/foldHorn";
 import { FoldPathChart } from "../charts/FoldPathChart";
 import { offTargetDb } from "../../lib/speaker/foldMatch";
-import { Icon, IconButton } from "../ui/IconButton";
+import { DRIVER_ICON_PATH, Icon, IconButton } from "../ui/IconButton";
 import { usePalette } from "../../hooks/useTheme";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { FOLD_TWO_COLUMN_PX } from "../../styles/layout";
@@ -501,7 +501,7 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
       id: TOOL.drivers,
       label: FOLD_EDITOR_TEXT.drivers,
       // a driver from the side: the magnet behind, the cone opening to the front
-      icon: <path d="M2 6h3v4H2zM5 6l8-4v12l-8-4" />,
+      icon: <path d={DRIVER_ICON_PATH} />,
     },
     {
       id: TOOL.opening,
