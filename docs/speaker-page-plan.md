@@ -27,13 +27,13 @@ Today, with the TH18 template and every fold open, the results pane is about 2,7
 
 Each setting sits at the level it belongs to.
 
-| Level        | Settings                                                           |
-| ------------ | ------------------------------------------------------------------ |
-| Speaker      | Name, bands, amps, external crossover                              |
-| Cabinet      | Construction, wall panels, hardware, look                          |
-| Chamber      | Type (Box or Horn), Path, size, then only what that type uses      |
-| Box chamber  | Vent, fiber fill, bracing, back panel, drivers                     |
-| Horn chamber | Goals, Design from goals, horn type, the side view editor, drivers |
+| Level        | Settings                                                                        |
+| ------------ | ------------------------------------------------------------------------------- |
+| Speaker      | Bands, amps, external crossover. The name sits in the saved configurations row. |
+| Cabinet      | Construction, wall panels, hardware, look                                       |
+| Chamber      | Type (Box or Horn), Path, size, then only what that type uses                   |
+| Box chamber  | Vent, fiber fill, bracing, back panel, drivers                                  |
+| Horn chamber | Goals, Design from goals, horn type, the side view editor, drivers              |
 
 - Bracing and back panel move from Construction to each Box chamber. A horn chamber gets no added braces: its boards brace the panels.
 - Arched top: Box-only speakers (Decisions).
@@ -53,7 +53,7 @@ Each setting sits at the level it belongs to.
 
 | Section           | Change                                                                                                                                                                  |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Speaker           | Name only. "Start from" moves to the saved configurations row as "New from…" (full save and open redesign: #180).                                                       |
+| Speaker           | Removed. The name and "New from…" sit in the saved configurations row (full save and open redesign: #180).                                                              |
 | Construction      | Construction, wall panels and hardware only.                                                                                                                            |
 | Chamber           | Sub-sections, each a light inset box with a small heading: Size, Vent, Fill and bracing (Box), Horn (Horn), Drivers. Type and Path on one row; dimensions on one row.   |
 | Horn              | Goals on one row with Design from goals (its tooltip says what it reads and sets). Horn type. Straight horn read-only, with "Edit by hand". "Import a Hornresp record". |
@@ -68,6 +68,9 @@ Each setting sits at the level it belongs to.
 
 - Field labels carry no unit: every length is inches. A units setting comes later (#149).
 - A fold's summary wraps under its title in small text, up to two lines. Summaries keep to the key facts.
+- Net air is always worked out for a Box chamber: no Auto/Custom control. A straight horn shows "Rear chamber" in Horn settings, set by Design from goals or a Hornresp import, with "Edit by hand".
+- A driver's Band tooltip: "The band from Bands and filters that plays this driver."
+- The chamber's position uses the same labels: "Left (−) / Right (+)" from the cabinet's center, "Down (−) / Up (+)" from its bottom.
 - Taps: "Front tap after section", "Back tap after section", "Taps from closed end". Tooltip: "Where the front and back of the cones join the horn, counted from the closed end."
 
 ### Driver position
