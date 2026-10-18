@@ -3,7 +3,6 @@ import type { HornFold, SpeakerCabinet, SpeakerChamber, SpeakerHorn } from "../.
 import { FoldEditor } from "../../components/drawings/FoldEditor";
 import { Card } from "../../components/ui/Card";
 import { Notice } from "../../components/ui/Notice";
-import { CardHeading } from "../../components/ui/CardHeading";
 import { foldRoom, isDrawn, startFold } from "../../lib/speaker/foldHorn";
 import { FOLD_EDITOR_TEXT } from "../../constants/speakerPage";
 
@@ -11,7 +10,7 @@ interface Props {
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
   chamber: SpeakerChamber;
   horn: SpeakerHorn;
-  /** the heading's chamber name, when the speaker has more than one chamber */
+  /** the chamber's name, at the start of the editor's tool row, when the speaker has more than one chamber */
   name: string | null;
   onFold: (fold: HornFold) => void;
   /** a wall dragged in the side view: what to add to the chamber's depth and height, in */
@@ -32,9 +31,6 @@ export function FoldHornCard({ cabinet, chamber, horn, name, onFold, onResize }:
   const fold = useMemo(() => horn.fold ?? startFold(room.heightIn), [horn.fold, room.heightIn]);
   return (
     <Card className="sm:col-span-2">
-      <CardHeading>
-        {name ? `${FOLD_EDITOR_TEXT.heading}: ${name}` : FOLD_EDITOR_TEXT.heading}
-      </CardHeading>
       {!isDrawn(horn.fold) && <Notice>{FOLD_EDITOR_TEXT.notDrawn}</Notice>}
       <FoldEditor
         room={room}
@@ -43,6 +39,7 @@ export function FoldHornCard({ cabinet, chamber, horn, name, onFold, onResize }:
         setType={horn.drive.kind}
         onChange={onFold}
         onResize={onResize}
+        name={name}
       />
     </Card>
   );

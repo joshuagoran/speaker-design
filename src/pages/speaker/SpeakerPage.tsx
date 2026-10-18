@@ -52,7 +52,7 @@ import {
   DISPERSION_DISTANCE_M,
 } from "../../constants/chartScales";
 import { SPEAKER_SETTINGS_SECTIONS } from "../../constants/settingsSections";
-import { SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
+import { SPEAKER_TEXT, MODEL_GAP_TEXT, FOLD_EDITOR_TEXT } from "../../constants/speakerPage";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { CHAMBER_LOAD, HORN_PATH } from "../../constants/speakerSpec";
 import {
@@ -329,7 +329,9 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
                     cabinet={spec.cabinet}
                     chamber={c}
                     horn={c.load.horn}
-                    name={spec.cabinet.chambers.length === 1 ? null : `${i + 1}`}
+                    name={
+                      spec.cabinet.chambers.length === 1 ? null : FOLD_EDITOR_TEXT.chamber(i + 1)
+                    }
                     onFold={(fold) => speakerPage.editChamber(i, (ch) => withHornFold(ch, fold))}
                     onResize={({ depthIn, heightIn }) =>
                       speakerPage.editChamber(i, (ch) => ({

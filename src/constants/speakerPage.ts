@@ -258,14 +258,15 @@ export const FOLD_CHART_TEXT = {
 
 /** The folded horn editor's tools, as their buttons and tooltips name them, and its marks. */
 export const FOLD_EDITOR_TEXT = {
-  heading: "Folded horn",
+  /** the chamber's name at the start of the tool row, by its place (only with more than one chamber) */
+  chamber: (n: number) => `Chamber ${n}`,
   tools: "Drawing tools",
   move: "Move: drag a board, the end of a board, or the drivers.",
   board: "Add board: press and drag. The ends snap onto walls and other boards.",
   remove: "Delete: click a board, a corner, the drivers or the vent.",
   drivers: "Drivers: click a board to put them there. Click again to turn them.",
-  opening:
-    "Opening: click a wall next to the passage to move the mouth, or next to the rear chamber to open a vent. Drag the ends of either.",
+  mouth: "Mouth: click a wall to move the mouth there. Drag its ends.",
+  vent: "Vent: click a wall next to the rear chamber to open a vent there. Drag its ends.",
   square: "Square joint: click a joint to hold it at 90°. Click again to free it.",
   undo: "Undo (Ctrl+Z or Cmd+Z)",
   closedEnd: "closed end",
