@@ -34,17 +34,6 @@ The old pages' model code is shared. The new pages import it from about 40 files
 | Scripts                      | `optimizer-dump*`, `optimizer-snapshot`, `tests/optimizer-dump.json`                                                                                                                                                                |
 | "Design you have now" starts | The Speaker page's PA and Hi-fi starts (`SPEAKER_CURRENT_START`), `paPlannerDesign.ts`, and the Stack page's current PA start. Templates and presets stay.                                                                          |
 
-## Routes
-
-| Old link          | Opens              |
-| ----------------- | ------------------ |
-| empty, `#`        | `#stack`           |
-| `#hifi`, `#fills` | `#speaker`         |
-| `#coverage`       | `#space`           |
-| `#cutlist`        | `#stack-cutlist`   |
-| `#hifi-cutlist`   | `#speaker-cutlist` |
-| `/notes`          | Notes (no change)  |
-
 ## Saved data
 
 | Data                                                  | After the switch-over                                 |
@@ -56,31 +45,29 @@ The old pages' model code is shared. The new pages import it from about 40 files
 
 Each step is one PR. Each keeps CI green.
 
-| Step | Work                                                                                                                                                                                                                                        | Proof                                                         |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1    | Routes: open on `#stack`, add the redirects above, and remove the PA tab. Move `assumptionGroups` out of `src/pages/coverage`. Remove the "design you have now" starts and the `planner` and `hifi` props from the Speaker and Stack pages. | `page-route` test for every old link. The phone check passes. |
-| 2    | Delete the Fills, Coverage, and Hi-fi pages, their hooks, the Hi-fi cutlist, their tests, and their phone check sections.                                                                                                                   | `vp check`, the full suite, and the phone check.              |
-| 3    | Delete the PA page, its hooks, the PA cutlist, and the PA-only tests. Keep the old-save adapter and its test.                                                                                                                               | Same as step 2. Old saves still list on the Stack page.       |
-| 4    | Remove the old-only model code and scripts. Update CLAUDE.md, README.md, and the docs. Mark the old plan docs as history.                                                                                                                   | `vp check` with no unused exports.                            |
+| Step | Work                                                                                                                                                                                                                                  | Proof                                                           |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 1    | Open on `#stack`, and remove the PA tab. Old links get no redirect. Move `assumptionGroups` out of `src/pages/coverage`. Remove the "design you have now" starts and the `planner` and `hifi` props from the Speaker and Stack pages. | `page-route` test for the default page. The phone check passes. |
+| 2    | Delete the Fills, Coverage, and Hi-fi pages, their hooks, the Hi-fi cutlist, their tests, and their phone check sections.                                                                                                             | `vp check`, the full suite, and the phone check.                |
+| 3    | Delete the PA page, its hooks, the PA cutlist, and the PA-only tests. Keep the old-save adapter and its test.                                                                                                                         | Same as step 2. Old saves still list on the Stack page.         |
+| 4    | Remove the old-only model code and scripts. Update CLAUDE.md, README.md, and the docs. Mark the old plan docs as history.                                                                                                             | `vp check` with no unused exports.                              |
 
 ## Owner tasks (acceptance)
 
 Run each in the browser after step 1, and again after step 3.
 
 1. Open the app with no link. It opens on the Stack page.
-2. Open an old `#hifi` link and an old `#coverage` link. Each opens the page in the Routes table.
-3. On the Stack page, open an old saved PA design and an old saved Hi-fi design.
-4. On the Speaker page, start from each template. Each one opens and draws.
-5. On the Space page, place a stack. The coverage map draws.
-6. Open the Speaker and Stack cutlists.
-7. Open `/notes`. It shows the parts and defaults.
-8. At phone width, do tasks 1, 4, and 5.
+2. On the Stack page, open an old saved PA design and an old saved Hi-fi design.
+3. On the Speaker page, start from each template. Each one opens and draws.
+4. On the Space page, place a stack. The coverage map draws.
+5. Open the Speaker and Stack cutlists.
+6. Open `/notes`. It shows the parts and defaults.
+7. At phone width, do tasks 1, 3, and 4.
 
 ## Decisions
 
 | Question                     | Proposal                                    |
 | ---------------------------- | ------------------------------------------- |
-| Old link redirects           | The Routes table above.                     |
 | Old saves                    | Read-only on the Stack page. No write path. |
 | "Design you have now" starts | Removed. Templates and presets stay.        |
 | Notes page                   | No change. It reads the defaults.           |
