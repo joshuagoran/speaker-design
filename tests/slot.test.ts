@@ -18,12 +18,13 @@ import { ductFit } from "../src/lib/speaker/chips";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { portOfEffectiveLength, ventTuningHz } from "../src/lib/acoustics/hornModel";
-import { chamberVentModel, stuffedLiters } from "../src/lib/speaker/chamberAir";
+import { chamberHornPort, chamberVentModel, stuffedLiters } from "../src/lib/speaker/chamberAir";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
+import { PORT_SHAPE, VENT_KIND } from "../src/constants/speakerSpec";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
-import type { SubGeometryConfig } from "../src/types";
+import type { SpeakerChamber, SpeakerSpec, SubGeometryConfig } from "../src/types";
 import { C, rel, close, vent, DRV18 } from "./helpers";
 
 /** The tuning, Hz, of `liters` with a vent of `areaIn2` and effective length `effectiveIn` (the engine's duct). */
@@ -242,5 +243,44 @@ test("bottom slot: the shortest fold tunes a little above the longest straight r
     const fbOf = (g: typeof straight) => engineFb(g.netL, g.port.area, g.port.len + g.port.ec);
     const step = fbOf(fold) - fbOf(straight);
     assert.ok(step > 0.3 && step < 3, `${box.h}: ${fbOf(straight)} -> ${fbOf(fold)} Hz`);
+  }
+});
+
+test("short, wide slots still model: the engine keeps the rule's effective length, so Fb is Helmholtz's", (t) => {
+  const start = templateSpeaker(SPEAKER_TEMPLATE.monitorCoax);
+  const [chamber] = start.cabinet.chambers;
+  assert.ok(chamber.vent.kind === VENT_KIND.vented, "a vented template");
+  const { vent: ported } = chamber;
+  const wall = start.cabinet.panel.thicknessIn;
+  /** the chamber's air, L, that puts Helmholtz's tuning of a vent at 30 Hz: low, where the exit's load is a mass */
+  const litersAt30 = (areaIn2: number, effectiveIn: number) =>
+    100 * Math.pow(helmholtzFb(100, areaIn2, effectiveIn) / 30, 2);
+  // `n` openings `h` high, running `w` (the clear face), `len` long: short beside a round exit's own end correction
+  for (const { n, h, w, len } of [
+    { n: 4, h: 1, w: 30, len: 0.5 },
+    { n: 1, h: 1, w: 30, len: 0.5 },
+    { n: 1, h: 2, w: 30, len: 1 },
+    { n: 1, h: 3, w: 20, len: 0.5 },
+  ]) {
+    const name = `${n} × ${h} × ${w} in, ${len} in long`;
+    // the bare vent: its length and its opening's flanged end correction only, shorter than the round exit's own
+    const areaIn2 = n * h * w;
+    const bareIn = len + rectangleEndCorrection(h, w);
+    const bare = portOfEffectiveLength(areaIn2 * CM2_PER_IN2, bareIn * CM_PER_IN);
+    assert.ok(bare.length > 0 && bare.exitReactanceRatio !== undefined, `${name}: a short duct`);
+    const bareLiters = litersAt30(areaIn2, bareIn);
+    rel(t, engineFb(bareLiters, areaIn2, bareIn), 30, 0.005, `${name}, bare`);
+    // the same slot in a chamber whose clear face it runs: the chamber models, at the rule's effective length
+    const slotChamber: SpeakerChamber = {
+      ...chamber,
+      dims: { ...chamber.dims, w: w + 2 * wall, h: Math.max(chamber.dims.h, n * h + 6) },
+      vent: { ...ported, port: { shape: PORT_SHAPE.slot, n, h, len } },
+    };
+    const spec: SpeakerSpec = { ...start, cabinet: { ...start.cabinet, chambers: [slotChamber] } };
+    const vent = chamberVentModel(spec.cabinet, slotChamber);
+    assert.ok(vent && chamberHornPort(spec.cabinet, slotChamber), `${name}: a port`);
+    const effectiveIn = vent.lenIn + vent.endCorrectionIn;
+    rel(t, engineFb(litersAt30(areaIn2, effectiveIn), areaIn2, effectiveIn), 30, 0.005, name);
+    assert.ok(speakerResponse(spec).chambers[0].fb !== null, `${name}: the chamber models`);
   }
 });

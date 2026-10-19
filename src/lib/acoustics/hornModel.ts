@@ -25,7 +25,7 @@ import {
   SPEED_OF_SOUND,
   SPL_REFERENCE_PA,
 } from "../../constants/acoustics";
-import { HORN_PROFILE } from "../../constants/hornEngine";
+import { HORN_PROFILE, ONE_BOX_HALF_SPACE } from "../../constants/hornEngine";
 import { CM_PER_M, LITERS_PER_CUBIC_M, SQ_CM_PER_SQ_M } from "../../constants/units";
 import {
   abs,
@@ -153,6 +153,13 @@ function frontLoad(design: HornDesign, f: number, radiationLoad: boolean) {
   };
 }
 
+/**
+ * A round exit's own end correction, cm, for an exit of `areaCm2` in half space with one box: what its radiation load
+ * adds to the vent's length at low frequency (a flanged piston's 8/(3π)·r, r the exit's radius).
+ */
+const roundExitCorrection = (areaCm2: number) =>
+  FLANGED_CIRCLE_END_RATIO * Math.sqrt(areaCm2 / Math.PI);
+
 /** The vent as a straight duct of its area and length (a segment of equal areas). */
 export const ventDuct = (area: number, length: number) => ({
   profile: HORN_PROFILE.conical,
@@ -194,12 +201,13 @@ export function ventOf(
   /**
    * The exit's reactance over a round exit's: a slot opening's end correction over a circle's of the vent's whole area
    * (cm over cm). n openings side by side each carry their own correction, so their mass is the opening's correction
-   * over the total area. 1 for a round vent.
+   * over the total area. 1 for a round vent. A port that sets its own ratio keeps it.
    */
-  const exitReactanceRatio = port.slot
-    ? rectangleEndCorrection(port.slot.width, port.slot.height) /
-      (FLANGED_CIRCLE_END_RATIO * Math.sqrt(port.area / Math.PI))
-    : 1;
+  const exitReactanceRatio =
+    port.exitReactanceRatio ??
+    (port.slot
+      ? rectangleEndCorrection(port.slot.width, port.slot.height) / roundExitCorrection(port.area)
+      : 1);
   /** the lossless vent at frequency f: impedance from the chamber, exit flow per flow in, and the exit's load */
   const lossless = (f: number) => {
     if (!radiationLoad) {
@@ -271,22 +279,33 @@ export function ventOf(
 }
 
 /**
- * A round exit's own end correction, cm, for an exit of `areaCm2` in half space with one box: what its radiation load
- * adds to the vent's length at low frequency (a flanged piston's 8/(3π)·r, r the exit's radius).
+ * The shortest duct `portOfEffectiveLength` keeps, as a share of the vent's effective length: below it the exit's load
+ * scales down instead, so a short, wide vent still models (a duct of no length would be no vent).
  */
-const roundExitCorrection = (areaCm2: number) =>
-  FLANGED_CIRCLE_END_RATIO * Math.sqrt(areaCm2 / Math.PI);
+const MIN_DUCT_SHARE = 0.1;
 
 /**
  * A vent as the engine's port from its effective length, cm: its physical length plus both ends' corrections, as a
  * vent rule works them out. The duct is that length less the round exit's own correction, which the exit's radiation
  * load adds back (half space, one box). So the vent keeps the rule's effective length at low frequency; only the duct's
- * wave behavior and the exit's load are new. `areaCm2` is all the openings together.
+ * wave behavior and the exit's load are new. `areaCm2` is all the openings together. A short, wide vent, whose duct
+ * would come out shorter than `MIN_DUCT_SHARE` of its effective length (or not positive), keeps a duct that long, and its
+ * exit's load scales down to the rest.
  */
-export const portOfEffectiveLength = (areaCm2: number, effectiveLengthCm: number): HornPort => ({
-  area: areaCm2,
-  length: effectiveLengthCm - roundExitCorrection(areaCm2),
-});
+export function portOfEffectiveLength(areaCm2: number, effectiveLengthCm: number): HornPort {
+  const exit = roundExitCorrection(areaCm2);
+  const duct = effectiveLengthCm - exit;
+  /** the shortest duct this keeps, cm: a share of the effective length */
+  const shortest = MIN_DUCT_SHARE * effectiveLengthCm;
+  if (duct >= shortest) return { area: areaCm2, length: duct };
+  // a short, wide vent: the round exit's own correction takes (nearly) all its effective length. Keep a short duct and
+  // scale the exit's load down so the duct and the exit's correction still add up to the rule's effective length
+  return {
+    area: areaCm2,
+    length: shortest,
+    exitReactanceRatio: (effectiveLengthCm - shortest) / exit,
+  };
+}
 
 /**
  * The tuning Fb, Hz, of a chamber of `liters` with this vent, as `hornModel` finds it (the duct with its exit's load,
@@ -298,7 +317,7 @@ export function ventTuningHz(liters: number, port: HornPort | null): number | nu
   /** the chamber's compliance, m³/Pa */
   const Cab = liters / LITERS_PER_CUBIC_M / AIR_STIFFNESS;
   const vent = ventOf(
-    { rear: { liters, port }, angle: 2, count: 1 },
+    { rear: { liters, port }, ...ONE_BOX_HALF_SPACE },
     Cab,
     true,
     BOX_LEAK_Q,

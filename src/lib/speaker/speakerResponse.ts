@@ -38,6 +38,7 @@ import { coneParts, hfParts, isConeKind, type ConeParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
 import { HORN_LAYOUT } from "../../constants/acousticNetwork";
+import { ONE_BOX_HALF_SPACE } from "../../constants/hornEngine";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
 import {
   CHAMBER_LOAD,
@@ -172,17 +173,13 @@ function modelChamber(
     },
   });
   if (chamber.load.kind === CHAMBER_LOAD.horn) {
-    const read = hornDesignOf(
-      chamber,
-      { count: 1, angle: 2 },
-      {
-        netLiters,
-        face: chamberClearFace(cabinet, chamber),
-        wallIn: cabinet.panel.thicknessIn,
-        setbackIn: chamberSetbackIn(cabinet.panel, chamber),
-        traced: tracedHorn(cabinet, chamber) ?? undefined,
-      },
-    );
+    const read = hornDesignOf(chamber, ONE_BOX_HALF_SPACE, {
+      netLiters,
+      face: chamberClearFace(cabinet, chamber),
+      wallIn: cabinet.panel.thicknessIn,
+      setbackIn: chamberSetbackIn(cabinet.panel, chamber),
+      traced: tracedHorn(cabinet, chamber) ?? undefined,
+    });
     if (!read.ok) return empty([read.gap]);
     const model = hornLayoutModel(read.design, grid.freqs, volts);
     if (!model) return empty([SPEAKER_MODEL_GAP.noModel]);
@@ -217,8 +214,7 @@ function modelChamber(
         {
           driver: parts.ts,
           drivers: cones.count,
-          count: 1,
-          angle: 2,
+          ...ONE_BOX_HALF_SPACE,
           throatChamber: 0,
           segments: [],
           rear: { liters: airL, port },

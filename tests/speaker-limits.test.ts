@@ -5,7 +5,9 @@ import assert from "node:assert";
 import { configs } from "./pa-configs";
 import { PA_FLOOR, hifiCases, paDesign, speakerAndFeed } from "./speaker-cases";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
-import { bandDriveVolts, speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { bandDriveVolts, bandLoads, speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { filtersTransfer } from "../src/lib/speaker/bandFilter";
+import { abs } from "../src/lib/acoustics/complex";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { NO_FILTERS, lrFilter } from "../src/lib/speaker/specParts";
@@ -297,4 +299,28 @@ test("speaker limits: bands are a free list: a 4-way box, with a band the user n
   // each band its own line on the charts
   const lines = four.bands.map((_, i) => JSON.stringify(bandLine(PALETTES.light, i, 4)));
   assert.equal(new Set(lines).size, 4);
+});
+
+test("speaker limits: the peak excursion searches the engine's whole curve, below 20 Hz too (no highpass)", () => {
+  // a vented box with no highpass: below the tuning the cone unloads, so its excursion rises to the grid's bottom
+  const start = hifiCase("DEFAULT_HIFI");
+  const spec: SpeakerSpec = { ...start, bands: start.bands.map((b) => ({ ...b, highpass: null })) };
+  const { response, limits } = modelOf(spec, NO_FILTERS);
+  const freqs = response.sum.map((o) => o.f);
+  assert.ok(freqs[0] < 20, "the grid reaches below 20 Hz");
+  const chamber = limits.chambers[0];
+  const drive = response.chambers[0]?.drive;
+  assert.ok(chamber && drive, "the woofer's chamber");
+  const band = spec.bands.find((b) => b.id === chamber.band);
+  assert.ok(band, "its band");
+  // the engine's excursion at the band's full drive, through its own filters, at every point of the grid
+  const toDrive = bandDriveVolts(band, bandLoads(spec).get(band.id) ?? {}) / SPEAKER_RESPONSE_VOLTS;
+  const xmm = drive.map((d, i) => d.xmm * toDrive * abs(filtersTransfer(freqs[i], band)));
+  const most = Math.max(...xmm);
+  assert.ok(Math.abs(chamber.excursion.peak - most) <= 1e-12 * most, "the curve's most");
+  assert.equal(chamber.excursion.hz, freqs[xmm.indexOf(most)]);
+  assert.ok(
+    chamber.excursion.hz < 20,
+    `the peak is below 20 Hz (${chamber.excursion.hz.toFixed(1)} Hz)`,
+  );
 });

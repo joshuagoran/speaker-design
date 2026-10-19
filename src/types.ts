@@ -1186,6 +1186,12 @@ export interface HornPort {
    * correction; slots split only by a fin radiate as one wider opening, so give that one. Absent: round.
    */
   slot?: { width: number; height: number };
+  /**
+   * the exit's reactance over a round exit's of `area` (its end correction over the round exit's), when set: a vent
+   * shorter than the round exit's own correction keeps its effective length with a smaller exit load
+   * (`portOfEffectiveLength`). Absent: from `slot`, or 1 (round).
+   */
+  exitReactanceRatio?: number;
 }
 
 /** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
