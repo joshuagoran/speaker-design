@@ -4,7 +4,7 @@ Issue: #178 (Switch-over).
 
 ## Goal
 
-- Remove the PA, Hi-fi, Coverage, and Fills pages.
+- Remove the PA, Hi-fi, Coverage, and Fills pages, in two PRs.
 - The app opens on the Speaker page.
 - The Speaker, Stack, Space, and Notes pages work as they do now.
 - Move the old pages' model code into the new structure. Delete the code nothing uses.
@@ -27,7 +27,7 @@ Issue: #178 (Switch-over).
 
 ## Where the model code moves
 
-`src/lib/pa` and `src/lib/hifi` go away. Their shared code moves by what it does, not by the old page. Step 4 settles the final file names.
+`src/lib/pa` and `src/lib/hifi` go away. Their shared code moves by what it does, not by the old page. PR 2 settles the final file names.
 
 | Folder                | What goes there                                                                        | From                                                                                                                                                                                                                                                                                            |
 | --------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -51,18 +51,16 @@ Issue: #178 (Switch-over).
 
 ## Steps
 
-Each step is one PR. Each keeps CI green.
+Two PRs. Each keeps CI green.
 
-| Step | Work                                                                                                                                                                                                                                                                    | Proof                                                                                  |
-| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 1    | Open on the Speaker page, and remove the old pages' tabs. Old links get no redirect. Move `assumptionGroups` out of `src/pages/coverage`. Remove the starts that copy the open PA or Hi-fi design, the Stack page's old saves list, and the `planner` and `hifi` props. | `page-route` test for the default page. The phone check passes.                        |
-| 2    | Delete the Fills, Coverage, Hi-fi, and PA pages, their hooks, their cutlists, their tests, and their phone check sections.                                                                                                                                              | `vp check`, the full suite, and the phone check.                                       |
-| 3    | Move the model code (see "Where the model code moves"). Only the imports change. Results stay the same.                                                                                                                                                                 | `vp check`, the full suite, the speaker optimizer snapshot, and the goldens unchanged. |
-| 4    | Run the dead code check and delete what it finds. Remove the old scripts. Update CLAUDE.md, README.md, and the docs. Mark the old plan docs as history.                                                                                                                 | The dead code script lists nothing. `vp check` and the full suite pass.                |
+| PR  | Work                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Proof                                                                                                                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Remove the old pages (all the user sees changes here). Open on the Speaker page, and remove the old pages' tabs. Old links get no redirect. Move `assumptionGroups` out of `src/pages/coverage`. Remove the starts that copy the open PA or Hi-fi design, the Stack page's old saves list, and the `planner` and `hifi` props. Delete the Fills, Coverage, Hi-fi, and PA pages, their hooks, their cutlists, their tests, and their phone check sections. | `page-route` test for the default page. `vp check`, the full suite, and the phone check pass. The owner tasks pass.                                         |
+| 2   | Clean up (no change the user sees). Move the model code (see "Where the model code moves"). Run the dead code check and delete what it finds. Remove the old scripts. Update CLAUDE.md, README.md, and the docs. Mark the old plan docs as history.                                                                                                                                                                                                       | The dead code script lists nothing. `vp check` and the full suite pass. The speaker optimizer snapshot and the goldens do not change. The owner tasks pass. |
 
 ## Owner tasks (acceptance)
 
-Run each in the browser after step 2, and again after step 4.
+Run each in the browser after each PR.
 
 1. Open the app with no link. It opens on the Speaker page.
 2. On the Speaker page, start from each template. Each one opens and draws.
