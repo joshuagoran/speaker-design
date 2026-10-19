@@ -72,7 +72,7 @@ These stay in Boundary Lab and Deploy:
    Their positions exist in `speakerLayout.ts` (`slotOpeningsAt`, `roundPortsAt`, `radiatorsAt`).
    `layStack` in `spaceLayout.ts` does not place them yet.
 2. For each opening, find the boundaries it touches: the floor and each wall.
-   "Touches" means the opening's edge is within a set gap (decision 1).
+   "Touches" means a gap of 10 mm (0.4 in) or less, as Deploy's minimum clearance (decision 1).
 3. Set `angle`: 2 for none, 1 for one boundary, 0.5 for two.
 4. Set `count`: identical openings of identical boxes whose edges touch.
 5. Pass `{ count, angle }` per placement into `hornDesignOf` and the vent exit, instead of the fixed values.
@@ -88,6 +88,7 @@ These stay in Boundary Lab and Deploy:
 4. The Speaker model already includes a half-space self load.
    The correction for opening i is the full-space self load, less the half-space one, plus its own images.
 5. For openings closer than the sum of their radii, use Stage A's touching rule.
+   Deploy has no such rule: its meshes give a smooth change with distance, down to its 10 mm clearance.
 6. Each box gives a linear reply at each frequency: U = U₀ − Y·p.
    U₀ is today's flow. Y is the box's admittance matrix, one row and column per opening.
    Get Y from the box's network with one extra solve per opening (unit pressure at that opening).
@@ -111,9 +112,9 @@ Deploy's matrix T maps outside pressure to each cabinet's surface flow. Here Y d
 ### UI
 
 - No new settings. The page applies loading by itself.
-- The selected placement shows one line: how much louder or quieter it plays at 40 Hz, and its cone travel change, against the same box alone.
+- The selected placement shows one line: how much louder or quieter it plays at 40 Hz, and its cone travel change, against the same box alone (decision 2).
 - Its tooltip explains: "Walls, the floor, and other boxes near a horn mouth or port change how much air it moves."
-- Optional: a chart of maximum output, in place and alone, on the shared axes (80–140 dB, 15 Hz–20 kHz).
+- A chart of the selected box's maximum output, in place and alone, on the shared axes (80–140 dB, 15 Hz–20 kHz).
 - UI text names no model or code.
 
 ### Owner tasks (acceptance)
@@ -185,7 +186,15 @@ Example: the QSC K12.2 page lists a 12 in cone, a 1.4 in compression driver, 50 
 - Each entry: maker, model, kind (sub, top, or full range), drivers, response points, maximum SPL, coverage, size, weight, US price and vendor, source URL, and the date read.
 - A gap stays a gap: a missing value is marked, not invented.
 - A new place group, "Reference speakers", in `placeOptions.ts`, and a new `SPACE_ITEM` kind.
-- First list (decision 4): QSC K10.2, K12.2, KS118, and KS112; EV ELX200-12P, ELX200-18SP, EKX-12P, and EKX-18SP.
+- First list (decision 4). Check each name and its specs at data entry. Drop a box if its maker publishes too little.
+
+  | Maker  | Tops                     | Subs                  |
+  | ------ | ------------------------ | --------------------- |
+  | QSC    | K10.2, K12.2             | KS112, KS118          |
+  | EV     | ELX200-12P, EKX-12P      | ELX200-18SP, EKX-18SP |
+  | JBL    | EON712, PRX912           | EON718S, PRX918XLF    |
+  | Mackie | Thump212, SRM212 V-Class | Thump118S, SRM1850    |
+  | RCF    | ART 912-A                | SUB 708-AS II         |
 
 ### Legal
 
@@ -220,11 +229,12 @@ The CLF spike:
 
 ## Decisions
 
-| #   | Question                                               | Proposal                                  |
-| --- | ------------------------------------------------------ | ----------------------------------------- |
-| 1   | Stage A: how close is "touching"?                      | Edge within 2 in of the boundary or mouth |
-| 2   | Show the "in place and alone" chart, or only the line? | Line first; chart if the mock asks for it |
-| 3   | Stage C (room modes as load): now or later?            | Later                                     |
-| 4   | First reference speakers                               | The eight boxes above                     |
-| 5   | CLF import: go or no-go                                | After the spike                           |
-| 6   | Show prices for reference speakers?                    | Yes, US vendors only, as for drivers      |
+| #   | Question                                               | Answer                                                   | Status   |
+| --- | ------------------------------------------------------ | -------------------------------------------------------- | -------- |
+| 1   | Stage A: how close is "touching"?                      | 10 mm (0.4 in), as Deploy's clearance; Stage B is smooth | Proposed |
+| 2   | Show the "in place and alone" chart, or only the line? | Both: the line and the chart                             | Decided  |
+| 3   | Stage C (room modes as load): now or later?            | Later                                                    | Proposed |
+| 4   | First reference speakers                               | QSC, EV, JBL, Mackie, and RCF (the table above)          | Decided  |
+| 5   | CLF import: go or no-go                                | After the spike                                          | Open     |
+| 6   | Show prices for reference speakers?                    | Yes, US vendors only, as for drivers                     | Open     |
+| 7   | Which part first?                                      | Loading (Part 1), then reference speakers                | Decided  |
