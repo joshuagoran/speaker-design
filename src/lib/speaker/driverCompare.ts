@@ -156,6 +156,8 @@ export interface DriverCompareRow {
   name: string;
   /** the part's own price with its horn, US dollars; null when the catalog lists none */
   price: number | null;
+  /** the part's own weight with its horn, lb; null when the catalog lists none */
+  lb: number | null;
   /** your design's part */
   yours: boolean;
   run: DriverCompareRun;
@@ -214,6 +216,7 @@ export function compareRows(
         option,
         name: ctx.nameOf(option),
         price: part.priced ? part.price + (horn?.price ?? 0) : null,
+        lb: part.weighed ? part.lb + (horn?.lb ?? 0) : null,
         yours: id === ctx.yours,
         run,
         problems,
@@ -227,7 +230,6 @@ export function compareRows(
 export const SORT_BEST: Record<DriverCompareSort, SortDirection> = {
   name: SORT_DIRECTION.ascending,
   price: SORT_DIRECTION.ascending,
-  total: SORT_DIRECTION.ascending,
   lb: SORT_DIRECTION.ascending,
   level: SORT_DIRECTION.descending,
   f3: SORT_DIRECTION.ascending,
@@ -243,10 +245,8 @@ function sortValue(r: DriverCompareRow, key: DriverCompareSort): number | string
       return r.name;
     case DRIVER_COMPARE_SORT.price:
       return r.price;
-    case DRIVER_COMPARE_SORT.total:
-      return m.price;
     case DRIVER_COMPARE_SORT.lb:
-      return m.lb;
+      return r.lb;
     case DRIVER_COMPARE_SORT.level:
       return r.run.bandDb;
     case DRIVER_COMPARE_SORT.f3:

@@ -5,7 +5,6 @@
 export const DRIVER_COMPARE_SORT = {
   name: "name",
   price: "price",
-  total: "total",
   lb: "lb",
   level: "level",
   f3: "f3",
@@ -34,8 +33,7 @@ export const DRIVER_COMPARE_TEXT = {
   passes: "passes",
   use: "Use",
   price: "Its price",
-  total: "Speaker price",
-  lb: "Speaker weight",
+  lb: "Driver weight",
   /** its band's level: the band's name first ("Low band level") */
   level: (band: string) => `${band} band level`,
   f3: "F3",

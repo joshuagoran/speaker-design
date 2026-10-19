@@ -48,6 +48,19 @@ interface Props<R extends CompareRowBase> {
   onPreview?: (row: R | null) => void;
   /** the row previewed: it is tinted */
   previewId?: string | null;
+  /** show the checks column (default); without it, the page shows a row's checks elsewhere (`CompareChecks`) */
+  checks?: boolean;
+}
+
+/** A row's checks: "passes", or the problems, gray where your design has it too, orange where the option adds it. */
+export function CompareChecks({ problems }: Pick<CompareRowBase, "problems">) {
+  if (!problems.length) return <span className="text-green-700">{DRIVER_COMPARE_TEXT.passes}</span>;
+  return problems.map((p, i) => (
+    <span key={`${p.text}-${i}`} className={p.yoursToo ? "text-stone-500" : "text-orange-700"}>
+      {i > 0 && "; "}
+      {p.text}
+    </span>
+  ));
 }
 
 /** A previewed row's tint: cyan over the cell's own background, so the sticky name cell stays opaque. */
@@ -68,6 +81,7 @@ export function CompareTable<R extends CompareRowBase>({
   sort,
   onPreview,
   previewId,
+  checks = true,
 }: Props<R>) {
   /** a heading: a button that sorts by it, where the table sorts */
   const head = (key: string, label: string) => {
@@ -105,9 +119,14 @@ export function CompareTable<R extends CompareRowBase>({
                 {head(c.key, c.head)}
               </th>
             ))}
-            <th className="py-1 pr-3 font-normal" aria-sort={ariaSort(DRIVER_COMPARE_SORT.checks)}>
-              {head(DRIVER_COMPARE_SORT.checks, DRIVER_COMPARE_TEXT.checks)}
-            </th>
+            {checks && (
+              <th
+                className="py-1 pr-3 font-normal"
+                aria-sort={ariaSort(DRIVER_COMPARE_SORT.checks)}
+              >
+                {head(DRIVER_COMPARE_SORT.checks, DRIVER_COMPARE_TEXT.checks)}
+              </th>
+            )}
             <th className="py-1 font-normal" />
           </tr>
         </thead>
@@ -151,22 +170,11 @@ export function CompareTable<R extends CompareRowBase>({
                     {c.cell(r)}
                   </td>
                 ))}
-                <td className={`py-1.5 pr-3 ${tint}`}>
-                  {r.problems.length ? (
-                    // a problem your design has whatever you pick is gray; what this option adds is orange
-                    r.problems.map((p, i) => (
-                      <span
-                        key={`${p.text}-${i}`}
-                        className={p.yoursToo ? "text-stone-500" : "text-orange-700"}
-                      >
-                        {i > 0 && "; "}
-                        {p.text}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-green-700">{DRIVER_COMPARE_TEXT.passes}</span>
-                  )}
-                </td>
+                {checks && (
+                  <td className={`py-1.5 pr-3 ${tint}`}>
+                    <CompareChecks problems={r.problems} />
+                  </td>
+                )}
                 <td className={`py-1 text-right ${tint}`}>
                   {!r.yours && (
                     <Button

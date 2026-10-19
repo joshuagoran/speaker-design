@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { CompareTable, type CompareColumn } from "../../components/ui/CompareTable";
+import { CompareChecks, CompareTable, type CompareColumn } from "../../components/ui/CompareTable";
 import { SORT_BEST, sortRows, type DriverCompareRow } from "../../lib/speaker/driverCompare";
 import { isWooferKind } from "./speakerParts";
 import { formatDollars } from "../../lib/format";
-import { UI_TEXT } from "../../constants/uiText";
 import { DRIVER_TYPE_NAMES } from "../../constants/speakerPage";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import {
@@ -40,18 +39,9 @@ const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
     cell: (r) => (r.price === null ? "?" : formatDollars(r.price)),
   },
   {
-    key: DRIVER_COMPARE_SORT.total,
-    head: DRIVER_COMPARE_TEXT.total,
-    // no part with a price: unknown, not $0
-    cell: ({ run: { metrics } }) =>
-      metrics.pricePartial && metrics.price === 0
-        ? "?"
-        : `${formatDollars(metrics.price)}${metrics.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
-  },
-  {
     key: DRIVER_COMPARE_SORT.lb,
     head: DRIVER_COMPARE_TEXT.lb,
-    cell: (r) => amount(r.run.metrics.lb, "lb"),
+    cell: (r) => amount(r.lb, "lb"),
   },
   {
     key: DRIVER_COMPARE_SORT.level,
@@ -73,7 +63,7 @@ const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
 /**
  * The Speaker page's driver comparison table: each option's numbers in your design, sorted by maximum output (highest
  * first) until a heading is clicked; a second click on the same heading reverses it. Yours stays first, and the options
- * that fail something yours doesn't stay last.
+ * that fail something yours doesn't stay last. The previewed row's checks (else yours) show above the table.
  */
 export function DriverCompareTable({ rows, kind, bandName, previewId, onPreview, onUse }: Props) {
   const [sort, setSort] = useState<{ key: DriverCompareSort; dir: SortDirection }>({
@@ -95,21 +85,36 @@ export function DriverCompareTable({ rows, kind, bandName, previewId, onPreview,
         : { key: next, dir: SORT_BEST[next] },
     );
   };
+  const sorted = sortRows(rows, sort.key, sort.dir);
+  /** the row whose checks show: the one previewed, else yours */
+  const shown = sorted.find((r) => r.id === previewId) ?? sorted.find((r) => r.yours);
   return (
-    <CompareTable
-      nameHead={DRIVER_TYPE_NAMES[isWooferKind(kind) ? DRIVER_KIND.woofer : kind]}
-      columns={COLUMNS(bandName)}
-      rows={sortRows(rows, sort.key, sort.dir)}
-      onUse={(r) => {
-        // the row moves to the top as yours: the pointer is no longer over it
-        onPreview(null);
-        onUse(r.option);
-      }}
-      bg="bg-panel"
-      minWidth="min-w-[760px]"
-      sort={{ ...sort, onSort }}
-      previewId={previewId}
-      onPreview={(r) => onPreview(r && r.id)}
-    />
+    <>
+      {/* two lines held, so the table doesn't move as the checks change */}
+      <p className="text-xs min-h-[2lh]">
+        {shown && (
+          <>
+            <span className="text-stone-500">{shown.name}: </span>
+            <CompareChecks problems={shown.problems} />
+          </>
+        )}
+      </p>
+      <CompareTable
+        nameHead={DRIVER_TYPE_NAMES[isWooferKind(kind) ? DRIVER_KIND.woofer : kind]}
+        columns={COLUMNS(bandName)}
+        rows={sorted}
+        onUse={(r) => {
+          // the row moves to the top as yours: the pointer is no longer over it
+          onPreview(null);
+          onUse(r.option);
+        }}
+        bg="bg-panel"
+        minWidth="min-w-[22rem]"
+        checks={false}
+        sort={{ ...sort, onSort }}
+        previewId={previewId}
+        onPreview={(r) => onPreview(r && r.id)}
+      />
+    </>
   );
 }

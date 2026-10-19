@@ -9,6 +9,9 @@ import { UI_TEXT } from "../../constants/uiText";
 import { DRIVER_COMPARE_SORT, DRIVER_COMPARE_TEXT } from "../../constants/driverCompare";
 import type { PaDriverCompareRow, PaDriverPart } from "../../types";
 
+/** The stack price column's heading (also its key). */
+const STACK_PRICE_HEAD = "Drivers / stack";
+
 type Metrics = NonNullable<PaDriverCompareRow["m"]>;
 /** A part-specific column: its heading and its value in words. */
 interface Column {
@@ -78,8 +81,8 @@ export function DriverCompare({ rows, onUse }: Props) {
                     cell: (r) => (r.price == null ? "?" : formatDollars(r.price)),
                   },
                   {
-                    key: DRIVER_COMPARE_SORT.total,
-                    head: "Drivers / stack",
+                    key: STACK_PRICE_HEAD,
+                    head: STACK_PRICE_HEAD,
                     cell: (r) =>
                       r.m
                         ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : UI_TEXT.partialPriceMark}`

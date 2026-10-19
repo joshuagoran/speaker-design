@@ -720,7 +720,7 @@ export function withPart(d: SpeakerDriver, driverId: string, hornId: string | nu
 export function partFacts(
   kind: DriverKind,
   id: string,
-): { price: number; priced: boolean; lb: number } {
+): { price: number; priced: boolean; lb: number; weighed: boolean } {
   const row: { price: number | null; lb: number | null } | undefined =
     kind === DRIVER_KIND.sub
       ? byId(SPEAKER_SUB_OPTIONS, id)
@@ -733,7 +733,12 @@ export function partFacts(
             : kind === DRIVER_KIND.compression
               ? byId(CD_OPTIONS, id)
               : byId(HIFI_TWEETERS, id);
-  return { price: row?.price ?? 0, priced: row?.price != null, lb: row?.lb ?? 0 };
+  return {
+    price: row?.price ?? 0,
+    priced: row?.price != null,
+    lb: row?.lb ?? 0,
+    weighed: row?.lb != null,
+  };
 }
 
 /** A horn's price and weight (none: 0). */
