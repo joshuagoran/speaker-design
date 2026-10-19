@@ -1,6 +1,6 @@
 // The designs and readers the speaker model's tests share (tests/speaker-response.test.ts,
-// tests/speaker-limits.test.ts, and others): the Hi-fi and PA designs through the L1 adapters, the PA sub box model of
-// them, and curve comparisons on a log-frequency axis.
+// tests/speaker-limits.test.ts, and others): the Hi-fi and PA designs through the L1 adapters, the PA sub box's net air
+// by the PA rules, and curve comparisons on a log-frequency axis.
 import assert from "node:assert";
 import { midBoxOf, type PaConfig } from "./pa-configs";
 import type { speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -8,7 +8,7 @@ import { speakerIdentity } from "../src/lib/speaker/specParts";
 import type { PaFloor } from "../src/lib/speaker/paSpec";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { needsWaveguide } from "../src/lib/speaker/twoWay";
-import { subSystem } from "../src/lib/acoustics/boxModels";
+import { subGeometry } from "../src/lib/acoustics/boxModels";
 import { towerMidDims } from "../src/lib/speaker/tower";
 import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
 import { panelNominalNear } from "../src/lib/build/panel";
@@ -175,27 +175,20 @@ export const withNet = (
   },
 });
 
-/** The PA sub box model of a design: its net air, tuning, curve, and limits. */
-export function paSubModel(cfg: PaDesign) {
+/** The PA sub box of a design by the PA rules: its vent and its net air. */
+export function paSubGeometry(cfg: PaDesign) {
   const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
   const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
   assert.ok(sub && mid);
-  const s = subSystem(sub, mid, {
+  return subGeometry(sub, mid, {
     subBox: cfg.cDim,
     midDims: cfg.layout === "tower" ? towerMidDims(cfg.cDim) : cfg.mDim,
     wall: cfg.wall,
     inset: cfg.inset,
     portStyle: cfg.portStyle,
     cVent: cfg.cVent,
-    hpf: cfg.hpf,
-    hpType: cfg.hpType,
-    ampW: cfg.ampW,
-    portMax: cfg.portMax,
     layout: cfg.layout,
     braceStyle: cfg.braceStyle,
     hardware: cfg.hardware,
-    xoLo: cfg.xoLo,
   });
-  assert.ok(s.mdl);
-  return { s, sub: s.mdl };
 }

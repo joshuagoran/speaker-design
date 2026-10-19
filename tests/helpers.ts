@@ -2,7 +2,20 @@
 import assert from "node:assert";
 import { spaceModelLaidOut, withSolved, type SpaceModel } from "../src/lib/speaker/spaceCoverage";
 import { solveFeeds } from "../src/lib/speaker/solveFeeds";
-import type { Chip, ChipId, ChipSeverity, SpaceDesign, ThieleSmall, VentSpec } from "../src/types";
+import { hornModel, portOfEffectiveLength } from "../src/lib/acoustics/hornModel";
+import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
+import type {
+  BoxModelTS,
+  Chip,
+  ChipId,
+  ChipSeverity,
+  HornDesign,
+  HornModel,
+  HornPort,
+  SpaceDesign,
+  ThieleSmall,
+  VentSpec,
+} from "../src/types";
 
 /**
  * `count` log-spaced frequencies from `fmin` to `fmax`, Hz: the horn engine's grid (10 Hz–2 kHz reaches a mid horn's
@@ -39,8 +52,40 @@ export const chipOf = <I extends ChipId>(
   assert.ok(c, `${id}${kind ? ` (${kind})` : ""}: ${chipList(F)}`);
   return c;
 };
-/** `closedBox` filter orders: LR24 at both corners, as the PA crossovers default to. */
-export const LR24_ORDERS = { hpOrder: 4, lpOrder: 4 } as const;
+/**
+ * A plain box as the horn engine takes it, no horn: `drivers` cones straight on the air in half space, a chamber of
+ * `liters` behind them, sealed (no port) or vented.
+ */
+export const directBox = (
+  driver: BoxModelTS,
+  liters: number,
+  port: HornPort | null = null,
+  drivers = 1,
+): HornDesign => ({
+  driver,
+  drivers,
+  count: 1,
+  throatChamber: 0,
+  segments: [],
+  rear: { liters, port },
+  angle: 2,
+  portOffset: 0,
+});
+/**
+ * `n` round openings of `areaIn2` in all as the engine's port, `lenIn` long: the effective length adds the textbook
+ * 1.46 r per opening (a flanged and a free end, r each opening's radius), as `helmholtz` takes it.
+ */
+export const roundVent = (areaIn2: number, lenIn: number, n = 1) =>
+  portOfEffectiveLength(
+    areaIn2 * CM2_PER_IN2,
+    (lenIn + 1.46 * Math.sqrt(areaIn2 / n / Math.PI)) * CM_PER_IN,
+  );
+/** The horn engine's response for a design that must be modelable. */
+export const engineModel = (...args: Parameters<typeof hornModel>): HornModel => {
+  const model = hornModel(...args);
+  assert.ok(model, "the design should be modelable");
+  return model;
+};
 
 /** The Thiele-Small fields these references use. */
 type TsFields = Pick<ThieleSmall, "Fs" | "Sd" | "Mms" | "Re" | "Bl" | "Qms">;

@@ -4,6 +4,7 @@
 // Symbols are Thiele and Small's; each is defined in the DriverCircuit and VentResistances types (src/types.ts).
 import type { BoxModelTS, Complex, DriverCircuit, VentResistances } from "../../types";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../../constants/units";
+import { AIR_DENSITY, SPL_REFERENCE_PA } from "../../constants/acoustics";
 
 /** Millihenries per henry: datasheets give the coil's inductance Le in mH. */
 const MH_PER_H = 1000;
@@ -70,3 +71,15 @@ export const ventResistances = (
   Ral: QL / (2 * Math.PI * Fb * Cab),
   Rap: Number.isFinite(Qp) ? (2 * Math.PI * Fb * Map) / Qp : 0,
 });
+
+/**
+ * A cone's midband level at `volts` RMS, dB at 1 m in half space: its mass-controlled line, p = ρ·V·Bl·Sd/(2π·Re·Mms),
+ * where a box's response flattens above its tuning (no inductance or radiation load).
+ */
+export const midbandLevelDb = (ts: BoxModelTS, volts: number) =>
+  20 *
+  Math.log10(
+    (AIR_DENSITY * volts * ts.Bl * (ts.Sd / SQ_CM_PER_SQ_M)) /
+      (2 * Math.PI * ts.Re * (ts.Mms / GRAMS_PER_KG)) /
+      SPL_REFERENCE_PA,
+  );

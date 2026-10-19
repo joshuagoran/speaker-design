@@ -1,9 +1,8 @@
 // The voice coil's inductance in the box models (lib/acoustics/driverCircuit coilFactor): a driver that lists Le rolls
-// off at the top in the sealed, vented and passive-radiator models; one without Le reads exactly as with the coil as
-// Re alone.
+// off at the top in a sealed and a vented box (the horn engine with no horn) and the passive-radiator model; one
+// without Le reads exactly as with the coil as Re alone.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxModel, closedBox } from "../src/lib/acoustics/boxModels";
 import { passiveRadiatorBox } from "../src/lib/acoustics/wooferBox";
 import { coilFactor } from "../src/lib/acoustics/driverCircuit";
 import {
@@ -18,7 +17,7 @@ import {
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HIFI_PASSIVES, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import type { BoxModelTS, Complex } from "../src/types";
-import { massLineSPL, near } from "./helpers";
+import { directBox, engineModel, hornGrid, massLineSPL, near, roundVent } from "./helpers";
 
 const mid = MID_OPTIONS.find((o) => o.id === "f12pr300");
 assert.ok(mid, "the catalog has the mid");
@@ -28,10 +27,14 @@ const zero: BoxModelTS = { ...bare, Le: 0 };
 const coil: BoxModelTS = { ...bare, Le: 1.5 };
 const grid = { fmin: 20, fmax: 5000, N: 160, phase: true };
 
+/** A sealed or vented box's curve through the horn engine, as `raw` levels with the excursion. */
+const engineCurve = (...args: Parameters<typeof engineModel>) =>
+  engineModel(...args).curve.map((o) => ({ f: o.f, raw: o.spl, xmm: o.xmm, phase: o.phase }));
+
 /** The three box models of one driver, each run the same way. */
 const models = (ts: BoxModelTS) => ({
-  sealed: closedBox(ts, 40, null, null, 2.83, { ...grid, hpOrder: 4, lpOrder: 4 })?.curve,
-  vented: boxModel(ts, 60, 20, 8, 1, 2.83, "BW24", grid)?.curve,
+  sealed: engineCurve(directBox(ts, 40), hornGrid(20, 5000, 160), 2.83),
+  vented: engineCurve(directBox(ts, 60, roundVent(20, 8)), hornGrid(20, 5000, 160), 2.83),
   radiator: passiveRadiatorBox(
     ts,
     40,
@@ -118,25 +121,28 @@ function seriesSPL(
   const U = radiated ? multiply(multiply(Ud, box(w)), imaginary(w * Cab)) : Ud;
   return 20 * Math.log10((AIR_DENSITY * w * abs(U)) / (2 * Math.PI) / 2e-5);
 }
-const wide = { fmin: 20, fmax: 5000, N: 400 };
+/** The grid of these checks, 20 Hz–5 kHz. */
+const WIDE = hornGrid(20, 5000, 400);
+/** The lumped circuit (no radiation load), as the series reference takes it. */
+const LUMPED = { radiationLoad: false } as const;
+/** A 60 in², 12″ round vent as the lumped mode takes it: its whole effective length, 1.46 r added. */
+const lumpedVent = { area: 60 * 6.4516, length: (12 + 1.46 * Math.sqrt(60 / Math.PI)) * 2.54 };
 
 test("voice coil: at 250 Hz the box models match the series circuit with Re + jωLe (f18fh500)", () => {
-  const sealed = closedBox(fh500, VbL, null, null, 2.83, { ...wide, hpOrder: 4, lpOrder: 4 });
-  const vented = boxModel(fh500, VbL, 60, 12, 5, 2.83, "BW24", wide);
-  assert.ok(sealed && vented);
-  const s = near(sealed.curve, 250),
-    v = near(vented.curve, 250);
+  const sealed = engineCurve(directBox(fh500, VbL), WIDE, 2.83, LUMPED);
+  const ventedModel = engineModel(directBox(fh500, VbL, lumpedVent), WIDE, 2.83, LUMPED);
+  const vented = engineCurve(directBox(fh500, VbL, lumpedVent), WIDE, 2.83, LUMPED);
+  const s = near(sealed, 250),
+    v = near(vented, 250);
   const sRef = seriesSPL(fh500, s.f, 2.83, sealedBox),
-    vRef = seriesSPL(fh500, v.f, 2.83, ventedBox(vented.Fb), true);
+    vRef = seriesSPL(fh500, v.f, 2.83, ventedBox(ventedModel.fb ?? NaN), true);
   assert.ok(Math.abs(s.raw - sRef) < 0.05, `sealed: ${s.raw.toFixed(3)} vs ${sRef.toFixed(3)} dB`);
   assert.ok(Math.abs(v.raw - vRef) < 0.05, `vented: ${v.raw.toFixed(3)} vs ${vRef.toFixed(3)} dB`);
 });
 
 test("voice coil: the level never passes the mass line scaled by ωMms/|Zm| (the current cannot pass V/Re)", () => {
   for (const ts of [fh500, coil]) {
-    const r = closedBox(ts, VbL, null, null, 2.83, { ...wide, hpOrder: 4, lpOrder: 4 });
-    assert.ok(r);
-    for (const o of r.curve) {
+    for (const o of engineCurve(directBox(ts, VbL), WIDE, 2.83, LUMPED)) {
       const bound =
         massLineSPL(ts, 2.83) +
         20 *
@@ -150,9 +156,8 @@ test("voice coil: the level never passes the mass line scaled by ωMms/|Zm| (the
 });
 
 test("voice coil: well above the coil's resonance with the motional capacitance (2 kHz) Le lowers the level", () => {
-  const sealed = (ts: BoxModelTS) =>
-    closedBox(ts, VbL, null, null, 2.83, { ...wide, hpOrder: 4, lpOrder: 4 })?.curve;
-  const vented = (ts: BoxModelTS) => boxModel(ts, VbL, 60, 12, 5, 2.83, "BW24", wide)?.curve;
+  const sealed = (ts: BoxModelTS) => engineCurve(directBox(ts, VbL), WIDE, 2.83);
+  const vented = (ts: BoxModelTS) => engineCurve(directBox(ts, VbL, roundVent(60, 12)), WIDE, 2.83);
   for (const [kind, run] of [
     ["sealed", sealed],
     ["vented", vented],

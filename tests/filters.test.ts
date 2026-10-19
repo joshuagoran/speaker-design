@@ -1,10 +1,14 @@
 import { test } from "vite-plus/test";
-import {
-  highpassGain,
-  linkwitzRileyLowpass,
-  linkwitzRileyHighpass,
-} from "../src/lib/acoustics/boxModels";
+import { highpassGain } from "../src/lib/acoustics/boxModels";
+import { filterTransfer } from "../src/lib/speaker/bandFilter";
+import { abs } from "../src/lib/acoustics/complex";
 import { db, close } from "./helpers";
+
+/** An LR24 filter's magnitude at `f` (Hz), corner `fc` (the order is 4 throughout). */
+const lr24 = (side: "lowpass" | "highpass") => (f: number, fc: number, _order: 4) =>
+  abs(filterTransfer(f, { hz: fc, type: "LR24" }, side));
+const linkwitzRileyLowpass = lr24("lowpass"),
+  linkwitzRileyHighpass = lr24("highpass");
 
 test("Butterworth highpasses are -3.01 dB at the corner", (t) => {
   close(t, db(highpassGain(40, 40, "BW24")), -3.01, 0.01);

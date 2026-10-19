@@ -26,7 +26,7 @@ import {
   midBoxBracing,
   subBoxBracing,
   subHardwarePlan,
-  subSystem,
+  subGeometry,
   subWeightLb,
 } from "../src/lib/acoustics/boxModels";
 import { towerHornCutout, towerMidDims } from "../src/lib/speaker/tower";
@@ -74,22 +74,17 @@ function paBoxModels(cfg: PaDesign, joint: CornerJoint) {
   const tower = cfg.layout === "tower";
   const midDims = tower ? towerMidDims(cfg.cDim) : cfg.mDim;
   const { hardware, braceStyle, backJoint, wall, inset, layout } = cfg;
-  const s = subSystem(sub, mid, {
+  const s = subGeometry(sub, mid, {
     subBox: cfg.cDim,
     midDims: cfg.mDim,
     wall,
     inset,
     portStyle: cfg.portStyle,
     cVent: cfg.cVent,
-    hpf: cfg.hpf,
-    hpType: cfg.hpType,
-    ampW: cfg.ampW,
-    portMax: cfg.portMax,
     layout,
     braceStyle,
     backJoint,
     hardware,
-    xoLo: cfg.xoLo,
   });
   const vent = [cfg.cDim, wall, inset, cfg.portStyle, cfg.cVent, sub, braceStyle] as const;
   const subBracing = subBoxBracing(...vent, hardware.sub, backJoint);

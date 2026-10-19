@@ -1,9 +1,9 @@
 // The Speaker optimizer's vents: the port sizes a vented chamber tries, a port's length solved for a tuning on the
 // chamber's net air, and a radiator's added masses. Each port keeps its shape and count. Pure.
 import type { SpeakerCabinet, SpeakerChamber, SpeakerPort } from "../../../types";
-import { chamberVentModel, stuffedLiters } from "../chamberAir";
+import { chamberHornPort, chamberVentModel, stuffedLiters } from "../chamberAir";
 import { PORT_RULE, portRule } from "../speakerLayout";
-import { ventTuning } from "../../acoustics/boxModels";
+import { ventTuningHz } from "../../acoustics/hornModel";
 import { hifiPortElbows } from "../../acoustics/wooferBox";
 import { ventSizesFor } from "../../optimizer/searchSpace";
 import { passiveRadiatorMassMax, HIFI_PASSIVES } from "../../data";
@@ -21,8 +21,6 @@ const MIN_DIA_IN = 0.75;
 const MIN_PORT_LEN_IN = 0.5;
 /** How many radiator masses the search tries, from none to the most the radiator takes. */
 const RADIATOR_MASS_STEPS = 6;
-/** m per in. */
-const M_PER_IN = 0.0254;
 
 /** A port's size along the axis the ladder moves (a duct's throat, a slot's narrow side, a tube's diameter). */
 const sizeOf = (p: SpeakerPort) =>
@@ -94,9 +92,9 @@ function bent(
 }
 
 /**
- * The port at the length that tunes the chamber to `fbHz` (Helmholtz, as the box model tunes it: `ventTuning` on the
- * stuffed net air, with the vent's own end corrections, which move with the length), on the length field's step; null
- * when even the shortest port tunes it lower than that. `netOf` gives the chamber's net air with a port in it, L.
+ * The port at the length that tunes the chamber to `fbHz` (as the speaker model tunes it: the horn engine's
+ * `ventTuningHz` on the stuffed net air, the vent's effective length by its rule, whose end corrections move with the
+ * length), on the length field's step; null when even the shortest port tunes it lower than that. `netOf` gives the chamber's net air with a port in it, L.
  * `cabinet` holds the chamber at index `k` (its neighbors set its shared walls).
  */
 export function tunedPort(
@@ -115,12 +113,16 @@ export function tunedPort(
   for (let i = 0; i < 6; i++) {
     const { chamber, cab } = at(p);
     const vm = chamberVentModel(cab, chamber);
-    if (!vm || !(vm.areaIn2 > 0)) return null;
+    const port = chamberHornPort(cab, chamber);
+    if (!vm || !port) return null;
     const air = stuffedLiters(chamber, netOf(cab, chamber));
     if (!(air > 0)) return null;
-    const { Fb, Leff } = ventTuning(air, vm.areaIn2, p.len, vm.openings, vm.endCorrectionIn);
-    // the tuning goes as 1/√Leff
-    const len = p.len + (Leff * Math.pow(Fb / fbHz, 2) - Leff) / M_PER_IN;
+    const Fb = ventTuningHz(air, port);
+    if (Fb === null) return null;
+    /** the vent's effective length, in: its path length plus its end corrections */
+    const effectiveIn = p.len + vm.endCorrectionIn;
+    // the tuning goes about as 1/√(effective length) (exactly, for a lumped vent): the next step's length
+    const len = p.len + effectiveIn * (Math.pow(Fb / fbHz, 2) - 1);
     if (!Number.isFinite(len)) return null;
     const done = Math.abs(len - p.len) < 0.01;
     p = bent(cabinet, chamber, { ...p, len: Math.max(MIN_PORT_LEN_IN / 2, len) });

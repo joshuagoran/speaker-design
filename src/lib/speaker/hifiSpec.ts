@@ -13,7 +13,7 @@ import type {
   SpecIdentity,
 } from "../../types";
 import { driverLayout, isCoax, tweeterLevelInBox } from "./twoWay";
-import { HIFI_STUFFING_GAIN, hifiBox, hifiGridTop, hifiPortElbows } from "../acoustics/wooferBox";
+import { HIFI_STUFFING_GAIN, hifiBox, hifiPortElbows } from "../acoustics/wooferBox";
 import { hifiBoxFit } from "../build/boxLayout";
 import { MAX_ELBOWS } from "../build/tubeFold";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
@@ -134,21 +134,17 @@ function hifiBandParts(
   state: HifiDesignState,
   fit: ReturnType<typeof hifiBoxFit>,
 ): { subsonic: BandFilter | null; trimDb: number } {
-  const box = hifiBox(
-    state.woofer,
-    {
-      box: state.boxType,
-      port: state.portSpec,
-      pr: fit.radiator,
-      dim: fit.dim,
-      wall: fit.wallThicknessIn,
-      wAmpW: state.wooferAmpWatts,
-    },
-    hifiGridTop(state.crossoverHz),
-  );
+  const box = hifiBox(state.woofer, {
+    box: state.boxType,
+    port: state.portSpec,
+    pr: fit.radiator,
+    dim: fit.dim,
+    wall: fit.wallThicknessIn,
+    wAmpW: state.wooferAmpWatts,
+  });
   if (!box) return { subsonic: null, trimDb: 0 };
-  /** the woofer's passband level at 2.83 V, as hifiSystemFromBox reads it */
-  const refW = box.m.ref - 20 * Math.log10(box.V / ONE_WATT_VOLTS);
+  /** the woofer's passband level at 2.83 V */
+  const refW = box.ref - 20 * Math.log10(box.V / ONE_WATT_VOLTS);
   const { trim } = tweeterLevelInBox(
     state.tweeter,
     {

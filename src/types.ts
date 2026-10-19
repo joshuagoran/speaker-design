@@ -1106,52 +1106,6 @@ export interface PaDesignConfig {
   summary?: string;
 }
 
-/** One point of a vented-box response: raw box SPL, system SPL with the highpass, cone excursion (mm, peak) and port air speed (m/s, peak). */
-export interface VentedPoint {
-  f: number;
-  raw: number;
-  spl: number;
-  xmm: number;
-  vel: number;
-  /** the phase of `raw` (the box alone), radians, unwrapped; only with the model's `phase` option */
-  rawPhase?: number;
-}
-
-export interface VentedBoxModel {
-  curve: VentedPoint[];
-  Fb: number;
-  f3: number;
-  f3Box: number;
-  ref: number;
-  spl30: number;
-  spl35: number;
-  spl45: number;
-  peakVel: number;
-  peakVelF: number;
-  peakX: number;
-  peakXF: number;
-  xmaxPct: number;
-}
-
-/** One point of a sealed-box response (no port). */
-export interface SealedPoint {
-  f: number;
-  raw: number;
-  spl: number;
-  xmm: number;
-  /** the phase of `raw` (the box alone, no crossover), radians, unwrapped; only with the model's `phase` option */
-  rawPhase?: number;
-}
-
-export interface SealedBoxModel {
-  curve: SealedPoint[];
-  Fc: number;
-  Qtc: number;
-  f3: number;
-  ref: number;
-  peakX: number;
-}
-
 /**
  * A driver as an acoustic circuit (lib/acoustics/driverCircuit), in the box models' terms: a pressure source Pg behind
  * Ras + Rae + j(ωMas − 1/(ωCas)). Mechanical values are seen through the cone's area Sd: a mass or resistance divides
@@ -1547,18 +1501,6 @@ export type HornrespReading =
 /** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator, no horn throat). */
 export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
 
-/** The sub's music limit: the drive level (volts, and watts into the driver) where the first of port, cone, driver and amp gives out. */
-export interface SubLimits {
-  who: SubLimitWho;
-  V: number;
-  W: number;
-  vel: number;
-  xPct: number;
-  spl30: number;
-  spl35: number;
-  spl45: number;
-}
-
 /** How many 90° elbows a round port tube takes to fit its box (lib/build/tubeFold). */
 export type ElbowCount = 0 | 1 | 2;
 
@@ -1602,18 +1544,6 @@ export interface SubGeometryConfig {
   hardware?: PaHardware;
 }
 
-/** `subSystem` adds the highpass, the amp and the port air speed limit. */
-export interface SubSystemConfig extends SubGeometryConfig {
-  hpf: number;
-  hpType: HighpassType;
-  ampW: number;
-  portMax: number;
-  /** the sub-to-mid crossover, for a curve that shows the lowpass skirt; the optimizer's screening leaves it out */
-  xoLo?: number;
-  /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
-  phase?: boolean;
-}
-
 /** The sub's vent and volumes, without the model. */
 export interface SubGeometry {
   port: VentGeometry;
@@ -1623,35 +1553,7 @@ export interface SubGeometry {
   /** the liters the hardware's recesses take (lib/build/hardware) */
   recessL: number;
   netL: number;
-  Fb: number;
 }
-
-/** What a sub always has: its vent, volumes and the amp's peak voltage. */
-export interface SubSystemBase {
-  port: VentGeometry;
-  grossL: number;
-  ductL: number;
-  woodL: number;
-  /** the liters the hardware's recesses take (lib/build/hardware) */
-  recessL: number;
-  netL: number;
-  AMP_V: number;
-}
-
-/** A sub with no model: the driver has no T/S, or the box or vent is degenerate (no net volume, no port area, port length at or under 0). */
-export interface SubSystemUnmodeled extends SubSystemBase {
-  mdl: null;
-  lim: null;
-}
-
-/** A sub with its vented-box model and the music limit that comes from it. */
-export interface SubSystemModeled extends SubSystemBase {
-  mdl: VentedBoxModel;
-  lim: SubLimits;
-}
-
-/** `subSystem`: check `mdl` and `lim` narrows with it. */
-export type SubSystem = SubSystemUnmodeled | SubSystemModeled;
 
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
 export interface HornResponse {

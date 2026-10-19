@@ -15,6 +15,8 @@ import {
   subVentMasses,
 } from "../src/lib/acoustics/boxModels";
 import { subDriverDepthIn } from "../src/lib/build/tubes";
+import { portOfEffectiveLength, ventTuningHz } from "../src/lib/acoustics/hornModel";
+import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import {
   boxCenterOfGravity,
   DEFAULT_HARDWARE,
@@ -95,7 +97,13 @@ test("each recess's liters come off the box's net volume, and the tuning follows
   close(null, liters, 2 * partRecessLiters(handle, t), 1e-12);
   close(null, fitted.recessL, liters, 1e-12);
   close(null, bare.netL - fitted.netL, liters, 1e-9);
-  assert.ok(fitted.Fb > bare.Fb, "a smaller box tunes higher on the same vent");
+  /** a geometry's tuning, Hz: its net air with its vent (the engine's duct by the vent's effective length) */
+  const fbOf = (g: typeof bare) =>
+    ventTuningHz(
+      g.netL,
+      portOfEffectiveLength(g.port.area * CM2_PER_IN2, (g.port.len + g.port.ec) * CM_PER_IN),
+    ) ?? NaN;
+  assert.ok(fbOf(fitted) > fbOf(bare), "a smaller box tunes higher on the same vent");
   // the box's hardware plan counts the same liters
   close(null, subPlan().liters, liters, 1e-12);
   // no handles: only the dish, which takes none; the tower's mid chamber has no hardware of its own

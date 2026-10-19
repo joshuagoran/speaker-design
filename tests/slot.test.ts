@@ -4,8 +4,6 @@ import {
   sideDuctEndCorrection,
   cutParts,
   ventGeometry,
-  boxModel,
-  subSystem,
   slotMouthCorrection,
   subGeometry,
   maxStraightSlotIn,
@@ -19,8 +17,23 @@ import {
 import { ductFit } from "../src/lib/speaker/chips";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
-import type { SubSystemConfig } from "../src/types";
+import { portOfEffectiveLength, ventTuningHz } from "../src/lib/acoustics/hornModel";
+import { chamberVentModel, stuffedLiters } from "../src/lib/speaker/chamberAir";
+import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
+import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
+import type { SubGeometryConfig } from "../src/types";
 import { C, rel, close, vent, DRV18 } from "./helpers";
+
+/** The tuning, Hz, of `liters` with a vent of `areaIn2` and effective length `effectiveIn` (the engine's duct). */
+const engineFb = (liters: number, areaIn2: number, effectiveIn: number) =>
+  ventTuningHz(liters, portOfEffectiveLength(areaIn2 * CM2_PER_IN2, effectiveIn * CM_PER_IN)) ??
+  NaN;
+/** Helmholtz's tuning, Hz, of `liters` with a vent of `areaIn2` and effective length `effectiveIn` (lumped). */
+const helmholtzFb = (liters: number, areaIn2: number, effectiveIn: number) =>
+  (C / (2 * Math.PI)) *
+  Math.sqrt((areaIn2 * 0.00064516) / ((liters / 1000) * effectiveIn * 0.0254));
 // Independent check of the closed form: integrate the potential of the rectangle numerically.
 // phi(x, y) = integral of 1/distance over the rectangle, from its four corner sub-rectangles.
 const F = (p: number, q: number) =>
@@ -70,11 +83,11 @@ test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
       slotMouthCorrection(3, 30 - 1.5, 20 - 0.75 - 14, 0.75, 14 - 0.75 - 0.75),
     1e-12,
   );
-  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
-  const m = boxModel(ts, 120, g.area, g.len, 25, 20, "BW24", { ecIn: g.ec })!;
-  const Sp = g.area * 0.00064516,
-    Leff = (14 + g.ec!) * 0.0254;
-  rel(t, m.Fb, (C / (2 * Math.PI)) * Math.sqrt(Sp / (0.12 * Leff)), 1e-9);
+  // the engine's duct tunes a little below Helmholtz at the same effective length (its air's springiness, its exit's load)
+  const duct = engineFb(120, g.area, 14 + g.ec!),
+    lumped = helmholtzFb(120, g.area, 14 + g.ec!);
+  assert.ok(duct < lumped);
+  rel(t, duct, lumped, 0.03);
 });
 test("side ducts: each opening's correction, outside its throat x open height, inside a slot mouth on its side", (t) => {
   const box = { w: 22, h: 30, d: 20 };
@@ -97,36 +110,29 @@ test("side ducts: each opening's correction, outside its throat x open height, i
       st,
     );
   }
-  // per-opening: two ducts tune like one duct in the mirrored half of the box
-  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
+  // per-opening: two ducts tune like one duct in the mirrored half of the box (each opening its own correction; the
+  // engine's duct, its exit one round opening of all the area, tunes them within 0.5 %)
   // the mirror image of one half: half the inner width, half the volume
   const half = { ...box, w: (box.w - 1.5) / 2 + 1.5 };
   const two = ventGeometry("vslots", box, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18),
     one = ventGeometry("vslot1", half, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18);
-  const a = boxModel(ts, 120, two.area, 12, 25, 20, "BW24", { nPorts: 2, ecIn: two.ec })!;
-  const b = boxModel(ts, 60, one.area, 12, 25, 20, "BW24", { nPorts: 1, ecIn: one.ec })!;
-  rel(t, a.Fb, b.Fb, 1e-9);
+  rel(t, two.ec ?? NaN, one.ec ?? NaN, 1e-9, "each opening's correction");
+  rel(t, helmholtzFb(120, two.area, 12 + two.ec!), helmholtzFb(60, one.area, 12 + one.ec!), 1e-9);
+  rel(t, engineFb(120, two.area, 12 + two.ec!), engineFb(60, one.area, 12 + one.ec!), 0.005);
 });
-test("subSystem passes the slot end correction to the model", (t) => {
-  const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500")!,
-    mid = MID_OPTIONS[0];
-  const cfg: SubSystemConfig = {
-    subBox: { w: 22, h: 30, d: 22 },
-    midDims: { w: 15, h: 15, d: 15 },
-    wall: 0.75,
-    inset: 0.75,
-    portStyle: "slots",
-    cVent: vent({ slotH: 3, len: 14 }),
-    hpf: 30,
-    hpType: "BW24",
-    ampW: 800,
-    portMax: 20,
-    layout: "stack",
-  };
-  const s = subSystem(sub, mid, cfg);
-  const Sp = s.port.area * 0.00064516,
-    Leff = (s.port.len + s.port.ec!) * 0.0254;
-  rel(t, s.mdl!.Fb, (C / (2 * Math.PI)) * Math.sqrt(Sp / ((s.netL / 1000) * Leff)), 1e-9);
+test("the speaker model passes the letterbox's end corrections to the engine", (t) => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
+  const [chamber] = spec.cabinet.chambers;
+  const port = chamberVentModel(spec.cabinet, chamber);
+  assert.ok(port);
+  const response = speakerResponse(spec);
+  const air = stuffedLiters(chamber, response.chambers[0].netLiters);
+  rel(
+    t,
+    response.chambers[0].fb ?? NaN,
+    engineFb(air, port.areaIn2, port.lenIn + port.endCorrectionIn),
+    1e-12,
+  );
 });
 
 test("side duct: the mouth's gap to the back wall is the one the cutlist and the 3D view build", (t) => {
@@ -212,7 +218,7 @@ test("bottom slot: the shortest fold tunes a little above the longest straight r
   // but its sharp bend takes some back, and its mouth opens wide under the lid, so its effective length is within about
   // an inch of the longest straight slot's in these boxes (tests/slot-flow.ts), and with the rear wall's wood and the
   // duct's own air off the box it tunes 0.4–1.2 Hz higher.
-  const cases: [SubSystemConfig["subBox"], number][] = [
+  const cases: [SubGeometryConfig["subBox"], number][] = [
     [{ w: 22, h: 30, d: 20 }, 3],
     [{ w: 21, h: 37, d: 18 }, 3],
     [{ w: 24, h: 24, d: 24 }, 4],
@@ -232,7 +238,9 @@ test("bottom slot: the shortest fold tunes a little above the longest straight r
     const straight = at(maxStraightSlotIn(box, slotH, 0.75)),
       fold = at(minFoldedSlotIn(box, 0.75));
     assert.ok(!straight.port.desc.includes("folded") && fold.port.desc.includes("folded"));
-    const step = fold.Fb - straight.Fb;
-    assert.ok(step > 0.3 && step < 3, `${box.h}: ${straight.Fb} -> ${fold.Fb} Hz`);
+    /** the tuning of a geometry's net air with its vent, Hz */
+    const fbOf = (g: typeof straight) => engineFb(g.netL, g.port.area, g.port.len + g.port.ec);
+    const step = fbOf(fold) - fbOf(straight);
+    assert.ok(step > 0.3 && step < 3, `${box.h}: ${fbOf(straight)} -> ${fbOf(fold)} Hz`);
   }
 });

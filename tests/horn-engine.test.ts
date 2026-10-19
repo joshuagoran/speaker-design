@@ -1,6 +1,6 @@
 // The horn engine (lib/acoustics) against references that need no Hornresp: power series for the special functions,
-// the textbook solutions for ducts and flares, power conservation, and the app's own box models, which the engine
-// must reproduce when it has no horn.
+// the textbook solutions for ducts and flares, and power conservation. Its plain boxes (no horn) are checked against
+// Small's closed forms in tests/sealed.test.ts and tests/vented.test.ts.
 //
 // Words used below: "flow" is volume velocity (m³/s); "impedance" is acoustic impedance (Pa·s/m³); k is the wave
 // number 2πf/c; ka compares a piston's radius a with the wavelength; ρc/S is a plane wave's impedance across area S.
@@ -24,23 +24,18 @@ import { hornGrid } from "./helpers";
 import { abs, add, arg, complex, divide, multiply, subtract } from "../src/lib/acoustics/complex";
 import { AIR_DENSITY, SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
 import type { Complex, HornDesign, HornModel, HornPoint, HornSegment, Matrix2 } from "../src/types";
 
 /** ρc: air's characteristic impedance, Pa·s/m (a plane wave's pressure over its particle speed). */
 const AIR_IMPEDANCE = AIR_DENSITY * SPEED_OF_SOUND;
-const SQUARE_INCH_TO_CM2 = 6.4516,
-  M_TO_CM = 100;
 const waveNumberAt = (f: number) => (2 * Math.PI * f) / SPEED_OF_SOUND;
 /**
  * A driver with its voice coil's inductance off, for checks whose reference leaves the coil out (the piston formulas,
  * a bank built by hand).
  */
 const noInductance = (ts: HornDesign["driver"]): HornDesign["driver"] => ({ ...ts, Le: 0 });
-/** The inductances the checks against the box models run with, mH: none, and a coil like a 12″ mid's. */
-const BOX_MODEL_INDUCTANCES = [0, 1.5];
 
 /** Asserts that two numbers differ by at most `tolerance`. */
 const near = (actual: number, expected: number, tolerance: number, what: string) =>
@@ -310,38 +305,7 @@ const modelOf = (...args: Parameters<typeof hornModel>): HornModel => {
   return result;
 };
 
-test("with no horn and no radiation load it is the sealed box model, the coil's inductance included", () => {
-  for (const Le of BOX_MODEL_INDUCTANCES) sealedMatches({ ...DEFAULT_PA.mid.ts, Le });
-});
-
-/** The engine with no horn and no radiation load against closedBox, for one driver. */
-function sealedMatches(driver: HornDesign["driver"]) {
-  const liters = 30,
-    volts = 20;
-  const sealed = closedBox(driver, liters, null, null, volts, {
-    hpOrder: 4,
-    lpOrder: 4,
-    fmin: 20,
-    fmax: 2000,
-    N: 120,
-    phase: true,
-  });
-  assert.ok(sealed);
-  const freqs = sealed.curve.map((p) => p.f);
-  const horn = modelOf(directRadiator(driver, { liters, port: null }), freqs, volts, {
-    radiationLoad: false,
-  });
-  sealed.curve.forEach((box, i) => {
-    const engine = horn.curve[i];
-    const at = `at ${box.f.toFixed(1)} Hz`;
-    near(engine.spl, box.raw, 1e-9, `SPL ${at}`);
-    near(engine.xmm, box.xmm, 1e-9, `excursion ${at}`);
-    near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
-  });
-  assert.strictEqual(horn.fb, null);
-}
-
-test("with the radiation load on, a direct radiator still matches the box model low down", () => {
+test("with the radiation load on, a direct radiator still matches its lumped circuit low down", () => {
   // the air mass taken off the moving mass (8/3·ρa³) is the radiation reactance's mass at low ka: the two cancel there
   const design = directRadiator(noInductance(DEFAULT_PA.mid.ts), { liters: 30, port: null });
   const freqs = [40, 70, 100, 150];
@@ -349,46 +313,6 @@ test("with the radiation load on, a direct radiator still matches the box model 
     unloaded = modelOf(design, freqs, 10, { radiationLoad: false });
   loaded.curve.forEach((p, i) => near(p.spl, unloaded.curve[i].spl, 0.2, `SPL at ${p.f} Hz`));
 });
-
-test("with no horn and no radiation load it is the vented box model, the coil's inductance included", () => {
-  for (const Le of BOX_MODEL_INDUCTANCES) ventedMatches({ ...DEFAULT_PA.sub.ts, Le });
-});
-
-/** The engine with no horn and no radiation load against boxModel, for one driver. */
-function ventedMatches(driver: HornDesign["driver"]) {
-  const liters = 180,
-    ventSquareInches = 40,
-    ventInches = 14,
-    highpassHz = 31,
-    volts = 50;
-  const vented = boxModel(driver, liters, ventSquareInches, ventInches, highpassHz, volts, "BW24", {
-    phase: true,
-    N: 160,
-  });
-  assert.ok(vented);
-  // the box model's effective vent length (m), both end corrections included: with the radiation load off the vent is
-  // lumped, and nothing adds the outer end's
-  const { Leff: effectiveLength } = ventTuning(liters, ventSquareInches, ventInches);
-  const port = {
-    area: ventSquareInches * SQUARE_INCH_TO_CM2,
-    length: effectiveLength * M_TO_CM,
-  };
-  const freqs = vented.curve.map((p) => p.f);
-  const horn = modelOf(directRadiator(driver, { liters, port }), freqs, volts, {
-    radiationLoad: false,
-  });
-  near(horn.fb ?? 0, vented.Fb, 1e-9, "tuning");
-  vented.curve.forEach((box, i) => {
-    const engine = horn.curve[i];
-    // the box model's excursion and vent speed include its highpass; the engine's are before any filter
-    const highpass = highpassGain(box.f, highpassHz, "BW24");
-    const at = `at ${box.f.toFixed(1)} Hz`;
-    near(engine.spl, box.raw, 1e-9, `SPL ${at}`);
-    near(engine.xmm * highpass, box.xmm, 1e-9, `excursion ${at}`);
-    near(engine.portSpeed * highpass, box.vel, 1e-9, `vent speed ${at}`);
-    near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
-  });
-}
 
 test("boxes side by side add 6 dB each doubling, and their mouths load each other", () => {
   const freqs = [60, 120, 250];

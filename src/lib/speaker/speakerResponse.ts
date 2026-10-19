@@ -1,7 +1,7 @@
 // The general speaker model: any speaker spec's response on axis at 1 m in half space. Each chamber runs through the
-// box model of its kind (the engines' own: sealed and vented from lib/acoustics/boxModels, passive radiators from lib/acoustics/wooferBox, a horn
-// built into the box through the horn engine), each datasheet driver through its engine's datasheet model; then each
-// band's filters and level, and the bands summed with their phase. Pure.
+// model of its kind (sealed, vented, and a horn built into the box through the horn engine, lib/acoustics/hornModel;
+// passive radiators through lib/acoustics/wooferBox), each datasheet driver through its engine's datasheet model; then
+// each band's filters and level, and the bands summed with their phase. Pure.
 //
 // Not modeled here (they belong to where the box stands, the later Space page): the baffle step, diffraction, the room,
 // directivity and the drivers' positions (every driver is on the listening axis, at the same distance). The tilt is
@@ -25,12 +25,12 @@ import type {
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { hornLayoutModel } from "./hornLayoutModel";
 import { tracedHorn } from "./foldHorn";
-import { boxModel, closedBox } from "../acoustics/boxModels";
+import { closedBoxQtc, hornModel } from "../acoustics/hornModel";
 import { logSpacedFrequencies } from "../acoustics/directivity";
 import { passiveRadiatorBox } from "../acoustics/wooferBox";
 import { HIFI_PASSIVES, HIFI_WAVEGUIDES, HORN_OPTIONS, passiveRadiatorMassMax } from "../data";
 import { byId } from "../tables";
-import { chamberClearFace, chamberVentModel, stuffedLiters } from "./chamberAir";
+import { chamberClearFace, chamberHornPort, stuffedLiters } from "./chamberAir";
 import { chamberNetLiters } from "./speakerBuild";
 import { hornDesignOf } from "./hornDesign";
 import { chamberSetbackIn } from "./driverBoard";
@@ -58,13 +58,13 @@ export const SPEAKER_RESPONSE_FREQUENCIES = logSpacedFrequencies(
   POINTS,
 );
 
-/** A grid of `N` log-spaced points over the charts' axis: its frequencies, and the box models' options for them. */
+/** A grid of `N` log-spaced points over the charts' axis: its frequencies, and the radiator box model's options for them. */
 interface ResponseGrid {
   freqs: readonly number[];
   box: { fmin: number; fmax: number; N: number };
 }
 
-/** The grid of `points` points (the box models' grid is the same log spacing), each worked out once. */
+/** The grid of `points` points (the radiator box model's grid is the same log spacing), each worked out once. */
 const GRIDS = new Map<number, ResponseGrid>();
 function gridOf(points: number): ResponseGrid {
   let grid = GRIDS.get(points);
@@ -91,9 +91,9 @@ const pressureOf = (db: number, phase = 0): Complex => scale(phasor(phase), Math
 const levelOf = (p: Complex) => 20 * Math.log10(Math.max(1e-9, abs(p)));
 
 /**
- * `count` alike cones in parallel, each on the full voltage, as one cone for the box models: the areas and moving
- * masses add and the coil's resistance and inductance divide, so the circuit's elements are the bank's (as the horn
- * engine wires its `drivers`, Hornresp's Nd).
+ * `count` alike cones in parallel, each on the full voltage, as one cone for the radiator box model and Qtc: the areas
+ * and moving masses add and the coil's resistance and inductance divide, so the circuit's elements are the bank's (as
+ * the horn engine wires its `drivers`, Hornresp's Nd).
  */
 const bank = ({ ts }: ConeParts, count: number): ConeParts["ts"] =>
   count === 1
@@ -130,9 +130,10 @@ export function chamberCones(chamber: SpeakerChamber) {
 const positive = (x: number) => Number.isFinite(x) && x > 0;
 
 /**
- * The chamber's cones through its box model at `volts`: sealed, vented, passive radiators, or the horn engine for a
- * horn built into the box, each on the chamber's air with its stuffing. The net air and the tuning come with it. A
- * size the models can't run on (no air, no port area or length, no cones) is the `noModel` gap.
+ * The chamber's cones through its model at `volts`, each on the chamber's air with its stuffing: the horn engine for a
+ * sealed or vented chamber (no horn: the cones radiate straight, the vent a duct by its rule's effective length) and
+ * for a horn built into the box; the radiator box model for passive radiators. The net air and the tuning come with
+ * it. A size the models can't run on (no air, no port area or length, no cones) is the `noModel` gap.
  */
 function modelChamber(
   cabinet: SpeakerCabinet,
@@ -205,36 +206,38 @@ function modelChamber(
       },
     };
   }
-  const ts = bank(parts, cones.count);
   const { vent } = chamber;
   switch (vent.kind) {
-    case VENT_KIND.sealed: {
-      const m = closedBox(ts, airL, null, null, volts, {
-        ...GRID,
-        hpOrder: 4,
-        lpOrder: 4,
-        phase: true,
-      });
-      return m ? done(m.curve, null, m.Qtc) : empty([SPEAKER_MODEL_GAP.noModel]);
-    }
+    case VENT_KIND.sealed:
     case VENT_KIND.vented: {
-      const port = chamberVentModel(cabinet, chamber);
-      if (
-        !port ||
-        !positive(port.areaIn2) ||
-        !positive(port.lenIn) ||
-        !positive(port.openings) ||
-        !Number.isFinite(port.endCorrectionIn)
-      )
-        return empty([SPEAKER_MODEL_GAP.noModel]);
-      // no filter here: the band's filters come after (a 1 Hz corner leaves `spl` as `raw`; only `raw` is read)
-      const m = boxModel(ts, airL, port.areaIn2, port.lenIn, 1, volts, undefined, {
-        ...GRID,
-        nPorts: port.openings,
-        ecIn: port.endCorrectionIn,
-        phase: true,
-      });
-      return m ? done(m.curve, m.Fb, null) : empty([SPEAKER_MODEL_GAP.noModel]);
+      const port = vent.kind === VENT_KIND.vented ? chamberHornPort(cabinet, chamber) : null;
+      if (vent.kind === VENT_KIND.vented && !port) return empty([SPEAKER_MODEL_GAP.noModel]);
+      // the cones straight on the air, the chamber behind them: the horn engine with no horn (each cone its own air load)
+      const model = hornModel(
+        {
+          driver: parts.ts,
+          drivers: cones.count,
+          count: 1,
+          angle: 2,
+          throatChamber: 0,
+          segments: [],
+          rear: { liters: airL, port },
+          portOffset: 0,
+        },
+        grid.freqs,
+        volts,
+      );
+      if (!model) return empty([SPEAKER_MODEL_GAP.noModel]);
+      return {
+        pressure: model.curve.map((o) => pressureOf(o.spl, o.phase)),
+        result: {
+          netLiters,
+          fb: model.fb,
+          qtc: port ? null : closedBoxQtc(bank(parts, cones.count), airL),
+          gaps: [],
+          drive: model.curve.map((o) => ({ xmm: o.xmm, vel: port ? o.portSpeed : undefined })),
+        },
+      };
     }
     case VENT_KIND.radiator: {
       const { radiators } = vent;
@@ -248,7 +251,7 @@ function modelChamber(
         n: radiators.n,
         addG: Math.min(radiators.addG, passiveRadiatorMassMax(drv)),
       };
-      const m = passiveRadiatorBox(ts, airL, pr, 1, volts, undefined, {
+      const m = passiveRadiatorBox(bank(parts, cones.count), airL, pr, 1, volts, undefined, {
         ...GRID,
         phase: true,
       });
