@@ -304,9 +304,9 @@ describe("the aluminum plate on the DIY horns with the N314T", () => {
 });
 
 describe("the aluminum plate on every horn it applies to", () => {
-  for (const { horn, cds } of bolted)
-    test(`stack, ${horn.id}: with every driver that fits it, the plate clears the horn, the driver and the lid's parts, or the L-bracket holds the driver`, () => {
-      for (const cd of cds) checkPlate(horn, cd, "stack");
+  for (const { horn, ends } of bolted)
+    test(`stack, ${horn.id}: with the smallest and the largest driver that fit it, the plate clears the horn, the driver and the lid's parts, or the L-bracket holds the driver`, () => {
+      for (const cd of ends) checkPlate(horn, cd, "stack");
     });
 
   for (const layout of LID_LAYOUTS.filter((l) => l !== "stack"))

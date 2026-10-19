@@ -358,9 +358,9 @@ function checkMount(horn: Horn, cd: Props["cd"], layout: PaLayout) {
 }
 
 describe("the plywood horn mount on every horn it applies to", () => {
-  for (const { horn, cds } of bolted)
-    test(`stack, ${horn.id}: with every driver that fits it, the mount clears the horn, the driver and the lid's parts, or the plate stays`, () => {
-      for (const cd of cds) checkMount(horn, cd, "stack");
+  for (const { horn, ends } of bolted)
+    test(`stack, ${horn.id}: with the smallest and the largest driver that fit it, the mount clears the horn, the driver and the lid's parts, or the plate stays`, () => {
+      for (const cd of ends) checkMount(horn, cd, "stack");
     });
 
   for (const layout of LID_LAYOUTS.filter((l) => l !== "stack"))

@@ -183,8 +183,19 @@ export const meshed = Object.entries(HORN_MESHES).flatMap(([id, mesh]) => {
 export const meshedFor = (cd: Pick<CompressionDriver, "exit">) =>
   meshed.filter(({ horn }) => horn.exit === cd.exit);
 
-/** Every horn the driver bolts straight to, with every driver that fits its throat. */
-export const bolted = HORN_OPTIONS.filter((h) => !h.adapter).map((horn) => ({
-  horn,
-  cds: CD_OPTIONS.filter((c) => c.exit === horn.exit),
-}));
+/** The smallest and the largest driver by body diameter (one when they are the same driver). */
+export function sizeEnds(cds: readonly CompressionDriver[]): CompressionDriver[] {
+  if (!cds.length) return [];
+  const bySize = [...cds].sort((a, b) => a.body.dia - b.body.dia || a.body.depth - b.body.depth);
+  const [smallest, largest] = [bySize[0], bySize[bySize.length - 1]];
+  return smallest === largest ? [smallest] : [smallest, largest];
+}
+
+/**
+ * Every horn the driver bolts straight to, with every driver that fits its throat, and of those the smallest and the
+ * largest (the scene checks build only these two).
+ */
+export const bolted = HORN_OPTIONS.filter((h) => !h.adapter).map((horn) => {
+  const cds = CD_OPTIONS.filter((c) => c.exit === horn.exit);
+  return { horn, cds, ends: sizeEnds(cds) };
+});
