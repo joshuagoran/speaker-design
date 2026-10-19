@@ -27,12 +27,18 @@ export const SORT_MARKS = { ascending: " ▲", descending: " ▼" } as const sat
 export const DRIVER_COMPARE_TEXT = {
   compare: "Compare",
   heading: "Compare drivers",
-  line: "Hover a row to see it on the charts.",
-  /** the line on a phone, where the comparison shows one chart */
-  lineTouch: "Tap a row to see it on the chart.",
+  /** the line: how a row previews, by the verb (`hover` with a mouse, `tap` on a phone) */
+  line: (verb: string) => `${verb} a row to see it on the charts.`,
+  hover: "Hover",
+  tap: "Tap",
+  /** the second line from md up, where a click swaps the row in */
+  clickToSwap: "Click to swap.",
+  /** the Speaker page's button on a phone: puts the previewed row in */
+  swap: "Swap",
   close: "Close",
   yours: "yours",
   passes: "passes",
+  /** the PA table's button */
   use: "Use",
   /** the PA table's part price heading */
   price: "Its price",

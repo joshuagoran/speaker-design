@@ -229,6 +229,8 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
       ...lineOf(b.id),
       swatch: "dot" as const,
       tint: "transparent",
+      // faint while an option is previewed, so its curves stand out
+      ghost: previewed !== undefined,
     }));
   const sumSeries = (curve: FrequencyPoint[]) => ({
     curve,
@@ -239,6 +241,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
     tint: alpha(pal.ink, 0.05),
     // below the floor it would run along the axis as if it were data
     clipAtFloor: true,
+    ghost: previewed !== undefined,
   });
   /** the checks, one compact row per band, then per chamber (its limits, fit and bracing checks) */
   const checkRows = [
@@ -381,7 +384,13 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
         {/* on a phone the chart stays on top while the list scrolls */}
         {!mdUp && <div className="sticky -top-4 z-10 bg-white pt-4">{responseChart}</div>}
         <p className="text-xs text-stone-500">
-          {mdUp ? DRIVER_COMPARE_TEXT.line : DRIVER_COMPARE_TEXT.lineTouch}
+          {DRIVER_COMPARE_TEXT.line(mdUp ? DRIVER_COMPARE_TEXT.hover : DRIVER_COMPARE_TEXT.tap)}
+          {mdUp && (
+            <>
+              <br />
+              {DRIVER_COMPARE_TEXT.clickToSwap}
+            </>
+          )}
         </p>
         <DriverCompareTable
           rowUse={mdUp}

@@ -119,7 +119,7 @@ export function DriverCompareTable({
         </p>
         {!rowUse && shown && !shown.yours && (
           <Button size="xs" onClick={() => use(shown)}>
-            {DRIVER_COMPARE_TEXT.use}
+            {DRIVER_COMPARE_TEXT.swap}
           </Button>
         )}
       </div>
@@ -131,6 +131,7 @@ export function DriverCompareTable({
         bg="bg-white"
         compact
         rowUse={rowUse}
+        useColumn={false}
         minWidth="min-w-[22rem]"
         checks={false}
         sort={{ ...sort, onSort }}

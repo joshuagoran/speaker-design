@@ -42,7 +42,12 @@ interface Series {
    * previewed option's name), so nothing below it moves
    */
   ownLine?: boolean;
+  /** drawn faint, so another curve stands out against it (your design's curves while an option is previewed) */
+  ghost?: boolean;
 }
+
+/** A ghosted curve's opacity, and any curve's while another curve's legend item is under the pointer. */
+const FADED_OPACITY = 0.2;
 
 /** A labeled vertical line at a frequency. */
 interface Mark {
@@ -179,8 +184,9 @@ export function ResponseChart({
   /** the curve whose legend item is under the pointer: the other curves fade back */
   const [hot, setHot] = useState<string | null>(null);
   const keyOf = (p: Pick<Series, "id" | "label">) => p.id ?? p.label;
-  /** a curve's opacity: full, or faded while another curve's legend item is under the pointer */
-  const faded = (p: Pick<Series, "id" | "label">) => (hot !== null && hot !== keyOf(p) ? 0.2 : 1);
+  /** a curve's opacity: faded while another curve's legend item is under the pointer, or while it is a ghost */
+  const faded = (p: Pick<Series, "id" | "label" | "ghost">) =>
+    hot !== null ? (hot === keyOf(p) ? 1 : FADED_OPACITY) : p.ghost ? FADED_OPACITY : 1;
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState<number | null>(null);
   const move = (e: React.PointerEvent<SVGSVGElement>) => {

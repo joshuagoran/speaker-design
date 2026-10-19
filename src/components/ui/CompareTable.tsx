@@ -54,6 +54,8 @@ interface Props<R extends CompareRowBase> {
   compact?: boolean;
   /** a click on a row (or Enter on it) uses it, in place of a Use column */
   rowUse?: boolean;
+  /** a Use button on each row (default); without it, rows are used by a click (`rowUse`) or a button the page shows */
+  useColumn?: boolean;
 }
 
 /** A row's checks: "passes", or the problems, gray where your design has it too, orange where the option adds it. */
@@ -88,6 +90,7 @@ export function CompareTable<R extends CompareRowBase>({
   checks = true,
   compact = false,
   rowUse = false,
+  useColumn = true,
 }: Props<R>) {
   /** the space after each column */
   const gap = compact ? "pr-2" : "pr-3";
@@ -135,7 +138,7 @@ export function CompareTable<R extends CompareRowBase>({
                 {head(DRIVER_COMPARE_SORT.checks, DRIVER_COMPARE_TEXT.checks)}
               </th>
             )}
-            {!rowUse && <th className="py-1 font-normal" />}
+            {useColumn && <th className="py-1 font-normal" />}
           </tr>
         </thead>
         <tbody
@@ -203,7 +206,7 @@ export function CompareTable<R extends CompareRowBase>({
                     <CompareChecks problems={r.problems} />
                   </td>
                 )}
-                {!rowUse && (
+                {useColumn && (
                   <td className={`py-1 text-right ${tint}`}>
                     {!r.yours && (
                       <Button
