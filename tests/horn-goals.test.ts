@@ -8,12 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import {
-  hornGoalCheck,
-  hornRoom,
-  withGoalHorn,
-  withHornDrive,
-} from "../src/pages/speaker/chamberLoad";
+import { hornGoalCheck, withGoalHorn, withHornDrive } from "../src/pages/speaker/chamberLoad";
 import { areaAtShare, driveAfterRemoval, withDriveKind } from "../src/pages/speaker/hornSections";
 import { hornFromRecord } from "../src/pages/speaker/hornrespImport";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
@@ -323,30 +318,23 @@ test("Hornresp import: an offset record keeps its tap, rear chamber and vent are
   assert.ok(!broken.ok && broken.reason.length > 0);
 });
 
-test("horn goals: Design from goals keeps the path the user picked", () => {
-  const folded: SpeakerChamber = {
+test("horn goals: Start from goals reads only the drivers, the size, the type and the goals", () => {
+  // two starting chambers that differ in everything else: vent, fill, path and the old horn's extras
+  const other: SpeakerChamber = {
     ...BIN,
-    load: { kind: CHAMBER_LOAD.horn, horn: { ...hornOf(BIN), path: HORN_PATH.folded } },
+    stuffingPct: 25,
+    load: {
+      kind: CHAMBER_LOAD.horn,
+      horn: { ...hornOf(BIN), path: HORN_PATH.folded, doubleBoard: true, portOffset: 3 },
+    },
   };
-  for (const chamber of [BIN, folded]) {
-    const found = withGoalHorn(
-      BIN_SPEC.cabinet,
-      chamber,
-      PLACED,
-      HORN_DRIVE.front,
-      HORN_GOALS_DEFAULT,
-    );
-    assert.ok(found);
-    assert.equal(hornOf(found.chamber).path, hornOf(chamber).path);
-  }
-  // a straight horn stays within the chamber's depth
-  const straight = withGoalHorn(
-    BIN_SPEC.cabinet,
-    BIN,
-    PLACED,
-    HORN_DRIVE.front,
-    HORN_GOALS_DEFAULT,
-  );
-  const lengthCm = hornOf(straight?.chamber ?? BIN).segments.reduce((sum, s) => sum + s.length, 0);
-  assert.ok(lengthCm <= hornRoom(BIN_SPEC.cabinet, BIN, PLACED).depthIn * CM_PER_IN + 1e-6);
+  const a = withGoalHorn(BIN_SPEC.cabinet, BIN, PLACED, HORN_DRIVE.front, HORN_GOALS_DEFAULT);
+  const b = withGoalHorn(BIN_SPEC.cabinet, other, PLACED, HORN_DRIVE.front, HORN_GOALS_DEFAULT);
+  assert.ok(a && b);
+  assert.deepEqual(a.chamber.load, b.chamber.load);
+  assert.equal(a.chamber.netLiters, b.chamber.netLiters);
+  // it lays out a folded horn with a sealed rear chamber and no fill
+  assert.equal(hornOf(a.chamber).path, HORN_PATH.folded);
+  assert.equal(a.chamber.vent.kind, VENT_KIND.sealed);
+  assert.equal(a.chamber.stuffingPct, 0);
 });

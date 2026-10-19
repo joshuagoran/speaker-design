@@ -61,7 +61,7 @@ const DRIVE_OPTIONS: readonly SelectOption[] = DRIVE_KINDS.map((id) => ({
   name: HORN_DRIVE_NAMES[id],
 }));
 
-/** The least rear chamber a straight horn takes, L (as Design from goals and an import set it). */
+/** The least rear chamber a straight horn takes, L (as Start from goals and an import set it). */
 const MIN_REAR_L = MIN_NET_L;
 
 /** An offset drive's tap setting: its label and its tooltip. */
@@ -134,10 +134,10 @@ interface Props {
 }
 
 /**
- * A horn-loaded chamber's horn, in two parts: the Horn group (its goals, with Design from goals) and the Horn settings
+ * A horn-loaded chamber's horn, in two parts: the Horn group (its goals, with Start from goals) and the Horn settings
  * fold: its type and taps, its compression ratio (the throat: the first section's start area) and front chamber (from
  * the drivers and the driver board, shown only), the driver board's thickness, the chamber's extra settings
- * (`children`), the straight horn and the Hornresp import. Design from goals or an import set the straight horn and a
+ * (`children`), the straight horn and the Hornresp import. Start from goals or an import set the straight horn and a
  * straight horn's rear chamber (the chamber's net air): both show read-only until Edit manually is on. The sections are
  * smooth: each starts at the previous section's end area, and only the first shows its start area. With Steps on (in
  * the Advanced fold, and always while the horn has a step) every section shows its start area, so a step can be made;
@@ -170,7 +170,7 @@ export function HornSettings({
   const steps = stepCount(segments);
   /** Steps on: latched while the horn has a step, so a field typed back to smooth stays; only Off turns it off */
   const [stepsOn, setStepsOn] = useState(() => stepsLatched(false, segments));
-  /** Edit manually: the straight horn's sections and the rear chamber unlocked (Design from goals or an import sets them) */
+  /** Edit manually: the straight horn's sections and the rear chamber unlocked (Start from goals or an import sets them) */
   const [manual, setManual] = useState(false);
   if (stepsLatched(stepsOn, segments) !== stepsOn) setStepsOn(true);
   /** a folded horn: its drawing sets the taps, the throat and the shape; the sections are only its target */
@@ -285,7 +285,9 @@ export function HornSettings({
   /** the line that says what sets the straight horn, and the one switch that unlocks it (and the rear chamber) */
   const manualRow = (
     <div className="flex items-center justify-between gap-2">
-      <p className="text-xs text-stone-500">{SETTINGS_TEXT.setByDesign}</p>
+      <p className="text-xs text-stone-500">
+        {folded ? SETTINGS_TEXT.setByDesign : SETTINGS_TEXT.setByImport}
+      </p>
       <ToggleButton size="xs" on={manual} className="shrink-0" onClick={() => setManual((m) => !m)}>
         {SETTINGS_TEXT.editManually}
       </ToggleButton>
@@ -336,13 +338,16 @@ export function HornSettings({
             />
           )}
         </div>
-        <HornGoalsFields
-          goals={horn.goals ?? HORN_GOALS_DEFAULT}
-          fit={fit}
-          overAir={overAir}
-          onGoals={(goals) => onEdit((h) => ({ ...h, goals }))}
-          onDesign={drive.kind === HORN_DRIVE.back ? undefined : onDesign}
-        />
+        {/* Start from goals lays out a folded horn; a straight horn is set by hand or a Hornresp import */}
+        {folded && (
+          <HornGoalsFields
+            goals={horn.goals ?? HORN_GOALS_DEFAULT}
+            fit={fit}
+            overAir={overAir}
+            onGoals={(goals) => onEdit((h) => ({ ...h, goals }))}
+            onDesign={drive.kind === HORN_DRIVE.back ? undefined : onDesign}
+          />
+        )}
       </InsetGroup>
       <FoldBox title={SETTINGS_TEXT.hornSettings} summary={hornSettingsSummary(horn)}>
         {!folded && drive.kind === HORN_DRIVE.tapped && (

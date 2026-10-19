@@ -2,7 +2,6 @@
 // from the chamber's cones and size; a horn's drive; a horn sized from its goals, and how it meets them. Pure.
 import type {
   ChamberLoad,
-  ChamberVent,
   Dims2,
   HornGoalFit,
   HornFold,
@@ -26,7 +25,7 @@ import { foldLayout } from "../../lib/speaker/foldLayout";
 import { DEFAULT_VENTS } from "./speakerParts";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
-import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH, VENT_KIND } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { segmentsAirLiters } from "../../lib/acoustics/hornSegments";
 import { CM_PER_IN, CM2_PER_IN2, LITERS_PER_CUBIC_IN } from "../../constants/units";
@@ -123,10 +122,33 @@ export function withChamberLoad(
 }
 
 /**
- * The chamber with a starting layout sized from `goals` for `drive` (lib/speaker/hornGoals `goalHorn`): its horn, its
- * net air (the rear chamber) to the tenth, and a sealed vent for a tapped horn (it has none). The search reads the
- * chamber's room (`hornRoom`), less the drivers' displacement. A folded horn also gets boards (`foldLayout`) and a
- * sealed chamber (its vent is drawn). Null when no layout can be modeled.
+ * The chamber as Start from goals reads it: its drivers, size and horn type only. The rest starts from fixed defaults (a
+ * sealed rear chamber, no fill, a folded horn with no drawing, its mouth centered and a single driver board), so the
+ * same drivers, size, type and goals always give the same horn, whatever the chamber held before.
+ */
+export function goalStartChamber(chamber: SpeakerChamber, drive: GoalDrive): SpeakerChamber {
+  const before = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
+  return {
+    ...chamber,
+    stuffingPct: 0,
+    vent: DEFAULT_VENTS.sealed,
+    load: {
+      kind: CHAMBER_LOAD.horn,
+      horn: {
+        segments: before?.segments ?? [],
+        portOffset: 0,
+        drive: before?.drive.kind === drive ? before.drive : { kind: HORN_DRIVE.front },
+        path: HORN_PATH.folded,
+      },
+    },
+  };
+}
+
+/**
+ * Start from goals: a folded horn chamber laid out from `goals` for `drive` (lib/speaker/hornGoals `goalHorn`), from
+ * `goalStartChamber`: its straight horn, its net air (the rear chamber) to the tenth and its boards (`foldLayout`; none
+ * found: the straight horn plays until the user draws). The search reads the chamber's room (`hornRoom`), less the
+ * drivers' displacement. Null when no layout can be modeled.
  */
 export function withGoalHorn(
   cabinet: Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">,
@@ -137,73 +159,38 @@ export function withGoalHorn(
 ): { chamber: SpeakerChamber; fit: HornGoalFit } | null {
   const throat = throatCones(chamber.drivers);
   if (!throat) return null;
-  const { room, displacementLiters, airLiters } = chamberAirLiters(cabinet, chamber, placed);
-  /** the goals' horn in the chamber with `vent`, as `goalHorn` finds it */
-  const search = (vent: ChamberVent) => {
-    const searched = { ...chamber, vent };
-    const found = goalHorn(
-      {
-        chamber: searched,
-        drive,
-        room: {
-          face: chamberClearFace(cabinet, searched),
-          wallIn: cabinet.panel.thicknessIn,
-          setbackIn: chamberSetbackIn(cabinet.panel, searched),
-        },
-        airLiters,
-        displacementLiters,
-        power: throat.parts.ts,
-        goals,
-        // the path the user picked: Design from goals keeps it
-        path: chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn.path : HORN_PATH.straight,
+  const start = goalStartChamber(chamber, drive);
+  const { room, displacementLiters, airLiters } = chamberAirLiters(cabinet, start, placed);
+  const found = goalHorn(
+    {
+      chamber: start,
+      drive,
+      room: {
+        face: chamberClearFace(cabinet, start),
+        wallIn: cabinet.panel.thicknessIn,
+        setbackIn: chamberSetbackIn(cabinet.panel, start),
       },
-      room.depthIn * CM_PER_IN,
-    );
-    return (
-      found && {
-        chamber: {
-          ...searched,
-          load: { kind: CHAMBER_LOAD.horn, horn: found.horn },
-          netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
-        },
-        fit: found.fit,
-        horn: found.horn,
-      }
-    );
-  };
-  const found = search(drive === HORN_DRIVE.tapped ? DEFAULT_VENTS.sealed : chamber.vent);
-  if (!found) return null;
-  const wasFolded =
-    chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.path === HORN_PATH.folded;
-  /**
-   * The designed horn with no drawing: a straight horn, or a folded one the user draws next (with the chamber's vent).
-   * The path stays the one the user picked.
-   */
-  const straight = (): { chamber: SpeakerChamber; fit: HornGoalFit } => ({
-    chamber: wasFolded
-      ? { ...found.chamber, load: { kind: CHAMBER_LOAD.horn, horn: withoutFold(found.horn) } }
-      : found.chamber,
-    fit: found.fit,
-  });
-  if (!wasFolded) return straight();
-  // a folded horn: boards placed so the traced passage follows the straight horn, sized for a sealed rear chamber (the
-  // vent is drawn, and the boards place none); none found: the straight horn with the chamber's vent plays until the
-  // user draws
-  const sealedFound =
-    found.chamber.vent.kind === VENT_KIND.sealed ? found : search(DEFAULT_VENTS.sealed);
-  if (!sealedFound) return straight();
-  const fold = foldLayout(
-    foldRoom(cabinet, sealedFound.chamber),
-    sealedFound.horn.segments,
-    sealedFound.horn.drive,
-  );
-  if (!fold) return straight();
-  return {
-    chamber: {
-      ...sealedFound.chamber,
-      load: { kind: CHAMBER_LOAD.horn, horn: { ...withoutFold(sealedFound.horn), fold } },
+      airLiters,
+      displacementLiters,
+      power: throat.parts.ts,
+      goals,
+      path: HORN_PATH.folded,
     },
-    fit: sealedFound.fit,
+    room.depthIn * CM_PER_IN,
+  );
+  if (!found) return null;
+  const horn = withoutFold(found.horn);
+  const designed: SpeakerChamber = {
+    ...start,
+    load: { kind: CHAMBER_LOAD.horn, horn },
+    netLiters: Math.max(MIN_NET_L, shownTenth(found.netLiters)),
+  };
+  const fold = foldLayout(foldRoom(cabinet, designed), horn.segments, horn.drive);
+  return {
+    chamber: fold
+      ? { ...designed, load: { kind: CHAMBER_LOAD.horn, horn: { ...horn, fold } } }
+      : designed,
+    fit: found.fit,
   };
 }
 

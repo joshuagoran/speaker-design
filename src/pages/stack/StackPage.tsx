@@ -16,8 +16,12 @@ import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
-import { stackDispersionMap } from "../../lib/speaker/stackDispersion";
-import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
+import { dispersionModeled, stackDispersionMap } from "../../lib/speaker/stackDispersion";
+import {
+  DISPERSION_HEADING,
+  DISPERSION_HORN_NOTE,
+  DISPERSION_START_PLANE,
+} from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
 import { priceText } from "../../lib/speaker/speakerTotals";
@@ -182,7 +186,9 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
   const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
   const dispersion = useMemo(
     () =>
-      modeled.length ? stackDispersionMap(design.stack, design.speakers, response, plane) : null,
+      modeled.length && dispersionModeled(design.speakers)
+        ? stackDispersionMap(design.stack, design.speakers, response, plane)
+        : null,
     [design, response, plane, modeled.length],
   );
   /** the phone strip's headline figures */
@@ -319,6 +325,12 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 </div>
               )}
               <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.maxNote}</p>
+            </section>
+          )}
+          {modeled.length > 0 && !dispersionModeled(design.speakers) && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
+              <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
+              <Notice>{DISPERSION_HORN_NOTE}</Notice>
             </section>
           )}
           {dispersion && (

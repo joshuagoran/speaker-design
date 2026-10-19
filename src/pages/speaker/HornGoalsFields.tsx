@@ -44,7 +44,7 @@ interface Props {
 }
 
 /**
- * A horn's goals (the band it plays flat, and the level it reaches there), the Design from goals action, and how the
+ * A horn's goals (the band it plays flat, and the level it reaches there), the Start from goals action, and how the
  * horn meets the goals now: its spread, its low edge, its lowest maximum output and the air it holds.
  */
 export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Props) {
@@ -63,7 +63,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
   const outOfOrder = goals.highHz <= goals.lowHz;
   return (
     <div className={GAP_Y_TIGHT}>
-      {/* the Goals label with Design from goals on its row */}
+      {/* the Goals label with Start from goals on its row */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-label text-stone-500">
           <Tooltip tip={SPEAKER_TEXT.hornGoalsTip}>{SPEAKER_TEXT.hornGoals}</Tooltip>

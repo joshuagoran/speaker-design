@@ -11,8 +11,12 @@ import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
-import { speakerDispersionMap } from "../../lib/speaker/stackDispersion";
-import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
+import { dispersionModeled, speakerDispersionMap } from "../../lib/speaker/stackDispersion";
+import {
+  DISPERSION_HEADING,
+  DISPERSION_HORN_NOTE,
+  DISPERSION_START_PLANE,
+} from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
 import { priceText } from "../../lib/speaker/speakerTotals";
@@ -170,7 +174,10 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
   ];
   const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
   const dispersion = useMemo(
-    () => (response.bands.length ? speakerDispersionMap(spec, response, plane) : null),
+    () =>
+      response.bands.length && dispersionModeled([spec])
+        ? speakerDispersionMap(spec, response, plane)
+        : null,
     [spec, response, plane],
   );
   /** price, weight and bracing in one row of tiles */
@@ -434,6 +441,12 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
             </section>
           )}
           <StatTileGrid tiles={buildTiles} />
+          {response.bands.length > 0 && !dispersionModeled([spec]) && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
+              <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
+              <Notice>{DISPERSION_HORN_NOTE}</Notice>
+            </section>
+          )}
           {dispersion && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
               <SectionHeading>{DISPERSION_HEADING}</SectionHeading>

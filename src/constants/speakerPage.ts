@@ -509,18 +509,17 @@ export const SPEAKER_TEXT = {
   ventTapped: "A tapped horn has no vent.",
   hornGoals: "Goals",
   hornGoalsTip:
-    "What the horn is for. Design from goals sizes the horn to fit inside this chamber and meet them.",
-  hornGoalLow: "Low",
-  hornGoalLowTip: "The horn plays flat down to here, Hz.",
-  hornGoalHigh: "High",
-  hornGoalHighTip: "The crossover to the box above. The horn plays flat up to here, Hz.",
-  hornGoalTarget: "Level",
+    "What Start from goals aims for: the band the horn plays flat, and how loud it gets there. The lines below check the horn against them.",
+  hornGoalLow: "Flat from",
+  hornGoalLowTip: "The lowest frequency the horn plays flat, Hz.",
+  hornGoalHigh: "Flat to",
+  hornGoalHighTip:
+    "The highest frequency the horn plays flat, Hz. Usually the crossover to the box above.",
+  hornGoalTarget: "Max output",
   hornGoalTargetTip:
-    "The level at 1 m at full power, dB, from the lowest to the highest frequency. The power rating or the cone travel of the drivers limits it.",
-  hornDesign: "Design from goals",
-  hornDesigning: "Designing…",
-  hornDesignTip:
-    "Reads the goals, the drivers and the chamber size. Sets the straight horn, the taps and, for a folded horn, the boards.",
+    "The level at 1 m at full power, dB, over the whole band. The power rating or the cone travel of the drivers limits it.",
+  hornDesign: "Start from goals",
+  hornDesigning: "Starting…",
   hornDesignFailed: "No horn for these goals can be calculated in this chamber.",
   hornGoalsOrder: "Set the highest frequency above the lowest.",
   /** the goals check: how flat the response is over the goals' band */
