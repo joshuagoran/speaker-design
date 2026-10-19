@@ -58,7 +58,7 @@ import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { paPlannerDesign } from "../speaker/paPlannerDesign";
 import { MemberSettings } from "./MemberSettings";
-import { stackKeepUpChips } from "./stackChips";
+import { stackDispersionChips, stackKeepUpChips } from "./stackChips";
 import { stackSummary } from "./stackSummary";
 import { StackOptimizerResults } from "./StackOptimizerResults";
 import { StackOptimizerSettings, stackOptimizerSummary } from "./StackOptimizerSettings";
@@ -193,8 +193,11 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
   );
   /** the phone strip's headline figures */
   const summary = stackSummary(response, limits, totals.lb);
-  /** keep-up at each crossover between members */
-  const keepUps = stackKeepUpChips(design.stack, response, limits, names);
+  /** keep-up at each crossover between members, then each box's dispersion check at its own crossovers */
+  const keepUps = [
+    ...stackKeepUpChips(design.stack, response, limits, names),
+    ...stackDispersionChips(design.stack, design.speakers, names),
+  ];
   return (
     <SettingsLayout
       results={

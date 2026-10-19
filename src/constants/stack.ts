@@ -23,6 +23,8 @@ export const STACK_TEXT = {
   noMembers: "Add a saved speaker, or start from a preset.",
   /** a crossover between two boxes: the lower and the upper box by name */
   crossing: (lower: string, upper: string) => `${lower} to ${upper}`,
+  /** a crossing between two bands inside one box: the box's name, then the lower and the upper band by name */
+  memberCrossing: (box: string, lower: string, upper: string) => `${box}: ${lower} to ${upper}`,
   missing: "A box's speaker is missing from this stack, so the response leaves it out.",
   gaps: "The response leaves out part of a box's speaker. Open that speaker on the Speaker page to see which part.",
   fullRange: "full range",

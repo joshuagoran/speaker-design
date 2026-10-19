@@ -16,6 +16,7 @@ import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./speakerParts";
 import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
+import { dispersionChecks } from "../../lib/speaker/dispersionCheck";
 import { hfHeadroomChip } from "../../lib/pa/chips";
 import { hfLimitWatts } from "../../lib/pa/calc";
 import { bandLoads } from "../../lib/speaker/speakerLimits";
@@ -29,7 +30,8 @@ const pctOf = (p: LimitPeak) => Math.round((100 * p.peak) / p.limit);
 
 /**
  * Each band's checks, in the spec's order: what sets its level, a datasheet driver's power and, with the response, its
- * keep-up against the band under it at their crossover in the box (lib/speaker/keepUp).
+ * keep-up against the band under it at their crossover in the box (lib/speaker/keepUp); then, on the lower band of a
+ * crossover, whether its beam matches the band over it (lib/speaker/dispersionCheck).
  */
 export function bandChips(
   spec: Pick<SpeakerSpec, "bands" | "input" | "cabinet">,
@@ -37,6 +39,7 @@ export function bandChips(
   response?: Pick<SpeakerResponse, "bands">,
 ): { id: BandId; chips: SpeakerChip[] }[] {
   const keepUps = response ? speakerKeepUps(spec.bands, response, limits) : [];
+  const dispersion = dispersionChecks(spec);
   const nameOf = (k: number) => {
     const id = response?.bands[k]?.id;
     return spec.bands.find((b) => b.id === id)?.name ?? id ?? "";
@@ -105,6 +108,9 @@ export function bandChips(
           ...keepUpChip(k, nameOf(k.lower), nameOf(k.upper)),
           "speakerKeepsUp",
         ]),
+      ...dispersion
+        .filter((k) => k.lower === b.id)
+        .map((k): SpeakerChip => [...k.chip, "speakerDispersion"]),
     ];
     return { id: b.id, chips };
   });

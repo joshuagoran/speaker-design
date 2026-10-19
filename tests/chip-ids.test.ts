@@ -25,7 +25,7 @@ import { bandChips, chamberChips } from "../src/pages/speaker/speakerChips";
 import { chamberBraceChips, chamberFitChips } from "../src/lib/speaker/fitChips";
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
-import { stackKeepUpChips } from "../src/pages/stack/stackChips";
+import { stackDispersionChips, stackKeepUpChips } from "../src/pages/stack/stackChips";
 import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { keysOf } from "../src/lib/records";
@@ -185,7 +185,10 @@ const stackLists = configs.flatMap((c) => {
   const read = layersFromPa(paDesign(c), { id: "pa", name: c.name }, PA_FLOOR);
   const response = stackResponse(read.stack, read.speakers);
   const limits = stackLimits(read.stack, response);
-  return stackKeepUpChips(read.stack, response, limits, ["1", "2", "3"]).map((k) => k.chips);
+  return [
+    ...stackKeepUpChips(read.stack, response, limits, ["1", "2", "3"]),
+    ...stackDispersionChips(read.stack, read.speakers, ["1", "2", "3"]),
+  ].map((k) => k.chips);
 });
 
 const lists: [ChipSection, Chip[][]][] = [
