@@ -26,6 +26,12 @@ export const CASES = [
   { name: "sub-bin-vented", spl: 0.02, boxes: 1, drivers: 1 },
   { name: "sub-bin-eighth", spl: 0.02, boxes: 1, drivers: 1 },
   { name: "sub-direct-vented", spl: 0.6, boxes: 1, drivers: 1 },
+  // the PA sub template's box (18NBX100 with Le, its letterbox slot): Lpt is the slot's path length plus the app's end
+  // corrections (the floor-mirrored outer end and the inner slot mouth) less a round exit's own 0.85 r, which
+  // Hornresp's exit load adds back (End Correction Flag 0). So Hornresp's effective length is the app's. SPL: as in
+  // sub-direct-vented, Hornresp's leak does not radiate and the engine's does; the gap grows below the tuning (0.15 dB
+  // at 25 Hz, 0.87 dB at 10 Hz). With a leak that does not radiate (the network) it is within 0.001 dB.
+  { name: "pa-sub-box", spl: 0.9, boxes: 1, drivers: 1 },
   { name: "mid-vented", spl: 0.02, boxes: 1, drivers: 1 },
   // Hornresp's record holds two drivers as one composite driver and horn. The engine reads it two ways: two boxes
   // side by side (count 2, stacking by images), and two drivers on one throat (Hornresp's Nd)
