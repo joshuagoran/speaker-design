@@ -155,3 +155,12 @@ test("the Stack page lists each member speaker's own crossings, under the member
     ["1. Box: Low to High"],
   );
 });
+
+test("a cone over the crossover covers its own beam there, not a dome's", () => {
+  for (const id of [SPEAKER_TEMPLATE.paTowerBaffleHorn, SPEAKER_TEMPLATE.paTowerTopHorn]) {
+    const checks = dispersionChecks(templateSpeaker(id));
+    assert.ok(checks.length > 0, `${id}: has a crossing`);
+    for (const k of checks)
+      assert.ok(!k.chip[2].includes(DISPERSION_TEXT.coverage.dome), `${id}: ${k.chip[2]}`);
+  }
+});

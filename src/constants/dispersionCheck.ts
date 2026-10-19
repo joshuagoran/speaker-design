@@ -13,9 +13,13 @@ export const DISPERSION_NARROW_KA = 2.2;
 /** The share of the upper band's coverage the lower band's beam must reach to match it. */
 export const DISPERSION_MATCH_SHARE = 0.75;
 
-/** How the check knows the upper band's coverage, by id: a rated horn, a coaxial with none published, or a dome. */
+/**
+ * How the check knows the upper band's coverage, by id: a rated horn, a cone's own beam at the crossover, a coaxial
+ * with none published, or a dome.
+ */
 export const DISPERSION_COVERAGE = {
   rated: "rated",
+  cone: "cone",
   unpublished: "unpublished",
   dome: "dome",
 } as const;
@@ -29,7 +33,7 @@ export const DISPERSION_TEXT = {
   /** the lower band is wide enough: the upper band's name */
   okTitle: (high: string) => `Matches ${high} at the crossover`,
   okTip: (deg: number, xo: number) => `About ${deg}° wide at ${xo} Hz.`,
-  /** the upper band's coverage in a warning: a rated figure, degrees; none published; a dome */
+  /** the upper band's coverage in a warning: a figure, degrees (a horn's, or a cone's beam); none published; a dome */
   coverage: {
     rated: (deg: number) => `${deg}°`,
     unpublished: "unpublished coverage, taken as wide",

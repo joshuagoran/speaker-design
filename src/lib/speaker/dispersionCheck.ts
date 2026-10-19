@@ -38,15 +38,19 @@ function beamDeg(sdCm2: number, hz: number): number {
     : (2 * Math.asin(DISPERSION_NARROW_KA / ka)) / RAD;
 }
 
-/** What the check knows of the upper band's coverage: a rated horn's, a coaxial's unpublished one, or a dome. */
+/** What the check knows of the upper band's coverage: a rated horn's, a cone's beam, a coaxial's unpublished one, or a dome. */
 type UpperCoverage =
-  | { kind: typeof DISPERSION_COVERAGE.rated; deg: number }
+  | { kind: typeof DISPERSION_COVERAGE.rated | typeof DISPERSION_COVERAGE.cone; deg: number }
   | { kind: typeof DISPERSION_COVERAGE.unpublished | typeof DISPERSION_COVERAGE.dome };
 
-/** The band's coverage: its first HF driver's (else its first cone's, a dome), from its horn or own waveguide. */
+/**
+ * The band's coverage at `hz`: its first HF driver's (else its first cone's), from its horn or own waveguide; a cone with
+ * neither covers its own beam there; an HF driver with neither is a dome (or a coaxial's unpublished coverage).
+ */
 function upperCoverage(
   chambers: SpeakerSpec["cabinet"]["chambers"],
   band: BandId,
+  hz: number,
 ): UpperCoverage | null {
   const drivers = chambers.flatMap((c) => c.drivers);
   const hf = drivers.find((d) => hfBandOf(d) === band);
@@ -56,6 +60,8 @@ function upperCoverage(
   const part = hf ? DRIVER_PART.hf : DRIVER_PART.cone;
   const pattern = driverPattern({ driver, part, mouth: null });
   if (pattern.horn) return { kind: DISPERSION_COVERAGE.rated, deg: Math.round(pattern.horn.covH) };
+  const sd = hf ? 0 : (coneParts(driver)?.ts.Sd ?? 0);
+  if (sd > 0) return { kind: DISPERSION_COVERAGE.cone, deg: Math.round(beamDeg(sd, hz)) };
   return {
     kind:
       hf && driver.kind === DRIVER_KIND.coaxial
@@ -86,19 +92,18 @@ export function dispersionChecks(spec: Pick<SpeakerSpec, "bands" | "cabinet">): 
   const all = crossingPairs(filters).flatMap((c): DispersionCheck[] => {
     const lower = bands[c.lower].id,
       upper = bands[c.upper].id;
-    const sd = lowerSdCm2(cabinet.chambers, lower);
-    const coverage = upperCoverage(cabinet.chambers, upper);
-    if (sd === null || !coverage) return [];
     const xo = Math.round(c.hz);
+    const sd = lowerSdCm2(cabinet.chambers, lower);
+    const coverage = upperCoverage(cabinet.chambers, upper, xo);
+    if (sd === null || !coverage) return [];
     const beam = beamDeg(sd, xo);
     const deg = Math.round(beam);
     const high = nameOf(upper);
-    const covered =
-      coverage.kind === DISPERSION_COVERAGE.rated ? coverage.deg : DISPERSION_DOME_COVERAGE_DEG;
+    const covered = "deg" in coverage ? coverage.deg : DISPERSION_DOME_COVERAGE_DEG;
     const narrower = beam < Math.min(covered, DISPERSION_FULL_BEAM_DEG) * DISPERSION_MATCH_SHARE;
     const words = DISPERSION_TEXT.coverage;
     const said =
-      coverage.kind === DISPERSION_COVERAGE.rated
+      "deg" in coverage
         ? words.rated(coverage.deg)
         : coverage.kind === DISPERSION_COVERAGE.unpublished
           ? words.unpublished
