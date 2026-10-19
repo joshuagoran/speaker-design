@@ -3,6 +3,7 @@ import { CompareChecks, CompareTable, type CompareColumn } from "../../component
 import { SORT_BEST, sortRows, type DriverCompareRow } from "../../lib/speaker/driverCompare";
 import { isWooferKind } from "./speakerParts";
 import { formatDollars } from "../../lib/format";
+import { Button } from "../../components/ui/Button";
 import { DRIVER_TYPE_NAMES } from "../../constants/speakerPage";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import {
@@ -25,6 +26,8 @@ interface Props {
   onPreview: (id: string | null) => void;
   /** puts an option into the entry */
   onUse: (o: DriverCompareOption) => void;
+  /** a click on a row uses it (from md up); else a tap previews it and Use sits beside its checks (a phone) */
+  rowUse: boolean;
 }
 
 /** A number with its unit (none: the heading carries it), to `digits` decimals; "–" for none. */
@@ -66,7 +69,15 @@ const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
  * first) until a heading is clicked; a second click on the same heading reverses it. Yours stays first, and the options
  * that fail something yours doesn't stay last. The previewed row's checks (else yours) show above the table.
  */
-export function DriverCompareTable({ rows, kind, bandName, previewId, onPreview, onUse }: Props) {
+export function DriverCompareTable({
+  rows,
+  kind,
+  bandName,
+  previewId,
+  onPreview,
+  onUse,
+  rowUse,
+}: Props) {
   const [sort, setSort] = useState<{ key: DriverCompareSort; dir: SortDirection }>({
     key: DRIVER_COMPARE_SORT.max,
     dir: SORT_BEST.max,
@@ -89,29 +100,37 @@ export function DriverCompareTable({ rows, kind, bandName, previewId, onPreview,
   const sorted = sortRows(rows, sort.key, sort.dir);
   /** the row whose checks show: the one previewed, else yours */
   const shown = sorted.find((r) => r.id === previewId) ?? sorted.find((r) => r.yours);
+  const use = (r: DriverCompareRow) => {
+    // the row moves to the top as yours: the pointer is no longer over it
+    onPreview(null);
+    onUse(r.option);
+  };
   return (
     <>
       {/* two lines held, so the table doesn't move as the checks change */}
-      <p className="text-xs min-h-[2lh]">
-        {shown && (
-          <>
-            <span className="text-stone-500">{shown.name}: </span>
-            <CompareChecks problems={shown.problems} />
-          </>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs min-h-[2lh]">
+          {shown && (
+            <>
+              <span className="text-stone-500">{shown.name}: </span>
+              <CompareChecks problems={shown.problems} />
+            </>
+          )}
+        </p>
+        {!rowUse && shown && !shown.yours && (
+          <Button size="xs" onClick={() => use(shown)}>
+            {DRIVER_COMPARE_TEXT.use}
+          </Button>
         )}
-      </p>
+      </div>
       <CompareTable
         nameHead={DRIVER_TYPE_NAMES[isWooferKind(kind) ? DRIVER_KIND.woofer : kind]}
         columns={COLUMNS(bandName)}
         rows={sorted}
-        onUse={(r) => {
-          // the row moves to the top as yours: the pointer is no longer over it
-          onPreview(null);
-          onUse(r.option);
-        }}
+        onUse={use}
         bg="bg-white"
         compact
-        rowUse
+        rowUse={rowUse}
         minWidth="min-w-[22rem]"
         checks={false}
         sort={{ ...sort, onSort }}

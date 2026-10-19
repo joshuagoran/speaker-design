@@ -28,6 +28,8 @@ export const DRIVER_COMPARE_TEXT = {
   compare: "Compare",
   heading: "Compare drivers",
   line: "Hover a row to see it on the charts.",
+  /** the line on a phone, where the comparison shows one chart */
+  lineTouch: "Tap a row to see it on the chart.",
   close: "Close",
   yours: "yours",
   passes: "passes",

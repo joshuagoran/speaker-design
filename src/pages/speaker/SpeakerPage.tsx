@@ -49,10 +49,12 @@ import {
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
   GAP_Y,
+  MD_UP,
   resultsCellClass,
   resultsGridClass,
 } from "../../styles/layout";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import {
   HIFI_BOT,
   HIFI_TOP,
@@ -344,18 +346,45 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
           },
         ]
       : [];
+  /** the response chart: in the results, and on top of the driver comparison on a phone */
+  const responseChart = (
+    <ResponseChart
+      fmin={FREQ_AXIS_MIN_HZ}
+      fmax={FREQ_AXIS_MAX_HZ}
+      top={HIFI_TOP}
+      bot={HIFI_BOT}
+      step={10}
+      yLabel={SPEAKER_TEXT.yLabel}
+      series={[
+        ...(response.bands.length ? [sumSeries(response.sum)] : []),
+        ...bandSeries(response.bands),
+        ...previewSeries("curve"),
+      ]}
+      marks={fbMarks}
+    />
+  );
+  /** from md up: the comparison sits in the settings column and a click uses a row; on a phone it fills the screen */
+  const mdUp = useMediaQuery(MD_UP);
   /** the driver comparison in the settings column, while it is open */
   const compareView =
     compareOpen && cmp.driver ? (
-      <section ref={compareBlock} className={`min-w-0 ${GAP_Y}`}>
+      <section
+        ref={compareBlock}
+        className={`min-w-0 ${GAP_Y} max-md:fixed max-md:inset-0 max-md:z-40 max-md:overflow-y-auto max-md:bg-white max-md:p-4`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SectionHeading>{DRIVER_COMPARE_TEXT.heading}</SectionHeading>
           <Button size="xs" onClick={() => setCompare(null)}>
             {DRIVER_COMPARE_TEXT.close}
           </Button>
         </div>
-        <p className="text-xs text-stone-500">{DRIVER_COMPARE_TEXT.line}</p>
+        {/* on a phone the chart stays on top while the list scrolls */}
+        {!mdUp && <div className="sticky -top-4 z-10 bg-white pt-4">{responseChart}</div>}
+        <p className="text-xs text-stone-500">
+          {mdUp ? DRIVER_COMPARE_TEXT.line : DRIVER_COMPARE_TEXT.lineTouch}
+        </p>
         <DriverCompareTable
+          rowUse={mdUp}
           rows={cmp.rows}
           kind={cmp.driver.kind}
           bandName={nameOf(cmp.driver.bands[0] ?? "")}
@@ -485,20 +514,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} ${resultsGridClass(wide)}`}>
             <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
               <SectionHeading>{SPEAKER_TEXT.response}</SectionHeading>
-              <ResponseChart
-                fmin={FREQ_AXIS_MIN_HZ}
-                fmax={FREQ_AXIS_MAX_HZ}
-                top={HIFI_TOP}
-                bot={HIFI_BOT}
-                step={10}
-                yLabel={SPEAKER_TEXT.yLabel}
-                series={[
-                  ...(response.bands.length ? [sumSeries(response.sum)] : []),
-                  ...bandSeries(response.bands),
-                  ...previewSeries("curve"),
-                ]}
-                marks={fbMarks}
-              />
+              {responseChart}
               {/* a chamber the model leaves out is named with its reason, never dropped silently */}
               {response.chambers.flatMap((c, i) =>
                 [...new Set(c.gaps)].map((g) => (
