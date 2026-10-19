@@ -20,8 +20,6 @@ interface Props {
   rows: readonly DriverCompareRow[];
   /** the entry's kind: the name column's heading */
   kind: SpeakerDriver["kind"];
-  /** the entry's band's name: the level column's heading */
-  bandName: string;
   previewId: string | null;
   onPreview: (id: string | null) => void;
   /** puts an option into the entry */
@@ -35,7 +33,7 @@ const amount = (x: number | null, unit: string, digits = 1) =>
   x === null ? "–" : `${x.toFixed(digits)}${unit ? ` ${unit}` : ""}`;
 
 /** The Speaker page's columns between the name and the checks, in order. */
-const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
+const COLUMNS: CompareColumn<DriverCompareRow>[] = [
   {
     key: DRIVER_COMPARE_SORT.price,
     head: DRIVER_COMPARE_TEXT.heads.price,
@@ -48,9 +46,10 @@ const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
   },
   {
     key: DRIVER_COMPARE_SORT.level,
-    head: DRIVER_COMPARE_TEXT.heads.level(bandName),
+    head: DRIVER_COMPARE_TEXT.heads.level,
+    tip: DRIVER_COMPARE_TEXT.heads.levelTip,
     // the heading carries the unit
-    cell: (r) => amount(r.run.bandDb, ""),
+    cell: (r) => amount(r.levelDb, ""),
   },
   {
     key: DRIVER_COMPARE_SORT.f3,
@@ -69,15 +68,7 @@ const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
  * first) until a heading is clicked; a second click on the same heading reverses it. Yours stays first, and the options
  * that fail something yours doesn't stay last. The previewed row's checks (else yours) show above the table.
  */
-export function DriverCompareTable({
-  rows,
-  kind,
-  bandName,
-  previewId,
-  onPreview,
-  onUse,
-  rowUse,
-}: Props) {
+export function DriverCompareTable({ rows, kind, previewId, onPreview, onUse, rowUse }: Props) {
   const [sort, setSort] = useState<{ key: DriverCompareSort; dir: SortDirection }>({
     key: DRIVER_COMPARE_SORT.max,
     dir: SORT_BEST.max,
@@ -125,7 +116,7 @@ export function DriverCompareTable({
       </div>
       <CompareTable
         nameHead={DRIVER_TYPE_NAMES[isWooferKind(kind) ? DRIVER_KIND.woofer : kind]}
-        columns={COLUMNS(bandName)}
+        columns={COLUMNS}
         rows={sorted}
         onUse={use}
         bg="bg-white"

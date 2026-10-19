@@ -13,7 +13,7 @@ import {
   type DriverCompareRun,
 } from "../src/lib/speaker/driverCompare";
 import { evaluateSpeaker, speakerF3 } from "../src/lib/speaker/optimize/evaluate";
-import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { passbandDb, passbandEdgesHz, speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
 import { speakerPrice } from "../src/lib/speaker/speakerTotals";
@@ -78,7 +78,7 @@ test("every row's numbers come from the page's model: yours matches the page's r
   assert.equal(run.metrics.lb, cabinetBuild(spec.cabinet).lb);
   assert.equal(run.metrics.price, speakerPrice(spec.cabinet).dollars);
   assert.equal(run.metrics.f3, speakerF3(response));
-  assert.equal(run.bandDb, response.bands.find((b) => b.id === own.bands[0])?.passbandDb);
+  assert.deepEqual(run.bands[0]?.curve, response.bands.find((b) => b.id === own.bands[0])?.curve);
   assert.deepEqual(run.sum, response.sum);
   // another option: its run is the page's on the design with it put in
   const other = driverOptions(own)[1];
@@ -197,4 +197,29 @@ test("sort: a row with no number goes last, either way", () => {
     );
     assert.equal(passing.at(-1)?.id, blank.id, `${dir}: no F3 last`);
   }
+});
+
+test("Avg dB reads every option over your driver's band: an option with less bass reads quieter there", () => {
+  const { spec, target } = hifiWoofer();
+  const own = entryOf(spec, target);
+  const options = driverOptions(own);
+  const runs = runsOf(spec, target, options);
+  const rows = compareRows(options, (o) => runs.get(optionKey(o)), {
+    kind: own.kind,
+    yours: optionKey(ownOption(own)),
+    nameOf: (o) => o.driverId,
+  });
+  const window = passbandEdgesHz(runs.get(optionKey(ownOption(own)))?.bands[0]?.curve ?? []);
+  assert.ok(window, "your band has a passband");
+  // an option whose own passband starts well above yours loses level over your band
+  const lean = rows.filter((r) => {
+    const edges = passbandEdgesHz(r.run.bands[0]?.curve ?? []);
+    return edges !== null && edges.lowHz > window.lowHz * 2;
+  });
+  assert.ok(lean.length > 0, "the catalog has a woofer with less bass");
+  for (const r of lean)
+    assert.ok(
+      (r.levelDb ?? 0) < passbandDb(r.run.bands[0]?.curve ?? []),
+      `${r.id}: quieter over your band than over its own`,
+    );
 });

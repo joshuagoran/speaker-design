@@ -391,7 +391,6 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
           rowUse={mdUp}
           rows={cmp.rows}
           kind={cmp.driver.kind}
-          bandName={nameOf(cmp.driver.bands[0] ?? "")}
           previewId={previewId}
           onPreview={setPreviewId}
           onUse={(o) =>
