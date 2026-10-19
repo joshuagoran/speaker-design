@@ -60,7 +60,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BASE...HEAD" | grep -qE '^(src/components/stack-view/|src/lib/build/hornMount\.ts$|src/constants/hornMount\.ts$|tests/(horn-plate\.test|horn-ply-mount\.test|mount-helpers|scene-cases|three-memory-check)\.|\.github/workflows/pages\.yml$)'; then
+          elif git diff --name-only "$BASE...HEAD" | grep -qE '^(src/components/stack-view/|src/lib/build/|src/constants/hornMount\.ts$|src/data/meshes/|tests/(horn-[^/]*\.test|mount-helpers|scene-cases|three-memory-check)\.|\.github/workflows/pages\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
