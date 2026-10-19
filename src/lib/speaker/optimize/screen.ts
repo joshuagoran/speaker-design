@@ -45,7 +45,7 @@ import type { SpeakerOptimizerLocks } from "../../../types";
  * The screen's grid: this many points over the charts' axis (the page's has 220). The finalists and the shown cards
  * are worked out on the full grid.
  */
-export const SCREEN_POINTS = 40;
+export const SCREEN_POINTS = 60;
 /** The tunings a vented chamber tries, as factors of yours. */
 const FB_FACTORS = [0.85, 0.93, 1, 1.08, 1.18];
 /** How many of each goal's best options a unit keeps for the combine step. */
