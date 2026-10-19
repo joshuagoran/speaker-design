@@ -165,9 +165,10 @@ export const HORN_GOAL_LIMIT_NAMES = {
 /** How a horn's drivers drive its path, as the Horn settings name it (`HORN_DRIVE`). */
 export const HORN_DRIVE_NAMES = {
   front: "Front-loaded",
-  offset: "Offset",
+  // an offset horn is a front-loaded one with its driver part way along (the Driver position setting)
+  offset: "Front-loaded",
   tapped: "Tapped",
-  back: "Back-loaded",
+  back: "Rear-loaded",
 } as const satisfies Record<HornDrive["kind"], string>;
 
 /** Each band's crossover as the Speaker page names it (the ids are the saved drive values: active, passive). */
@@ -212,7 +213,7 @@ export const MODEL_GAP_TEXT = {
     fix: "Set each filter corner above 0 Hz.",
   },
   backLoaded: {
-    why: "a back-loaded horn is not calculated",
+    why: "a rear-loaded horn is not calculated",
     fix: "Use a front-loaded, offset or tapped horn.",
   },
   taps: {
@@ -494,7 +495,7 @@ export const SPEAKER_TEXT = {
     "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box. Only the sections set the response.",
   hornDrive: "Horn type",
   hornDriveTip:
-    "Where the cones meet the horn's path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Back-loaded: the cone backs drive the horn.",
+    "Where the cones meet the horn's path. Front-loaded: the cone fronts drive the path, the backs sit in a closed box. Tapped: the cone fronts and backs each open into the path. Rear-loaded: the cone backs drive the horn.",
   hornTap: "Tap after section",
   hornTapTip: "Where the front of the cones joins the horn, counted from the closed end.",
   hornFrontTap: "Front tap after section",

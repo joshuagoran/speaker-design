@@ -5,22 +5,35 @@ import { createContext, useContext, useState } from "react";
 import { POSITION_AXIS, SPEAKER_VIEW, type SpeakerView } from "../../constants/speakerResults";
 import type { PositionFocus } from "../../types";
 
-/** The focus and its setter, as the context shares them. */
+/** A driver entry picked in the 2D view: its chamber and entry, and a count that rises on each pick. */
+export interface PickedDriver extends Pick<PositionFocus, "chamber" | "driver"> {
+  count: number;
+}
+
+/** The focus and its setter, and the driver last picked in the 2D view, as the context shares them. */
 export interface PositionFocusState {
   focus: PositionFocus | null;
   setFocus: (focus: PositionFocus | null) => void;
+  /** the driver last dragged in the Front view: the settings open its box and scroll to it */
+  picked: PickedDriver | null;
+  pickDriver: (chamber: number, driver: number) => void;
 }
 
 /** The page's position focus; outside a page that provides it, nothing is marked. */
 export const PositionFocusContext = createContext<PositionFocusState>({
   focus: null,
   setFocus: () => {},
+  picked: null,
+  pickDriver: () => {},
 });
 
 /** The page's own focus state, to provide through `PositionFocusContext`. */
 export function usePositionFocusState(): PositionFocusState {
   const [focus, setFocus] = useState<PositionFocus | null>(null);
-  return { focus, setFocus };
+  const [picked, setPicked] = useState<PickedDriver | null>(null);
+  const pickDriver = (chamber: number, driver: number) =>
+    setPicked((p) => ({ chamber, driver, count: (p?.count ?? 0) + 1 }));
+  return { focus, setFocus, picked, pickDriver };
 }
 
 /** The focus as a field reads it: the context's state. */

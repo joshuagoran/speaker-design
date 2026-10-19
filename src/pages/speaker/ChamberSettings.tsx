@@ -951,7 +951,7 @@ function DriverFields({
   onEdit,
   onRemove,
 }: DriverProps) {
-  const { setFocus } = usePositionFocus();
+  const { setFocus, picked } = usePositionFocus();
   const woofer = isWooferKind(driver.kind);
   const type = isWooferKind(driver.kind) ? DRIVER_KIND.woofer : driver.kind;
   /** every woofer size shows; else only the woofer's own size */
@@ -1003,6 +1003,11 @@ function DriverFields({
   return (
     <FoldBox
       summary={driverSummary(driver, bands)}
+      reveal={
+        picked && picked.chamber === chamberIndex && picked.driver === index
+          ? picked.count
+          : undefined
+      }
       lead={sectionBands.map((id, k) => {
         const at = bands.findIndex((b) => b.id === id);
         return at < 0 ? null : <BandDot key={k} index={at} count={bands.length} />;

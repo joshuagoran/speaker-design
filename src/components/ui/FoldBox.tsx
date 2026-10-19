@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HOVER_TRANSITION } from "./buttonStyles";
-import { GAP_Y } from "../../styles/layout";
+import { GAP_Y, MD_UP } from "../../styles/layout";
 
 interface Props {
   /** the box's name in bold, shown open and closed ("Vent"); absent: the summary is the line's main text */
@@ -13,6 +13,8 @@ interface Props {
   actions?: React.ReactNode;
   /** whether it starts open (default closed) */
   defaultOpen?: boolean;
+  /** a count that opens the box and scrolls it into view each time it changes (a driver picked in a drawing) */
+  reveal?: number;
   children: React.ReactNode;
 }
 
@@ -21,10 +23,27 @@ interface Props {
  * chevron, the title and the summary (wrapped to two lines at most), and buttons at the right. Click the line to open
  * it. Closed, its settings stay mounted but hidden, so they keep their state.
  */
-export function FoldBox({ title, summary, lead, actions, defaultOpen = false, children }: Props) {
+export function FoldBox({
+  title,
+  summary,
+  lead,
+  actions,
+  defaultOpen = false,
+  reveal,
+  children,
+}: Props) {
   const [open, setOpen] = useState(defaultOpen);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (reveal === undefined) return;
+    setOpen(true);
+    // from md up the settings scroll in their own pane; on a phone the page would scroll away from the drawing
+    if (window.matchMedia(MD_UP).matches)
+      box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [reveal]);
   return (
     <div
+      ref={box}
       className={`rounded border border-stone-300 focus-within:border-stone-500 pl-1.5 pr-1 py-1 ${HOVER_TRANSITION}`}
     >
       <div className="flex items-center gap-1.5 min-h-8">

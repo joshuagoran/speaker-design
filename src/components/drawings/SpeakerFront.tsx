@@ -71,6 +71,8 @@ interface Props {
    * stack's drawing)
    */
   onMoveDriver?: (chamber: number, driver: number, position: FacePoint) => void;
+  /** a driver entry the user starts to drag (the settings open its box) */
+  onPickDriver?: (chamber: number, driver: number) => void;
   /** the driver position field with focus: its point (the center line, or the bottom) is marked; null: none */
   focus?: PositionFocus | null;
 }
@@ -142,7 +144,7 @@ export function speakerFrontFrame(
  * PA's as its front view draws it, the Hi-fi's), the radiators, and a horn-loaded chamber's mouth. A Hi-fi port or a
  * radiator on the back is drawn dashed (behind). The top is drawn flat (an arched top too, for now).
  */
-export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
+export function SpeakerFront({ spec, onMoveDriver, onPickDriver, focus = null }: Props) {
   const pal = usePalette();
   const { cabinet } = spec;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -520,6 +522,7 @@ export function SpeakerFront({ spec, onMoveDriver, focus = null }: Props) {
           others: othersKey(cabinet, chamber, entry, center),
         };
         setDragging({ chamber, driver: entry });
+        onPickDriver?.(chamber, entry);
       },
     };
   };

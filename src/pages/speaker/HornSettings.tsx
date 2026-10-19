@@ -8,7 +8,6 @@ import { SETTINGS_TEXT } from "../../constants/speakerSettings";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { byId } from "../../lib/tables";
-import { keysOf } from "../../lib/records";
 import { hornSettingsSummary } from "./settingsSummaries";
 import type { HornGoalFit, HornGoals, HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
 import { SettingsFold } from "../../components/ui/SettingsFold";
@@ -54,25 +53,26 @@ import {
   type HornSectionSize,
 } from "./hornSections";
 
-/** The horn types to pick: a back-loaded horn is not calculated, so it is not offered. */
-const DRIVE_OPTIONS: readonly SelectOption[] = entriesOf(HORN_DRIVE_NAMES)
-  .filter(([kind]) => kind !== HORN_DRIVE.back)
-  .map(([id, name]) => ({ id, name }));
+/**
+ * The horn types to pick: front-loaded (its driver at the closed end, or part way along: the Driver position setting)
+ * and tapped. A rear-loaded horn is not calculated, so it is not offered.
+ */
+const DRIVE_OPTIONS: readonly SelectOption[] = [HORN_DRIVE.front, HORN_DRIVE.tapped].map((id) => ({
+  id,
+  name: HORN_DRIVE_NAMES[id],
+}));
+
+/** The Driver position choice for the closed end (a front-loaded drive); a section number puts it part way along. */
+const AT_CLOSED_END = "0";
 
 /** The least rear chamber a straight horn takes, L (as Design from goals and an import set it). */
 const MIN_REAR_L = MIN_NET_L;
 
-/** An offset drive's one tap, by its key in the drive. */
-const OFFSET_TAP = "tap" satisfies keyof Extract<SpeakerHorn["drive"], { kind: "offset" }>;
-
-/** Each tap setting of a drive: where it is in the drive, its label and its tooltip. */
-const TAP_FIELDS = {
-  offset: [{ key: OFFSET_TAP, label: SETTINGS_TEXT.tap, tip: SETTINGS_TEXT.tapTip }],
-  tapped: [
-    { key: "frontTap", label: SETTINGS_TEXT.frontTap, tip: SETTINGS_TEXT.tapsTip },
-    { key: "rearTap", label: SETTINGS_TEXT.backTap, tip: SETTINGS_TEXT.tapsTip },
-  ],
-} as const;
+/** A tapped drive's tap settings: where each is in the drive, its label and its tooltip. */
+const TAP_FIELDS = [
+  { key: "frontTap", label: SETTINGS_TEXT.frontTap, tip: SETTINGS_TEXT.tapsTip },
+  { key: "rearTap", label: SETTINGS_TEXT.backTap, tip: SETTINGS_TEXT.tapsTip },
+] as const;
 
 /** Each size field of a section: its spec field, its label and its step. */
 const SECTION_FIELDS: readonly {
@@ -102,22 +102,17 @@ const BOARD_OPTIONS = [
 const shownSize = (s: HornSegment, size: HornSectionSize) =>
   size === "length" ? shownInOfCm(s.length) : shownIn2(s[size]);
 
-/** A tap setting's key in its drive. */
-type TapKey = (typeof TAP_FIELDS)[keyof typeof TAP_FIELDS][number]["key"];
+/** A tapped drive's tap setting key. */
+type TapKey = (typeof TAP_FIELDS)[number]["key"];
 
-/** The section a tap opens after (a section boundary from 1); null when the drive has no such tap. */
-function tapOf(drive: SpeakerHorn["drive"], key: TapKey): number | null {
-  if (drive.kind === HORN_DRIVE.offset && key === OFFSET_TAP) return drive.tap;
-  if (drive.kind === HORN_DRIVE.tapped && key !== OFFSET_TAP) return drive[key];
-  return null;
-}
-
-/** The drive with tap `key` set to open after section `tap`; unchanged when it has no such tap. */
+/** The drive with tap `key` set to open after section `tap`; unchanged when it is not tapped. */
 function withTap(drive: SpeakerHorn["drive"], key: TapKey, tap: number): SpeakerHorn["drive"] {
-  if (drive.kind === HORN_DRIVE.offset && key === OFFSET_TAP) return { ...drive, tap };
-  if (drive.kind === HORN_DRIVE.tapped && key !== OFFSET_TAP) return { ...drive, [key]: tap };
-  return drive;
+  return drive.kind === HORN_DRIVE.tapped ? { ...drive, [key]: tap } : drive;
 }
+
+/** A front-loaded drive at the Driver position `id`: at the closed end, or after a section (an offset drive). */
+const driveAt = (id: string): SpeakerHorn["drive"] =>
+  id === AT_CLOSED_END ? { kind: HORN_DRIVE.front } : { kind: HORN_DRIVE.offset, tap: Number(id) };
 
 interface Props {
   horn: SpeakerHorn;
@@ -290,6 +285,18 @@ export function HornSettings({
   const tapOptions: readonly SelectOption[] = segments
     .slice(0, -1)
     .map((_, i) => ({ id: String(i + 1), name: SPEAKER_TEXT.hornSection(i + 1) }));
+  /** where a front-loaded horn's driver can join it: at the closed end, or after any section but the last */
+  const positionOptions: readonly SelectOption[] = [
+    { id: AT_CLOSED_END, name: SETTINGS_TEXT.atClosedEnd },
+    ...tapOptions.map((o) => ({ ...o, name: SETTINGS_TEXT.afterSection(Number(o.id)) })),
+  ];
+  /** front-loaded: its driver at the closed end (front) or part way along (offset) */
+  const frontLoaded = drive.kind === HORN_DRIVE.front || drive.kind === HORN_DRIVE.offset;
+  /**
+   * Driver position shows for a straight front-loaded horn of two or more sections (a drawn horn's comes from the
+   * drawing; a one-section horn has nowhere part way along)
+   */
+  const positioned = frontLoaded && !folded && tapOptions.length > 0;
   /** the line that says what sets the straight horn, and the one switch that unlocks it (and the rear chamber) */
   const manualRow = (
     <div className="flex items-center justify-between gap-2">
@@ -321,6 +328,34 @@ export function HornSettings({
   return (
     <>
       <InsetGroup title={SETTINGS_TEXT.horn}>
+        <div className={positioned ? PAIR_ROW : ""}>
+          <SelectField
+            label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
+            options={DRIVE_OPTIONS}
+            value={byId(DRIVE_OPTIONS, frontLoaded ? HORN_DRIVE.front : drive.kind)}
+            onChange={(o) => {
+              // front-loaded keeps an offset drive's position; the picker lists only the drives it offers
+              if (o.id === HORN_DRIVE.tapped && drive.kind !== HORN_DRIVE.tapped)
+                onDrive(HORN_DRIVE.tapped);
+              if (o.id === HORN_DRIVE.front && !frontLoaded) onDrive(HORN_DRIVE.front);
+            }}
+          />
+          {positioned && (
+            <SelectField
+              label={
+                <Tooltip tip={SETTINGS_TEXT.driverPositionTip}>
+                  {SETTINGS_TEXT.driverPosition}
+                </Tooltip>
+              }
+              options={positionOptions}
+              value={byId(
+                positionOptions,
+                drive.kind === HORN_DRIVE.offset ? String(drive.tap) : AT_CLOSED_END,
+              )}
+              onChange={(o) => onEdit((h) => ({ ...h, drive: driveAt(o.id) }))}
+            />
+          )}
+        </div>
         <HornGoalsFields
           goals={horn.goals ?? HORN_GOALS_DEFAULT}
           fit={fit}
@@ -330,32 +365,19 @@ export function HornSettings({
         />
       </InsetGroup>
       <FoldBox title={SETTINGS_TEXT.hornSettings} summary={hornSettingsSummary(horn)}>
-        <SelectField
-          label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
-          options={DRIVE_OPTIONS}
-          value={byId(DRIVE_OPTIONS, drive.kind)}
-          onChange={(o) => {
-            // the picker lists exactly the drives it offers (DRIVE_OPTIONS)
-            const kind = keysOf(HORN_DRIVE_NAMES).find((k) => k === o.id);
-            if (kind && kind !== drive.kind && kind !== HORN_DRIVE.back) onDrive(kind);
-          }}
-        />
-        {!folded && (drive.kind === HORN_DRIVE.offset || drive.kind === HORN_DRIVE.tapped) && (
-          <div className={drive.kind === HORN_DRIVE.tapped ? PAIR_ROW : ""}>
-            {TAP_FIELDS[drive.kind].map(({ key, label, tip }) => {
-              const tap = tapOf(drive, key);
-              return (
-                <SelectField
-                  key={key}
-                  label={<Tooltip tip={tip}>{label}</Tooltip>}
-                  options={tapOptions}
-                  value={tap === null ? undefined : byId(tapOptions, String(tap))}
-                  onChange={(o) =>
-                    onEdit((h) => ({ ...h, drive: withTap(h.drive, key, Number(o.id)) }))
-                  }
-                />
-              );
-            })}
+        {!folded && drive.kind === HORN_DRIVE.tapped && (
+          <div className={PAIR_ROW}>
+            {TAP_FIELDS.map(({ key, label, tip }) => (
+              <SelectField
+                key={key}
+                label={<Tooltip tip={tip}>{label}</Tooltip>}
+                options={tapOptions}
+                value={byId(tapOptions, String(drive[key]))}
+                onChange={(o) =>
+                  onEdit((h) => ({ ...h, drive: withTap(h.drive, key, Number(o.id)) }))
+                }
+              />
+            ))}
           </div>
         )}
         {!folded && drive.kind === HORN_DRIVE.tapped && (

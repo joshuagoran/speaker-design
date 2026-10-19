@@ -306,6 +306,11 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
                           drivers: ch.drivers.map((d, k) => (k === j ? { ...d, position } : d)),
                         }))
                       }
+                      onPickDriver={(i, j) => {
+                        // its box is in the Chambers section: open it, and the box opens and scrolls into view
+                        if (!folds.open.chambers) folds.toggle("chambers");
+                        positionFocus.pickDriver(i, j);
+                      }}
                       focus={focus}
                     />
                   ) : view === SPEAKER_VIEW.side ? (
