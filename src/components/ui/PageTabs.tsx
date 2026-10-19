@@ -6,7 +6,7 @@ interface Props<Id extends string> {
   tabs: readonly (readonly [Id, string, string])[];
   /** the page showing */
   current: Id;
-  /** the navigation's accessible name, e.g. "PA stack pages" */
+  /** the navigation's accessible name, e.g. "Speaker pages" */
   label: string;
   /** opens a page (the link's own navigation is the fallback) */
   onNavigate: (id: Id, href: string) => (e: MouseEvent<HTMLAnchorElement>) => void;

@@ -1,7 +1,7 @@
 // Where a new stack (Stack page) or space (Space page) starts: a preset (src/pages/stack/stackPresets). The picker's
 // label and button are the start picker's (START_PICKER_TEXT).
 
-/** The presets, by id: the PA page's starting design in each layout, and the Hi-fi page's pair. */
+/** The presets, by id: the default PA design in each layout, and the default Hi-fi pair. */
 export const STACK_PRESET = {
   paStack: "paStack",
   paPole: "paPole",

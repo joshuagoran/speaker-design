@@ -266,7 +266,7 @@ export const SPEAKER_RESPONSE_VOLTS = ONE_WATT_VOLTS;
  */
 export const STACK_LISTEN_DISTANCE_M = 4;
 
-/** The saved speakers' collection under users/{uid} (the speaker library, next to `configs` and `hifiConfigs`). */
+/** The saved speakers' collection under users/{uid} (the speaker library). */
 export const SPEAKERS_COLLECTION = "speakers";
 
 /** The saved stacks' collection under users/{uid}, next to the speaker library. */
