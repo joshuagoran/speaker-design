@@ -4,7 +4,7 @@ import { BOX_SHADOW_HZ, SINGLE_FREQ_RANGE, STATS_CLEARANCE_FT } from "../../lib/
 import { SPACE_DETAILS, SPACE_LEVEL_REF_PLACE } from "../../constants/space";
 import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
-import { sharedAssumptionGroups, type AssumptionGroup } from "../coverage/assumptionGroups";
+import { sharedAssumptionGroups, type AssumptionGroup } from "./assumptionGroups";
 import type { CoverageLevelRef, SpaceVenue } from "../../types";
 
 interface Props {
