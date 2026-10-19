@@ -507,15 +507,15 @@ export const SPEAKER_TEXT = {
   hornTappedAir: "The chamber volume is the air behind the cones.",
   /** why a tapped horn's chamber takes no vent */
   ventTapped: "A tapped horn has no vent.",
-  hornGoals: "Goals",
+  hornGoals: "Target band",
   hornGoalsTip:
     "What Start from goals aims for: the band the horn plays flat, and how loud it gets there. The lines below check the horn against them.",
-  hornGoalLow: "Flat from",
+  hornGoalLow: "Lowest",
   hornGoalLowTip: "The lowest frequency the horn plays flat, Hz.",
-  hornGoalHigh: "Flat to",
+  hornGoalHigh: "Highest",
   hornGoalHighTip:
     "The highest frequency the horn plays flat, Hz. Usually the crossover to the box above.",
-  hornGoalTarget: "Max output",
+  hornGoalTarget: "Loudness at 1 m",
   hornGoalTargetTip:
     "The level at 1 m at full power, dB, over the whole band. The power rating or the cone travel of the drivers limits it.",
   hornDesign: "Start from goals",
