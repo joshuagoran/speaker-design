@@ -4,7 +4,7 @@
 // - Bracing: every chamber of direct radiators is braced as its own box by the PA rule (lib/acoustics/boxModels braceShell: each
 //   panel over PA_PANEL_TARGET_HZ, with the cabinet's style and back joint), its drivers, vent and hardware kept clear.
 //   A chamber with a PA sub and a PA port in a frame cabinet runs the PA sub box's own rule (subBoxBracing), so the PA
-//   designs match the PA page. A horn-loaded chamber takes none (the horn's walls hold its panels).
+//   designs match the PA box models. A horn-loaded chamber takes none (the horn's walls hold its panels).
 // - Hardware (`SpeakerCabinet.hardware`): the PA presets (lib/build/hardware) in each shell's lowest chamber.
 // - Net air: the chamber's clear volume less its drivers, the vent's air, the wood inside (the braces and ribs, the
 //   vent's walls, a frame's baffle cleats round its clear face) and the hardware's recesses. No allowance: every part is
@@ -1192,7 +1192,7 @@ const flushMarks = (boxY: number, centerX: number, joint: CornerJoint, t: number
 /**
  * The chamber's cutouts, by panel, as cutlist notes: each driver on the baffle at its spot (a cone's cutout, a horn's,
  * a tweeter's plate), a PA sub's tube holes (lib/acoustics/boxModels subCutNote), a Hi-fi port or slot, the radiators on their
- * panel, a horn-loaded chamber's mouth. A PA sub in a box of its own keeps the PA page's note, without its place.
+ * panel, a horn-loaded chamber's mouth. A PA sub in a box of its own keeps the PA box models' note, without its place.
  */
 function chamberNotes(
   cabinet: SpeakerCabinet,
@@ -1456,7 +1456,7 @@ const hardwareLine = (box: CutBoxId, plan: BoxHardwarePlan) =>
  * (`SpeakerLayout.oneShell`) share one shell: its sides, top and bottom (or an arched top), back and baffle under
  * `SHELL_CUT_BOX`, every chamber's cutouts on the one baffle, and each chamber's partitions, braces and vent parts
  * under its own box. Any other chamber is a box of its own (`chamberCutBox`), less the walls another chamber gives it.
- * `also` is the lines under the list (the bought vent parts and the hardware, as the PA and Hi-fi pages give them);
+ * `also` is the lines under the list (the bought vent parts and the hardware);
  * `vent` is the vent's lines alone, the notes under the purchased parts table (`speakerPurchasedParts`).
  */
 export function speakerCutParts(

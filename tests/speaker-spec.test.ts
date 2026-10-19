@@ -1,4 +1,4 @@
-// The speaker spec (lib/speaker): every golden design reads into it with its key facts (boxes, drivers,
+// The speaker spec (lib/speaker): every saved and synthetic PA design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { test } from "vite-plus/test";
@@ -50,7 +50,7 @@ import type {
   DesignLayers,
   DriverKind,
   PaLayout,
-  PaPlannerDesign,
+  PaDesign,
   PortStyle,
   SpeakerChamber,
   SpeakerPart,
@@ -98,17 +98,17 @@ const PA_PLACEMENT_COUNT: Record<PaLayout, number> = { stack: 1, pole: 1, satell
 const PA_BOX_COUNT: Record<PaLayout, number> = { stack: 2, pole: 2, satellite: 3, tower: 2 };
 
 /** Whether the design's horn arches the tower's top (lib/speaker/tower `towerSpec`). */
-const towerArches = (cfg: PaPlannerDesign) =>
+const towerArches = (cfg: PaDesign) =>
   towerSpec(cfg.cDim, cfg.wall, byIdOrThrow(HORN_OPTIONS, cfg.horn, CATALOG_TABLE_NAMES.horns))
     .archTop;
 
-/** The golden PA designs, and a pole layout (no seed has one). */
+/** The saved and synthetic PA designs, and a pole layout (no seed has one). */
 const paCases: PaConfig[] = [
   ...configs,
   { ...configs[0], name: "pole: tops on spacers", layout: "pole", spacerH: 18 },
 ];
 
-test("speaker spec: every golden PA design reads into a stack with its boxes, drivers, vents and crossovers", () => {
+test("speaker spec: every saved and synthetic PA design reads into a stack with its boxes, drivers, vents and crossovers", () => {
   for (const c of paCases) {
     const cfg = paDesign(c);
     const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
@@ -227,7 +227,7 @@ test("speaker spec: every golden PA design reads into a stack with its boxes, dr
 
 test("speaker spec: a tower whose round horn is narrower than the cabinet has an arched top", () => {
   const tower = paCases.map(paDesign).find((cfg) => cfg.layout === "tower" && towerArches(cfg));
-  assert.ok(tower, "a golden tower with an arched top");
+  assert.ok(tower, "a PA tower with an arched top");
   const [spec] = layersFromPa(tower, { id: "pa", name: "tower" }, PA_FLOOR).speakers;
   assert.equal(spec.cabinet.top, CABINET_TOP.arched);
 });
@@ -266,7 +266,7 @@ test("speaker spec: the tower's chambers stack in one shell and share their part
   assert.equal(chamberClearFace(tower.cabinet, subChamber).h, cfg.cDim.h - 2 * t);
 });
 
-test("speaker spec: each PA layout stands the tops where the planner draws them, a channel each", () => {
+test("speaker spec: each PA layout stands the tops where the 3D view draws them, a channel each", () => {
   const base = paDesign(configs[0]);
   const read = (layout: PaLayout, spacerH = base.spacerH) =>
     layersFromPa({ ...base, layout, spacerH }, { id: "pa", name: "layout" }, PA_FLOOR);

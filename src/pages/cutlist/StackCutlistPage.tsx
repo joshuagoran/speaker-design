@@ -10,8 +10,8 @@ interface Props {
 }
 
 /**
- * The Stack Cutlist page: every member's parts, each under its member's box, packed on the same sheets (the PA page's
- * cutlist packs its sub and mid boxes so), with the stack's own cutlist choices. A measured panel thickness applies to
+ * The Stack Cutlist page: every member's parts, each under its member's box, packed on the same sheets, with the stack's own
+ * cutlist choices. A measured panel thickness applies to
  * every member whose walls are that size; the walls' size and material shown are the first member's.
  */
 export function StackCutlistPage({ stack }: Props) {

@@ -60,7 +60,7 @@ export const hornOptions = (kind: DriverKind): readonly SelectOption[] =>
 export const driverName = (driver: Pick<SpeakerDriver, "kind" | "driverId">) =>
   byId(DRIVER_OPTIONS[driver.kind], driver.driverId)?.name ?? driver.driverId;
 
-/** The port each shape starts at: the Hi-fi page's round port and slot, the PA page's side ducts. */
+/** The port each shape starts at: the default hi-fi design's round port and slot, the PA designs' side ducts. */
 export const DEFAULT_PORTS = {
   round: { shape: PORT_SHAPE.round, ...DEFAULT_HIFI.portSpec },
   slot: { shape: PORT_SHAPE.slot, n: 1, h: DEFAULT_PORT_SIZE.h, len: DEFAULT_HIFI.portSpec.len },
@@ -73,7 +73,7 @@ export const DEFAULT_PORTS = {
   },
 } as const satisfies Record<NonNullable<SpeakerPort["shape"]>, SpeakerPort>;
 
-/** The vent each kind starts at: the round port at the Hi-fi page's air-speed limit, or the Hi-fi page's radiators. */
+/** The vent each kind starts at: the round port at the hi-fi air-speed limit, or the default hi-fi design's radiators. */
 export const DEFAULT_VENTS = {
   sealed: { kind: VENT_KIND.sealed },
   vented: { kind: VENT_KIND.vented, port: DEFAULT_PORTS.round, maxSpeedMs: HIFI_PORT_MAX_MS },

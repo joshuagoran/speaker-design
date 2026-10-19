@@ -111,7 +111,7 @@ export function radiatorSpots(
  *   bottom clear of the vent along the bottom of the baffle (a slot with its shelf, or round ports) or of radiators on
  *   the baffle, and radiators stacked on the back (or, on the sides, the outside's share of them: their depth isn't
  *   checked here).
- * `tweeter` is the tweeter with its waveguide's mouth as the faceplate (`HifiDesign.tweeterWithWaveguide`).
+ * `tweeter` is the tweeter with its waveguide's mouth as the faceplate (`tweeterWithWaveguide` below).
  */
 export function hifiBoxMin({
   woofer,

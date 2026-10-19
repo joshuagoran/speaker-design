@@ -29,7 +29,7 @@ export const DRIVER_CLEARANCE_IN = 0.5;
 /**
  * The optimizers' cursory brace estimate (lib/acoustics/boxModels braceWoodEstimate), by back joint and style: one window brace's
  * wood for every `span` inches of each inside span past the first, times `scale`. Least squares against the rule's wood
- * over the golden sub boxes in ¾″ ply with that back (their mid boxes need none, and neither does the estimate under
+ * over the saved and synthetic PA designs' sub boxes (tests/pa-configs) in ¾″ ply with that back (their mid boxes need none, and neither does the estimate under
  * `span`), since the rule braces a screwed back (its edges hinged) apart from a glued one. It sees only the box's
  * dimensions, not the driver's and the vent's keep-outs, so the rule's frames can differ widely by vent style at one
  * size (the idk and lil tower boxes, both 24 × 32 × 20: 3.6 L of frames and none); issue #75 re-checks shown cards.

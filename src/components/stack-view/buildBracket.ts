@@ -65,7 +65,7 @@ export function buildBracket(
  * For a horn the driver bolts straight to (no adapter): the brackets are custom, so the upright itself is clamped
  * between the horn's throat flange and the driver by the driver's bolts, with a hole for the throat. It is as wide as
  * the bolt circle needs and reaches just past the upper bolts. The driver moves back by the bracket's thickness. 3D
- * only: the planner's model and parts list leave it out. Returns the z of the upright's back face, where the driver's
+ * only: the model and parts list leave it out. Returns the z of the upright's back face, where the driver's
  * front face sits.
  */
 export function buildClampedBracket(

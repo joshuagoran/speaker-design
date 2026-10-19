@@ -1,5 +1,5 @@
-// The Space page's target across the bands and where it is measured (lib/speaker/spaceBalance) against the PA Coverage
-// page (lib/acoustics/coverage balancedTarget, oneMeterSpot): the PA presets' spaces take the page's target in every band.
+// The Space page's target across the bands and where it is measured (lib/speaker/spaceBalance) against the coverage
+// engine (lib/acoustics/coverage oneMeterSpot): the PA presets' spaces take the target in every band.
 import { expect, test } from "vite-plus/test";
 import { ONE_METER_FT, RESPONSE_FREQS } from "../src/lib/acoustics/coverage";
 import { presetLayers } from "../src/pages/stack/stackPresets";
@@ -20,7 +20,7 @@ const PRESETS = [
   [STACK_PRESET.paTower, "tower"],
 ] as const satisfies readonly (readonly [string, PaLayout])[];
 
-/** A PA preset as a space on the coverage page's default floor. */
+/** A PA preset as a space on the default coverage layout. */
 function presetSpace(preset: (typeof PRESETS)[number][0]): SpaceDesign {
   const read = presetLayers(preset, { id: "test", name: "test" });
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };

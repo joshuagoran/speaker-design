@@ -429,7 +429,7 @@ export function buildSpeakerScene({
     }
     for (const { parts } of members) parts.build(at);
     // the handles, input dish and horn posts the build plans (the cutlist and the weights count these same parts), on the
-    // faces of the box they are placed on, as the PA page draws them (buildHardware)
+    // faces of the box they are placed on (buildHardware)
     for (const { placed, g } of members) {
       const plan = cabinetBuild(cabinet).chambers[layout.chambers.indexOf(placed)]?.hardware;
       if (!plan) continue;
@@ -729,7 +729,7 @@ function chamberParts(
         const t = hifiDriverById("tweeter", driver.driverId);
         if (!t) return;
         if (horn && !t.ownGuide) {
-          // on its waveguide, the Hi-fi page's way: its compression driver behind, on the top or set into the baffle
+          // on its waveguide, as a hi-fi design has it: its compression driver behind, on the top or set into the baffle
           const cd = hifiCompressionDriver(t);
           const screwOn =
             driverMountKind(t) === THREAD_MOUNT || hornMountKind(horn) === THREAD_MOUNT;

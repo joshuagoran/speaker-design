@@ -49,7 +49,7 @@ export const tweeterCutoutNote = (faceplate: Dims2, at: string, off: number) =>
   `tweeter: ${formatInches(faceplate.w)} × ${formatInches(faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${at}${offsetWords(off)}`;
 /**
  * A slot's openings on the baffle: one, or `n` alike stacked, each under its own shelf; `bottoms` each opening's bottom
- * in words, from the lowest (the Hi-fi page's slot is one).
+ * in words, from the lowest (a hi-fi design's slot is one).
  */
 export const slotOpeningNote = (
   port: Pick<SizedSlotPort, "w" | "h" | "n">,

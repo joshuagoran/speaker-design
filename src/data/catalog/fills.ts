@@ -14,7 +14,7 @@
 // hf: compression section, sens 1 W/1 m, aes W, xo recommended minimum Hz, imp Ω, cov degrees.
 import type { FillDriver, RawDriver } from "../../types";
 
-/** The fill the planner starts on. */
+/** The default fill design's driver. */
 export const BC10CXN64_RAW: RawDriver<FillDriver> = {
   id: "bc10cxn64",
   size: 10,

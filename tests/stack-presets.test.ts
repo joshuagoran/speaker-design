@@ -1,5 +1,5 @@
 // The Stack and Space pages' starts (src/pages/stack/stackPresets): the PA presets in each layout and the Hi-fi pair,
-// read in as speakers, a stack and a space. A PA start keeps the PA page's music balance in its band Levels
+// read in as speakers, a stack and a space. A PA start keeps the PA music balance in its band Levels
 // (lib/speaker/paBalance), the highest 0 dB, every member and placement at 0 dB; the space plays each band at that
 // balance (tests/space-coverage.test.ts). The presets' Levels are saved data (src/data/presets/pa-band-levels.ts).
 import { test } from "vite-plus/test";

@@ -2,7 +2,7 @@
 // Each entry is a tube count (`nt`) and the tube's inside diameter in inches (`dia`), smallest total area first; the
 // search keeps the first that doesn't limit, so keep the order by area when adding one. The compiler checks the shape
 // (PortTubeSet in src/types.ts). The rectangular vents are ply ducts, not stock parts: their sizes stay in the search.
-// Every size here has its pipe in PORT_PIPES below; the planner's tube sliders run over what this table holds.
+// Every size here has its pipe in PORT_PIPES below; the tube sliders run over what this table holds.
 import type { PortElbow, PortPipe, PortTubeSet } from "../../types";
 
 export const PORT_TUBES: readonly PortTubeSet[] = [

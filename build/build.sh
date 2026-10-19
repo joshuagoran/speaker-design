@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build the planner into single self-contained pages: React, three.js, the compiled Tailwind CSS, the font and the
+# Build the app into single self-contained pages: React, three.js, the compiled Tailwind CSS, the font and the
 # optimizer worker are all bundled in (no CDN scripts).
 #   build/build.sh         -> dist/stack-planner.html (claude.ai artifact)
 #   build/build.sh pages   -> also dist/site/ (GitHub Pages; this build also bundles Firebase for saving), with the

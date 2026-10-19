@@ -14,7 +14,7 @@ export const ROOM_CEILING_FT: [number, number] = [8, 40];
 /** A surface whose material is set, and the name its field shows. */
 export type SurfaceName = readonly [RoomSurface, string];
 
-/** Each surface whose material is set, and the name its field shows (the Coverage page's). */
+/** Each surface whose material is set, and the name its field shows by default. */
 const SURFACES: readonly SurfaceName[] = [
   ["front", "Behind the stacks"],
   ["back", "Far end"],
@@ -35,7 +35,7 @@ export interface RoomActions {
 interface Props {
   room: CoverageRoom;
   actions: RoomActions;
-  /** the surfaces' field names, when a page names them its own way (default: the Coverage page's) */
+  /** the surfaces' field names, when a page names them its own way (default: SURFACES) */
   surfaces?: readonly SurfaceName[];
   /** a tooltip on a surface's field name */
   surfaceTips?: Partial<Record<RoomSurface, string>>;

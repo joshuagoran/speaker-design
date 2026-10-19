@@ -1,6 +1,5 @@
 // A stack's cutlist: every member's speaker built as the Speaker page builds it (lib/speaker/speakerBuild), each part
-// under its stack box ("Box 2, chamber 1"), so the Cutlist page packs every member's parts on the same sheets, as
-// the PA page's cutlist packs the sub and mid boxes. Two members of one speaker build two speakers. Pure.
+// under its stack box ("Box 2, chamber 1"), so the Cutlist page packs every member's parts on the same sheets. Two members of one speaker build two speakers. Pure.
 import type {
   CornerJoint,
   CutPart,

@@ -13,7 +13,7 @@
 // depth, in), from the maker's dimension drawing only, with the drawing cited beside them.
 import type { RawDriver, SubDriver } from "../../types";
 
-/** The sub the planner starts on. */
+/** The default PA design's sub. */
 export const BC18NBX_RAW: RawDriver<SubDriver> = {
   id: "bc18nbx",
   lb: 20,

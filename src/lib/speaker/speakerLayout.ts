@@ -6,7 +6,7 @@
 // stacked and centered in the bay behind the throat (`driverSpots`). The 3D view (stack-view/buildSpeakerScene) and
 // the front drawing (drawings/SpeakerFront) both read it. x is across from the cabinet's center line (+ to the right
 // seen from the front), y up from the cabinet's bottom. Both views draw the left speaker of a pair, so a driver's
-// `xIn` (+ toward the pair's inside) is + to the right, as the Hi-fi page draws it. Pure.
+// `xIn` (+ toward the pair's inside) is + to the right. Pure.
 import type {
   ArchBlock,
   Dims2,
@@ -291,7 +291,7 @@ export const hornFitsWhereSet = (
 
 /**
  * Where a newly picked horn sits on a chamber: the catalog's `rect` flag sets the first choice (a rectangular horn in
- * the baffle, a round one freestanding on the top, as the Hi-fi page's waveguides), where it fits (`hornFits`); else the
+ * the baffle, a round one freestanding on the top, as a hi-fi design's waveguides), where it fits (`hornFits`); else the
  * other place. The user can pick either place that fits.
  */
 export function defaultHornPlacement(

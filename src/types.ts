@@ -335,7 +335,7 @@ export interface HornHf {
 export type HornFinish = "black";
 
 /**
- * Where a horn is offered when not everywhere: "hifi" for a small waveguide only the Hi-fi page lists (the PA picker
+ * Where a horn is offered when not everywhere: "hifi" for a small waveguide only hi-fi designs offer (the PA designs
  * and optimizers leave it out; `HORN_OPTIONS` in src/lib/data.ts).
  */
 export type HornScope = "hifi";
@@ -371,7 +371,7 @@ export interface Horn {
   note: string;
 }
 
-/** A horn the hi-fi page can use as a waveguide: one with its coverage specs. */
+/** A horn a hi-fi design can use as a waveguide: one with its coverage specs. */
 export type HifiWaveguide = Horn & { hf: HornHf };
 
 /** The cabinet's ported-vent kinds. */
@@ -671,7 +671,7 @@ export interface PassiveRadiator {
   note: string;
   /** a non-round cone's width and height in inches */
   shape?: Dims2;
-  /** the most added mass in grams; the planner allows 3 x Mms when absent */
+  /** the most added mass in grams; 3 x Mms is allowed when absent */
   maxAddG?: number;
 }
 
@@ -764,7 +764,7 @@ export interface WaveguideSpec {
   mount?: Horn["mount"];
 }
 
-/** The Hi-fi design the model works on (the Hi-fi page's state, with the units the lib uses: inches, Hz, watts, dB). */
+/** The Hi-fi design the model works on (the design's state, with the units the lib uses: inches, Hz, watts, dB). */
 export interface HifiConfig {
   box: HifiBoxKind;
   /** the passive radiators (used when `box` is "radiator") */
@@ -869,7 +869,7 @@ export type HifiGoal = "cheaper" | "lighter" | "lower" | "louder";
 
 export type DimensionLockMode = "free" | "exact" | "max";
 
-/** The Hi-fi page's design and room, as the planner holds it. */
+/** A hi-fi design and its room, with every field set. */
 export interface HifiDesignState {
   woofer: HifiWoofer;
   tweeter: HifiTweeter;
@@ -927,7 +927,7 @@ export interface HifiCardConfig {
 }
 
 /**
- * What the Hi-fi page saves: the fields a card applies and the rest of the design and room. The JSON round trip drops
+ * What a hi-fi design saves: the fields a card applies and the rest of the design and room. The JSON round trip drops
  * undefined fields, so `pr` is absent unless the box has radiators.
  */
 export interface SavedHifiConfig
@@ -988,11 +988,11 @@ export interface PanelStockMaterial {
 export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, PanelStockMaterial>;
 
 /**
- * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
+ * The sub's vent, in inches: the design keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
  * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them. `div` is the side ducts'
  * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/build/panel); absent,
  * as in saves from before the choice, they are ½″ (`ductDividerIn`). `fins` is how many fins split the bottom slot;
- * absent, as the PA page always leaves it, its two (`PA_SLOT_FINS`, lib/acoustics/boxModels `slotFinsOf`); the Speaker page sets it.
+ * absent, as the PA presets leave it, its two (`PA_SLOT_FINS`, lib/acoustics/boxModels `slotFinsOf`); the Speaker page sets it.
  */
 export interface VentSpec {
   slotH: number;
@@ -1008,7 +1008,7 @@ export interface VentSpec {
 export type PortTubeSet = Pick<VentSpec, "nt" | "dia">;
 
 /**
- * Stock pipe a tube size is cut from: `dia` the size the planner models (the nominal inside diameter, in), the pipe's
+ * Stock pipe a tube size is cut from: `dia` the size the models use (the nominal inside diameter, in), the pipe's
  * measured inside and outside diameters (in), and a stick's length (ft) and price from a US vendor.
  */
 export interface PortPipe {
@@ -1030,7 +1030,7 @@ export interface PortElbow {
 }
 
 /**
- * The PA design the planner snapshots and the optimizer works on: driver and box ids, dimensions in inches, crossovers in Hz,
+ * The PA design the optimizer works on: driver and box ids, dimensions in inches, crossovers in Hz,
  * amp watts and balance in dB. The fields after `layout` are looks and cutlist choices; the optimizer leaves them alone.
  */
 export interface PaDesignConfig {
@@ -1182,7 +1182,7 @@ export interface VentResistances {
   Rap: number;
 }
 
-/** A complex number, the one type the planner's complex math uses (lib/acoustics/complex). */
+/** A complex number, the one type the app's complex math uses (lib/acoustics/complex). */
 export interface Complex {
   /** the real part */
   re: number;
@@ -1559,7 +1559,6 @@ export interface SubLimits {
   spl45: number;
 }
 
-/** The vent as the model uses it: openings, total area (in²), length (in), end correction (in), hydraulic diameter (in) and a description. */
 /** How many 90° elbows a round port tube takes to fit its box (lib/build/tubeFold). */
 export type ElbowCount = 0 | 1 | 2;
 
@@ -1574,7 +1573,7 @@ export interface VentGeometry {
   desc: string;
 }
 
-/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches), and the bottom slot's fins (absent: the PA page's two). */
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches), and the bottom slot's fins (absent: two). */
 export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
   ductH: number;
   nPorts: number;
@@ -1609,7 +1608,7 @@ export interface SubSystemConfig extends SubGeometryConfig {
   hpType: HighpassType;
   ampW: number;
   portMax: number;
-  /** the sub-to-mid crossover, for a curve that shows the lowpass skirt (the planner's chart); the optimizer's screening leaves it out */
+  /** the sub-to-mid crossover, for a curve that shows the lowpass skirt; the optimizer's screening leaves it out */
   xoLo?: number;
   /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
   phase?: boolean;
@@ -1681,7 +1680,7 @@ export interface FillPort {
   len: number;
 }
 
-/** The Fills page's design, as the planner holds it. */
+/** A fill design, with every field set. */
 export interface FillDesignState {
   driver: FillDriver;
   boxType: FillBoxType;
@@ -1805,14 +1804,14 @@ export type SpeakerRoundPort = RoundPort &
 export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
 
 /**
- * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (the PA page's two), its
+ * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (two by default), its
  * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
  * (the PA slot rule: lib/acoustics/boxModels ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
  * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
  * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
  * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width. An open slot always runs the whole
  * clear face and uses the box walls (lib/speaker/chamberAir `slotRunIn`): its `h` sets the area, it has no width of its
- * own (the Hi-fi page's `w` is set by `hifiSystem`).
+ * own (a hi-fi design's `w` is set by `hifiSystem`).
  */
 export interface SpeakerSlotPort extends Omit<SlotPort, "w"> {
   fins?: number;
@@ -2158,7 +2157,7 @@ export interface SpeakerChamber {
   netLiters: number | null;
   /**
    * how much more air the stuffing makes the box act like, %: the Hi-fi engine stuffs a sealed box 10%, the PA its
-   * mids and the Fills page its sealed boxes 15%; 0 for none. The model applies it to every chamber alike (a horn's
+   * mids and the fills their sealed boxes 15%; 0 for none. The model applies it to every chamber alike (a horn's
    * rear chamber too).
    */
   stuffingPct: number;
@@ -2289,8 +2288,8 @@ export type SpecIdentity = Pick<SpeakerSpec, "id" | "name">;
 /** A speaker read from one design, by id (`SPEAKER_PART`): it names the speaker's id and name. */
 export type SpeakerPart = (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART];
 
-/** The PA design as the planner holds it: every field set (a save can lack the later ones). */
-export type PaPlannerDesign = PaDesignConfig &
+/** A PA design with every field set (a save can lack the later ones). */
+export type PaDesign = PaDesignConfig &
   Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH" | "hardware" | "divider">>;
 
 /**
@@ -2414,7 +2413,7 @@ export interface SpaceVenue {
    */
   targetDb: CoverageLayout["targetDb"];
   /**
-   * where the target is measured, as on the coverage page: the audience's average (the floor but the space in front of
+   * where the target is measured: the audience's average (the floor but the space in front of
    * each box), the listener, or 1 m in front of each placement (averaged).
    */
   levelRef: CoverageLevelRef;
@@ -2656,7 +2655,7 @@ export interface StackLimits {
 /** A goal, by id (`SPEAKER_GOAL`): cheaper, lighter, smaller, lower, louder. */
 export type SpeakerGoal = (typeof SPEAKER_GOAL)[keyof typeof SPEAKER_GOAL];
 
-/** The search's limits. The size limit is a lock per axis (`SpeakerOptimizerLocks.size`), as on the PA page. */
+/** The search's limits. The size limit is a lock per axis (`SpeakerOptimizerLocks.size`). */
 export interface SpeakerOptimizerLimits {
   /** the level the speaker has to reach for music, dB at 1 m, against `SpeakerLimits.musicDb` */
   targetDb: number;
@@ -3450,7 +3449,7 @@ export type CoverageLevelRef = "listener" | "audience" | "stacks";
 /** The subs in their stacks, both together in the middle, or one sub alone in the middle. */
 export type SubPlacement = "stacks" | "center" | "single";
 
-/** The coverage page's layout: room, where the stacks (and subs) stand, the listener, the band. */
+/** A coverage layout: room, where the stacks (and subs) stand, the listener, the band. */
 export interface CoverageLayout {
   room: CoverageRoom;
   stacks: [left: FloorPlacement, right: FloorPlacement];
@@ -3469,7 +3468,7 @@ export interface CoverageLayout {
   listener: FloorPoint;
 }
 
-/** The planner's music balance: its crossovers, and how much less the mid band needs than the sub and the horn than the mid. */
+/** A PA design's music balance: its crossovers, and how much less the mid band needs than the sub and the horn than the mid. */
 export type MusicBalance = Pick<PaDesignConfig, "xoLo" | "xoHi" | "tilt" | "hfTilt">;
 
 /** The stack the map places: the dispersion model's stack, its footprint and the mid box's width, inches. */
@@ -3514,7 +3513,7 @@ export interface CoverageStats {
 
 // ---- PA optimizer types ----
 
-/** The goals, as the planner's buttons name them. */
+/** The PA optimizer's goals. */
 export type PaGoal = "cheaper" | "lighter" | "lower" | "louder";
 /** The room sizes the optimizer sets its output target from: square feet, or outdoors. */
 export type PaRoom = 500 | 750 | 1000 | "outdoor";
@@ -3555,7 +3554,7 @@ export type PaDefaultedField =
   | "inset"
   | "layout";
 
-/** The design the optimizer starts from: the planner's snapshot, possibly an older one. */
+/** The design the optimizer starts from, possibly an older save. */
 export interface PaOptimizerCurrent
   extends Omit<PaDesignConfig, PaDefaultedField>, Partial<Pick<PaDesignConfig, PaDefaultedField>> {}
 

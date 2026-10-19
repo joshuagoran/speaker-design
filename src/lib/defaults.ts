@@ -1,4 +1,4 @@
-// What the planner shows on first load, as whole objects: the drivers are the table entries themselves.
+// The default designs and parts, as whole objects: the drivers are the table entries themselves.
 import {
   A460G2_14,
   B15,
@@ -113,7 +113,7 @@ export type PaDefaults = Omit<
  * for the B&C 18NBX100 and the sub box set to 24 × 32 × 18; the fields the seed does not carry (wall, inset, finish, spacer, cutlist choices, plywood, sets, mid size) keep the values the hooks always started on.
  */
 export const DEFAULT_PA = {
-  // the only format and cabinet the planner has ever offered; nothing changes them
+  // the only format and cabinet a PA design has ever offered; nothing changes them
   format: byIdOrThrow(FORMATS, "full", CATALOG_TABLE_NAMES.formats),
   cabinet: byIdOrThrow(CABINETS, "column", CATALOG_TABLE_NAMES.cabinets),
   sub: BC18NBX,
@@ -159,7 +159,7 @@ export const DEFAULT_PA = {
 /** What each port shape starts at: the round port's diameter and the slot's height. The toggle falls back to these until you size the other shape. */
 export const DEFAULT_PORT_SIZE: PortMemory = { dia: 2, h: 1 };
 
-/** The Hi-fi page's starting design, room and waveguide. */
+/** The default hi-fi design, room and waveguide. */
 export const DEFAULT_HIFI = {
   woofer: SB17NRX,
   tweeter: SB26STCN,
@@ -197,7 +197,7 @@ export const DEFAULT_HIFI_LOOK = {
   baffleColor: DEFAULT_PA.baffleColor,
 } satisfies Required<Pick<SavedHifiConfig, "cabFinish" | "baffleColor">>;
 
-/** The Fills page's starting design. */
+/** The default fill design. */
 export const DEFAULT_FILL = {
   driver: BC10CXN64,
   boxType: "vented",
@@ -209,7 +209,7 @@ export const DEFAULT_FILL = {
   maxPortAirSpeedMs: 20,
 } satisfies FillDesignState;
 
-/** The part each driver kind starts on when the Speaker page adds one: the PA, Hi-fi and Fills pages' starting parts. */
+/** The part each driver kind starts on when the Speaker page adds one: the default PA, hi-fi, and fill designs' parts. */
 export const DEFAULT_DRIVER_IDS = {
   sub: DEFAULT_PA.sub.id,
   mid: DEFAULT_PA.mid.id,
@@ -261,14 +261,14 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
   look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
 };
 
-/** A vented box's starting size and port, as the Hi-fi page takes them. */
+/** A vented box's starting size and port, as a hi-fi design takes them. */
 type StartBox = Pick<HifiDesignState, "boxDims" | "portSpec">;
 
 /**
  * The Speaker page's DJ booth monitor templates (docs/speaker-designer-plan.md P4 and the owner decisions): a pair, one on
  * each side of the DJ, hung or on pedestals (not floor wedges), 0.5–1.5 m away, 90–100° wide, crossed to the subs at
  * 70 Hz LR24 (60–80 Hz). Two options:
- * - a coaxial in a small vented box: the Celestion FTX1025 (10″, 100°) in the Fills page's box and port with ½″ walls,
+ * - a coaxial in a small vented box: the Celestion FTX1025 (10″, 100°) in the default fill design's box and port with ½″ walls,
  *   crossed at its HF section's recommended minimum;
  * - an 8″ and a 1″ compression driver on a small 4–6″ horn mounted tight above it, crossed at about 2.5–3 kHz (the low
  *   end: an 8″ narrows to about 65° at 2.7 kHz): the FaitalPRO 8PR200 (published to 5 kHz) and the B&C DE250 on the

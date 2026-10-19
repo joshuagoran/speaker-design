@@ -1,4 +1,4 @@
-// Calculation functions for the planner. Pure TS, no React, window or THREE.
+// The PA box models and their build parts. Pure TS, no React, window or THREE.
 import { coilFactor, driverCircuit, ventResistances } from "./driverCircuit";
 import { rectangleEndCorrection } from "./radiation";
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../../constants/acoustics";
@@ -153,8 +153,8 @@ export const maxSlotFins = (iw: number, t: number, slotH: number) => {
   return Math.max(0, Math.floor((iw - least) / (t + least)));
 };
 /**
- * How many fins split a bottom slot: the vent's own count (the Speaker page's), held to `maxSlotFins`, else the PA
- * page's two (left as is, so the PA page's results do not change).
+ * How many fins split a bottom slot: the vent's own count (the Speaker page's), held to `maxSlotFins`, else two (the
+ * PA designs' default, kept so their results do not change).
  */
 export const slotFinsOf = (v: Pick<VentSpec, "fins" | "slotH">, iw: number, t: number) =>
   v.fins === undefined ? PA_SLOT_FINS : Math.min(v.fins, maxSlotFins(iw, t, v.slotH));
@@ -215,12 +215,12 @@ export const foldedLidGapIn = (
  * where the jet and its vortices make the noise and compression that set the limit (Roozen, Bockholts, van Eck &
  * Hirschberg, "Vortex sound in bass-reflex ports of loudspeakers", J. Acoust. Soc. Am. 104 (1998) 1914–1924; Salvatti,
  * Devantier & Button, "Maximizing performance from loudspeaker ports", J. Audio Eng. Soc. 50 (2002) 19–45, whose flared
- * ports stay clean to well above a straight port's onset). About 30 m/s against the 23.5 m/s sine peak the planner
+ * ports stay clean to well above a straight port's onset). About 30 m/s against the 23.5 m/s sine peak a PA design
  * allows a sharp-edged slot, whose cut ends the cutlist doesn't round over.
  */
 export const FLARED_PORT_SPEED_RATIO = 30 / 23.5;
 /**
- * The air-speed limit for a vent, m/s: `portMax` (the planner's setting, a sharp-edged vent's) for the slots and side
+ * The air-speed limit for a vent, m/s: `portMax` (the design's setting, a sharp-edged vent's) for the slots and side
  * ducts, FLARED_PORT_SPEED_RATIO times it for flared round tubes.
  */
 export const ventSpeedLimit = (style: PortStyle, portMax: number) =>
@@ -739,7 +739,7 @@ const slotRoomIn = (
  * folded, the whole floor and the rear channel up the back to the lid as well), a side duct between its wall and the
  * side (its flared ends a flare wider) and each round tube's run along the floor (up to the lid where it takes
  * elbows), these two over the whole depth. The optimizers' searches don't run the rule (braceWoodEstimate), so the
- * slot's room may follow its length; the planner's volume moves with the ribs it lets in behind a short slot.
+ * slot's room may follow its length; the built box's volume moves with the ribs it lets in behind a short slot.
  */
 export function subKeepOut(
   box: Dims3,
@@ -922,9 +922,9 @@ const regionsKey = (rs: readonly BoxRegion[]) =>
   rs.map((r) => `${r.x.join()},${r.y.join()},${r.z.join()}`).join(";");
 /**
  * The sub box's braces and ribs by rule, and its panels' resonances: its vent's parts as supports, and its driver and
- * vent kept clear (subKeepOut), and with `handles` (the planner's: the box has its hardware) the recesses of its handles
- * and input dish as well, placed first (subHardwarePlacement). The planner's and the cards' (the optimizers leave the
- * hardware out, and their searches estimate the bracing: braceWoodEstimate).
+ * vent kept clear (subKeepOut), and with `handles` (the box has its hardware) the recesses of its handles and input dish
+ * as well, placed first (subHardwarePlacement). The optimizers' cards use it too (they leave the hardware out, and
+ * their searches estimate the bracing: braceWoodEstimate).
  */
 export function subBoxBracing(
   box: Dims3,
@@ -1030,7 +1030,7 @@ export function midBoxBracing(
 /**
  * The optimizers' cursory estimate of a PA box's braces' and ribs' wood (their searches run no rule): a window brace's
  * frame (windowWoodIn3) for each BRACE_ESTIMATE span of each inside span past the first, scaled, as window brace wood.
- * Fitted to the rule over the golden boxes in ¾″ ply, the optimizers' plywood, for each back joint as the rule takes
+ * Fitted to the rule over the saved and synthetic PA designs' boxes in ¾″ ply, the optimizers' plywood, for each back joint as the rule takes
  * it (`back`, screwed when absent, as in subBoxBracing; tests/bracing.test.ts holds its error).
  */
 export function braceWoodEstimate(
@@ -1921,7 +1921,7 @@ export function ventGeometry(
     };
   }
   if (portStyle === "slots") {
-    // one letterbox split by its fins (wall ply; the PA page's two); the fins run the full length but the mouths
+    // one letterbox split by its fins (wall ply; two by default); the fins run the full length but the mouths
     // sit together, so it is treated as a single opening on the floor (see slotInnerEndCorrection)
     const fins = slotFinsOf(cVent, iw, t);
     const h = cVent.slotH,
@@ -2040,8 +2040,7 @@ export function sineLimitAt(
 export const SUB_BASS_BAND_HZ = [30, 50] as const;
 /**
  * The amp power, W into the channel's `load` (lib/power), at which an HF section (at its nominal impedance) behind a
- * passive pad of `pad` dB reaches its rating `ratingW` (W into its impedance): the Fills page's and the Speaker page's
- * HF headroom check.
+ * passive pad of `pad` dB reaches its rating `ratingW` (W into its impedance): the Speaker page's HF headroom check.
  */
 export const hfLimitWatts = (
   ratingW: number,
@@ -2096,7 +2095,7 @@ export const subWeightLb = (
   (drvLb || 0) +
   hardwareLb +
   SUB_FIXINGS_LB;
-// ---- the sub as the planner computes it ----
+// ---- the PA sub box model ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
 // Vent and volumes only (no model): what the optimizer's vent solver iterates on.
 export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConfig): SubGeometry {
@@ -2177,8 +2176,7 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
   };
 }
 
-// ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
-// cfg: { midDims, wall, inset, xoLo, xoHi, xoLoOrder, xoHiOrder, mAmpW }
+// ---- the mid-bass box: sealed, always lightly stuffed ----
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
 /** A mid's displacement, L: its published one, else assumed by size (4 L for a 15″, 2.5 L for a smaller one). */
 export const midDisplacementL = (mid: Pick<MidDriver, "size" | "ts">) =>
@@ -2187,7 +2185,7 @@ export const midDisplacementL = (mid: Pick<MidDriver, "size" | "ts">) =>
  * The pad that brings a coaxial's HF section down to its woofer behind a passive network, dB (never negative). Both
  * sensitivities are 1 W / 1 m at their own impedance, so the HF's moves to 2.83 V first (a 16 ohm section gets half
  * the power the 8 ohm woofer does), as the Hi-fi engine's level match does. Zero without
- * an HF section. The Fills page's limits and the Fill speaker template both read it.
+ * an HF section. The Fill speaker template reads it (fillDriverPadDb).
  * @param hf the coaxial's HF section, or null for a fill without one
  * @param wooferSensDb the woofer's sensitivity at 2.83 V / 1 m, dB
  */
@@ -2200,8 +2198,8 @@ export function fillHfPadDb(hf: FillDriver["hf"], wooferSensDb: number): number 
 }
 
 /**
- * The pad for a fill driver: its HF section down to the maker's woofer sensitivity (`lfSens`). The Fills page's limits
- * and the Fill speaker template both read this one expression, so they cannot drift apart.
+ * The pad for a fill driver: its HF section down to the maker's woofer sensitivity (`lfSens`). The Fill speaker
+ * template reads it.
  */
 export function fillDriverPadDb(drv: Pick<FillDriver, "hf" | "lfSens">): number {
   return fillHfPadDb(drv.hf, drv.lfSens);

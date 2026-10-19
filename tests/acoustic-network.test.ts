@@ -1,4 +1,4 @@
-// The acoustic network engine (lib/acoustics/network) against the planner's own models, and the physics its new
+// The acoustic network engine (lib/acoustics/network) against the app's own box models, and the physics its new
 // presets must obey.
 //
 // - Parity: with the same parts it gives the horn engine's results (lib/acoustics/hornModel) for every Hornresp case

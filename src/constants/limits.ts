@@ -2,7 +2,7 @@ import type { LimitId, WooferLimit } from "../types";
 
 /**
  * Every limit's id, and the word a chart label shows for it ("sine, Xmax-limited"). A result names what stops its
- * level by id (`SubLimits.who`, `PaMaxPoint.who`, `HornResponse.who`, `WooferLimit`), so code decides on the id and
+ * level by id (`SubLimits.who`, `HornResponse.who`, `WooferLimit`), so code decides on the id and
  * never on the words; pages look the words up here or in the longer maps below.
  */
 export const LIMIT_NAMES = {

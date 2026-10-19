@@ -1,4 +1,4 @@
-// PA horns and Hi-fi waveguides (one table: the Hi-fi page lists the horns with coverage specs as waveguides).
+// PA horns and Hi-fi waveguides (one table: hi-fi designs list the horns with coverage specs as waveguides).
 // src/lib/data.ts derives the PA list (HORN_OPTIONS: every horn but the Hi-fi-only ones, by name) and the Hi-fi
 // waveguides (HIFI_WAVEGUIDES: every 1" horn with coverage specs, by name).
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
@@ -14,7 +14,7 @@
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
 // [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
 // finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn),
-// scope ("hifi" for a small waveguide only the Hi-fi page lists; omit it for a horn every page offers), mount (a screw-on
+// scope ("hifi" for a small waveguide only hi-fi designs list; omit it for a horn every design offers), mount (a screw-on
 // throat's thread; omit it for a horn the driver bolts to; src/lib/data.ts picks the adapter a driver of the other kind
 // needs, which the Hi-fi cost adds and the 3-D view draws without its length).
 // A horn with a CAD mesh (HORN_MESHES in src/data/meshes) is drawn from it, at the mesh's size, which `size` must
@@ -122,7 +122,7 @@ export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
 ]; // [radius, depth] in inches, from ST260-19.stl cross-section
 
-/** The waveguide the Hi-fi planner starts on. */
+/** The default hi-fi design's waveguide. */
 export const ST260: HifiWaveguide = {
   id: "st260",
   lb: 1,
@@ -154,7 +154,7 @@ const T520_25_STD_1: HornAdapter = {
   driverBoltCircle: 76 / 25.4,
 };
 
-/** The horn the PA planner starts on. */
+/** The default PA design's horn. */
 export const A460G2_14: Horn = {
   id: "a460g2_14",
   lb: 3.5,
@@ -224,7 +224,7 @@ export const DIY_ROSSE110X50: Horn = {
 };
 
 /**
- * The owner's own OS waveguide for a 1 in driver, for the Hi-fi page (and the PA horns), designed in hornlab.io and
+ * The owner's own OS waveguide for a 1 in driver, for hi-fi designs (and the PA horns), designed in hornlab.io and
  * printed; drawn from its STEP model.
  */
 export const DIY_OS90X70: HifiWaveguide = {
@@ -418,7 +418,7 @@ export const HORN_RAW: readonly Horn[] = [
     xo: "1200–1500 Hz",
     note: 'Approx.: drawn as the ST260 profile stretched to 290 × 185 × 245 mm deep (Cults3D listing); no profile published. Elliptical 600 Hz horn, 1" throat.',
   },
-  // Small 1" waveguides (4.5–7" mouths) for the Hi-fi page only (scope "hifi"): a DJ monitor's 8" + 1" pair crossed at
+  // Small 1" waveguides (4.5–7" mouths) for hi-fi designs only (scope "hifi"): a DJ monitor's 8" + 1" pair crossed at
   // about 2.5–3 kHz, or a small fill. Their cutoffs (1–2.2 kHz) sit above the PA's 900 Hz–1 kHz crossovers, so the PA
   // picker and optimizers leave them out. A mouth this small holds its rated coverage only above about
   // 25,000 / (degrees × mouth width in m) Hz (Keele): about 1.7–2.6 kHz across most of these (3.6 kHz for the 4.5"

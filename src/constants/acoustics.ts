@@ -1,4 +1,4 @@
-/** The speed of sound in air at 20 °C, m/s: the value every model in the planner uses. */
+/** The speed of sound in air at 20 °C, m/s: the value every model in the app uses. */
 export const SPEED_OF_SOUND = 343;
 
 /**

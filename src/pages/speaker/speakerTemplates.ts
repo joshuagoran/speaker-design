@@ -9,7 +9,7 @@ import type {
   HifiDesignState,
   HornSegment,
   PaLayout,
-  PaPlannerDesign,
+  PaDesign,
   SpeakerBand,
   SpeakerCabinet,
   SpeakerChamber,
@@ -80,8 +80,8 @@ import { conesAreaCm2, throatAreaCm2 } from "../../lib/speaker/hornThroat";
 /** The PA layout with the tower's one speaker. */
 const TOWER = "tower" satisfies PaLayout;
 
-/** The PA page's starting design (DEFAULT_PA) as the planner holds it, its parts by id, in `layout`. */
-export function defaultPaDesign(layout: PaLayout = DEFAULT_PA.layout): PaPlannerDesign {
+/** The default PA design (DEFAULT_PA) with every field set, its parts by id, in `layout`. */
+export function defaultPaDesign(layout: PaLayout = DEFAULT_PA.layout): PaDesign {
   const {
     format,
     cabinet,
@@ -108,9 +108,9 @@ export function defaultPaDesign(layout: PaLayout = DEFAULT_PA.layout): PaPlanner
   };
 }
 
-/** One speaker of the PA page's starting design in `layout`, under the template's identity. */
+/** One speaker of the default PA design in `layout`, under the template's identity. */
 function paSpeaker(layout: PaLayout, part: SpeakerPart, identity: SpecIdentity): SpeakerSpec {
-  // the speakers alone are read: where the stacks stand (the coverage page's) does not change them
+  // the speakers alone are read: where the stacks stand (the default coverage layout) does not change them
   const read = layersFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT);
   const id = speakerIdentity(identity, part).id;
   const found = read.speakers.find((s) => s.id === id);
@@ -173,7 +173,7 @@ const monitor = (state: HifiDesignState, identity: SpecIdentity): SpeakerSpec =>
   input: monitorInput(),
 });
 
-/** The coaxial monitor: the coaxial in the Fills page's box, crossed at its HF section's recommended minimum. */
+/** The coaxial monitor: the coaxial in the default fill design's box, crossed at its HF section's recommended minimum. */
 function monitorCoax(identity: SpecIdentity): SpeakerSpec {
   const coax = byId(
     HIFI_COAXES.map((c) => ({ ...c, id: c.woofer.id })),
@@ -193,7 +193,7 @@ function monitorCoax(identity: SpecIdentity): SpeakerSpec {
 
 /**
  * The 8″ + horn monitor: the compression driver on the small horn in the baffle, mounted tight above the woofer, as the
- * Hi-fi rule spaces a tweeter on its waveguide (the Hi-fi page stands a round waveguide on the box top instead).
+ * Hi-fi rule spaces a tweeter on its waveguide (a hi-fi design stands a round waveguide on the box top instead).
  */
 function monitorHorn(identity: SpecIdentity): SpeakerSpec {
   const state: HifiDesignState = {

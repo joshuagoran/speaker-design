@@ -232,7 +232,7 @@ export const HORN_ENGINE_GAP = {
   drawing: "drawing",
 } as const;
 
-/** The Fills model's walls: ½″ ply (lib/acoustics/boxModels `fillSystem` takes an inch off each outside size). */
+/** A fill design's walls: ½″ ply. */
 export const FILL_PANEL = "1/2" satisfies PanelNominal;
 
 /**

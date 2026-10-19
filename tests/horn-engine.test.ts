@@ -1,5 +1,5 @@
 // The horn engine (lib/acoustics) against references that need no Hornresp: power series for the special functions,
-// the textbook solutions for ducts and flares, power conservation, and the planner's own box models, which the engine
+// the textbook solutions for ducts and flares, power conservation, and the app's own box models, which the engine
 // must reproduce when it has no horn.
 //
 // Words used below: "flow" is volume velocity (m³/s); "impedance" is acoustic impedance (Pa·s/m³); k is the wave

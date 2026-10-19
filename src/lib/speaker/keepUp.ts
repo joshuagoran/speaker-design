@@ -1,8 +1,8 @@
-// Keep-up at a crossover (the PA page's "Mid limits first" and "Horn limits first" checks, lib/speaker/chips midChips and
-// hornChips), for any two parts that cross: two bands of a speaker, or two members of a stack. One input drives both.
+// Keep-up at a crossover ("Mid limits first" and "Horn limits first"), for any two parts that cross: two bands of a
+// speaker, or two members of a stack. One input drives both.
 // At the input where the lower part reaches its music limit, the upper part must still have headroom at the crossover;
-// the band Levels (and a member's level) already hold the music balance, so the PA page's "less the music balance" is
-// in the curves. The gap is the upper part's headroom at the crossover less the lower part's headroom for music: below
+// the band Levels (and a member's level) already hold the music balance, so the curves need no "less the music
+// balance" step. The gap is the upper part's headroom at the crossover less the lower part's headroom for music: below
 // −KEEP_UP_SLACK_DB, the upper part limits first. Pure.
 import type {
   FrequencyPoint,

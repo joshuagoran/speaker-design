@@ -42,7 +42,7 @@ test("slot inner-end table: the solver gives its values back", { timeout: 60_000
     const table = ecOverH[a][b][c][d];
     // the table keeps three decimals
     assert.ok(Math.abs(flow - table) < 0.00051, `${a} ${b} ${c} ${d}: ${flow} vs ${table}`);
-    // and the planner reads the table at its own points
+    // and the models read the table at its own points
     assert.ok(
       Math.abs(
         slotMouthCorrection(3, 3 / span[b], 3 / gap[a], 3 * wall[c], 3 * run[d]) - 3 * table,

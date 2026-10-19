@@ -25,7 +25,7 @@ import math
 import re
 import sys
 
-#: Hornresp's speed of sound in this repo's runs (the planner's air; see docs/horn-engine-plan.md), m/s
+#: Hornresp's speed of sound in this repo's runs (the app's air; see docs/horn-engine-plan.md), m/s
 SPEED_OF_SOUND = 343.0
 #: the record's horn rows: (start area key, end area key, length suffix)
 ROWS = (("S1", "S2", "12"), ("S2", "S3", "23"), ("S3", "S4", "34"), ("S4", "S5", "45"))

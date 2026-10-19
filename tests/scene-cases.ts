@@ -1,14 +1,14 @@
-// Props for the 3D scene tests: every golden config, the default PA and the other layouts.
+// Props for the 3D scene tests: every saved and synthetic PA design, the default PA and the other layouts.
 import { SUB_OPTIONS, MID_OPTIONS, HORN_OPTIONS, CD_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import type { Props } from "../src/components/stack-view/buildStackScene";
 import type { PaDesignConfig } from "../src/types";
 import { configs, midBoxOf } from "./pa-configs";
 
-const PLINTH_IN = 3; // the planner's fixed plinth
+const PLINTH_IN = 3; // the stack's fixed plinth, in
 
 /**
- * The scene props the planner would pass for a saved design, which can lack the fields an older save didn't have, and
+ * The scene props for a saved design, which can lack the fields an older save didn't have, and
  * the 3D view's cutaway (the view's own toggle, not saved with the design).
  */
 export function scenePropsOf(

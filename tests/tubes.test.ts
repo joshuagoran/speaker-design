@@ -84,7 +84,7 @@ test("tube end correction: flanged and free ends less the flares, the wall, the 
   // a second tube beside it adds the mutual mass of the two mouths
   const two = subTubeEndCorrection(box, "round2", { ...one, nt: 2 }, 0.75, 0.75, DRV18, 0);
   assert.ok(two > straight);
-  // the planner's vent carries it, and the fewest elbows that fit
+  // the box model's vent carries it, and the fewest elbows that fit
   const g = ventGeometry("round1", box, elbowed, 0.75, 0.75, DRV18);
   assert.equal(g.elbows, modelTubeElbows(box, "round1", elbowed, 0.75, 0.75, DRV18));
   assert.equal(g.elbows, 1);

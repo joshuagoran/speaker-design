@@ -1,6 +1,6 @@
 import type { CrossoverOrder, HighpassType } from "../types";
 
-/** The crossover slopes the PA stack and Hi-fi pages offer, with their names: one row per order. */
+/** The crossover slopes the app offers, with their names: one row per order. */
 export const CROSSOVER_SLOPES = [
   [4, "LR24"],
   [8, "LR48"],

@@ -1,5 +1,5 @@
 // Audience coverage: level across the floor from both stacks, seen from above. Each box is the dispersion model's
-// stack (sub, mid and horn through their crossovers, with their directivity), driven at the planner's own output
+// stack (sub, mid and horn through their crossovers, with their directivity), driven at the models' own output
 // curves, placed and aimed on the floor.
 // Outdoors the floor is a mirror (half-space), less what the ground and any crowd absorb, and the air absorbs along
 // every path. Indoors the room is a rectangular box, each side and the ceiling of its own material:

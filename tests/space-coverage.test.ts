@@ -1,5 +1,6 @@
-// The space model (lib/speaker/spaceCoverage) against the PA coverage page (lib/acoustics/coverage): the PA design read in as
-// a space on the coverage page's floor maps the floor as the page does; height and tilt move the levels as they should.
+// The space model (lib/speaker/spaceCoverage) against the coverage engine (lib/acoustics/coverage): the PA design read in
+// as a space on the default coverage layout maps the floor as the engine does; height and tilt move the levels as they
+// should.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
@@ -60,7 +61,7 @@ const SAME_LEVELS_SHAPE_DB: Record<"indoors" | "outdoors", ShapeTolerance> = {
   },
 };
 
-/** The coverage page's default floor, and the same floor outdoors. */
+/** The default coverage layout, and the same floor outdoors. */
 const FLOORS = {
   indoors: DEFAULT_COVERAGE_LAYOUT,
   outdoors: {
@@ -143,7 +144,7 @@ test("space model: with Measured at the audience average, moving only the listen
       COVERAGE_BANDS.mid,
     );
   // the map's request holds the room and the ear, not the listener, so its grid is the same wherever one stands
-  // and so is the audience average, as the coverage page counts it (the whole floor but the boxes' clearance)
+  // and so is the audience average (the whole floor but the boxes' clearance)
   const average = audienceAverage(grid, req.room, boxes);
   assert.ok(average !== null && Number.isFinite(average));
   assert.equal(at({ x: 0, y: 5 }), average);

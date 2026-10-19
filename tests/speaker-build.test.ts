@@ -58,14 +58,14 @@ import {
 import type {
   CornerJoint,
   CutPart,
-  PaPlannerDesign,
+  PaDesign,
   SpeakerCabinet,
   SpeakerChamber,
   SpeakerSpec,
 } from "../src/types";
 
 /** The PA box models' numbers for a design (with the design's back joint and handles). */
-function paBoxModels(cfg: PaPlannerDesign, joint: CornerJoint) {
+function paBoxModels(cfg: PaDesign, joint: CornerJoint) {
   const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
   const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
   const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);

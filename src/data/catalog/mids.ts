@@ -16,7 +16,7 @@
 // drawing only, with the drawing cited beside them.
 import type { MidDriver, RawDriver } from "../../types";
 
-/** The 12 in mid the planner starts on. */
+/** The default PA design's 12 in mid. */
 export const F12PR300_RAW: RawDriver<MidDriver> = {
   id: "f12pr300",
   size: 12,
@@ -51,7 +51,7 @@ export const F12PR300_RAW: RawDriver<MidDriver> = {
   note: "[usspeaker.com spec table, Sep 2026] Neo, 300 W AES / 600 W program, 99 dB, Le 0.42 mH, 5.3 lb. Displacement not published; 2.5 L assumed.",
 };
 
-/** The 15 in mid the planner starts on. */
+/** The 15 in mid a PA design starts on. */
 export const BC15NDL76_RAW: RawDriver<MidDriver> = {
   id: "bc15ndl76",
   size: 15,

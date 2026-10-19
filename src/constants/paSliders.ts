@@ -6,8 +6,8 @@ const tubeCounts = PORT_TUBES.map((p) => p.nt),
   tubeDias = PORT_TUBES.map((p) => p.dia);
 
 /**
- * The PA planner's sliders for the fields the optimizer sets: their ranges and steps. The settings panel draws its
- * sliders from these, and the optimizer rounds its cards to them, so every card is a design the planner can show.
+ * The PA sliders for the fields the optimizer sets: their ranges and steps. The settings draw their sliders from
+ * these, and the optimizer rounds its cards to them, so every card is a design the settings can show.
  */
 export const PA_SLIDERS = {
   subW: { min: 18, max: 40, step: 0.5 },

@@ -1,6 +1,6 @@
 // The horn engine (lib/acoustics/hornModel) against Hornresp 60.60's own results, for the designs in tests/hornresp:
 // each case's record (<case>.txt, as Hornresp imported it) and its exported results (<case>-results.txt, trimmed to
-// 2 kHz). Hornresp ran with the planner's air (343 m/s, 1.18 kg/m³) and its chamber resonances masked (lumped
+// 2 kHz). Hornresp ran with the app's air (343 m/s, 1.18 kg/m³) and its chamber resonances masked (lumped
 // chambers, as the engine's); docs/horn-engine-plan.md says how to run it again.
 //
 // Hornresp's conventions the comparison follows:

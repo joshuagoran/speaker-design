@@ -75,7 +75,7 @@ export const RACKS: readonly Rack[] = [
     note: "Travels with whichever rack is in use.",
     items: [
       ["UMIK-1 measurement mic + REW", 100],
-      // the boxes' Speakon jacks and dishes are in the planner's Totals (data/catalog/cabinet-hardware): this line was
+      // the boxes' Speakon jacks and dishes are in the boxes' own totals (data/catalog/cabinet-hardware): this line was
       // $120 with them, less a stack pair's four boxes at 1 × D0604K + 2 × NL4MPXX ($10.67) each
       ["6× XLR + 6× Speakon cables", 77],
     ],

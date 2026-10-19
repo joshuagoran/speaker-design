@@ -16,7 +16,7 @@ interface Props {
 }
 
 /**
- * How the Space page's map is modeled (the PA Coverage page's list, for any stacks and speakers): the levels and the
+ * How the Space page's map is modeled, for any stacks and speakers: the levels and the
  * sources the space plays, then the floor, room and summing both maps share. Folded away until opened.
  */
 export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {

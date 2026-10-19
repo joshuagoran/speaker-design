@@ -1,5 +1,5 @@
 // The dispersion check at a crossover between a speaker's bands (src/lib/speaker/dispersionCheck): on the Speaker page's
-// band rows (bandChips) and the Stack page's lists (stackDispersionChips), against the Hi-fi page's check on the same design.
+// band rows (bandChips) and the Stack page's lists (stackDispersionChips), on hi-fi designs.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { dispersionChecks } from "../src/lib/speaker/dispersionCheck";

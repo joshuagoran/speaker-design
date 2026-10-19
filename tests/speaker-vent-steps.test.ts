@@ -56,7 +56,7 @@ function numberFields(port: SpeakerPort) {
 }
 
 test("the vent fields' steps are SPEAKER_STEPS' entries", () => {
-  // the slot sizes step as the PA page's sliders do, a count by one
+  // the slot sizes step as the PA sliders do, a count by one
   expect(SPEAKER_STEPS.slotHIn).toBe(0.25);
   expect(SPEAKER_STEPS.count).toBe(1);
 });

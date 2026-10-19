@@ -1,6 +1,6 @@
 // Auto balance (lib/speaker/autoBalance): band Levels for any speaker or stack. Each pair of bands next to each other
 // meets at its crossover, the highest Level 0 dB: flat by default (the same level), or with the PA music tilt option (the
-// band above that tilt below the band under it). With the PA music tilt, on the PA presets it gives the PA page's own
+// band above that tilt below the band under it). With the PA music tilt, on the PA presets it gives the PA music
 // balance (lib/speaker/paBalance `paBandLevels`).
 import { test } from "vite-plus/test";
 import assert from "node:assert";

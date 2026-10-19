@@ -23,7 +23,7 @@ export function subVentPlan(
   // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
   const ductH = pg.ductH != null ? pg.ductH : 3,
     innerW = s.w - 2 * T;
-  // the bottom slot's fins and the openings between them (the PA page's two fins: three openings)
+  // the bottom slot's fins and the openings between them (two fins by default: three openings)
   const fins = slotFinLayout(innerW, T, slotFinsOf({ fins: pg.fins, slotH: ductH }, innerW, T));
   const round = isRoundPort(portStyle); // round-tube ports only
   const corners = portStyle === "round4";

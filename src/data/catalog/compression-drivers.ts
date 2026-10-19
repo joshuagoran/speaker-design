@@ -11,7 +11,7 @@
 // {n, thread, circle in}, and steps [diameter, length] front to back only where a photo shows them. Mark guesses in note.
 import type { CompressionDriver } from "../../types";
 
-/** The compression driver the planner starts on. */
+/** The default PA design's compression driver. */
 export const N314T: CompressionDriver = {
   id: "n314t",
   lb: 5.1,

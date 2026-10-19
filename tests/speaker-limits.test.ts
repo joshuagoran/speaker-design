@@ -33,7 +33,7 @@ import {
 import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../src/constants/limits";
 import type {
   BandId,
-  PaPlannerDesign,
+  PaDesign,
   SpeakerFeed,
   SpeakerLimits,
   SpeakerResponse,
@@ -249,7 +249,7 @@ test("speaker limits: a passive band rides its channel through its pad; a band w
 });
 
 /** A PA design's speaker by part, read in through the PA adapter, its drivers settled on their baffles. */
-function paSpeaker(pa: PaPlannerDesign, part: (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART]) {
+function paSpeaker(pa: PaDesign, part: (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART]) {
   const { spec } = speakerAndFeed(layersFromPa(pa, { id: "pa", name: "PA" }, PA_FLOOR), part);
   return { ...spec, cabinet: settledCabinet(spec.cabinet) };
 }

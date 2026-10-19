@@ -1,4 +1,4 @@
-// The Speaker page's PA sub template against the PA page's sub (the same design, DEFAULT_PA): the letterbox's fins,
+// The Speaker page's PA sub template against the PA box models' sub (the same design, DEFAULT_PA): the letterbox's fins,
 // its size and length, the model's vent, the net air, the cutlist's pieces and the 3D view's fins match. And a
 // letterbox built from the settings with another fin count carries it into the cutlist, the model and the views.
 import { test } from "vite-plus/test";
@@ -50,7 +50,7 @@ function finsIn(group: THREE.Object3D, t: number, slotH: number) {
   return n;
 }
 
-/** The PA page's sub: its parts, its geometry (vent and net air) and its cutlist, from the planner's design. */
+/** The PA box models' sub: its parts, its geometry (vent and net air) and its cutlist, from the default PA design. */
 function paSub() {
   const cfg = defaultPaDesign();
   const sub = byIdOrThrow(SUB_OPTIONS, cfg.sub, "subs");
@@ -99,18 +99,18 @@ function letterboxOf(spec: SpeakerSpec) {
   return { chamber, vent, port };
 }
 
-test("the Speaker page's PA sub matches the PA page's: fins, slot, vent, net air, cutlist and 3D fins", () => {
+test("the Speaker page's PA sub matches the PA box models': fins, slot, vent, net air, cutlist and 3D fins", () => {
   assert.equal(DEFAULT_PA.portStyle, "slots", "the PA's starting sub has the letterbox");
   const pa = paSub();
   const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
   const { chamber, port } = letterboxOf(spec);
   const t = spec.cabinet.panel.thicknessIn;
-  // the slot: the PA page's fins, height and length, on the PA rule
+  // the slot: the PA design's fins, height and length, on the PA rule
   assert.equal(port.fins, PA_SLOT_FINS);
   assert.deepEqual([port.h, port.len], [pa.cfg.cVent.slotH, pa.cfg.cVent.len]);
   assert.equal(t, pa.cfg.wall);
   assert.equal(portRule(chamber)?.rule, PORT_RULE.pa);
-  // the model's vent: the PA page's area (the fins off the width), length and end correction
+  // the model's vent: the box model's area (the fins off the width), length and end correction
   const vent = chamberVentModel(spec.cabinet, chamber);
   assert.ok(vent);
   assert.ok(Math.abs(vent.areaIn2 - pa.geometry.port.area) < 1e-9, `area ${vent.areaIn2}`);
@@ -124,7 +124,7 @@ test("the Speaker page's PA sub matches the PA page's: fins, slot, vent, net air
   assert.deepEqual(pieces(parts), pieces(pa.parts));
   const fins = parts.find((p) => p.part === "ductFin");
   assert.equal(fins?.qty, PA_SLOT_FINS);
-  // the 3D view: the PA page's sub builds as many fins as the Speaker page's
+  // the 3D view: the PA sub scene builds as many fins as the Speaker page's
   const ctx = createSceneContext({
     wall: t,
     inset: pa.cfg.inset,
@@ -184,7 +184,7 @@ test("a high fin count is held to what the width takes: the area stays positive,
   const t = spec.cabinet.panel.thicknessIn;
   const iw = chamber.dims.w - 2 * t;
   const most = maxSlotFins(iw, t, port.h);
-  assert.ok(most >= PA_SLOT_FINS, "the PA page's two fit the default box");
+  assert.ok(most >= PA_SLOT_FINS, "the default two fit the default box");
   // each opening at least the ply and half the slot's height
   assert.ok(slotFinLayout(iw, t, most).open >= Math.max(t, port.h / 2) - 1e-9);
   assert.ok(slotFinLayout(iw, t, most + 1).open < Math.max(t, port.h / 2));

@@ -1,6 +1,5 @@
-// The panel sizes the Speaker page sets on a spec, as the PA page sets them on its design: the walls' size (the baffle
-// of a frame box stays ¾″, lib/acoustics/boxModels BAFFLE_PLY_IN) and the side ducts' dividers' size. The PA page shares one
-// measured thickness per size between its walls and dividers (usePaDesign `panelExactIn`); here dividers of the walls'
+// The panel sizes the Speaker page sets on a spec: the walls' size (the baffle of a frame box stays ¾″,
+// lib/acoustics/boxModels BAFFLE_PLY_IN) and the side ducts' dividers' size. Dividers of the walls'
 // size follow the walls' thickness, and dividers of another size keep their default (only the walls are measured). Pure.
 import type { PanelNominal, SideDuctPort, SpeakerCabinet, SpeakerPanel } from "../../types";
 import { defaultPanelIn } from "../build/panel";
@@ -19,7 +18,7 @@ export const withWallPanel = (panel: SpeakerPanel, nominal: PanelNominal): Speak
 
 /**
  * The side ducts with their dividers at another nominal size. The walls' size takes the walls' current thickness
- * (measured or default); another size is plywood, as the PA page's dividers, at its default thickness. The same size
+ * (measured or default); another size is plywood at its default thickness. The same size
  * keeps its thickness.
  */
 export const withDuctDivider = (

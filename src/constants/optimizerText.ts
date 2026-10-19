@@ -43,7 +43,7 @@ export const CARD_WHY = {
   altLower: "Goes lower than your design.",
 } as const;
 
-/** The optimizer panel and result cards' fixed copy, the same on the PA and Hi-fi pages. */
+/** The optimizer panel and result cards' fixed copy, the same on every page. */
 export const OPTIMIZER_PANEL_TEXT = {
   heading: "Find a better design",
   limitedBy: "Limited by:",

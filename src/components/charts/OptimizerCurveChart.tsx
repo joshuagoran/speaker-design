@@ -13,9 +13,9 @@ interface Props {
   cur?: readonly CurvePoint[] | null;
   fmin?: number;
   fmax?: number;
-  /** shaded band, Hz; null for none (the Hi-fi cards) */
+  /** shaded band, Hz; null for none */
   band?: readonly [number, number] | null;
-  /** fixed dB axis: defaults to the maximum-output scale (the PA cards'); the Hi-fi cards pass HIFI_TOP / HIFI_BOT */
+  /** fixed dB axis: defaults to the maximum-output scale (MAX_OUTPUT_TOP / MAX_OUTPUT_BOT) */
   top?: number;
   bot?: number;
   /** what the chart shows, for screen readers */

@@ -32,7 +32,7 @@ import type {
   DesignLayers,
   FrequencyPoint,
   HifiDesignState,
-  PaPlannerDesign,
+  PaDesign,
   SpeakerChamber,
   SpeakerSpec,
 } from "../src/types";
@@ -117,7 +117,7 @@ export const hifiCases: { name: string; state: HifiDesignState }[] = [
 export const PA_FLOOR: PaFloor = DEFAULT_COVERAGE_LAYOUT;
 
 /** A saved or synthetic PA design with every field set (as tests/speaker-spec.test.ts reads it). */
-export function paDesign(c: PaConfig): PaPlannerDesign {
+export function paDesign(c: PaConfig): PaDesign {
   // older saved configs can lack some fields; they fall back to the default PA design
   const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
     DEFAULT_PA;
@@ -176,7 +176,7 @@ export const withNet = (
 });
 
 /** The PA sub box model of a design: its net air, tuning, curve, and limits. */
-export function paSubModel(cfg: PaPlannerDesign) {
+export function paSubModel(cfg: PaDesign) {
   const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
   const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
   assert.ok(sub && mid);

@@ -9,7 +9,7 @@ import { configs, midBoxOf } from "./pa-configs";
 import type { BoxBracing, BraceStyleId } from "../src/types";
 
 const STYLES: readonly BraceStyleId[] = ["window", "ribs", "both"];
-/** Every default design: the golden configs (the saved seeds and the synthetic ones) and the planner's default. */
+/** Every default design: the saved seeds, the synthetic designs, and the default PA design. */
 const designs = [
   ...configs,
   {

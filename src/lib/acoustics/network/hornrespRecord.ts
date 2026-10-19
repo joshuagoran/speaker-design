@@ -4,7 +4,7 @@
 //
 // Hornresp's conventions the reader follows (as tests/hornresp.test.ts does):
 // - Units: areas cm², lengths cm, Vrc in L, Vtc in cc, Le in mH, Mmd in g; Eg is the drive in V RMS.
-// - The driver: Mmd is the moving mass without its air load, with Cms and Rms. The planner's Thiele/Small set carries
+// - The driver: Mmd is the moving mass without its air load, with Cms and Rms. The app's Thiele/Small set carries
 //   one side's air load in Mms, which the presets take back off with the radiation load on; so Mms = Mmd + 8/3·ρa³.
 // - Several drivers are one composite driver (Sd, Mmd and Rms added; Cms, Re and Le divided): read as one driver.
 // - A horn's rear chamber is lossless. A direct radiator's vented box has QL = 7, and its leak does not radiate.
@@ -191,7 +191,7 @@ function segmentsOf(lines: RecordLines): HornSegment[] {
 }
 
 /**
- * The driver as the planner's Thiele/Small set: Hornresp's mechanical values (Mmd, Cms, Rms) to Mms with one side's
+ * The driver as the app's Thiele/Small set: Hornresp's mechanical values (Mmd, Cms, Rms) to Mms with one side's
  * air load, Fs and Qms; the record's first Le is the plain inductance.
  */
 function driverOf(lines: RecordLines): BoxModelTS {

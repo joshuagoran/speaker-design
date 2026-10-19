@@ -79,7 +79,7 @@ test("the lowest band is the lowest band", () => {
   expect(COVERAGE_BANDS.sub.lo).toBe(Math.min(...lo));
 });
 
-test("a new space starts at the PA planner's 105 dB target", () => {
+test("a new space starts at the default coverage layout's 105 dB target", () => {
   expect(SPACE_HOME_TARGET_DB).toBe(105);
   expect(emptySpace().space.venue.targetDb).toBe(SPACE_HOME_TARGET_DB);
   expect(SPACE_HOME_TARGET_DB).toBe(LISTENER_TARGET_DB);

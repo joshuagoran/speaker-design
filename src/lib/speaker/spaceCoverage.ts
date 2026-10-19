@@ -1,15 +1,15 @@
-// The space model: every placement's stack in the room, summed across the floor on the PA coverage page's engine
+// The space model: every placement's stack in the room, summed across the floor on the coverage engine
 // (lib/acoustics/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes).
 // Each placement plays its stack's response (lib/speaker/stackResponse: each member's speaker through its crossover,
 // level and delay), with each band's amp power from its speaker; each driver spot radiates its band's share with its own
 // coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step (the speaker
-// model is half-space; the floor image puts the floor back, as on the PA page). Pure.
+// model is half-space; the floor image puts the floor back). Pure.
 //
 // Each placement's own delay and level are its solved ones (lib/speaker/solveFeeds: Auto ones from the layout, the rest
 // as typed).
 //
 // The whole space plays from one input. At its music limit the placement with the least headroom (less its level) sets
-// the level; the page then turns it down so the reference (the audience's average, as on the coverage page) gets the target, never past the limit.
+// the level; the page then turns it down so the reference (the audience's average) gets the target, never past the limit.
 import type {
   BandId,
   Complex,

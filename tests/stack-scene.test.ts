@@ -1,5 +1,5 @@
 // The Stack page's 3D view (stack-view/buildMembersScene) on the PA presets: the members stand where the stack places
-// them, so the scene is as tall as the stack's height (lib/speaker/speakerTotals, the PA page's stack height less the
+// them, so the scene is as tall as the stack's height (lib/speaker/speakerTotals, the PA stack height less the
 // plinth: tests/stack-totals.test.ts), from its base at the floor.
 import { describe, expect, test } from "vite-plus/test";
 import * as THREE from "three";

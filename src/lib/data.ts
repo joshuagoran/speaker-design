@@ -139,9 +139,9 @@ export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[]
 [SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS].forEach((arr: { name: string }[]) =>
   arr.splice(0, arr.length, ...sortedByName(arr)),
 );
-/** A horn the Hi-fi page offers as a waveguide: a 1-inch throat, with its coverage specs and size. */
+/** A horn a hi-fi design offers as a waveguide: a 1-inch throat, with its coverage specs and size. */
 const isHifiWaveguide = (h: Horn): h is HifiWaveguide => h.exit === 1 && !!h.hf?.covH && !!h.size;
-/** The Hi-fi page's waveguides, from every horn (the Hi-fi-only ones included), A–Z. */
+/** The hi-fi waveguides, from every horn (the Hi-fi-only ones included), A–Z. */
 export const HIFI_WAVEGUIDES: readonly HifiWaveguide[] =
   sortedByName(HORN_RAW).filter(isHifiWaveguide);
 
@@ -221,7 +221,7 @@ const withFaceplate = (t: HifiTweeterRaw): HifiTweeter => {
     domeIn: t.type === "horn-loaded" ? diameter || 3 : t.exit || 1,
   };
 };
-/** The tweeter the hi-fi planner starts on, as the table holds it (with its faceplate and dome size). */
+/** The tweeter the default hi-fi design starts on, as the table holds it (with its faceplate and dome size). */
 export const SB26STCN: HifiTweeter = withFaceplate(SB26STCN_RAW);
 export const HIFI_TWEETERS: readonly HifiTweeter[] = HIFI_TWEETERS_RAW.map((t) =>
   t === SB26STCN_RAW ? SB26STCN : withFaceplate(t),

@@ -1,4 +1,4 @@
-// Warning chips for each planner section: pure functions of the numbers the page already has.
+// Warning chips for the Speaker and Stack pages: pure functions of the numbers the page already has.
 // Each returns [kind, head, body, id][] with kind "ok" | "warn" | "bad" and id the check's (CHIP_IDS).
 
 import type {
@@ -149,7 +149,7 @@ const TUBES_WONT_FIT = "Tubes won't fit";
 const DUCT_TOO_LONG = "Duct too long";
 /**
  * An HF section through a passive pad `pad` dB on the amp it shares: the amp power at which it reaches its program
- * rating `ratingW` (`hfLimW`, W into the channel's load) against the amp's `ampW`. The Fills page's and the Speaker page's check.
+ * rating `ratingW` (`hfLimW`, W into the channel's load) against the amp's `ampW`. The Speaker page's check.
  */
 export function hfHeadroomChip(
   pad: number,

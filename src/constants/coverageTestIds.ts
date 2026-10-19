@@ -1,5 +1,5 @@
 /**
- * The Coverage page's hooks for the layout check. No imports: tests/mobile-check.mjs loads this file straight into Node.
+ * The coverage map's hooks for the layout check. No imports: tests/mobile-check.mjs loads this file straight into Node.
  */
 export const COVERAGE_TEST_IDS = {
   /** the floor map's SVG */

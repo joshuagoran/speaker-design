@@ -1,7 +1,7 @@
 // The speaker at its limits: each band's drivers at the amp's full power through the band's filters, up to the first
-// limit the PA and Hi-fi pages already use. Pure; it reads the response's chamber runs, so no box model runs again.
+// limit the box models use. Pure; it reads the response's chamber runs, so no box model runs again.
 //
-// - Cones (lib/acoustics/boxModels sineLimitAt, the PA's maxOutputCurve per point): the cone's Xmax and the vent's air speed at
+// - Cones (lib/acoustics/boxModels sineLimitAt, per point): the cone's Xmax and the vent's air speed at
 //   each frequency, the driver's program rating (2 × AES) and the amp as ceilings on the whole drive. Radiators add
 //   their travel against their Xmax, as the Hi-fi engine checks it.
 // - Datasheet drivers keep their engine's power rule: a compression driver the PA's (lib/acoustics/boxModels hornPower), a tweeter

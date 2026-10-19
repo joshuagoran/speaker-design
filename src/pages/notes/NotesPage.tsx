@@ -107,7 +107,7 @@ function sensitivityText(): string {
   return `${maker}'s ${sens} dB claim agrees with their T/S parameters (${ts}).`;
 }
 
-/** The plywood thicknesses the planner models other than the default wall, as the heading offers them. */
+/** The plywood thicknesses the app models other than the default wall, as the heading offers them. */
 const OTHER_THICKNESSES = DEFAULT_SUB_WEIGHTS.filter((w) => w.t !== DEFAULT_WALL).map((w) => w.t);
 /** The default sub's braces at each plywood size, as the rule puts them in. */
 const BRACES_BY_SIZE = DEFAULT_SUB_WEIGHTS.map(

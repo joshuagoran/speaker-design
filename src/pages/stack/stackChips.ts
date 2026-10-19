@@ -1,5 +1,5 @@
-// The Stack page's checks between its members: keep-up at each crossover between boxes (lib/speaker/keepUp), as the
-// PA page's "Mid limits first" check, one list per crossing; and each member speaker's own crossovers (the Speaker page's
+// The Stack page's checks between its members: keep-up at each crossover between boxes (lib/speaker/keepUp), "Mid limits
+// first", one list per crossing; and each member speaker's own crossovers (the Speaker page's
 // dispersion check on its bands). Crossings between members get no dispersion check.
 import type { Chip, ChipId, StackLimits, StackResponse, StackSpec } from "../../types";
 import type { SpeakerSpec } from "../../types";

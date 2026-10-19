@@ -224,7 +224,7 @@ test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles do
       ventMasses: masses ? subVentMasses(d.cDim, t, "slots", v) : [],
     });
   const slot = { ...vent, len: 12 };
-  // the planner's plan counts the vent: the same as the plan given its panels
+  // the box's hardware plan counts the vent: the same as the plan given its panels
   assert.deepStrictEqual(subPlan(DEFAULT_HARDWARE.sub, "slots", slot), plan(true, slot));
   assert.ok(
     plan(true, slot).parts[0].v < plan(false, slot).parts[0].v,

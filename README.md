@@ -80,12 +80,12 @@ build/serve.sh          # http://127.0.0.1:8901/stack-planner.html
 It builds both pages and serves `dist/`. The pages are self-contained, so opening
 `dist/stack-planner.html` straight from disk works too.
 
-Saving is unavailable in local preview (see below). The planner detects that and
+Saving is unavailable in local preview (see below). The app detects that and
 says so rather than breaking.
 
-## Publishing the planner
+## Publishing the app
 
-The planner is published as a claude.ai Artifact. It must declare the `db`
+The app is published as a claude.ai Artifact. It must declare the `db`
 capability or saved configurations silently do nothing:
 
 ```
@@ -104,7 +104,7 @@ Two consequences of declaring `db`:
 
 ## Saved designs
 
-The planner saves speakers, stacks, and spaces, each in its own collection
+The app saves speakers, stacks, and spaces, each in its own collection
 (`speakers`, `stacks`, and `spaces`; on GitHub Pages under `users/{uid}`).
 A stack names its speakers, and a space names its stacks.
 
@@ -113,7 +113,7 @@ The old PA and Hi-fi designs (collections `configs` and `hifiConfigs`, and the
 read. They stay in place. `data/configs-seed.json` keeps the old PA seeds as
 test designs.
 
-## How the planner is put together
+## How the app is put together
 
 - `src/data/catalog/<kind>.ts` — the parts catalog, pure typed data. Adding a part is an edit there; each file's header
   lists its fields and units.
@@ -177,7 +177,7 @@ See `docs/design-notes.md` for the findings behind the current configuration.
 
 ## Web app (GitHub Pages + Firestore)
 
-`sh build/build.sh pages` builds `dist/site/` — the same planner, with saved
+`sh build/build.sh pages` builds `dist/site/` — the same app, with saved
 designs in Firebase Firestore instead of the claude.ai artifact store. Pushes
 to `main` deploy it via `.github/workflows/pages.yml`.
 

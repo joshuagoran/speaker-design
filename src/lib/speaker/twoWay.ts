@@ -96,9 +96,9 @@ export function tweeterMaxLevel(
  * The power the tweeter gets, W into its impedance (as `tAmpW`): its own amp's when active; when passive, the one amp
  * channel's, `wAmpW` into the woofer's impedance, as a voltage through the network's pad, the level match `trim` dB
  * (lib/power). A tweeter quieter than the woofer (trim > 0) takes the full amp: a passive network can't add gain, so
- * the woofer would be padded instead, and the tweeter's level then caps the speaker's, as `maxLevel` reads it. The
- * Fills page's `hfLimW` (lib/acoustics/boxModels fillSystem) is this relation solved for the amp power that brings the HF to its
- * program rating.
+ * the woofer would be padded instead, and the tweeter's level then caps the speaker's, as `maxLevel` reads it.
+ * `hfLimitWatts` (lib/acoustics/boxModels) is this relation solved for the amp power that brings the HF to its program
+ * rating.
  */
 export const tweeterAmpWatts = (
   cfg: Pick<HifiConfig, "drive" | "wAmpW" | "tAmpW">,

@@ -242,7 +242,7 @@ function modelChamber(
       if (!drv) return empty([SPEAKER_MODEL_GAP.unknownRadiator]);
       if (!positive(radiators.n) || !(radiators.addG >= 0))
         return empty([SPEAKER_MODEL_GAP.noModel]);
-      // the added mass kept under the most the radiator takes, as the Hi-fi page keeps it (lib/build/boxLayout)
+      // the added mass kept under the most the radiator takes, as lib/build/boxLayout keeps it
       const pr = {
         drv,
         n: radiators.n,
@@ -263,7 +263,7 @@ const hornById = (id: Horn["id"]) => byId(HORN_OPTIONS, id) ?? byId(HIFI_WAVEGUI
 /**
  * A datasheet driver's (or a coaxial's HF section's) level at `f`, dB at 1 m: its 1 W sensitivity moved to `volts`
  * into its impedance. A compression driver on a catalog horn also falls 12 dB/oct below the horn's loading limit, as
- * the PA's horn model (lib/acoustics/boxModels hornResponse); a tweeter keeps the Hi-fi engine's flat sensitivity.
+ * the PA's datasheet horn model; a tweeter keeps the Hi-fi engine's flat sensitivity.
  */
 function hfLevelAt(driver: SpeakerDriver, sens: number, imp: number, volts: number, f: number) {
   const flat = sens + 10 * Math.log10(8 / imp) + 20 * Math.log10(volts / ONE_WATT_VOLTS);

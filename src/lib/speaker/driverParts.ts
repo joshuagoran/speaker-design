@@ -149,7 +149,7 @@ export function hfParts(driver: SpeakerDriver): HfParts | null {
   }
 }
 
-/** Whether a horn's throat and a compression driver's exit differ in size (the PA page's and the Speaker page's check). */
+/** Whether a horn's throat and a compression driver's exit differ in size (the Speaker page's check). */
 export const hornExitsDiffer = (
   horn: Pick<Horn, "exit">,
   driver: Pick<CompressionDriver, "exit">,

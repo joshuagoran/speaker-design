@@ -183,7 +183,7 @@ export function chamberVentModel(
             slotInnerEndCorrection(dims, slot, t, baffleInsetIn(cabinet), slotFolds(dims, slot, t)),
         };
       }
-      // the Hi-fi page's slot is one (n 1); the Speaker page's can be more, alike
+      // a hi-fi design's slot is one (n 1); the Speaker page's can be more, alike
       return {
         areaIn2: port.n * port.h * w,
         lenIn: port.len,

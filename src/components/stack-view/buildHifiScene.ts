@@ -1,6 +1,6 @@
 // The Hi-fi speaker in the 3D view: one speaker (the left of the pair) on the floor, built from the same numbers the
-// Hi-fi page's model and its 2D front drawing use (lib/speaker/twoWay and lib/build/boxLayout: the driver layout, the vent and radiators' places), with
-// the PA view's scene context, cone, horn, driver and horn mounts.
+// hi-fi model and its 2D front drawing use (lib/speaker/twoWay and lib/build/boxLayout: the driver layout, the vent and radiators' places), with
+// the stack scene's context, cone, horn, driver and horn mounts.
 import * as THREE from "three";
 import { type SceneContext } from "./sceneContext";
 import { buildCone, CONE_FACE_BACK_IN } from "./buildCone";

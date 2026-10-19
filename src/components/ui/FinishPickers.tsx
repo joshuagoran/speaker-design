@@ -47,7 +47,7 @@ export function BaffleColorPicker({ value, onChange }: Props) {
 
 /**
  * The horn body's paint: the horn's catalog finish (a preset that clears the picked color), the paint swatches or a
- * custom color (the PA page and the Speaker page alike). `value` undefined is the catalog finish.
+ * custom color. `value` undefined is the catalog finish.
  */
 export function HornColorPicker({
   value,

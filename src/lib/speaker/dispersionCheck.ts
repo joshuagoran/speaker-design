@@ -1,5 +1,4 @@
-// The dispersion check at a crossover between two of a speaker's bands, as the Hi-fi page's check but on the speaker's
-// own parts: the lower band's cone is as wide as it gets until its beam narrows (ka, its circumference over the
+// The dispersion check at a crossover between two of a speaker's bands, on the speaker's own parts: the lower band's cone is as wide as it gets until its beam narrows (ka, its circumference over the
 // wavelength, past DISPERSION_NARROW_KA), and below the upper band's coverage the off-axis response dips at the
 // crossover. One check per crossing (`crossingPairs`), on the lower band. Pure.
 import type { BandId, SpeakerDriver, SpeakerSpec } from "../../types";

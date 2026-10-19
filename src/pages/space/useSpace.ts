@@ -216,12 +216,12 @@ interface ReferenceSpots {
   /** the listener's spot; null when the reference is not the listener (so moving the listener moves nothing else) */
   listener: FloorPoint | null;
   meterSpots: readonly MeterSpot[];
-  /** the boxes' spots: the audience average leaves the floor right in front of them out (as on the coverage page) */
+  /** the boxes' spots: the audience average leaves the floor right in front of them out */
   boxes: readonly FloorPoint[];
 }
 
 /**
- * A request's level at the limit at the reference, as the coverage page reads it, dB: the audience average over the
+ * A request's level at the limit at the reference, dB: the audience average over the
  * grid's floor (needs `grid`; null without it), the level at the listener, or the mean of the 1 m spots of the
  * placements that play in `band`. Null when nothing reaches it. Only the listener's own reference reads the listener.
  */
@@ -340,7 +340,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     [model],
   );
 
-  // the worker queue: one job at a time, and only the newest waiting job is kept (as the coverage page's)
+  // the worker queue: one job at a time, and only the newest waiting job is kept
   // each job carries the frequency its band's target is read at, so a grid on show keeps its own band's target
   const [shown, setShown] = useState<
     (GridJob & { grid: CoverageGrid; anchorOf: CoverageGrid | null }) | null

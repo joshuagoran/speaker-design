@@ -74,8 +74,9 @@ test("default style, by nominal size: ribs for ⅝″ / 15 mm and ½″ / 12 mm,
   assert.strictEqual(savedBraceStyle(undefined), undefined);
 });
 
-/** Each golden design's two boxes, as the planner braces them: the inside, the keep-out and the bracing. */
-function goldenBoxes(style: BraceStyleId | undefined) {
+/** Each saved and synthetic PA design's two boxes, as the box models brace them: the inside, the keep-out and the
+ * bracing. */
+function paBoxes(style: BraceStyleId | undefined) {
   return configs.flatMap((c) => {
     const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
     const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
@@ -106,7 +107,7 @@ function goldenBoxes(style: BraceStyleId | undefined) {
 }
 
 test("a window brace that ties the sides goes behind the magnet or above or below the driver, never through it", () => {
-  for (const { name, inner, keep, b } of goldenBoxes("window")) {
+  for (const { name, inner, keep, b } of paBoxes("window")) {
     const top = Math.max(...keep.driver.map((o) => o.y[1])),
       bottom = Math.min(...keep.driver.map((o) => o.y[0])),
       back = Math.max(...keep.driver.map((o) => o.z[1]));
@@ -131,8 +132,8 @@ test("a window brace that ties the sides goes behind the magnet or above or belo
 
 test("the rule is deterministic and every style only lifts panels", () => {
   for (const style of STYLES) {
-    const a = goldenBoxes(style),
-      again = goldenBoxes(style);
+    const a = paBoxes(style),
+      again = paBoxes(style);
     a.forEach((o, i) => {
       assert.deepStrictEqual(o.b, again[i].b, `${o.name} ${style}`);
       for (const p of o.b.panels) assert.ok(p.hz >= p.bareHz - 1e-9, `${o.name} ${style} ${p.id}`);
@@ -349,7 +350,7 @@ test("the starting sub under Ribs takes ribs: on the back at ¾″, and on the s
   }
 });
 
-test("the optimizers' brace estimate stays near the rule over the golden boxes, in the optimizers' ¾″ ply", () => {
+test("the optimizers' brace estimate stays near the rule over the PA designs' boxes, in the optimizers' ¾″ ply", () => {
   // for each back joint, as the rule braces it
   for (const back of [DEFAULT_BACK_JOINT, GLUED_BACK] as const)
     for (const style of STYLES) {

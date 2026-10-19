@@ -9,7 +9,7 @@ interface Props {
   onClear: () => void;
 }
 
-/** The lock-everything and clear-locks buttons of an optimizer: the bar on the PA and Hi-fi pages, the Speaker fold's Keep list. */
+/** The lock-everything and clear-locks buttons of an optimizer: the Speaker fold's Keep list. */
 export function LockBarButtons({ nLocks, lockMax, onLockAll, onClear }: Props) {
   const clear = nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set";
   return (

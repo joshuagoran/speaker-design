@@ -1,4 +1,4 @@
-// Bracing by rule, for any box (lib/build/boxBracing lays out the PA boxes' panels; the Hi-fi page reads the plate model).
+// Bracing by rule, for any box (lib/build/boxBracing lays out the PA boxes' panels).
 //
 // The plate: each panel, and each bay of it between supports, is a thin (Kirchhoff) plate. Hinged (simply supported)
 // on all four edges, its first mode (m = n = 1) is the orthotropic rectangular plate's,

@@ -1,4 +1,4 @@
-// Read adapter: the Fills page's design (FillDesignState) as a speaker spec, a stack of one and a space. Pure; nothing
+// Read adapter: a fill design (FillDesignState) as a speaker spec, a stack of one and a space. Pure; nothing
 // is written.
 import type {
   AdapterBandId,
@@ -32,9 +32,9 @@ import { DEFAULT_HIFI } from "../defaults";
 
 /**
  * A band of the coaxial's passive network: the cone below its HF section's recommended crossover (`hf.xo`) and the HF
- * section above it, at the Hi-fi page's slope, as the coaxial monitor template crosses it (the maker's own network
+ * section above it, at the default hi-fi slope, as the coaxial monitor template crosses it (the maker's own network
  * isn't published). A coaxial without HF data or a crossover keeps both bands open. The HF band carries the network's
- * pad (`fillDriverPadDb`, the one the Fills page's limits use), so the HF section plays at the woofer's level. Both bands
+ * pad (`fillDriverPadDb`), so the HF section plays at the woofer's level. Both bands
  * share the fill's one amp channel.
  */
 function networkBand(id: AdapterBandId, state: FillDesignState): SpeakerBand {
@@ -65,7 +65,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
           at: { xIn: 0, yIn: 0 },
           dims: boxDims,
           netLiters: null,
-          // the Fills model stuffs only a sealed box (fillSystem)
+          // a fill design stuffs only a sealed box
           stuffingPct: state.boxType === VENT_KIND.vented ? 0 : stuffingPctOf(STUFFING_VOLUME_GAIN),
           vent:
             state.boxType === VENT_KIND.vented
@@ -81,7 +81,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
               kind: DRIVER_KIND.coaxial,
               driverId: state.driver.id,
               count: 1,
-              // the Fills page draws no layout: centered
+              // a fill design has no layout: centered
               position: { xIn: 0, yIn: boxDims.h / 2 },
               bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
               horn: null,
@@ -96,7 +96,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
         thicknessIn: PANEL_STOCK[FILL_PANEL].in,
       },
       ...FLUSH_BOX,
-      // the fill page counts no handles or input dish
+      // a fill design counts no handles or input dish
       ...NO_HARDWARE,
       roundoverIn: 0,
       tiltDeg: 0,

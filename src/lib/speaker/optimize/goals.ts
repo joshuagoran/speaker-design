@@ -36,7 +36,7 @@ export interface Metric {
   ampW: number;
 }
 
-/** Each goal's objective: lower is better; warnings and changes nudge, as on the PA page. */
+/** Each goal's objective: lower is better; warnings and changes nudge. */
 export const OBJECTIVE: Record<SpeakerGoal, (x: Metric) => number> = {
   cheaper: (x) => 1e6 * x.w + x.price + 1e-6 * x.lb + 1e-8 * x.ch,
   lighter: (x) => x.lb + 0.5 * x.ch + 2 * x.w,

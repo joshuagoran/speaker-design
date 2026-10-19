@@ -1,6 +1,6 @@
-// Passive radiators for the Hi-fi tab (per unit, US vendors, Oct 2026). Sd cm², Mms g (as shipped), Cms mm/N,
+// Passive radiators for hi-fi designs (per unit, US vendors, Oct 2026). Sd cm², Mms g (as shipped), Cms mm/N,
 // excursion in `pub` (SB, Purifi and Seas publish only the mechanical limit, Xlim). No maker states a maximum
-// added mass, so the planner allows up to 3 × Mms.
+// added mass, so the models allow up to 3 × Mms.
 // src/lib/xmax adds the comparable Xmax.
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
 // a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size

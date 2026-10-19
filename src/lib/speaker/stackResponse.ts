@@ -8,8 +8,7 @@
 // distance (1/r); the levels are moved back to 1 m, so a stack reads on the same axes as a speaker.
 //
 // An auto delay puts the member in phase with the member it crosses (one's lowpass and the other's highpass within an
-// octave) at their crossover, at the listening point, as the coverage page aligns the PA sub with the mid
-// (lib/acoustics/coverage autoSubDelayMs): the crossovers' share wrapped to a turn, each crossing band's own phase unwrapped
+// octave) at their crossover, at the listening point: the crossovers' share wrapped to a turn, each crossing band's own phase unwrapped
 // from its loudest point, and the paths. It solves for the relative delay; where the auto member would have to play
 // early, the others wait instead (every delay moves up together), so no delay is below 0.
 //
