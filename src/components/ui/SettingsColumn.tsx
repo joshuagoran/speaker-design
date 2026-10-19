@@ -4,13 +4,7 @@ import type { FoldsAt } from "./FoldHeading";
 import type { Folds } from "../../hooks/useFolds";
 import { FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
-import {
-  FLEX_GAP_Y,
-  SECTION_GAP_Y,
-  SECTION_GAP_Y_MD_UP,
-  GAP_Y,
-  GAP_Y_MD_UP,
-} from "../../styles/layout";
+import { FLEX_GAP_Y, SECTION_GAP_Y, SECTION_GAP_Y_MD_UP, GAP_Y } from "../../styles/layout";
 
 interface Props<Id extends string> {
   /** the column's name for screen readers */
@@ -82,10 +76,12 @@ interface SectionProps<Id extends string> {
   id: Id;
   title: React.ReactNode;
   folds: Folds<Id>;
-  /** the widths it folds at; on PA phones the heading hides, as the sheet's tabs group the settings there */
+  /** the widths it folds at; "desktop" on a page with a phone settings sheet, whose tabs group the settings there */
   foldsAt?: FoldsAt;
   /** the section's key facts, shown under its title while it is folded (two lines at most) */
   summary: React.ReactNode;
+  /** extra classes on the section (on phones, hidden unless its sheet tab is showing) */
+  className?: string;
   children: React.ReactNode;
 }
 
@@ -96,11 +92,12 @@ export function SettingsSection<Id extends string>({
   folds,
   foldsAt = "always",
   summary,
+  className = "",
   children,
 }: SectionProps<Id>) {
   return (
     // the section bleeds to the panel edges (the column pads its body), so the heading bar spans the panel; the body pads itself
-    <section className={`md:-mx-4 ${FLEX_GAP_Y}`}>
+    <section className={`md:-mx-4 ${FLEX_GAP_Y} ${className}`}>
       <FoldHeading
         id={id}
         title={title}
@@ -113,11 +110,7 @@ export function SettingsSection<Id extends string>({
         className={`bg-stone-300 border-t-2 border-stone-900 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
         buttonClassName="px-3 md:px-4"
       />
-      <FoldBody
-        open={folds.open[id]}
-        foldsAt={foldsAt}
-        className={`pb-1 md:px-4 ${foldsAt === "desktop" ? GAP_Y_MD_UP : GAP_Y}`}
-      >
+      <FoldBody open={folds.open[id]} foldsAt={foldsAt} className={`pb-1 md:px-4 ${GAP_Y}`}>
         {children}
       </FoldBody>
     </section>

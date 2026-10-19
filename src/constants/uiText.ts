@@ -2,13 +2,11 @@
 export const UI_TEXT = {
   /** the toast when a save to the saved-designs store fails */
   saveFailed: "Couldn't save — try again",
-  /** the settings column's title, and its name for screen readers */
+  /** the settings column's title, and its name (and the phone sheet's bar's) for screen readers */
   settings: "Settings",
   /** the settings column's buttons that fold or open every section */
   collapseAll: "Collapse all",
   expandAll: "Expand all",
-  /** the settings drawer's close button, as screen readers hear it */
-  closeSettings: "Close settings",
   /** after a price total when some part has no price, so the real total is higher */
   partialPriceMark: "+",
   /** an optimizer card's line when some part has no price, and its tip */
