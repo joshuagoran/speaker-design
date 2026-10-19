@@ -60,9 +60,16 @@ export const oneSideAirMass = (coneAreaCm2: number) =>
   (8 / 3) * AIR_DENSITY * Math.pow(coneAreaCm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
 /**
  * The vent's tuning search (duct vent): up in steps of `step` (a ratio) to `ceiling`, Hz, from `start` times the lumped
- * vent's tuning, or from `from`, Hz, when the tuning is already past that start.
+ * vent's tuning, or from `from`, Hz, when the tuning is already past that start; then `halvings` halvings of the last
+ * step (to the last bit of a double).
  */
-const TUNING_SEARCH = { from: 1, start: 0.5, step: 1.01, ceiling: 20000 } as const;
+const TUNING_SEARCH = { from: 1, start: 0.5, step: 1.01, ceiling: 20000, halvings: 45 } as const;
+/**
+ * Duct vents' tunings already found, Hz, by everything the search reads: the optimizers model the same chamber and vent
+ * with many drivers. Cleared when it holds `TUNINGS_KEPT`.
+ */
+const TUNINGS = new Map<string, number>();
+const TUNINGS_KEPT = 4096;
 
 export interface HornModelOptions {
   /**
@@ -219,9 +226,12 @@ export function ventOf(
   /** the lumped vent's tuning, Hz: its air as one mass, ρ·length/Sp, with the chamber's compliance */
   const lumpedFb =
     1 / (2 * Math.PI * Math.sqrt(((AIR_DENSITY * (port.length / CM_PER_M)) / Sp) * Cab));
+  /** the tuning's key in TUNINGS: everything `detuning` reads */
+  const key = `${port.area}|${port.length}|${exitReactanceRatio}|${Cab}|${design.angle}|${design.count}`;
+  const known = radiationLoad ? TUNINGS.get(key) : lumpedFb;
   let Fb: number;
-  if (!radiationLoad) {
-    Fb = lumpedFb;
+  if (known !== undefined) {
+    Fb = known;
   } else {
     // step up to the first sign change, then halve the bracket: the duct's reactance has poles above the tuning, so a
     // plain bisection over a wide range could land on one. The exit's load adds mass, so the tuning falls below the
@@ -235,12 +245,14 @@ export function ventOf(
     )
       below *= TUNING_SEARCH.step;
     let above = below * TUNING_SEARCH.step;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TUNING_SEARCH.halvings; i++) {
       const middle = Math.sqrt(below * above);
       if (detuning(middle) < 0) below = middle;
       else above = middle;
     }
     Fb = Math.sqrt(below * above);
+    if (TUNINGS.size >= TUNINGS_KEPT) TUNINGS.clear();
+    TUNINGS.set(key, Fb);
   }
   /** the vent's acoustic mass that tunes Cab to Fb, kg/m⁴: ρ·length/Sp when lumped */
   const Map = 1 / (Math.pow(2 * Math.PI * Fb, 2) * Cab);

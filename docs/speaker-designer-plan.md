@@ -518,7 +518,7 @@ Each PR stands alone. Lowest risk first.
           2. Units. Each chamber's cones are one unit (a coaxial feeds two bands). Each datasheet driver entry
              (compression driver, tweeter) is one unit. A band fed by two units stays as it is.
           3. Screen each unit alone: a spec with its chamber and its bands only, the net air estimated (no cabinet
-             build), on a coarse grid (60 points), at the top amp power.
+             build), on a coarse grid (40 points), at the top amp power.
              - First pass, when a unit has more than 8 candidates: each at your volume on 3 tunings. The ones the
                search keeps (below) go on, at most 8, yours always.
              - Full pass: volume (7 steps, the ones the drivers fit) × tuning (5 steps) × the crossovers its band
