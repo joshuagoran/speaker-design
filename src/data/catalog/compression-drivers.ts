@@ -166,7 +166,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     },
     price: 160,
     src: "hoqs.org, Sep 2026 (in stock, ships from the US, per Josh)",
-    note: "[hoqs.org spec table, Sep 2026; no datasheet] 3 in edge-wound aluminum coil, titanium diaphragm, neo, copper ring, 1.9 T. 80 W nominal / 160 W program (the planner treats 80 W as the AES-style rating, so program = 2 \u00d7 80 W), 110 dB, recommended crossover 800 Hz with BW24, 500 Hz\u201318 kHz, 8 \u03a9. 4 \u00d7 M6 on a 102 mm circle (same as the N314T), 4.4 lb. Body: 4×M6 on a 102 mm circle (hoqs.org). GUESS: no published size; drawn at the N314T's ⌀5.72 × 2.53 in.",
+    note: "[hoqs.org spec table, Sep 2026; no datasheet] 3 in edge-wound aluminum coil, titanium diaphragm, neo, copper ring, 1.9 T. 80 W nominal / 160 W program (the app treats 80 W as the AES-style rating, so program = 2 \u00d7 80 W), 110 dB, recommended crossover 800 Hz with BW24, 500 Hz\u201318 kHz, 8 \u03a9. 4 \u00d7 M6 on a 102 mm circle (same as the N314T), 4.4 lb. Body: 4×M6 on a 102 mm circle (hoqs.org). GUESS: no published size; drawn at the N314T's ⌀5.72 × 2.53 in.",
   },
   {
     id: "hf1440",
@@ -584,7 +584,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     },
     price: 129.95,
     src: "usspeaker.com, Oct 2026",
-    note: "[beyma.com datasheet, Oct 2026] Sheet 06/19, named CD-11Fe/S. The screw-on CD-11Fe: a 1-3/8″ threaded exit, no bolts. Ferrite, PM4 polymer diaphragm, 1.75 in DUO double-layer aluminum coil. 70 W AES above 1.5 kHz (140 W program). 109 dB 1 W/1 m on an unnamed constant-directivity horn, averaged 1–7 kHz. 700 Hz–19 kHz. Minimum crossover 1.5 kHz at 12 dB/oct. 4 lb. The sheet does not give the thread pitch; 1-3/8″-18 is the usual one. It needs a screw-on horn or a screw-on to bolt adapter. GUESS: the body's bolts are the planner's generic 2 × M6 on a 76 mm circle, only so the 3-D view can draw it; the driver has none. Exit flare angle not published. Body: ⌀110 × 78 mm (Beyma datasheet).",
+    note: "[beyma.com datasheet, Oct 2026] Sheet 06/19, named CD-11Fe/S. The screw-on CD-11Fe: a 1-3/8″ threaded exit, no bolts. Ferrite, PM4 polymer diaphragm, 1.75 in DUO double-layer aluminum coil. 70 W AES above 1.5 kHz (140 W program). 109 dB 1 W/1 m on an unnamed constant-directivity horn, averaged 1–7 kHz. 700 Hz–19 kHz. Minimum crossover 1.5 kHz at 12 dB/oct. 4 lb. The sheet does not give the thread pitch; 1-3/8″-18 is the usual one. It needs a screw-on horn or a screw-on to bolt adapter. GUESS: the body's bolts are the app's generic 2 × M6 on a 76 mm circle, only so the 3-D view can draw it; the driver has none. Exit flare angle not published. Body: ⌀110 × 78 mm (Beyma datasheet).",
   },
   {
     id: "cd11nd",
@@ -753,7 +753,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     },
     price: 229.08,
     src: "Parts Express, Oct 2026",
-    note: "[bcspeakers.com spec page, Oct 2026; no datasheet PDF published] Neo, 2 in aluminum coil, HT polymer diaphragm. 70 W nominal / 140 W continuous program (B&C's 2-hour pink-noise test from the 1.2 kHz recommended crossover up, so the planner treats 70 W as the AES-style rating), 108 dB, 1\u201317 kHz, recommended crossover 1.2 kHz at 12 dB/oct or steeper, 2.58 lb. 2 \u00d7 M6 on a 76 mm circle, 3.62 in across, 1.93 in deep: a 2-bolt flange, so check the 1\u2033 horn's bolt pattern. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀92 × 49 mm, 2×M6 on a 76 mm circle (bcspeakers.com).",
+    note: "[bcspeakers.com spec page, Oct 2026; no datasheet PDF published] Neo, 2 in aluminum coil, HT polymer diaphragm. 70 W nominal / 140 W continuous program (B&C's 2-hour pink-noise test from the 1.2 kHz recommended crossover up, so the app treats 70 W as the AES-style rating), 108 dB, 1\u201317 kHz, recommended crossover 1.2 kHz at 12 dB/oct or steeper, 2.58 lb. 2 \u00d7 M6 on a 76 mm circle, 3.62 in across, 1.93 in deep: a 2-bolt flange, so check the 1\u2033 horn's bolt pattern. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀92 × 49 mm, 2×M6 on a 76 mm circle (bcspeakers.com).",
   },
   {
     id: "lavoce171",
@@ -834,6 +834,6 @@ export const CD_RAW: readonly CompressionDriver[] = [
     },
     price: 1100,
     src: "parts-express.com, Oct 2026 (#294-2142; price from the indexed listing)",
-    note: "[celestion.com product page, Oct 2026] AxiPeriodic wide-band 2″-exit driver: neodymium, 5 in (125 mm) aluminum coil, titanium diaphragm. 150 W AES, 300 W continuous, 108 dB 1 W/1 m on a compatible horn, 300 Hz–20 kHz; Celestion says no midband crossover is needed. 198 mm across, 111 mm deep, 4 × M6 on a 102 mm circle (the N314T's and N320T's pattern), 7.5 kg (16.5 lb). Gaps: Celestion publishes no recommended crossover and no power-test high-pass; 500 Hz is assumed for both (GUESS, from the 300 Hz lower limit). No published body steps, so it is drawn as the generic stepped body. A PA v2 candidate for bigger stacks (docs/pa-v2-plan.md); at 16.5 lb it is over the planner's usual weight limit, and it pairs only with 2″ horns (the B&C ME75 here).",
+    note: "[celestion.com product page, Oct 2026] AxiPeriodic wide-band 2″-exit driver: neodymium, 5 in (125 mm) aluminum coil, titanium diaphragm. 150 W AES, 300 W continuous, 108 dB 1 W/1 m on a compatible horn, 300 Hz–20 kHz; Celestion says no midband crossover is needed. 198 mm across, 111 mm deep, 4 × M6 on a 102 mm circle (the N314T's and N320T's pattern), 7.5 kg (16.5 lb). Gaps: Celestion publishes no recommended crossover and no power-test high-pass; 500 Hz is assumed for both (GUESS, from the 300 Hz lower limit). No published body steps, so it is drawn as the generic stepped body. A PA v2 candidate for bigger stacks (docs/pa-v2-plan.md); at 16.5 lb it is over the app's usual weight limit, and it pairs only with 2″ horns (the B&C ME75 here).",
   },
 ];
