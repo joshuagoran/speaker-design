@@ -125,7 +125,8 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
         return; // pinching, not rotating
       }
       if (!st.drag) return;
-      st.rotY += (e.clientX - st.lx) * 0.01;
+      // the model turns the way the pointer moves: dragging right turns its front to the right (the camera goes left)
+      st.rotY -= (e.clientX - st.lx) * 0.01;
       st.rotX = Math.max(0.05, Math.min(1.2, st.rotX + (e.clientY - st.ly) * 0.006));
       st.lx = e.clientX;
       st.ly = e.clientY;
