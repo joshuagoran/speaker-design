@@ -1,5 +1,5 @@
-// The driver and the vented box's losses as acoustic circuit elements: the one derivation the box models (lib/pa/calc
-// boxModel and closedBox, lib/hifi passiveRadiatorBox, the exact PA search's lib/pa/exactSub) and the horn engine
+// The driver and the vented box's losses as acoustic circuit elements: the one derivation the box models (lib/acoustics/boxModels
+// boxModel and closedBox, lib/acoustics/wooferBox passiveRadiatorBox) and the horn engine
 // (lib/acoustics/hornModel) share, so they cannot drift apart. That includes the voice coil's inductance (`coilFactor`).
 // Symbols are Thiele and Small's; each is defined in the DriverCircuit and VentResistances types (src/types.ts).
 import type { BoxModelTS, Complex, DriverCircuit, VentResistances } from "../../types";

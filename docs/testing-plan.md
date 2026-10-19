@@ -1,5 +1,7 @@
 # Test plan for the planner's calculations
 
+> History: this document describes tests for the PA page's calculations. The switch-over (#178) removed the PA, Hi-fi, Coverage, and Fills pages, and the golden snapshot tests with them.
+
 Goal: every number the planner shows comes from a tested, pure function, and
 each function has been checked against an independent reference (a textbook
 formula, a closed-form limit, or a manufacturer's published figure).

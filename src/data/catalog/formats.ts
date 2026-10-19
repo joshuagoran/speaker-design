@@ -1,4 +1,4 @@
-// System sizes for the PA planner: sub and mid diameters in inches.
+// System sizes for the PA designs: sub and mid diameters in inches.
 // To add one, append to the table; the compiler checks the shape (Format in src/types.ts).
 import type { Format } from "../../types";
 

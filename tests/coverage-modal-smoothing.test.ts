@@ -1,4 +1,4 @@
-// Room-mode smoothing (lib/pa/coverage coverageFrequencies): in a band view, each band point in the modal range splits
+// Room-mode smoothing (lib/acoustics/coverage coverageFrequencies): in a band view, each band point in the modal range splits
 // into sub-points that share its weight, so one point near a room mode doesn't draw a lobe pattern of its own.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
@@ -10,11 +10,12 @@ import {
   coverageGrid,
   levelAtPoint,
   sceneSlots,
-} from "../src/lib/pa/coverage";
-import { modalTopHz } from "../src/lib/pa/roomAcoustics";
+} from "../src/lib/acoustics/coverage";
+import { modalTopHz } from "../src/lib/acoustics/roomAcoustics";
 import { MODAL_SUBPOINTS, MODAL_SUBPOINTS_WHOLE_BAND } from "../src/constants/acoustics";
 import { presetLayers } from "../src/pages/stack/stackPresets";
-import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
 import { spacePlacement } from "../src/lib/speaker/specParts";
 import type { SpaceDesign } from "../src/types";

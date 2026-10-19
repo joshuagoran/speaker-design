@@ -4,7 +4,7 @@ import type { PaBandLevels } from "../src/lib/speaker/paBalance";
 import { PA_MUSIC_TILT, autoBalanceStack } from "../src/lib/speaker/autoBalance";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { keysOf } from "../src/lib/records";
 import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts";
@@ -20,9 +20,9 @@ const PER_DB = 1000;
 const saved = (db: number) => Math.round(db * PER_DB) / PER_DB || 0;
 
 /**
- * Each PA layout's preset Levels, worked out now from the PA page's starting design by auto balance
+ * Each PA layout's preset Levels, worked out now from the default PA design by auto balance
  * (lib/speaker/autoBalance) with the PA music tilt option, not the flat default, as the file saves them. It gives the
- * PA page's own balance (lib/speaker/paBalance `paBandLevels`) to within 0.01 dB (tests/auto-balance.test.ts).
+ * PA music balance (lib/speaker/paBalance `paBandLevels`) to within 0.01 dB (tests/auto-balance.test.ts).
  */
 export function presetLevels(): Record<PaLayout, PaBandLevels> {
   const out = {} as Record<PaLayout, PaBandLevels>; // boundary: filled for every layout just below
@@ -48,8 +48,8 @@ export function presetLevels(): Record<PaLayout, PaBandLevels> {
 
 /** The whole file for these Levels. */
 export const presetLevelsText = (levels: Record<PaLayout, PaBandLevels>) =>
-  `// The PA presets' band Levels, dB: the PA page's music balance for its starting design (DEFAULT_PA) in each layout,
-// worked out once by lib/speaker/autoBalance \`autoBalanceStack\` (the PA page's own balance to within 0.01 dB) and saved
+  `// The PA presets' band Levels, dB: the PA music balance of the default PA design (DEFAULT_PA) in each layout, worked
+// out once by lib/speaker/autoBalance \`autoBalanceStack\` (lib/speaker/paBalance's balance to within 0.01 dB) and saved
 // here (docs/speaker-designer-plan.md, L3f "Band levels in the preset"). The Stack and Space pages' PA presets read them
 // (src/pages/stack/stackPresets).
 //

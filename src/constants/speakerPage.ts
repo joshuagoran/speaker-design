@@ -92,7 +92,7 @@ export const TUBE_LAYOUT_NAMES = {
   corners: "Corners",
 } as const satisfies Record<keyof typeof TUBE_LAYOUT, string>;
 
-/** The elbows a round tube can have, as the Speaker page names each count (lib/tubeFold `ELBOW_COUNTS`). */
+/** The elbows a round tube can have, as the Speaker page names each count (lib/build/tubeFold `ELBOW_COUNTS`). */
 export const ELBOW_COUNT_NAMES = {
   0: "None",
   1: "One",

@@ -1,4 +1,4 @@
-import type { HifiGoal, PaDriverPart, PaGoal, PaRunMode } from "../types";
+import type { HifiGoal, PaGoal } from "../types";
 
 /** A goal both optimizers offer. */
 type SharedGoal = PaGoal & HifiGoal;
@@ -43,7 +43,7 @@ export const CARD_WHY = {
   altLower: "Goes lower than your design.",
 } as const;
 
-/** The optimizer panel and result cards' fixed copy, the same on the PA and Hi-fi pages. */
+/** The optimizer panel and result cards' fixed copy, the same on every page. */
 export const OPTIMIZER_PANEL_TEXT = {
   heading: "Find a better design",
   limitedBy: "Limited by:",
@@ -54,20 +54,6 @@ export const OPTIMIZER_PANEL_TEXT = {
   /** before the near miss's option buttons, when there are cards */
   looserLimit: "Reaches the goal with a looser limit:",
 } as const;
-
-/** The driver comparison's part buttons, by part. */
-export const DRIVER_PART_NAMES = {
-  sub: "Sub",
-  mid: "Mid",
-  cd: "Compression driver",
-  horn: "Horn",
-} as const satisfies Record<PaDriverPart, string>;
-
-/** The PA run buttons' words, by run mode (the Details drop-down names them too; the phone check taps Improve). */
-export const PA_RUN_LABELS = {
-  improve: "Improve",
-  full: "Fully optimize",
-} as const satisfies Record<PaRunMode, string>;
 
 /**
  * What a card changes from your design, as its "changes" line says it. Code that asks whether a card changed
@@ -101,17 +87,3 @@ export const CHANGE_NAMES = {
 
 /** How the notice starts when the first card only comes closest and misses a level or F3 the goals keep. */
 export const OUT_OF_REACH_LEAD = "Out of reach within the checks";
-
-/** What fails in a design that isn't a check's title: the optimizers' problem lines. */
-export const DESIGN_PROBLEM_TEXT = {
-  unmodeled: "can't be modeled",
-  exitMismatch: "horn and driver exits differ",
-  missingWoofer: "woofer isn't in the driver tables",
-  missingTweeter: "tweeter isn't in the driver tables",
-  missingRadiator: "the passive radiator isn't in the driver tables",
-} as const;
-
-/** What the optimizer says when your design's price isn't whole (a part without a US price, `HifiPricedMetrics`). */
-export const PRICE_UNKNOWN_TEXT = {
-  cheaper: "Your design has a part without a US price, so nothing can be shown cheaper than it.",
-} as const;

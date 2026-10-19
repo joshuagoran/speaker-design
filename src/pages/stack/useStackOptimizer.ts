@@ -2,12 +2,9 @@ import { useMemo, useState } from "react";
 import { runStackOptimizer } from "../../lib/speaker/optimize/runStackOptimizer";
 import {
   budgetStart,
-  optimizerView,
   storedLimit,
   useDesignOptimizer,
   weightStart,
-  type LoadUndo,
-  type Searched,
 } from "../../hooks/useDesignOptimizer";
 import { isKept, toggleKeep, type KeepItem } from "../speaker/speakerKeeps";
 import {
@@ -34,7 +31,6 @@ import type {
   StackOptimizerCard,
   StackOptimizerLimits,
   StackOptimizerLocks,
-  StackOptimizerResult,
 } from "../../types";
 
 interface Props {
@@ -60,25 +56,12 @@ type StoredStackLimits = Pick<StackOptimizerLimits, "budget" | "maxLb" | "maxHei
 /** The height a limit starts at when it is turned on: your stack's height, to the next inch. */
 const heightStart = (inches: number) => Math.max(1, Math.ceil(inches));
 
-/** A search's result and the stack it searched from. */
-export type StackSearched = Searched<StackDesign, StackOptimizerResult>;
-
-/** What Undo after loads puts back: the stack from before the first load in a row, and the stack the last load set. */
-export type StackLoadUndo = LoadUndo<StackDesign>;
-
 /**
  * Whether two designs are the same stack: everything a search reads and a card replaces, the members (their crossovers,
  * levels and delays) and the speakers. The id, name and notes are not part of it.
  */
 export const sameStackDesign = (a: StackDesign, b: StackDesign): boolean =>
   a.stack.members === b.stack.members && a.speakers === b.speakers;
-
-/** The optimizer's results and Undo against the stack as it is now (`optimizerView`). */
-export const stackOptimizerView = (
-  searched: StackSearched | null,
-  undo: StackLoadUndo | null,
-  design: StackDesign,
-) => optimizerView(searched, undo, design, sameStackDesign);
 
 /** The design under your stack's id, name and notes (a card's design, or the one Undo goes back to). */
 export const withStackIdentity = (design: StackDesign, yours: StackDesign): StackDesign => ({

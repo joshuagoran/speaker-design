@@ -2,24 +2,8 @@
 // geometry the 3D view builds the tower from.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { createElement } from "react";
-import { renderToString } from "react-dom/server";
-import {
-  cutParts,
-  midWeightLb,
-  plywoodLbPerSqFt,
-  towerMidWeightLb,
-  MID_FIXINGS_LB,
-  DRIVER_CUTOUT_IN,
-  formatInches,
-  boxInternalLiters,
-  heaviestLiftLb,
-  midGrossLiters,
-  subLiftLb,
-  towerUpperLoadedLb,
-} from "../src/lib/pa/calc";
-import { towerHornCutout, towerMidDims, towerSpec } from "../src/lib/pa/tower";
-import { boxGeometry, evaluateDesign } from "../src/lib/pa/optimize";
+import { cutParts } from "../src/lib/acoustics/boxModels";
+import { towerMidDims, towerSpec } from "../src/lib/speaker/tower";
 import { TOWER_MID_HEIGHT_IN } from "../src/constants/paLayouts";
 import {
   BACK_JOINT_CUT_NOTES,
@@ -29,8 +13,7 @@ import {
   DEFAULT_BACK_JOINT,
   GLUED_BACK,
 } from "../src/constants/bracing";
-import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
-import { BoxFront } from "../src/components/drawings/BoxFront";
+import { HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { close, vent } from "./helpers";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { HORN_MESHES } from "../src/data/meshes";
@@ -41,7 +24,6 @@ import type {
   CornerJoint,
   CutPart,
   CutPartId,
-  PaDesignConfig,
   PaLayout,
   Dims3,
   Horn,
@@ -90,24 +72,6 @@ const one = (P: CutPart[], id: CutPartId) => {
   const rows = P.filter((p) => p.part === id);
   assert.equal(rows.length, 1, `one ${id} row`);
   return rows[0];
-};
-/** The default design as the planner saves it, as a tower in BOX with the round horn. */
-const towerConfig = (): PaDesignConfig => {
-  const { midSize: _m, plywoodSheetKind: _k, boxSetCount: _n, ...rest } = DEFAULT_PA;
-  return {
-    ...rest,
-    format: DEFAULT_PA.format.id,
-    cabinet: DEFAULT_PA.cabinet.id,
-    sub: DEFAULT_PA.sub.id,
-    mid: DEFAULT_PA.mid.id,
-    midBox: DEFAULT_PA.midBox.id,
-    cd: DEFAULT_PA.cd.id,
-    horn: ROUND.id,
-    cDim: BOX,
-    wall: T,
-    inset: INSET,
-    layout: "tower",
-  };
 };
 const area = (P: CutPart[]) => P.reduce((a, p) => a + p.a * p.b * p.qty, 0);
 
@@ -185,28 +149,6 @@ test("tower cutlist: the shell at the full height, two partitions, the sub's bra
     1e-9,
   );
   close(t, area([partition]), 2 * iw * inD, 1e-9);
-});
-
-test("tower cutlist: the baffle's mid and horn cutouts are placed up from its bottom edge, where the 3D view opens them", () => {
-  const spec = towerSpec(BOX, T, FLAT);
-  const note = one(parts("tower", FLAT), "baffle").note;
-  const band = SLOTS.slotH + T;
-  const up = (y: number) => `centered ${formatInches(y - T - band)}″ up from its bottom edge`;
-  // the mid's typical cutout and the horn's mouth, each centered where towerSpec puts it
-  const hc = towerHornCutout(BOX, T, FLAT);
-  assert.equal(hc.shape, "rect");
-  assert.ok(
-    note.includes(
-      `mid ${formatInches(DRIVER_CUTOUT_IN[MID.size])}″ driver cutout (typical; use the datasheet's), ${up(spec.midCenter)}`,
-    ),
-    note,
-  );
-  assert.ok(
-    note.includes(
-      `horn cutout ${formatInches(hc.w)}″ × ${formatInches(hc.h)}″, ${formatInches(hc.r)}″ corners, ${up(spec.hornCenter)}`,
-    ),
-    note,
-  );
 });
 
 test("tower cutlist: the arched top is a bent strip, the sides stop at the springline, and the curves aren't guillotine cuts", (t) => {
@@ -309,74 +251,6 @@ test("a stack's cutlist has no partitions or arched top, and the sub's volume re
   );
 });
 
-test("towerMidWeightLb: the mid chamber and the horn section over the sub box, by hand", (t) => {
-  const W = BOX.w,
-    D = BOX.d,
-    spec = towerSpec(BOX, T, FLAT),
-    ext = spec.extH;
-  const face = W * ext,
-    cut = (Math.PI / 4) * DRIVER_CUTOUT_IN[MID.size] ** 2 + towerHornCutout(BOX, T, FLAT).area;
-  const want =
-    ((face + 2 * D * ext + W * D + (W - 2 * T) * (D - INSET - 0.75 - T)) * plywoodLbPerSqFt(T) +
-      (face - cut) * 2.3) /
-      144 +
-    MID_FIXINGS_LB;
-  close(t, towerMidWeightLb(BOX, T, INSET, FLAT, MID), want, 1e-9);
-  // more than the mid chamber alone as a box (the horn section), and the arched top weighs less than a flat one as tall
-  assert.ok(towerMidWeightLb(BOX, T, INSET, FLAT, MID) > midWeightLb(towerMidDims(BOX), T, null));
-  assert.ok(towerMidWeightLb(BOX, T, INSET, ROUND, MID) > midWeightLb(towerMidDims(BOX), T, null));
-});
-
-test("towerMidWeightLb: within a few percent of the tower's cut panels over the sub box, less its cutouts", () => {
-  for (const h of [FLAT, ROUND]) {
-    const P = parts(
-      "tower",
-      h,
-      "butt",
-      "round2",
-      vent({ nt: 2, dia: 4, len: 12, slotH: 3, throat: 2 }),
-    );
-    const S = parts(
-      "stack",
-      h,
-      "butt",
-      "round2",
-      vent({ nt: 2, dia: 4, len: 12, slotH: 3, throat: 2 }),
-    ).filter((p) => p.box === "sub");
-    const shell = ["side", "topBottom", "bottom", "back", "baffle", "partition", "archTop"];
-    const lb = (Q: CutPart[]) =>
-      Q.filter((p) => shell.includes(p.part)).reduce(
-        (a, p) => a + ((p.a * p.b * p.qty) / 144) * plywoodLbPerSqFt(p.t),
-        0,
-      );
-    const cut = (Math.PI / 4) * DRIVER_CUTOUT_IN[MID.size] ** 2 + towerHornCutout(BOX, T, h).area;
-    // the tower's panels less the sub box's (whose top stands for the sub/mid partition), and its cutouts out of the
-    // baffle: what the cabinet adds over the sub box
-    const added = lb(P) - lb(S) - (cut * 2.3) / 144;
-    const w = towerMidWeightLb(BOX, T, INSET, h, MID) - MID_FIXINGS_LB;
-    assert.ok(
-      w >= added * 0.95 && w <= added * 1.15,
-      `${h.id}: formula ${w.toFixed(1)} vs parts ${added.toFixed(1)}`,
-    );
-  }
-});
-
-test("BoxFront: the tower as one cabinet, the partitions at towerSpec's heights, the arched top drawn", () => {
-  const g = boxGeometry(towerConfig());
-  assert.deepEqual(g.tower, towerSpec(BOX, T, ROUND));
-  assert.deepEqual(g.mid, towerMidDims(BOX));
-  assert.ok(g.tower?.archTop, "the round horn arches the top");
-  const svg = renderToString(createElement(BoxFront, { g }));
-  // one line per partition, and the outline's arc
-  assert.equal(svg.match(/<line /g)?.length, g.tower.partitions.length);
-  assert.match(svg, /<path d="M[^"]*A/);
-  // the drawing's scale fits the whole tower: the outline spans the height the 3D view builds
-  assert.ok(svg.includes(`tower ${g.sub.w} × ${Math.round(g.tower.height * 10) / 10}″`), svg);
-  // a stack has neither
-  const stack = renderToString(createElement(BoxFront, { g: { ...g, tower: null } }));
-  assert.equal(stack.match(/<line /g), null);
-});
-
 test("the meshed horns' light list matches the meshes, and each mesh is its horn's catalog size", (t) => {
   assert.deepEqual([...MESHED_HORN_IDS].sort(), Object.keys(HORN_MESHES).sort());
   for (const id of MESHED_HORN_IDS) {
@@ -388,37 +262,8 @@ test("the meshed horns' light list matches the meshes, and each mesh is its horn
   }
 });
 
-test("the tower's mid chamber: modeled at its clear height as built, between the partitions", (t) => {
+test("the tower's mid chamber: its clear height as built, between the partitions", (t) => {
   const spec = towerSpec(BOX, T, FLAT);
   const clear = spec.partitions[1] - spec.partitions[0] - T;
   close(t, clear, TOWER_MID_HEIGHT_IN - T, 1e-12);
-  close(
-    t,
-    midGrossLiters(towerMidDims(BOX), T, INSET, "tower"),
-    ((BOX.w - 2 * T) * clear * (BOX.d - INSET - 0.75 - T) * 16.387) / 1000,
-    1e-9,
-  );
-  // a mid box elsewhere loses two walls, as before
-  const box = { w: 15, h: 15, d: 15 };
-  assert.equal(midGrossLiters(box, T, INSET, "stack"), boxInternalLiters(15, 15, 15, T, INSET));
-});
-
-test("the heaviest lift: the heavier box, or in the tower the whole cabinet", () => {
-  assert.equal(heaviestLiftLb("stack", 80, 30), 80);
-  assert.equal(heaviestLiftLb("pole", 20, 30), 30);
-  assert.equal(heaviestLiftLb("tower", 80, 60), 140);
-  assert.equal(subLiftLb("stack", 80, 60), 80);
-  assert.equal(subLiftLb("tower", 80, 60), 140);
-  // the optimizers' numbers for a tower: the cabinet over the sub as carried, and the whole tower as the lift
-  const c = towerConfig();
-  const m = evaluateDesign(c);
-  assert.ok(m, "the tower evaluates");
-  const mid = MID_OPTIONS.find((o) => o.id === c.mid),
-    cd = CD_OPTIONS.find((o) => o.id === c.cd);
-  assert.ok(mid && cd);
-  close({}, m.midLb, towerUpperLoadedLb(BOX, T, INSET, ROUND, mid, cd), 1e-9);
-  close({}, m.heaviest, m.subLb + m.midLb, 1e-9);
-  const sub = m.chips.sub.find(([, , , id]) => id === "subWeight");
-  assert.ok(sub, "the lift chip");
-  assert.ok(sub[2].startsWith(`${m.heaviest.toFixed(0)} lb loaded`), sub[2]);
 });

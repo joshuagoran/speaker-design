@@ -2,7 +2,7 @@
 // stack, with the same response; removing a member drops the ones on it to where it stood.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { stackLayout } from "../src/lib/speaker/stackLayout";

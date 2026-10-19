@@ -1,5 +1,5 @@
 // The general speaker model: any speaker spec's response on axis at 1 m in half space. Each chamber runs through the
-// box model of its kind (the engines' own: sealed and vented from lib/pa/calc, passive radiators from lib/hifi, a horn
+// box model of its kind (the engines' own: sealed and vented from lib/acoustics/boxModels, passive radiators from lib/acoustics/wooferBox, a horn
 // built into the box through the horn engine), each datasheet driver through its engine's datasheet model; then each
 // band's filters and level, and the bands summed with their phase. Pure.
 //
@@ -25,8 +25,9 @@ import type {
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { hornLayoutModel } from "./hornLayoutModel";
 import { tracedHorn } from "./foldHorn";
-import { boxModel, closedBox } from "../pa/calc";
-import { logSpacedFrequencies, passiveRadiatorBox } from "../hifi/hifi";
+import { boxModel, closedBox } from "../acoustics/boxModels";
+import { logSpacedFrequencies } from "../acoustics/directivity";
+import { passiveRadiatorBox } from "../acoustics/wooferBox";
 import { HIFI_PASSIVES, HIFI_WAVEGUIDES, HORN_OPTIONS, passiveRadiatorMassMax } from "../data";
 import { byId } from "../tables";
 import { chamberClearFace, chamberVentModel, stuffedLiters } from "./chamberAir";
@@ -241,7 +242,7 @@ function modelChamber(
       if (!drv) return empty([SPEAKER_MODEL_GAP.unknownRadiator]);
       if (!positive(radiators.n) || !(radiators.addG >= 0))
         return empty([SPEAKER_MODEL_GAP.noModel]);
-      // the added mass kept under the most the radiator takes, as the Hi-fi page keeps it (lib/hifi/boxLayout)
+      // the added mass kept under the most the radiator takes, as lib/build/boxLayout keeps it
       const pr = {
         drv,
         n: radiators.n,
@@ -262,7 +263,7 @@ const hornById = (id: Horn["id"]) => byId(HORN_OPTIONS, id) ?? byId(HIFI_WAVEGUI
 /**
  * A datasheet driver's (or a coaxial's HF section's) level at `f`, dB at 1 m: its 1 W sensitivity moved to `volts`
  * into its impedance. A compression driver on a catalog horn also falls 12 dB/oct below the horn's loading limit, as
- * the PA's horn model (lib/pa/calc hornResponse); a tweeter keeps the Hi-fi engine's flat sensitivity.
+ * the PA's datasheet horn model; a tweeter keeps the Hi-fi engine's flat sensitivity.
  */
 function hfLevelAt(driver: SpeakerDriver, sens: number, imp: number, volts: number, f: number) {
   const flat = sens + 10 * Math.log10(8 / imp) + 20 * Math.log10(volts / ONE_WATT_VOLTS);

@@ -5,7 +5,7 @@ import type { DesignLayers, PaLayout, SpecIdentity } from "../../types";
 import { layersFromPa } from "../../lib/speaker/paSpec";
 import { layersFromHifi } from "../../lib/speaker/hifiSpec";
 import { withBandLevels } from "../../lib/speaker/paBalance";
-import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/acoustics/coverageLayout";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../../lib/defaults";
 import { PA_PRESET_BAND_LEVELS } from "../../data/presets/pa-band-levels";
 import { STACK_PRESET, type StackPreset } from "../../constants/stackPresets";

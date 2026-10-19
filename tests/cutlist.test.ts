@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxParts, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc";
-import { packSheets } from "../src/lib/pa/cutlist";
+import { boxParts, formatInches, PLYWOOD_SHEETS } from "../src/lib/acoustics/boxModels";
+import { packSheets } from "../src/lib/build/cutlist";
 import type { CutPart, CutPartId } from "../src/types";
 import { close } from "./helpers";
 

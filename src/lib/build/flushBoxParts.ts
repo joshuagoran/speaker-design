@@ -1,0 +1,211 @@
+// Cutlist for the Hi-fi speaker: the box's six panels at its wall thickness, the slot shelf, and the cutouts and
+// bought parts as notes on their rows. lib/build/cutlist lays them out on sheets as it does the PA boxes. The flush box's
+// panels and notes are shared with the Speaker page's flush cabinets (lib/speaker/speakerBuild).
+import type {
+  CornerJoint,
+  CutBoxId,
+  CutPart,
+  CutlistSettings,
+  Dims2,
+  Dims3,
+  PanelMaterial,
+  PassiveRadiatorChoice,
+  RadiatorPanel,
+  RoundPort,
+  SizedSlotPort,
+} from "../../types";
+import { cutoutNote, formatInches } from "../acoustics/boxModels";
+import { GRAIN_PRESETS, NOTE_SEP } from "./cutlist";
+import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
+import { passiveRadiatorShape } from "../acoustics/wooferBox";
+
+/** A driver's cutout note from its nominal size: the typical cutout, or the datasheet's where none is on file. */
+export const sizedCutout = (size: number) => {
+  const c = HIFI_DRIVER_CUTOUT_IN[size];
+  return c != null ? cutoutNote(c) : "driver cutout: use the datasheet's (no typical size on file)";
+};
+/** Notes joined into one row's note, the empty ones left out. */
+export const joinNotes = (notes: readonly (string | false | null | undefined)[]) =>
+  notes.filter((n): n is string => !!n).join(NOTE_SEP);
+
+/**
+ * How far a flush box's baffle edge sits above the box bottom, in: a butt-jointed baffle covers the front edges, a
+ * rabbeted or mitered one sits t/2 up in the rabbets.
+ */
+const baffleEdgeIn = (joint: CornerJoint, t: number) => (joint === "butt" ? 0 : t / 2);
+/**
+ * A height on a flush box's baffle, as the cutlist marks it on the loose panel: up from the baffle's own bottom edge
+ * (`baffleEdgeIn`), from a height up from the box bottom.
+ */
+export const aboveBaffleEdge = (fromBoxBottom: number, joint: CornerJoint, t: number) =>
+  `${formatInches(fromBoxBottom - baffleEdgeIn(joint, t))}″ above the bottom edge`;
+/** A part's offset across a pair's baffle in words: inward or outward of center (mirror the pair); none at 0. */
+export const offsetWords = (off: number) =>
+  off
+    ? `, ${formatInches(Math.abs(off))}″ ${off > 0 ? "inward" : "outward"} of center (mirror the pair)`
+    : "";
+/** A tweeter's faceplate cutout note, at its center (`at`, words) and offset across (`off`, in). */
+export const tweeterCutoutNote = (faceplate: Dims2, at: string, off: number) =>
+  `tweeter: ${formatInches(faceplate.w)} × ${formatInches(faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${at}${offsetWords(off)}`;
+/**
+ * A slot's openings on the baffle: one, or `n` alike stacked, each under its own shelf; `bottoms` each opening's bottom
+ * in words, from the lowest (a hi-fi design's slot is one).
+ */
+export const slotOpeningNote = (
+  port: Pick<SizedSlotPort, "w" | "h" | "n">,
+  bottoms: readonly string[],
+) =>
+  port.n > 1
+    ? `${port.n} × slot, stacked: ${formatInches(port.w)} × ${formatInches(port.h)}″ openings, centered, bottoms ${bottoms.join(", ")}`
+    : `slot: ${formatInches(port.w)} × ${formatInches(port.h)}″ opening, centered, ${bottoms[0]}`;
+/**
+ * A slot's shelves as a cutlist row of `box`: each its slot's roof, running back from the baffle, the slots stacked from
+ * the bottom panel up, a slot and a shelf apart; `tooLong`: the words where the slot is too long, else null.
+ */
+export const slotShelfPart = (
+  box: CutBoxId,
+  port: Pick<SizedSlotPort, "w" | "h" | "len" | "n">,
+  t: number,
+  tooLong: string | null,
+): CutPart => {
+  const undersides = Array.from({ length: port.n }, (_, k) => port.h + k * (port.h + t));
+  return {
+    box,
+    part: "slotShelf",
+    qty: port.n,
+    a: port.w,
+    b: port.len,
+    t,
+    note: joinNotes([
+      port.n > 1
+        ? `roofs of the ${port.n} stacked slots: undersides ${undersides.map((u) => `${formatInches(u)}″`).join(", ")} above the bottom panel`
+        : `roof of the slot: underside ${formatInches(port.h)}″ above the bottom panel`,
+      "runs back from the baffle",
+      tooLong,
+    ]),
+  };
+};
+/** A round port's holes on its panel. */
+export const roundPortHoleNote = (port: Pick<RoundPort, "n" | "dia">) =>
+  `port: ${port.n} × hole for the ${formatInches(port.dia)}″ tube (size it to the tube's outside)`;
+/** A round port's tubes as bought, with the elbows each takes (null: too long for the box, in the `tooLong` words). */
+export const roundPortLine = (
+  port: Pick<RoundPort, "n" | "dia" | "len">,
+  elbows: number | null,
+  tooLong: string,
+) =>
+  `${port.n} × ${formatInches(port.dia)}″ port tube per speaker, ${formatInches(port.len)}″ long (buy, flared)${elbows == null ? `; ${tooLong}` : elbows ? `, with ${elbows} elbow${elbows > 1 ? "s" : ""}` : ""}`;
+/** The radiators' cutouts, on the panel they mount on (a side panel: split between the two, mirrored for a pair). */
+export function radiatorCutoutNote(
+  pr: Pick<PassiveRadiatorChoice, "drv" | "n">,
+  panel: RadiatorPanel,
+): string {
+  const shape = pr.drv.shape;
+  const one = shape
+    ? `${formatInches(shape.w)} × ${formatInches(shape.h)}″ oval passive radiator cutout (use the datasheet's)`
+    : `passive radiator ${sizedCutout(passiveRadiatorShape(pr.drv).w)}`;
+  return panel !== "side"
+    ? `${pr.n} × ${one}`
+    : pr.n === 1
+      ? `one side only (mirror the pair): ${one}`
+      : pr.n % 2 === 0
+        ? `${pr.n / 2} in each side: ${one}`
+        : `${pr.n} split between the sides: ${one}`;
+}
+/** The baffle's roundover note: routed after glue-up but on a butt joint, and the warning past the stock's depth. */
+export const roundoverNote = (r: number, t: number, joint: CornerJoint) =>
+  r > 0 &&
+  `${formatInches(r)}″ roundover on the front edges${joint === "butt" ? "" : " (rout after glue-up)"}${r > t + 1e-9 ? `${NOTE_SEP}roundover deeper than the ${formatInches(t)}″ stock: double the baffle up or glue hardwood strips along its edges` : ""}`;
+
+/** The notes a flush box's panels carry: their cutouts and fittings, by panel. */
+export interface FlushBoxNotes {
+  side?: string;
+  /** a note on the top and bottom row */
+  top?: string;
+  baffle: readonly (string | false | null | undefined)[];
+  back?: string;
+}
+
+/**
+ * A flush box's four panel rows (label `box`), the outside W × H × D at walls `t`, by joint:
+ * - butt: the baffle and back cover the whole front and rear; the sides run full height between them, the top and
+ *   bottom sit between the sides. The baffle's front edges are one piece, so a roundover cuts into it alone.
+ * - rabbet: the sides run full height and depth, rabbeted t × t/2 on all four edges for the top, bottom, baffle and
+ *   back; the top and bottom are rabbeted front and rear for the baffle and back.
+ * - miter: the sides, top and bottom wrap the box with 45° corners, rabbeted front and rear for the baffle and back.
+ */
+export function flushBoxPanels(
+  box: CutBoxId,
+  { w: W, h: H, d: D }: Dims3,
+  t: number,
+  joint: CornerJoint,
+  notes: FlushBoxNotes,
+): CutPart[] {
+  const half = formatInches(t / 2),
+    full = formatInches(t);
+  const rabbet = (edges: string) => `rabbet ${full} × ${half} on ${edges}`;
+  // sides: depth front to back (a) by height (b); top/bottom: depth (a) by width (b); baffle and back: width by height
+  const size: Record<
+    CornerJoint,
+    { side: [number, number]; top: [number, number]; face: [number, number] }
+  > = {
+    butt: { side: [D - 2 * t, H], top: [D - 2 * t, W - 2 * t], face: [W, H] },
+    rabbet: { side: [D, H], top: [D, W - t], face: [W - t, H - t] },
+    miter: { side: [D, H], top: [D, W], face: [W - t, H - t] },
+  };
+  const s = size[joint];
+  const sideNote = {
+    butt: "between the baffle and back",
+    rabbet: rabbet("all four edges, for the top, bottom, baffle and back"),
+    miter: `45° on the top and bottom edges; ${rabbet("the front and rear edges")}`,
+  }[joint];
+  const topNote = {
+    butt: "between the sides",
+    rabbet: rabbet("the front and rear edges"),
+    miter: `45° on both ends; ${rabbet("the front and rear edges")}`,
+  }[joint];
+  const faceNote = (where: "front" | "rear") =>
+    joint === "butt" ? `covers the ${where} edges` : `sits in the ${where} rabbets`;
+  return [
+    {
+      box,
+      part: "side",
+      qty: 2,
+      a: s.side[0],
+      b: s.side[1],
+      t,
+      note: joinNotes([sideNote, notes.side]),
+    },
+    {
+      box,
+      part: "topBottom",
+      qty: 2,
+      a: s.top[0],
+      b: s.top[1],
+      t,
+      note: joinNotes([topNote, notes.top]),
+    },
+    {
+      box,
+      part: "baffle",
+      qty: 1,
+      a: s.face[0],
+      b: s.face[1],
+      t,
+      note: joinNotes([faceNote("front"), ...notes.baffle]),
+    },
+    {
+      box,
+      part: "back",
+      qty: 1,
+      a: s.face[0],
+      b: s.face[1],
+      t,
+      note: joinNotes([faceNote("rear"), notes.back]),
+    },
+  ];
+}
+
+/** The settings as a material takes them: MDF has no grain, so every panel turns freely and there is no waterfall. */
+export const settingsForMaterial = (s: CutlistSettings, mat: PanelMaterial): CutlistSettings =>
+  mat === "mdf" ? { ...s, grain: GRAIN_PRESETS.none, waterfall: false } : s;

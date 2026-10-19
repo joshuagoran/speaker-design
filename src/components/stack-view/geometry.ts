@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { PARTS_3D } from "../../styles/palette";
 import type { Dims2, PartMesh } from "../../types";
 /** Rounded rectangle outline centered on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
@@ -160,44 +159,6 @@ export function flareGeometry({
   geo.setIndex(idx);
   geo.computeVertexNormals();
   return geo;
-}
-
-/** Pictogram silhouette of a person, billboarded and semi-transparent, `heightIn` inches tall (standing on y = 0). */
-export function createScaleFigure(heightIn: number) {
-  const u = heightIn / 100;
-  const figure = new THREE.Group();
-  const material = new THREE.MeshBasicMaterial({
-    color: PARTS_3D.figure,
-    transparent: true,
-    opacity: 0.38,
-    side: THREE.DoubleSide,
-  });
-  const body = new THREE.Shape();
-  const outline = [
-    [6.5, 85],
-    [10.0, 82],
-    [11.0, 70],
-    [8.0, 50],
-    [6.5, 30],
-    [5.5, 1],
-    [1.0, 1],
-    [0, 40],
-    [-1.0, 1],
-    [-5.5, 1],
-    [-6.5, 30],
-    [-8.0, 50],
-    [-11.0, 70],
-    [-10.0, 82],
-    [-6.5, 85],
-  ];
-  body.moveTo(outline[0][0] * u, outline[0][1] * u);
-  outline.slice(1).forEach(([x, y]) => body.lineTo(x * u, y * u));
-  body.closePath();
-  figure.add(new THREE.Mesh(new THREE.ShapeGeometry(body), material));
-  const head = new THREE.Shape();
-  head.absarc(0, 92.5 * u, 6 * u, 0, Math.PI * 2, false);
-  figure.add(new THREE.Mesh(new THREE.ShapeGeometry(head), material));
-  return figure;
 }
 
 /** Millimeters to the scene's inches. */

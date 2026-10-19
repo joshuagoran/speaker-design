@@ -3,18 +3,14 @@ import assert from "node:assert";
 import {
   boxModel,
   subwooferLimits,
-  maxOutputCurve,
-  subBassLevel,
-  SUB_BASS_BAND_HZ,
   thermalVoltageLimit,
   ampVoltage,
   hornPower,
-  nearestPoint,
   sineLimitAt,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { CD_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { FALLBACK_OHMS, ohmsOf, voltsToWatts } from "../src/lib/power";
-import { LIMIT_NAMES, SUB_LIMITED_BY, SUB_LIMIT_NAMES } from "../src/constants/limits";
+import { LIMIT_NAMES } from "../src/constants/limits";
 import { close, near } from "./helpers";
 
 /** An 8 Ω load: the amp power's watts into it (lib/power). */
@@ -70,7 +66,7 @@ test("a 4 Ω and an 8 Ω version given the same amp power differ only by their s
   const levelAt = (ts: ReturnType<typeof tsOf>, watts: number) => {
     const m = boxModel(ts, 150, 60, 14, 25, ampVoltage(watts, ts), "BW24");
     assert.ok(m);
-    return nearestPoint(m.curve, 80).spl;
+    return near(m.curve, 80).spl;
   };
   // an 8 Ω driver and a 4 Ω copy with the same efficiency (half the Re and Le, Bl / √2): the same level at 1000 W each
   const eight = tsOf("ciarendh18");
@@ -116,58 +112,13 @@ test("limits search the whole curve, including below 20 Hz", (t) => {
   const peak = Math.max(...m.curve.map((o) => o.xmm));
   close(t, m.peakX, peak, 1e-12);
 });
-test("maxCurve never exceeds the amp-limited curve and stays below Xmax", (t) => {
+test("the sine limit never exceeds the amp's voltage and stays within Xmax and the port's speed", () => {
   const V = ampVoltage(800, EIGHT_OHM),
-    m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!,
-    mc = maxOutputCurve(m.curve, fh, V, 23.5);
-  mc.forEach((o, i) => assert.ok(o.spl <= m.curve[i].spl + 1e-9));
+    m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!;
+  for (const o of m.curve) assert.ok(sineLimitAt(o, fh, V, 23.5).V <= V * (1 + 1e-9));
   for (const f of [30, 45, 60]) {
     const o = near(m.curve, f),
-      c = near(mc, f),
-      s = 10 ** ((c.spl - o.spl) / 20);
+      s = sineLimitAt(o, fh, V, 23.5).V / V;
     assert.ok(o.xmm * s <= fh.Xmax * (1 + 1e-9) && o.vel * s <= 23.5 * (1 + 1e-9), `${f} Hz`);
   }
-});
-test("sub-bass level: the mean of the curve inside its band only", (t) => {
-  const [lo, hi] = SUB_BASS_BAND_HZ;
-  const curve = [
-    { f: lo - 1, spl: 0 },
-    { f: lo, spl: 100 },
-    { f: (lo + hi) / 2, spl: 110 },
-    { f: hi, spl: 120 },
-    { f: hi + 1, spl: 0 },
-  ];
-  close(t, subBassLevel(curve), 110, 1e-12);
-});
-test("sub-bass level of a max curve lies between its lowest and highest point in the band", () => {
-  const V = ampVoltage(800, EIGHT_OHM),
-    m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!,
-    mc = maxOutputCurve(m.curve, fh, V, 23.5);
-  const band = mc.filter((o) => o.f >= SUB_BASS_BAND_HZ[0] && o.f <= SUB_BASS_BAND_HZ[1]);
-  const level = subBassLevel(mc);
-  assert.ok(band.length > 10);
-  assert.ok(level >= Math.min(...band.map((o) => o.spl)));
-  assert.ok(level <= Math.max(...band.map((o) => o.spl)));
-});
-test("limit ids show the words the pages have always shown", () => {
-  assert.deepEqual(LIMIT_NAMES, {
-    port: "port",
-    Xmax: "Xmax",
-    radiator: "radiator",
-    thermal: "thermal",
-    amp: "amp",
-    throat: "throat",
-  });
-  assert.deepEqual(SUB_LIMIT_NAMES, {
-    port: "port air speed",
-    Xmax: "cone travel (Xmax)",
-    thermal: "driver program rating",
-    amp: "amplifier power",
-  });
-  assert.deepEqual(SUB_LIMITED_BY, {
-    port: "port air speed",
-    Xmax: "cone travel",
-    thermal: "the driver's program rating",
-    amp: "amplifier power",
-  });
 });

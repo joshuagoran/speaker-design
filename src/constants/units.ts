@@ -45,6 +45,3 @@ export const INCHES_PER_FOOT = 12;
 
 /** Square centimeters in one square inch: the spec's areas in in², the horn engine's (Hornresp's) in cm². */
 export const CM2_PER_IN2 = CM_PER_IN * CM_PER_IN;
-
-/** Square meters in one square inch: the box models' vent areas are in in². */
-export const SQ_M_PER_SQ_IN = CM2_PER_IN2 / SQ_CM_PER_SQ_M;

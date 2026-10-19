@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { bracingRegions } from "../../lib/bracing";
+import { bracingRegions } from "../../lib/build/bracing";
 import { BAFFLE_THICKNESS_IN } from "./buildCabinet";
 import type { SceneContext } from "./sceneContext";
 import type { BoxAxis, BoxBracing, BoxKeepOut, BoxRegion, Dims3 } from "../../types";
@@ -26,36 +26,6 @@ export function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: numbe
       y + T + (r.y[0] + r.y[1]) / 2,
       zFront - (r.z[0] + r.z[1]) / 2,
     ),
-  });
-}
-
-/**
- * A box's window braces and ribs (lib/bracing) inside the cabinet `box` whose bottom is at `y` and center at `x`, in
- * bare ply (PARTS_3D.brace) on every finish, so they show in the cutaway beside the vent's parts and the drivers: each
- * rail and rib as lib/bracing places it.
- */
-export function buildBraces(
-  ctx: SceneContext,
-  {
-    bracing,
-    box,
-    y,
-    x = 0,
-    parent,
-  }: { bracing: BoxBracing; box: Dims3; y: number; x?: number; parent: THREE.Object3D },
-) {
-  const T = ctx.wall;
-  const inner = {
-    x: box.w - 2 * T,
-    y: box.h - 2 * T,
-    z: box.d - ctx.inset - BAFFLE_THICKNESS_IN - T,
-  };
-  buildBracesAt(ctx, {
-    bracing,
-    inner,
-    // the inside's left wall, floor and baffle face, as `insideToScene` places them
-    corner: { x: x - inner.x / 2, y: y + T, z: box.d / 2 - ctx.inset - BAFFLE_THICKNESS_IN },
-    parent,
   });
 }
 
@@ -93,7 +63,7 @@ export function buildBracesAt(
 
 /**
  * The driver's body behind the baffle in the cutaway (the cone is drawn only on the closed cabinet): each box of its
- * keep-out (lib/pa/calc driverKeepOut) less the clearance, as a disc of the basket stepping in to the magnet.
+ * keep-out (lib/acoustics/boxModels driverKeepOut) less the clearance, as a disc of the basket stepping in to the magnet.
  */
 export function buildDriverBody(
   ctx: SceneContext,

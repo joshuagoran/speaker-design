@@ -2,7 +2,7 @@
 // cup, all from Parts Express (US dollars, the price and month in `src`, the product page in `url`). Sizes in inches
 // as the listing gives them (W × H), `upright` naming the one that runs up the panel as mounted,
 // weights in lb (Parts Express's listed weight). A figure the listing doesn't give is null and named in `note`; the
-// part is kept. The compiler checks the shape (CabinetPart in src/types.ts); lib/pa/hardware places them on the boxes.
+// part is kept. The compiler checks the shape (CabinetPart in src/types.ts); lib/build/hardware places them on the boxes.
 import type { CabinetPart } from "../../types";
 
 const PE = "https://www.parts-express.com/";

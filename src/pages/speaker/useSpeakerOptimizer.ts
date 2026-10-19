@@ -2,12 +2,9 @@ import { useMemo, useState } from "react";
 import { runSpeakerOptimizer } from "../../lib/speaker/optimize/runOptimizer";
 import {
   budgetStart,
-  optimizerView,
   storedLimit,
   useDesignOptimizer,
   weightStart,
-  type LoadUndo,
-  type Searched,
 } from "../../hooks/useDesignOptimizer";
 import {
   allKept,
@@ -26,7 +23,6 @@ import type {
   SpeakerOptimizerCard,
   SpeakerOptimizerLimits,
   SpeakerOptimizerLocks,
-  SpeakerOptimizerResult,
   SpeakerSpec,
 } from "../../types";
 
@@ -47,22 +43,9 @@ interface Props {
 /** What the optimizer remembers per viewer: the two limits (the target and the goals start over with the design). */
 type StoredSpeakerLimits = Pick<SpeakerOptimizerLimits, "budget" | "maxLb">;
 
-/** A search's result and the spec it searched from. */
-export type SpeakerSearched = Searched<SpeakerSpec, SpeakerOptimizerResult>;
-
-/** What Undo after loads puts back: the spec from before the first load in a row, and the spec the last load set. */
-export type SpeakerLoadUndo = LoadUndo<SpeakerSpec>;
-
 /** Whether two specs are the same design: everything a search reads and a card replaces (all but the id and name). */
 export const sameDesign = (a: SpeakerSpec, b: SpeakerSpec): boolean =>
   a.cabinet === b.cabinet && a.bands === b.bands && a.input === b.input && a.look === b.look;
-
-/** The optimizer's results and Undo against the spec as it is now (`optimizerView`). */
-export const speakerOptimizerView = (
-  searched: SpeakerSearched | null,
-  undo: SpeakerLoadUndo | null,
-  spec: SpeakerSpec,
-) => optimizerView(searched, undo, spec, sameDesign);
 
 /** A card's design as Load puts it in: the card's spec under your spec's id and name. */
 export const loadedSpec = (card: Pick<SpeakerOptimizerCard, "spec">, spec: SpeakerSpec) => ({

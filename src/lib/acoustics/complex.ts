@@ -1,4 +1,4 @@
-// Complex arithmetic: the one set the planner uses (the hi-fi crossover sums, the PA dispersion map, the horn
+// Complex arithmetic: the one set the app uses (the hi-fi crossover sums, the dispersion maps, the horn
 // engine's two-ports). Plain objects: none of these run in the optimizers' inner loops, where the box models keep
 // their inline real arithmetic. `abs`, `arg` and `exp` keep their standard math names.
 import type { Complex, Matrix2 } from "../../types";

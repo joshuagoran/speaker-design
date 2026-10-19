@@ -18,7 +18,7 @@ import {
   DISPERSION_START_PLANE,
 } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
-import { STATS } from "../../components/optimizer/StatRow";
+import { STATS } from "../../components/stats/StatLabel";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
@@ -102,7 +102,7 @@ const SUM_SERIES_ID = "sum";
 /** The sum's line width on the charts, px: it reads over its bands' (2 px). */
 const SUM_LINE_PX = 4;
 
-/** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
+/** The 3D view's and the front drawing's height. */
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
 
 /** The settings sections that start closed: only Chambers starts open. */

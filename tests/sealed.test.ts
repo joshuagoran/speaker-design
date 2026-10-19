@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { closedBox } from "../src/lib/pa/calc";
+import { closedBox } from "../src/lib/acoustics/boxModels";
 import { MID_OPTIONS } from "../src/lib/data";
 import { tsModel, massLineSPL, f3SecondOrder, near, close, rel, db, LR24_ORDERS } from "./helpers";
 

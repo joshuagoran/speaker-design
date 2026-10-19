@@ -1,6 +1,6 @@
 // The horn engine: a front-loaded horn box as Hornresp models one.
 //
-// The driver is the box models' acoustic circuit (lib/acoustics/driverCircuit, shared with lib/pa/calc boxModel and
+// The driver is the box models' acoustic circuit (lib/acoustics/driverCircuit, shared with lib/acoustics/boxModels boxModel and
 // closedBox): a pressure source Pg behind the driver's own impedance, with the voice coil's inductance when the driver
 // lists one (Re + jωLe, as Hornresp and the box models). Its front drives a throat chamber and the horn's segments into
 // the mouth's radiation impedance; its rear drives a sealed or vented chamber. The vent is a straight duct ended in its
@@ -77,14 +77,7 @@ export interface HornModelOptions {
 }
 
 /**
- * `count` log-spaced frequencies from `fmin` to `fmax`, Hz: the horn engine's grid (10 Hz–2 kHz reaches a mid horn's
- * crossover).
- */
-export const hornGrid = (fmin = 10, fmax = 2000, count = 500) =>
-  Array.from({ length: count }, (_, i) => fmin * Math.pow(fmax / fmin, i / (count - 1)));
-
-/**
- * Unwraps a phase sequence (radians) in place, as the box models do (lib/pa/calc unwrapRawPhase): from the top
+ * Unwraps a phase sequence (radians) in place, as the box models do (lib/acoustics/boxModels unwrapRawPhase): from the top
  * frequency down, so the phases of the same design match theirs exactly, not only to a whole turn.
  */
 function unwrapFromTop(phases: number[]) {
@@ -413,10 +406,3 @@ export function hornModel(
   setPhaseAndDelay(curve, phases);
   return { curve, fb: vent ? vent.Fb : null };
 }
-
-/**
- * The throat chamber's and the horn's load on the cone at frequency `f` (Hz), acoustic impedance (Pa·s/m³): for the
- * planner's readouts.
- */
-export const hornFrontImpedance = (design: HornDesign, f: number, radiationLoad = true): Complex =>
-  frontLoad(design, f, radiationLoad).frontImpedance;

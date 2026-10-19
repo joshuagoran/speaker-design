@@ -23,7 +23,7 @@ import {
   DISPERSION_START_PLANE,
 } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
-import { STATS } from "../../components/optimizer/StatRow";
+import { STATS } from "../../components/stats/StatLabel";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";

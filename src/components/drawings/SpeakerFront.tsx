@@ -55,12 +55,16 @@ import {
 import { coneParts } from "../../lib/speaker/driverParts";
 import { CM2_PER_IN2 } from "../../constants/units";
 import { byId } from "../../lib/tables";
-import { isAmt, isRibbon } from "../../lib/hifi/hifi";
+import { isAmt, isRibbon } from "../../lib/speaker/twoWay";
 import { PANEL } from "../../constants/cutParts";
 import { subVentHoles } from "../stack-view/buildSubwoofer";
-import { subVentPlan } from "../../lib/pa/subVentPlan";
+import { subVentPlan } from "../../lib/build/ventPlan";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { HORN_CUTOUT_SHAPE, TOWER_HORN_WALL_GAP_IN, towerHornCutout } from "../../lib/pa/tower";
+import {
+  HORN_CUTOUT_SHAPE,
+  TOWER_HORN_WALL_GAP_IN,
+  towerHornCutout,
+} from "../../lib/speaker/tower";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { DRIVER_KIND, FOLD_WALL, PORT_SHAPE } from "../../constants/speakerSpec";
 
@@ -116,7 +120,7 @@ const HOLE_POINTS = 24;
 const VIEW_PX = 150;
 const PAD_PX = 4;
 /**
- * A horn's mouth shape by the one rule the baffle cutout, the cutlist and the 3D view take (lib/pa/tower
+ * A horn's mouth shape by the one rule the baffle cutout, the cutlist and the 3D view take (lib/speaker/tower
  * towerHornCutout): a meshed horn's silhouette (drawn as the ellipse its area takes), a rectangle with rounded corners
  * (a rectangular mouth, or a horn with no profile), or a circle. Sized here in a box that holds the mouth's width, so
  * a rectangular mouth keeps its own.
@@ -243,7 +247,7 @@ export function SpeakerFront({ spec, onMoveDriver, onPickDriver, focus = null }:
         {...opening}
       />
     ));
-    // the letterbox's openings between its fins (lib/pa/calc slotFinLayout)
+    // the letterbox's openings between its fins (lib/acoustics/boxModels slotFinLayout)
     const band =
       plan.bandH > 0
         ? plan.fins.openings.map((x, j) =>

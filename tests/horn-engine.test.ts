@@ -1,5 +1,5 @@
 // The horn engine (lib/acoustics) against references that need no Hornresp: power series for the special functions,
-// the textbook solutions for ducts and flares, power conservation, and the planner's own box models, which the engine
+// the textbook solutions for ducts and flares, power conservation, and the app's own box models, which the engine
 // must reproduce when it has no horn.
 //
 // Words used below: "flow" is volume velocity (m³/s); "impedance" is acoustic impedance (Pa·s/m³); k is the wave
@@ -19,16 +19,12 @@ import {
   inputImpedance,
   outputFlowRatio,
 } from "../src/lib/acoustics/hornSegments";
-import {
-  hornModel,
-  hornGrid,
-  hornFrontImpedance,
-  oneSideAirMass,
-} from "../src/lib/acoustics/hornModel";
+import { hornModel, oneSideAirMass } from "../src/lib/acoustics/hornModel";
+import { hornGrid } from "./helpers";
 import { abs, add, arg, complex, divide, multiply, subtract } from "../src/lib/acoustics/complex";
 import { AIR_DENSITY, SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/pa/calc";
+import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
 import type { Complex, HornDesign, HornModel, HornPoint, HornSegment, Matrix2 } from "../src/types";
@@ -435,32 +431,6 @@ test("a front-loaded horn out-plays the same driver direct in its band, with les
   assert.ok(nearest(withHorn, 300).xmm < nearest(without, 300).xmm, "less excursion at 300 Hz");
   // the electrical impedance never drops below the voice coil's resistance
   assert.ok(withHorn.every((p) => p.ze >= driver.Re - 1e-9));
-});
-
-test("the front load is the throat chamber in parallel with the horn's input", () => {
-  const driver = noInductance(DEFAULT_PA.mid.ts);
-  const f = 400,
-    omega = 2 * Math.PI * f;
-  // no horn, no chamber: the cone sees the mouth's (here its own) radiation load
-  const bare = directRadiator(driver, { liters: 30, port: null });
-  nearComplex(
-    hornFrontImpedance(bare, f),
-    mouthImpedance(driver.Sd / 10_000, f, 2, 1),
-    1e-12,
-    "bare cone",
-  );
-  // a 1 L throat chamber: 1/(jωC + 1/Zhorn), with C = V/(ρc²)
-  const horn: HornDesign = {
-    ...bare,
-    segments: [{ profile: HORN_PROFILE.exponential, s1: 300, s2: 3000, length: 40 }],
-  };
-  const hornInput = hornFrontImpedance(horn, f);
-  const chamberCompliance = 0.001 / (AIR_IMPEDANCE * SPEED_OF_SOUND);
-  const expected = divide(
-    complex(1),
-    add(complex(0, omega * chamberCompliance), divide(complex(1), hornInput)),
-  );
-  nearComplex(hornFrontImpedance({ ...horn, throatChamber: 1 }, f), expected, 1e-9, "chamber");
 });
 
 test("a design with a zero size is not modeled", () => {

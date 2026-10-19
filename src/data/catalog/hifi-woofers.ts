@@ -11,7 +11,7 @@
 // (null where unpublished), Hvc / Hg (coil and gap heights) mm, and `pub` = every excursion figure the maker
 // publishes, one-way mm, with its formula and source URL. Do not add Xmax / xmax: src/lib/xmax derives them.
 // Hi-fi ts also lists Le mH, sens dB (the note says 2.83 V or 1 W) and imp Ω.
-// ---- Hi-fi tab: 2-way home speakers (researched Sep 2026) ----
+// ---- Hi-fi: 2-way home speakers (researched Sep 2026) ----
 // DIY 2-way hi-fi driver shortlist. Compiled 30 Sep 2026.
 // Prices come from US vendors only (parts-express.com, madisoundspeakerstore.com, usspeaker.com).
 // Tags in each note say where the specs came from:
@@ -23,7 +23,7 @@
 // artifact; check stock before ordering.
 import type { HifiWoofer, RawDriver } from "../../types";
 
-/** The woofer the Hi-fi planner starts on. */
+/** The default hi-fi design's woofer. */
 export const SB17NRX_RAW: RawDriver<HifiWoofer> = {
   id: "sb17nrx",
   size: 6.5,

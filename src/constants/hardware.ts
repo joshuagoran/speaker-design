@@ -1,11 +1,11 @@
 /**
- * Cabinet hardware ids and the words the pages use for them (lib/pa/hardware places the parts; their names come from
+ * Cabinet hardware ids and the words the pages use for them (lib/build/hardware places the parts; their names come from
  * data/catalog/cabinet-hardware). Code decides on the ids, the pages look the words up here.
  */
 import type { HardwareBoxId } from "../types";
 
 /**
- * The hardware presets by box (lib/pa/hardware planBoxHardware): the sub box's (two handles, the input dish and its
+ * The hardware presets by box (lib/build/hardware planBoxHardware): the sub box's (two handles, the input dish and its
  * jacks), and the mid box's, which adds the horn's binding posts on its top.
  */
 export const HARDWARE_BOX = { sub: "sub", mid: "mid" } as const satisfies Record<
@@ -15,27 +15,12 @@ export const HARDWARE_BOX = { sub: "sub", mid: "mid" } as const satisfies Record
 
 /** A box's handle setting when it takes none. */
 export const NO_HANDLES = "none";
-/** That choice's label in the settings. */
-export const NO_HANDLES_LABEL = "No handles";
-
 /** What each placed part is, in a sentence ("Sub left handle"). */
 export const HARDWARE_KIND_NAMES = {
   handle: "handle",
   plate: "input dish",
   posts: "horn binding posts",
 } as const;
-
-/**
- * The line under the hardware settings (the PA's Build section and the Speaker page): the box the input dish goes on
- * and the dish, its jacks and where; then, when a horn takes them, where its binding posts go, what they are and where.
- * Parts by their catalog names (data/catalog/cabinet-hardware).
- */
-export const hardwareNote = (
-  dish: { box: string; name: string; jack: string; place: string },
-  posts: { box: string; name: string; place: string } | null,
-) =>
-  `${dish.box}: ${dish.name} ${HARDWARE_KIND_NAMES.plate} with 2 × ${dish.jack} (in, link), ${dish.place}.` +
-  (posts ? ` ${posts.box}: ${posts.name}, ${posts.place}.` : "");
 
 /** Each panel a part goes on, in a sentence ("left side"). */
 export const HARDWARE_PANEL_WORDS = {
@@ -89,12 +74,6 @@ export const HARDWARE_PLACE_WORDS = {
   plate: "back, centered side to side",
   // the cutlist row is the top and bottom pair: the posts go in the top only
   posts: "top only, centered side to side",
-} as const;
-/** Where the presets put each kind of part, in the same words. */
-export const HARDWARE_PRESET_WORDS = {
-  handle: `${HARDWARE_PLACE_WORDS.handle}, at the center of gravity`,
-  plate: `${HARDWARE_PLACE_WORDS.plate}, as low as is clear`,
-  posts: `${HARDWARE_PLACE_WORDS.posts}, as far back as is clear`,
 } as const;
 /**
  * A placed part's position, one pattern for every part: where it goes, then its center from each named edge of that

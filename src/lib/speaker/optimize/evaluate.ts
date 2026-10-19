@@ -20,7 +20,7 @@ import {
   speakerPurchasedParts,
   type CabinetBuild,
 } from "../speakerBuild";
-import { purchasedTotal } from "../../cutlistCsv";
+import { purchasedTotal } from "../../build/cutlistCsv";
 import {
   driverAcrossIn,
   driverHorn,
@@ -32,7 +32,7 @@ import {
 } from "../speakerLayout";
 import { chamberFitChips } from "../fitChips";
 import { keepUpChip, speakerKeepUps } from "../keepUp";
-import { KEEP_UP_SLACK_DB } from "../../pa/chips";
+import { KEEP_UP_SLACK_DB } from "../chips";
 import { LITERS_PER_CUBIC_IN } from "../../../constants/units";
 import { SPEAKER_PROBLEM } from "../../../constants/speakerOptimizer";
 import { PURCHASED_PART } from "../../../constants/purchasedParts";

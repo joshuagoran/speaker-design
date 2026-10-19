@@ -1,5 +1,5 @@
 import { StatTile } from "./StatTile";
-import { statLabel, type StatName } from "../optimizer/StatRow";
+import { statLabel, type StatName } from "./StatLabel";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /** One headline number: label, value and unit, and a stable key where labels can repeat (absent: the label). */

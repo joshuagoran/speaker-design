@@ -1,4 +1,4 @@
-// Read adapter: the PA page's design (PaPlannerDesign) as speaker specs, a stack and a space. Pure; nothing is
+// Read adapter: a PA design (PaDesign) as speaker specs, a stack and a space. Pure; nothing is
 // written.
 //
 // Stack, pole and satellite: a sub box (one vented chamber) and a mid/high box (one sealed chamber, the horn on its
@@ -13,7 +13,7 @@ import type {
   FacePoint,
   HornPlacement,
   PaLayout,
-  PaPlannerDesign,
+  PaDesign,
   DesignLayers,
   PortStyle,
   SpacePlacement,
@@ -33,12 +33,17 @@ import type {
 } from "../../types";
 import { HORN_OPTIONS, SUB_OPTIONS } from "../data";
 import { byIdOrThrow } from "../tables";
-import { STUFFING_VOLUME_GAIN, slotFinsOf, subDriverCenter, ventSpeedLimit } from "../pa/calc";
-import { modelTubeElbows } from "../pa/tubes";
-import { towerMidDims, towerSpec } from "../pa/tower";
-import { takesHornMount } from "../pa/hornMount";
-import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
-import { defaultBraceStyleNear } from "../bracing";
+import {
+  STUFFING_VOLUME_GAIN,
+  slotFinsOf,
+  subDriverCenter,
+  ventSpeedLimit,
+} from "../acoustics/boxModels";
+import { modelTubeElbows } from "../build/tubes";
+import { towerMidDims, towerSpec } from "./tower";
+import { takesHornMount } from "../build/hornMount";
+import { PA_PANEL_TARGET_HZ } from "../build/boxBracing";
+import { defaultBraceStyleNear } from "../build/bracing";
 import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
 import { NO_HANDLES } from "../../constants/hardware";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
@@ -72,7 +77,7 @@ import {
 } from "./specParts";
 
 /** The sub's round tubes as a round port: `nt` tubes of `dia`, `len` long, with the elbows the model takes. */
-const roundTubes = (cfg: PaPlannerDesign, sub: SubDriver): SpeakerPort => ({
+const roundTubes = (cfg: PaDesign, sub: SubDriver): SpeakerPort => ({
   shape: PORT_SHAPE.round,
   n: cfg.cVent.nt,
   dia: cfg.cVent.dia,
@@ -83,7 +88,7 @@ const roundTubes = (cfg: PaPlannerDesign, sub: SubDriver): SpeakerPort => ({
 });
 
 /** The sub's side ducts: `n` of them, each `throat` wide and `len` long, with their dividers. */
-const sideDucts = (cfg: PaPlannerDesign, n: 1 | 2): SpeakerPort => ({
+const sideDucts = (cfg: PaDesign, n: 1 | 2): SpeakerPort => ({
   shape: PORT_SHAPE.duct,
   n,
   throat: cfg.cVent.throat,
@@ -93,7 +98,7 @@ const sideDucts = (cfg: PaPlannerDesign, n: 1 | 2): SpeakerPort => ({
 });
 
 /** The sub's vent as a chamber's port, by port style. */
-const PA_PORTS: Record<PortStyle, (cfg: PaPlannerDesign, sub: SubDriver) => SpeakerPort> = {
+const PA_PORTS: Record<PortStyle, (cfg: PaDesign, sub: SubDriver) => SpeakerPort> = {
   // the letterbox: split by its fins (the PA rule folds it up the back wall when too long to run straight)
   slots: (cfg) => ({
     shape: PORT_SHAPE.slot,
@@ -110,7 +115,7 @@ const PA_PORTS: Record<PortStyle, (cfg: PaPlannerDesign, sub: SubDriver) => Spea
 };
 
 /** The sub box: one vented chamber at the cabinet's bottom, the sub where the 3D view puts it. */
-function subChamber(cfg: PaPlannerDesign): SpeakerChamber {
+function subChamber(cfg: PaDesign): SpeakerChamber {
   const sub = byIdOrThrow(SUB_OPTIONS, cfg.sub, CATALOG_TABLE_NAMES.subs);
   // in from the box's inside corner: to the center line, and up from the outside bottom
   const center = subDriverCenter(cfg.cDim, cfg.wall, cfg.portStyle, cfg.cVent, sub.size);
@@ -123,7 +128,7 @@ function subChamber(cfg: PaPlannerDesign): SpeakerChamber {
     vent: {
       kind: VENT_KIND.vented,
       port: PA_PORTS[cfg.portStyle](cfg, sub),
-      // the design's setting, more for flared tubes (as the PA page takes it)
+      // the design's setting, more for flared tubes (ventSpeedLimit)
       maxSpeedMs: ventSpeedLimit(cfg.portStyle, cfg.portMax),
     },
     load: DIRECT_LOAD,
@@ -142,7 +147,7 @@ function subChamber(cfg: PaPlannerDesign): SpeakerChamber {
 }
 
 /** The mid driver at a height on its chamber's baffle, centered across. */
-const midDriver = (cfg: PaPlannerDesign, yIn: number): SpeakerDriver => ({
+const midDriver = (cfg: PaDesign, yIn: number): SpeakerDriver => ({
   kind: DRIVER_KIND.mid,
   driverId: cfg.mid,
   count: 1,
@@ -152,11 +157,7 @@ const midDriver = (cfg: PaPlannerDesign, yIn: number): SpeakerDriver => ({
 });
 
 /** The compression driver on its horn, placed on the lid or in the baffle, with the lid's mount where it applies. */
-function hornDriver(
-  cfg: PaPlannerDesign,
-  placement: HornPlacement,
-  position: FacePoint,
-): SpeakerDriver {
+function hornDriver(cfg: PaDesign, placement: HornPlacement, position: FacePoint): SpeakerDriver {
   const horn = byIdOrThrow(HORN_OPTIONS, cfg.horn, CATALOG_TABLE_NAMES.horns);
   return {
     kind: DRIVER_KIND.compression,
@@ -177,7 +178,7 @@ function hornDriver(
  * holds the mid, else bare (the horn section).
  */
 const sealedChamber = (
-  cfg: PaPlannerDesign,
+  cfg: PaDesign,
   at: SpeakerChamber["at"],
   dims: SpeakerChamber["dims"],
   drivers: SpeakerChamber["drivers"],
@@ -194,15 +195,15 @@ const sealedChamber = (
   bracing: paBracing(cfg),
 });
 
-/** Each PA box's bracing: the PA page's style (the plywood's where it sets none), back joint and panel target. */
-const paBracing = (cfg: PaPlannerDesign): ChamberBracing => ({
+/** Each PA box's bracing: the design's style (the plywood's where it sets none), back joint and panel target. */
+const paBracing = (cfg: PaDesign): ChamberBracing => ({
   braceStyle: cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
   backJoint: cfg.backJoint ?? DEFAULT_BACK_JOINT,
   braceTargetHz: PA_PANEL_TARGET_HZ,
 });
 
 /**
- * The PA box's handles as a cabinet takes them: its handles where it has a model, else none (the PA page's No handles
+ * The PA box's handles as a cabinet takes them: its handles where it has a model, else none (No handles
  * keeps the dish). Every PA box has its input dish.
  */
 const paHardware = (handles: BoxHandles): Pick<SpeakerCabinet, "handles" | "inputDish"> => ({
@@ -212,11 +213,11 @@ const paHardware = (handles: BoxHandles): Pick<SpeakerCabinet, "handles" | "inpu
 
 /**
  * The plywood shell: the PA's frame with its inset baffle (an inset of 0 too), the design's panels and inset, the box's
- * `handles` (as the PA page sets them) with its input dish, and the `top` given (flat but on the tower, whose horn can
+ * `handles` (as the design sets them) with its input dish, and the `top` given (flat but on the tower, whose horn can
  * arch it); the PA boxes stand upright with sharp-edged baffles.
  */
 const paCabinet = (
-  cfg: PaPlannerDesign,
+  cfg: PaDesign,
   chambers: SpeakerCabinet["chambers"],
   handles: BoxHandles,
   top: SpeakerCabinet["top"] = CABINET_TOP.flat,
@@ -247,7 +248,7 @@ const activeBand = (
 });
 
 /** The sub band's own filter: the subsonic highpass; on the sub amp. */
-const subBand = (cfg: PaPlannerDesign, lowpass: SpeakerBand["lowpass"]) =>
+const subBand = (cfg: PaDesign, lowpass: SpeakerBand["lowpass"]) =>
   activeBand(
     SPEAKER_BAND.low,
     { highpass: { hz: cfg.hpf, type: cfg.hpType }, lowpass },
@@ -259,7 +260,7 @@ const subBand = (cfg: PaPlannerDesign, lowpass: SpeakerBand["lowpass"]) =>
  * The horn band: above the mid-to-horn crossover, `hfTilt` below the mid band, which is `midDb` below the box's top; on
  * the HF amp.
  */
-const hornBand = (cfg: PaPlannerDesign, midDb: number) =>
+const hornBand = (cfg: PaDesign, midDb: number) =>
   activeBand(
     SPEAKER_BAND.high,
     { highpass: lrFilter(cfg.xoHi, cfg.xoHiOrder), lowpass: null },
@@ -269,7 +270,7 @@ const hornBand = (cfg: PaPlannerDesign, midDb: number) =>
 
 /** One PA box as a speaker spec. */
 const paSpeaker = (
-  cfg: PaPlannerDesign,
+  cfg: PaDesign,
   design: SpecIdentity,
   part: SpeakerPart,
   cabinet: SpeakerCabinet,
@@ -284,19 +285,19 @@ const paSpeaker = (
 });
 
 /** The sub box's input range: below the crossover to the tops (its own subsonic stays in its band). */
-const subInput = (cfg: PaPlannerDesign): SpeakerSpec["input"] => ({
+const subInput = (cfg: PaDesign): SpeakerSpec["input"] => ({
   highpass: null,
   lowpass: lrFilter(cfg.xoLo, cfg.xoLoOrder),
 });
 
 /** The mid/high box's input range: above the crossover to the subs. */
-const topInput = (cfg: PaPlannerDesign): SpeakerSpec["input"] => ({
+const topInput = (cfg: PaDesign): SpeakerSpec["input"] => ({
   highpass: lrFilter(cfg.xoLo, cfg.xoLoOrder),
   lowpass: null,
 });
 
 /** The sub box of the stack, pole and satellite layouts. */
-const subSpeaker = (cfg: PaPlannerDesign, design: SpecIdentity) =>
+const subSpeaker = (cfg: PaDesign, design: SpecIdentity) =>
   paSpeaker(
     cfg,
     design,
@@ -307,7 +308,7 @@ const subSpeaker = (cfg: PaPlannerDesign, design: SpecIdentity) =>
   );
 
 /** The mid/high box: the mid in a sealed box, the horn on its lid, crossed inside the box. */
-const topSpeaker = (cfg: PaPlannerDesign, design: SpecIdentity) =>
+const topSpeaker = (cfg: PaDesign, design: SpecIdentity) =>
   paSpeaker(
     cfg,
     design,
@@ -339,7 +340,7 @@ const topSpeaker = (cfg: PaPlannerDesign, design: SpecIdentity) =>
  * Each partition is the top wall of the chamber below it (`SpeakerChamber.dims`), as `towerSpec` builds them, and the
  * top is arched where `towerSpec` arches it (a round horn narrower than the cabinet).
  */
-function towerSpeaker(cfg: PaPlannerDesign, design: SpecIdentity): SpeakerSpec {
+function towerSpeaker(cfg: PaDesign, design: SpecIdentity): SpeakerSpec {
   const horn = byIdOrThrow(HORN_OPTIONS, cfg.horn, CATALOG_TABLE_NAMES.horns);
   const tower = towerSpec(cfg.cDim, cfg.wall, horn);
   const midDims = towerMidDims(cfg.cDim);
@@ -363,7 +364,7 @@ function towerSpeaker(cfg: PaPlannerDesign, design: SpecIdentity): SpeakerSpec {
           [hornDriver(cfg, HORN_PLACEMENT.baffle, { xIn: 0, yIn: tower.hornCenter - hornFloor })],
         ),
       ],
-      // the tower's one cabinet takes the sub box's hardware (lib/pa/hardware boxTakesHardware)
+      // the tower's one cabinet takes the sub box's hardware (lib/build/hardware boxTakesHardware)
       cfg.hardware.sub,
       tower.archTop ? CABINET_TOP.arched : CABINET_TOP.flat,
     ),
@@ -388,10 +389,10 @@ function towerSpeaker(cfg: PaPlannerDesign, design: SpecIdentity): SpeakerSpec {
 /**
  * The PA design's stack: the sub with the top on it (a gap, or the pole's spacer), the top on its stand beside the sub
  * (satellite), or the tower alone. The crossover between the sub and the top is each member's. The sub's delay is
- * auto (`AUTO_DELAY`): in phase with the top's mid at the crossover, as the coverage page aligns it, the top waiting
+ * auto (`AUTO_DELAY`): in phase with the top's mid at the crossover, as the Space page aligns it, the top waiting
  * where the sub has to play early. The top sits `tilt` below the sub, as the tower's mid band does.
  */
-function paStack(cfg: PaPlannerDesign, design: SpecIdentity): StackSpec {
+function paStack(cfg: PaDesign, design: SpecIdentity): StackSpec {
   const idOf = (part: SpeakerPart) => speakerIdentity(design, part).id;
   const sub: StackMember = {
     ...stackMember(idOf(SPEAKER_PART.sub), subInput(cfg)),
@@ -420,14 +421,14 @@ function paStack(cfg: PaPlannerDesign, design: SpecIdentity): StackSpec {
   return { ...design, members: MEMBERS[cfg.layout](), notes: "" };
 }
 
-/** The coverage page's floor as the PA design's space takes it: where the stacks stand, the room and the listener. */
+/** The PA design's floor (the default coverage layout): where the stacks stand, the room and the listener. */
 export type PaFloor = Pick<
   CoverageLayout,
   "stacks" | "mirror" | "room" | "listener" | "earFt" | "targetDb" | "levelRef"
 >;
 
 /**
- * The coverage page's floor as a venue: its room, listener, ear height and target, measured where the page measures it.
+ * The PA floor as a venue: its room, listener, ear height and target, and where the target is measured.
  */
 export function paVenue(floor: PaFloor): SpaceVenue {
   const { room } = floor;
@@ -437,24 +438,20 @@ export function paVenue(floor: PaFloor): SpaceVenue {
     alignAt: roomCenter(room),
     earFt: floor.earFt,
     targetDb: floor.targetDb,
-    // as the coverage page: its target in the sub band, measured where it measures it, under the PA music balance
+    // its target in the sub band, measured where the floor says, under the PA music balance
     levelRef: floor.levelRef,
     balance: AUTO_BALANCE_MODE.moreBass,
   };
 }
 
 /**
- * The PA design read in: its speakers, its stack (`paStack`) and its space on the coverage page's floor: the stacks at
- * its spots (`stacks`, left then right; where the page mirrors them, one mirrored placement stands for both)
+ * The PA design read in: its speakers, its stack (`paStack`) and its space on the PA floor: the stacks at
+ * its spots (`stacks`, left then right; where the floor mirrors them, one mirrored placement stands for both)
  * on their plinths. Satellite places no stack: one sub on its plinth midway, and the tops on their stands at the spots,
  * each on its own input range, `tilt` under the sub as in the stack. Each band's amp power is the design's; the venue
- * is the page's room and listener (`paVenue`).
+ * is the floor's room and listener (`paVenue`).
  */
-export function layersFromPa(
-  cfg: PaPlannerDesign,
-  design: SpecIdentity,
-  floor: PaFloor,
-): DesignLayers {
+export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor): DesignLayers {
   const stack = paStack(cfg, design);
   const tower = cfg.layout === "tower";
   const speakers = tower

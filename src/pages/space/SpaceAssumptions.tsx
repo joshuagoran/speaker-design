@@ -1,6 +1,6 @@
 import { UI_TEXT } from "../../constants/uiText";
 import { AssumptionsList } from "../../components/ui/AssumptionsList";
-import { BOX_SHADOW_HZ, SINGLE_FREQ_RANGE, STATS_CLEARANCE_FT } from "../../lib/pa/coverage";
+import { BOX_SHADOW_HZ, SINGLE_FREQ_RANGE, STATS_CLEARANCE_FT } from "../../lib/acoustics/coverage";
 import { SPACE_DETAILS, SPACE_LEVEL_REF_PLACE } from "../../constants/space";
 import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
@@ -16,7 +16,7 @@ interface Props {
 }
 
 /**
- * How the Space page's map is modeled (the PA Coverage page's list, for any stacks and speakers): the levels and the
+ * How the Space page's map is modeled, for any stacks and speakers: the levels and the
  * sources the space plays, then the floor, room and summing both maps share. Folded away until opened.
  */
 export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {

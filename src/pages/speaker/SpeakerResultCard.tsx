@@ -6,7 +6,7 @@ import { SpeakerFront } from "../../components/drawings/SpeakerFront";
 import { CardFrame } from "../../components/optimizer/CardFrame";
 import { CardTile, CardTiles } from "../../components/optimizer/CardTile";
 import { Delta } from "../../components/optimizer/Delta";
-import { STATS } from "../../components/optimizer/StatRow";
+import { STATS } from "../../components/stats/StatLabel";
 import { formatDims } from "../../lib/format";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";

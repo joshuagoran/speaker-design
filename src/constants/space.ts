@@ -52,7 +52,7 @@ export const SPACE_HOME_MARGIN_FT = 4;
  */
 export const PAIR_SIDE = { left: "L", right: "R" } as const;
 
-/** The Target level a new space starts with (and Start empty, and a fill or Hi-fi preset that names none), dB SPL: as the PA planner. */
+/** The Target level a new space starts with (and Start empty, and a fill or Hi-fi preset that names none), dB SPL: as the default coverage layout. */
 export const SPACE_HOME_TARGET_DB = 105;
 
 /** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
@@ -255,7 +255,7 @@ export const SPACE_TEXT = {
   audienceAverage: "Audience average",
   audienceMax: "Audience at the limit",
   listener: "Listener",
-  /** the share of the floor at or above a level against the target (as the coverage page counts it) */
+  /** the share of the floor at or above a level against the target */
   floorAtLeast: (db: string) => `Floor ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
@@ -267,7 +267,7 @@ export const SPACE_TEXT = {
   listenerVs: "The listener against the target:",
 } as const;
 
-/** The Space page's Details fold: its own groups and lines (the room's groups come from the coverage page's list). */
+/** The Space page's Details fold: its own groups and lines (the room's groups come from pages/space/assumptionGroups). */
 export const SPACE_DETAILS = {
   map: "The map",
   mapLines: (limitHz: number) => [

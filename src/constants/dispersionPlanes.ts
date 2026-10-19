@@ -1,6 +1,6 @@
 import type { DispersionPlane } from "../types";
 
-/** The dispersion-map planes the PA stack and Hi-fi pages offer, with their names, in display order. */
+/** The dispersion-map planes the app offers, with their names, in display order. */
 export const DISPERSION_PLANES = [
   ["h", "Horizontal"],
   ["v", "Vertical"],
@@ -9,7 +9,7 @@ export const DISPERSION_PLANES = [
 /** A dispersion plane's name, as the toggle spells it. */
 export type DispersionPlaneName = (typeof DISPERSION_PLANES)[number][1];
 
-/** What a map's 0° is: the PA page's horn axis, or the Speaker and Stack pages' listening axis (the highest band's). */
+/** What a map's 0° is: the horn axis, or the Speaker and Stack pages' listening axis (the highest band's). */
 export const DISPERSION_AXIS_NAMES = {
   horn: "horn",
   listening: "listening",

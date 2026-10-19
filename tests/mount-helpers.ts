@@ -1,13 +1,20 @@
-// What the horn mount tests share (tests/horn-plate.test.ts, tests/horn-ply-mount.test.ts): the default scene with its
-// lid hardware, mesh lookups, and the samples of a horn's surface the clearance checks run on.
+// What the horn mount tests share (tests/horn-plate.test.ts, tests/horn-ply-mount.test.ts, and
+// tests/horn-mount-holes.test.ts): the default mid/high box with its lid hardware and its horn, mesh lookups, and the
+// samples of a horn's surface the clearance checks run on.
 import * as THREE from "three";
-import { buildStackScene, type Props } from "../src/components/stack-view/buildStackScene";
-import { MM_IN } from "../src/components/stack-view/geometry";
+import type { Props } from "../src/components/stack-view/buildStackScene";
+import { createSceneContext } from "../src/components/stack-view/sceneContext";
+import { buildCabinet } from "../src/components/stack-view/buildCabinet";
+import { buildHardware } from "../src/components/stack-view/buildHardware";
+import { buildHorn } from "../src/components/stack-view/buildHorn";
+import { paConeRadius } from "../src/components/stack-view/buildCone";
+import { circlePath, MM_IN } from "../src/components/stack-view/geometry";
 import { HORN_MESHES } from "../src/data/meshes";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
-import { midHardwarePlan } from "../src/lib/pa/calc";
+import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
+import { midHardwarePlan } from "../src/lib/acoustics/boxModels";
+import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "../src/constants/paLayouts";
 import { SCENE_CASE_NAMES, sceneCases } from "./scene-cases";
 import type { CompressionDriver, PaLayout, PartMesh } from "../src/types";
 
@@ -19,6 +26,9 @@ export const CLEAR_IN = 0.01;
 const SAMPLES = 12;
 /** The layouts with a lid under the driver, where a mount stands. */
 export const LID_LAYOUTS: readonly PaLayout[] = ["stack", "pole", "satellite"];
+/** A satellite column's diameter and its gap to the sub, in: the pair stands either side of the sub. */
+const SATELLITE_COLUMN_D_IN = 8,
+  SATELLITE_GAP_IN = 6;
 
 /** The default PA's scene props. */
 export const base = (() => {
@@ -27,21 +37,77 @@ export const base = (() => {
   return c.props;
 })();
 
-/** The scene with the mid box's hardware (its horn posts and input dish on the lid and back) drawn too. */
-export function scene(props: Partial<Props>) {
+/**
+ * The mid/high box (one, or a satellite pair) with its lid hardware (horn posts and input dish) and its horn and driver
+ * on the lid, where each layout puts it. A tower's horn sits in the tower's own section, where no mount stands. With
+ * `lidHardware` false the lid is bare.
+ */
+export function scene(props: Partial<Props>, { lidHardware = true } = {}) {
   const p = { ...base, ...props };
-  const midHardware = midHardwarePlan(
-    p.mid.box,
-    p.wall ?? DEFAULT_PA.wall,
-    p.inset ?? DEFAULT_PA.inset,
-    p.mid,
-    p.layout,
-    undefined,
-    DEFAULT_HARDWARE.mid,
-  );
-  const g = buildStackScene({ ...p, midHardware });
-  g.updateMatrixWorld(true);
-  return g;
+  const wall = p.wall ?? DEFAULT_PA.wall,
+    inset = p.inset ?? DEFAULT_PA.inset;
+  const ctx = createSceneContext({
+    wall,
+    inset,
+    cabFinish: p.cabFinish ?? DEFAULT_PA.cabFinish,
+    baffleColor: p.baffleColor,
+    cutaway: p.cutaway,
+    horn: p.horn,
+    hornColor: p.hornColor,
+  });
+  const box = p.mid.box,
+    subTop = p.plinth + p.sub.box.h;
+  if (p.layout === "tower") {
+    // the horn in a section of the tower's width (its size doesn't matter here: a tower's horn takes no mount)
+    buildHorn(ctx, {
+      horn: p.horn,
+      cd: p.cd,
+      y: subTop,
+      mount: p.sub.box,
+      tower: {
+        cy: subTop - p.horn.size.h / 2,
+        width: p.sub.box.w - 2 * wall,
+        sectionH: p.horn.size.h,
+      },
+    });
+  } else {
+    const satX = p.sub.box.w / 2 + SATELLITE_COLUMN_D_IN / 2 + SATELLITE_GAP_IN;
+    const y =
+      p.layout === "satellite"
+        ? SATELLITE_COLUMN_H_IN
+        : p.layout === "pole"
+          ? subTop + (p.spacerH ?? DEFAULT_PA.spacerH)
+          : subTop + MID_GAP_IN;
+    const xs = p.layout === "satellite" ? [-satX, satX] : [0];
+    const plan = midHardwarePlan(
+      box,
+      wall,
+      inset,
+      p.mid,
+      p.layout,
+      undefined,
+      DEFAULT_HARDWARE.mid,
+    );
+    for (const x of xs) {
+      buildCabinet(ctx, {
+        dims: box,
+        baffleHoles: [circlePath(0, 0, paConeRadius(p.mid.size))],
+        y,
+        x,
+      });
+      if (plan && lidHardware) buildHardware(ctx, { plan, box, y, x, parent: ctx.group });
+    }
+    buildHorn(ctx, {
+      horn: p.horn,
+      cd: p.cd,
+      y: y + box.h,
+      xs,
+      mount: box,
+      hornMount: p.hornMount,
+    });
+  }
+  ctx.group.updateMatrixWorld(true);
+  return ctx.group;
 }
 
 export const meshesNamed = (group: THREE.Group, name: string) => {
@@ -117,8 +183,19 @@ export const meshed = Object.entries(HORN_MESHES).flatMap(([id, mesh]) => {
 export const meshedFor = (cd: Pick<CompressionDriver, "exit">) =>
   meshed.filter(({ horn }) => horn.exit === cd.exit);
 
-/** Every horn the driver bolts straight to, with every driver that fits its throat. */
-export const bolted = HORN_OPTIONS.filter((h) => !h.adapter).map((horn) => ({
-  horn,
-  cds: CD_OPTIONS.filter((c) => c.exit === horn.exit),
-}));
+/** The smallest and the largest driver by body diameter (one when they are the same driver). */
+export function sizeEnds(cds: readonly CompressionDriver[]): CompressionDriver[] {
+  if (!cds.length) return [];
+  const bySize = [...cds].sort((a, b) => a.body.dia - b.body.dia || a.body.depth - b.body.depth);
+  const [smallest, largest] = [bySize[0], bySize[bySize.length - 1]];
+  return smallest === largest ? [smallest] : [smallest, largest];
+}
+
+/**
+ * Every horn the driver bolts straight to, with every driver that fits its throat, and of those the smallest and the
+ * largest (the scene checks build only these two).
+ */
+export const bolted = HORN_OPTIONS.filter((h) => !h.adapter).map((horn) => {
+  const cds = CD_OPTIONS.filter((c) => c.exit === horn.exit);
+  return { horn, cds, ends: sizeEnds(cds) };
+});

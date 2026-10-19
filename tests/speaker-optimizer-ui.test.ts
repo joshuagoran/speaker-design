@@ -9,8 +9,6 @@ import { evaluateSpeaker } from "../src/lib/speaker/optimize/evaluate";
 import { driverRef } from "../src/lib/speaker/optimize/space";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import {
-  loadedSpec,
-  speakerOptimizerView,
   useSpeakerOptimizer,
   type SpeakerOptimizer,
 } from "../src/pages/speaker/useSpeakerOptimizer";
@@ -159,31 +157,6 @@ test("Load keeps your spec's id and name; clearing the results (the spec replace
   assert.equal(after.current.id, "saved-1");
   assert.equal(after.current.name, "My speaker");
   assert.equal(after.current.cabinet, card.spec.cabinet, "the card's design");
-});
-
-test("stale cards: a design edit after the search; Undo ends with a design edit after a load", () => {
-  const ran = { from: spec, result: searched };
-  const edited = (s: SpeakerSpec): SpeakerSpec => ({
-    ...s,
-    bands: s.bands.map((b, i) => (i ? b : { ...b, levelDb: b.levelDb - 1 })),
-  });
-  const renamed = (s: SpeakerSpec): SpeakerSpec => ({ ...s, name: `${s.name} 2` });
-  const view = speakerOptimizerView;
-  assert.deepEqual(view(null, null, spec), { result: null, stale: false, canUndo: false });
-  assert.equal(view(ran, null, spec).result, searched, "the result shows");
-  assert.equal(view(ran, null, spec).stale, false, "on the design searched");
-  assert.equal(view(ran, null, renamed(spec)).stale, false, "a new name changes no design");
-  assert.equal(view(ran, null, edited(spec)).stale, true, "an edit after the search");
-  // a card loaded: Undo and the cards hold until the design is edited
-  const loaded = loadedSpec(cards[0], spec);
-  const undo = { before: spec, loaded };
-  assert.deepEqual(view(ran, undo, loaded), { result: searched, stale: false, canUndo: true });
-  assert.equal(view(ran, undo, renamed(loaded)).canUndo, true, "a rename keeps Undo");
-  assert.deepEqual(view(ran, undo, edited(loaded)), {
-    result: searched,
-    stale: true,
-    canUndo: false,
-  });
 });
 
 test("driver locks hold their driver: a driver added or removed drops them, never moves them", () => {

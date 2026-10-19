@@ -1,4 +1,4 @@
-// Sub cabinet shapes for the PA planner. Dimensions are outer inches per sub size (dims[18], dims[15]).
+// Sub cabinet shapes for the PA designs. Dimensions are outer inches per sub size (dims[18], dims[15]).
 // To add one, append to the table; the compiler checks the shape (Cabinet in src/types.ts): vents lists the vent
 // kinds it offers (VentKind), vent an optional fixed slot {slotH, len} in.
 import type { Cabinet } from "../../types";

@@ -1,19 +1,18 @@
 // The Stack and Space pages' starts (src/pages/stack/stackPresets): the PA presets in each layout and the Hi-fi pair,
-// read in as speakers, a stack and a space. A PA start keeps the PA page's music balance in its band Levels
+// read in as speakers, a stack and a space. A PA start keeps the PA music balance in its band Levels
 // (lib/speaker/paBalance), the highest 0 dB, every member and placement at 0 dB; the space plays each band at that
 // balance (tests/space-coverage.test.ts). The presets' Levels are saved data (src/data/presets/pa-band-levels.ts).
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { STACK_PRESETS, presetLayers } from "../src/pages/stack/stackPresets";
-import { paBalancedLayers, paBandLevels, type PaBandLevels } from "../src/lib/speaker/paBalance";
+import { type PaBandLevels } from "../src/lib/speaker/paBalance";
 import { PA_PRESET_BAND_LEVELS } from "../src/data/presets/pa-band-levels";
 import { presetLevels } from "./preset-levels";
-import { DRIVER_KIND } from "../src/constants/speakerSpec";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { SPEAKER_BAND } from "../src/constants/speakerSpec";
@@ -91,27 +90,6 @@ test("stack starts: a PA preset is the PA design read in with its saved Levels i
 
 test("stack starts: the saved preset Levels are what the balance gives now (else run vp run preset-levels)", () => {
   assert.deepStrictEqual(PA_PRESET_BAND_LEVELS, presetLevels());
-});
-
-test("stack starts: a design the page can't balance in every band keeps the adapter's Levels in all of them", () => {
-  const cfg = defaultPaDesign();
-  const read = layersFromPa(cfg, ID, DEFAULT_COVERAGE_LAYOUT);
-  // the horn band stays in the spec, but no driver plays it: the stack has no level for it
-  const stubbed: DesignLayers = {
-    ...read,
-    speakers: read.speakers.map((s) => ({
-      ...s,
-      cabinet: {
-        ...s.cabinet,
-        chambers: s.cabinet.chambers.map((c) => ({
-          ...c,
-          drivers: c.drivers.filter((d) => d.kind !== DRIVER_KIND.compression),
-        })),
-      },
-    })),
-  };
-  assert.equal(paBandLevels(cfg, stubbed), null);
-  assert.deepStrictEqual(paBalancedLayers(cfg, stubbed), stubbed);
 });
 
 test("stack starts: the Hi-fi pair reads in through its adapter", () => {

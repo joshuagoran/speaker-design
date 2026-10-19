@@ -5,11 +5,6 @@
   "scripts": {
     "build": "sh build/build.sh pages",
     "test": "vp test",
-    "golden": "vp test --run --config tests/update-golden.config.ts",
-    "optimizer-dump": "vp test --run --config tests/optimizer-dump.config.ts",
-    "optimizer-dump:pa": "vp test --run --config tests/optimizer-dump.config.ts --project \"pa-*\"",
-    "optimizer-dump:hifi": "vp test --run --config tests/optimizer-dump.config.ts --project \"hifi-*\"",
-    "optimizer-snapshot": "vp test --run --config tests/optimizer-snapshot.config.ts",
     "speaker-optimizer-snapshot": "vp test --run --config tests/speaker-optimizer-snapshot.config.ts",
     "stack-optimizer-snapshot": "vp test --run --config tests/stack-optimizer-snapshot.config.ts",
     "slot-inner-end": "vp test --run --config tests/update-slot-inner-end.config.ts",
@@ -17,6 +12,7 @@
     "handle-mesh": "node build/handle-mesh.mjs",
     "horn-mesh": "node build/horn-mesh.mjs",
     "xmax-audit": "vp test --run --config tests/xmax-audit.config.ts",
+    "dead-exports": "node tools/dead-exports.mjs",
     "prepare": "vp config"
   },
   "dependencies": {

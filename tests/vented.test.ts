@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxModel, butterworth, closedBox } from "../src/lib/pa/calc";
+import { boxModel, butterworth, closedBox } from "../src/lib/acoustics/boxModels";
 import { SUB_OPTIONS } from "../src/lib/data";
 import type { BoxModelTS } from "../src/types";
 import { tsModel, massLineSPL, helmholtz, near, close, rel, LR24_ORDERS } from "./helpers";

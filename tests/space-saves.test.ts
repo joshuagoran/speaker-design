@@ -2,12 +2,13 @@
 // space, with the same model; a mirrored pair is one placement; the hardware numbers its channels.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { homeVenue } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
-import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { ampPowerGroups, channelGroups, withAmpPower } from "../src/lib/speaker/spaceHardware";
 import {
   emptySpace,

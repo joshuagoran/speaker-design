@@ -23,7 +23,7 @@ import { frontChamber, throatCones } from "../src/lib/speaker/hornThroat";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
-import { panelLbPerSqFt } from "../src/lib/panel";
+import { panelLbPerSqFt } from "../src/lib/build/panel";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import { frontLoadedOf, roomOf } from "./horn-room";
 import type { SpeakerChamber, SpeakerSpec } from "../src/types";

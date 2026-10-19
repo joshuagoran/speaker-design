@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { startCutlistLayout } from "../lib/pa/runCutlist";
+import { startCutlistLayout } from "../lib/build/runCutlist";
 import type { CutlistLayout, CutlistRequest } from "../types";
 
 /**

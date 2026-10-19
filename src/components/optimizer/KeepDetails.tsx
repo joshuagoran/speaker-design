@@ -3,7 +3,7 @@ import { DetailsDropdown } from "../ui/DetailsDropdown";
 
 interface Props {
   lines: readonly string[];
-  /** more lines after a gap: on the PA page, what Improve and Fully optimize search */
+  /** more lines after a gap */
   more?: readonly string[];
 }
 

@@ -28,7 +28,7 @@ const CHIP_TITLE_CLASSES = {
   bad: "text-red-700",
 };
 
-/** Stack of warning chips, each `[status, heading, text, id]` as returned by subChips, midChips, hornChips, fillChips and hifiChips. */
+/** Stack of warning chips, each `[status, heading, text, id]` as the pages' chip lists return them. */
 export function WarningChips({ chips, tips, row }: Props) {
   if (row !== undefined)
     return (

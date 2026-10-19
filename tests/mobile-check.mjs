@@ -3,13 +3,10 @@
 // Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary).
 // Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors, and any
 // request outside the page: everything is bundled in, so the page must work with the network blocked.
-// Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
-// checked here and on a desktop window.
 // On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { GOAL_SHORT_NAMES } from "../src/constants/optimizerText.ts";
-import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
@@ -39,7 +36,7 @@ const views = ["", "#speaker", "#speaker-cutlist", "#stack", "#stack-cutlist", "
 const failures = [];
 
 // Everything the check measures, evaluated in the page.
-const measure = (ids) => {
+const measure = () => {
   const vis = (e) => {
     const r = e.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden";
@@ -62,32 +59,11 @@ const measure = (ids) => {
       (e) =>
         `"${e.previousElementSibling.textContent.slice(0, 40)}" ${Math.round(e.getBoundingClientRect().width)}px`,
     );
-  // detail-row captions: the text itself (not its box, which an overflowing line runs past) must end inside the row
-  // and start right of the label
-  const notes = [...document.querySelectorAll(`[data-testid="${ids.note}"]`)].filter(vis);
-  const captions = notes
-    .map((e) => {
-      const row = e.closest(`[data-testid="${ids.row}"]`);
-      const label = row?.firstElementChild;
-      if (!row || !label) return `"${e.textContent.slice(0, 40)}" outside a detail row`;
-      const range = document.createRange();
-      range.selectNodeContents(e);
-      const text = range.getBoundingClientRect();
-      const cell = row.getBoundingClientRect();
-      if (text.right > cell.right + 0.5)
-        return `"${e.textContent.slice(0, 40)}" ends ${Math.round(text.right - cell.right)}px past its cell`;
-      if (text.left < label.getBoundingClientRect().right - 0.5)
-        return `"${e.textContent.slice(0, 40)}" overlaps its label`;
-      return null;
-    })
-    .filter(Boolean);
   return {
     sw: document.documentElement.scrollWidth,
     iw: innerWidth,
     small,
     squeezed,
-    notes: notes.length,
-    captions,
   };
 };
 
@@ -124,12 +100,11 @@ for (const size of sizes) {
     continue;
   }
   const check = async (label) => {
-    const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
+    const m = await p.evaluate(measure);
     if (m.sw > m.iw)
       failures.push(`${size.name} ${label}: page scrolls sideways (${m.sw} > ${m.iw} px)`);
     for (const s of m.small) failures.push(`${size.name} ${label}: small touch target ${s}`);
     for (const s of m.squeezed) failures.push(`${size.name} ${label}: chip text squeezed ${s}`);
-    for (const s of m.captions) failures.push(`${size.name} ${label}: detail caption ${s}`);
     return m;
   };
   for (const v of views) {
@@ -156,11 +131,10 @@ for (const size of sizes) {
   await p.goto("https://speaknow.test/notes/");
   await p.waitForFunction(() => document.querySelector("nav a"), null, { timeout: 30000 });
   await p.waitForTimeout(600);
-  const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
+  const m = await p.evaluate(measure);
   if (m.sw > m.iw)
     failures.push(`${size.name} /notes: page scrolls sideways (${m.sw} > ${m.iw} px)`);
   for (const t of m.small) failures.push(`${size.name} /notes: small touch target ${t}`);
-  for (const t of m.captions) failures.push(`${size.name} /notes: detail caption ${t}`);
   if (!(await p.locator("h2").count()))
     failures.push(`${size.name} /notes: the Notes page is not shown`);
   if (await p.locator("nav a", { hasText: /^Notes$/ }).count())
@@ -169,8 +143,7 @@ for (const size of sizes) {
   await ctx.close();
 }
 
-// Detail-row captions and page errors on desktop windows, every view (sections fold on phones only, so all are open
-// here).
+// Page errors on desktop windows, every view (sections fold on phones only, so all are open here).
 for (const width of [1024, 1600]) {
   const name = `desktop ${width}`;
   const ctx = await browser.newContext({ viewport: { width, height: 900 } });
@@ -184,8 +157,6 @@ for (const width of [1024, 1600]) {
       location.hash = h;
     }, v);
     await p.waitForTimeout(600);
-    const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
-    for (const s of m.captions) failures.push(`${name} ${v || "(no hash)"}: detail caption ${s}`);
   }
   for (const e of errs) failures.push(`${name}: page error: ${e}`);
   await ctx.close();

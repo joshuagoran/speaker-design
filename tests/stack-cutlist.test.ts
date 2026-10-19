@@ -1,8 +1,8 @@
-// The Stack page's Cutlist tab (lib/speaker/stackBuild) on the PA presets against the PA page's cutlist (lib/pa/calc
-// cutParts): the same pieces, so the same sheets, with each member's boxes tagged apart.
+// The Stack page's Cutlist tab (lib/speaker/stackBuild) on the PA presets against the PA box models' cutlist
+// (lib/acoustics/boxModels cutParts): the same pieces, so the same sheets, with each member's boxes tagged apart.
 import { describe, expect, test } from "vite-plus/test";
-import { cutParts } from "../src/lib/pa/calc";
-import { layoutCutlist, CUTLIST_DEFAULTS } from "../src/lib/pa/cutlist";
+import { cutParts } from "../src/lib/acoustics/boxModels";
+import { layoutCutlist, CUTLIST_DEFAULTS } from "../src/lib/build/cutlist";
 import { stackCutParts } from "../src/lib/speaker/stackBuild";
 import { presetLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
@@ -11,7 +11,7 @@ import { STACK_PRESET } from "../src/constants/stackPresets";
 import { cutBoxName, cutBoxTag } from "../src/constants/cutParts";
 import type { CornerJoint, CutPart, CutlistSettings, PaLayout } from "../src/types";
 
-/** The presets whose boxes the PA page cuts as the speakers do (the tower's mid chamber takes the rule's braces too). */
+/** The presets whose boxes the PA box models cut as the speakers do (the tower's mid chamber takes the rule's braces too). */
 const PRESETS = [
   [STACK_PRESET.paStack, "stack"],
   [STACK_PRESET.paPole, "pole"],
@@ -30,7 +30,7 @@ function pieces(parts: readonly CutPart[]) {
 
 const SETTINGS: CutlistSettings = { ...CUTLIST_DEFAULTS, joint: "butt", sheet: "4x8", stacks: 1 };
 
-describe("Stack cutlist: the PA presets cut as the PA page cuts them", () => {
+describe("Stack cutlist: the PA presets cut as the PA box models cut them", () => {
   for (const [preset, layout] of PRESETS)
     for (const joint of ["butt", "rabbet", "miter"] as const satisfies readonly CornerJoint[])
       test(`${preset} (${joint})`, () => {

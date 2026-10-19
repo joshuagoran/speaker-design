@@ -5,10 +5,6 @@ import { describe, expect, test } from "vite-plus/test";
 import { HORN_RAW } from "../src/data/catalog/horns";
 import { HORN_MESHES } from "../src/data/meshes";
 import { HIFI_WAVEGUIDES, HORN_OPTIONS, sortedByName, waveguideSpecOf } from "../src/lib/data";
-import { compareDrivers } from "../src/lib/pa/compareDrivers";
-import { paSearchDesign } from "../src/lib/pa/optimize";
-import { paCurrent } from "./optimizer-dump-cases";
-
 const hifiOnly = HORN_RAW.filter((h) => h.scope === "hifi");
 const hifiIds = new Set(hifiOnly.map((h) => h.id));
 
@@ -76,12 +72,5 @@ describe("the scope flag", () => {
     );
     // the PA's 1-inch waveguides stay on the Hi-fi list too
     expect(HIFI_WAVEGUIDES.some((h) => !hifiIds.has(h.id))).toBe(true);
-  });
-
-  test("the PA driver comparison never offers one", () => {
-    const cur = paSearchDesign({ cur: paCurrent("lil block stack") });
-    const rows = compareDrivers(cur, "horn", { maxLb: 125, budget: 1100 });
-    expect(rows.length).toBe(HORN_OPTIONS.length);
-    expect(rows.some((r) => hifiIds.has(r.id))).toBe(false);
   });
 });

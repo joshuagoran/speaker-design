@@ -1,11 +1,7 @@
 import * as THREE from "three";
 import { roundedRectShape, roundedRectPath, circlePath } from "./geometry";
-import { buildCabinet } from "./buildCabinet";
-import { buildCone, paConeRadius } from "./buildCone";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
-import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
-import { towerSpec } from "../../lib/pa/tower";
-import { modelTubeElbows, subTubeLegs } from "../../lib/pa/tubes";
+import { modelTubeElbows, subTubeLegs } from "../../lib/build/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import {
   ductDividerIn,
@@ -14,24 +10,11 @@ import {
   slotFinIn,
   maxStraightSlotIn,
   slotFolds,
-} from "../../lib/pa/calc";
+} from "../../lib/acoustics/boxModels";
 import type { SceneContext } from "./sceneContext";
-import type { Props } from "./buildStackScene";
-import { subVentOpenings, subVentPlan, type SubVentPlan } from "../../lib/pa/subVentPlan";
-import type {
-  BoxBracing,
-  BoxHardwarePlan,
-  BoxKeepOut,
-  Dims3,
-  Horn,
-  MidDriver,
-  PortStyle,
-  SubDriver,
-} from "../../types";
-import { buildBraces, buildDriverBody, VENT_MESH_NAME } from "./buildBraces";
-import { buildHardware } from "./buildHardware";
-import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
-
+import { subVentOpenings, type SubVentPlan } from "../../lib/build/ventPlan";
+import type { Dims3, SubDriver } from "../../types";
+import { VENT_MESH_NAME } from "./buildBraces";
 /**
  * The sub vent's openings in the baffle: the round tubes' mouths, or the side ducts' full-height mouths against the side
  * walls; in the baffle's coordinates, the box's center line at `x`, its bottom at `plinth` and the baffle's center at
@@ -48,97 +31,6 @@ export function subVentHoles(
       ? circlePath(x + o.x, pl + o.y - baffleCy, o.r)
       : roundedRectPath(x + o.x, pl + o.y - baffleCy, o.w, o.h, o.corner),
   );
-}
-
-/**
- * The sub column: the plinth, the cabinet with its driver and vent cutouts, and the ducts or port tubes behind the baffle.
- * With `tower` the cabinet carries the mid and horn sections above the sub, on one shell and one baffle.
- * Returns the y of the sub's top, the z of the baffle face and the group everything went into.
- */
-export function buildSubwoofer(
-  ctx: SceneContext,
-  {
-    sub,
-    box,
-    portStyle,
-    portGeom,
-    plinth,
-    tower,
-    bracing,
-    keepOut,
-    hardware,
-  }: {
-    sub: Pick<SubDriver, "size" | "depthIn">;
-    /** the box's handles and input dish (lib/pa/hardware), on its faces */
-    hardware?: BoxHardwarePlan;
-    box: Dims3;
-    /** the sub box's braces and ribs (lib/bracing), drawn inside it */
-    bracing?: BoxBracing;
-    /** what the braces keep clear of (lib/pa/calc subKeepOut): its driver is drawn in the cutaway */
-    keepOut?: BoxKeepOut;
-    portStyle: PortStyle;
-    portGeom?: Props["portGeom"];
-    plinth: number;
-    tower?: { mid: Pick<MidDriver, "size">; horn: Horn };
-  },
-): { top: number; baffleZ: number; group: THREE.Group } {
-  const T = ctx.wall;
-  const subGroup = new THREE.Group();
-  ctx.group.add(subGroup);
-  const vent = subVentPlan(sub, box, portStyle, portGeom, T);
-  const { vSlot, sides, tubes, bandH, vThroat } = vent;
-  const s = box;
-  const pl = plinth || 0;
-  // plinth / toe-kick, inset so the column appears to float
-  if (pl > 0) {
-    const p = new THREE.Mesh(new THREE.BoxGeometry(s.w - 3, pl, s.d - 3), ctx.materials.wood);
-    p.position.set(0, pl / 2, 0);
-    subGroup.add(p);
-  }
-  const drvR = paConeRadius(sub.size);
-  // Tower: one shell and one continuous baffle; sections are divided internally.
-  const { archTop, extH } = tower ? towerSpec(s, T, tower.horn) : { archTop: false, extH: 0 };
-  const baffleH = s.h + extH - 2 * T - bandH;
-  const baffleCy = pl + T + bandH + baffleH / 2; // absolute center of the baffle
-  // centered when symmetric; bottom slots: centered in the baffle above the duct (sub section only in a tower)
-  const drvAbsY = tubes
-    ? pl + T + tubes.driver.y
-    : vSlot
-      ? pl + s.h / 2
-      : pl + T + bandH + (s.h - 2 * T - bandH) / 2;
-  // a single side duct pushes the driver into the middle of the remaining baffle
-  const drvX = sides.length === 1 && vSlot ? (-sides[0] * (vThroat + 0.43 + T)) / 2 : 0;
-  const holes = [
-    circlePath(drvX, drvAbsY - baffleCy, drvR),
-    ...subVentHoles(vent, s, T, { x: 0, plinth: pl, baffleCy }),
-  ];
-  if (tower)
-    holes.push(
-      ...towerBaffleHoles(ctx, { box: s, plinth: pl, mid: tower.mid, horn: tower.horn, baffleCy }),
-    );
-  const subZ = buildCabinet(ctx, {
-    dims: { w: s.w, h: s.h + extH, d: s.d },
-    baffleHoles: holes,
-    y: pl,
-    archTop,
-    baffleBottom: bandH,
-    parent: subGroup,
-  }).baffleZ;
-  if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, horn: tower.horn, parent: subGroup });
-  if (bracing) buildBraces(ctx, { bracing, box: s, y: pl, parent: subGroup });
-  if (hardware) buildHardware(ctx, { plan: hardware, box: s, y: pl, parent: subGroup });
-  if (keepOut)
-    buildDriverBody(ctx, {
-      keepOut,
-      box: s,
-      y: pl,
-      parent: subGroup,
-      clearance: DRIVER_CLEARANCE_IN,
-    });
-  buildSubVent(ctx, vent, { sub, box: s, plinth: pl, baffleZ: subZ, parent: subGroup });
-  buildCone(ctx, { r: drvR, y: drvAbsY, z: subZ, x: drvX, parent: subGroup });
-  buildSubSlotShelf(ctx, vent, { box: s, plinth: pl, parent: subGroup });
-  return { top: pl + s.h, baffleZ: subZ, group: subGroup };
 }
 
 /**
@@ -261,7 +153,7 @@ export function buildSubVent(
     const elbow = (c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3) =>
       addElbow(tube, bend, c, ax, ay);
     // a quarter-round flare whose lip is the mouth `at`, opening along `dir`: inside the tube's length, as the model
-    // counts it (its run is part of the centerline, lib/pa/tubes flareShortfall)
+    // counts it (its run is part of the centerline, lib/build/tubes flareShortfall)
     const bell = (at: THREE.Vector3, dir: THREE.Vector3) => {
       const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);

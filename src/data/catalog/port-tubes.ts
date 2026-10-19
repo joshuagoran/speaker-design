@@ -2,7 +2,7 @@
 // Each entry is a tube count (`nt`) and the tube's inside diameter in inches (`dia`), smallest total area first; the
 // search keeps the first that doesn't limit, so keep the order by area when adding one. The compiler checks the shape
 // (PortTubeSet in src/types.ts). The rectangular vents are ply ducts, not stock parts: their sizes stay in the search.
-// Every size here has its pipe in PORT_PIPES below; the planner's tube sliders run over what this table holds.
+// Every size here has its pipe in PORT_PIPES below; the tube sliders run over what this table holds.
 import type { PortElbow, PortPipe, PortTubeSet } from "../../types";
 
 export const PORT_TUBES: readonly PortTubeSet[] = [
@@ -99,7 +99,7 @@ export const PORT_PIPES: readonly PortPipe[] = [
 ];
 
 /**
- * The 90° elbow for each tube size (Spears Sch 40 socket 90°, part 406-0xx). The fold rule (lib/tubeFold) takes a leg
+ * The 90° elbow for each tube size (Spears Sch 40 socket 90°, part 406-0xx). The fold rule (lib/build/tubeFold) takes a leg
  * past an elbow as at least a diameter, about a short-radius fitting's center-to-socket-face length.
  */
 export const PORT_ELBOWS: readonly PortElbow[] = [

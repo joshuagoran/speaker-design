@@ -1,5 +1,5 @@
 // Firebase for the GitHub Pages build, bundled from npm (the modular SDK) instead of the compat scripts from Google's CDN.
-// It exposes the small surface the planner's config store uses, in the shape of the claude.ai artifact database:
+// It exposes the small surface the app's config store uses, in the shape of the claude.ai artifact database:
 // collection(path).orderBy(field, dir).limit(n).onSnapshot(next, error), collection(path).doc(id?).set(data) / .delete().
 import { initializeApp, type FirebaseOptions } from "firebase/app";
 import {

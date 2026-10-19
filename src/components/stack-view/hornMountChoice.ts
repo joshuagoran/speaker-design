@@ -1,7 +1,7 @@
 // The horn mount a driver bolted straight to its horn on a lid shows: the plywood mount only when the driver's bolts fit
 // it, else the aluminum plate; the plate, when no bolt can pass through it, gives way to the clamped L-bracket. The 3D
-// view draws the same (buildHorn), so the setting and the summaries show what it draws. The PA page's Build settings
-// and the Speaker page's driver settings read it.
+// view draws the same (buildHorn), so the setting and the summaries show what it draws. The Speaker page's driver
+// settings read it.
 import { plyMountFit } from "./buildPlyMount";
 import { plateFit } from "./buildPlate";
 import {

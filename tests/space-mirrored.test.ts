@@ -3,19 +3,19 @@
 // presets and templates that set it.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { spacePlacement } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
-import { spaceModel } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { spaceAlignment } from "../src/lib/speaker/spaceAlignment";
 import { speakerFromFill } from "../src/lib/speaker/fillSpec";
 import { presetLayers } from "../src/pages/stack/stackPresets";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
 import { withBoxAimed, withBoxMoved } from "../src/pages/space/useSpace";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { DEFAULT_FILL, DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";

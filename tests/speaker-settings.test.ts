@@ -14,7 +14,7 @@ import {
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { bracingTaken, shellBackJoint } from "../src/lib/speaker/chamberBracing";
-import { withoutDish } from "../src/lib/pa/hardware";
+import { withoutDish } from "../src/lib/build/hardware";
 import { NO_HANDLES } from "../src/constants/hardware";
 import { GLUED_BACK, NO_BRACING } from "../src/constants/bracing";
 import { CABINET_TOP, CHAMBER_LOAD, VENT_KIND } from "../src/constants/speakerSpec";

@@ -33,7 +33,7 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
-import { HIFI_PASSIVES_BY_SIZE } from "../../lib/hifi/hifiDriverLists";
+import { HIFI_PASSIVES_BY_SIZE } from "../../lib/speaker/driverLists";
 import {
   CHAMBER_LOAD_NAMES,
   SPEAKER_TEXT,
@@ -124,20 +124,20 @@ import {
 import { CD_OPTIONS, hornById } from "../../lib/data";
 import { hornMountChoice } from "../../components/stack-view/hornMountChoice";
 import { HornMountField } from "../../components/ui/HornMountField";
-import { takesHornMountAt } from "../../lib/pa/hornMount";
+import { takesHornMountAt } from "../../lib/build/hornMount";
 import { HORN_MOUNT_DEFAULT } from "../../constants/hornMount";
 import { UI_TEXT } from "../../constants/uiText";
 import { Notice } from "../../components/ui/Notice";
 import { formatHz, formatInches } from "../../lib/format";
 import { mismatchedHornExit } from "../../lib/speaker/driverParts";
-import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
+import { PANEL_NOMINAL_OPTIONS } from "../../lib/build/panel";
 import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
 import { withSlotKind, withSlotPlace } from "../../lib/speaker/slotPort";
 import { FILL_LEVEL_PCT, SPEAKER_STEPS } from "../../constants/speakerSteps";
-import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/pa/calc";
+import { maxSlotFins, slotFinsOf, slotFolds } from "../../lib/acoustics/boxModels";
 import { stuffedLiters, tubeDriverOf } from "../../lib/speaker/chamberAir";
-import { ELBOW_COUNTS, elbowCountOf } from "../../lib/tubeFold";
-import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { ELBOW_COUNTS, elbowCountOf } from "../../lib/build/tubeFold";
+import { PA_PANEL_TARGET_HZ } from "../../lib/build/boxBracing";
 import { fillBracingSummary, fillLevelOf, driverSummary, ventSummary } from "./settingsSummaries";
 import { atXForOffset, atYForOffset, chamberOffset } from "./chamberPlace";
 

@@ -1,8 +1,8 @@
 // The Speaker page's Details fold: every note on its charts and tiles, as short bullets grouped by chart (the response,
 // the maximum output, the price, the bracing and weight, the views and the checks). Built from the build and the views.
 import { SPEAKER_DETAILS_TEXT as T } from "../../constants/speakerResults";
-import { braceNoteLines } from "../../lib/bracingNotes";
-import { braceShortfalls, strengthShortfalls } from "../../lib/bracing";
+import { braceNoteLines } from "../../lib/build/bracingNotes";
+import { braceShortfalls, strengthShortfalls } from "../../lib/build/bracing";
 import { formatHz } from "../../lib/format";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { bracingText } from "./speakerText";

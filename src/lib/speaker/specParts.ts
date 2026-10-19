@@ -19,8 +19,8 @@ import type {
 } from "../../types";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { GLUED_BACK } from "../../constants/bracing";
-import { defaultBraceStyleNear } from "../bracing";
-import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
+import { defaultBraceStyleNear } from "../build/bracing";
+import { PA_PANEL_TARGET_HZ } from "../build/boxBracing";
 import {
   AUTO_DELAY,
   CABINET_CONSTRUCTION,

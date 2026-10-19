@@ -7,7 +7,7 @@ interface Props {
   items: readonly SummaryItem[];
 }
 
-/** A sticky strip of headline figures, shown on phones only: the PA page's sub figures, the Stack page's stack figures. */
+/** A sticky strip of headline figures, shown on phones only: the Stack page's stack figures. */
 export function SummaryStrip({ items }: Props) {
   return (
     <div

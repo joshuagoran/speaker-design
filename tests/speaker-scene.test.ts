@@ -1,9 +1,9 @@
 // The Speaker page's 3D scene of any speaker spec (stack-view/buildSpeakerScene), built from the read adapters' specs of
-// golden PA and Hi-fi designs (the PA sub, the mid/high box, the tower, a Hi-fi speaker on a waveguide, a coaxial):
+// saved and synthetic PA designs and Hi-fi designs (the PA sub, the mid/high box, the tower, a Hi-fi speaker on a waveguide, a coaxial):
 // each chamber, driver, horn and port where the spec and its layout (lib/speaker/speakerLayout) put them, the walls the
 // tower's chambers share, a horn-loaded chamber's mouth and flare, and every geometry the build makes reachable from the
 // scene (the 3D view frees what it can reach: stack-view/SceneView3D).
-import { PA_FLOOR } from "./speaker-cases";
+import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { describe, expect, test, vi } from "vite-plus/test";
 import * as THREE from "three";
 import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
@@ -36,13 +36,9 @@ import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
-import { paSearchDesign } from "../src/lib/pa/optimize";
-import { panelNominalNear } from "../src/lib/panel";
-import { savedHardware } from "../src/lib/pa/hardware";
-import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES, MID_BOXES } from "../src/lib/data";
+import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";
-import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
-import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import {
   ARCH_BLOCK,
   CABINET_CONSTRUCTION,
@@ -57,34 +53,15 @@ import {
   VENT_KIND,
 } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { configs, type GoldenConfig } from "./golden-configs";
-import type {
-  HifiDesignState,
-  PaPlannerDesign,
-  SpeakerChamber,
-  SpeakerPart,
-  SpeakerSpec,
-} from "../src/types";
+import { configs, type PaConfig } from "./pa-configs";
+import type { HifiDesignState, SpeakerChamber, SpeakerPart, SpeakerSpec } from "../src/types";
 
 const EPS = 1e-6;
 
-const IDENTITY = { id: "golden", name: "Golden" };
+const IDENTITY = { id: "pa-config", name: "PA config" };
 
-/** A golden PA design as the planner holds it (as tests/speaker-spec.test.ts reads it). */
-function paDesign(c: GoldenConfig): PaPlannerDesign {
-  const cfg = paSearchDesign({ cur: c });
-  return {
-    ...cfg,
-    mDim: c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box,
-    panel: c.panel ?? panelNominalNear(cfg.wall),
-    hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
-    spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
-    hardware: savedHardware(c.hardware),
-    divider: c.divider ?? DEFAULT_PA.divider,
-  };
-}
 /** A PA design's speaker of `part`, read through the adapter. */
-function paSpeaker(c: GoldenConfig, part: SpeakerPart): SpeakerSpec {
+function paSpeaker(c: PaConfig, part: SpeakerPart): SpeakerSpec {
   const read = layersFromPa(paDesign(c), IDENTITY, PA_FLOOR);
   const id = speakerIdentity(IDENTITY, part).id;
   const found = read.speakers.find((s) => s.id === id);
@@ -120,23 +97,27 @@ function inBaffle(spec: SpeakerSpec): SpeakerSpec {
   };
 }
 
-const golden = (name: string) => {
+/** A saved or synthetic PA design by name. */
+const paConfig = (name: string) => {
   const found = configs.find((c) => c.name === name);
-  if (!found) throw new Error(`no golden ${name}`);
+  if (!found) throw new Error(`no PA config ${name}`);
   return found;
 };
 const [defaultPa] = configs;
 const coax = HIFI_COAXES.find((c) => c.tweeter);
 if (!coax?.tweeter) throw new Error("no coaxial with its HF part");
 
-/** The golden designs' specs the scene is checked on. */
+/** The designs' specs the scene is checked on. */
 const CASES: { name: string; spec: SpeakerSpec }[] = [
   { name: "PA sub (letterbox)", spec: paSpeaker(defaultPa, SPEAKER_PART.sub) },
-  { name: "PA sub, side ducts", spec: paSpeaker(golden("synthetic: vslots"), SPEAKER_PART.sub) },
-  { name: "PA sub, corner tubes", spec: paSpeaker(golden("synthetic: 4 round"), SPEAKER_PART.sub) },
+  { name: "PA sub, side ducts", spec: paSpeaker(paConfig("synthetic: vslots"), SPEAKER_PART.sub) },
+  {
+    name: "PA sub, corner tubes",
+    spec: paSpeaker(paConfig("synthetic: 4 round"), SPEAKER_PART.sub),
+  },
   {
     name: "PA sub, folded slot, flush",
-    spec: paSpeaker({ ...golden("synthetic: slots, folded"), inset: 0 }, SPEAKER_PART.sub),
+    spec: paSpeaker({ ...paConfig("synthetic: slots, folded"), inset: 0 }, SPEAKER_PART.sub),
   },
   { name: "PA mid/high box", spec: paSpeaker(defaultPa, SPEAKER_PART.top) },
   { name: "PA tower", spec: paSpeaker({ ...defaultPa, layout: "tower" }, SPEAKER_PART.tower) },
@@ -185,7 +166,7 @@ const boxOf = (...objects: THREE.Object3D[]) => {
 /** Where a chamber's front is: the cabinet's front plane (the deepest chamber's half depth). */
 const frontZ = (spec: SpeakerSpec) => speakerLayout(spec.cabinet).size.d / 2;
 
-describe("each golden design's spec", () => {
+describe("each design's spec", () => {
   for (const { name, spec } of CASES)
     test(`${name}: chambers and drivers where the spec puts them`, () => {
       const layout = speakerLayout(spec.cabinet);
@@ -237,7 +218,7 @@ describe("each golden design's spec", () => {
         s.children.filter((c) => c.name !== SPEAKER_GROUP_NAMES.chamber),
       );
       const box = boxOf(...panels);
-      // the PA's frame draws its roundover's bevel proud of the outline, as the PA page does
+      // the PA's frame draws its roundover's bevel proud of the outline
       const proud =
         spec.cabinet.construction === CABINET_CONSTRUCTION.frameInset ? ROUNDOVER_IN : 0;
       expect(box.min.y, name).toBeCloseTo(-proud, 6);

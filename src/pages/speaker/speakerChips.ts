@@ -17,8 +17,8 @@ import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../con
 import { driverName } from "./speakerParts";
 import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
 import { dispersionChecks } from "../../lib/speaker/dispersionCheck";
-import { hfHeadroomChip } from "../../lib/pa/chips";
-import { hfLimitWatts } from "../../lib/pa/calc";
+import { hfHeadroomChip } from "../../lib/speaker/chips";
+import { hfLimitWatts } from "../../lib/acoustics/boxModels";
 import { bandLoads } from "../../lib/speaker/speakerLimits";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 
@@ -78,7 +78,7 @@ export function bandChips(
           ];
     })();
     // a passive band's HF section behind a pad (its Level below 0) on the amp it shares: where it reaches its rating,
-    // as the Fills page's check; no chip without a pad
+    // no chip without a pad
     const pad = Math.max(0, -(band?.levelDb ?? 0));
     const padChip: SpeakerChip | null =
       hf && band?.drive === HIFI_DRIVE.passive && pad > 0

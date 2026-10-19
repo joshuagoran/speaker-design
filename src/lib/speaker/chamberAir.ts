@@ -2,7 +2,7 @@
 // share one wall, the lower (or left) chamber's; and its vent as the box models take it (its net air: lib/speaker
 // speakerBuild). Pure.
 //
-// Symbols kept short are the established ones: t is the wall's thickness, in (as lib/pa/calc and lib/hifi name it).
+// Symbols kept short are the established ones: t is the wall's thickness, in (as lib/acoustics/boxModels and lib/acoustics/wooferBox name it).
 import type {
   Dims2,
   PortStyle,
@@ -10,17 +10,17 @@ import type {
   SpeakerChamber,
   SpeakerSlotPort,
 } from "../../types";
-import { hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
+import { hifiRoundEndCorrection, hifiSlotEndCorrection } from "../acoustics/wooferBox";
 import {
   ductDividerIn,
   sideDuctEndCorrection,
   slotFinsOf,
   slotFolds,
   slotInnerEndCorrection,
-} from "../pa/calc";
+} from "../acoustics/boxModels";
 import { rectangleEndCorrection } from "../acoustics/radiation";
-import { subTubeEndCorrection, type TubeDriver } from "../pa/tubes";
-import { elbowCountOf } from "../tubeFold";
+import { subTubeEndCorrection, type TubeDriver } from "../build/tubes";
+import { elbowCountOf } from "../build/tubeFold";
 import { MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
 import { coneDepthIn } from "./driverParts";
 import { STUFFING_MAX_PCT } from "../../constants/speakerSteps";
@@ -135,7 +135,7 @@ const TUBE_SIZE_SPLIT_IN = 16.5;
 /** The parts of a cabinet the air and vent rules read. */
 type CabinetAir = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
 
-/** A vented chamber's vent as the vented box model takes it (lib/pa/calc boxModel). */
+/** A vented chamber's vent as the vented box model takes it (lib/acoustics/boxModels boxModel). */
 export interface ChamberVentModel {
   /** the open area of all the openings together, in² */
   areaIn2: number;
@@ -150,7 +150,7 @@ export interface ChamberVentModel {
 /**
  * A vented chamber's vent, null for any other: each port by the rule of the engine it comes from.
  * - Round tubes: the Hi-fi rule (1.46 r and a sharp bend's correction per elbow; absent elbows: straight), or the PA
- *   tube rule for `flared` tubes in a PA sub's chamber (lib/pa/tubes subTubeEndCorrection).
+ *   tube rule for `flared` tubes in a PA sub's chamber (lib/build/tubes subTubeEndCorrection).
  * - A slot: `n` openings (the PA letterbox one), each running the chamber's whole clear face (`slotRunIn`; their
  *   shelves' wood: lib/speaker/speakerBuild). The Hi-fi rule, or the PA letterbox's where it has `fins`.
  * - Side ducts (PA): `n` ducts up the front edges, the dividers' height off each; their inner walls take air too.
@@ -169,7 +169,7 @@ export function chamberVentModel(
       // the slot's long side: the whole clear face (`slotRunIn`)
       const w = slotRunIn(face, port);
       if (port.fins !== undefined) {
-        // the PA letterbox (lib/pa/calc ventGeometry): its fins take their thickness off the width; its mouth on the
+        // the PA letterbox (lib/acoustics/boxModels ventGeometry): its fins take their thickness off the width; its mouth on the
         // floor (which mirrors it), its inner end as the PA slot's, folded up the back wall when too long to run
         // straight (as the PA rule, the cutlist and the 3D view fold it)
         const open = w - slotFinsOf({ fins: port.fins, slotH: port.h }, w, t) * t;
@@ -183,7 +183,7 @@ export function chamberVentModel(
             slotInnerEndCorrection(dims, slot, t, baffleInsetIn(cabinet), slotFolds(dims, slot, t)),
         };
       }
-      // the Hi-fi page's slot is one (n 1); the Speaker page's can be more, alike
+      // a hi-fi design's slot is one (n 1); the Speaker page's can be more, alike
       return {
         areaIn2: port.n * port.h * w,
         lenIn: port.len,

@@ -7,7 +7,7 @@ export const SPEAKER_STEPS = {
   sizeIn: 0.25,
   /** a port's path length */
   portLenIn: 0.5,
-  /** a slot's narrow side (the PA page's slot height step) */
+  /** a slot's narrow side (the PA sliders' slot height step) */
   slotHIn: 0.25,
   /** a duct's throat, a tube's diameter */
   portSizeIn: 0.25,

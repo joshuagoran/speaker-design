@@ -22,9 +22,9 @@ import {
 } from "../../constants/bracing";
 import { NO_HANDLES } from "../../constants/hardware";
 import { CHAMBER_LOAD } from "../../constants/speakerSpec";
-import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
-import { NO_HANDLE_SET, savedBox } from "../pa/hardware";
-import { defaultBraceStyleNear } from "../bracing";
+import { PA_PANEL_TARGET_HZ } from "../build/boxBracing";
+import { NO_HANDLE_SET, savedBox } from "../build/hardware";
+import { defaultBraceStyleNear } from "../build/bracing";
 
 /** A saved speaker's spec, as the library holds it (no id or name). */
 type SavedSpeaker = SavedSpeakerData["speaker"];

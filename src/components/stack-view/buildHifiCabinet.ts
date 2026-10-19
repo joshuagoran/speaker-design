@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { SceneContext } from "./sceneContext";
-import type { RadiatorSide } from "../../lib/hifi/boxLayout";
+import type { RadiatorSide } from "../../lib/build/boxLayout";
 import { NO_WALL_OPENINGS, openingRect, panelPieces, type WallOpenings } from "./wallCuts";
 import type { Dims3 } from "../../types";
 
@@ -36,7 +36,7 @@ export interface HifiCabinetHoles {
  * The Hi-fi box (butt-jointed, as the Cutlist page builds it): the baffle covering the whole front, its four front
  * edges rounded over by `roundover` (sharp at 0), painted; the sides, top, bottom and back in the cabinet finish, and,
  * outside the cutaway, a dark lining inside (unless `lining` is false) so the openings look into a closed box. A roundover deeper than the baffle
- * is drawn on a front that thick (the Hi-fi page's fix: a doubled baffle).
+ * is drawn on a front that thick (the fix: a doubled baffle).
  *
  * The model and the cutlist place the drivers and vents whatever the roundover (a round port low on the baffle, say),
  * so a cutout can reach into the rounded edge, as it would in the build. The view keeps each baffle hole on the flat

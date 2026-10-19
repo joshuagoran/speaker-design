@@ -1,5 +1,5 @@
 // The dispersion check at a crossover between a speaker's bands (src/lib/speaker/dispersionCheck): on the Speaker page's
-// band rows (bandChips) and the Stack page's lists (stackDispersionChips), against the Hi-fi page's check on the same design.
+// band rows (bandChips) and the Stack page's lists (stackDispersionChips), on hi-fi designs.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { dispersionChecks } from "../src/lib/speaker/dispersionCheck";
@@ -13,28 +13,11 @@ import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { DISPERSION_TEXT } from "../src/constants/dispersionCheck";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
-import { hifiChips, hifiSystem } from "../src/lib/hifi/hifi";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import type { HifiDesignState, SpeakerSpec } from "../src/types";
 
 const IDENTITY = { id: "hifi", name: "Hi-fi speaker" };
 const hifiSpec = (state: HifiDesignState) => speakerFromHifi(state, DEFAULT_HIFI_LOOK, IDENTITY);
-
-/** The Hi-fi page's own dispersion check on a design, as its chips give it. */
-function hifiPageCheck(state: HifiDesignState) {
-  const d = deriveHifiDesign(state);
-  const sys = hifiSystem(state.woofer, d.tweeterWithWaveguide, d.speakerConfig);
-  assert.ok(sys);
-  const chip = hifiChips(sys, state.woofer, d.tweeterWithWaveguide, d.speakerConfig).find(
-    ([, , , id]) => id === "hifiDispersion",
-  );
-  assert.ok(chip);
-  return chip;
-}
-
-/** The degrees a chip's detail names first ("About 157° ..."). */
-const degreesIn = (detail: string) => Number(/[Aa]bout (\d+)°/.exec(detail)?.[1]);
 
 test("the Hi-fi 2-way gives one chip, on its low band, naming the high band", () => {
   const spec = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
@@ -118,22 +101,6 @@ test("a 3-way has one chip per crossover, each on its lower band", () => {
     dispersionChecks(mid).map((c) => [c.lower, c.upper]),
     [[SPEAKER_BAND.mid, SPEAKER_BAND.high]],
   );
-});
-
-test("the Hi-fi page's check is unchanged, and the Speaker page agrees with it on the same design", () => {
-  const page = hifiPageCheck(DEFAULT_HIFI);
-  assert.deepEqual(page.slice(0, 2), ["ok", "Dispersion matches at the crossover"]);
-  assert.match(page[2], /^The woofer is about \d+° wide at 2000 Hz\.$/);
-  const wide = hifiPageCheck({ ...DEFAULT_HIFI, crossoverHz: 6000 });
-  assert.equal(wide[0], "warn");
-  assert.equal(wide[1], "Woofer narrower than the tweeter at the crossover");
-  assert.match(wide[2], /an off-axis dip below 6000 Hz\. Use a lower crossover\.$/);
-  for (const state of [DEFAULT_HIFI, { ...DEFAULT_HIFI, crossoverHz: 6000 }]) {
-    const [ours] = dispersionChecks(hifiSpec(state));
-    const theirs = hifiPageCheck(state);
-    assert.equal(ours.chip[0], theirs[0]);
-    assert.equal(degreesIn(ours.chip[2]), degreesIn(theirs[2]));
-  }
 });
 
 test("the Stack page lists each member speaker's own crossings, under the member's name", () => {

@@ -3,7 +3,7 @@
 // chamber keeps its own drivers. Pure.
 import type { ChamberVent, SpeakerHorn } from "../../types";
 import { readHornrespRecord } from "../../lib/acoustics/network/hornrespRecord";
-import { hifiRoundEndCorrection } from "../../lib/hifi/hifi";
+import { hifiRoundEndCorrection } from "../../lib/acoustics/wooferBox";
 import { BOTH_ENDS_CORRECTION_RATIO } from "../../lib/acoustics/radiation";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { HORN_LAYOUT } from "../../constants/acousticNetwork";

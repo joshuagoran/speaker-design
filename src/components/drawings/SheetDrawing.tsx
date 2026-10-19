@@ -6,8 +6,8 @@ import type {
   PanelMaterial,
   PlywoodSheet,
 } from "../../types";
-import { formatInches, formatThickness } from "../../lib/pa/calc";
-import { cutRowKey } from "../../lib/pa/cutlist";
+import { formatInches, formatThickness } from "../../lib/acoustics/boxModels";
+import { cutRowKey } from "../../lib/build/cutlist";
 import { usePalette } from "../../hooks/useTheme";
 import {
   cutBoxName,

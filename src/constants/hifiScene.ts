@@ -1,5 +1,5 @@
 // The Hi-fi speaker's 3D view (stack-view/buildHifiScene): how it draws the parts the catalogue gives only a front size
-// for, inches or ratios. Every part's position and front size comes from the design (lib/hifi); these only give it a
+// for, inches or ratios. Every part's position and front size comes from the design (lib/speaker/twoWay, lib/build/boxLayout); these only give it a
 // body.
 import type { CompressionDriver } from "../types";
 

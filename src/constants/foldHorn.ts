@@ -89,9 +89,6 @@ export const FOLD_END = {
   free: "free",
 } as const;
 
-/** A board end's `FOLD_END` kind. */
-export type FoldEndKind = (typeof FOLD_END)[keyof typeof FOLD_END];
-
 /** The step a board end moves in while drawing or dragging, in. */
 export const FOLD_SNAP_IN = 0.25;
 

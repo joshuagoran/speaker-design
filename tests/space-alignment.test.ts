@@ -2,10 +2,10 @@
 // against the delays and levels the model plays, a mirrored pair's rows, a fill's delay, the amp power figures, the texts.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
-import { spaceModel } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { ampPowerGroups, withAmpPower } from "../src/lib/speaker/spaceHardware";
 import { delayDistanceIn, delayText, spaceAlignment } from "../src/lib/speaker/spaceAlignment";
 import { speakerFromFill } from "../src/lib/speaker/fillSpec";

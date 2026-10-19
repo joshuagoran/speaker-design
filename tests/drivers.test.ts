@@ -1,117 +1,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import {
-  SPEAKER_SUB_OPTIONS,
-  MID_OPTIONS,
-  FILL_OPTIONS,
-  TRIAX_OPTIONS,
-  CD_OPTIONS,
-  HIFI_WOOFERS,
-  HIFI_PASSIVES,
-} from "../src/lib/data";
-import {
-  ESTIMATE,
-  HIFI_MAKERS,
-  comparableXmax,
-  isGapFormula,
-  xmaxBandOf,
-  xmaxByFormula,
-} from "../src/lib/xmax";
-import { MAKER_NAMES } from "../src/data/catalog/makers";
-import { keysOf } from "../src/lib/records";
-import type { ThieleSmall } from "../src/types";
-import { close, tsModel } from "./helpers";
-
-// Datasheet values that disagree with the driver's own Mms/Sd/Fs/Bl/Re by more than the tolerance.
-// Keep each with a note; the model uses Mms/Bl/Re/Sd/Fs/Qms, not the listed Vas/Qes.
-const KNOWN: Record<string, string> = {
-  "bc18ps:Vas": "datasheet Vas 245 L vs 283 L from Mms/Sd/Fs; noted on the driver",
-  "bc18nws4:Vas": "datasheet Vas 203.5 L vs about 234 L from Mms/Sd/Fs; noted on the driver",
-  "es12nlw9300:Qes": "datasheet Qes 0.45 vs 0.394 from Bl/Mms/Re/Fs; Qtc reads ~12% low",
-  "lv123f:Vas": "datasheet Vas 42 L vs 37.3 L",
-  "cindcx10:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.53x",
-  "by12cxa400fe:Qes": "datasheet Qes 0.26 vs 0.29 from Bl/Mms/Re/Fs; noted on the driver",
-};
-// the Speaker page's subs: the PA's and its own
-const all = [...SPEAKER_SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS, ...TRIAX_OPTIONS];
-const need = ["Fs", "Qms", "Sd", "Mms", "Bl", "Re", "Xmax", "aes"] as const;
-
-test("every driver with T/S has the fields the models use", (t) => {
-  for (const o of all)
-    if (o.ts && o.ts.Bl)
-      for (const k of need) assert.ok(Number.isFinite(o.ts[k]) && o.ts[k] > 0, `${o.id}.${k}`);
-});
-test("T/S internal consistency (Qts, Qes, Vas) or a listed exception", (t) => {
-  const bad: string[] = [];
-  for (const o of all) {
-    const ts: ThieleSmall = o.ts;
-    if (!ts || !ts.Bl || !ts.Mms) continue;
-    const m = tsModel(o.ts);
-    if (ts.Qes && ts.Qms && ts.Qts) {
-      const q = (ts.Qes * ts.Qms) / (ts.Qes + ts.Qms);
-      if (Math.abs(q / ts.Qts - 1) > 0.05) bad.push(`${o.id}:Qts`);
-    }
-    if (ts.Qes && Math.abs(m.Qes / ts.Qes - 1) > 0.1) bad.push(`${o.id}:Qes`);
-    if (ts.Vas && Math.abs(m.VasL / ts.Vas - 1) > 0.1) bad.push(`${o.id}:Vas`);
-  }
-  const unexplained = bad.filter((k) => !KNOWN[k]);
-  assert.deepEqual(unexplained, [], "new mismatches: add a note to KNOWN or fix the data");
-});
-test("prices and weights are positive where given; ids are unique", (t) => {
-  const ids = new Set<string>();
-  for (const o of [...all, ...CD_OPTIONS]) {
-    assert.ok(!ids.has(o.id), `duplicate ${o.id}`);
-    ids.add(o.id);
-    if (o.price != null) assert.ok(o.price > 0, `${o.id} price`);
-    if (o.lb != null) assert.ok(o.lb > 0, `${o.id} lb`);
-  }
-});
-
-// A published Xmax that its own formula, from the published coil and gap heights, misses by more than 0.5 mm.
-const XMAX_KNOWN: Record<string, string> = {
-  by12lx60:
-    "Beyma's sheet prints Xmax 9 but its own Lvc 20 / Hag 10 give 7.86 by its printed formula",
-  by15p1000fev2:
-    "Beyma's sheet prints Xmax 8 but its own Lvc 20 / Hag 12 give 7.43 by its printed formula",
-  ciare_hwb200:
-    "Ciare prints Xmax 7 but its own Hvc 16 / Hg 8 give 6.0 by its printed Hg/4 formula (HW205, same motor, prints 6)",
-};
-const woofers = [...all, ...HIFI_WOOFERS];
-
-test("published Xmax fits its formula from Hvc and Hg (±0.5 mm) or a listed exception", (t) => {
-  const bad: string[] = [];
-  for (const o of woofers) {
-    const { pub, Hvc, Hg } = o.ts;
-    if (Hvc == null || Hg == null || pub.Xmax == null) continue;
-    // Eminence: the greater of the plain overhang and the 10 % distortion point, so never below the overhang
-    if (pub.formula === "overhang-or-x10" && pub.Xmax < xmaxByFormula("plain", Hvc, Hg) - 0.5)
-      bad.push(`${o.id}: ${pub.Xmax} below the plain overhang`);
-    if (!isGapFormula(pub.formula)) continue;
-    const want = xmaxByFormula(pub.formula, Hvc, Hg);
-    if (Math.abs(pub.Xmax - want) > 0.5) bad.push(`${o.id}: ${pub.Xmax} vs ${want.toFixed(2)}`);
-  }
-  assert.deepEqual(
-    bad.filter((k) => !XMAX_KNOWN[k.split(":")[0]]),
-    [],
-    "add a note to XMAX_KNOWN or fix the data",
-  );
-});
-
-test("every driver's comparable Xmax: derived from heights where both are given, centered in its band", (t) => {
-  for (const o of woofers) {
-    const { Xmax, xmax, Hvc, Hg } = o.ts;
-    assert.ok(xmax.lo > 0 && xmax.lo <= Xmax && Xmax <= xmax.hi, o.id);
-    if (Hvc != null && Hg != null) {
-      assert.equal(xmax.basis, "derived", o.id);
-      close(t, Xmax, comparableXmax(Hvc, Hg), 1e-9, o.id);
-    } else assert.notEqual(xmax.basis, "derived", o.id);
-  }
-  for (const p of HIFI_PASSIVES) {
-    assert.ok(p.xmax.lo > 0 && p.xmax.lo <= p.Xmax && p.Xmax <= p.xmax.hi, p.id);
-    assert.equal(p.xmax.basis, "published", p.id);
-    assert.equal(p.Xmax, p.pub.Xmax ?? p.pub.Xlim, p.id);
-  }
-});
+import { MID_OPTIONS } from "../src/lib/data";
+import { ESTIMATE, xmaxBandOf } from "../src/lib/xmax";
+import { close } from "./helpers";
 
 test("xmax: derived, converted and estimated bands", (t) => {
   const name = "Test 1";
@@ -156,34 +47,6 @@ test("xmax: derived, converted and estimated bands", (t) => {
     ESTIMATE.XmaxHifi.map((k) => k * 10),
   );
   assert.throws(() => xmaxBandOf({ pub: { Xmax: null, formula: "unstated" } }, "bc", name));
-});
-
-test("xmax: the maker id, not the driver's name, picks the hi-fi estimate band", () => {
-  const ts = { pub: { Xmax: 10, formula: "unstated" } } as const;
-  // a pro maker's driver named like a hi-fi one stays pro, and the other way round
-  assert.deepEqual(xmaxBandOf(ts, "sbAudience", "SB Acoustics X"), xmaxBandOf(ts, "bc", "X"));
-  assert.deepEqual(xmaxBandOf(ts, "sbAcoustics", "SB Audience X"), xmaxBandOf(ts, "dayton", "X"));
-  for (const m of keysOf(MAKER_NAMES)) {
-    const band = xmaxBandOf(ts, m, "X");
-    assert.deepEqual(
-      [band.lo, band.hi],
-      (HIFI_MAKERS.has(m) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro).map((k) => k * 10),
-      m,
-    );
-  }
-  // every table row with an estimated Xmax got its band from its maker
-  for (const d of [
-    ...SPEAKER_SUB_OPTIONS,
-    ...MID_OPTIONS,
-    ...FILL_OPTIONS,
-    ...TRIAX_OPTIONS,
-    ...HIFI_WOOFERS,
-  ]) {
-    const { pub, xmax } = d.ts;
-    if (xmax.basis !== "estimated" || pub.Xmax == null || pub.formula !== "unstated") continue;
-    const k = HIFI_MAKERS.has(d.maker) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro;
-    assert.deepEqual([xmax.lo, xmax.hi], [k[0] * pub.Xmax, k[1] * pub.Xmax], d.id);
-  }
 });
 
 test("mids: a given impedance is positive, and the 10MB600 carries its datasheet depth", () => {

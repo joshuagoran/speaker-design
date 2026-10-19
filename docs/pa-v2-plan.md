@@ -1,5 +1,7 @@
 # PA v2: a modular horn stack with a fixed analog front end
 
+> History: this document describes plans made for the PA page. The switch-over (#178) removed the PA, Hi-fi, Coverage, and Fills pages.
+
 The owner's plan for v2 of the whole PA, Oct 2026: boxes, drivers, amps and front end. Nothing is decided. It builds
 on [amp-dsp-v1.md](amp-dsp-v1.md) and [front-end-handoff.md](front-end-handoff.md).
 

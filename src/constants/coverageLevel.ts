@@ -1,4 +1,4 @@
-import type { CoverageLevelMode, CoverageLevelRef } from "../types";
+import type { CoverageLevelRef } from "../types";
 
 /** Where the coverage map's target can be measured, by id. */
 export const COVERAGE_LEVEL_REF = {
@@ -20,12 +20,6 @@ export const COVERAGE_LEVEL_REF_PLACE = {
   audience: "the audience average",
   stacks: "1 m from the stacks",
 } as const satisfies Record<CoverageLevelRef, string>;
-
-/** The old level setting's values, for loading layouts saved before the target level. */
-export const LEGACY_LEVEL_MODE = {
-  limit: "limit",
-  listener: "listener",
-} as const satisfies Record<CoverageLevelMode, CoverageLevelMode>;
 
 /** The coverage edge, dB against the target: the coverage map's medium line and the "≥ −6 dB" share of the floor. */
 export const COVERAGE_EDGE_DB = -6;

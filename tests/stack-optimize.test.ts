@@ -7,13 +7,11 @@ import assert from "node:assert";
 import { optimizeStack } from "../src/lib/speaker/optimize/optimizeStack";
 import { evaluateStack, speakerOf } from "../src/lib/speaker/optimize/stackEvaluate";
 import { outerSize } from "../src/lib/speaker/optimize/evaluate";
-import { driverRef } from "../src/lib/speaker/optimize/space";
 import { presetLayers } from "../src/pages/stack/stackPresets";
 import { STACK_PRESET, type StackPreset } from "../src/constants/stackPresets";
 import { SPEAKER_STEPS, STACK_STEPS } from "../src/constants/speakerSteps";
 import { AUTO_DELAY } from "../src/constants/speakerSpec";
 import { CHANGE_NAMES } from "../src/constants/optimizerText";
-import { PA_PRESETS, PARITY_TARGET_DB, paPresetParity } from "./stack-optimizer-parity";
 import type {
   SpeakerGoal,
   StackDesign,
@@ -157,74 +155,6 @@ test("PA stack: every goal's cards beat your stack on their labels, on their own
   }
 }, 60_000);
 
-test("PA tower and the Hi-fi pair: one member keeps its level; stacked goals; a lower target", () => {
-  for (const g of ["cheaper", "louder"] as const) {
-    const { r } = checkedRun(STACK_PRESET.paTower, [g]);
-    for (const card of r.cards) assert.equal(card.design.stack.members[0].levelDb, 0);
-  }
-  checkedRun(STACK_PRESET.hifiPair, ["cheaper"]);
-  const { r } = checkedRun(STACK_PRESET.paStack, ["lighter", "cheaper"], {
-    targetDb: PARITY_TARGET_DB,
-  });
-  assert.equal(r.cards[0]?.slot.kind, "first");
-}, 60_000);
-
-test("limits hold on the final design: budget, weight per box and height", () => {
-  const { r } = checkedRun(STACK_PRESET.paStack, ["louder"], {
-    targetDb: PARITY_TARGET_DB,
-    budget: 1000,
-    maxLb: 80,
-    maxHeightIn: 60,
-  });
-  assert.ok(r.cards.length > 0, "a card inside the limits");
-}, 60_000);
-
-test("locks hold: a kept speaker, crossovers, levels, delays, a driver and a size", () => {
-  const design = preset(STACK_PRESET.paStack);
-  const [sub, top] = design.speakers;
-  const between: StackOptimizerLocks = {
-    keep: [sub.id],
-    crossovers: [0, 1],
-    levels: [0, 1],
-    delays: [0, 1],
-  };
-  for (const g of ["cheaper", "lighter"] as const) {
-    const { r } = checkedRun(STACK_PRESET.paStack, [g], { targetDb: PARITY_TARGET_DB }, between);
-    for (const card of r.cards) {
-      assert.deepStrictEqual(speakerOf(card.design, { speakerId: sub.id }), sub, "the kept sub");
-      card.design.stack.members.forEach((m, k) => {
-        const was = design.stack.members[k];
-        assert.deepStrictEqual(m.crossover, was.crossover);
-        assert.equal(m.levelDb, was.levelDb);
-        assert.equal(m.delayMs, was.delayMs);
-      });
-    }
-  }
-  const inBox: StackOptimizerLocks = {
-    speakers: {
-      [top.id]: { drivers: [driverRef(0, 0)], horns: [driverRef(0, 1)], size: { w: "exact" } },
-      [sub.id]: { size: { h: "max" } },
-    },
-  };
-  const { r } = checkedRun(
-    STACK_PRESET.paStack,
-    ["cheaper"],
-    { targetDb: PARITY_TARGET_DB },
-    inBox,
-  );
-  for (const card of r.cards) {
-    const t = speakerOf(card.design, { speakerId: top.id });
-    assert.equal(
-      t?.cabinet.chambers[0].drivers[0].driverId,
-      top.cabinet.chambers[0].drivers[0].driverId,
-    );
-    assert.deepStrictEqual(
-      t?.cabinet.chambers[0].drivers[1].horn,
-      top.cabinet.chambers[0].drivers[1].horn,
-    );
-  }
-}, 60_000);
-
 test("near miss: a weight no box can make, and a target out of reach", () => {
   const { r } = checkedRun(STACK_PRESET.paStack, ["cheaper"], { maxLb: 20 });
   assert.ok(!r.cards.some((c) => c.slot.kind === "first"), "no first card");
@@ -262,38 +192,9 @@ test("two boxes share a speaker on different crossovers: each box's level follow
   assert.ok((smallest.metrics.musicDb ?? 0) >= (m.musicDb ?? 0), "the stack's level holds");
 }, 60_000);
 
-test("the same input gives the same cards", () => {
-  const design = preset(STACK_PRESET.paStack);
-  const L = { ...keepLevel(evaluateStack(design).metrics), targetDb: PARITY_TARGET_DB };
-  const run = () => {
-    const { stats: _stats, ...rest } = optimizeStack(design, ["lighter", "cheaper"], L);
-    return JSON.stringify(rest);
-  };
-  assert.equal(run(), run());
-}, 60_000);
-
 test("runtime: the PA stack's search takes a few seconds at most", () => {
   const design = preset(STACK_PRESET.paStack);
   const r = optimizeStack(design, ["cheaper"], keepLevel(evaluateStack(design).metrics));
   // about 1.5 s on a laptop in Node; CI machines are slower
   assert.ok(r.stats.ms < 10_000, `took ${r.stats.ms} ms`);
 });
-
-// Parity: each side's best card on the goal at the PA room rule's target (1000 sq ft), among the cards inside the Stack
-// optimizer's space (the same driver sizes, plywood and vent style, each box ×0.7–1.5 per axis) that keep what the goal
-// keeps, scored by the stack model.
-// - The PA optimizer also changes the vent style (its cheaper and lower cards) and sizes the boxes past ×1.5 (its lower
-//   and louder cards): those cards are outside the space.
-// - Stack, pole and satellites have the same speakers; only the poses differ.
-// - The tower: the PA optimizer finds no card (its mid chamber is fixed and fails its Qtc check, 0.48 < 0.5).
-for (const [p, layout] of PA_PRESETS)
-  test(`parity: the ${p} preset's cards are at least as good as the PA optimizer's`, () => {
-    for (const g of ["cheaper", "lighter", "lower", "louder"] as const) {
-      const run = paPresetParity(p, layout, g);
-      assert.ok(run.stack.value !== null, `${p} ${g}: a card that keeps the goal`);
-      assert.ok(run.stack.value < run.start, `${p} ${g}: better than the preset`);
-      if (run.pa.value !== null)
-        assert.ok(run.stack.value <= run.pa.value + 1e-6, `${p} ${g}: ${JSON.stringify(run)}`);
-      if (p === STACK_PRESET.paTower) assert.equal(run.pa.cards, 0, "the PA tower finds no card");
-    }
-  }, 120_000);

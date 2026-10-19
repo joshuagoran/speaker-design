@@ -13,7 +13,7 @@ import { HIFI_MESH_NAMES } from "../src/components/stack-view/buildHifiScene";
 import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
 import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
 import { subVentHoles } from "../src/components/stack-view/buildSubwoofer";
-import { subVentPlan } from "../src/lib/pa/subVentPlan";
+import { subVentPlan } from "../src/lib/build/ventPlan";
 import {
   portRule,
   PORT_RULE,

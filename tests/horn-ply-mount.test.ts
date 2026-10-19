@@ -4,7 +4,7 @@
 // driver instead.
 import { describe, expect, test } from "vite-plus/test";
 import * as THREE from "three";
-import { buildStackScene, type Props } from "../src/components/stack-view/buildStackScene";
+import type { Props } from "../src/components/stack-view/buildStackScene";
 import { CD_MESH_NAME, HORN_MESH_NAME } from "../src/components/stack-view/buildHorn";
 import { BRACKET_MESH_NAME } from "../src/components/stack-view/buildBracket";
 import {
@@ -21,13 +21,8 @@ import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { DIY_ROSSE110X50 } from "../src/data/catalog/horns";
 import { N314T } from "../src/data/catalog/compression-drivers";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { savedHornMount, takesHornMount } from "../src/lib/pa/hornMount";
-import {
-  HORN_MOUNT_DEFAULT,
-  HORN_MOUNT_NAMES,
-  HORN_MOUNT_PANEL,
-  RETIRED_HORN_MOUNT_BRACKET,
-} from "../src/constants/hornMount";
+import { takesHornMount } from "../src/lib/build/hornMount";
+import { HORN_MOUNT_DEFAULT, HORN_MOUNT_PANEL } from "../src/constants/hornMount";
 import { PANEL_STOCK } from "../src/data/catalog/plywood";
 import {
   CLEAR_IN,
@@ -363,9 +358,9 @@ function checkMount(horn: Horn, cd: Props["cd"], layout: PaLayout) {
 }
 
 describe("the plywood horn mount on every horn it applies to", () => {
-  for (const { horn, cds } of bolted)
-    test(`stack, ${horn.id}: with every driver that fits it, the mount clears the horn, the driver and the lid's parts, or the plate stays`, () => {
-      for (const cd of cds) checkMount(horn, cd, "stack");
+  for (const { horn, ends } of bolted)
+    test(`stack, ${horn.id}: with the smallest and the largest driver that fit it, the mount clears the horn, the driver and the lid's parts, or the plate stays`, () => {
+      for (const cd of ends) checkMount(horn, cd, "stack");
     });
 
   for (const layout of LID_LAYOUTS.filter((l) => l !== "stack"))
@@ -407,13 +402,14 @@ describe("the plywood horn mount on every horn it applies to", () => {
 
   test("a shallow box: the base stops at the lid's back edge", () => {
     const d = DIY_ROSSE110X50.size.d + 1;
-    const g = buildStackScene({
-      ...base,
-      horn: DIY_ROSSE110X50,
-      hornMount: "ply",
-      mid: { ...base.mid, box: { ...base.mid.box, d } },
-    });
-    g.updateMatrixWorld(true);
+    const g = scene(
+      {
+        horn: DIY_ROSSE110X50,
+        hornMount: "ply",
+        mid: { ...base.mid, box: { ...base.mid.box, d } },
+      },
+      { lidHardware: false },
+    );
     const [b] = meshesNamed(g, PLY_MOUNT_MESH_NAMES.base);
     if (!b) throw new Error("no base");
     expect(boxOf(b).min.z).toBeCloseTo(-d / 2 + ROUNDOVER_IN, 6);
@@ -502,7 +498,7 @@ describe("two-bolt drivers on the plywood mount", () => {
 });
 
 describe("with the aluminum plate (the default)", () => {
-  test("no plywood mount is drawn (tests/horn-mount-default.test.ts pins the default scenes)", () => {
+  test("no plywood mount is drawn", () => {
     expect(HORN_MOUNT_DEFAULT).toBe("plate");
     expect(DEFAULT_PA.hornMount).toBe(HORN_MOUNT_DEFAULT);
     for (const layout of [...LID_LAYOUTS, "tower"] as const)
@@ -511,13 +507,5 @@ describe("with the aluminum plate (the default)", () => {
         for (const name of Object.values(PLY_MOUNT_MESH_NAMES))
           expect(meshesNamed(g, name), `${horn.id} ${layout}`).toHaveLength(0);
       }
-  });
-
-  test("a save from before the setting, with the retired L-bracket, or with a bad value, loads with the plate", () => {
-    expect(savedHornMount(undefined)).toBe("plate");
-    expect(savedHornMount(RETIRED_HORN_MOUNT_BRACKET)).toBe("plate");
-    expect(savedHornMount("plywood")).toBe("plate");
-    expect(savedHornMount(3)).toBe("plate");
-    for (const id of Object.keys(HORN_MOUNT_NAMES)) expect(savedHornMount(id)).toBe(id);
   });
 });

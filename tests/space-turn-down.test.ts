@@ -11,8 +11,8 @@ import { emptySpeaker } from "../src/pages/speaker/useSpeakerPage";
 import { PAGE_DRAFT_KEYS } from "../src/constants/pageDrafts";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { SPACE_HOME_TARGET_DB } from "../src/constants/space";
-import { COVERAGE_BANDS } from "../src/lib/pa/coverage";
-import { LISTENER_TARGET_DB } from "../src/lib/pa/optimize";
+import { COVERAGE_BANDS } from "../src/lib/acoustics/coverage";
+import { LISTENER_TARGET_DB } from "../src/lib/acoustics/coverageLayout";
 import type { CoverageBand, CoverageLevelRef } from "../src/types";
 
 afterEach(() => {
@@ -79,7 +79,7 @@ test("the lowest band is the lowest band", () => {
   expect(COVERAGE_BANDS.sub.lo).toBe(Math.min(...lo));
 });
 
-test("a new space starts at the PA planner's 105 dB target", () => {
+test("a new space starts at the default coverage layout's 105 dB target", () => {
   expect(SPACE_HOME_TARGET_DB).toBe(105);
   expect(emptySpace().space.venue.targetDb).toBe(SPACE_HOME_TARGET_DB);
   expect(SPACE_HOME_TARGET_DB).toBe(LISTENER_TARGET_DB);

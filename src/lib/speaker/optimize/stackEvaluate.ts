@@ -15,7 +15,7 @@ import { memberSpeaker, stackLimits, stackResponse } from "../stackResponse";
 import { passbandDb } from "../speakerResponse";
 import { stackHeightIn } from "../speakerTotals";
 import { keepUpChip, stackKeepUps } from "../keepUp";
-import { KEEP_UP_SLACK_DB } from "../../pa/chips";
+import { KEEP_UP_SLACK_DB } from "../chips";
 import { keysOf } from "../../records";
 import { STACK_PROBLEM } from "../../../constants/stackOptimizer";
 import {

@@ -29,7 +29,7 @@ import {
   onTop,
   speakerLayout,
 } from "../speakerLayout";
-import { takesHornMountAt } from "../../pa/hornMount";
+import { takesHornMountAt } from "../../build/hornMount";
 import { inSearchSpace, rangeOf } from "../../optimizer/searchSpace";
 import { DEFAULT_PA } from "../../defaults";
 import {

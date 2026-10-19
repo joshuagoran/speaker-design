@@ -144,7 +144,7 @@ export const SLOT_PLACE = {
   sides: "sides",
 } as const;
 
-/** The fins across the PA sub's letterbox slot (lib/pa/calc ventGeometry splits it in three). */
+/** The fins across the PA sub's letterbox slot (lib/acoustics/boxModels ventGeometry splits it in three). */
 export const PA_SLOT_FINS = 2;
 
 /**
@@ -232,7 +232,7 @@ export const HORN_ENGINE_GAP = {
   drawing: "drawing",
 } as const;
 
-/** The Fills model's walls: ½″ ply (lib/pa/calc `fillSystem` takes an inch off each outside size). */
+/** A fill design's walls: ½″ ply. */
 export const FILL_PANEL = "1/2" satisfies PanelNominal;
 
 /**

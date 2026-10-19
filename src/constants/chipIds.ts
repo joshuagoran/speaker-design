@@ -1,5 +1,3 @@
-import type { ChipId } from "../types";
-
 /**
  * Every check's id, by the section whose chips carry it: one id per check, whatever its title says (a title may
  * carry a number, e.g. "Qtc 0.72"), so code decides on the id and never on the words. A check that names what sets
@@ -86,17 +84,3 @@ export const CHIP_IDS = {
   /** the Stack page's checks: between its members, and at each speaker's own crossovers (src/pages/stack/stackChips.ts) */
   stack: ["stackKeepsUp", "stackDispersion"],
 } as const;
-
-/** The checks that name what sets a section's level; a result card says that in its "Limited by" line instead. */
-export const LIMIT_CHIP_IDS: ReadonlySet<ChipId> = new Set<ChipId>([
-  "subPortLimited",
-  "subExcursionLimited",
-  "subAmpLimited",
-  "subThermalLimited",
-  "midExcursionLimited",
-  "midThermalLimited",
-  "midAmpLimited",
-  "hornAmpLimited",
-  "hornProgramLimited",
-  "hifiWooferLimit",
-]);

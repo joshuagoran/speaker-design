@@ -18,7 +18,7 @@ import type { SceneContext } from "./sceneContext";
 import type { HornAxis } from "./buildHorn";
 import { HORN_MOUNT_PANEL } from "../../constants/hornMount";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
-import { defaultPanelIn } from "../../lib/panel";
+import { defaultPanelIn } from "../../lib/build/panel";
 import type { CompressionDriver, Horn } from "../../types";
 
 /** The plywood mount's meshes, by part. */

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { CABINET_FINISHES, cabinetFinishOf } from "../../lib/data";
-import { hornBodyColor } from "../../lib/pa/hornColor";
+import { hornBodyColor } from "../../lib/speaker/hornColor";
 import { PARTS_3D } from "../../styles/palette";
 import type { Props } from "./buildStackScene";
 import type { Horn } from "../../types";

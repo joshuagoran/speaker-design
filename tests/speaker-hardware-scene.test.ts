@@ -1,4 +1,4 @@
-// The Speaker page's views draw the box's hardware (handles, input dish, horn posts) from the same builder the PA page's
+// The Speaker page's views draw the box's hardware (handles, input dish, horn posts) from the same builder the stack's
 // 3D view uses (stack-view/buildHardware): each setting adds its meshes at the faces the build plans, the front drawing
 // shows the parts that stand out of the sides and the lid, and the weight and the cutlist count the parts that are drawn.
 import { describe, expect, test } from "vite-plus/test";

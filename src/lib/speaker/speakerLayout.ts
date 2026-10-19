@@ -6,7 +6,7 @@
 // stacked and centered in the bay behind the throat (`driverSpots`). The 3D view (stack-view/buildSpeakerScene) and
 // the front drawing (drawings/SpeakerFront) both read it. x is across from the cabinet's center line (+ to the right
 // seen from the front), y up from the cabinet's bottom. Both views draw the left speaker of a pair, so a driver's
-// `xIn` (+ toward the pair's inside) is + to the right, as the Hi-fi page draws it. Pure.
+// `xIn` (+ toward the pair's inside) is + to the right. Pure.
 import type {
   ArchBlock,
   Dims2,
@@ -40,14 +40,14 @@ import { byId } from "../tables";
 import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
 import { clearDepthIn, sharedWalls, slotRunIn, TOUCH_IN, tubeDriverOf } from "./chamberAir";
-import { RADIATOR_PANEL } from "../hifi/hifi";
-import { subVentOpenings, subVentPlan } from "../pa/subVentPlan";
+import { RADIATOR_PANEL } from "../acoustics/wooferBox";
+import { subVentOpenings, subVentPlan } from "../build/ventPlan";
 import {
   radiatorSpots,
   roundPortSpots,
   type RadiatorSpot,
   type RoundSpot,
-} from "../hifi/boxLayout";
+} from "../build/boxLayout";
 import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
 import { DRIVER_CUTOUT_IN, HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
@@ -254,7 +254,7 @@ export const onTop = (driver: Pick<SpeakerDriver, "horn">) =>
 /**
  * Whether a catalog horn fits where it would sit on a chamber. In the baffle: its mouth's height inside the chamber's
  * clear face, and its width too unless the tower's cutout trims it to the clear face (a rectangular horn, or one drawn
- * from its mesh: lib/pa/tower towerHornCutout). On the top: no chamber standing on this one (a horn wider than the
+ * from its mesh: lib/speaker/tower towerHornCutout). On the top: no chamber standing on this one (a horn wider than the
  * chamber stands over its edges, as on the PA mid box).
  */
 export function hornFits(
@@ -268,7 +268,7 @@ export function hornFits(
 }
 
 /**
- * The box a baffle horn's cutout is sized in (lib/pa/tower towerHornCutout): the chamber's clear face and a wall each
+ * The box a baffle horn's cutout is sized in (lib/speaker/tower towerHornCutout): the chamber's clear face and a wall each
  * side, so a chamber beside another cuts within its own clear face. The cutlist, the weights, the 3D view and the front
  * drawing all size it here.
  */
@@ -291,7 +291,7 @@ export const hornFitsWhereSet = (
 
 /**
  * Where a newly picked horn sits on a chamber: the catalog's `rect` flag sets the first choice (a rectangular horn in
- * the baffle, a round one freestanding on the top, as the Hi-fi page's waveguides), where it fits (`hornFits`); else the
+ * the baffle, a round one freestanding on the top, as a hi-fi design's waveguides), where it fits (`hornFits`); else the
  * other place. The user can pick either place that fits.
  */
 export function defaultHornPlacement(
@@ -571,7 +571,7 @@ export interface PlacedRoundPorts {
 
 /**
  * A Hi-fi round port's tubes on their chamber: at the port's `position` (the row's center, on its panel) where set,
- * each cut (its tube's outside) kept inside the clear face; else by the Hi-fi rule (lib/hifi/boxLayout
+ * each cut (its tube's outside) kept inside the clear face; else by the Hi-fi rule (lib/build/boxLayout
  * `roundPortSpots`: a row centered along the baffle's bottom).
  */
 export function roundPortsAt(
@@ -587,14 +587,14 @@ export function roundPortsAt(
   return { panel: port.position.panel, ...movedTo(placed, spots, cut, port.position) };
 }
 
-/** A passive radiator placed: its spot on its panel (lib/hifi/boxLayout), and its center across from the center. */
+/** A passive radiator placed: its spot on its panel (lib/build/boxLayout), and its center across from the center. */
 export interface PlacedRadiator extends RadiatorSpot {
   x: number;
 }
 
 /**
  * A radiator chamber's radiators on it: at the vent's `position` (the stack's center, on its panel) where set, each
- * kept inside the clear face; else by the Hi-fi rule (lib/hifi/boxLayout `radiatorSpots`: stacked up `RADIATOR_PANEL`
+ * kept inside the clear face; else by the Hi-fi rule (lib/build/boxLayout `radiatorSpots`: stacked up `RADIATOR_PANEL`
  * from its bottom, centered across). None for any other chamber or a radiator id the catalog doesn't have. `moved`: a
  * set position was moved to keep them inside.
  */

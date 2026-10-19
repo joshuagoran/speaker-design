@@ -1,6 +1,6 @@
 import { PA_SETTINGS_TABS } from "../../constants/paSettingsTabs";
 import { Fragment } from "react";
-import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { PA_PANEL_TARGET_HZ } from "../../lib/build/boxBracing";
 import { formatHz } from "../../lib/format";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
@@ -18,7 +18,7 @@ import {
   mainsDsp,
   rackTotal,
 } from "../../lib/data";
-import { STATS } from "../../components/optimizer/StatRow";
+import { STATS } from "../../components/stats/StatLabel";
 import { AMP_SERIES, GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { FONT } from "../../styles/fonts";
 import { FLEX_GAP_Y, PAGE_WIDTH, READING_WIDTH, GAP_Y } from "../../styles/layout";
@@ -107,7 +107,7 @@ function sensitivityText(): string {
   return `${maker}'s ${sens} dB claim agrees with their T/S parameters (${ts}).`;
 }
 
-/** The plywood thicknesses the planner models other than the default wall, as the heading offers them. */
+/** The plywood thicknesses the app models other than the default wall, as the heading offers them. */
 const OTHER_THICKNESSES = DEFAULT_SUB_WEIGHTS.filter((w) => w.t !== DEFAULT_WALL).map((w) => w.t);
 /** The default sub's braces at each plywood size, as the rule puts them in. */
 const BRACES_BY_SIZE = DEFAULT_SUB_WEIGHTS.map(

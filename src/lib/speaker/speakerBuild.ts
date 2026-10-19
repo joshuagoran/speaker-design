@@ -1,17 +1,17 @@
 // A speaker spec's build, chamber by chamber: its braces and ribs by the PA boxes' bracing rule, its hardware, its cut
 // parts, the wood and the vent inside its air, its net air and its weight. Pure.
 //
-// - Bracing: every chamber of direct radiators is braced as its own box by the PA rule (lib/pa/calc braceShell: each
+// - Bracing: every chamber of direct radiators is braced as its own box by the PA rule (lib/acoustics/boxModels braceShell: each
 //   panel over PA_PANEL_TARGET_HZ, with the cabinet's style and back joint), its drivers, vent and hardware kept clear.
 //   A chamber with a PA sub and a PA port in a frame cabinet runs the PA sub box's own rule (subBoxBracing), so the PA
-//   designs match the PA page. A horn-loaded chamber takes none (the horn's walls hold its panels).
-// - Hardware (`SpeakerCabinet.hardware`): the PA presets (lib/pa/hardware) in each shell's lowest chamber.
+//   designs match the PA box models. A horn-loaded chamber takes none (the horn's walls hold its panels).
+// - Hardware (`SpeakerCabinet.hardware`): the PA presets (lib/build/hardware) in each shell's lowest chamber.
 // - Net air: the chamber's clear volume less its drivers, the vent's air, the wood inside (the braces and ribs, the
 //   vent's walls, a frame's baffle cleats round its clear face) and the hardware's recesses. No allowance: every part is
 //   counted.
 // - Cut parts: chambers that fill one box of one depth share one shell (`SHELL_CUT_BOX`) with partitions inside, and an
 //   arched top where the views draw one on a frame; any other chamber is its own box, less the walls another chamber
-//   gives it. A frame is the PA boxes' (lib/pa/calc boxParts), a flush box the Hi-fi box's (lib/hifi/cutlist
+//   gives it. A frame is the PA boxes' (lib/acoustics/boxModels boxParts), a flush box the Hi-fi box's (lib/build/flushBoxParts
 //   flushBoxPanels).
 // - Weight: the PA's rule on a frame (its box weights: the 3/4″ baffle and the walls by their outside faces, the braces,
 //   the fixings; a chamber over another adds what it builds, as the tower's cabinet over its sub box), the Hi-fi's on a
@@ -45,7 +45,7 @@ import type {
   VentPanel,
   VentSpec,
 } from "../../types";
-import type { HardwareDriver } from "../pa/hardware";
+import type { HardwareDriver } from "../build/hardware";
 import {
   BAFFLE_PLY_IN,
   MID_FIXINGS_LB,
@@ -76,21 +76,16 @@ import {
   type BraceShell,
   type ConeBody,
   type HardwareCutNotes,
-} from "../pa/calc";
-import { subTubeKit } from "../pa/tubes";
-import { towerHornCutout } from "../pa/tower";
-import { NO_HANDLE_SET, hardwareKeepOut, planBoxHardware, withoutDish } from "../pa/hardware";
-import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
-import { MIN_BAY_IN, braceShortfalls, defaultBraceStyleNear, panelStock } from "../bracing";
+} from "../acoustics/boxModels";
+import { subTubeKit } from "../build/tubes";
+import { towerHornCutout } from "./tower";
+import { NO_HANDLE_SET, hardwareKeepOut, planBoxHardware, withoutDish } from "../build/hardware";
+import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../build/boxBracing";
+import { MIN_BAY_IN, braceShortfalls, defaultBraceStyleNear, panelStock } from "../build/bracing";
 import { bracingTaken, shellBackJoint } from "./chamberBracing";
-import { panelLbPerSqFt } from "../panel";
-import {
-  HIFI_FALLBACK_LB,
-  HIFI_FIXINGS_LB,
-  hifiPortElbows,
-  radiatorsLb,
-  slotMaxLength,
-} from "../hifi/hifi";
+import { panelLbPerSqFt } from "../build/panel";
+import { HIFI_FALLBACK_LB, HIFI_FIXINGS_LB, radiatorsLb } from "./twoWay";
+import { hifiPortElbows, slotMaxLength } from "../acoustics/wooferBox";
 import {
   aboveBaffleEdge,
   flushBoxPanels,
@@ -104,7 +99,7 @@ import {
   slotOpeningNote,
   slotShelfPart,
   tweeterCutoutNote,
-} from "../hifi/cutlist";
+} from "../build/flushBoxParts";
 import {
   CD_OPTIONS,
   FILL_OPTIONS,
@@ -899,7 +894,7 @@ const hifiSlotFits = (dims: Dims3, port: SpeakerSlotPort, t: number) =>
 
 /**
  * Whether a chamber's vent fits it by the Hi-fi rule (lib/speaker/speakerLayout `portRule`): a slot by its length, round
- * tubes by the elbows they need (lib/hifi hifiPortElbows). A PA port's fit is its fit chips' (lib/speaker/fitChips), so
+ * tubes by the elbows they need (lib/acoustics/wooferBox hifiPortElbows). A PA port's fit is its fit chips' (lib/speaker/fitChips), so
  * it, and a chamber with no vent, count as fitting here.
  */
 export function hifiVentFits(
@@ -917,7 +912,7 @@ export function hifiVentFits(
 
 /**
  * The chamber's vent as cutlist rows and bought parts: a PA port's parts (a slot's shelf and fins, side ducts' walls and
- * dividers; flared tubes bought, with their stock pipe: lib/pa/calc subVentParts), a Hi-fi slot's shelf, a Hi-fi
+ * dividers; flared tubes bought, with their stock pipe: lib/acoustics/boxModels subVentParts), a Hi-fi slot's shelf, a Hi-fi
  * round port's tubes bought.
  */
 function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]; vent: string[] } {
@@ -1188,7 +1183,7 @@ const frameMarks = (edgeY: number, centerX: number): BaffleMarks => ({
   across: (x) => offsetWords(x - centerX),
 });
 
-/** The marks on a flush box's baffle, whose box stands `boxY` up the cabinet (lib/hifi/cutlist aboveBaffleEdge). */
+/** The marks on a flush box's baffle, whose box stands `boxY` up the cabinet (lib/build/flushBoxParts aboveBaffleEdge). */
 const flushMarks = (boxY: number, centerX: number, joint: CornerJoint, t: number): BaffleMarks => ({
   up: (y) => aboveBaffleEdge(y - boxY, joint, t),
   across: (x) => offsetWords(x - centerX),
@@ -1196,8 +1191,8 @@ const flushMarks = (boxY: number, centerX: number, joint: CornerJoint, t: number
 
 /**
  * The chamber's cutouts, by panel, as cutlist notes: each driver on the baffle at its spot (a cone's cutout, a horn's,
- * a tweeter's plate), a PA sub's tube holes (lib/pa/calc subCutNote), a Hi-fi port or slot, the radiators on their
- * panel, a horn-loaded chamber's mouth. A PA sub in a box of its own keeps the PA page's note, without its place.
+ * a tweeter's plate), a PA sub's tube holes (lib/acoustics/boxModels subCutNote), a Hi-fi port or slot, the radiators on their
+ * panel, a horn-loaded chamber's mouth. A PA sub in a box of its own keeps the PA box models' note, without its place.
  */
 function chamberNotes(
   cabinet: SpeakerCabinet,
@@ -1461,7 +1456,7 @@ const hardwareLine = (box: CutBoxId, plan: BoxHardwarePlan) =>
  * (`SpeakerLayout.oneShell`) share one shell: its sides, top and bottom (or an arched top), back and baffle under
  * `SHELL_CUT_BOX`, every chamber's cutouts on the one baffle, and each chamber's partitions, braces and vent parts
  * under its own box. Any other chamber is a box of its own (`chamberCutBox`), less the walls another chamber gives it.
- * `also` is the lines under the list (the bought vent parts and the hardware, as the PA and Hi-fi pages give them);
+ * `also` is the lines under the list (the bought vent parts and the hardware);
  * `vent` is the vent's lines alone, the notes under the purchased parts table (`speakerPurchasedParts`).
  */
 export function speakerCutParts(

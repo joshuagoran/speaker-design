@@ -1,5 +1,7 @@
 # String review
 
+> History: this document describes the old pages' strings. The switch-over (#178) removed the PA, Hi-fi, Coverage, and Fills pages.
+
 The user-visible strings rewritten for the US-spelling / short-strings pass, by page: before → after, with the file.
 Style: about 80 % ASD-STE100: at most 20 words a sentence, one idea each, active voice, imperatives for instructions,
 no phrasal verbs, articles kept; technical names exempt. `${…}` and `{…}` are the values the page fills in.

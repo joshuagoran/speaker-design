@@ -13,26 +13,30 @@ substitute for an impedance sweep on the prototype.
 
 ```
 src/main.tsx                    entry: mounts <App/>; imports the stylesheet
-src/App.tsx                     hash routing, header, and the planner state shared by the PA pages
-src/pages/pa-stack/             PA stack page: PaStackPage, sections/, hooks/ (state: sub, mid, horn, crossovers, ...)
-src/pages/coverage/             Coverage page: the stacks on a floor plan (useCoverageLayout, useCoverageMap)
-src/pages/{hifi,fills,cutlist,notes}/   the other pages
+src/App.tsx                     hash routing (the Speaker page by default), header
+src/pages/speaker/              Speaker page: one box, its settings, results, templates, and optimizer
+src/pages/stack/                Stack page: speakers stacked or side by side, with presets and an optimizer
+src/pages/space/                Space page: stacks placed in a room or outdoors, and the coverage map
+src/pages/{cutlist,notes}/      the cutlists (Speaker and Stack) and Notes (at /notes)
 src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
 src/components/saved-configs/firebaseStore.ts   saving on GitHub Pages (bundled only into that build)
 src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
 src/styles/palette.ts           the colors (CSS variables and Tailwind names come from here)
 src/styles/app.css              page styles + Tailwind layers; font
-src/data/catalog/               the parts catalog as typed data, one file per kind (drivers, horns, amps, cabinets, plywood, …)
+src/data/catalog/               the parts catalog as typed data, one file per kind (drivers, horns, amps, cabinets, plywood, ...)
 src/lib/data.ts                 the catalog as the app reads it: comparable Xmax, tweeter faceplates, picker order
 src/lib/tables.ts               byId / byIdOrThrow for those tables
-src/lib/defaults.ts             DEFAULT_PA / DEFAULT_HIFI / DEFAULT_FILL: the first-load designs, as whole objects
-src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
-src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion, coverage (+ worker, runner) (pure TypeScript, tested)
-src/lib/hifi/                   hifi model and its optimizer
+src/lib/defaults.ts             DEFAULT_PA / DEFAULT_HIFI / DEFAULT_FILL: the designs the templates start from
+src/types.ts                    types shared across modules (drivers, horns, cabinets, specs, Setter)
+src/lib/acoustics/              the models: box models, woofer box, horn engine, directivity, dispersion, room, coverage
+src/lib/build/                  cutlists (+ worker, runner), bracing, hardware, horn mounts, tubes, vent plan, box layout
+src/lib/speaker/                the speaker, stack, and space model: specs, response, limits, chips, optimizers (+ workers)
+src/lib/optimizer/              what the optimizers share: amp steps, goal keeps, progress, card selection
 index.html                      Vite entry
 tailwind.config.js              Tailwind, compiled at build time
 tsconfig.json                   strict TypeScript (type-checked by `vp check`; Vite does the emit)
-tests/                          Vitest suites, golden snapshot, mobile layout check
+tests/                          Vitest suites, optimizer snapshots, mobile layout and 3D memory checks
+tools/dead-exports.mjs          lists the code in src/ that nothing live uses (`vp run dead-exports`)
 build/build.sh                  vp build + build/inline.mjs -> one self-contained page
 build/serve.sh                  build + serve on :8901
 build/compare-main.sh           build this tree and a ref (default origin/main), cmp both pages
@@ -49,9 +53,9 @@ Node `^22.18.0 || ^24.11.0 || >=26` and Python 3 (for the preview server). The t
 pnpm install            # or `vp install` with the global vp CLI
 pnpm exec vp check      # format, lint, type check
 pnpm exec vp test       # tests (Vitest)
-pnpm run golden         # rewrite tests/golden.json after an intentional change (golden.test.ts only reads it)
-pnpm run optimizer-dump # rewrite tests/optimizer-dump.json (optimizer cards for fixed cases), sharded over all cores
-                        # optimizer-dump:pa / optimizer-dump:hifi redo one part and keep the other
+pnpm run speaker-optimizer-snapshot   # rewrite the optimizer snapshots after an intentional change
+pnpm run stack-optimizer-snapshot
+pnpm run dead-exports   # list the code in src/ that nothing live uses
 ```
 
 ## Build
@@ -76,12 +80,12 @@ build/serve.sh          # http://127.0.0.1:8901/stack-planner.html
 It builds both pages and serves `dist/`. The pages are self-contained, so opening
 `dist/stack-planner.html` straight from disk works too.
 
-Saving is unavailable in local preview (see below). The planner detects that and
+Saving is unavailable in local preview (see below). The app detects that and
 says so rather than breaking.
 
-## Publishing the planner
+## Publishing the app
 
-The planner is published as a claude.ai Artifact. It must declare the `db`
+The app is published as a claude.ai Artifact. It must declare the `db`
 capability or saved configurations silently do nothing:
 
 ```
@@ -98,82 +102,47 @@ Two consequences of declaring `db`:
 - Omitting `capabilities` on a later publish carries the declaration forward.
   Passing `{}` clears it, which would break saving.
 
-## Saved configurations
+## Saved designs
 
-The planner keeps whole-system snapshots in the artifact's document store,
-collection `configs`, one document per configuration:
+The app saves speakers, stacks, and spaces, each in its own collection
+(`speakers`, `stacks`, and `spaces`; on GitHub Pages under `users/{uid}`).
+A stack names its speakers, and a space names its stacks.
 
-```jsonc
-{
-  "name": "NSW 266 L reference",
-  "savedAt": 1758738000000, // epoch ms, the list sorts on this
-  "format": "full", // fixed: 18" sub + CD; mid size (12" or 15") follows the "mid" driver
-  "sub": "emnsw4018", // SUB_OPTIONS id
-  "mid": "em3012", // MID_OPTIONS id
-  "midBox": "b15", // MID_BOXES id
-  "cd": "n314t", // CD_OPTIONS id
-  "horn": "a460g2_14", // HORN_OPTIONS id
-  "cabinet": "column", // last "Start from" choice, label only
-  "portStyle": "slots", // slots (bottom; folds up the back wall when longer than the depth holds; old saves with folded load as slots) | vslots (both sides) | vslot1 (one side) | round2
-  "cDim": { "w": 28, "h": 32, "d": 24 }, // external inches
-  "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
-  "hpf": 33,
-  "hpType": "BW24", // sub highpass: BW24 | LR24 | BW48 | LR48
-  "ampW": 800, // amp power per sub channel into 8 Ω; caps max SPL
-  "portMax": 20, // peak port air speed limit, m/s
-  "mDim": { "w": 15, "h": 15, "d": 15 }, // mid-bass box, external inches (sealed)
-  "wall": 0.75, // side/top/bottom/back ply, 0.75 or 0.5 (braced); baffles stay 3/4"
-  "inset": 0.75, // baffle set back from the frame front, 0–1.5"
-  "cabFinish": "birch", // "birch", "walnut" or a paint hex
-  "spacerH": 20, // "tops on spacers" spacer height, in
-  "joint": "butt", // cutlist corner joints: butt | rabbet | miter
-  "xoLo": 120,
-  "xoHi": 950, // crossovers, sub->mid and mid->horn, Hz
-  "xoLoOrder": 4, // their Linkwitz-Riley slopes: 4 = LR24, 8 = LR48; a missing one loads as 4
-  "xoHiOrder": 4,
-  "mAmpW": 400, // amp power per mid channel into 8 Ω
-  "tilt": 6, // dB less the mid band needs than the sub band (music balance)
-  "hfAmpW": 100, // amp power per HF channel, rated into 8 Ω
-  "hfTilt": 6, // dB less the HF band needs than the mid band
-  "layout": "stack", // older saves may also hold "cutaway": the 3D view's toggle now, not saved; it is ignored
-  "baffleColor": "#e8b4a8",
-  "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz",
-}
-```
+The old PA and Hi-fi designs (collections `configs` and `hifiConfigs`, and the
+`planner.*`, `hifi.*`, and `coverage.layout` localStorage keys) are no longer
+read. They stay in place. `data/configs-seed.json` keeps the old PA seeds as
+test designs.
 
-Unknown ids fall back to whatever is currently selected, so a config saved
-before a driver was added still loads.
+## How the app is put together
 
-Read or seed the collection from a Claude session with the `ArtifactData` tool
-(`action: "list" | "get" | "set" | "batch"`, `collection: "configs"`). The eight
-published cabinets are seeded as `preset-<id>` documents; they are ordinary
-configurations and can be edited or deleted like any other.
-
-## How the planner is put together
-
-- `src/data/catalog/<kind>.ts` — the parts catalog, pure typed data: subs, mids, fills, compression drivers, horns and waveguides, Hi-fi woofers, tweeters and passive radiators, amps, makers, cabinets, mid boxes, formats, finishes, racks, DSP units, plywood and driver cutouts. Adding a part is an edit there; each file's header lists its fields and units.
-- `src/lib/data.ts` — the tables the app reads (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …), derived from the catalog (comparable Xmax, tweeter faceplates, picker order). Drivers with a `ts` block get modeled; ones without show a note instead.
-- `src/lib/pa/optimize.ts` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.ts`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
-- `src/lib/pa/coverage.ts` — the Coverage page's floor map: both stacks (the dispersion model's sub, mid and horn, driven at the planner's curves and balanced with its music tilts) placed and aimed on a floor plan, summed with the floor and first-order wall reflections. Coherent below 500 Hz (the stacks interfere), power-summed above it in a band average. Runs in a Web Worker (`coverage.worker.ts`), coarse while dragging, then fine.
-- `src/lib/pa/chips.ts` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
-- `src/lib/pa/calc.ts` — every calculation, pure TypeScript, imported by the page and the tests (`vp test`):
-  - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` (rectangular mouth; outside, the floor mirrors a letterbox's mouth and the ground a side duct's; inside, a letterbox's mouth reads `slotInnerEndCorrection`: the potential-flow table in `src/data/acoustics/slot-inner-end.ts` for a mouth on the floor with the back wall behind it, and for a fold a sharp 90° bend plus the same mouth under the lid; a side duct's the modal `sideDuctEndCorrection`). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
-  - `closedBox(ts, VbL, hp, lp, volts, { hpOrder, lpOrder })` — sealed mid-bass, LR24 or LR48 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modeled.
-  - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).
-  - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
-- Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the crossover's highpass (LR24 or LR48) and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
-- Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `vp run golden` after an intentional change; `golden.test.ts` only reads it, and the writer, `tests/update-golden.ts`, is a separate run because rewriting `golden.json` inside the full suite would race `tests/optimize.test.ts`, which reads it in a parallel worker). CI runs them before every deploy, plus `tests/mobile-check.mjs` (Playwright: no sideways scroll, 40 px touch targets, chip text not squeezed, at phone and tablet widths) and `tests/three-memory-check.mjs` (the PA and Hi-fi 3D views free what each rebuild drops). See `docs/testing-plan.md` and `docs/calc-audit.md`.
-- Render tools, for looking at the 3D views by eye (not in `vp test` or CI): `node tests/render-hardware.mjs [outDir] [view …]` (the PA stack's hardware close up) and `node tests/render-hifi.mjs [outDir] [view …]` (the Hi-fi speaker in the page's own 3D view card). Each view is a query string for its page; the options are listed at the top of `tests/render/hardware-view.ts` and `tests/render/hifi-view.tsx`.
+- `src/data/catalog/<kind>.ts` — the parts catalog, pure typed data. Adding a part is an edit there; each file's header
+  lists its fields and units.
+- `src/lib/data.ts` — the tables the app reads (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`,
+  `FILL_OPTIONS`, ...), derived from the catalog. Drivers with a `ts` block get modeled; ones without show a note.
+- `src/lib/acoustics/` — the models, pure TypeScript:
+  - `boxModels.ts` — `boxModel` (vented box: leakage QL 7, port losses Qp 50, each opening's end correction),
+    `closedBox` (sealed, LR24 or LR48 crossovers), the horn's power (`hornPower`), the maximum-output layer
+    (`sineLimitAt`), and the weights.
+  - `wooferBox.ts` — a woofer in a sealed, vented, or passive radiator box; `directivity.ts` — pistons, waveguides,
+    and the baffle step.
+  - `hornModel.ts` and `network/` — the 1-D horn engine (Hornresp-style).
+  - `coverage.ts`, `roomAcoustics.ts`, and `roomModes.ts` — the Space page's floor map: the floor and wall
+    reflections, the diffuse field, and the room's modes.
+- `src/lib/speaker/` — the speaker spec and its response, limits, chips, cabinet build, and the stack and space
+  models. The two optimizers (`optimize/`) run in Web Workers, inlined by the build.
+- `src/lib/build/` — the cutlist packer (in a worker), bracing by rule, hardware, horn mounts, tubes, and the vent plan.
+- Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at,
+  minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`).
+- Tests (`tests/`) check each function against an independent reference. The speaker and stack optimizer snapshots pin the cards each optimizer picks. CI runs them, the phone check
+  (`tests/mobile-check.mjs`), and the 3D checks (`tests/three-memory-check.mjs` and the horn mount tests) as parallel
+  jobs. See `docs/testing-plan.md` and `docs/calc-audit.md`.
+- Render tool, for looking at the 3D view by eye (not in `vp test` or CI): `node tests/render-speaker.mjs [outDir]
+[view ...]` (a template's speaker in the page's own 3D view card). The options are listed at the top of
+  `tests/render/speaker-view.tsx`.
 - `src/components/stack-view/` — the three.js scenes. `SceneView3D` is the viewer (renderer, camera, drag and pinch,
-  themed stage, framing); `StackView3D` shows the PA stack (`buildStackScene`) and `HifiView3D` one Hi-fi speaker
-  (`buildHifiScene`, from the numbers the Hi-fi model and its 2D drawing use, `lib/hifi/boxLayout`). Both sit in
-  `Viewer3DCard`, whose cutaway and full-screen buttons are view state, never saved. The PA scene takes `sub` (whose
-  `.box` carries the dimensions) and `portGeom` (explicit vent geometry), so the drawn box always matches the modeled
-  one; a scene rebuilds when the JSON of its props changes.
-- `ResponseChart` — max-SPL curves (sub through its lowpass, mid-bass through
-  its crossovers), fixed 80–135 dB so configurations compare directly.
-- `StackPlanner` — state and layout. Every cabinet is custom: `cDim` and `cVent`
-  hold the geometry and `CABINETS` only supplies starting points.
+  themed stage, framing); `SpeakerView3D` shows one speaker (`buildSpeakerScene`) and `MembersView3D` a stack. Both
+  sit in `Viewer3DCard`, whose cutaway and full-screen buttons are view state, never saved. A scene rebuilds when the
+  JSON of its props changes.
 
 ## Design constraints
 
@@ -208,15 +177,15 @@ See `docs/design-notes.md` for the findings behind the current configuration.
 
 ## Web app (GitHub Pages + Firestore)
 
-`sh build/build.sh pages` builds `dist/site/` — the same planner, with saved
-configs in Firebase Firestore instead of the claude.ai artifact store. Pushes
+`sh build/build.sh pages` builds `dist/site/` — the same app, with saved
+designs in Firebase Firestore instead of the claude.ai artifact store. Pushes
 to `main` deploy it via `.github/workflows/pages.yml`.
 
 One-time setup:
 
 1. [Firebase console](https://console.firebase.google.com): create a project (free Spark plan).
-2. Add a **Web app**; copy its config object into `build/firebase-config.js`
-   (`window.PLANNER_FIREBASE = { ... }`). These values are public by design.
+2. Add a **Web app**; copy its config object into
+   `src/components/saved-configs/firebaseConfig.ts`. These values are public by design.
 3. **Firestore Database → Create** (production mode).
 4. **Authentication → Sign-in method → Google → Enable**; under
    **Settings → Authorized domains** add `<user>.github.io`.
@@ -224,6 +193,5 @@ One-time setup:
    only `users/{uid}/…`) and publish.
 6. GitHub repo **Settings → Pages → Source: GitHub Actions**.
 
-On the site, **Sign in with Google to save**, then **Import saved configs**
-once to copy `data/configs-seed.json` (exported from the artifact) into your
-account. Without a config the page works but can't save.
+On the site, **Sign in with Google to save**. Without a config the page works
+but can't save.

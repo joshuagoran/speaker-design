@@ -1,6 +1,6 @@
 // Presets for the acoustic network engine (lib/acoustics/network/solve): small builders that wire the parts of a
 // known box or horn into a network. Front-loaded, offset-driver and tapped horns are one horn path with the driver's
-// sides at different points; the sealed and vented boxes are the box models' circuits (lib/pa/calc).
+// sides at different points; the sealed and vented boxes are the box models' circuits (lib/acoustics/boxModels).
 //
 // A horn path runs from segment boundary 0 to boundary n (n segments). Every boundary a driver side taps gets a node,
 // and so do boundary 0 (a closed end, unless a side taps it) and the mouth (boundary n). Ducts join the nodes in order.
@@ -15,7 +15,6 @@
 // designs are Hornresp's (cm², cm, L), as the horn engine's.
 import type {
   AcousticNetwork,
-  BoxModelTS,
   HornDesign,
   HornLayoutDesign,
   HornModel,
@@ -39,9 +38,7 @@ import {
   CM_PER_M,
   LITERS_PER_CUBIC_M,
   SQ_CM_PER_SQ_M,
-  SQ_M_PER_SQ_IN,
 } from "../../../constants/units";
-import { ventResistances } from "../driverCircuit";
 import {
   AIR_STIFFNESS,
   oneSideAirMass,
@@ -49,7 +46,6 @@ import {
   ventOf,
   type HornModelOptions,
 } from "../hornModel";
-import { ventTuning, type BoxModelOptions } from "../../pa/calc";
 import { networkResponse } from "./solve";
 
 /** The horn presets' options: the horn engine's, and whether a leak's flow radiates. */
@@ -327,98 +323,4 @@ export function presetModel(
     ze: point.ze[0],
   }));
   return { curve, fb: preset.fb };
-}
-
-/**
- * The sealed box model (lib/pa/calc closedBox) as a network: the cone's front open to the air, its rear on the box's
- * air. No radiation load, as the box model.
- */
-export function sealedBox(ts: BoxModelTS, liters: number): PresetNetwork {
-  const front = 0,
-    rear = 1;
-  return {
-    network: {
-      nodeCount: 2,
-      parts: [
-        { kind: NETWORK_PART.driver, front, rear, ts, drivers: 1, airMassOff: 0 },
-        {
-          kind: NETWORK_PART.opening,
-          node: front,
-          load: { kind: OPENING_LOAD.open },
-          radiates: true,
-          setback: 0,
-        },
-        { kind: NETWORK_PART.chamber, node: rear, liters },
-      ],
-      angle: 2,
-      count: 1,
-    },
-    driver: 0,
-    throat: 1,
-    throatArea: ts.Sd / SQ_CM_PER_SQ_M,
-    vent: null,
-    ventArea: 0,
-    fb: null,
-  };
-}
-
-/**
- * The vented box model (lib/pa/calc boxModel) as a network, from the same inputs: net liters, the vent's total area
- * (in²) and physical length (in), and its options (openings, QL, Qp, end correction). The vent is a lumped mass of its
- * effective length (`ventTuning`) with its loss; the leak radiates, as in the box model. No radiation load.
- */
-export function ventedBox(
-  ts: BoxModelTS,
-  liters: number,
-  ventSquareInches: number,
-  ventInches: number,
-  opts: Pick<BoxModelOptions, "nPorts" | "QL" | "Qp" | "ecIn"> = {},
-): PresetNetwork {
-  const { nPorts = 1, QL = BOX_LEAK_Q, Qp = BOX_PORT_Q, ecIn } = opts;
-  /** the vent's effective length (m) and the tuning (Hz) */
-  const { Leff, Fb } = ventTuning(liters, ventSquareInches, ventInches, nPorts, ecIn);
-  /** the vent's area, m²; the box's compliance, m³/Pa; the vent's acoustic mass, kg/m⁴ */
-  const Sp = ventSquareInches * SQ_M_PER_SQ_IN,
-    Cab = liters / LITERS_PER_CUBIC_M / AIR_STIFFNESS,
-    Map = (AIR_DENSITY * Leff) / Sp;
-  const { Ral, Rap } = ventResistances(Fb, Cab, Map, QL, Qp);
-  const front = 0,
-    box = 1,
-    exit = 2;
-  const parts: NetworkPart[] = [
-    { kind: NETWORK_PART.driver, front, rear: box, ts, drivers: 1, airMassOff: 0 },
-    {
-      kind: NETWORK_PART.opening,
-      node: front,
-      load: { kind: OPENING_LOAD.open },
-      radiates: true,
-      setback: 0,
-    },
-    { kind: NETWORK_PART.chamber, node: box, liters },
-    { kind: NETWORK_PART.mass, from: box, to: exit, mass: Map, resistance: Rap },
-    {
-      kind: NETWORK_PART.opening,
-      node: exit,
-      load: { kind: OPENING_LOAD.open },
-      radiates: true,
-      setback: 0,
-    },
-  ];
-  if (Number.isFinite(Ral))
-    parts.push({
-      kind: NETWORK_PART.opening,
-      node: box,
-      load: { kind: OPENING_LOAD.resistance, resistance: Ral },
-      radiates: true,
-      setback: 0,
-    });
-  return {
-    network: { nodeCount: 3, parts, angle: 2, count: 1 },
-    driver: 0,
-    throat: 1,
-    throatArea: ts.Sd / SQ_CM_PER_SQ_M,
-    vent: 3,
-    ventArea: Sp,
-    fb: Fb,
-  };
 }

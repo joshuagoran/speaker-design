@@ -2,10 +2,10 @@
 // a change of default part, price or rating shows up in the prose. Nothing here names a part itself.
 import { DEFAULT_PA } from "./defaults";
 import { PANEL_NOMINAL_NAMES, PLYWOOD_MATERIAL } from "../constants/panelSizes";
-import { PANEL_NOMINALS, panelIn } from "./panel";
+import { PANEL_NOMINALS, panelIn } from "./build/panel";
 import { MAKER_NAMES } from "../data/catalog/makers";
-import { subBoxBracing, subSystem, subWeightLb } from "./pa/calc";
-import { hardwareLb } from "./pa/hardware";
+import { subBoxBracing, subSystem, subWeightLb } from "./acoustics/boxModels";
+import { hardwareLb } from "./build/hardware";
 import { formatDollars, formatHz } from "./format";
 import { crossoverSlopeName } from "../constants/crossovers";
 
@@ -36,9 +36,9 @@ export const DEFAULT_CROSSOVERS = `sub HPF ~${d.hpf} Hz ${d.hpType} · sub/mid $
 export const DEFAULT_WALL = PANEL_NOMINAL_NAMES[d.panel].short;
 
 /**
- * The default sub box's loaded weight on each nominal plywood size the planner offers, thickest first, with the braces
- * and ribs the rule puts in at that size (its default style) and its default handles, dish and jacks, as the planner
- * weighs it; and how many of each.
+ * The default sub box's loaded weight on each nominal plywood size the app offers, thickest first, with the braces
+ * and ribs the rule puts in at that size (its default style) and its default handles, dish and jacks; and how many of
+ * each.
  */
 export const DEFAULT_SUB_WEIGHTS = PANEL_NOMINALS.map((n) => {
   const t = panelIn(n, PLYWOOD_MATERIAL);
@@ -61,7 +61,7 @@ export const DEFAULT_SUB_WEIGHTS = PANEL_NOMINALS.map((n) => {
   };
 });
 
-/** The default sub's 2.83 V sensitivity from its T/S in the default box, as the PA page's sub section shows it. */
+/** The default sub's 2.83 V sensitivity from its T/S in the default box. */
 function subTsSensitivity(): number {
   const sys = subSystem(d.sub, d.mid, {
     subBox: d.cDim,

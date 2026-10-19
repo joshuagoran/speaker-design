@@ -24,7 +24,7 @@ import {
   type SizeModel,
 } from "./space";
 import { tunedPort } from "./vent";
-import { ampWatts } from "../../pa/calc";
+import { ampWatts } from "../../acoustics/boxModels";
 import { bandLoads } from "../speakerLimits";
 import type { UnitOption } from "./screen";
 

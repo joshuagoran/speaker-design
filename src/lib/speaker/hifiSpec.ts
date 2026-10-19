@@ -1,4 +1,4 @@
-// Read adapter: the Hi-fi page's design (HifiDesignState) as a speaker spec, a stack of one (its sub highpass) and a
+// Read adapter: a hi-fi design (HifiDesignState) as a speaker spec, a stack of one (its sub highpass) and a
 // space (the pair at the seat). Pure; nothing is written.
 import type {
   AdapterBandId,
@@ -12,17 +12,10 @@ import type {
   SpeakerSpec,
   SpecIdentity,
 } from "../../types";
-import {
-  driverLayout,
-  HIFI_STUFFING_GAIN,
-  hifiBox,
-  hifiGridTop,
-  hifiPortElbows,
-  isCoax,
-  tweeterLevelInBox,
-} from "../hifi/hifi";
-import { hifiBoxFit } from "../hifi/boxLayout";
-import { MAX_ELBOWS } from "../tubeFold";
+import { driverLayout, isCoax, tweeterLevelInBox } from "./twoWay";
+import { HIFI_STUFFING_GAIN, hifiBox, hifiGridTop, hifiPortElbows } from "../acoustics/wooferBox";
+import { hifiBoxFit } from "../build/boxLayout";
+import { MAX_ELBOWS } from "../build/tubeFold";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
@@ -63,7 +56,7 @@ function hifiVent(
       return { kind: VENT_KIND.sealed };
     case VENT_KIND.vented: {
       const port = state.portSpec;
-      // the Hi-fi page's air-speed limit
+      // the hi-fi design's air-speed limit
       const maxSpeedMs = state.portMaxMs ?? HIFI_PORT_MAX_MS;
       return port.shape === PORT_SHAPE.slot
         ? { kind: VENT_KIND.vented, port, maxSpeedMs }
@@ -183,7 +176,7 @@ export function speakerFromHifi(
   identity: SpecIdentity,
 ): SpeakerSpec {
   const { crossoverHz, crossoverOrder } = state;
-  /** the box as the model takes it (lib/hifi/boxLayout) */
+  /** the box as the model takes it (lib/build/boxLayout) */
   const fit = hifiBoxFit(state);
   const drive = state.drive ?? HIFI_DRIVE.active;
   const { subsonic, trimDb } = hifiBandParts(state, fit);
@@ -215,7 +208,7 @@ export function speakerFromHifi(
         thicknessIn: fit.wallThicknessIn,
       },
       ...FLUSH_BOX,
-      // the Hi-fi page counts no handles or input dish
+      // a hi-fi design counts no handles or input dish
       ...NO_HARDWARE,
       roundoverIn: state.roundoverIn,
       tiltDeg: state.tiltDeg ?? 0,
@@ -235,7 +228,7 @@ export function speakerFromHifi(
         drive === HIFI_DRIVE.passive ? state.wooferAmpWatts : state.tweeterAmpWatts,
       ),
     ],
-    // the Hi-fi page's sub highpass is the stack's crossover (layersFromHifi): the input range starts off
+    // the hi-fi design's sub highpass is the stack's crossover (layersFromHifi): the input range starts off
     input: NO_FILTERS,
     look,
   };

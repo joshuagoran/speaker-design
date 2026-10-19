@@ -44,7 +44,7 @@ hr_stop() { wineserver -k 2>/dev/null; pkill -x Xvfb; }
 # Go to the Input Parameters window through the Window menu.
 to_input() { click 578 300; xdotool key 1; sleep 1; }
 
-# Set Hornresp's air to the planner's (343 m/s, 1.18 kg/m³). A new container starts with Hornresp's defaults
+# Set Hornresp's air to the app's (343 m/s, 1.18 kg/m³). A new container starts with Hornresp's defaults
 # (344, 1.205). The input window's title shows the values when they are set.
 hr_set_air() {
   to_input

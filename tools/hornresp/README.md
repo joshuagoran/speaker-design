@@ -31,7 +31,7 @@ manager. Check a step with `shot NAME` (a screenshot) when something goes wrong.
 export HR_DIR=<hornresp folder> WINEPREFIX=<prefix> SHOT_DIR=/tmp
 source tools/hornresp/hornresp.sh
 hr_start                     # up to a minute on a new container
-hr_set_air                   # 343 m/s, 1.18 kg/m³: the planner's air
+hr_set_air                   # 343 m/s, 1.18 kg/m³: the app's air
 hr_run my-case my-case.txt   # import, calculate, export to $HR_DIR/Export/my-case-data.txt
 hr_trim "$HR_DIR/Export/my-case-data.txt" > tests/hornresp/my-case-results.txt
 hr_stop

@@ -3,10 +3,12 @@ import { evaluateSpeaker } from "../src/lib/speaker/optimize/evaluate";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speakerStarts";
 import type { SpeakerGoal, SpeakerSpec } from "../src/types";
-import type { Json } from "./optimizer-dump-merge";
 
 // The Speaker optimizer snapshot's runs: a few templates and goals, the target at the template's level and no budget or
 // weight limit. tests/speaker-optimizer-snapshot.test.ts checks them against tests/speaker-optimizer-snapshot.json.
+
+/** A JSON value, as the snapshot files store them. */
+export type Json = number | string | boolean | null | undefined | Json[] | { [k: string]: Json };
 
 /** Where the snapshot's cards are stored. */
 export const SPEAKER_SNAPSHOT_FILE = new URL("./speaker-optimizer-snapshot.json", import.meta.url);

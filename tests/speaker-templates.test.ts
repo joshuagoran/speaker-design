@@ -24,8 +24,9 @@ import {
   slotOpeningsAt,
   speakerLayout,
 } from "../src/lib/speaker/speakerLayout";
-import { hornGrid, hornModel } from "../src/lib/acoustics/hornModel";
-import { takesHornMountAt } from "../src/lib/pa/hornMount";
+import { hornModel } from "../src/lib/acoustics/hornModel";
+import { hornGrid } from "./helpers";
+import { takesHornMountAt } from "../src/lib/build/hornMount";
 import { HORN_OPTIONS } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";
 import {

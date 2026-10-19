@@ -1,7 +1,7 @@
 /**
- * Top of every maximum-output chart, dB SPL: the PA response chart, the PA optimizer cards, the Hi-fi page's
- * maximum-output chart and the Speaker page's. A PA horn on its amp reaches about 131 dB at 1 m on the golden designs, a
- * Hi-fi compression driver on a waveguide about 126 dB.
+ * Top of every maximum-output chart, dB SPL: the Speaker and Stack pages' maximum-output charts and the optimizer
+ * cards. A PA horn on its amp reaches about 131 dB at 1 m on the saved PA designs, a Hi-fi compression driver on a
+ * waveguide about 126 dB.
  */
 export const MAX_OUTPUT_TOP = 140;
 
@@ -15,8 +15,8 @@ export const FREQ_AXIS_MIN_HZ = 15;
 export const FREQ_AXIS_MAX_HZ = 20000;
 
 /**
- * Top of every sensitivity and response chart (the Hi-fi page's response charts and its optimizer cards, the
- * Speaker page's 2.83 V, 1 m response), so designs and charts compare by eye.
+ * Top of every sensitivity and response chart (the Speaker page's 2.83 V, 1 m response and the Stack page's response),
+ * so designs and charts compare by eye.
  */
 export const HIFI_TOP = 120;
 
@@ -46,7 +46,7 @@ export const DISPERSION_FREQ_MIN_HZ = 50;
 /** High end of every dispersion map's frequency axis, Hz (the PA stack's). */
 export const DISPERSION_FREQ_MAX_HZ = 20000;
 
-/** How far out a stack's or speaker's dispersion map is worked out, m (the PA page's, the Speaker and Stack pages'). */
+/** How far out a stack's or speaker's dispersion map is worked out, m (the Speaker and Stack pages'). */
 export const DISPERSION_DISTANCE_M = 10;
 
 /** How many log-spaced frequencies a dispersion map samples between its axis ends (about 9 per octave). */

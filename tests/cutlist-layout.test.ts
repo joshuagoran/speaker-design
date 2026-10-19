@@ -1,6 +1,6 @@
 import { describe, test } from "vite-plus/test";
 import assert from "node:assert";
-import { PLYWOOD_SHEETS, cutParts } from "../src/lib/pa/calc";
+import { PLYWOOD_SHEETS, cutParts } from "../src/lib/acoustics/boxModels";
 import {
   FROM_OFFCUT,
   cutRowKey,
@@ -13,7 +13,7 @@ import {
   packSheets,
   savedCutlist,
   waterfallStrips,
-} from "../src/lib/pa/cutlist";
+} from "../src/lib/build/cutlist";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { CUT_BOX_NAMES } from "../src/constants/cutParts";
 import type { CutPart, CutlistSettings, PortStyle } from "../src/types";

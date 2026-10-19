@@ -14,7 +14,7 @@
 // aesXo Hz, minXo Hz (the maker's lowest crossover), imp Ω, fs Hz (null where unpublished).
 import type { HifiTweeterRaw } from "../../types";
 
-/** The tweeter the Hi-fi planner starts on. */
+/** The default hi-fi design's tweeter. */
 export const SB26STCN_RAW: HifiTweeterRaw = {
   id: "sb26stcn",
   lb: 0.22,

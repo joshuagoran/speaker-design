@@ -1,5 +1,5 @@
 #!/bin/sh
-# Local preview: builds the planner and serves it on :8901. The page is self-contained (no CDN scripts), so it also
+# Local preview: builds the app and serves it on :8901. The page is self-contained (no CDN scripts), so it also
 # works opened straight from disk.
 set -e
 cd "$(dirname "$0")/.."

@@ -1,4 +1,4 @@
-// The Pages build's Firebase adapter, against a mocked modular SDK: the planner's config store must get the same
+// The Pages build's Firebase adapter, against a mocked modular SDK: the app's config store must get the same
 // calls the compat SDK used to make (user collection path, orderBy savedAt desc, limit 50, set / delete, auth).
 import { test, vi } from "vite-plus/test";
 import assert from "node:assert";

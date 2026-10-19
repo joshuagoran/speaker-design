@@ -1,41 +1,33 @@
-// The general speaker model (lib/speaker/speakerResponse) against today's engines: the golden Hi-fi and PA designs,
-// read through the L1 adapters, give the same curves, net air and tuning as the Hi-fi and PA models.
+// The general speaker model (lib/speaker/speakerResponse) against the box models: the Hi-fi and PA designs, read
+// through the L1 adapters, give the same curves, net air, and tuning as the Hi-fi models and the PA sub box model.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { ohmsOf } from "../src/lib/power";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import {
   PA_FLOOR,
   atModelVolts,
   bandCurve,
-  hifiCases,
   levelAt,
   maxDiff,
   paDesign,
-  paModels,
+  paSubModel,
   speakerAndFeed,
   withNet,
 } from "./speaker-cases";
 import { speakerResponse, SPEAKER_RESPONSE_FREQUENCIES } from "../src/lib/speaker/speakerResponse";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
-import { flushBracing, lrFilter } from "../src/lib/speaker/specParts";
+import { flushBracing } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
-import {
-  HIFI_NET_SHARE,
-  hifiBox,
-  hifiGridTop,
-  isCoax,
-  linkwitzRileyFilter,
-} from "../src/lib/hifi/hifi";
 import {
   boxModel,
   closedBox,
   highpassGain,
   linkwitzRileyHighpass,
   linkwitzRileyLowpass,
-} from "../src/lib/pa/calc";
+  STUFFING_VOLUME_GAIN,
+} from "../src/lib/acoustics/boxModels";
 import { abs, add, complex, multiply, phasor, scale } from "../src/lib/acoustics/complex";
 import { chamberVentModel } from "../src/lib/speaker/chamberAir";
 import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
@@ -104,130 +96,38 @@ test("speaker model: a band filter's magnitude is the box models' highpass and L
 
 // ---- Hi-fi ----
 
-/**
- * Tolerances for the Hi-fi parity, dB. Each band runs the engine's own arithmetic on the model's grid, so it differs
- * only by reading the engine's curve between its points (196 points over 15 Hz–2 kHz): 0.05 dB. The sum also takes
- * each box's own phase and the subsonic's, which the Hi-fi engine leaves out of its sum (it multiplies the woofer's
- * level by the crossover alone): a few degrees at a 1.6–2 kHz crossover, more where the woofer's voice-coil inductance
- * turns its phase there: up to 0.12 dB on these designs (Oct 2026). The curves run on the Hi-fi engine's net air; from
- * the size, the model counts the real bracing (none in these boxes: lib/speaker/speakerBuild) where the Hi-fi engine
- * keeps 3% of the clear volume for bracing and damping (HIFI_NET_SHARE), so its net air is that 3% more, exactly.
- */
-const HIFI_BAND_DB = 0.05;
-const HIFI_SUM_DB = 0.15;
-
-test("speaker model: the Hi-fi designs match the Hi-fi engine before the room (bands, sum, net air, tuning)", () => {
-  for (const { name, state } of hifiCases) {
-    const read = speakerFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
-    const design = deriveHifiDesign(state);
-    const sys = design.speakerModel?.speakerSystem;
-    assert.ok(sys, name);
-    const cfg = design.speakerConfig;
-    const box = hifiBox(state.woofer, cfg, hifiGridTop(cfg.xo));
-    assert.ok(box, name);
-    const [free] = speakerResponse(read).chambers;
-    const allowance = (1 - HIFI_NET_SHARE) * box.gross;
-    assert.ok(
-      Math.abs(free.netLiters - (box.net + allowance)) < 1e-9 * box.net,
-      `${name}: net air`,
-    );
-    const spec = withNet(read, read.cabinet.chambers[0], box.net);
-    const response = speakerResponse(spec);
-    const order = cfg.order;
-    const lowRaw = box.m.curve.map((o) => ({ f: o.f, spl: o.spl - atModelVolts(box.V) }));
-    const lowRef = lowRaw.map((o) => ({
-      f: o.f,
-      spl: o.spl + 20 * Math.log10(abs(linkwitzRileyFilter(o.f, cfg.xo, order, "lp"))),
-    }));
-    const tweeterDb = sys.tSens283 + sys.trim;
-    const highRef = SPEAKER_RESPONSE_FREQUENCIES.map((f) => ({
-      f,
-      spl: tweeterDb + 20 * Math.log10(abs(linkwitzRileyFilter(f, cfg.xo, order, "hp"))),
-    }));
-    const lowDiff = maxDiff(bandCurve(response, SPEAKER_BAND.low), lowRef);
-    const highDiff = maxDiff(bandCurve(response, SPEAKER_BAND.high), highRef);
-    // the Hi-fi engine's on-axis sum before the room: the woofer's level times the crossover, plus the tweeter's
-    const top = box.m.curve[box.m.curve.length - 1].f;
-    const sumRef = SPEAKER_RESPONSE_FREQUENCIES.filter((f) => f <= top).map((f) => {
-      const w = scale(
-        linkwitzRileyFilter(f, cfg.xo, order, "lp"),
-        10 ** ((levelAt(lowRaw, f) ?? 0) / 20),
-      );
-      const t = scale(linkwitzRileyFilter(f, cfg.xo, order, "hp"), 10 ** (tweeterDb / 20));
-      return { f, spl: 20 * Math.log10(abs(add(w, t))) };
-    });
-    const sumDiff = maxDiff(response.sum, sumRef);
-    assert.ok(lowDiff <= HIFI_BAND_DB, `${name}: woofer band off by ${lowDiff.toFixed(3)} dB`);
-    assert.ok(highDiff <= HIFI_BAND_DB, `${name}: tweeter band off by ${highDiff.toFixed(3)} dB`);
-    // A coaxial's bands only: its woofer's datasheet inductance (Le 1.1 mH on the B&C 10CXN64) turns its phase at
-    // the crossover, which the speaker model's sum takes and the Hi-fi engine's sum leaves out (about 1.2 dB).
-    if (!isCoax(state.woofer, state.tweeter))
-      assert.ok(sumDiff <= HIFI_SUM_DB, `${name}: sum off by ${sumDiff.toFixed(3)} dB`);
-    const [chamber] = response.chambers;
-    assert.ok(Math.abs(chamber.netLiters - box.net) < 1e-9 * box.net, `${name}: net air`);
-    if (sys.kind === "sealed")
-      assert.ok(chamber.qtc !== null && Math.abs(chamber.qtc - sys.Qtc) < 1e-9, name);
-    else
-      assert.ok(
-        chamber.fb !== null && Math.abs(chamber.fb - sys.Fb) < 1e-9 * sys.Fb,
-        `${name}: Fb`,
-      );
-    assert.deepEqual(chamber.gaps, [], name);
-  }
-});
-
-// ---- PA ----
-
-/** Each golden PA design's differences from today's models, dB and %. */
+/** Each PA design's sub differences from the PA sub box model, dB and %. */
 interface PaRow {
   name: string;
   port: string;
-  /** with the net air set to today's (the box models and filters alone) */
+  /** with the net air set to the box model's (the box models and filters alone) */
   subDb: number;
-  midDb: number;
-  hornDb: number;
   fbPct: number;
   /** with the net air the model works out from the size */
   subFreeDb: number;
-  midFreeDb: number;
   netPct: number;
-  midNetPct: number;
 }
 
 /**
- * Tolerances for the PA parity. With the net air set to today's, every band runs the engines' own arithmetic (the sub's
- * vent by the PA's port rules: the letterbox's fins and fold, the flared tubes, the side ducts): PA_EXACT_DB, reading
- * today's curves between their points, and Fb to rounding. With the net air worked out from the size (lib/speaker
- * speakerBuild: the braces, vent walls, cleats and hardware recesses counted as the PA counts them), the sub's net air is
- * the PA's (PA_FB_PCT) and its band within PA_EXACT_DB. The mid's is less than the PA's by up to PA_MID_NET_PCT: the
- * model counts its baffle cleats, as the PA counts the sub's (the PA's mid leaves them out), and in the tower the braces
- * its rule gives the mid chamber (the PA page leaves that chamber unbraced). Its sealed curve moves by up to
- * PA_MID_FREE_DB.
- *
- * On the goldens (Oct 2026), from the size: the mid's net air is −1.0% to −2.7% of the PA's in a box of its own (up to
- * 0.13 dB), −3.7% in the tower (0.01 dB).
+ * Tolerances for the PA sub parity. With the net air set to the box model's, the sub band runs the box model's own
+ * arithmetic (its vent by the PA's port rules: the letterbox's fins and fold, the flared tubes, the side ducts):
+ * PA_EXACT_DB, reading the box model's curve between its points, and Fb to rounding. With the net air worked out from
+ * the size (lib/speaker speakerBuild: the braces, vent walls, cleats, and hardware recesses counted as the box model
+ * counts them), the sub's net air is the box model's (PA_FB_PCT) and its band within PA_EXACT_DB.
  */
 const PA_EXACT_DB = 0.05;
 const PA_FB_PCT = 1e-9;
-const PA_MID_NET_PCT = 4;
-const PA_MID_FREE_DB = 0.15;
 
-test("speaker model: the golden PA designs match the PA models (sub, mid and horn bands, net air, tuning)", () => {
+test("speaker model: the PA designs' subs match the PA sub box model (band, net air, tuning)", () => {
   const rows: PaRow[] = [];
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
     const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
-    const models = paModels(cfg);
+    const models = paSubModel(cfg);
     const subSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.sub);
-    const topSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
     const subChamber = subSide.spec.cabinet.chambers[0];
-    const midChamber = topSide.spec.cabinet.chambers.find((ch) =>
-      ch.drivers.some((d) => d.kind === "mid"),
-    );
-    assert.ok(midChamber, c.name);
-    // today's curves at 2.83 V, with the crossovers each band takes (the sub's lowpass, the top's highpass: the system's
-    // outside the tower)
+    // the box model's curve at 2.83 V, with the sub's lowpass
     const subRef = models.sub.curve.map((o) => ({
       f: o.f,
       spl:
@@ -235,67 +135,26 @@ test("speaker model: the golden PA designs match the PA models (sub, mid and hor
         atModelVolts(models.s.AMP_V) +
         20 * Math.log10(linkwitzRileyLowpass(o.f, cfg.xoLo, cfg.xoLoOrder)),
     }));
-    const midBand = topSide.spec.bands.find((b) => b.id === SPEAKER_BAND.mid);
-    const highBand = topSide.spec.bands.find((b) => b.id === SPEAKER_BAND.high);
-    assert.ok(midBand && highBand, c.name);
-    // each band at its level (the tower's mid and horn carry the music balance)
-    const midRef = models.mid.curve.map((o) => ({
-      f: o.f,
-      spl: o.spl - atModelVolts(models.m.V) + midBand.levelDb,
-    }));
-    const hornRef = models.horn.curve.map((o) => ({
-      f: o.f,
-      spl:
-        o.spl +
-        highBand.levelDb +
-        (tower
-          ? 0
-          : 20 *
-            Math.log10(abs(filterTransfer(o.f, lrFilter(cfg.xoLo, cfg.xoLoOrder), "highpass")))),
-    }));
-    // the boxes with today's net air (the mid's stuffing is the chamber's own: the PA's 15%)
     const subSet = speakerResponse(withNet(subSide.spec, subChamber, models.s.netL), {
       feed: subSide.feed,
     });
-    const topSpec = tower ? withNet(subSide.spec, subChamber, models.s.netL) : topSide.spec;
-    const midSet = speakerResponse(withNet(topSpec, midChamber, models.m.netL), {
-      feed: topSide.feed,
-    });
     const subFree = speakerResponse(subSide.spec, { feed: subSide.feed });
-    const topFree = speakerResponse(topSide.spec, { feed: topSide.feed });
-    const midIndex = topSide.spec.cabinet.chambers.indexOf(midChamber);
     const fb = subSet.chambers[0].fb;
-    const qtc = midSet.chambers[midIndex].qtc;
-    assert.ok(fb !== null && qtc !== null, c.name);
-    assert.ok(Math.abs(qtc - models.mid.Qtc) < 1e-9, `${c.name}: mid Qtc`);
+    assert.ok(fb !== null, c.name);
     rows.push({
       name: c.name,
       port: cfg.portStyle,
       subDb: maxDiff(bandCurve(subSet, SPEAKER_BAND.low), subRef),
-      midDb: maxDiff(bandCurve(midSet, SPEAKER_BAND.mid), midRef),
-      hornDb: maxDiff(bandCurve(midSet, SPEAKER_BAND.high), hornRef),
       fbPct: (100 * Math.abs(fb - models.sub.Fb)) / models.sub.Fb,
       subFreeDb: maxDiff(bandCurve(subFree, SPEAKER_BAND.low), subRef),
-      midFreeDb: maxDiff(bandCurve(topFree, SPEAKER_BAND.mid), midRef),
       netPct: (100 * (subFree.chambers[0].netLiters - models.s.netL)) / models.s.netL,
-      midNetPct: (100 * (topFree.chambers[midIndex].netLiters - models.m.netL)) / models.m.netL,
     });
   }
   for (const r of rows) {
-    assert.ok(r.midDb <= PA_EXACT_DB, `${r.name}: mid band off by ${r.midDb.toFixed(3)} dB`);
-    assert.ok(r.hornDb <= PA_EXACT_DB, `${r.name}: horn band off by ${r.hornDb.toFixed(3)} dB`);
     assert.ok(r.subDb <= PA_EXACT_DB, `${r.name}: sub band off by ${r.subDb.toFixed(3)} dB`);
     assert.ok(r.fbPct <= PA_FB_PCT, `${r.name}: Fb off by ${r.fbPct}%`);
     assert.ok(r.subFreeDb <= PA_EXACT_DB, `${r.name}: sub as read, ${r.subFreeDb.toFixed(3)} dB`);
     assert.ok(Math.abs(r.netPct) <= PA_FB_PCT, `${r.name}: sub's net air off by ${r.netPct}%`);
-    assert.ok(
-      r.midNetPct <= 0 && r.midNetPct >= -PA_MID_NET_PCT,
-      `${r.name}: mid's net air off by ${r.midNetPct.toFixed(2)}%`,
-    );
-    assert.ok(
-      r.midFreeDb <= PA_MID_FREE_DB,
-      `${r.name}: mid as read, ${r.midFreeDb.toFixed(2)} dB`,
-    );
   }
 });
 
@@ -444,29 +303,34 @@ test("speaker model: the PA top and tower sum their chambers' cones and the horn
     const tower = cfg.layout === "tower";
     const read = layersFromPa(cfg, { id: "pa", name: seed.name }, PA_FLOOR);
     const { spec, feed } = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
-    const models = paModels(cfg);
+    const models = paSubModel(cfg);
     const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
     const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
     const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);
     const horn = HORN_OPTIONS.find((o) => o.id === cfg.horn);
     assert.ok(sub && mid && cd?.hf && horn?.hf);
-    // every cone chamber at today's net air
+    // the sub chamber at the box model's net air, the mid chamber at its own as built
+    const midIndex = spec.cabinet.chambers.findIndex((c) =>
+      c.drivers.some((d) => d.kind === "mid"),
+    );
+    const midNetL = speakerResponse(spec, { feed }).chambers[midIndex].netLiters;
     const set: SpeakerSpec = {
       ...spec,
       cabinet: {
         ...spec.cabinet,
-        chambers: spec.cabinet.chambers.map((c) =>
+        chambers: spec.cabinet.chambers.map((c, i) =>
           c.drivers.some((d) => d.kind === "sub")
             ? { ...c, netLiters: models.s.netL }
-            : c.drivers.some((d) => d.kind === "mid")
-              ? { ...c, netLiters: models.m.netL }
+            : i === midIndex
+              ? { ...c, netLiters: midNetL }
               : c,
         ),
       },
     };
     const response = speakerResponse(set, { feed });
-    // each band's pressure from the engines on the model's grid, with its phase, then its filters, the feed and level
-    const midBox = closedBox(mid.ts, models.m.effL, null, null, volts, {
+    // each band's pressure from the box models on the model's grid, with its phase, then its filters, the feed and
+    // level (the mid chamber's stuffing is the PA's 15%)
+    const midBox = closedBox(mid.ts, midNetL * STUFFING_VOLUME_GAIN, null, null, volts, {
       ...grid,
       hpOrder: 4,
       lpOrder: 4,

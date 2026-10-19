@@ -10,7 +10,8 @@ concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  test:
+  # lint, types, and the unit tests (the 3D job runs the horn mount tests)
+  unit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -22,20 +23,82 @@ jobs:
           cache: true
       - run: vp install
       - run: vp check
-      - run: vp test
+      - run: vp test --exclude tests/horn-plate.test.ts --exclude tests/horn-ply-mount.test.ts
+
+  # the build, and the phone and tablet layout check (tests/mobile-check.mjs)
+  phone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version: "22"
+          cache: true
+      - run: vp install
       - run: vp run build
-      # phone and tablet layout check (tests/mobile-check.mjs)
       # Playwright's own Chromium, without --with-deps: the runner already has Chrome's system libraries, and the
       # apt step pulls fonts from a slow mirror that has stalled CI for many minutes
       - run: vp exec playwright install chromium
         timeout-minutes: 5
       - run: node tests/mobile-check.mjs dist/stack-planner.html
         timeout-minutes: 5
-      # the 3D view's GPU memory stays flat over rebuilds (tests/three-memory-check.mjs)
-      - run: node tests/three-memory-check.mjs dist/stack-planner.html
+
+  # the 3D checks: the 3D view's GPU memory stays flat over rebuilds (tests/three-memory-check.mjs), and the horn mount
+  # tests. On a pull request they run only when the 3D view, the horn mount code, their tests, or this workflow change;
+  # on main they always run.
+  three:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE...HEAD" | grep -qE '^(src/components/stack-view/|src/lib/build/|src/constants/hornMount\.ts$|src/data/meshes/|tests/(horn-[^/]*\.test|mount-helpers|scene-cases|three-memory-check)\.|\.github/workflows/pages\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No 3D or horn mount change: the 3D checks are skipped."
+          fi
+      - if: steps.changes.outputs.run == 'true'
+        uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version: "22"
+          cache: true
+      - if: steps.changes.outputs.run == 'true'
+        run: vp install
+      - if: steps.changes.outputs.run == 'true'
+        run: vp test tests/horn-plate.test.ts tests/horn-ply-mount.test.ts
+      - if: steps.changes.outputs.run == 'true'
+        run: vp run build
+      - if: steps.changes.outputs.run == 'true'
+        run: vp exec playwright install chromium
         timeout-minutes: 5
+      - if: steps.changes.outputs.run == 'true'
+        run: node tests/three-memory-check.mjs dist/stack-planner.html
+        timeout-minutes: 5
+
+  # the check main's merge rule requires ("test"): it passes only when the unit, phone, and 3D jobs all pass (a skipped
+  # job counts as passed by the rule, so this job runs always and fails unless each one succeeded)
+  test:
+    needs: [unit, phone, three]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "unit=${{ needs.unit.result }} phone=${{ needs.phone.result }} three=${{ needs.three.result }}"
+          test "${{ needs.unit.result }}" = success
+          test "${{ needs.phone.result }}" = success
+          test "${{ needs.three.result }}" = success
+
   deploy:
-    needs: test
+    needs: [test]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

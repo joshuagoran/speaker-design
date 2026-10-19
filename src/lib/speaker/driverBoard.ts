@@ -15,13 +15,6 @@ export const driverBoardPieces = (horn: Pick<SpeakerHorn, "doubleBoard">) =>
 export const driverBoardIn = (wallIn: number, horn: Pick<SpeakerHorn, "doubleBoard">) =>
   wallIn * driverBoardPieces(horn);
 
-/** The chamber's driver board thickness, in: its horn's; 0 for a chamber with no horn built into it. */
-export const chamberBoardIn = (
-  panel: Pick<SpeakerPanel, "thicknessIn">,
-  chamber: Pick<SpeakerChamber, "load">,
-) =>
-  chamber.load.kind === CHAMBER_LOAD.horn ? driverBoardIn(panel.thicknessIn, chamber.load.horn) : 0;
-
 /**
  * How far the cones stand behind the bay's end, in: the pieces of the board in front of the one the drivers bolt to, each
  * a wall thick (0 for one piece).

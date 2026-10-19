@@ -1,5 +1,5 @@
-// The PA presets' band Levels, dB: the PA page's music balance for its starting design (DEFAULT_PA) in each layout,
-// worked out once by lib/speaker/autoBalance `autoBalanceStack` (the PA page's own balance to within 0.01 dB) and saved
+// The PA presets' band Levels, dB: the PA music balance of the default PA design (DEFAULT_PA) in each layout, worked
+// out once by lib/speaker/autoBalance `autoBalanceStack` (lib/speaker/paBalance's balance to within 0.01 dB) and saved
 // here (docs/speaker-designer-plan.md, L3f "Band levels in the preset"). The Stack and Space pages' PA presets read them
 // (src/pages/stack/stackPresets).
 //

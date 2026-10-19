@@ -29,15 +29,15 @@ import {
 } from "../../components/ui/SettingsSheetTabs";
 import { StatTileGrid } from "../../components/stats/StatTileGrid";
 import { SheetDrawing } from "../../components/drawings/SheetDrawing";
-import { PLYWOOD_SHEETS, formatInches } from "../../lib/pa/calc";
+import { PLYWOOD_SHEETS, formatInches } from "../../lib/acoustics/boxModels";
 import {
   defaultPanelIn,
   formatThickness,
   panelExactRange,
   panelThicknessName,
-} from "../../lib/panel";
+} from "../../lib/build/panel";
 import { PANEL_NOMINAL_NAMES } from "../../constants/panelSizes";
-import { settingsForMaterial } from "../../lib/hifi/cutlist";
+import { settingsForMaterial } from "../../lib/build/flushBoxParts";
 import {
   FROM_OFFCUT,
   FROM_OFFCUT_NOTE,
@@ -50,7 +50,7 @@ import {
   grainPresetOf,
   layoutCutlist,
   noteLines,
-} from "../../lib/pa/cutlist";
+} from "../../lib/build/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import {
   CSV_SECTIONS,
@@ -59,7 +59,7 @@ import {
   cutlistCsv,
   partLengthWidth,
   purchasedTotal,
-} from "../../lib/cutlistCsv";
+} from "../../lib/build/cutlistCsv";
 import { downloadText } from "../../lib/download";
 import {
   PURCHASED_COLUMNS,

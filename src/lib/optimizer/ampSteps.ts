@@ -6,16 +6,3 @@ export interface AmpSteps {
   step: number;
   min: number;
 }
-
-/** A power on the slider: floored to its step; null under its minimum. */
-export function onSlider(watts: number, s: AmpSteps): number | null {
-  const w = Math.floor(watts / s.step) * s.step;
-  return w >= s.min ? w : null;
-}
-
-/**
- * The power that moves a band `db` from where `watts` puts it (negative: down; an amp moves its band 1 dB per dB of
- * power), on the slider: floored to its step, null under its minimum.
- */
-export const ampForGain = (watts: number, db: number, s: AmpSteps): number | null =>
-  onSlider(watts * 10 ** (db / 10), s);

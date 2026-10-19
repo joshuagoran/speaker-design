@@ -11,8 +11,8 @@ import {
   slotFinLayout,
   slotFinsOf,
   slotFolds,
-} from "../src/lib/pa/calc";
-import { ELBOW_COUNTS, elbowCountOf } from "../src/lib/tubeFold";
+} from "../src/lib/acoustics/boxModels";
+import { ELBOW_COUNTS, elbowCountOf } from "../src/lib/build/tubeFold";
 import { withCompressionRatio } from "../src/pages/speaker/hornSections";
 import { withSlotKind, withSlotPlace } from "../src/lib/speaker/slotPort";
 import { chamberVentModel } from "../src/lib/speaker/chamberAir";
@@ -46,7 +46,7 @@ test("maxSlotFins: each opening keeps the ply's width and half the slot's height
 test("slotFinsOf: the vent's count held to the most, else the default of two", () => {
   expect(slotFinsOf({ fins: undefined, slotH: 2.25 }, 22.37, T)).toBe(PA_SLOT_FINS);
   expect(PA_SLOT_FINS).toBe(2);
-  // the default stays two, whatever the width (the PA page's results do not change)
+  // the default stays two, whatever the width (the PA designs' results do not change)
   expect(slotFinsOf({ fins: undefined, slotH: 2.25 }, 1, T)).toBe(2);
   expect(slotFinsOf({ fins: 0, slotH: 2.25 }, 22.37, T)).toBe(0);
   expect(slotFinsOf({ fins: 3, slotH: 2.25 }, 22.37, T)).toBe(3);

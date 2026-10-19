@@ -10,19 +10,17 @@ import {
   subGeometry,
   maxStraightSlotIn,
   minFoldedSlotIn,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import {
   BOTH_ENDS_CORRECTION_RATIO,
   rectangleEndCorrection,
   rectangleEndCorrectionIntegral,
 } from "../src/lib/acoustics/radiation";
-import { ductFit } from "../src/lib/pa/chips";
+import { ductFit } from "../src/lib/speaker/chips";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import type { SubSystemConfig } from "../src/types";
 import { C, rel, close, vent, DRV18 } from "./helpers";
-import { RETIRED_FOLDED_PORT_STYLE, savedPortStyle } from "../src/constants/portStyles";
-
 // Independent check of the closed form: integrate the potential of the rectangle numerically.
 // phi(x, y) = integral of 1/distance over the rectangle, from its four corner sub-rectangles.
 const F = (p: number, q: number) =>
@@ -237,8 +235,4 @@ test("bottom slot: the shortest fold tunes a little above the longest straight r
     const step = fold.Fb - straight.Fb;
     assert.ok(step > 0.3 && step < 3, `${box.h}: ${straight.Fb} -> ${fold.Fb} Hz`);
   }
-});
-test("saved designs with the retired folded layout load as the bottom slot", () => {
-  assert.equal(savedPortStyle(RETIRED_FOLDED_PORT_STYLE), "slots");
-  assert.equal(savedPortStyle("vslots"), "vslots");
 });

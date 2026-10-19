@@ -21,7 +21,7 @@ import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { SpaceSide } from "../../components/drawings/SpaceSide";
-import { COVERAGE_BANDS } from "../../lib/pa/coverage";
+import { COVERAGE_BANDS } from "../../lib/acoustics/coverage";
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
 import { entriesOf, keysOf } from "../../lib/records";

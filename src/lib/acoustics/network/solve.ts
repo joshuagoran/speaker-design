@@ -13,7 +13,7 @@
 // 500-point curve takes a few milliseconds. The engine is pure (no DOM, no globals), so it runs in a web worker.
 //
 // The driver is the horn engine's and the box models' circuit (lib/acoustics/driverCircuit): with the same parts it
-// gives lib/acoustics/hornModel's and lib/pa/calc's results to rounding (tests/acoustic-network.test.ts).
+// gives lib/acoustics/hornModel's and lib/acoustics/boxModels's results to rounding (tests/acoustic-network.test.ts).
 //
 // Words used below: "flow" is volume velocity (m³/s); "impedance" is acoustic impedance (Pa·s/m³); "admittance" its
 // reciprocal. ω is the angular frequency 2πf (rad/s) and k = ω/c the wave number (rad/m). Pressures and flows are
@@ -408,34 +408,6 @@ function flowsOf(prepared: Prepared, unknowns: Complex[], f: number): NetworkSta
         return { in: unknowns[flow], out: unknowns[flow] };
     }
   });
-}
-
-/**
- * A prepared network's state at frequency `f` (Hz): each node's pressure and each part's flows. Null when `f` is not
- * positive or the network cannot be solved there.
- */
-export function solvePreparedAt(prepared: PreparedNetwork, f: number): NetworkState | null {
-  if (!isPositive(f)) return null;
-  const unknowns = solveAt(prepared, f);
-  if (!unknowns) return null;
-  return {
-    pressures: unknowns.slice(0, prepared.network.nodeCount),
-    flows: flowsOf(prepared, unknowns, f),
-  };
-}
-
-/**
- * The network's state at frequency `f` (Hz) with `volts` RMS on every driver: each node's pressure and each part's
- * flows. Null when a size it divides by is not positive or the network cannot be solved. For many frequencies,
- * prepare the network once (`prepareNetwork`) and call `solvePreparedAt`.
- */
-export function solveNetworkAt(
-  network: AcousticNetwork,
-  f: number,
-  volts: number,
-): NetworkState | null {
-  const prepared = prepareNetwork(network, volts);
-  return prepared && solvePreparedAt(prepared, f);
 }
 
 /**

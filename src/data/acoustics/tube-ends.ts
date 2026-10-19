@@ -5,7 +5,7 @@
  * The extra inner end correction of a tube whose mouth faces a wall, in tube radii, at the gap from the mouth to the
  * wall in tube radii. An axisymmetric potential-flow solve (a flanged tube end facing a rigid plane: the same method as
  * SLOT_INNER_END, turned about the tube's axis). Between and past the two points it falls as a power of the gap
- * (`tubeWallEndCorrection` in src/lib/pa/tubes.ts); the planner never builds a mouth closer than a diameter (2 r).
+ * (`tubeWallEndCorrection` in src/lib/build/tubes.ts); no design builds a mouth closer than a diameter (2 r).
  */
 export const TUBE_WALL_END = {
   gapOverR: [1, 1.5],

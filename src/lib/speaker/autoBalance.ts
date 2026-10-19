@@ -1,7 +1,7 @@
 // Auto balance: band Levels for any speaker or stack, flat or with the PA music tilt (docs/speaker-designer-plan.md, L3f
 // "Auto balance").
-// By default the bands meet flat; the PA music tilt option is the PA page's music balance (lib/pa/musicBalance), made
-// general for any number and order of bands:
+// By default the bands meet flat; the PA music tilt option is the PA music balance (lib/speaker/paBalance), made general for any
+// number and order of bands:
 //
 // - The bands go in order of their passband (the middle of where each is within 3 dB of its highest point).
 // - Each pair of bands next to each other meets at their crossover: the lower band's lowpass and the upper band's
@@ -17,7 +17,7 @@
 // Each band is read on its own response at 2.83 V with its Level taken out (lib/speaker/speakerResponse; in a stack,
 // each member's speaker through its crossover, lib/speaker/stackResponse). One input drives every band, so a band's
 // limit sets only how loud the whole design can play, not where its bands sit against each other: with the PA music tilt,
-// the PA page's balance at the bands' limits comes to the same Levels (tests/auto-balance.test.ts checks it on the PA
+// the PA music balance at the bands' limits comes to the same Levels (tests/auto-balance.test.ts checks it on the PA
 // presets).
 // Pure.
 import type {
@@ -32,7 +32,7 @@ import type {
   StackMember,
   StackResponse,
 } from "../../types";
-import { curveLevelAt } from "../pa/coverage";
+import { curveLevelAt } from "../acoustics/coverage";
 import { passbandCenterHz, passbandEdgesHz } from "./speakerResponse";
 import { DEFAULT_PA } from "../defaults";
 import { PA_SLIDERS } from "../../constants/paSliders";
@@ -43,13 +43,13 @@ import {
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
 
-/** The tilt: how far a band sits below the band under it at their crossover, dB (the PA page's saved keys). */
+/** The tilt: how far a band sits below the band under it at their crossover, dB (the PA design's saved keys). */
 export type MusicTilt = Pick<MusicBalance, "tilt" | "hfTilt">;
 
 /** Flat (the default): every band at the same level at each crossover. */
 export const FLAT_TILT: MusicTilt = { tilt: 0, hfTilt: 0 };
 
-/** The PA music tilt, the PA page's starting music balance: the mid 6 dB below the sub, the horn 3 dB below the mid. */
+/** The PA music tilt, the default PA design's music balance: the mid 6 dB below the sub, the horn 3 dB below the mid. */
 export const PA_MUSIC_TILT: MusicTilt = { tilt: DEFAULT_PA.tilt, hfTilt: DEFAULT_PA.hfTilt };
 
 /** The tilt each auto balance option sets. */
@@ -58,7 +58,7 @@ export const AUTO_BALANCE_TILT: Record<AutoBalanceMode, MusicTilt> = {
   [AUTO_BALANCE_MODE.moreBass]: PA_MUSIC_TILT,
 };
 
-/** The highest crossover that takes `tilt` (a crossover to a sub), Hz: the PA page's highest sub-to-mid crossover. */
+/** The highest crossover that takes `tilt` (a crossover to a sub), Hz: the PA designs' highest sub-to-mid crossover. */
 export const SUB_CROSSOVER_MAX_HZ = PA_SLIDERS.xoLo.max;
 
 /** The Band balance tooltip: what each option does, with the numbers of the PA music tilt. */

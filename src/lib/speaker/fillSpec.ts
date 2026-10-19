@@ -1,8 +1,7 @@
-// Read adapter: the Fills page's design (FillDesignState) as a speaker spec, a stack of one and a space. Pure; nothing
+// Read adapter: a fill design (FillDesignState) as a speaker spec, a stack of one and a space. Pure; nothing
 // is written.
 import type {
   AdapterBandId,
-  DesignLayers,
   FillDesignState,
   SpeakerBand,
   SpeakerSpec,
@@ -15,10 +14,8 @@ import {
   DRIVER_KIND,
   FILL_PANEL,
   PORT_SHAPE,
-  SPACE_ITEM,
   SPEAKER_BAND,
   SPEAKER_BAND_NAMES,
-  SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import {
@@ -27,22 +24,17 @@ import {
   flushBracing,
   NO_HARDWARE,
   NO_FILTERS,
-  homeVenue,
   lrFilter,
-  spacePlacement,
-  speakerIdentity,
-  stackMember,
   stuffingPctOf,
 } from "./specParts";
-import { SEATED_EAR_FT, SPACE_HOME_ROOM } from "../../constants/space";
-import { fillDriverPadDb, STUFFING_VOLUME_GAIN } from "../pa/calc";
+import { fillDriverPadDb, STUFFING_VOLUME_GAIN } from "../acoustics/boxModels";
 import { DEFAULT_HIFI } from "../defaults";
 
 /**
  * A band of the coaxial's passive network: the cone below its HF section's recommended crossover (`hf.xo`) and the HF
- * section above it, at the Hi-fi page's slope, as the coaxial monitor template crosses it (the maker's own network
+ * section above it, at the default hi-fi slope, as the coaxial monitor template crosses it (the maker's own network
  * isn't published). A coaxial without HF data or a crossover keeps both bands open. The HF band carries the network's
- * pad (`fillDriverPadDb`, the one the Fills page's limits use), so the HF section plays at the woofer's level. Both bands
+ * pad (`fillDriverPadDb`), so the HF section plays at the woofer's level. Both bands
  * share the fill's one amp channel.
  */
 function networkBand(id: AdapterBandId, state: FillDesignState): SpeakerBand {
@@ -73,7 +65,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
           at: { xIn: 0, yIn: 0 },
           dims: boxDims,
           netLiters: null,
-          // the Fills model stuffs only a sealed box (fillSystem)
+          // a fill design stuffs only a sealed box
           stuffingPct: state.boxType === VENT_KIND.vented ? 0 : stuffingPctOf(STUFFING_VOLUME_GAIN),
           vent:
             state.boxType === VENT_KIND.vented
@@ -89,7 +81,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
               kind: DRIVER_KIND.coaxial,
               driverId: state.driver.id,
               count: 1,
-              // the Fills page draws no layout: centered
+              // a fill design has no layout: centered
               position: { xIn: 0, yIn: boxDims.h / 2 },
               bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
               horn: null,
@@ -104,7 +96,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
         thicknessIn: PANEL_STOCK[FILL_PANEL].in,
       },
       ...FLUSH_BOX,
-      // the fill page counts no handles or input dish
+      // a fill design counts no handles or input dish
       ...NO_HARDWARE,
       roundoverIn: 0,
       tiltDeg: 0,
@@ -113,24 +105,5 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
     // the highpass to the subs is the stack's crossover (layersFromFill): the input range starts off
     input: NO_FILTERS,
     look: {},
-  };
-}
-
-/**
- * The fill read in: the speaker, a stack of one with the highpass to the subs as its crossover (in a DSP), and the space:
- * one placement. The Fills page places nothing, so it stands at the origin.
- */
-export function layersFromFill(state: FillDesignState, design: SpecIdentity): DesignLayers {
-  const speaker = speakerFromFill(state, speakerIdentity(design, SPEAKER_PART.speaker));
-  const crossover = { highpass: lrFilter(state.highpassHz, state.highpassOrder), lowpass: null };
-  return {
-    speakers: [speaker],
-    stack: { ...design, members: [stackMember(speaker.id, crossover)], notes: "" },
-    space: {
-      ...design,
-      placements: [spacePlacement({ x: 0, y: 0 }, { kind: SPACE_ITEM.stack, id: design.id }, 0)],
-      // a seated listener in a living room, in front of it
-      venue: homeVenue(0, { x: 0, y: SPACE_HOME_ROOM.lengthFt / 2 }, SEATED_EAR_FT),
-    },
   };
 }

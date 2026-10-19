@@ -1,20 +1,21 @@
 # SpeakNow (speaker-design)
 
-DIY speaker planner: PA stack, cutlist, fills and hi-fi tabs, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `build/build.sh` (`vp build` + `build/inline.mjs`); sources in `src/`, strict TypeScript (`tsconfig.json`), shared types in `src/types.ts`;
+DIY speaker planner: the Speaker, Stack, and Space pages, their cutlists, and Notes, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `build/build.sh` (`vp build` + `build/inline.mjs`); sources in `src/`, strict TypeScript (`tsconfig.json`), shared types in `src/types.ts`; model code in `src/lib` by what it does (`acoustics`: the models; `build`: cutlists,
+bracing, hardware, and horn mounts; `speaker`: the speaker, stack, and space model);
 checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without the global CLI); phone layout check in `tests/mobile-check.mjs` (CI).
 The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`, `src/lib/pageRoute.ts`; the Pages build also writes `notes/index.html`).
 
 ## UI rules
 
-- UI text never mentions another page by name when that page may go away (today: the PA, Hi-fi, Coverage and Fills pages). Say what is true instead.
+- UI text never mentions another page by name when that page may go away. Say what is true instead.
 - UI text never names internal rules, models or code. Say what is true for the user.
 - **Charts use fixed axes.** Never autoscale a chart to its data; give it a fixed range for its purpose so designs compare
   by eye as settings change. Exception (owner-approved): the folded horn's path chart scales its axes to the drawing and its
   straight horn.
-- **Charts on the same view share the same scales**, x and y. Frequency charts use the PA stack's x axis (15 Hz–20 kHz);
-  every maximum-output chart (the PA response chart, the PA optimizer cards, the Hi-fi and Speaker page maximum-output
-  charts) uses 80–140 dB (`MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`); every sensitivity or response chart (the Hi-fi
-  response charts and optimizer cards, the Speaker page's response chart) uses 50–120 dB (`HIFI_TOP` / `HIFI_BOT`).
+- **Charts on the same view share the same scales**, x and y. Frequency charts use one x axis (15 Hz–20 kHz);
+  every maximum-output chart (the Speaker and Stack pages' maximum-output charts and optimizer cards) uses 80–140 dB
+  (`MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`); every sensitivity or response chart (the Speaker page's response chart) uses
+  50–120 dB (`HIFI_TOP` / `HIFI_BOT`).
   The coverage map colors the level against the target on a fixed −12 to +6 dB scale (`COVERAGE_MAP_DB`).
 - Colors: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
   grays (and a lighter gray, `faint`, kept as a spare: no chart uses it now); status colors stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's color names are remapped from it in `tailwind.config.js`.
@@ -39,7 +40,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
 - Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent. When a second page needs a control, first move it into `src/components/ui`, then use it on both pages.
 - Layouts own the spacing: containers space their children with one gap rule; shared controls carry no outer margin (`tests/no-control-margins.test.ts`).
-- A page with settings uses `SettingsLayout`: from md up the page doesn't scroll; the results and the `SettingsColumn` are two panes, each with its own scrollbar. Long settings (PA, Hi-fi) split into `SettingsSection` folds with a one-line summary each, built from the state and the catalog. Page width and gutters come from `PAGE_WIDTH` (`src/styles/layout.ts`): the full window width, never capped; on very wide screens a single result block (chart, stat tiles, detail list, notices) (also the saved configurations, optimizer, Details and dispersion blocks) stops at `RESULT_MAX_WIDTH` and prose at `READING_WIDTH`. The PA and Hi-fi Design results take two columns from `RESULTS_TWO_COLUMN_PX` (`resultsGridClass` / `resultsCellClass`), using the full pane.
+- A page with settings uses `SettingsLayout`: from md up the page doesn't scroll; the results and the `SettingsColumn` are two panes, each with its own scrollbar. Long settings (Speaker, Stack) split into `SettingsSection` folds with a one-line summary each, built from the state and the catalog. Page width and gutters come from `PAGE_WIDTH` (`src/styles/layout.ts`): the full window width, never capped; on very wide screens a single result block (chart, stat tiles, detail list, notices) (also the saved configurations, optimizer, Details and dispersion blocks) stops at `RESULT_MAX_WIDTH` and prose at `READING_WIDTH`. Results that take two columns do so from `RESULTS_TWO_COLUMN_PX` (`resultsGridClass` / `resultsCellClass`), using the full pane.
 
 ## TypeScript
 
@@ -55,8 +56,11 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - Driver prices come from US vendors only; don't drop a driver because some specs are missing (mark the gap).
 - The parts catalog (drivers, horns, waveguides, passive radiators, port tubes, amps, makers, cabinets, racks, DSP units, plywood, driver cutouts) lives in `src/data/catalog/<kind>.ts`, and the acoustics tables (room materials, air absorption, the generated slot inner-end table) in `src/data/acoustics/`, as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
 - UI text that names parts or defaults (Notes, racks, signal path) reads them from the catalog and the defaults (`src/lib/defaults.ts`), never hardcoded.
-- Optimizer tests: `tests/optimizer-snapshot.test.ts` (normal suite) checks the cards both optimizers pick for a few fixed designs; when an optimizer change is meant to change them, rewrite the file with `vp run optimizer-snapshot`. The full optimizer dump, `tests/optimizer-dump.json` (`vp run optimizer-dump`, or `optimizer-dump:pa` / `optimizer-dump:hifi`; parallel shards, minutes), is there to compare a change's cards over many more designs when that helps; it isn't required.
-- Never run the PA "Fully optimize" search (`optimizeExact`) on the PA tower, in tests or in comparisons. No tower design passes its checks, so the search runs to its round cap (more than 30 minutes; see #75).
+- Optimizer tests: `tests/speaker-optimizer-snapshot.test.ts` and `tests/stack-optimizer-snapshot.test.ts` (normal suite)
+  check the cards the two optimizers pick for a few fixed designs; when an optimizer change is meant to change them,
+  rewrite them with `vp run speaker-optimizer-snapshot` or `vp run stack-optimizer-snapshot`.
+- Dead code: `vp run dead-exports` (`tools/dead-exports.mjs`) lists the files and declarations in `src/` that no live
+  code uses (tests don't count). Delete what it lists.
 - Docs (`docs/`) use ASD-STE100 style: short sentences (20 words max), one idea each, active voice, plain verbs, no filler. Prefer tables and lists to prose.
 - Never push straight to `main` (it deploys via GitHub Actions). Every change goes through a PR; don't ask.
 - Feature branches: merge `main` into a feature branch with a merge commit pushed straight to that branch, with no
