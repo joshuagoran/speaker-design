@@ -26,6 +26,3 @@ export const PA_SLIDERS = {
   xoLo: { min: 60, max: 250, step: 5 },
   xoHi: { min: 500, max: 2000, step: 50 },
 } as const satisfies Record<string, SliderSpec>;
-
-/** A single vertical slot's widest throat, in. */
-export const PA_THROAT_MAX_VSLOT1 = 10;

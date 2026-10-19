@@ -2,8 +2,6 @@
 // range under its lock, the subsonic highpasses a tuning takes, and the PA vent sizes per style. Pure data and rules.
 import type { DimensionLockMode, PortStyle, VentSpec } from "../../types";
 import { PORT_TUBES } from "../../data/catalog/port-tubes";
-import { keysOf } from "../records";
-
 /**
  * A catalog row the optimizers search: a driver joins every search space once, as its standard version; another
  * impedance version of it (`variantOf`) stays in the pickers only.
@@ -47,5 +45,3 @@ const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
 };
 /** The vent sizes the search tries for a style, smallest area first. */
 export const ventSizesFor = (style: PortStyle) => VENT_SIZES[style];
-/** Every vent style. */
-export const VENT_STYLES = keysOf(VENT_SIZES);

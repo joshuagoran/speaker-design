@@ -85,18 +85,6 @@ export function tubeElbows(room: TubeRoom, dia: number, len: number): ElbowCount
   return null;
 }
 
-/** The spans a tube fits, shortest first, overlapping ones merged: the lengths it can take with some elbow count. */
-export const tubeSpans = (room: TubeRoom, dia: number) =>
-  mergeSpans(
-    ELBOW_COUNTS.map((e) => tubeSpan(room, dia, e)).filter(
-      (s): s is [number, number] => s !== null,
-    ),
-  );
-
-/** The longest tube the room holds with up to `e` elbows (0 when none fits). */
-export const tubeMaxLength = (room: TubeRoom, dia: number, e: ElbowCount = MAX_ELBOWS) =>
-  Math.max(0, ...ELBOW_COUNTS.filter((k) => k <= e).map((k) => tubeSpan(room, dia, k)?.[1] ?? 0));
-
 /**
  * How a tube `len` long is built with `e` elbows: the riser against the back wall and the return leg as short as the
  * length allows, each pulled forward only as far as a shorter tube needs. Outside the span the legs are clamped.

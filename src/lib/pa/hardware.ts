@@ -151,13 +151,6 @@ export const hardwareLb = (
   box: HardwareBoxId,
   layout: PaLayout | undefined,
 ) => (hw ? hardwareBought(hw, box, layout).reduce((a, b) => a + b.qty * (b.part.lb ?? 0), 0) : 0);
-/** A box's hardware price, $. */
-export const hardwarePrice = (
-  hw: PaHardware | undefined,
-  box: HardwareBoxId,
-  layout: PaLayout | undefined,
-) => (hw ? hardwareBought(hw, box, layout).reduce((a, b) => a + b.qty * b.part.price, 0) : 0);
-
 /** The driver as the center of gravity reads it: its center on the baffle (box axes), weight (lb) and mounting depth (in). */
 export interface HardwareDriver {
   center: { x: number; y: number };
@@ -580,6 +573,3 @@ export function withoutDish(plan: BoxHardwarePlan): BoxHardwarePlan {
     price: bought.reduce((a, b) => a + b.qty * b.part.price, 0),
   };
 }
-
-/** Whether every part of a plan fits. */
-export const hardwareFits = (plan: BoxHardwarePlan) => plan.parts.every((p) => !p.hits.length);

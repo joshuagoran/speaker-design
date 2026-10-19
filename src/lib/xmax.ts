@@ -124,14 +124,6 @@ export function passiveWithXmax(p: RawPassiveRadiator): PassiveRadiator {
   return { ...p, Xmax: lim, xmax: exact(lim, "published") };
 }
 
-/** A curve at the low and high ends of an Xmax band; null when the band is exact (nothing to shade). */
-export function xmaxBandCurves<P>(
-  band: Pick<XmaxBand, "lo" | "hi">,
-  curveAt: (Xmax: number) => P,
-): { lo: P; hi: P } | null {
-  return band.lo === band.hi ? null : { lo: curveAt(band.lo), hi: curveAt(band.hi) };
-}
-
 const FORMULA_LABEL: Record<XmaxFormula, string> = {
   plain: "plain overhang",
   "hg/4": "Hg/4",
@@ -152,54 +144,4 @@ export function publishedText(p: PublishedExcursion): string {
     p.Xdamage != null ? `Xdamage ${mm(p.Xdamage)}` : null,
   ];
   return parts.filter((s) => s != null).join(", ");
-}
-
-/** Why a value is an estimate, for its tooltip. */
-const estimateWhy = (formula: XmaxFormula, Hg: number | undefined) =>
-  formula === "overhang-or-x10"
-    ? "Eminence: the larger of overhang and 10 % distortion point; no coil height. Between its figure and figure + Hg/4."
-    : Hg != null
-      ? "The maker publishes the gap height but no coil height and no method."
-      : "The maker publishes no coil or gap height and no method.";
-
-/**
- * Two stat rows, [name, value, note, tooltip]: the comparable Xmax the models use and the maker's own figure. Notes stay
- * short (stat-row notes don't wrap); the full list of published figures and the source go in the tooltips.
- */
-export function xmaxRows(
-  ts: Pick<ThieleSmall, "Xmax" | "xmax" | "pub" | "Hvc" | "Hg">,
-): [string, string, string, string][] {
-  const { xmax, pub, Hvc, Hg } = ts;
-  const est = xmax.basis === "estimated";
-  const how =
-    xmax.basis === "derived" && Hvc != null && Hg != null
-      ? `Hvc ${mm(Hvc)} / Hg ${mm(Hg)}`
-      : xmax.basis === "converted"
-        ? `from the ${FORMULA_LABEL[pub.formula]} figure`
-        : xmax.basis === "published"
-          ? "as published"
-          : `estimate ${xmax.lo.toFixed(1)}–${xmax.hi.toFixed(1)}`;
-  // the maker's own figure, named when it is not an Xmax
-  const [kind, value] =
-    pub.Xmax != null
-      ? ["", pub.Xmax]
-      : pub.Xvar != null
-        ? ["Xvar ", pub.Xvar]
-        : pub.travelPP != null
-          ? ["travel p-p ", pub.travelPP]
-          : ["Xlim ", pub.Xlim];
-  return [
-    [
-      "Xmax (comparable)",
-      `${est ? "≈" : ""}${ts.Xmax.toFixed(1)} mm`,
-      how,
-      `One scale for all drivers: (Hvc − Hg)/2 + Hg/4, as B&C, Lavoce and Ciare publish. The app uses it.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
-    ],
-    [
-      "Xmax (maker)",
-      value != null ? `${kind}${mm(value)} mm` : "—",
-      pub.Xmax != null ? FORMULA_LABEL[pub.formula] : "no Xmax published",
-      `As the maker publishes it: ${publishedText(pub) || "nothing"}.${pub.src ? ` Source: ${new URL(pub.src).hostname}.` : ""}`,
-    ],
-  ];
 }

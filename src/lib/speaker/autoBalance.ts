@@ -1,7 +1,7 @@
 // Auto balance: band Levels for any speaker or stack, flat or with the PA music tilt (docs/speaker-designer-plan.md, L3f
 // "Auto balance").
-// By default the bands meet flat; the PA music tilt option is the PA page's music balance (lib/pa/musicBalance), made
-// general for any number and order of bands:
+// By default the bands meet flat; the PA music tilt option is the old PA page's music balance, made general for any
+// number and order of bands:
 //
 // - The bands go in order of their passband (the middle of where each is within 3 dB of its highest point).
 // - Each pair of bands next to each other meets at their crossover: the lower band's lowpass and the upper band's

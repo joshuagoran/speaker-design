@@ -2,7 +2,6 @@
 // is written.
 import type {
   AdapterBandId,
-  DesignLayers,
   FillDesignState,
   SpeakerBand,
   SpeakerSpec,
@@ -15,10 +14,8 @@ import {
   DRIVER_KIND,
   FILL_PANEL,
   PORT_SHAPE,
-  SPACE_ITEM,
   SPEAKER_BAND,
   SPEAKER_BAND_NAMES,
-  SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import {
@@ -27,14 +24,9 @@ import {
   flushBracing,
   NO_HARDWARE,
   NO_FILTERS,
-  homeVenue,
   lrFilter,
-  spacePlacement,
-  speakerIdentity,
-  stackMember,
   stuffingPctOf,
 } from "./specParts";
-import { SEATED_EAR_FT, SPACE_HOME_ROOM } from "../../constants/space";
 import { fillDriverPadDb, STUFFING_VOLUME_GAIN } from "../pa/calc";
 import { DEFAULT_HIFI } from "../defaults";
 
@@ -113,24 +105,5 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
     // the highpass to the subs is the stack's crossover (layersFromFill): the input range starts off
     input: NO_FILTERS,
     look: {},
-  };
-}
-
-/**
- * The fill read in: the speaker, a stack of one with the highpass to the subs as its crossover (in a DSP), and the space:
- * one placement. The Fills page places nothing, so it stands at the origin.
- */
-export function layersFromFill(state: FillDesignState, design: SpecIdentity): DesignLayers {
-  const speaker = speakerFromFill(state, speakerIdentity(design, SPEAKER_PART.speaker));
-  const crossover = { highpass: lrFilter(state.highpassHz, state.highpassOrder), lowpass: null };
-  return {
-    speakers: [speaker],
-    stack: { ...design, members: [stackMember(speaker.id, crossover)], notes: "" },
-    space: {
-      ...design,
-      placements: [spacePlacement({ x: 0, y: 0 }, { kind: SPACE_ITEM.stack, id: design.id }, 0)],
-      // a seated listener in a living room, in front of it
-      venue: homeVenue(0, { x: 0, y: SPACE_HOME_ROOM.lengthFt / 2 }, SEATED_EAR_FT),
-    },
   };
 }

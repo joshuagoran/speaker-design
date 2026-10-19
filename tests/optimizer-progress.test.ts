@@ -1,20 +1,8 @@
 import { afterEach, test } from "vite-plus/test";
 import assert from "node:assert";
-import fs from "node:fs";
-import { makeOptimizerRunner, isOptimizerCancel, runParts } from "../src/lib/makeOptimizerRunner";
+import { makeOptimizerRunner, isOptimizerCancel } from "../src/lib/makeOptimizerRunner";
 import { throttledProgress } from "../src/lib/optimizer/progress";
-import { hifiScoreBoxes } from "../src/lib/hifi/optimize";
-import { optimizePaStack } from "../src/lib/pa/optimize";
-import { HIFI_WOOFERS, HIFI_TWEETERS, MID_BOXES } from "../src/lib/data";
-import type {
-  Dims3,
-  HifiOptimizerCurrent,
-  OptimizerMessage,
-  OptimizerProgress,
-  OptimizerRequest,
-  PaOptimizerCurrent,
-  PaOptimizerInput,
-} from "../src/types";
+import type { OptimizerMessage, OptimizerProgress, OptimizerRequest } from "../src/types";
 
 // ---- the runner, with a fake Worker (Vitest runs in Node, which has none) ----
 
@@ -153,29 +141,6 @@ test("runner: without workers the search runs on the main thread, with progress"
   }
 });
 
-test("runParts: when one part fails the others are stopped; the caller's signal stops them all", async () => {
-  const seen: AbortSignal[] = [];
-  const hang = (sig: AbortSignal) => {
-    seen.push(sig);
-    return new Promise<number>((_, rej) =>
-      sig.addEventListener("abort", () => rej(new Error("stopped"))),
-    );
-  };
-  await assert.rejects(
-    runParts(undefined, (sig) => [hang(sig), Promise.reject(new Error("part failed")), hang(sig)]),
-    /part failed/,
-  );
-  assert.ok(seen.length === 2 && seen.every((sig) => sig.aborted), "the other parts were stopped");
-  const ctl = new AbortController();
-  const run = runParts(ctl.signal, (sig) => [hang(sig), hang(sig)]);
-  ctl.abort();
-  await assert.rejects(run, /stopped/);
-  assert.deepStrictEqual(
-    await runParts(undefined, () => [Promise.resolve(1), Promise.resolve(2)]),
-    [1, 2],
-  );
-});
-
 test("throttledProgress passes on at most one report per interval, and always the final one", () => {
   const seen: OptimizerProgress[] = [];
   const report = throttledProgress((p) => seen.push(p), 1e9);
@@ -188,86 +153,3 @@ test("throttledProgress passes on at most one report per interval, and always th
 });
 
 // ---- the engines: the same result with and without a progress callback ----
-
-/** Checks a run's reports: done and total never go back, done never passes total, and the last is done = total. */
-function assertProgress(seen: OptimizerProgress[]) {
-  assert.ok(seen.length >= 2, `at least a first and a last report, got ${seen.length}`);
-  for (let i = 1; i < seen.length; i++) {
-    assert.ok(seen[i].done >= seen[i - 1].done, `done went back at ${i}`);
-    assert.ok(seen[i].total >= seen[i - 1].total, `total went back at ${i}`);
-  }
-  for (const p of seen) assert.ok(p.done <= p.total, `${p.done} of ${p.total}`);
-  const last = seen[seen.length - 1];
-  assert.ok(last.total > 0 && last.done === last.total, `ends at ${last.done} of ${last.total}`);
-}
-const withoutMs = <T extends { stats: { ms: number } }>(r: T) =>
-  JSON.stringify({ ...r, stats: { ...r.stats, ms: 0 } });
-
-const hifiCur: HifiOptimizerCurrent = {
-  woofer: "sb17nrx",
-  tweeter: "sb26stcn",
-  box: "vented",
-  dim: { w: 9, h: 15, d: 11 },
-  wall: 0.75,
-  port: { n: 1, dia: 2, len: 6 },
-  xo: 2000,
-  order: 4,
-  wAmpW: 100,
-  tAmpW: 50,
-  bsc: 3,
-  place: "free",
-  wallFt: 2,
-  portMax: 17,
-  guide: null,
-};
-const hifiInput = {
-  cur: hifiCur,
-  woofers: HIFI_WOOFERS,
-  tweeters: HIFI_TWEETERS,
-  budget: 800,
-  seatM: 2.6,
-  goals: ["cheaper" as const],
-};
-
-test("hi-fi box step: the same boxes with and without progress; progress climbs to its total", () => {
-  const seen: OptimizerProgress[] = [];
-  const plain = hifiScoreBoxes(hifiInput, 1, 3);
-  const reported = hifiScoreBoxes(hifiInput, 1, 3, (p) => seen.push(p));
-  assert.equal(JSON.stringify(reported), JSON.stringify(plain));
-  assertProgress(seen);
-});
-
-// boundary: the seed file is saved configurations (older ones lack mDim)
-const seeds = JSON.parse(
-  fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
-) as (Omit<PaOptimizerCurrent, "mDim"> & { mDim?: Dims3; name: string })[];
-const seed = seeds.find((x) => x.name === "lil block stack LE (optimized)");
-
-test("PA search: the same result with and without progress; progress climbs to its total", () => {
-  assert.ok(seed, "the seed design is in the file");
-  const cur: PaOptimizerCurrent = {
-    layout: "stack",
-    inset: 0.75,
-    wall: 0.75,
-    hpType: "BW24",
-    portMax: 20,
-    tilt: 6,
-    hfTilt: 6,
-    joint: "butt",
-    mDim: { ...(MID_BOXES.find((b) => b.id === seed.midBox) || MID_BOXES[0]).box },
-    ...seed,
-  };
-  const input: PaOptimizerInput = {
-    cur,
-    room: 1000,
-    maxLb: 125,
-    budget: 1100,
-    locks: {},
-    goals: ["cheaper"],
-  };
-  const seen: OptimizerProgress[] = [];
-  const plain = optimizePaStack(input);
-  const reported = optimizePaStack(input, (p) => seen.push(p));
-  assert.equal(withoutMs(reported), withoutMs(plain));
-  assertProgress(seen);
-});

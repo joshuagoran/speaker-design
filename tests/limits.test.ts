@@ -4,8 +4,6 @@ import {
   boxModel,
   subwooferLimits,
   maxOutputCurve,
-  subBassLevel,
-  SUB_BASS_BAND_HZ,
   thermalVoltageLimit,
   ampVoltage,
   hornPower,
@@ -14,7 +12,7 @@ import {
 } from "../src/lib/pa/calc";
 import { CD_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { FALLBACK_OHMS, ohmsOf, voltsToWatts } from "../src/lib/power";
-import { LIMIT_NAMES, SUB_LIMITED_BY, SUB_LIMIT_NAMES } from "../src/constants/limits";
+import { LIMIT_NAMES } from "../src/constants/limits";
 import { close, near } from "./helpers";
 
 /** An 8 Ω load: the amp power's watts into it (lib/power). */
@@ -127,47 +125,4 @@ test("maxCurve never exceeds the amp-limited curve and stays below Xmax", (t) =>
       s = 10 ** ((c.spl - o.spl) / 20);
     assert.ok(o.xmm * s <= fh.Xmax * (1 + 1e-9) && o.vel * s <= 23.5 * (1 + 1e-9), `${f} Hz`);
   }
-});
-test("sub-bass level: the mean of the curve inside its band only", (t) => {
-  const [lo, hi] = SUB_BASS_BAND_HZ;
-  const curve = [
-    { f: lo - 1, spl: 0 },
-    { f: lo, spl: 100 },
-    { f: (lo + hi) / 2, spl: 110 },
-    { f: hi, spl: 120 },
-    { f: hi + 1, spl: 0 },
-  ];
-  close(t, subBassLevel(curve), 110, 1e-12);
-});
-test("sub-bass level of a max curve lies between its lowest and highest point in the band", () => {
-  const V = ampVoltage(800, EIGHT_OHM),
-    m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!,
-    mc = maxOutputCurve(m.curve, fh, V, 23.5);
-  const band = mc.filter((o) => o.f >= SUB_BASS_BAND_HZ[0] && o.f <= SUB_BASS_BAND_HZ[1]);
-  const level = subBassLevel(mc);
-  assert.ok(band.length > 10);
-  assert.ok(level >= Math.min(...band.map((o) => o.spl)));
-  assert.ok(level <= Math.max(...band.map((o) => o.spl)));
-});
-test("limit ids show the words the pages have always shown", () => {
-  assert.deepEqual(LIMIT_NAMES, {
-    port: "port",
-    Xmax: "Xmax",
-    radiator: "radiator",
-    thermal: "thermal",
-    amp: "amp",
-    throat: "throat",
-  });
-  assert.deepEqual(SUB_LIMIT_NAMES, {
-    port: "port air speed",
-    Xmax: "cone travel (Xmax)",
-    thermal: "driver program rating",
-    amp: "amplifier power",
-  });
-  assert.deepEqual(SUB_LIMITED_BY, {
-    port: "port air speed",
-    Xmax: "cone travel",
-    thermal: "the driver's program rating",
-    amp: "amplifier power",
-  });
 });

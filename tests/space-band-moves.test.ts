@@ -4,7 +4,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { presetLayers } from "../src/pages/stack/stackPresets";
-import { computeSpaceGrid, spaceGridRequest, spaceModel } from "../src/lib/speaker/spaceCoverage";
+import { computeSpaceGrid, spaceGridRequest } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import type { CoverageBand, CoverageGrid, FloorPoint, SpaceDesign } from "../src/types";
 

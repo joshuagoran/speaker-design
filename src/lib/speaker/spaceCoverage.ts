@@ -50,7 +50,7 @@ import {
 import { coneParts, isConeKind } from "./driverParts";
 import { driverHorn, speakerLayout } from "./speakerLayout";
 import { spaceLayout, type BandOfPart, type PlacedDriver, type PlacedItem } from "./spaceLayout";
-import { solveFeeds, typedFeed, type SolvedFeed } from "./solveFeeds";
+import { typedFeed, type SolvedFeed } from "./solveFeeds";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
 import { COAX_HF_EXIT_IN } from "../../constants/coax";
@@ -218,12 +218,6 @@ export function withSolved(model: SpaceModel, solved: SolvedFeed[]): SpaceModel 
     solved,
     headroomDb: rooms.length ? Math.min(...rooms) : 0,
   };
-}
-
-/** The space worked out (see the file's note), its Auto delays and levels solved at its venue. */
-export function spaceModel(design: SpaceDesign): SpaceModel {
-  const laid = spaceModelLaidOut(design);
-  return withSolved(laid, solveFeeds(laid, design.space.venue));
 }
 
 /**

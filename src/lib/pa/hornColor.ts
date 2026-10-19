@@ -10,11 +10,6 @@ export function pickedHornColor(value: string | undefined): PaDesignConfig["horn
   return value && value !== HORN_COLOR_CATALOG && HEX_COLOR.test(value) ? value : undefined;
 }
 
-/** A saved design's horn color; a save from before the picker, or a bad value: the catalog finish. */
-export function savedHornColor(c: Partial<PaDesignConfig>): PaDesignConfig["hornColor"] {
-  return pickedHornColor(c.hornColor);
-}
-
 /** The horn body's color as 0xRRGGBB: the picked color, else the factory finish, else the printed cream. */
 export function hornBodyColor(horn: Pick<Horn, "finish">, picked?: string): number {
   const color = pickedHornColor(picked);

@@ -16,7 +16,6 @@ import type {
   BoxRegion,
   BackJointId,
   BraceStyleId,
-  CompressionDriver,
   CompressionHf,
   CornerJoint,
   CrossoverOrder,
@@ -34,7 +33,6 @@ import type {
   FillSystemConfig,
   FrequencyPoint,
   HighpassType,
-  Horn,
   HornHf,
   HornResponse,
   MidDriver,
@@ -44,7 +42,6 @@ import type {
   PaLayout,
   PaMaxPoint,
   PlateStock,
-  PhasedPoint,
   PortStyle,
   SealedBoxModel,
   SealedPoint,
@@ -252,22 +249,6 @@ interface Complex {
   re: number;
   im: number;
 }
-export const complex = (re: number, im = 0): Complex => ({ re, im });
-export const addComplex = (a: Complex, b: Complex): Complex => ({
-  re: a.re + b.re,
-  im: a.im + b.im,
-});
-export const multiplyComplex = (a: Complex, b: Complex): Complex => ({
-  re: a.re * b.re - a.im * b.im,
-  im: a.re * b.im + a.im * b.re,
-});
-export const divideComplex = (a: Complex, b: Complex): Complex => {
-  const d = b.re * b.re + b.im * b.im;
-  return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d };
-};
-export const invertComplex = (a: Complex) => divideComplex(complex(1), a);
-export const complexMagnitude = (a: Complex) => Math.hypot(a.re, a.im);
-
 // Filter magnitudes. Butterworth order n: x^n / sqrt(1 + x^2n). Linkwitz-Riley 2m: a
 // Butterworth m squared, x^2m / (1 + x^2m). LR24 is -6 dB at the corner, BW24 -3 dB.
 export const HIGHPASS_ALIGNMENTS: Record<
@@ -311,16 +292,6 @@ export function butterworth(s: Complex, n: number): Complex {
   }
   return { re, im };
 }
-// The highpass's phase, radians, continuous in f: each section s² / (s² + b·s + 1) leads by π less its denominator's
-// angle, π far below the corner to 0 far above. A Butterworth n, or a Linkwitz-Riley as two of n/2; highpassGain is
-// its magnitude.
-export function highpassPhase(f: number, fc: number, type: HighpassType = "BW24") {
-  const [kind, n] = HIGHPASS_ALIGNMENTS[type] || HIGHPASS_ALIGNMENTS.BW24,
-    x = f / fc;
-  const bw = (m: number) =>
-    butterworthSections(m).reduce((p, b) => p + Math.PI - Math.atan2(b * x, 1 - x * x), 0);
-  return kind === "bw" ? bw(n) : 2 * bw(n / 2);
-}
 // A model curve's box phase made continuous: each point moved by whole turns to within half a turn of the next one
 // up, from the top of the curve down (the top keeps its own value: there a box's phase is near 0).
 export function unwrapRawPhase(curve: { rawPhase?: number }[]) {
@@ -329,15 +300,6 @@ export function unwrapRawPhase(curve: { rawPhase?: number }[]) {
       up = curve[i + 1].rawPhase ?? 0;
     curve[i].rawPhase = p - 2 * Math.PI * Math.round((p - up) / (2 * Math.PI));
   }
-}
-// A model run with its phase option, as the type that says so: every point has the box's phase. Throws for one run
-// without it, which only a bug in the caller's own call can give.
-export function phasedCurve<P extends VentedPoint | SealedPoint>(
-  curve: readonly P[],
-): PhasedPoint<P>[] {
-  const out = curve.filter((o): o is PhasedPoint<P> => o.rawPhase != null);
-  if (out.length !== curve.length) throw new Error("the box model was run without its phase");
-  return out;
 }
 // Linkwitz-Riley crossover magnitudes of either order (4 = LR24, 8 = LR48), both -6 dB at fc
 export const linkwitzRileyLowpass = (f: number, fc: number, order: CrossoverOrder) =>
@@ -1122,11 +1084,6 @@ export const braceLb = (
   wall: number,
 ) => (braceWoodIn3(b) * plywoodLbPerSqFt(wall)) / 144 / wall;
 
-// ---------------------------------------------------------------
-// Cutlist: panels for the sub and mid boxes from the planner's current
-// dimensions (cutlist.ts lays them out on 4x8 or 5x5 sheets).
-// ---------------------------------------------------------------
-export { DRIVER_CUTOUT_IN };
 export { PLYWOOD_SHEETS } from "../../data/catalog/plywood";
 export const formatInches = (x: number) => {
   // inches to the nearest 1/16, as 12 5/8
@@ -2123,46 +2080,8 @@ export function maxOutputCurve(
 // The sub-bass band, Hz: the low end the sub's readout averages, an absolute level to compare designs by (F3 is relative
 // to each driver's own passband).
 export const SUB_BASS_BAND_HZ = [30, 50] as const;
-// The mean level of a curve over the sub-bass band, dB: on maxOutputCurve, the sub-bass the design can play. The grid is
-// log-spaced, so this is a mean over log frequency.
-export function subBassLevel(curve: FrequencyPoint[]) {
-  const [lo, hi] = SUB_BASS_BAND_HZ;
-  const band = curve.filter((o) => o.f >= lo && o.f <= hi);
-  return band.reduce((a, o) => a + o.spl, 0) / band.length;
-}
 export const nearestPoint = <P extends { f: number }>(curve: P[], f: number): P =>
   curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
-// One point of the sub at its music limit (one drive level for the whole band) through the lowpass at xoLo
-// (LR24, or LR48 with order 8).
-const subMusicLevel = (
-  o: Pick<VentedPoint, "f" | "spl">,
-  lim: Pick<SubLimits, "V">,
-  AMP_V: number,
-  xoLo: number,
-  order: CrossoverOrder,
-) =>
-  o.spl + 20 * Math.log10(linkwitzRileyLowpass(o.f, xoLo, order)) + 20 * Math.log10(lim.V / AMP_V);
-// The whole curve of it,
-export function subMusicThroughLowpass(
-  mdl: VentedBoxModel,
-  lim: Pick<SubLimits, "V">,
-  AMP_V: number,
-  xoLo: number,
-  order: CrossoverOrder,
-): FrequencyPoint[] {
-  return mdl.curve.map((o) => ({ f: o.f, spl: subMusicLevel(o, lim, AMP_V, xoLo, order) }));
-}
-// ... and its level at the crossover: what the mid has to match (one point of that curve; the optimizer calls it often).
-export function subMusicOutputAt(
-  mdl: VentedBoxModel,
-  lim: Pick<SubLimits, "V">,
-  AMP_V: number,
-  xoLo: number,
-  order: CrossoverOrder,
-) {
-  return subMusicLevel(nearestPoint(mdl.curve, xoLo), lim, AMP_V, xoLo, order);
-}
-
 /**
  * The amp power, W into the channel's `load` (lib/power), at which an HF section (at its nominal impedance) behind a
  * passive pad of `pad` dB reaches its rating `ratingW` (W into its impedance): the Fills page's and the Speaker page's
@@ -2216,18 +2135,9 @@ export function hornResponse(
   return { ...power, hf, curve, flat: hf.sens + 10 * Math.log10(P) };
 }
 
-// ---- directivity ----
-// Rigid piston: -6 dB where ka sin(theta) = 2.2 (2 J1(x)/x = 0.5 at x = 2.215).
-export function pistonBeamWidthDeg(SdCm2: number, f: number) {
-  const ka = ((2 * Math.PI * f) / 343) * Math.sqrt(SdCm2 / 10000 / Math.PI);
-  return ka <= 2.2 ? 180 : (2 * Math.asin(2.2 / ka) * 180) / Math.PI;
-}
 // Keele: a horn holds its angle down to f = 25 400 / (mouth width m x angle deg) (1e6 in-deg-Hz).
 export const keeleFrequency = (covDeg: number, mouthIn: number) =>
   25400 / (mouthIn * 0.0254 * covDeg);
-export const hornBeamWidthDeg = (covDeg: number, fK: number, f: number) =>
-  Math.min(180, f >= fK ? covDeg : (covDeg * fK) / f);
-
 // ---- weights (lb): 3/4″ baffle, other panels at the wall ply, and the braces and ribs (subBoxBracing,
 // midBoxBracing) by their wood. Without the bracing: the bare box, a floor for any bracing ----
 /**
@@ -2295,32 +2205,6 @@ export function towerMidWeightLb(
     MID_FIXINGS_LB
   );
 }
-/**
- * The tower's cabinet over the sub box as it is carried, lb: towerMidWeightLb with the mid driver, the horn and the
- * compression driver in it (they mount in its baffle).
- */
-export const towerUpperLoadedLb = (
-  subBox: Pick<Dims3, "w" | "d">,
-  wall: number,
-  inset: number,
-  horn: TowerHorn & Pick<Horn, "lb">,
-  mid: Pick<MidDriver, "size" | "lb">,
-  cd: Pick<CompressionDriver, "lb">,
-) =>
-  towerMidWeightLb(subBox, wall, inset, horn, mid) + (mid.lb || 0) + (horn.lb || 0) + (cd.lb || 0);
-/**
- * What lifting the sub means, lb: the loaded sub box, or in the tower the one cabinet, the sub and everything over it
- * (`upperLb`, towerUpperLoadedLb).
- */
-export const subLiftLb = (layout: PaLayout | undefined, subLb: number, upperLb: number) =>
-  layout === "tower" ? subLb + upperLb : subLb;
-/**
- * The heaviest single lift, lb, as the optimizers' weight limit and Lighter goal read it: the heavier of the sub and the
- * mid box, or in the tower the whole cabinet (subLiftLb).
- */
-export const heaviestLiftLb = (layout: PaLayout | undefined, subLb: number, midLb: number) =>
-  Math.max(subLiftLb(layout, subLb, midLb), midLb);
-
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
 // Vent and volumes only (no model): what the optimizer's vent solver iterates on.

@@ -5,10 +5,9 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { STACK_PRESETS, presetLayers } from "../src/pages/stack/stackPresets";
-import { paBalancedLayers, paBandLevels, type PaBandLevels } from "../src/lib/speaker/paBalance";
+import { type PaBandLevels } from "../src/lib/speaker/paBalance";
 import { PA_PRESET_BAND_LEVELS } from "../src/data/presets/pa-band-levels";
 import { presetLevels } from "./preset-levels";
-import { DRIVER_KIND } from "../src/constants/speakerSpec";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
@@ -91,27 +90,6 @@ test("stack starts: a PA preset is the PA design read in with its saved Levels i
 
 test("stack starts: the saved preset Levels are what the balance gives now (else run vp run preset-levels)", () => {
   assert.deepStrictEqual(PA_PRESET_BAND_LEVELS, presetLevels());
-});
-
-test("stack starts: a design the page can't balance in every band keeps the adapter's Levels in all of them", () => {
-  const cfg = defaultPaDesign();
-  const read = layersFromPa(cfg, ID, DEFAULT_COVERAGE_LAYOUT);
-  // the horn band stays in the spec, but no driver plays it: the stack has no level for it
-  const stubbed: DesignLayers = {
-    ...read,
-    speakers: read.speakers.map((s) => ({
-      ...s,
-      cabinet: {
-        ...s.cabinet,
-        chambers: s.cabinet.chambers.map((c) => ({
-          ...c,
-          drivers: c.drivers.filter((d) => d.kind !== DRIVER_KIND.compression),
-        })),
-      },
-    })),
-  };
-  assert.equal(paBandLevels(cfg, stubbed), null);
-  assert.deepStrictEqual(paBalancedLayers(cfg, stubbed), stubbed);
 });
 
 test("stack starts: the Hi-fi pair reads in through its adapter", () => {

@@ -33,10 +33,6 @@ export const keepsFrom = <G extends string>(
     keysOf(table).map((g) => [g, { db: db - table[g].db, f3: f3 + table[g].hz }]),
   ) as Record<G, Keep>;
 
-/** Each goal's keep from a level to hold (dB) and your design's F3 (Hz). */
-export const goalKeeps = (db: number, f3: number): Record<KeepGoal, Keep> =>
-  keepsFrom(GOAL_KEEPS, db, f3);
-
 /**
  * How an optimizer words the level a goal may give up, given the allowance ("0.5 dB"), plus an optional footnote, and
  * what its goals hold to when your design can't be modeled (there is nothing of it to keep).
@@ -47,28 +43,11 @@ export interface KeepWords {
   unmodeled: string;
 }
 
-/** Hi-fi keeps your design's own clean level at the seat. */
-export const HIFI_KEEP_WORDS: KeepWords = {
-  level: (db) => `your level drops at most ${db}`,
-  note: "Level: clean, at the seat. F3: in the room.",
-  unmodeled: "Cannot calculate your design, so cards need only pass the checks and fit the budget.",
-};
-
 /** The Speaker optimizer's words: the target is the level at 1 m the page sets (it starts at your design's). */
 export const SPEAKER_KEEP_WORDS: KeepWords = {
   level: (db) => `level stays at most ${db} under the target`,
   note: "Level: the music level at 1 m. F3: the lowest band's.",
   unmodeled: SPEAKER_UNMODELED,
-};
-
-/** The F3 the PA goals measure from when your design can't be modeled, Hz. */
-export const PA_UNMODELED_F3_HZ = 40;
-
-/** PA keeps the target output: your output or the room's need, whichever is higher. */
-export const PA_KEEP_WORDS: KeepWords = {
-  level: (db) => `output stays at most ${db} under the target`,
-  note: "The target is your output or the room's need, whichever is higher.",
-  unmodeled: `Cannot calculate your design: the goals use the room's need and a ${PA_UNMODELED_F3_HZ} Hz F3.`,
 };
 
 /** One goal's line from its keep: what it may give up, e.g. "Cheaper: your level drops at most 0.5 dB, your F3 rises at most 2 Hz." */
@@ -79,10 +58,6 @@ function keepTextOf(k: { db: number; hz: number }, name: string, words: KeepWord
   ].filter((x) => x != null);
   return parts.length ? `${name}: ${parts.join(", ")}.` : `${name}: no limit on level or F3.`;
 }
-
-/** One line per goal: what it may give up, e.g. "Cheaper: your level drops at most 0.5 dB, your F3 rises at most 2 Hz." */
-export const keepText = (goal: KeepGoal, name: string, words: KeepWords): string =>
-  keepTextOf(GOAL_KEEPS[goal], name, words);
 
 /**
  * The Details lines for the picked goals: what each keeps from your design (named by `defs`, kept by `table`), then
@@ -100,11 +75,3 @@ export function keepLinesFrom<G extends string>(
   const lines = goals.map((g) => keepTextOf(table[g], defs[g].short, words));
   return words.note ? [...lines, words.note] : lines;
 }
-
-/** The Details lines for the PA and Hi-fi goals (`keepLinesFrom` on their table). */
-export const keepLines = (
-  goals: readonly KeepGoal[],
-  defs: Record<KeepGoal, { short: string }>,
-  words: KeepWords,
-  modeled: boolean,
-): string[] => keepLinesFrom(GOAL_KEEPS, goals, defs, words, modeled);

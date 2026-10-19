@@ -9,7 +9,7 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { spacePlacement } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
-import { spaceModel } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { spaceAlignment } from "../src/lib/speaker/spaceAlignment";
 import { speakerFromFill } from "../src/lib/speaker/fillSpec";
 import { presetLayers } from "../src/pages/stack/stackPresets";

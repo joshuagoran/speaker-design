@@ -3,7 +3,7 @@
 // each chamber, driver, horn and port where the spec and its layout (lib/speaker/speakerLayout) put them, the walls the
 // tower's chambers share, a horn-loaded chamber's mouth and flare, and every geometry the build makes reachable from the
 // scene (the 3D view frees what it can reach: stack-view/SceneView3D).
-import { PA_FLOOR } from "./speaker-cases";
+import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { describe, expect, test, vi } from "vite-plus/test";
 import * as THREE from "three";
 import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
@@ -36,13 +36,9 @@ import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
-import { paSearchDesign } from "../src/lib/pa/optimize";
-import { panelNominalNear } from "../src/lib/panel";
-import { savedHardware } from "../src/lib/pa/hardware";
-import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES, MID_BOXES } from "../src/lib/data";
+import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";
-import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
-import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import {
   ARCH_BLOCK,
   CABINET_CONSTRUCTION,
@@ -58,31 +54,12 @@ import {
 } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { configs, type GoldenConfig } from "./golden-configs";
-import type {
-  HifiDesignState,
-  PaPlannerDesign,
-  SpeakerChamber,
-  SpeakerPart,
-  SpeakerSpec,
-} from "../src/types";
+import type { HifiDesignState, SpeakerChamber, SpeakerPart, SpeakerSpec } from "../src/types";
 
 const EPS = 1e-6;
 
 const IDENTITY = { id: "golden", name: "Golden" };
 
-/** A golden PA design as the planner holds it (as tests/speaker-spec.test.ts reads it). */
-function paDesign(c: GoldenConfig): PaPlannerDesign {
-  const cfg = paSearchDesign({ cur: c });
-  return {
-    ...cfg,
-    mDim: c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box,
-    panel: c.panel ?? panelNominalNear(cfg.wall),
-    hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
-    spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
-    hardware: savedHardware(c.hardware),
-    divider: c.divider ?? DEFAULT_PA.divider,
-  };
-}
 /** A PA design's speaker of `part`, read through the adapter. */
 function paSpeaker(c: GoldenConfig, part: SpeakerPart): SpeakerSpec {
   const read = layersFromPa(paDesign(c), IDENTITY, PA_FLOOR);

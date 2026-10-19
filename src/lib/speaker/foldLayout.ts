@@ -191,20 +191,6 @@ function scoreTrace(
 }
 
 /**
- * How a fold scores against a straight horn (`target` with its `drive`) in a room: the score the layout search uses.
- * Null when it fails a hard check, traces as another horn type, or gives the sound model no horn.
- */
-export function foldLayoutScore(
-  room: FoldRoom,
-  fold: HornFold,
-  target: readonly HornSegment[],
-  drive: HornDrive,
-): FoldLayoutScore | null {
-  const shape = targetShape(target, drive);
-  return shape && scoreTrace(foldTrace({ ...room, fold }), target, shape, drive.kind);
-}
-
-/**
  * Heights that sum to `total`: each `wanted` height scaled by one factor, none under its `least`; those held at their
  * least leave the rest to the others. Null when the leasts alone pass `total`.
  */

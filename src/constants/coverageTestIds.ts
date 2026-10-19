@@ -9,6 +9,3 @@ export const COVERAGE_TEST_IDS = {
   /** the amp power table */
   ampPower: "coverage-amp-power",
 } as const;
-
-/** Where the floor layout is stored (per viewer), so the check can start the page in a given band. */
-export const COVERAGE_LAYOUT_KEY = "coverage.layout";

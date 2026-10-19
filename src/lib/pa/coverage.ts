@@ -16,16 +16,13 @@ import {
   SPEED_OF_SOUND,
 } from "../../constants/acoustics";
 import {
-  baffleStepShelf,
   logSpacedFrequencies,
   pistonPattern,
   waveguideGain,
   waveguideHalfAngles,
 } from "../hifi/hifi";
-import { abs } from "../acoustics/complex";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
-import { paStackSources, type StackSource } from "./dispersion";
 import {
   airDbPerM,
   floorReflection,
@@ -49,28 +46,17 @@ import {
 import type {
   Complex,
   CoverageBand,
-  CoverageBox,
   CoverageGrid,
-  CoverageLayout,
-  CoverageLevels,
-  CoverageRequest,
   CoverageRoom,
   CoverageStack,
   CoverageStats,
-  BalancedLevels,
   FloorPlacement,
   FloorPoint,
   FrequencyPoint,
-  MusicBalance,
   PaStackGeometry,
-  PhasedPoint,
-  PhasePoint,
-  SealedPoint,
-  VentedPoint,
 } from "../../types";
 
-const C = SPEED_OF_SOUND,
-  IN = 0.0254;
+const C = SPEED_OF_SOUND;
 
 /** The bands the map averages over, Hz. */
 export const COVERAGE_BANDS: Record<
@@ -90,8 +76,6 @@ export const BAND_POINTS = 10;
 export const COHERENT_BELOW_HZ = 500;
 /** the single-frequency view's range, Hz: above it the interference is finer than the grid */
 export const SINGLE_FREQ_RANGE: [number, number] = [20, 500];
-/** each box's DSP time-aligns its drivers on its axis this far out, m (as the dispersion model does) */
-export const ALIGN_DISTANCE_M = 10;
 /** A box shadows what's behind its cone: rule of thumb, −3 dB here and 6 dB/oct above. */
 export const BOX_SHADOW_HZ = 150;
 /**
@@ -173,11 +157,6 @@ export interface CoverageScene {
   modal: { modes: RoomModes; sources: ModalSource[]; crossoverHz: number } | null;
 }
 
-/** The PA coverage page's scene: the stack it places, too (its bands' outputs come from its levels). */
-export interface PaCoverageScene extends CoverageScene {
-  stack: CoverageStack;
-}
-
 /**
  * One frequency of a sum: each voice's complex output at 1 m, whether the paths add with phase, what the directivity
  * needs at this frequency (each piston's ka, each horn's half angles, the box's rear shadow), and the room there: what
@@ -201,26 +180,6 @@ export interface CoverageSlot {
   diffuse: number;
   /** the modal sum, below the room's crossover (null above it, and outdoors) */
   modal: ModalSlot | null;
-}
-
-/** The boxes on the floor: both stacks, and the center subs when they stand there. Feet and degrees. */
-export function coverageBoxes(
-  layout: Pick<CoverageLayout, "stacks" | "subs" | "cluster">,
-  stack: Pick<CoverageStack, "sub" | "footprint">,
-): CoverageBox[] {
-  const [left, right] = layout.stacks;
-  const out: CoverageBox[] = [
-    { ...left, kind: "stack", label: "L" },
-    { ...right, kind: "stack", label: "R" },
-  ];
-  if (!stack.sub) return out;
-  const { x, y } = layout.cluster;
-  if (layout.subs === "single") out.push({ x, y, aim: 0, kind: "sub", label: "S" });
-  if (layout.subs === "center") {
-    const half = stack.footprint.w / 24;
-    for (const sg of [-1, 1]) out.push({ x: x + sg * half, y, aim: 0, kind: "sub", label: "S" });
-  }
-  return out;
 }
 
 /**
@@ -313,50 +272,6 @@ export function sceneOf(
   };
 }
 
-/** The PA stack's voices: its sub, mid and horn as the dispersion model radiates them. */
-const paVoices = (stack: PaStackGeometry): CoverageVoice[] =>
-  paStackSources(stack).map((o) => ({
-    id: o.band,
-    pattern: o.horn
-      ? {
-          horn: {
-            covH: stack.horn.covH,
-            covV: stack.horn.covV,
-            wIn: stack.horn.wIn,
-            hIn: stack.horn.hIn,
-          },
-        }
-      : { a: o.a },
-  }));
-
-/**
- * The PA coverage page's sources: each box's drivers (a stack's, or a center sub's), on one vertical line at its spot
- * and aim, time-aligned on its horn's axis at ALIGN_DISTANCE_M; then their images (`sceneOf`).
- */
-export function coverageScene(
-  stack: CoverageStack,
-  layout: Pick<CoverageLayout, "room" | "stacks" | "subs" | "cluster">,
-): PaCoverageScene {
-  const all = paStackSources(stack);
-  const boxes = coverageBoxes(layout, stack).map((box) => {
-    const drivers = all.filter((o) =>
-      box.kind === "sub" ? o.band === "sub" : layout.subs === "stacks" || o.band !== "sub",
-    );
-    if (!drivers.length) return [];
-    const refZ = (drivers.find((o) => o.horn) ?? drivers[0]).z * IN;
-    return drivers.map((o): SceneDriver => ({
-      voice: o.band,
-      x: box.x * FT,
-      y: box.y * FT,
-      z: o.z * IN,
-      yaw: (box.aim * Math.PI) / 180,
-      pitch: 0,
-      alignM: Math.hypot(ALIGN_DISTANCE_M, refZ - o.z * IN) - ALIGN_DISTANCE_M,
-    }));
-  });
-  return { ...sceneOf(layout.room, paVoices(stack), boxes), stack };
-}
-
 /** The points either side of `f` in a curve that spans it, and how far `f` lies between them on log frequency. */
 function bracket<P extends Pick<FrequencyPoint, "f">>(
   curve: readonly P[],
@@ -395,107 +310,6 @@ export function curveLevelAt(
   return a.spl + (b.spl - a.spl) * t;
 }
 
-/**
- * A curve's own phase at `f`, radians, interpolated on log frequency and held past its ends (where a box's phase has
- * flattened out, or its band is far down); 0 for an empty curve.
- */
-export function curvePhaseAt(curve: readonly Pick<PhasePoint, "f" | "phase">[], f: number): number {
-  const n = curve.length;
-  if (!n) return 0;
-  if (f <= curve[0].f) return curve[0].phase;
-  if (f >= curve[n - 1].f) return curve[n - 1].phase;
-  const [a, b, t] = bracket(curve, f);
-  return a.phase + (b.phase - a.phase) * t;
-}
-
-/**
- * A band's curve with its own phase: its box model's (read at each curve point's frequency; the model must have been
- * run with its phase), and `filterPhase` (the sub's highpass's) where it has one. Both are continuous, so the sum is.
- */
-export function withOwnPhase(
-  curve: readonly FrequencyPoint[],
-  model: readonly Pick<PhasedPoint<VentedPoint | SealedPoint>, "f" | "rawPhase">[],
-  filterPhase?: (f: number) => number,
-): PhasePoint[] {
-  const box = model.map((o) => ({ f: o.f, phase: o.rawPhase }));
-  return curve.map((o) => ({
-    f: o.f,
-    spl: o.spl,
-    phase: curvePhaseAt(box, o.f) + (filterPhase?.(o.f) ?? 0),
-  }));
-}
-
-/** A sub or mid curve's level (as curveLevelAt) and own phase (as curvePhaseAt) at `f`, from one search. */
-function curveLevelPhaseAt(
-  curve: readonly PhasePoint[],
-  f: number,
-  skirt?: (f: number) => number,
-): Pick<PhasePoint, "spl" | "phase"> | null {
-  const n = curve.length;
-  if (!n) return null;
-  if (f < curve[0].f || f > curve[n - 1].f) {
-    // past the ends: no search, the level along the skirt and the end's phase held
-    const spl = curveLevelAt(curve, f, skirt);
-    return spl == null ? null : { spl, phase: (f < curve[0].f ? curve[0] : curve[n - 1]).phase };
-  }
-  const [a, b, t] = bracket(curve, f);
-  return { spl: a.spl + (b.spl - a.spl) * t, phase: a.phase + (b.phase - a.phase) * t };
-}
-
-/** Each band's crossover magnitude against frequency: what carries its curve on past its ends. */
-export function bandSkirts(
-  stack: PaStackGeometry,
-): Partial<Record<StackSource["band"], (f: number) => number>> {
-  const out: Partial<Record<StackSource["band"], (f: number) => number>> = {};
-  for (const o of paStackSources(stack))
-    out[o.band] = (f) => {
-      const h = o.filt(f);
-      return Math.hypot(h.re, h.im);
-    };
-  return out;
-}
-
-/**
- * The bands as a balanced system plays them at its limit: the mid `tilt` dB under the sub (levels, not angles) at the low crossover, the
- * horn `hfTilt` dB under the mid at the high one (the planner's music balance). The band with the least to spare sets
- * the level; the others are turned down to match. Each curve is read past its ends along its crossover's skirt, as
- * the map plays it; a band without a curve is left out of the balance.
- */
-export function balanceLevels(
-  levels: CoverageLevels,
-  b: MusicBalance,
-  stack: PaStackGeometry,
-): BalancedLevels {
-  const skirt = bandSkirts(stack);
-  const sub = levels.sub && curveLevelAt(levels.sub, b.xoLo, skirt.sub),
-    midLo = curveLevelAt(levels.mid, b.xoLo, skirt.mid),
-    midHi = curveLevelAt(levels.mid, b.xoHi, skirt.mid),
-    horn = curveLevelAt(levels.horn, b.xoHi, skirt.horn);
-  // gm: the mid's gain; the sub's follows from it, and the horn's from the mid's. Each must be 0 or less.
-  let gm = 0;
-  if (sub != null && midLo != null) gm = Math.min(gm, sub - b.tilt - midLo);
-  if (horn != null && midHi != null) gm = Math.min(gm, horn + b.hfTilt - midHi);
-  const pads = {
-    sub: sub != null && midLo != null ? Math.min(0, midLo + gm + b.tilt - sub) : 0,
-    mid: gm,
-    horn: horn != null && midHi != null ? Math.min(0, midHi + gm - b.hfTilt - horn) : 0,
-  };
-  const shift = <P extends FrequencyPoint>(c: P[], db: number): P[] =>
-    c.map((o) => ({ ...o, spl: o.spl + db }));
-  return {
-    levels: {
-      sub: levels.sub && shift(levels.sub, pads.sub),
-      mid: shift(levels.mid, pads.mid),
-      horn: shift(levels.horn, pads.horn),
-    },
-    pads,
-  };
-}
-
-/** The target at a frequency under the same music balance: the full target in the sub's band, less the music balance above. */
-export const balancedTarget = (target: number, f: number, b: MusicBalance) =>
-  f < b.xoLo ? target : f < b.xoHi ? target - b.tilt : target - b.tilt - b.hfTilt;
-
 /** A band's center, Hz, where its target is read (the one frequency for "one"). */
 export const bandCenterHz = (band: CoverageBand, freqHz: number) =>
   band === "one" ? freqHz : Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi);
@@ -506,10 +320,6 @@ export const bandRangeHz = (
   freqHz: number,
 ): Pick<(typeof COVERAGE_BANDS)["sub"], "lo" | "hi"> =>
   band === "one" ? { lo: freqHz, hi: freqHz } : COVERAGE_BANDS[band];
-
-/** A band's target: the balanced target at the band's center (or at the one frequency). */
-export const bandTarget = (target: number, band: CoverageBand, freqHz: number, b: MusicBalance) =>
-  balancedTarget(target, bandCenterHz(band, freqHz), b);
 
 /**
  * A piston's directivity factor Q (on-axis intensity over the mean over all directions) as levelAtPoint radiates it:
@@ -536,109 +346,6 @@ export function pistonQ(ka: number, shadow: number): number {
 export const hornQ = ([h, v]: [h: number, v: number]) =>
   Math.PI /
   Math.asin(Math.min(1, Math.sin(Math.min(h, Math.PI / 2)) * Math.sin(Math.min(v, Math.PI / 2))));
-
-/** The sub's or mid's baffle step at `f`, with its phase: each band's from its own box's width. */
-const bandShelf = (
-  stack: Pick<CoverageStack, "footprint" | "midW">,
-  band: "sub" | "mid",
-  f: number,
-) => baffleStepShelf(f, band === "sub" ? stack.footprint.w : stack.midW);
-
-/** The sub's or mid's own phase at `f`, radians: its curve's (its box, and the sub's highpass) and its baffle step's. */
-function ownPhase(
-  stack: Pick<CoverageStack, "footprint" | "midW">,
-  levels: CoverageLevels,
-  band: "sub" | "mid",
-  f: number,
-): number {
-  const shelf = bandShelf(stack, band, f);
-  return Math.atan2(shelf.im, shelf.re) + curvePhaseAt(levels[band] ?? [], f);
-}
-
-/**
- * Each band's output at 1 m at `f`: its level from the planner's curve (which already carries the crossover's
- * magnitude, and past the curve's ends rolls off by it), with its own phase and its crossover's, taken off the floor
- * for the sub and mid (the map adds the floor itself), and the sub through its DSP delay.
- */
-function bandOutputs(
-  stack: Pick<CoverageStack, "footprint" | "midW" | "subDelayMs">,
-  levels: CoverageLevels,
-  srcs: readonly StackSource[],
-  skirts: ReturnType<typeof bandSkirts>,
-  f: number,
-): CoverageSlot["out"] {
-  const out: CoverageSlot["out"] = {};
-  for (const o of srcs) {
-    const h = o.filt(f);
-    let ph = Math.hypot(h.re, h.im) > 1e-12 ? Math.atan2(h.im, h.re) : 0,
-      mag: number;
-    if (o.band === "horn") {
-      // the horn's datasheet sensitivity is free-field
-      const db = curveLevelAt(levels.horn, f, skirts.horn);
-      if (db == null) continue;
-      mag = Math.pow(10, db / 20);
-    } else {
-      const curve = levels[o.band];
-      const at = curve && curveLevelPhaseAt(curve, f, skirts[o.band]);
-      if (!at) continue;
-      // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
-      // its baffle step, and the floor image puts the floor back
-      const shelf = bandShelf(stack, o.band, f);
-      mag = Math.pow(10, at.spl / 20) * abs(shelf);
-      ph += Math.atan2(shelf.im, shelf.re) + at.phase;
-    }
-    if (o.band === "sub") ph -= (2 * Math.PI * f * stack.subDelayMs) / 1000;
-    out[o.band] = { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
-  }
-  return out;
-}
-
-/** An angle wrapped to ±π. */
-const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
-
-/**
- * The sub delay a DSP setup would dial in, ms (negative: the tops wait): the one that puts the sub in phase with the
- * mid at the low crossover on the box's axis at its alignment point, where the box's drivers already arrive together.
- * It comes from the true difference in their phase there, not one wrapped to a turn, so it follows the design
- * smoothly: the crossover's lowpass and highpass are in phase (Linkwitz-Riley), and the bands' own phases are unwrapped
- * from where they are flat. Null without a sub, or with the sub or mid silent at the crossover.
- */
-export function autoSubDelayMs(
-  stack: Omit<CoverageStack, "subDelayMs">,
-  levels: CoverageLevels,
-): number | null {
-  const f0 = stack.xoLo,
-    sub = paStackSources(stack).find((o) => o.band === "sub"),
-    mid = paStackSources(stack).find((o) => o.band === "mid");
-  if (!sub || !mid || !levels.sub || curveLevelAt(levels.sub, f0) == null) return null;
-  if (curveLevelAt(levels.mid, f0) == null) return null;
-  const hs = sub.filt(f0),
-    hm = mid.filt(f0);
-  // the crossovers' share, wrapped: the pair is in phase but for the mid's lowpass far above
-  const crossover = wrapAngle(Math.atan2(hs.im, hs.re) - Math.atan2(hm.im, hm.re));
-  const lead = crossover + ownPhase(stack, levels, "sub", f0) - ownPhase(stack, levels, "mid", f0);
-  return (lead / (2 * Math.PI * f0)) * 1000;
-}
-
-/** Each band's output at each frequency (see bandOutputs), and the scene's room at that frequency. */
-export function coverageSlots(
-  scene: PaCoverageScene,
-  levels: CoverageLevels,
-  freqs: readonly number[],
-  allCoherent: boolean,
-  shares?: readonly number[],
-): CoverageSlot[] {
-  const { stack } = scene;
-  const srcs = paStackSources(stack);
-  const skirts = bandSkirts(stack);
-  return sceneSlots(
-    scene,
-    freqs,
-    allCoherent,
-    (f) => bandOutputs(stack, levels, srcs, skirts, f),
-    shares,
-  );
-}
 
 /**
  * Each voice's output at each frequency (`outputs`, from the frequency and its index in `freqs`), and the scene's room
@@ -912,57 +619,6 @@ export function coverageGrid(
       );
   return { cols, rows, db };
 }
-
-/** The floor map for a request: what the worker runs. */
-export function computeCoverageGrid({
-  stack,
-  levels,
-  layout,
-  cols,
-}: CoverageRequest): CoverageGrid {
-  const scene = coverageScene(stack, layout);
-  const { freqs, shares, coherent } = coverageFrequencies(
-    layout.band,
-    layout.freqHz,
-    scene.modal?.crossoverHz ?? null,
-  );
-  return coverageGrid(
-    scene,
-    coverageSlots(scene, levels, freqs, coherent, shares),
-    layout.room,
-    layout.earFt,
-    cols,
-  );
-}
-
-/** A request's level at one spot on the floor (feet), at ear height, in its band: what its grid shows there. */
-export function coverageLevelAt(
-  { stack, levels, layout }: Omit<CoverageRequest, "cols">,
-  at: FloorPoint,
-): number {
-  const scene = coverageScene(stack, layout);
-  const { freqs, shares, coherent } = coverageFrequencies(
-    layout.band,
-    layout.freqHz,
-    scene.modal?.crossoverHz ?? null,
-  );
-  return levelAtPoint(
-    scene,
-    coverageSlots(scene, levels, freqs, coherent, shares),
-    at.x * FT,
-    at.y * FT,
-    layout.earFt * FT,
-  );
-}
-
-/** The response at a spot on the floor (feet), each frequency summed as a band average would sum it. */
-export const coverageResponse = (
-  scene: PaCoverageScene,
-  levels: CoverageLevels,
-  at: FloorPoint,
-  earFt: number,
-): FrequencyPoint[] =>
-  slotResponse(scene, coverageSlots(scene, levels, RESPONSE_FREQS, false), at, earFt);
 
 /** The response at a spot on the floor (feet): the level of each slot alone (slots at RESPONSE_FREQS, as a band sums). */
 export const slotResponse = (

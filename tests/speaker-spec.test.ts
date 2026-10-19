@@ -1,40 +1,26 @@
 // The speaker spec (lib/speaker): every golden design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
-import { PA_FLOOR } from "./speaker-cases";
+import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs, fillConfigs, type GoldenConfig } from "./golden-configs";
+import { configs, type GoldenConfig } from "./golden-configs";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
-import { layersFromHifi, speakerFromHifi } from "../src/lib/speaker/hifiSpec";
-import { layersFromFill } from "../src/lib/speaker/fillSpec";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { frontLoadedOf, roomOf } from "./horn-room";
 import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { flushBracing, speakerIdentity } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
-import { paSearchDesign } from "../src/lib/pa/optimize";
 import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
 import { boxInternalLiters, midGrossLiters } from "../src/lib/pa/calc";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
-import { panelNominalNear } from "../src/lib/panel";
-import { savedHardware } from "../src/lib/pa/hardware";
 import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { hornGrid, hornModel } from "../src/lib/acoustics/hornModel";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
-import {
-  FILL_OPTIONS,
-  HIFI_COAXES,
-  HIFI_TWEETERS,
-  HIFI_WAVEGUIDES,
-  HORN_OPTIONS,
-  MID_BOXES,
-} from "../src/lib/data";
-import { DEFAULT_FILL, DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
+import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES, HORN_OPTIONS } from "../src/lib/data";
+import { DEFAULT_PA } from "../src/lib/defaults";
 import { crossoverSlopeName } from "../src/constants/crossovers";
-import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../src/constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../src/constants/hifiEngine";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
 import {
   MID_GAP_IN,
   PLINTH_HEIGHT_IN,
@@ -63,9 +49,6 @@ import type {
   BandId,
   DesignLayers,
   DriverKind,
-  FillDesignState,
-  HifiDesignState,
-  HornPlacement,
   PaLayout,
   PaPlannerDesign,
   PortStyle,
@@ -74,23 +57,6 @@ import type {
   SpeakerPort,
   SpeakerSpec,
 } from "../src/types";
-
-/**
- * A golden PA design as the planner holds it: the search's defaults, and what the planner sets that an older seed
- * lacks (its mid box's size, the panel its walls are, the horn mount and spacer it starts on, its handles).
- */
-function paDesign(c: GoldenConfig): PaPlannerDesign {
-  const cfg = paSearchDesign({ cur: c });
-  return {
-    ...cfg,
-    mDim: c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box,
-    panel: c.panel ?? panelNominalNear(cfg.wall),
-    hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
-    spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
-    hardware: savedHardware(c.hardware),
-    divider: c.divider ?? DEFAULT_PA.divider,
-  };
-}
 
 /** Every chamber's drivers of a kind. */
 const driversOf = (s: SpeakerSpec, kind: DriverKind) =>
@@ -345,230 +311,10 @@ test("speaker spec: each PA layout stands the tops where the planner draws them,
   );
 });
 
-/** A golden fill as the Fills page holds it: the page's defaults where the case sets none. */
-function fillState(c: (typeof fillConfigs)[number]): FillDesignState {
-  const driver = FILL_OPTIONS.find((d) => d.id === c.drv);
-  assert.ok(driver, c.name);
-  return {
-    ...DEFAULT_FILL,
-    driver,
-    boxType: c.boxType,
-    boxDims: c.dim ?? DEFAULT_FILL.boxDims,
-    portSpec: c.port ?? DEFAULT_FILL.portSpec,
-    highpassHz: c.hp ?? DEFAULT_FILL.highpassHz,
-  };
-}
-
-test("speaker spec: every golden fill reads in as a coaxial in its box, the highpass to the subs as its crossover", () => {
-  for (const c of fillConfigs) {
-    const state = fillState(c);
-    const read = layersFromFill(state, { id: "fill", name: c.name });
-    const { stack, speakers } = read;
-    const [spec] = speakers;
-    const [chamber] = spec.cabinet.chambers;
-    assert.deepEqual(chamber.dims, state.boxDims, c.name);
-    assert.deepEqual(
-      [spec.cabinet.construction, spec.cabinet.top, spec.cabinet.insetIn],
-      [CABINET_CONSTRUCTION.flushBox, CABINET_TOP.flat, 0],
-      c.name,
-    );
-    assert.equal(chamber.vent.kind, c.boxType, c.name);
-    if (chamber.vent.kind === VENT_KIND.vented)
-      assert.deepEqual(chamber.vent.port, { shape: PORT_SHAPE.round, ...state.portSpec }, c.name);
-    const [coax] = driversOf(spec, DRIVER_KIND.coaxial);
-    assert.deepEqual([coax.driverId, coax.count], [c.drv, 1], c.name);
-    assert.deepEqual(coax.bands, [SPEAKER_BAND.low, SPEAKER_BAND.high]);
-    assert.ok(spec.bands.every((b) => b.drive === HIFI_DRIVE.passive));
-    // the highpass to the subs is the stack's; the bands cross only at the coaxial's own crossover
-    const [low, high] = spec.bands;
-    const xo = state.driver.hf?.xo;
-    assert.equal(low.highpass, null, c.name);
-    assert.deepEqual(
-      [low.lowpass?.hz ?? null, high.highpass?.hz ?? null],
-      [xo ?? null, xo ?? null],
-      c.name,
-    );
-    assert.deepEqual(stack.members[0].crossover.highpass, {
-      hz: state.highpassHz,
-      type: crossoverSlopeName(state.highpassOrder),
-    });
-    assert.ok(
-      spec.bands.every((b) => b.ampW === state.ampWatts),
-      c.name,
-    );
-  }
-});
-
 const waveguideTweeter = HIFI_TWEETERS.find((t) => needsWaveguide(t) && !t.ownGuide);
 const roundGuide = HIFI_WAVEGUIDES.find((h) => !h.rect);
 const coax = HIFI_COAXES.find((c) => c.tweeter);
 assert.ok(waveguideTweeter && roundGuide && coax?.tweeter, "the catalog has each case");
-
-/**
- * Hi-fi designs covering each box kind, port shape, waveguide placement, a coaxial, the engine knobs and a box too
- * small for its parts; `horn` is where the waveguide goes, where there is one.
- */
-const hifiCases: { name: string; state: HifiDesignState; horn?: HornPlacement }[] = [
-  { name: "DEFAULT_HIFI", state: DEFAULT_HIFI },
-  { name: "sealed", state: { ...DEFAULT_HIFI, boxType: VENT_KIND.sealed } },
-  { name: "radiator", state: { ...DEFAULT_HIFI, boxType: VENT_KIND.radiator } },
-  {
-    name: "slot",
-    state: { ...DEFAULT_HIFI, portSpec: { shape: PORT_SHAPE.slot, n: 1, h: 1, len: 6 } },
-  },
-  {
-    name: "too small for its parts",
-    state: { ...DEFAULT_HIFI, boxDims: { w: 4, h: 6, d: 8 } },
-  },
-  {
-    // a round waveguide stands free on the box top
-    name: "compression driver on a round waveguide",
-    state: { ...DEFAULT_HIFI, tweeter: waveguideTweeter, selectedWaveguide: roundGuide },
-    horn: HORN_PLACEMENT.top,
-  },
-  {
-    // no Hi-fi waveguide has a rectangular mouth yet: the round one made rectangular, which sits in the baffle
-    name: "compression driver on a rectangular waveguide",
-    state: {
-      ...DEFAULT_HIFI,
-      tweeter: waveguideTweeter,
-      selectedWaveguide: { ...roundGuide, rect: true },
-    },
-    horn: HORN_PLACEMENT.baffle,
-  },
-  {
-    name: "coaxial",
-    state: { ...DEFAULT_HIFI, woofer: coax.woofer, tweeter: coax.tweeter },
-  },
-  {
-    name: "passive, sub highpass, tilted",
-    state: {
-      ...DEFAULT_HIFI,
-      drive: HIFI_DRIVE.passive,
-      subHighpass: { hz: 70, order: 4 },
-      tiltDeg: 8,
-    },
-  },
-];
-
-test("speaker spec: Hi-fi designs read in with their fitted box, drivers, waveguide and crossover", () => {
-  for (const { name, state, horn } of hifiCases) {
-    const spec = speakerFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
-    const [chamber] = spec.cabinet.chambers;
-    assert.equal(spec.cabinet.chambers.length, 1, name);
-    // the box the page models, drawn and saved: the size set, fitted to what its parts need
-    assert.deepEqual(chamber.dims, deriveHifiDesign(state).speakerConfig.dim, name);
-    assert.equal(chamber.vent.kind, state.boxType, name);
-    assert.deepEqual(
-      [spec.cabinet.construction, spec.cabinet.top, spec.cabinet.insetIn],
-      [CABINET_CONSTRUCTION.flushBox, CABINET_TOP.flat, 0],
-      name,
-    );
-    // the port and the radiators placed by the Hi-fi rule
-    if (chamber.vent.kind === VENT_KIND.vented)
-      assert.ok(!("position" in chamber.vent.port), `${name}: the port placed by its rule`);
-    if (chamber.vent.kind === VENT_KIND.radiator)
-      assert.ok(!("position" in chamber.vent), `${name}: the radiators placed by their rule`);
-    if (chamber.vent.kind === VENT_KIND.vented) {
-      const { port } = chamber.vent;
-      assert.deepEqual([port.shape, port.len], [state.portSpec.shape, state.portSpec.len], name);
-      if (port.shape !== PORT_SHAPE.slot && port.shape !== PORT_SHAPE.duct)
-        assert.equal(typeof port.elbows, "number", `${name}: the round port carries its elbows`);
-    }
-    if (chamber.vent.kind === VENT_KIND.radiator)
-      assert.deepEqual(chamber.vent.radiators, state.radiatorSelection);
-    if (state.woofer.id === state.tweeter.id) {
-      assert.deepEqual(
-        chamber.drivers.map((d) => [d.kind, d.driverId, d.bands]),
-        [[DRIVER_KIND.coaxial, state.woofer.id, [SPEAKER_BAND.low, SPEAKER_BAND.high]]],
-        name,
-      );
-    } else {
-      const [woofer] = driversOf(spec, DRIVER_KIND.woofer);
-      const [tweeter] = driversOf(spec, DRIVER_KIND.tweeter);
-      assert.equal(woofer.driverId, state.woofer.id, name);
-      assert.equal(tweeter.driverId, state.tweeter.id, name);
-      assert.equal(tweeter.horn?.placement ?? null, horn ?? null, name);
-      if (horn) assert.equal(tweeter.horn?.hornId, state.selectedWaveguide.id, name);
-    }
-    const xo = { hz: state.crossoverHz, type: crossoverSlopeName(state.crossoverOrder) };
-    assert.deepEqual(bandOf(spec, SPEAKER_BAND.low).lowpass, xo, name);
-    assert.deepEqual(bandOf(spec, SPEAKER_BAND.high).highpass, xo, name);
-    // the box's own subsonic on the low band: the model's (a sub highpass, the system's, would take its place there)
-    const subsonic = bandOf(spec, SPEAKER_BAND.low).highpass;
-    if (state.boxType === VENT_KIND.sealed) assert.equal(subsonic, null, `${name}: no subsonic`);
-    else if (state.subHighpass) assert.ok(subsonic, `${name}: a subsonic`);
-    else {
-      const modeled = deriveHifiDesign(state).speakerModel?.speakerSystem.hpf;
-      assert.ok(modeled, name);
-      assert.deepEqual(subsonic, { hz: modeled, type: HIFI_SUBSONIC_TYPE }, name);
-    }
-    const passive = state.drive === HIFI_DRIVE.passive;
-    assert.ok(
-      spec.bands.every((b) => b.drive === (passive ? HIFI_DRIVE.passive : HIFI_DRIVE.active)),
-      name,
-    );
-    assert.equal(spec.cabinet.tiltDeg, state.tiltDeg ?? 0, name);
-
-    // the pair: one mirrored placement, toed in, the sub highpass as the stack's crossover, a channel per band when active
-    const read = layersFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
-    const { space, stack } = read;
-    assert.deepEqual(
-      space.placements.map((p) => [p.x, p.y, p.aim, p.mirror, p.mirrored]),
-      [
-        [
-          -state.speakerSpacingFt / 2,
-          state.distanceToWallFt,
-          { yawDeg: state.toeInDeg, pitchDeg: 0 },
-          false,
-          true,
-        ],
-      ],
-      name,
-    );
-    // the model's two boxes: the right one the mirror image of the left
-    assert.deepEqual(
-      expandPlacements(space.placements).map((p) => [p.x, p.y, p.aim, p.mirror]),
-      [
-        [
-          -state.speakerSpacingFt / 2,
-          state.distanceToWallFt,
-          { yawDeg: state.toeInDeg, pitchDeg: 0 },
-          false,
-        ],
-        [
-          state.speakerSpacingFt / 2,
-          state.distanceToWallFt,
-          { yawDeg: -state.toeInDeg, pitchDeg: 0 },
-          true,
-        ],
-      ],
-      name,
-    );
-    assert.equal(stack.members.length, 1, name);
-    for (const m of stack.members)
-      assert.deepEqual(
-        m.crossover.highpass,
-        state.subHighpass
-          ? { hz: state.subHighpass.hz, type: crossoverSlopeName(state.subHighpass.order) }
-          : null,
-        name,
-      );
-    // a passive pair shares the woofer's amp; an active one has a tweeter amp
-    assert.deepEqual(
-      read.speakers[0].bands.map((b) => b.ampW),
-      [state.wooferAmpWatts, passive ? state.wooferAmpWatts : state.tweeterAmpWatts],
-      name,
-    );
-    // the seat: the listening distance in front of the speakers, across as set
-    const seat = { x: state.listeningSeat.x, y: state.distanceToWallFt + state.listeningSeat.y };
-    assert.deepEqual(space.venue.listener, seat, name);
-    assert.equal(space.venue.earFt, state.earHeightIn / 12, name);
-    // a living room round the pair and the seat
-    assert.ok(space.venue.room.widthFt >= state.speakerSpacingFt, name);
-    assert.ok(space.venue.room.lengthFt > seat.y, name);
-  }
-});
 
 /** The PA default sub (B&C 18NBX100: Sd 1210 cm², Re 5.2 Ω), `count` of them. */
 const subs = (count: number): SpeakerChamber["drivers"] => [

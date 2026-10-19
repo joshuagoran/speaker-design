@@ -191,8 +191,6 @@ export interface EdgeSprings {
   y0: number;
   y1: number;
 }
-export const HINGED_EDGES: EdgeSprings = { x0: 0, x1: 0, y0: 0, y1: 0 };
-
 /** The plate's bending stiffnesses (N·m) and mass (kg/m²): the weaker modulus across the shorter span. */
 function plateStiffness(a: number, b: number, s: PlateStock) {
   const h = s.t * IN_M,

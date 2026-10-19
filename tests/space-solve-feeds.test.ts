@@ -13,11 +13,11 @@ import {
 } from "../src/lib/speaker/solveFeeds";
 import {
   spaceGridRequest,
-  spaceModel,
   spaceModelLaidOut,
   withSolved,
   type SpaceModel,
 } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { speakerFromFill } from "../src/lib/speaker/fillSpec";
 import { homeVenue, spacePlacement } from "../src/lib/speaker/specParts";
 import { DEFAULT_FILL } from "../src/lib/defaults";

@@ -7,7 +7,8 @@ import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { homeVenue } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
-import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { ampPowerGroups, channelGroups, withAmpPower } from "../src/lib/speaker/spaceHardware";
 import {
   emptySpace,

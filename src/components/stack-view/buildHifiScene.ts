@@ -2,10 +2,8 @@
 // Hi-fi page's model and its 2D front drawing use (lib/hifi: the driver layout, the vent and radiators' places), with
 // the PA view's scene context, cone, horn, driver and horn mounts.
 import * as THREE from "three";
-import { createSceneContext, type SceneContext } from "./sceneContext";
+import { type SceneContext } from "./sceneContext";
 import { buildCone, CONE_FACE_BACK_IN } from "./buildCone";
-import { buildHorn } from "./buildHorn";
-import { buildHifiCabinet, type HifiCabinetHoles } from "./buildHifiCabinet";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import {
   circlePath,
@@ -14,13 +12,10 @@ import {
   roundedRectPath,
   roundedRectShape,
 } from "./geometry";
-import { CD_OPTIONS, driverMountKind, hornMountKind } from "../../lib/data";
-import { THREAD_MOUNT } from "../../constants/throatMounts";
+import { CD_OPTIONS } from "../../lib/data";
 import { hifiTubeRoom, isAmt, isRibbon } from "../../lib/hifi/hifi";
 import {
   amtOpening,
-  radiatorSpots,
-  roundPortSpots,
   slotOpening,
   type RadiatorSpot,
   type RoundSpot,
@@ -28,7 +23,6 @@ import {
 import { ELBOW_COUNTS, MAX_ELBOWS, tubeElbows, tubeLegs, type TubeRoom } from "../../lib/tubeFold";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
-import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import type { Props as StackSceneProps } from "./buildStackScene";
 import type {
   CompressionDriver,
@@ -158,104 +152,6 @@ function holeLiner(ctx: SceneContext, r: number, len: number) {
   const inside = ctx.materials.black.clone();
   inside.side = THREE.BackSide;
   return zCylinder(r - 0.005, r - 0.005, len, inside, true);
-}
-
-/** Builds one Hi-fi speaker as a Group (no DOM or WebGL needed). Units: inches; the floor at y = 0. */
-export function buildHifiScene(p: HifiSceneProps): THREE.Group {
-  const { dim, wall: T, lay, tweeter: t } = p;
-  const horn = p.guide && p.waveguide && !t.ownGuide ? p.waveguide : null;
-  const ctx = createSceneContext({
-    wall: T,
-    inset: 0, // the baffle is the box's front
-    cabFinish: p.cabFinish,
-    baffleColor: p.baffleColor,
-    cutaway: p.cutaway,
-    // the context reads a horn only for its body's color: the waveguide's catalog finish
-    horn: horn ?? {},
-  });
-  const zf = dim.d / 2;
-  const tx = lay.onTop ? 0 : p.tweeterOffsetIn,
-    ty = lay.tweeterIn;
-  const holes: HifiCabinetHoles = { baffle: [], back: [], sides: { [-1]: [], 1: [] } };
-
-  // the woofer's cutout, and the vent's openings
-  const wooferR = wooferCutoutR(p.woofer.size);
-  holes.baffle.push(circlePath(0, lay.wooferIn, wooferR));
-  const round = p.port && p.port.shape !== "slot" ? roundPortSpots(p.port) : [];
-  round.forEach((s) =>
-    holes.baffle.push(circlePath(s.x, s.y, s.r + HIFI_BOX_LAYOUT.portTubeWallIn)),
-  );
-  const slot = p.port && p.port.shape === "slot" ? p.port : null;
-  const slotHole = slot ? slotOpening(dim, T, slot) : null;
-  if (slotHole)
-    holes.baffle.push(
-      roundedRectPath(0, slotHole.y + slotHole.h / 2, slotHole.w, slotHole.h, 0.02),
-    );
-
-  // the radiators' cutouts, on their panels
-  const spots = p.radiators ? radiatorSpots(p.radiators, p.radiatorPanel, T) : [];
-  const sideZ = (-dim.d / 2 + zf - Math.max(T, p.roundoverIn)) / 2;
-  for (const s of spots) {
-    const rx = s.shape.w / 2 - HIFI_FRONT_PARTS.radiatorFrameIn,
-      ry = s.shape.h / 2 - HIFI_FRONT_PARTS.radiatorFrameIn;
-    if (s.panel === "side") holes.sides[s.side ?? -1].push(ellipsePath(sideZ, s.y, rx, ry));
-    else holes[s.panel].push(ellipsePath(0, s.y, rx, ry));
-  }
-
-  // the tweeter's hole: a waveguide set into the baffle, a ribbon's or an AMT's plate, or a faceplate; none for a coaxial's HF,
-  // which sits in its woofer
-  const face: Dims2 | null = horn || lay.coax ? null : (t.ownGuide ?? t.faceplate);
-  if (horn && p.guide && !p.guide.freestanding)
-    holes.baffle.push(
-      roundedRectPath(
-        tx,
-        ty,
-        p.guide.w,
-        p.guide.h,
-        Math.min(p.guide.w, p.guide.h) * HIFI_FRONT_PARTS.guideCornerPerSize,
-      ),
-    );
-  else if (face) holes.baffle.push(plateHole(t, tx, ty, face));
-
-  const { shellFrontZ } = buildHifiCabinet(ctx, {
-    dim,
-    roundover: p.roundoverIn,
-    holes,
-  });
-
-  addWoofer(ctx, {
-    r: wooferR,
-    size: p.woofer.size,
-    y: lay.wooferIn,
-    zf,
-    shellFrontZ,
-    coax: !!lay.coax,
-  });
-  if (p.port && p.port.shape !== "slot")
-    addRoundPorts(ctx, { spots: round, port: p.port, dim, zf });
-  if (slot && slotHole) addSlotShelf(ctx, { opening: slotHole, len: slot.len, shellFrontZ });
-  for (const s of spots) addRadiator(ctx, s, { dim, zf, sideZ });
-
-  // the tweeter: a waveguide with its compression driver (on the box top on its mount, or set into the baffle), a
-  // ribbon's plate, a horn-loaded tweeter's flare or a dome, each plate flush in the baffle
-  if (horn && p.guide) {
-    const cd = hifiCompressionDriver(t);
-    // a thread on either side (direct, or through an adapter): the clamped bracket holds the driver
-    const screwOn = driverMountKind(t) === THREAD_MOUNT || hornMountKind(horn) === THREAD_MOUNT;
-    if (p.guide.freestanding)
-      buildHorn(ctx, { horn, cd, y: dim.h, xs: [0], mount: dim, backRoundover: 0, screwOn });
-    else
-      buildHorn(ctx, {
-        horn,
-        cd,
-        y: dim.h,
-        xs: [tx],
-        mount: dim,
-        // set into the baffle, its mouth flush with the front, as the PA tower sets its horn
-        tower: { cy: ty, width: p.guide.w, sectionH: 0 },
-      });
-  } else if (face) addTweeter(ctx, { t, face, x: tx, y: ty, zf });
-  return ctx.group;
 }
 
 /**

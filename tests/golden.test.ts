@@ -5,8 +5,7 @@ import { goldenCases, type GoldenValues } from "./golden-configs";
 
 // Reads tests/golden.json and checks every case against it. After an intentional change, regenerate the snapshot with
 //   vp run golden
-// (tests/update-golden.ts; it is its own run, because rewriting golden.json inside the full suite races
-// tests/optimize.test.ts, which reads it in a parallel worker).
+// (tests/update-golden.ts; it is its own run, so the full suite only reads golden.json).
 const goldenUrl = new URL("./golden.json", import.meta.url);
 // boundary: golden.json is what tests/update-golden.ts wrote
 const golden = JSON.parse(fs.readFileSync(goldenUrl, "utf8")) as Record<string, GoldenValues>;

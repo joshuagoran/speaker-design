@@ -1,6 +1,6 @@
 import { Button } from "../ui/Button";
 import { Ellipsis } from "../ui/Ellipsis";
-import type { OptimizerProgress, PaOptimizerResult } from "../../types";
+import type { OptimizerProgress, SpeakerOptimizerResult } from "../../types";
 import { GAP_Y_TIGHT } from "../../styles/layout";
 
 interface Props {
@@ -16,7 +16,7 @@ interface Props {
   /** how far the running search has got; null before its first report */
   progress?: OptimizerProgress | null;
   /** what the last search covered; null before the first one */
-  stats: Pick<PaOptimizerResult["stats"], "evaluated" | "ms"> | null | undefined;
+  stats: Pick<SpeakerOptimizerResult["stats"], "evaluated" | "ms"> | null | undefined;
   note?: React.ReactNode;
   children?: React.ReactNode;
 }

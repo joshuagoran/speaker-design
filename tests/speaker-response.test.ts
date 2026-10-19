@@ -8,7 +8,6 @@ import {
   PA_FLOOR,
   atModelVolts,
   bandCurve,
-  hifiCases,
   levelAt,
   maxDiff,
   paDesign,
@@ -21,14 +20,6 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { flushBracing, lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
-import {
-  HIFI_NET_SHARE,
-  hifiBox,
-  hifiGridTop,
-  isCoax,
-  linkwitzRileyFilter,
-} from "../src/lib/hifi/hifi";
 import {
   boxModel,
   closedBox,
@@ -103,80 +94,6 @@ test("speaker model: a band filter's magnitude is the box models' highpass and L
 });
 
 // ---- Hi-fi ----
-
-/**
- * Tolerances for the Hi-fi parity, dB. Each band runs the engine's own arithmetic on the model's grid, so it differs
- * only by reading the engine's curve between its points (196 points over 15 Hz–2 kHz): 0.05 dB. The sum also takes
- * each box's own phase and the subsonic's, which the Hi-fi engine leaves out of its sum (it multiplies the woofer's
- * level by the crossover alone): a few degrees at a 1.6–2 kHz crossover, more where the woofer's voice-coil inductance
- * turns its phase there: up to 0.12 dB on these designs (Oct 2026). The curves run on the Hi-fi engine's net air; from
- * the size, the model counts the real bracing (none in these boxes: lib/speaker/speakerBuild) where the Hi-fi engine
- * keeps 3% of the clear volume for bracing and damping (HIFI_NET_SHARE), so its net air is that 3% more, exactly.
- */
-const HIFI_BAND_DB = 0.05;
-const HIFI_SUM_DB = 0.15;
-
-test("speaker model: the Hi-fi designs match the Hi-fi engine before the room (bands, sum, net air, tuning)", () => {
-  for (const { name, state } of hifiCases) {
-    const read = speakerFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
-    const design = deriveHifiDesign(state);
-    const sys = design.speakerModel?.speakerSystem;
-    assert.ok(sys, name);
-    const cfg = design.speakerConfig;
-    const box = hifiBox(state.woofer, cfg, hifiGridTop(cfg.xo));
-    assert.ok(box, name);
-    const [free] = speakerResponse(read).chambers;
-    const allowance = (1 - HIFI_NET_SHARE) * box.gross;
-    assert.ok(
-      Math.abs(free.netLiters - (box.net + allowance)) < 1e-9 * box.net,
-      `${name}: net air`,
-    );
-    const spec = withNet(read, read.cabinet.chambers[0], box.net);
-    const response = speakerResponse(spec);
-    const order = cfg.order;
-    const lowRaw = box.m.curve.map((o) => ({ f: o.f, spl: o.spl - atModelVolts(box.V) }));
-    const lowRef = lowRaw.map((o) => ({
-      f: o.f,
-      spl: o.spl + 20 * Math.log10(abs(linkwitzRileyFilter(o.f, cfg.xo, order, "lp"))),
-    }));
-    const tweeterDb = sys.tSens283 + sys.trim;
-    const highRef = SPEAKER_RESPONSE_FREQUENCIES.map((f) => ({
-      f,
-      spl: tweeterDb + 20 * Math.log10(abs(linkwitzRileyFilter(f, cfg.xo, order, "hp"))),
-    }));
-    const lowDiff = maxDiff(bandCurve(response, SPEAKER_BAND.low), lowRef);
-    const highDiff = maxDiff(bandCurve(response, SPEAKER_BAND.high), highRef);
-    // the Hi-fi engine's on-axis sum before the room: the woofer's level times the crossover, plus the tweeter's
-    const top = box.m.curve[box.m.curve.length - 1].f;
-    const sumRef = SPEAKER_RESPONSE_FREQUENCIES.filter((f) => f <= top).map((f) => {
-      const w = scale(
-        linkwitzRileyFilter(f, cfg.xo, order, "lp"),
-        10 ** ((levelAt(lowRaw, f) ?? 0) / 20),
-      );
-      const t = scale(linkwitzRileyFilter(f, cfg.xo, order, "hp"), 10 ** (tweeterDb / 20));
-      return { f, spl: 20 * Math.log10(abs(add(w, t))) };
-    });
-    const sumDiff = maxDiff(response.sum, sumRef);
-    assert.ok(lowDiff <= HIFI_BAND_DB, `${name}: woofer band off by ${lowDiff.toFixed(3)} dB`);
-    assert.ok(highDiff <= HIFI_BAND_DB, `${name}: tweeter band off by ${highDiff.toFixed(3)} dB`);
-    // A coaxial's bands only: its woofer's datasheet inductance (Le 1.1 mH on the B&C 10CXN64) turns its phase at
-    // the crossover, which the speaker model's sum takes and the Hi-fi engine's sum leaves out (about 1.2 dB).
-    if (!isCoax(state.woofer, state.tweeter))
-      assert.ok(sumDiff <= HIFI_SUM_DB, `${name}: sum off by ${sumDiff.toFixed(3)} dB`);
-    const [chamber] = response.chambers;
-    assert.ok(Math.abs(chamber.netLiters - box.net) < 1e-9 * box.net, `${name}: net air`);
-    if (sys.kind === "sealed")
-      assert.ok(chamber.qtc !== null && Math.abs(chamber.qtc - sys.Qtc) < 1e-9, name);
-    else
-      assert.ok(
-        chamber.fb !== null && Math.abs(chamber.fb - sys.Fb) < 1e-9 * sys.Fb,
-        `${name}: Fb`,
-      );
-    assert.deepEqual(chamber.gaps, [], name);
-  }
-});
-
-// ---- PA ----
 
 /** Each golden PA design's differences from today's models, dB and %. */
 interface PaRow {

@@ -14,7 +14,8 @@ import {
 import { modalTopHz } from "../src/lib/pa/roomAcoustics";
 import { MODAL_SUBPOINTS, MODAL_SUBPOINTS_WHOLE_BAND } from "../src/constants/acoustics";
 import { presetLayers } from "../src/pages/stack/stackPresets";
-import { spaceModel, spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceOutputs } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
 import { spacePlacement } from "../src/lib/speaker/specParts";
 import type { SpaceDesign } from "../src/types";

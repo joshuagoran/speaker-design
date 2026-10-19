@@ -142,19 +142,6 @@ export const defaultBraceStyle = (n: PanelNominal): BraceStyleId =>
  */
 export const defaultBraceStyleNear = (t: number) => defaultBraceStyle(panelNominalNear(t));
 
-/** The first mode of a simply supported thin plate `a` × `b` inches, Hz (the header's formula). */
-export function plateFirstModeHz(a: number, b: number, s: PlateStock): number {
-  const long = Math.max(a, b) * IN_M,
-    short = Math.min(a, b) * IN_M,
-    h = s.t * IN_M;
-  const k = h ** 3 / (12 * (1 - s.nu * s.nu));
-  const rhoH = s.lbPerSqFt * LB_FT2_KG_M2;
-  return (
-    ((Math.PI / 2) * (Math.sqrt(s.eStrong * k) / long ** 2 + Math.sqrt(s.eWeak * k) / short ** 2)) /
-    Math.sqrt(rhoH)
-  );
-}
-
 /**
  * The panel either side of a rib that works with it as a flange, as shares of the rib's span and of the panel's
  * thickness: EN 1995-1-1:2004 (Eurocode 5) §9.1.2, the effective flange width of glued thin-flanged beams, whose
@@ -186,17 +173,6 @@ export function teeSecondMoment(b: number, h: number, w: number, d: number) {
   return (b * h ** 3) / 12 + af * (y - yf) ** 2 + (w * d ** 3) / 12 + aw * (yw - y) ** 2;
 }
 
-/**
- * A rib's first mode as a beam simply supported over `span` inches, carrying `tributary` inches of the panel beside it,
- * Hz: f = (π/2) √(EI/μ) / L², the rib and its effective flange of panel (ribFlangeIn) as one T section
- * (teeSecondMoment), at the stock's weaker modulus for both (plywood's in-plane stiffness either way of the grain is at
- * least that); μ is the rib's own mass and the whole strip of panel it carries, per length. The rib alone (no flange,
- * I = t·d³/12) reads about half the frequency for a box's ribs: a ¾″ rib 2½″ deep with a 3″ flange is 3.9 × as stiff.
- */
-export function ribFirstModeHz(span: number, tributary: number, s: PlateStock): number {
-  const { EI, mu } = teeBeam(span, tributary, s, s, RIB_DEPTH_IN);
-  return ((Math.PI / 2) * Math.sqrt(EI / mu)) / (span * IN_M) ** 2;
-}
 /**
  * A strip glued on edge to a panel (a rib, or a window brace's rail): its web of `web` stock standing `depth` in off the
  * panel and the panel's effective flange (ribFlangeIn) as one T section over `span` in, carrying `tributary` in of the
@@ -293,9 +269,6 @@ const EPS = 1e-6;
 export const BOX_AXES: readonly BoxAxis[] = ["x", "y", "z"];
 type Span = readonly [number, number];
 
-/** Whether two regions share some volume (regions that only touch don't). */
-export const regionsOverlap = (a: BoxRegion, b: BoxRegion) =>
-  BOX_AXES.every((k) => a[k][0] < b[k][1] - EPS && b[k][0] < a[k][1] - EPS);
 /** A region from its spans on three different axes. */
 export function regionOf(
   a: BoxAxis,

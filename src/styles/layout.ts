@@ -83,6 +83,3 @@ export const BLOCK_GAP_Y = "space-y-5";
 
 /** `GAP_Y` from md up only: a fold body whose children are tab groups, which phones show one at a time. */
 export const GAP_Y_MD_UP = "md:space-y-3";
-
-/** `BLOCK_GAP_Y` from md up only: the PA settings' tab groups, side by side in one fold on desktop. */
-export const BLOCK_GAP_Y_MD_UP = "md:space-y-5";

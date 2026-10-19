@@ -12,7 +12,6 @@ import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speaker
 import { SPEAKER_STEPS } from "../src/constants/speakerSteps";
 import { VENT_KIND } from "../src/constants/speakerSpec";
 import { SPEAKER_GOAL_TEXT } from "../src/constants/speakerOptimizer";
-import { hifiParity, paTowerParity } from "./speaker-optimizer-parity";
 import type {
   SpeakerGoal,
   SpeakerOptimizerLimits,
@@ -266,24 +265,3 @@ test("runtime: the PA tower's search takes a few seconds at most", () => {
   // about 1.5 s on a laptop in Node; CI machines are slower
   assert.ok(r.stats.ms < 10_000, `took ${r.stats.ms} ms`);
 });
-
-// Parity: each side's best card on the goal, among the cards inside the Speaker optimizer's space (same driver sizes,
-// the box ×0.7–1.5 per axis) that keep what the goal keeps, scored by the speaker model.
-test("parity: the Hi-fi 2-way's cards are at least as good as the Hi-fi optimizer's", () => {
-  // the Hi-fi optimizer also changes the plywood and the woofer's size (its lower card: an 8 in woofer in a box 3.7×
-  // the volume): those cards are outside the space
-  for (const g of ["lower", "louder"] as const) {
-    const p = hifiParity(g);
-    assert.ok(p.speaker.value !== null, `hifi ${g}: a card that keeps the goal`);
-    if (p.legacy.value !== null)
-      assert.ok(p.speaker.value <= p.legacy.value + 1e-6, `hifi ${g}: ${JSON.stringify(p)}`);
-  }
-}, 60_000);
-
-test("parity: the PA tower's cards are at least as good as the PA optimizer's", () => {
-  // the PA optimizer finds no card for the tower: its mid chamber is fixed and fails its Qtc check (0.48 < 0.5), so
-  // every design it tries fails; the Speaker optimizer has no Qtc check and can size the mid chamber
-  const p = paTowerParity("cheaper");
-  assert.equal(p.legacy.cards, 0);
-  assert.ok(p.speaker.value !== null && p.speaker.value < p.start, JSON.stringify(p));
-}, 60_000);

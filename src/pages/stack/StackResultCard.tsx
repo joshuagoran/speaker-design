@@ -7,7 +7,7 @@ import { StackFront } from "../../components/drawings/StackFront";
 import { CardFrame } from "../../components/optimizer/CardFrame";
 import { CardTile, CardTiles } from "../../components/optimizer/CardTile";
 import { Delta } from "../../components/optimizer/Delta";
-import { STATS } from "../../components/optimizer/StatRow";
+import { STATS } from "../../components/stats/StatLabel";
 import { formatDims } from "../../lib/format";
 import { stackListenHeightIn } from "../../lib/speaker/stackResponse";
 import { priceText } from "../../lib/speaker/speakerTotals";

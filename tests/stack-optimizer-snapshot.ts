@@ -3,12 +3,17 @@ import { evaluateStack } from "../src/lib/speaker/optimize/stackEvaluate";
 import { presetLayers } from "../src/pages/stack/stackPresets";
 import { STACK_PRESET, type StackPreset } from "../src/constants/stackPresets";
 import type { SpeakerGoal, SpeakerSpec, StackDesign } from "../src/types";
-import type { Json } from "./optimizer-dump-merge";
-import { PARITY_TARGET_DB } from "./stack-optimizer-parity";
+import type { Json } from "./speaker-optimizer-snapshot";
 
 // The Stack optimizer snapshot's runs: a few presets and goals, the target at the preset's level or at the PA room rule's
 // (1000 sq ft), and no budget, weight or height limit. tests/stack-optimizer-snapshot.test.ts checks them against
 // tests/stack-optimizer-snapshot.json.
+
+/**
+ * The level the runs aim at, dB SPL: a 1000 sq ft room's (105 dB at a listener 7 m off, less 6 dB for the pair and 3 dB
+ * of room gain).
+ */
+const TARGET_DB = 105 + 20 * Math.log10(7) - 6 - 3;
 
 /** Where the snapshot's cards are stored. */
 export const STACK_SNAPSHOT_FILE = new URL("./stack-optimizer-snapshot.json", import.meta.url);
@@ -16,8 +21,8 @@ export const STACK_SNAPSHOT_FILE = new URL("./stack-optimizer-snapshot.json", im
 /** The runs: a preset, its goals in tap order, and the target (null: the preset's own level). */
 const CASES: readonly { preset: StackPreset; goals: SpeakerGoal[]; targetDb: number | null }[] = [
   { preset: STACK_PRESET.paStack, goals: ["cheaper"], targetDb: null },
-  { preset: STACK_PRESET.paStack, goals: ["louder"], targetDb: PARITY_TARGET_DB },
-  { preset: STACK_PRESET.paTower, goals: ["lighter"], targetDb: PARITY_TARGET_DB },
+  { preset: STACK_PRESET.paStack, goals: ["louder"], targetDb: TARGET_DB },
+  { preset: STACK_PRESET.paTower, goals: ["lighter"], targetDb: TARGET_DB },
   { preset: STACK_PRESET.hifiPair, goals: ["cheaper"], targetDb: null },
 ];
 

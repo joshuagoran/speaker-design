@@ -2,9 +2,7 @@
 import {
   A460G2_14,
   B15,
-  B18,
   BC10CXN64,
-  BC15NDL76,
   BC18NBX,
   CABINETS,
   F12PR300,
@@ -157,12 +155,6 @@ export const DEFAULT_PA = {
   plywoodSheetKind: "4x8",
   boxSetCount: 2,
 } satisfies PaDefaults;
-
-/** The mid driver and box the mid size toggle switches to: the 12 is the starting design's, the 15 has its own. */
-export const DEFAULT_MID_BY_SIZE: Partial<Record<MidSize, Pick<PaDefaults, "mid" | "midBox">>> = {
-  12: { mid: DEFAULT_PA.mid, midBox: DEFAULT_PA.midBox },
-  15: { mid: BC15NDL76, midBox: B18 },
-};
 
 /** What each port shape starts at: the round port's diameter and the slot's height. The toggle falls back to these until you size the other shape. */
 export const DEFAULT_PORT_SIZE: PortMemory = { dia: 2, h: 1 };

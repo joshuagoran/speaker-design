@@ -18,7 +18,7 @@ import {
   mainsDsp,
   rackTotal,
 } from "../../lib/data";
-import { STATS } from "../../components/optimizer/StatRow";
+import { STATS } from "../../components/stats/StatLabel";
 import { AMP_SERIES, GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { FONT } from "../../styles/fonts";
 import { FLEX_GAP_Y, PAGE_WIDTH, READING_WIDTH, GAP_Y } from "../../styles/layout";

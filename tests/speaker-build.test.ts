@@ -4,7 +4,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
-import { PA_FLOOR, hifiCases, paDesign, speakerAndFeed } from "./speaker-cases";
+import { PA_FLOOR, paDesign, speakerAndFeed } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
@@ -17,11 +17,8 @@ import {
   slotOpeningsAt,
   speakerLayout,
 } from "../src/lib/speaker/speakerLayout";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEXT } from "../src/constants/speakerPage";
-import { hifiCutParts } from "../src/lib/hifi/cutlist";
-import { RADIATOR_PANEL } from "../src/lib/hifi/hifi";
 import {
   braceLb,
   braceParts,
@@ -47,7 +44,7 @@ import {
   GLUED_BACK,
   NO_BRACING,
 } from "../src/constants/bracing";
-import { hornById, CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, EMPTY_SPEAKER } from "../src/lib/defaults";
 import { SHELL_CUT_BOX, chamberCutBox } from "../src/constants/cutParts";
 import { keysOf } from "../src/lib/records";
@@ -220,38 +217,6 @@ test("speaker build: the golden PA designs match the PA page (bracing, net air, 
           )
         : [];
       assert.deepEqual(piecesDiff(parts, [...page.parts, ...extra]), [], `${c.name} (${joint})`);
-    }
-  }
-});
-
-test("speaker build: the Hi-fi designs match the Hi-fi page (cutlist, weight), braced by the rule", () => {
-  for (const { name, state } of hifiCases) {
-    const spec = speakerFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
-    const design = deriveHifiDesign(state);
-    const sys = design.speakerModel?.speakerSystem;
-    assert.ok(sys, name);
-    const build = cabinetBuild(spec.cabinet);
-    const [chamber] = build.chambers;
-    // these boxes' panels all clear the PA target unbraced
-    assert.equal((chamber.bracing?.windowIn3 ?? 0) + (chamber.bracing?.ribIn3 ?? 0), 0, name);
-    assert.equal(chamber.hardware, null, `${name}: no hardware`);
-    // the Hi-fi page's weight, and the waveguide's, which it leaves out
-    const guide = spec.cabinet.chambers[0].drivers.flatMap((d) =>
-      d.horn ? [hornById(d.horn.hornId)?.lb ?? 0] : [],
-    );
-    const guideLb = guide.reduce((a, b) => a + b, 0);
-    assert.ok(Math.abs(build.lb - sys.lb - guideLb) < LB, `${name}: ${build.lb} vs ${sys.lb}`);
-    for (const joint of ["butt", "rabbet", "miter"] as const) {
-      const page = hifiCutParts({
-        cfg: design.speakerConfig,
-        woofer: state.woofer,
-        tweeter: design.tweeterWithWaveguide,
-        joint,
-        prPanel: RADIATOR_PANEL,
-      });
-      const ours = speakerCutParts(spec.cabinet, joint);
-      assert.deepEqual(piecesDiff(ours.parts, page.parts), [], `${name} (${joint})`);
-      assert.deepEqual(ours.also, page.also, `${name}: bought parts`);
     }
   }
 });

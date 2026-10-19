@@ -6,12 +6,8 @@ import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { audienceAverage, STATS_CLEARANCE_FT } from "../src/lib/pa/coverage";
-import {
-  spaceGridRequest,
-  spaceLevelAt,
-  spaceModel,
-  computeSpaceGrid,
-} from "../src/lib/speaker/spaceCoverage";
+import { spaceGridRequest, spaceLevelAt, computeSpaceGrid } from "../src/lib/speaker/spaceCoverage";
+import { spaceModel } from "./helpers";
 import { referenceAtLimit } from "../src/pages/space/useSpace";
 import {
   meterSpotsOf,

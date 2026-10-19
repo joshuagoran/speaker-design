@@ -29,15 +29,6 @@ export const HIFI_BOX_LAYOUT = {
   radiatorWidthIn: 0.3,
 } as const;
 
-/** The baffle edge roundover radii on offer, inches (0: sharp edges); a router bit's usual sizes. */
-export const HIFI_ROUNDOVER_CHOICES = [0, 0.5, 0.75, 1, 1.5, 2] as const;
-
-/** The Hi-fi box sliders' labels. */
-export const HIFI_BOX_LABELS = { w: "Width", h: "Height", d: "Depth" } as const satisfies Record<
-  keyof Dims3,
-  string
->;
-
 /** The Hi-fi box sliders' ranges and step, inches; the width and height also start at what the drivers need. */
 export const HIFI_BOX_SLIDERS = {
   w: { min: 6, max: 16, step: 0.25 },

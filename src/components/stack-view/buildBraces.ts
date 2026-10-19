@@ -30,36 +30,6 @@ export function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: numbe
 }
 
 /**
- * A box's window braces and ribs (lib/bracing) inside the cabinet `box` whose bottom is at `y` and center at `x`, in
- * bare ply (PARTS_3D.brace) on every finish, so they show in the cutaway beside the vent's parts and the drivers: each
- * rail and rib as lib/bracing places it.
- */
-export function buildBraces(
-  ctx: SceneContext,
-  {
-    bracing,
-    box,
-    y,
-    x = 0,
-    parent,
-  }: { bracing: BoxBracing; box: Dims3; y: number; x?: number; parent: THREE.Object3D },
-) {
-  const T = ctx.wall;
-  const inner = {
-    x: box.w - 2 * T,
-    y: box.h - 2 * T,
-    z: box.d - ctx.inset - BAFFLE_THICKNESS_IN - T,
-  };
-  buildBracesAt(ctx, {
-    bracing,
-    inner,
-    // the inside's left wall, floor and baffle face, as `insideToScene` places them
-    corner: { x: x - inner.x / 2, y: y + T, z: box.d / 2 - ctx.inset - BAFFLE_THICKNESS_IN },
-    parent,
-  });
-}
-
-/**
  * The braces and ribs of a box whose inside (`inner`, in) has its left wall at `corner.x`, its floor at `corner.y` and
  * the baffle's rear face at `corner.z`, in `parent`'s coordinates.
  */

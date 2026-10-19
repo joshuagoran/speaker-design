@@ -18,7 +18,7 @@ import {
   DISPERSION_START_PLANE,
 } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
-import { STATS } from "../../components/optimizer/StatRow";
+import { STATS } from "../../components/stats/StatLabel";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";

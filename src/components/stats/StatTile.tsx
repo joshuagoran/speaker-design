@@ -1,4 +1,4 @@
-import { StatLabel, type StatName } from "../optimizer/StatRow";
+import { StatLabel, type StatName } from "./StatLabel";
 
 interface Props {
   label: StatName;

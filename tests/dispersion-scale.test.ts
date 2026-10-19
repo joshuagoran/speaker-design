@@ -1,9 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { paDispersionMap } from "../src/lib/pa/dispersion";
 import { dispersionGrid, logSpacedFrequencies } from "../src/lib/hifi/hifi";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
-import { DEFAULT_HIFI } from "../src/lib/defaults";
 import {
   CONTOUR_STEP_DB,
   DISPERSION_ANGLE_MAX_DEG,
@@ -13,18 +10,7 @@ import {
   DISPERSION_FREQ_MIN_HZ,
 } from "../src/constants/chartScales";
 import { DISPERSION_SCALE, dispersionColor, dispersionRgb } from "../src/styles/palette";
-import { DISPERSION_PLANES } from "../src/constants/dispersionPlanes";
-import type { HifiDispersionMap, PaStackGeometry } from "../src/types";
-
-const stack: PaStackGeometry = {
-  sub: { zIn: 12, Sd: 1200 },
-  mid: { zIn: 40, Sd: 530 },
-  horn: { zIn: 55, covH: 90, covV: 40, wIn: 12, hIn: 7 },
-  xoLo: 120,
-  xoHi: 1000,
-  orderLo: 4,
-  orderHi: 4,
-};
+import type { HifiDispersionMap } from "../src/types";
 
 const ANGLES = Array.from(
   { length: (2 * DISPERSION_ANGLE_MAX_DEG) / DISPERSION_ANGLE_STEP_DEG + 1 },
@@ -56,39 +42,6 @@ test("dispersion grid: −90..90° at the shared step on the 50 Hz-20 kHz axis",
     rows: ANGLES.map(() => FREQS.map(() => 0)),
     crossovers: [],
   });
-});
-
-test("dispersion grid: every map builder, PA and Hi-fi, both planes, returns the shared grid", () => {
-  // the Hi-fi page's map, from its defaults (hifiDispersionMap), centered and with an offset tweeter
-  const hifi = (state: Partial<Parameters<typeof deriveHifiDesign>[0]>) => {
-    const m = deriveHifiDesign({ ...DEFAULT_HIFI, ...state }).speakerModel;
-    assert.ok(m, "the default drivers can be modeled");
-    return m.dispersion;
-  };
-  for (const [plane, name] of DISPERSION_PLANES) {
-    onGrid(`PA ${name}`, paDispersionMap(stack, plane, 10));
-    onGrid(`Hi-fi ${name}`, hifi({ dispersionPlane: plane }));
-    onGrid(`Hi-fi ${name}, offset tweeter`, hifi({ dispersionPlane: plane, tweeterOffsetIn: 1.5 }));
-  }
-});
-
-test("dispersion maps carry the design's crossovers to mark", () => {
-  for (const [plane] of DISPERSION_PLANES) {
-    assert.deepStrictEqual(
-      paDispersionMap(stack, plane, 10).crossovers,
-      [120, 1000],
-      "sub/mid, mid/horn",
-    );
-    // without a sub there is only the mid/horn crossover
-    assert.deepStrictEqual(paDispersionMap({ ...stack, sub: null }, plane, 10).crossovers, [1000]);
-    const d = deriveHifiDesign({ ...DEFAULT_HIFI, dispersionPlane: plane });
-    assert.ok(d.speakerModel, "the default drivers can be modeled");
-    assert.deepStrictEqual(
-      d.speakerModel.dispersion.crossovers,
-      [d.speakerConfig.xo],
-      "woofer/tweeter",
-    );
-  }
 });
 
 test("dispersion color: hits its stops and clamps outside +6..−36 dB", () => {

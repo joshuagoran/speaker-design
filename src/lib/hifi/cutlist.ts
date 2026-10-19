@@ -8,7 +8,6 @@ import type {
   CutlistSettings,
   Dims2,
   Dims3,
-  HifiCutPartsConfig,
   PanelMaterial,
   PassiveRadiatorChoice,
   RadiatorPanel,
@@ -18,13 +17,7 @@ import type {
 import { cutoutNote, formatInches } from "../pa/calc";
 import { GRAIN_PRESETS, NOTE_SEP } from "../pa/cutlist";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
-import {
-  driverLayout,
-  hifiPortElbows,
-  hifiVentPort,
-  passiveRadiatorShape,
-  tweeterOffset,
-} from "./hifi";
+import { passiveRadiatorShape } from "./hifi";
 
 /** A driver's cutout note from its nominal size: the typical cutout, or the datasheet's where none is on file. */
 export const sizedCutout = (size: number) => {
@@ -54,8 +47,6 @@ export const offsetWords = (off: number) =>
 /** A tweeter's faceplate cutout note, at its center (`at`, words) and offset across (`off`, in). */
 export const tweeterCutoutNote = (faceplate: Dims2, at: string, off: number) =>
   `tweeter: ${formatInches(faceplate.w)} × ${formatInches(faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${at}${offsetWords(off)}`;
-/** The Hi-fi page's words for a port too long to fit its box. */
-export const HIFI_TOO_LONG = "too long for this box (see the Hi-fi page)";
 /**
  * A slot's openings on the baffle: one, or `n` alike stacked, each under its own shelf; `bottoms` each opening's bottom
  * in words, from the lowest (the Hi-fi page's slot is one).
@@ -213,61 +204,6 @@ export function flushBoxPanels(
       note: joinNotes([faceNote("rear"), notes.back]),
     },
   ];
-}
-
-/** The Hi-fi box's panels (flushBoxPanels) with its drivers', port's and radiators' cutouts, and the slot's shelf. */
-export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPartsConfig): {
-  parts: CutPart[];
-  also: string[];
-} {
-  const t = cfg.wall || 0.75,
-    box = "hifi" as const;
-  // the baffle's cutouts, as heights up from the baffle's own bottom edge, so they can be marked on the loose panel
-  const up = (fromBoxBottom: number) => aboveBaffleEdge(fromBoxBottom, joint, t);
-  const lay = driverLayout(woofer, tweeter, cfg.dim, !!cfg.guide?.freestanding);
-  const tweeterNote = lay.coax
-    ? "no tweeter cutout: the coaxial's HF is in the woofer"
-    : lay.onTop
-      ? "no tweeter cutout: its waveguide sits on the box top"
-      : tweeterCutoutNote(tweeter.faceplate, up(lay.tweeterIn), tweeterOffset(cfg, tweeter, lay));
-  const wooferNote = `woofer: ${sizedCutout(woofer.size)}, center ${up(lay.wooferIn)}`;
-
-  const ventPort = hifiVentPort({ ...cfg, wall: t });
-  const also: string[] = [];
-  let portNote: string | null = null;
-  const extra: CutPart[] = [];
-  // the model's check that the port fits the box (null: too long for it)
-  const elbows = ventPort ? hifiPortElbows(cfg.dim, t, ventPort) : 0;
-  if (ventPort?.shape === "slot") {
-    // the slot runs from the bottom panel's inside face (t up the box) to the shelf
-    portNote = slotOpeningNote(ventPort, [up(t)]);
-    extra.push(slotShelfPart(box, ventPort, t, elbows == null ? HIFI_TOO_LONG : null));
-  } else if (ventPort) {
-    portNote = roundPortHoleNote(ventPort);
-    also.push(roundPortLine(ventPort, elbows, HIFI_TOO_LONG));
-  }
-
-  // the radiators' cutouts, on the panel they mount on
-  const pr = cfg.box === "radiator" && cfg.pr ? cfg.pr : null;
-  const prNotes: Partial<Record<RadiatorPanel, string>> = pr
-    ? { [prPanel]: radiatorCutoutNote(pr, prPanel) }
-    : {};
-
-  const parts: CutPart[] = [
-    ...flushBoxPanels(box, cfg.dim, t, joint, {
-      side: prNotes.side,
-      baffle: [
-        wooferNote,
-        tweeterNote,
-        portNote,
-        prNotes.baffle,
-        roundoverNote(cfg.roundoverIn || 0, t, joint),
-      ],
-      back: prNotes.back,
-    }),
-    ...extra,
-  ];
-  return { parts, also };
 }
 
 /** The settings as a material takes them: MDF has no grain, so every panel turns freely and there is no waterfall. */

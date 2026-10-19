@@ -15,7 +15,6 @@ import { withoutMember } from "../src/pages/stack/useStack";
 import {
   loadedStack,
   sameStackDesign,
-  stackOptimizerView,
   useStackOptimizer,
   withStackIdentity,
   type StackOptimizer,
@@ -162,40 +161,6 @@ test("clearing the results (the stack replaced) ends Undo", () => {
     },
     (h) => assert.equal(h.canUndo, false, "no Undo after the stack is replaced"),
   ]);
-});
-
-test("stale cards: a design edit after the search; Undo ends with a design edit after a load", () => {
-  const ran = { from: design, result: searched };
-  const view = stackOptimizerView;
-  assert.deepEqual(view(null, null, design), { result: null, stale: false, canUndo: false });
-  assert.equal(view(ran, null, design).result, searched, "the result shows");
-  assert.equal(view(ran, null, design).stale, false, "on the stack searched");
-  assert.equal(view(ran, null, renamed(design)).stale, false, "a new name changes no design");
-  assert.equal(view(ran, null, edited(design)).stale, true, "an edit after the search");
-  assert.equal(
-    view(ran, null, { ...design, speakers: [...design.speakers] }).stale,
-    true,
-    "a speaker list change",
-  );
-  assert.equal(
-    view(ran, null, {
-      ...design,
-      stack: { ...design.stack, members: withoutMember(design.stack.members, 2) },
-    }).stale,
-    true,
-    "a member removed",
-  );
-  // a card loaded: Undo and the cards hold until the design is edited
-  const loaded = loadedStack(cards[0], design);
-  const undo = { before: design, loaded };
-  assert.deepEqual(view(ran, undo, loaded), { result: searched, stale: false, canUndo: true });
-  assert.equal(view(ran, undo, renamed(loaded)).canUndo, true, "a rename keeps Undo");
-  assert.deepEqual(view(ran, undo, edited(loaded)), {
-    result: searched,
-    stale: true,
-    canUndo: false,
-  });
-  assert.ok(sameStackDesign(loaded, withStackIdentity(loaded, design)));
 });
 
 test("a search that comes back for an older design is dropped", () => {

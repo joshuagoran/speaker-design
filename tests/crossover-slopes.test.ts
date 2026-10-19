@@ -7,20 +7,10 @@ import {
   linkwitzRileyHighpass,
   midSystem,
   hornResponse,
-  subSystem,
-  subThroughLowpass,
-  subMusicOutputAt,
   nearestPoint,
 } from "../src/lib/pa/calc";
-import { paResponseAt } from "../src/lib/pa/dispersion";
-import { evaluateDesign, optimizePaStack } from "../src/lib/pa/optimize";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import type {
-  CrossoverOrder,
-  MidSystemConfig,
-  PaDesignConfig,
-  PaStackGeometry,
-} from "../src/types";
+import type { CrossoverOrder, MidSystemConfig } from "../src/types";
 import { close, db } from "./helpers";
 
 test("LR48 is -6 dB at the corner, 48 dB/oct beyond it, and its halves sum to 1", (t) => {
@@ -105,103 +95,4 @@ test("horn: LR48 is -6 dB at the crossover and ~48 dB down an octave below", (t)
   close(t, at(b, 1000), at(a, 1000), 0.3);
   close(t, at(a, 500), db(linkwitzRileyHighpass(nearestPoint(a.curve, 500).f, 1000, 4)), 1e-9);
   assert.ok(at(b, 500) < -40 && at(a, 500) > -30, `${at(b, 500)} vs ${at(a, 500)}`);
-});
-
-test("sub: an LR48 lowpass is steeper above the crossover, the same at it", (t) => {
-  const d = DEFAULT_PA;
-  const s = subSystem(d.sub, d.mid, {
-    subBox: d.cDim,
-    midDims: d.mDim,
-    wall: d.wall,
-    inset: d.inset,
-    portStyle: d.portStyle,
-    cVent: d.cVent,
-    hpf: d.hpf,
-    hpType: d.hpType,
-    ampW: d.ampW,
-    portMax: d.portMax,
-    layout: d.layout,
-  });
-  assert.ok(s.mdl && s.lim, "the default sub is modeled");
-  const lp4 = subThroughLowpass(s.mdl, d.sub.ts, s.AMP_V, d.portMax, 120, 4),
-    lp8 = subThroughLowpass(s.mdl, d.sub.ts, s.AMP_V, d.portMax, 120, 8);
-  assert.ok(nearestPoint(lp8, 240).spl < nearestPoint(lp4, 240).spl - 15);
-  close(
-    t,
-    subMusicOutputAt(s.mdl, s.lim, s.AMP_V, 120, 8),
-    subMusicOutputAt(s.mdl, s.lim, s.AMP_V, 120, 4),
-    0.5,
-  );
-});
-
-const stack = (o: Partial<PaStackGeometry>): PaStackGeometry => ({
-  sub: { zIn: 12, Sd: 1200 },
-  mid: { zIn: 40, Sd: 530 },
-  horn: { zIn: 55, covH: 90, covV: 40, wIn: 12, hIn: 7 },
-  xoLo: 120,
-  xoHi: 1000,
-  orderLo: 4,
-  orderHi: 4,
-  ...o,
-});
-const freqs = [60, 120, 300, 800, 1000, 1400, 4000];
-const below = { th: 0, eyeIn: 20, distM: 5 }; // off the horn axis: the crossover lobes show
-const spl = (s: PaStackGeometry) => paResponseAt(s, below, freqs).map((p) => p.spl);
-
-test("dispersion: each crossover takes its own order", () => {
-  const lr24 = spl(stack({})),
-    lo8 = spl(stack({ orderLo: 8 })),
-    hi8 = spl(stack({ orderHi: 8 }));
-  assert.notDeepEqual(lo8, lr24);
-  assert.notDeepEqual(hi8, lr24);
-  assert.notDeepEqual(lo8, hi8);
-  // on the horn axis a mixed stack still sums flat (both are time-aligned Linkwitz-Riley pairs)
-  for (const p of paResponseAt(
-    stack({ orderLo: 8, orderHi: 4 }),
-    { th: 0, eyeIn: 55, distM: 5 },
-    [60, 120, 400, 1000, 4000],
-  ))
-    assert.ok(Math.abs(p.spl) < 1.5, `${p.f} Hz: ${p.spl.toFixed(2)} dB`);
-});
-
-/** The default design as the planner snapshots it. */
-const { midSize: _m, plywoodSheetKind: _k, boxSetCount: _n, ...rest } = DEFAULT_PA;
-const defaultConfig: PaDesignConfig = {
-  ...rest,
-  format: rest.format.id,
-  cabinet: rest.cabinet.id,
-  sub: rest.sub.id,
-  mid: rest.mid.id,
-  midBox: rest.midBox.id,
-  cd: rest.cd.id,
-  horn: rest.horn.id,
-};
-
-test("evaluate: a saved design without the orders reads as LR24", () => {
-  const { xoLoOrder: _lo, xoHiOrder: _hi, ...older } = defaultConfig;
-  // boundary: an older save, which lacks the two fields the type now has
-  const a = evaluateDesign(older as PaDesignConfig),
-    b = evaluateDesign(defaultConfig);
-  assert.deepEqual(a, b);
-});
-
-test("optimizer: every card keeps the design's LR48 slopes", (t) => {
-  const cur = { ...defaultConfig, xoLoOrder: 8, xoHiOrder: 8 } as const;
-  const out = optimizePaStack({
-    cur,
-    room: 1000,
-    maxLb: 150,
-    budget: 2000,
-    goals: ["cheaper"],
-    locks: { sub: true, mid: true, cd: true, horn: true },
-  });
-  assert.ok(out.cards.length >= 1, JSON.stringify(out.nearMiss && out.nearMiss.blocking));
-  for (const k of out.cards) {
-    assert.equal(k.config.xoLoOrder, 8, k.label);
-    assert.equal(k.config.xoHiOrder, 8, k.label);
-    // the card's numbers are the LR48 design's own
-    const m = evaluateDesign(k.config);
-    assert.ok(m, k.label);
-    close(t, m.out, k.metrics.out, 1e-9, k.label);
-  }
 });

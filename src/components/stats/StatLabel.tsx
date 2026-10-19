@@ -1,6 +1,5 @@
 import { Tooltip } from "../ui/Tooltip";
 import { SUB_BASS_BAND_HZ } from "../../lib/pa/calc";
-import { STAT_ROW_TEST_IDS } from "../../constants/statRowTestIds";
 import { UI_TEXT } from "../../constants/uiText";
 
 /** A statistic with plain-language help: its label, and the tooltip shown on it. */
@@ -82,9 +81,6 @@ export const STATS = {
 /** A row's or tile's name: a statistic from STATS (with its tooltip) or a plain label. */
 export type StatName = StatDef | string;
 export const statLabel = (k: StatName) => (typeof k === "string" ? k : k.label);
-/** The tooltip of a "Max SPL at … Hz" row (its name carries the frequency, so the row passes it as its own tip). */
-export const MAX_SPL_TIP = "Maximum steady sine level here, below the named limit.";
-
 interface StatLabelProps {
   k: StatName;
   extra?: string;
@@ -94,36 +90,4 @@ interface StatLabelProps {
 export function StatLabel({ k, extra }: StatLabelProps) {
   const tip = [typeof k === "string" ? null : k.tip, extra].filter(Boolean).join(" ");
   return tip ? <Tooltip tip={tip}>{statLabel(k)}</Tooltip> : statLabel(k);
-}
-
-interface StatRowProps {
-  k: StatName;
-  v: React.ReactNode;
-  note?: React.ReactNode;
-  tip?: string;
-}
-
-/**
- * One statistic: name, value and note. The name keeps its width; the value and its note are right-aligned in the rest
- * of the row, and a note too long for it wraps onto more lines there instead of running into the next column.
- */
-export function StatRow({ k, v, note, tip }: StatRowProps) {
-  return (
-    <div
-      className="flex justify-between gap-4 border-b border-stone-300 py-1"
-      data-testid={STAT_ROW_TEST_IDS.row}
-    >
-      <span className="text-stone-500 shrink-0">
-        <StatLabel k={k} extra={tip} />
-      </span>
-      <span className="text-right min-w-0 break-words">
-        <span className="font-medium tabular-nums">{v}</span>
-        {note ? (
-          <span className="block text-xs text-stone-500" data-testid={STAT_ROW_TEST_IDS.note}>
-            {note}
-          </span>
-        ) : null}
-      </span>
-    </div>
-  );
 }

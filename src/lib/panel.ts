@@ -3,21 +3,11 @@
 // depends on the walls (box volume, cutlist sizes and joints, the 3D view, weights) is worked out at `panelIn`.
 import { PANEL_STOCK } from "../data/catalog/plywood";
 import { PANEL_NOMINAL_NAMES } from "../constants/panelSizes";
-import type {
-  PaDesignConfig,
-  PanelExactIn,
-  PanelMaterial,
-  PanelNominal,
-  PanelStockMaterial,
-} from "../types";
+import type { PanelExactIn, PanelMaterial, PanelNominal, PanelStockMaterial } from "../types";
 import { keysOf } from "./records";
 
 /** Every nominal size, thickest first, as the settings offer them. */
 export const PANEL_NOMINALS = keysOf(PANEL_STOCK);
-
-/** Whether a stored value is a nominal size's id. */
-export const isPanelNominal = (v: unknown): v is PanelNominal =>
-  typeof v === "string" && Object.hasOwn(PANEL_STOCK, v);
 
 /** The thickness a nominal size starts at in a material before the Cutlist page has a measured one, inches. */
 export const defaultPanelIn = (n: PanelNominal, mat: PanelMaterial) => PANEL_STOCK[n][mat].t;
@@ -72,51 +62,6 @@ export const panelNominalNear = (t: number): PanelNominal =>
   PANEL_NOMINALS.reduce((a, n) =>
     Math.abs(PANEL_STOCK[n].in - t) < Math.abs(PANEL_STOCK[a].in - t) ? n : a,
   );
-
-/**
- * The nominal size a saved design or an optimizer card is at, from the thickness it was worked out at (`wall`) and the
- * size it names (`panel`, absent in designs saved before the sizes): the named size while its thickness matches; else
- * the size measured at that thickness; else the size that is that thickness nominally (old saves' 0.75 and 0.5); else
- * the named size. Undefined when nothing fits, so the page keeps its default.
- */
-export function panelFor(
-  c: Partial<Pick<PaDesignConfig, "wall" | "panel">>,
-  mat: PanelMaterial,
-  exact: PanelExactIn = {},
-): PanelNominal | undefined {
-  const named = isPanelNominal(c.panel) ? c.panel : undefined;
-  const { wall } = c;
-  if (wall === undefined || (named && panelIn(named, mat, exact) === wall)) return named;
-  return (
-    PANEL_NOMINALS.find((n) => panelIn(n, mat, exact) === wall) ??
-    PANEL_NOMINALS.find((n) => PANEL_STOCK[n].in === wall) ??
-    named
-  );
-}
-
-/**
- * A saved design's walls as it was saved, for a project that keeps the measurements in this browser (Hi-fi): the size
- * it names, else (saves from before the sizes) the size its `wall` is nominally; and that size's measurement set to its
- * `wall`, so the box comes back at the thickness it was saved at. Undefined when nothing fits, so the page keeps its own.
- */
-export function restoredPanel(
-  c: Partial<Pick<PaDesignConfig, "wall" | "panel">>,
-  mat: PanelMaterial,
-  exact: PanelExactIn,
-): { panel: PanelNominal; exactIn: PanelExactIn } | undefined {
-  const { wall } = c;
-  const panel = isPanelNominal(c.panel)
-    ? c.panel
-    : PANEL_NOMINALS.find((n) => PANEL_STOCK[n].in === wall);
-  if (!panel) return undefined;
-  const { min, max } = panelExactRange(panel);
-  if (wall === undefined || wall < min || wall > max) return { panel, exactIn: exact };
-  const { [panel]: _old, ...rest } = exact;
-  return {
-    panel,
-    exactIn: wall === defaultPanelIn(panel, mat) ? rest : { ...rest, [panel]: wall },
-  };
-}
 
 /** Stored measured thicknesses, each checked: a size whose value is missing or out of range stays at its default. */
 export function savedPanelExactIn(v: unknown): PanelExactIn {

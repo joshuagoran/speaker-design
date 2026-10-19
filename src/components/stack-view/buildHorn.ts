@@ -16,8 +16,6 @@ export const HORN_MESH_NAME = "horn";
 export const ADAPTER_MESH_NAME = "hornAdapter";
 /** The compression driver's meshes. */
 export const CD_MESH_NAME = "compressionDriver";
-export { HORN_MESH_DRAWING } from "./hornBody";
-
 /**
  * Turned steps along the z axis, front face at `z0`, drawn backward (toward −z) and centered on (x, y). Returns the z
  * of the last step's back face.

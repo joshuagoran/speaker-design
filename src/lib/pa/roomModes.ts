@@ -38,9 +38,6 @@ export interface ModalSource {
   images: Float64Array;
 }
 
-/** The surfaces an image's reflections are counted on, in this order. */
-export const MODAL_SURFACES = ["front", "back", "left", "right", "ceiling", "floor"] as const;
-
 /** One axis's images up to second order: the position from the source's, and the hits on the low and high wall. */
 const AXIS_IMAGES: {
   order: number;

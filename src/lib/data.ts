@@ -24,24 +24,19 @@ import type {
   Horn,
   MidDriver,
   MakerId,
-  MountAdapter,
-  MidSize,
   OwnGuide,
   PassiveRadiator,
   RawTS,
   SpeakerSubDriver,
   SubDriver,
-  SubSize,
   ThieleSmall,
   ThroatMountKind,
   ThroatThread,
-  TriaxDriver,
   WaveguideSpec,
 } from "../types";
 import { CABINET_FINISHES, PAINT_SWATCHES } from "../data/catalog/finishes";
 import { CD_RAW } from "../data/catalog/compression-drivers";
 import { BC10CXN64_RAW, FILL_RAW } from "../data/catalog/fills";
-import { TRIAX_RAW } from "../data/catalog/triaxials";
 import { HIFI_PASSIVES_RAW } from "../data/catalog/passive-radiators";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../data/catalog/hifi-tweeters";
 import { HIFI_WOOFERS_RAW, SB17NRX_RAW } from "../data/catalog/hifi-woofers";
@@ -55,7 +50,6 @@ import { DSP_UNITS } from "../data/catalog/dsp-units";
 import { MAINS_RACK, RACKS as RACK_TABLE } from "../data/catalog/racks";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { COAX_GAP, COAX_HF_EXIT_IN, COAXIAL_TWEETER_TYPE } from "../constants/coax";
-import { MOUNT_ADAPTERS } from "../data/catalog/mount-adapters";
 import { BOLT_MOUNT, THREAD_MOUNT } from "../constants/throatMounts";
 import { byId, byIdOrThrow } from "./tables";
 
@@ -65,11 +59,9 @@ export { N314T } from "../data/catalog/compression-drivers";
 export { DSP_UNITS };
 export { CABINET_FINISHES, PAINT_SWATCHES } from "../data/catalog/finishes";
 export { FORMATS } from "../data/catalog/formats";
-export { A460G2_14, ST260, ST260_PROFILE } from "../data/catalog/horns";
-export { B15, B18, MID_BOXES } from "../data/catalog/mid-boxes";
+export { A460G2_14, ST260 } from "../data/catalog/horns";
+export { B15, MID_BOXES } from "../data/catalog/mid-boxes";
 export { HORN_AMP_SAFETY_HPF_HZ } from "../data/catalog/racks";
-export { MOUNT_ADAPTERS };
-
 // Every driver table holds the maker's excursion figures; this adds the comparable Xmax the models read.
 const withTsXmax = <D extends { name: string; maker: MakerId; ts: RawTS<ThieleSmall> }>(d: D) => ({
   ...d,
@@ -92,12 +84,6 @@ export const BC15NDL76: MidDriver = withTsXmax(BC15NDL76_RAW);
 export const MID_OPTIONS: MidDriver[] = MID_RAW.map((d) =>
   d === F12PR300_RAW ? F12PR300 : d === BC15NDL76_RAW ? BC15NDL76 : withTsXmax(d),
 );
-
-/** The sub drivers for a sub size class (15 or 18 in). */
-export const subDriversOfSize = (size: SubSize) => SUB_OPTIONS.filter((o) => o.size === size);
-
-/** The mid drivers for a mid size class (10, 12 or 15 in). */
-export const midDriversOfSize = (size: MidSize) => MID_OPTIONS.filter((o) => o.size === size);
 
 // Copies, so the sort below leaves the catalog tables as written.
 export const CD_OPTIONS: CompressionDriver[] = [...CD_RAW];
@@ -164,11 +150,6 @@ export const FILL_OPTIONS: readonly FillDriver[] = FILL_RAW.map((d) =>
   d === BC10CXN64_RAW ? BC10CXN64 : withTsXmax(d),
 ).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
 
-/** The triaxials (a woofer with a midrange and HF section on one horn), A–Z. */
-export const TRIAX_OPTIONS: readonly TriaxDriver[] = TRIAX_RAW.map(withTsXmax).sort((a, b) =>
-  a.name.localeCompare(b.name, "en", { numeric: true }),
-);
-
 /** A cone's diameter from its area (Sd, cm²), inches. */
 const coneDiaIn = (sdCm2: number) => (2 * Math.sqrt(sdCm2 / Math.PI)) / 2.54;
 /**
@@ -225,12 +206,6 @@ export const HIFI_COAX_WOOFERS: readonly HifiWoofer[] = HIFI_COAXES.map((c) => c
 export const HIFI_COAX_TWEETERS: readonly HifiTweeter[] = HIFI_COAXES.flatMap((c) =>
   c.tweeter ? [c.tweeter] : [],
 );
-const COAX_GAPS_BY_ID: ReadonlyMap<string, CoaxParts["gaps"]> = new Map(
-  HIFI_COAXES.map((c) => [c.woofer.id, c.gaps]),
-);
-/** The HF figures a coaxial's maker doesn't publish, by its id; none for any other part. */
-export const coaxGaps = (id: string): CoaxParts["gaps"] => COAX_GAPS_BY_ID.get(id) ?? [];
-
 // Give every tweeter a faceplate size and radiating diameter the layout and directivity use.
 const withFaceplate = (t: HifiTweeterRaw): HifiTweeter => {
   const fp = t.faceplate;
@@ -267,10 +242,6 @@ const HIFI_DRIVER_TABLES: { [P in keyof HifiDriverParts]: readonly HifiDriverPar
   woofer: [...HIFI_WOOFERS, ...HIFI_COAX_WOOFERS],
   tweeter: [...HIFI_TWEETERS, ...HIFI_COAX_TWEETERS],
 };
-const HIFI_DRIVER_TABLE_NAMES = {
-  woofer: CATALOG_TABLE_NAMES.hifiWoofers,
-  tweeter: CATALOG_TABLE_NAMES.hifiTweeters,
-} as const satisfies Record<keyof HifiDriverParts, string>;
 /** A Hi-fi woofer or tweeter by id, the coaxials' parts included; undefined when there is none (a save's stale id). */
 export function hifiDriverById<P extends keyof HifiDriverParts>(
   part: P,
@@ -279,15 +250,6 @@ export function hifiDriverById<P extends keyof HifiDriverParts>(
   const table: readonly HifiDriverParts[P][] = HIFI_DRIVER_TABLES[part];
   return byId(table, id);
 }
-/** The same for an id the tables gave (a card's, the design's own): throws when there is none. */
-export function hifiDriverByIdOrThrow<P extends keyof HifiDriverParts>(
-  part: P,
-  id: string,
-): HifiDriverParts[P] {
-  const table: readonly HifiDriverParts[P][] = HIFI_DRIVER_TABLES[part];
-  return byIdOrThrow(table, id, HIFI_DRIVER_TABLE_NAMES[part]);
-}
-
 export const HIFI_PASSIVES: readonly PassiveRadiator[] = HIFI_PASSIVES_RAW.map(passiveWithXmax);
 // a tweeter's own waveguide (a ribbon's or an AMT's plate, a coaxial's cone) as the model's guide object (flush-mounted)
 export const ownGuideCfg = (
@@ -322,50 +284,6 @@ export const driverMountKind = (t: Pick<HifiTweeter, "mount">): ThroatMountKind 
 /** How a horn takes its driver: screw-on when it has a thread, else bolt-on (its throat flange). */
 export const hornMountKind = ({ mount }: Pick<WaveguideSpec, "mount">): ThroatMountKind =>
   mount ? THREAD_MOUNT : BOLT_MOUNT;
-/**
- * A compression driver on a waveguide: direct when both bolt on or both screw on with the same thread, else through the
- * catalogue's adapter from the driver's mount to the horn's; null when nothing joins them (two different threads, or no
- * adapter between the two kinds: the pair doesn't fit).
- */
-export function throatJoin(
-  t: Pick<HifiTweeter, "mount">,
-  guide: Pick<WaveguideSpec, "mount">,
-  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
-): { adapter: MountAdapter | null } | null {
-  const driver = driverMountKind(t),
-    horn = hornMountKind(guide);
-  if (driver === horn)
-    return driver === BOLT_MOUNT || driverThread(t) === guide.mount?.thread
-      ? { adapter: null }
-      : null;
-  const adapter = adapters.find((a) => a.driver === driver && a.horn === horn);
-  return adapter ? { adapter } : null;
-}
-/**
- * What the throat adds to one speaker's cost: the adapter's price when the driver sits on the catalogue waveguide
- * `guide` (null: it doesn't, as a dome or a ribbon on its own) and the pair needs one; 0 for a direct pair or one that
- * doesn't fit; null when the adapter it needs has no US price (the cost can't include it).
- */
-export function throatAdapterPrice(
-  t: Pick<HifiTweeter, "mount">,
-  guide: Pick<WaveguideSpec, "mount"> | null,
-  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
-): number | null {
-  const adapter = guide && throatJoin(t, guide, adapters)?.adapter;
-  return adapter ? adapter.price : 0;
-}
-/**
- * Whether the optimizer offers a driver on this waveguide: it fits, directly or through a priced adapter (the catalogue
- * rule for unpriced parts: the search leaves them out unless you lock them).
- */
-export function throatOffered(
-  t: Pick<HifiTweeter, "mount">,
-  guide: Pick<WaveguideSpec, "mount">,
-  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
-): boolean {
-  const join = throatJoin(t, guide, adapters);
-  return !!join && (!join.adapter || join.adapter.price != null);
-}
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
 

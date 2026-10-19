@@ -6,12 +6,10 @@ import { configs } from "./golden-configs";
 import {
   PA_FLOOR,
   hifiCases,
-  levelAt,
   maxDiff,
   paDesign,
   paModels,
   speakerAndFeed,
-  withHifiNet,
   withNet,
 } from "./speaker-cases";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -20,7 +18,6 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { NO_FILTERS, lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer } from "../src/lib/speaker/bandFilter";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { abs } from "../src/lib/acoustics/complex";
 import { ampVoltage, hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/pa/calc";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
@@ -37,7 +34,6 @@ import {
 import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../src/constants/limits";
 import type {
   BandId,
-  LimitId,
   PaPlannerDesign,
   SpeakerFeed,
   SpeakerLimits,
@@ -156,58 +152,6 @@ test("speaker limits: the golden PA designs meet the PA page's limits (sub, mid,
     const musicDb = Math.abs(worst - 20 * Math.log10(lim.V / models.s.AMP_V));
     assert.ok(musicDb <= PA_MUSIC_DB, `${c.name}: music limit off by ${musicDb.toFixed(3)} dB`);
     assert.equal(bandOf(alone.limits, SPEAKER_BAND.low).who, lim.who, `${c.name}: music limit`);
-  }
-});
-
-/**
- * Tolerances for the Hi-fi parity, with no baffle-step EQ (the model has no baffle step to make up for). The woofer's
- * drive at its limit (`WooferMaxPoint.s`), from 30 Hz to a third of the crossover: HIFI_WOOFER_DB, from reading the Hi-fi
- * curve between its points where the limit changes (a corner in the curve); 0.03 dB elsewhere. The two engines differ
- * above that: the Hi-fi divides the coil's rating by the lowpass, the PA (and the model) take it on the whole drive.
- * What sets it is the same at every point, but where the amp's power equals the woofer's program rating (the PA names
- * it thermal, the Hi-fi amp) and at a corner between two limits. The tweeter's power is the Hi-fi's to rounding.
- *
- * On these designs (Oct 2026): the woofer within 0.18 dB.
- */
-const HIFI_WOOFER_DB = 0.2;
-
-/** Whether two limits are the same, or both a ceiling on the whole drive met at the amp's full power (a tie). */
-const sameLimit = (a: LimitId, b: LimitId, scale: number) =>
-  a === b ||
-  (Math.abs(scale) < 1e-9 &&
-    [a, b].every((w) => w === LIMIT_NAMES.amp || w === LIMIT_NAMES.thermal));
-
-test("speaker limits: the Hi-fi designs meet the Hi-fi page's limits (woofer, tweeter)", () => {
-  for (const { name, state: given } of hifiCases) {
-    const state = { ...given, baffleStepCompensationDb: 0 };
-    // on the Hi-fi engine's net air (its 3% allowance for bracing and damping: tests/speaker-response.test.ts)
-    const spec = withHifiNet(
-      speakerFromHifi(state, DEFAULT_HIFI_LOOK, { id: "hifi", name }),
-      state,
-    );
-    const model = modelOf(spec, NO_FILTERS);
-    const sys = deriveHifiDesign(state).speakerModel?.speakerSystem;
-    assert.ok(sys, name);
-    const ref = sys.wMax.map((o) => ({ f: o.f, spl: 20 * Math.log10(o.s) }));
-    const scale = scaleDb(spec, model, SPEAKER_BAND.low).filter(
-      (o) => o.f >= 30 && o.f <= state.crossoverHz / 3,
-    );
-    assert.ok(scale.length > 50, name);
-    for (const o of scale) {
-      const r = levelAt(ref, o.f);
-      assert.ok(r !== null, name);
-      const at = `${name} at ${o.f.toFixed(1)} Hz`;
-      assert.ok(Math.abs(o.spl - r) <= HIFI_WOOFER_DB, `${at}: ${o.spl} vs ${r} dB`);
-      // what sets it, away from a corner between two limits (the Hi-fi points on either side agree)
-      const i = sys.wMax.findIndex((p) => p.f >= o.f);
-      const prev = sys.wMax.at(i - 1),
-        next = sys.wMax.at(i);
-      if (i > 0 && prev && next && prev.who === next.who)
-        assert.ok(sameLimit(o.who, next.who, o.spl), `${at}: ${o.who} vs ${next.who}`);
-    }
-    const tweeter = model.limits.drivers.find((d) => d.band === SPEAKER_BAND.high);
-    assert.ok(tweeter && Math.abs(tweeter.watts - sys.pMax) < 1e-9 * sys.pMax, `${name}: tweeter`);
-    assert.equal(tweeter.derate, sys.derate, `${name}: tweeter derating`);
   }
 });
 

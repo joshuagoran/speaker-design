@@ -15,25 +15,18 @@ import {
   foldedRearWallIn,
   foldedLidGapIn,
   ductDividerIn,
-  subGeometry,
-  ventTuning,
-  braceWoodEstimate,
-  braceWoodIn3,
   SUB_FIXINGS_LB,
   MID_FIXINGS_LB,
   sideDuctEndCorrection,
   slotMouthCorrection,
 } from "../src/lib/pa/calc";
 import { rectangleEndCorrection } from "../src/lib/acoustics/radiation";
-import { defaultBraceStyleNear } from "../src/lib/bracing";
-import { DEFAULT_PA } from "../src/lib/defaults";
 import { ductFit } from "../src/lib/pa/chips";
 import { subTubeLegs, subTubeSpan } from "../src/lib/pa/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../src/data/acoustics/tube-ends";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";
-import { subWoodIn3, ventShape } from "../src/lib/pa/exactSub";
-import type { CutPart, CutPartId } from "../src/types";
+import type { CutPart } from "../src/types";
 
 const IN3_L = 16.387 / 1000;
 test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {
@@ -123,51 +116,6 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
   // the fins run on to the back panel
   const duct = iw * len * t0 + 2 * 3 * (20 - t0) * t0;
   close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
-});
-test("folded slot: the rear wall makes the centerline the set length, and the searches' wood volume matches the cutlist", (t) => {
-  const box = { w: 22, h: 30, d: 20 },
-    t0 = 0.75,
-    cVent = vent({ slotH: 3, len: 26 });
-  const parts = cutParts({
-    sub: SUB_OPTIONS[0],
-    mid: MID_OPTIONS[0],
-    subBox: box,
-    midDims: { w: 15, h: 15, d: 15 },
-    wall: t0,
-    inset: 0.75,
-    joint: "butt",
-    portStyle: "slots",
-    cVent,
-    layout: "stack",
-  }).parts;
-  const part = (id: CutPartId) => parts.find((p) => p.box === "sub" && p.part === id);
-  // floor shelf from the baffle front to the rear channel's wall, as a straight slot's shelf runs: the longest straight
-  // run less the wall, 20 - 0.75 - 3 - 0.75 = 15.5
-  close(t, part("ductShelf")?.b ?? NaN, 15.5, 1e-12);
-  // centerline: the floor run to the channel's middle (20 - 0.75 - 1.5 = 17.75), then 1.5 up to the roof and the wall
-  // above it, so the wall is 26 - 17.75 - 1.5 = 6.75
-  close(t, part("ductRearWall")?.b ?? NaN, 6.75, 1e-12);
-  // the searches count the braces by estimate: the cutlist's other wood, and that
-  const bare = cutParts({
-    sub: SUB_OPTIONS[0],
-    mid: MID_OPTIONS[0],
-    subBox: box,
-    midDims: { w: 15, h: 15, d: 15 },
-    wall: t0,
-    inset: 0.75,
-    joint: "butt",
-    portStyle: "slots",
-    cVent,
-    layout: "stack",
-    noBraces: true,
-  }).parts;
-  const est = braceWoodIn3(braceWoodEstimate(box, t0, 0.75, defaultBraceStyleNear(t0)));
-  close(
-    t,
-    subWoodIn3("slots", box, t0, 0.75, cVent, undefined) * IN3_L,
-    internalWoodLiters(bare, "sub") + est * IN3_L,
-    1e-12,
-  );
 });
 test("folded slot: the longest fold leaves a slot height under the lid, in the fit, the model and the cutlist", (t) => {
   const box = { w: 22, h: 30, d: 20 },
@@ -263,66 +211,6 @@ test("midWeight: 15 in cube in 3/4 birch", (t) => {
     (225 * 2.3 + (225 + 450 + 450) * 2.3) / 144 + MID_FIXINGS_LB,
     1e-9,
   );
-});
-test("duct dividers: a thicker divider comes out of the side ducts' open area, not the net volume", (t) => {
-  const box = { w: 22, h: 30, d: 20 },
-    n = 2,
-    throat = 2,
-    len = 16,
-    wall = 0.75,
-    inset = 0.75,
-    grow = 0.25; // ½″ to ¾″
-  const cVent = (div?: number) => vent(div === undefined ? { throat, len } : { throat, len, div });
-  const geometry = (div?: number) =>
-    subGeometry(DEFAULT_PA.sub, DEFAULT_PA.mid, {
-      subBox: box,
-      midDims: DEFAULT_PA.mDim,
-      wall,
-      inset,
-      portStyle: "vslots",
-      cVent: cVent(div),
-      layout: DEFAULT_PA.layout,
-    });
-  const half = geometry(),
-    threeQ = geometry(0.75);
-  // two dividers per duct, each a quarter inch thicker: each duct's open height loses half an inch
-  close(t, half.port.area - threeQ.port.area, n * throat * 2 * grow, 1e-9);
-  // the dividers sit inside the duct, so the wood they add is the air the duct loses: the net volume holds
-  const moved = n * 2 * throat * len * grow * IN3_L;
-  close(t, threeQ.woodL - half.woodL, moved, 1e-9);
-  close(t, half.ductL - threeQ.ductL, moved, 1e-9);
-  close(t, threeQ.netL, half.netL, 1e-9);
-  // the exact sub model agrees: the same area and the same extra wood
-  close(t, ventShape("vslots", box, cVent(0.75), wall, 0.75, DRV18).area, threeQ.port.area, 1e-9);
-  close(
-    t,
-    subWoodIn3("vslots", box, wall, inset, cVent(0.75), undefined) -
-      subWoodIn3("vslots", box, wall, inset, cVent(), undefined),
-    n * 2 * throat * len * grow,
-    1e-9,
-  );
-  // the smaller vent tunes lower in the same box
-  const fb = (g: typeof half) => ventTuning(g.netL, g.port.area, len, n, g.port.ec).Fb;
-  assert.ok(fb(threeQ) < fb(half));
-  // the cutlist cuts them at that thickness
-  const { parts } = cutParts({
-    sub: DEFAULT_PA.sub,
-    mid: DEFAULT_PA.mid,
-    subBox: box,
-    midDims: DEFAULT_PA.mDim,
-    wall,
-    inset,
-    joint: "butt",
-    portStyle: "vslots",
-    cVent: cVent(0.75),
-    layout: DEFAULT_PA.layout,
-  });
-  assert.deepEqual(
-    parts.filter((p) => p.part === "ductDivider").map((p) => [p.qty, p.t]),
-    [[2 * n, 0.75]],
-  );
-  // a vent without a divider thickness (saves from before the choice) is at ½″
-  assert.equal(ductDividerIn({}), 0.5);
 });
 test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap from the back wall", (t) => {
   // tubes run from the baffle front (`inset` behind the frame front); bottom slots and side ducts run from the frame

@@ -1,6 +1,14 @@
 // Shared test helpers and independent physics references.
 import assert from "node:assert";
-import type { Chip, ChipId, ChipSeverity, ThieleSmall, VentSpec } from "../src/types";
+import { spaceModelLaidOut, withSolved, type SpaceModel } from "../src/lib/speaker/spaceCoverage";
+import { solveFeeds } from "../src/lib/speaker/solveFeeds";
+import type { Chip, ChipId, ChipSeverity, SpaceDesign, ThieleSmall, VentSpec } from "../src/types";
+
+/** The space worked out with its Auto delays and levels solved, as the Space page shows it. */
+export function spaceModel(design: SpaceDesign): SpaceModel {
+  const laid = spaceModelLaidOut(design);
+  return withSolved(laid, solveFeeds(laid, design.space.venue));
+}
 
 // The tests give a vent only the fields its layout reads; the cast marks the partial on purpose.
 export const vent = (v: Partial<VentSpec>) => v as VentSpec;

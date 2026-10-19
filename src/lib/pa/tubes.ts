@@ -272,16 +272,6 @@ const fittingCount = (spans: TubeSetup["spans"], len: number): ElbowCount | null
     return s !== null && len >= s[0] - 1e-9 && len <= s[1] + 1e-9;
   }) ?? null;
 
-/** The elbows a sub's tubes take at their length: the fewest that fit, or null when none does. */
-export const subTubeElbows = (
-  box: Dims3,
-  style: PortStyle,
-  v: TubeVent,
-  t: number,
-  inset: number,
-  drv: TubeDriver,
-): ElbowCount | null => fittingCount(tubeSetup(box, style, v, t, inset, drv).spans, v.len);
-
 // the model's count from the spans: modelTubeElbows
 function modelCount(spans: TubeSetup["spans"], len: number): ElbowCount {
   const fit = fittingCount(spans, len);

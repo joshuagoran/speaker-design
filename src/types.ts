@@ -48,13 +48,11 @@ import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { AMP_SERIES } from "./data/catalog/amps";
 import type { DSP_UNITS } from "./data/catalog/dsp-units";
-import type { Keep } from "./lib/optimizer/shortfall";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
 import type { AutoBalanceMode } from "./constants/autoBalance";
-import type { SelectedCard } from "./lib/optimizer/selectCards";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
   HARDWARE_KIND_NAMES,
@@ -313,22 +311,6 @@ export interface ThreadMount {
  */
 export type DriverMount = Pick<CompressionDriverBody, "bolts"> | ThreadMount;
 
-/**
- * An adapter between a driver and a horn whose throats meet differently (`MOUNT_ADAPTERS`): the driver side and the
- * horn side it joins, its US price (null when no vendor sells it) and where the price was read.
- */
-export interface MountAdapter {
-  id: string;
-  name: string;
-  lb: number;
-  /** the mount the driver has, and the mount the horn has, that it joins */
-  driver: ThroatMountKind;
-  horn: ThroatMountKind;
-  price: number | null;
-  src: string;
-  note: string;
-}
-
 /** One point of a horn's flare, [radius, depth] in inches. */
 export type HornProfilePoint = readonly [radius: number, depth: number];
 
@@ -577,24 +559,6 @@ export interface FillDriver {
 }
 
 // ---- Triaxials ----
-
-/** A triaxial's midrange section: the HF section's ratings that apply to it, and its band. It shares the HF horn, so its coverage is `hf.cov`. */
-export type TriaxMf = Pick<FillHf, "sens" | "aes" | "imp"> & {
-  /** the maker's lowest recommended crossover (its high-pass), Hz */
-  xoLo: number;
-  /** the highest crossover to the HF section (its low-pass), Hz: the top of the maker's MF frequency range */
-  xoHi: number;
-};
-
-/** A triaxial: a woofer with a coaxial compression driver that has a midrange and an HF section on one horn. */
-export type TriaxDriver = Omit<FillDriver, "hf"> & {
-  /** the HF section: every triaxial has one */
-  hf: FillHf;
-  /** the midrange section */
-  mf: TriaxMf;
-};
-
-// ---- Hi-fi ----
 
 /** An HF figure a coaxial's maker doesn't publish, by id (`COAX_GAP_NAMES`): the whole HF section, its crossover or its coverage. */
 export type CoaxGap = keyof typeof COAX_GAP_NAMES;
@@ -876,123 +840,16 @@ export interface WooferPoint {
   lp: number;
 }
 
-/** How loud the woofer can play at one frequency before something gives out. `s` is the scale from full-scale input. */
-export interface WooferMaxPoint {
-  f: number;
-  spl: number;
-  who: WooferLimit;
-  s: number;
-}
-
-/** What every modeled Hi-fi speaker has, whatever its box. */
-export interface HifiSystemBase {
-  gross: number;
-  net: number;
-  disp: number;
-  pVol: number;
-  pArea: number;
-  f3Box: number;
-  ref: number;
-  refW: number;
-  woofer: WooferPoint[];
-  wMax: WooferMaxPoint[];
-  /** `wMax` at the low and high ends of the woofer's and radiator's estimated Xmax; null when both are exact */
-  wMaxBand: BandCurves<WooferMaxPoint> | null;
-  sMusic: number;
-  whoW: WooferLimit;
-  trim: number;
-  tSens: number;
-  tSens283: number;
-  tLevel: number;
-  wLevel: number;
-  maxLevel: number;
-  who: "tweeter" | "woofer";
-  pMax: number;
-  derate: number;
-  lb: number;
-  portFits: boolean;
-  /** the fewest elbows that fit the port; null when it is too long even with two */
-  portElbows: number | null;
-  lay: DriverLayout;
-  f3: number;
-  hpf: number | null;
-  /** the high-pass to a sub in use (`hpf` is null unless the subsonic stays in series below it); absent when the design has none */
-  hp?: HifiConfig["hp"];
-  xo: number;
-  order: CrossoverOrder;
-  bsF3: number;
-  /** the tweeter's level at 1 m at `f` Hz for `volts`, through its high-pass */
-  tweeterAt: (f: number, volts: number) => number;
-  V: number;
-}
-
-/** A sealed box, lightly stuffed: its Qtc. */
-export interface HifiSealedSystem extends HifiSystemBase {
-  kind: Extract<HifiBoxKind, "sealed">;
-  Qtc: number;
-  Fb?: undefined;
-  Fp?: undefined;
-  peakVel: null;
-}
-
-/** A ported box: its tuning, the port's peak air speed and, for a slot, the slot's width in inches (null for round ports). */
-export interface HifiVentedSystem extends HifiSystemBase {
-  kind: Extract<HifiBoxKind, "vented">;
-  Fb: number;
-  slotW: number | null;
-  peakVel: number;
-  Qtc?: undefined;
-  Fp?: undefined;
-}
-
-/** A passive-radiator box: the radiators used, whether they fit the back, the box tuning and the radiators' own resonance. */
-export interface HifiRadiatorSystem extends HifiSystemBase {
-  kind: Extract<HifiBoxKind, "radiator">;
-  pr: PassiveRadiatorChoice;
-  Fb: number;
-  Fp: number;
-  peakVel: null;
-  Qtc?: undefined;
-}
-
-/**
- * The modeled speaker: `hifiSystem`'s result, one variant per box kind. The `?: undefined` fields are the other
- * boxes', so `Fb`, `Fp` and `Qtc` can be read without narrowing and `kind` says which one is set.
- */
-export type HifiSystem = HifiSealedSystem | HifiVentedSystem | HifiRadiatorSystem;
-
-/** A check on the design: a severity, a short title, a sentence of detail and the check's id. */
-export type HifiChip = Chip<ChipId<"hifi">>;
-
 /** Where the listener sits: feet across the room (x) and back from the speakers (y). */
 export interface ListeningSeat {
   x: number;
   y: number;
 }
 
-/** Where the listener is relative to one speaker: horizontal angle off its axis (rad), ear height above the box bottom (in) and distance (m). */
-export interface ListenerGeometry {
-  th: number;
-  eyeIn: number;
-  distM: number;
-  /** which side of the axis the listener is on: 1 toward the other speaker (where a + tweeter offset goes), -1 away; 1 when absent */
-  side?: -1 | 1;
-  /** the on-axis distance the drivers are time-aligned at, m; `distM` when absent (a map's arc keeps it while the listener moves round) */
-  alignM?: number;
-  /**
-   * the point is already in the box's own frame (on its axis, or on a dispersion map's arc round it), so the box's
-   * tilt (`HifiConfig.tiltDeg`) is not applied to it; absent: the point is in the room, the box tilted under it
-   */
-  boxFrame?: true;
-}
-
 export interface FrequencyPoint {
   f: number;
   spl: number;
 }
-
-/** A curve point with its phase, radians, unwrapped along the curve. */
-export type PhasePoint = FrequencyPoint & { phase: number };
 
 /** The plane a dispersion map is taken in: horizontal (sideways off axis) or vertical (above and below it). */
 export type DispersionPlane = "h" | "v";
@@ -1006,76 +863,11 @@ export interface HifiDispersionMap {
   crossovers: number[];
 }
 
-// ---- Hi-fi optimizer (lib/hifi/optimize) ----
+// ---- Hi-fi optimizer types ----
 
 export type HifiGoal = "cheaper" | "lighter" | "lower" | "louder";
 
 export type DimensionLockMode = "free" | "exact" | "max";
-
-/** The optimizer locks that are plain on/off switches (a box dimension has its own mode: `dim`). */
-export type HifiLockKey = "woofer" | "tweeter" | "box" | "xo" | "wAmpW" | "tAmpW";
-
-/** The optimizer's on/off locks, plus how each box dimension is held. */
-export interface HifiOptimizerLocks extends Partial<Record<HifiLockKey, boolean>> {
-  dim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
-}
-
-/** A radiator design as the page hands it to the optimizer: the driver named by id, with no `drv` yet. */
-export interface PassiveRadiatorHandover {
-  id: string;
-  n: number;
-  addG: number;
-}
-
-/** The design the optimizer starts from: the page's config with the drivers named by id. */
-export interface HifiOptimizerCurrent extends HifiConfig {
-  woofer: string;
-  tweeter: string;
-  tAmpW: number;
-}
-
-export interface HifiOptimizerInput {
-  /** `pr` can come as `{ id, n, addG }`; the optimizer looks the driver up in `passives` */
-  cur: Omit<HifiOptimizerCurrent, "pr"> & {
-    readonly pr?: PassiveRadiatorChoice | PassiveRadiatorHandover;
-  };
-  woofers: readonly HifiWoofer[];
-  tweeters: readonly HifiTweeter[];
-  passives?: readonly PassiveRadiator[];
-  goals?: readonly HifiGoal[];
-  locks?: HifiOptimizerLocks;
-  /** the most the drivers may cost for a pair, in dollars */
-  budget?: number;
-  /** listening distance, m */
-  seatM?: number;
-  /** the price of a waveguide, for one speaker */
-  guidePrice?: number;
-  /** the plywood the search designs in (HIFI_OPTIMIZER_PANEL) at its measured thickness, inches; absent: its default */
-  wall?: number;
-}
-
-/** What a design is scored on: price for the pair in dollars, weight in lb, in-room F3 in Hz and clean level at the seat in dB. */
-export interface HifiMetrics {
-  gross: number;
-  f3: number;
-  price: number;
-  level: number;
-  lb: number;
-}
-
-/** One speaker's paths to the seat for its level there, m: its woofer's and its tweeter's (lib/hifi hifiSeatPaths). */
-export interface HifiSeatPaths {
-  wM: number;
-  tM: number;
-}
-
-/**
- * The metrics with whether the price is whole: false when a part has no US price (a coaxial's), so `price` sums only
- * the known ones and the real one is higher (`UI_TEXT.partialPriceMark`), as the PA side's `priceKnown`.
- */
-export interface HifiPricedMetrics extends HifiMetrics {
-  priceKnown: boolean;
-}
 
 /** The Hi-fi page's design and room, as the planner holds it. */
 export interface HifiDesignState {
@@ -1120,83 +912,6 @@ export interface HifiDesignState {
   portMaxMs?: HifiConfig["portMax"];
 }
 
-/** What the model reads off a design that can be modeled: the system, and the curves and numbers worked out from it. */
-export interface HifiSpeakerModel {
-  speakerSystem: HifiSystem;
-  warningChips: HifiChip[];
-  /** both speakers' clean output at the seat, dB: each at its own distance, its drivers' paths counted close in, added in power (lib/hifi/nearField hifiPairLevelDb) */
-  maxLevelAtSeatDb: number;
-  onAxisResponse: FrequencyPoint[];
-  pairResponse: FrequencyPoint[];
-  /** what the tweeter can play at 1 m, behind the crossover */
-  tweeterMaxCurve: FrequencyPoint[];
-  dispersion: HifiDispersionMap;
-  /** the tweeter's edge diffraction alone on axis at 1 m: the ripple it puts on the response, dB */
-  edgeRipple: FrequencyPoint[];
-  /** that ripple's ± spread from 1 to 5 kHz, dB */
-  edgeRippleDb: number;
-}
-
-/**
- * How near the seat is for the models that stay far-field close in (lib/hifi): the woofer's piston and the waveguide's
- * directivity, the dispersion map drawn at the seat distance (its ±90° arc points close to the baffle) and the time
- * alignment set at the listening distance (sensitive to the ear's height close in). The level, baffle step and boundary
- * gain take their near-field forms below HIFI_NEAR_FIELD_M (lib/hifi/nearField).
- */
-export interface HifiNearField {
-  /** the nearer speaker's distance to the seat, at least the seat floor (`HifiDesignState.seatFloorM`), m */
-  distM: number;
-  /** that over the baffle's longer side, and over the woofer's diameter */
-  boxRatio: number;
-  wooferRatio: number;
-  /** under HIFI_NEAR_FIELD_M (constants/hifiEngine), where the near-field forms are in use and the models above are approximate */
-  near: boolean;
-}
-
-/** The Hi-fi design as the models read it, worked out from the planner's state. */
-export interface HifiDesign {
-  /** the box's least width and height, inches: what its parts need, up to the sliders' step (lib/hifi/boxLayout) */
-  boxMin: Dims2;
-  /** the walls' exact thickness, inches (lib/panel): what the model, cutlist and weight are worked out at */
-  wallThicknessIn: number;
-  /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
-  compressionWaveguide: WaveguideSpec;
-  /** the waveguide in use: the tweeter's own, the picked one for a tweeter that needs one, else none */
-  waveguideSpec: WaveguideSpec | null;
-  radiatorDriver: PassiveRadiator;
-  radiator: PassiveRadiatorChoice;
-  speakerConfig: HifiConfig;
-  tweeterWithWaveguide: HifiTweeter;
-  /** each speaker's seat geometry: the left one at -spacing/2, the right at +spacing/2 */
-  leftGeometry: ListenerGeometry;
-  rightGeometry: ListenerGeometry;
-  /** the average distance to the seat, at least the seat floor (`HifiDesignState.seatFloorM`, 1 m by default) */
-  seatDistanceM: number;
-  /** the same distance in feet, as the page shows it */
-  seatDistanceFt: number;
-  /** how near the seat is for the far-field models; a later chip reads it */
-  nearField: HifiNearField;
-  pairCostUsd: number;
-  /** false when a part in it has no US price: `pairCostUsd` sums the known ones (`UI_TEXT.partialPriceMark`) */
-  pairCostKnown: boolean;
-  /** null when the woofer can't be modeled (its parameters aren't published) */
-  speakerModel: HifiSpeakerModel | null;
-}
-
-/** The optimizer locks as a page holds them: an on/off lock per key, and the lock mode of each box dimension for each box (always present). */
-export type OptimizerLocks<K extends string, B extends string> = Partial<Record<K, boolean>> &
-  Record<B, Partial<Record<keyof Dims3, DimensionLockMode>>>;
-
-/** The Hi-fi optimizer locks as the page holds them. */
-export type HifiPlannerLocks = OptimizerLocks<HifiLockKey, "dim">;
-
-/** The card being previewed, and the design to go back to when the preview ends. */
-export interface DesignPreview<Card, Config> {
-  label: string;
-  before: Config;
-  card: Card;
-}
-
 /** The fields of a design a card applies (the ones the optimizer searched). */
 export interface HifiCardConfig {
   woofer: string;
@@ -1210,20 +925,6 @@ export interface HifiCardConfig {
   wAmpW: number;
   tAmpW: number;
 }
-
-/** The fields of a Hi-fi design a card applies (the keys of `HIFI_OPTIMIZED_FIELDS`). */
-export type HifiOptimizedField =
-  | "woofer"
-  | "tweeter"
-  | "box"
-  | "dim"
-  | "port"
-  | "pr"
-  | "wall"
-  | "xo"
-  | "wAmpW"
-  | "tAmpW";
-export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
 
 /**
  * What the Hi-fi page saves: the fields a card applies and the rest of the design and room. The JSON round trip drops
@@ -1252,58 +953,8 @@ export interface SavedHifiConfig
   summary: string;
 }
 
-/** A card's change from the current design. */
-export interface HifiMetricsDelta {
-  /** null when either price isn't whole (`HifiPricedMetrics.priceKnown`): no difference can be told */
-  price: number | null;
-  lb: number;
-  level: number;
-  f3: number;
-}
-
 /** What a card changes from your design, in the words its "changes" line shows. */
 export type ChangeName = (typeof CHANGE_NAMES)[keyof typeof CHANGE_NAMES];
-
-export interface HifiOptimizerCard {
-  label: string;
-  why: string;
-  /** which card it is (first, fix, closest, smallest or an alternative's goal): code reads this, never the label */
-  slot: CardSlot<HifiGoal>;
-  woofer: string;
-  tweeter: string;
-  config: HifiCardConfig;
-  metrics: HifiMetrics;
-  /** false when a part has no US price: `metrics.price` sums the known ones (`HifiPricedMetrics`) */
-  priceKnown: boolean;
-  delta: HifiMetricsDelta | null;
-  /** the warnings on this design (the checks it passes with a warning) */
-  warnings: HifiChip[];
-  names: { woofer: string; tweeter: string };
-  lay: DriverLayout;
-  /** the tweeter sits on a waveguide (undefined for a tweeter that needs none) */
-  guided: boolean | undefined;
-  /** the tweeter comes with its own waveguide */
-  ownGuide: boolean;
-  /** what differs from the current design: "woofer", "box size", "amp power" ... */
-  changed: ChangeName[];
-  /** clean level at the seat as [Hz, dB] points */
-  curve: [number, number][];
-  whoW: WooferLimit;
-}
-
-export interface HifiOptimizerResult {
-  goals: HifiGoal[];
-  cards: HifiOptimizerCard[];
-  stats: { evaluated: number; ms: number; pool?: number };
-  /** what fails in your design; empty when it passes or when no goal was given */
-  curProblems: string[];
-  // the fields below are absent when no goal was given
-  cur?: HifiPricedMetrics | null;
-  curCurve?: [number, number][] | null;
-  goalMissing?: string | null;
-}
-
-// ---- PA design (lib/pa) ----
 
 /** The subwoofer's vent layouts. `vslot1` is the single side duct; the rest are the cabinet's `vents`. */
 export type PortStyle = VentKind | "vslot1";
@@ -1481,14 +1132,6 @@ export interface VentedBoxModel {
   peakXF: number;
   xmaxPct: number;
 }
-
-/** A model point with the box's phase: what a model run with its `phase` option gives. */
-export type PhasedPoint<P extends VentedPoint | SealedPoint> = P & { rawPhase: number };
-
-/** A box model run with its `phase` option (see `phasedCurve`). */
-export type PhasedModel<M extends VentedBoxModel | SealedBoxModel> = Omit<M, "curve"> & {
-  curve: PhasedPoint<M["curve"][number]>[];
-};
 
 /** One point of a sealed-box response (no port). */
 export interface SealedPoint {
@@ -2803,9 +2446,6 @@ export interface StackSpec {
   notes: string;
 }
 
-/** What a space places, by id (`SPACE_ITEM`): a stack, or a speaker alone on its own input range. */
-export type SpaceItemKind = (typeof SPACE_ITEM)[keyof typeof SPACE_ITEM];
-
 /**
  * Where a placed stack or speaker points, degrees: its yaw on the floor from straight down the room (+ turns toward +x,
  * a toe-in or pan) and its pitch (+ up). The one aim model: a member's tilt in its stack (`StackPose.pitchDeg`) and its
@@ -3735,18 +3375,6 @@ export interface CutPartsConfig {
 /** The panel a Hi-fi box's passive radiators are cut into. */
 export type RadiatorPanel = Extract<CutPartId, "baffle" | "back" | "side">;
 
-/** What the Hi-fi cutlist needs: the model's config, the drivers (the tweeter with its waveguide), the joint and the radiators' panel. */
-export interface HifiCutPartsConfig {
-  cfg: Pick<
-    HifiConfig,
-    "box" | "dim" | "wall" | "port" | "pr" | "guide" | "roundoverIn" | "tweeterOffsetIn"
-  >;
-  woofer: HifiWoofer;
-  tweeter: HifiTweeter;
-  joint: CornerJoint;
-  prPanel: RadiatorPanel;
-}
-
 /** How the cutlist lays parts on sheets: sheet and stack count, saw kerf and edge trim (inches), grain, waterfall and offcut. */
 export interface CutlistSettings {
   sheet: PlywoodSheetKind;
@@ -3856,87 +3484,6 @@ export type Chip<I extends ChipId = ChipId> = [
   id: I,
 ];
 
-export interface SubChipsInput {
-  subSize: SubSize;
-  /** the driver's mounting depth, in, where its datasheet gives it (the tubes' elbows route behind it) */
-  subDepthIn: SubDriver["depthIn"];
-  subBox: Dims3;
-  portStyle: PortStyle;
-  cVent: VentSpec;
-  /** plywood thickness */
-  PT: number;
-  inset: PaDesignConfig["inset"];
-  subLbLoaded: number;
-  lim: Pick<SubLimits, "who" | "W">;
-  /** frequency of the peak excursion, Hz */
-  peakXF: number;
-  aes: number;
-  ampW: number;
-}
-
-export interface MidChipsInput {
-  midSize: MidSize;
-  midDims: Dims3;
-  Qtc: number;
-  f3: number;
-  peakX: number;
-  xoLo: number;
-  smallerBoxNetL: MidSystemBase["smallerBoxNetL"];
-  /** the tower's mid chamber: the sub's footprint sets it */
-  isTower: boolean;
-  ts: Pick<ThieleSmall, "Xmax" | "aes" | "imp">;
-  /** amp volts, the volts the driver can use, and the thermal limit in volts */
-  V: number;
-  useV: number;
-  vTherm: number;
-  mAmpW: number;
-  /** the sub at its music limit at the crossover, dB; null where the sub has no model */
-  subMusicAtXo: number | null;
-  /** how far the mid band's level sits below the sub's (the music balance), dB */
-  midBelowSubDb: number;
-  /** the mid's own limit at the crossover; null when `subMusicAtXo` is */
-  midAtXo: Pick<PaMaxPoint, "spl" | "who"> | null;
-}
-
-export interface HornChipsInput {
-  hf: Pick<CompressionHf, "minXo" | "aes" | "aesXo">;
-  hz: Partial<Pick<HornHf, "minXo" | "lowHz" | "covH">>;
-  horn: Pick<Horn, "name"> & { size: Pick<Dims3, "w"> };
-  xoHi: number;
-  hornModel: Pick<HornResponse, "who" | "pAmp" | "imp" | "pProg" | "derate">;
-  hfAmpW: number;
-  /** the mid at its limit at the horn crossover, dB; null where the mid has no model */
-  midAtXoHi: number | null;
-  /** how far the horn band's level sits below the mid's (the music balance), dB */
-  hornBelowMidDb: number;
-  /** the horn's level at the crossover, dB; null where the horn has no model */
-  hornAtXo: number | null;
-  /** the mid's beamwidth at the crossover in degrees, null where it has no model */
-  midBeam: number | null;
-  /** the horn's pattern-control frequency in Hz, null where its coverage isn't known */
-  fK: number | null;
-}
-
-export interface FillChipsInput {
-  drv: Pick<FillDriver, "size">;
-  dim: Dims2;
-  /** the vented box's tuning, or null for a sealed box */
-  Fb: number | null;
-  /** the sealed box's Qtc, or null for a vented box */
-  Qtc: number | null;
-  hp: number;
-  hpOrder: FillSystemConfig["hpOrder"];
-  portLimited: boolean;
-  portMax: number;
-  f3: number;
-  hf: Pick<FillHf, "aes"> | null;
-  hfLimW: number | null;
-  ampW: number;
-  pad: number;
-}
-
-// ---- PA dispersion (lib/pa/dispersion) ----
-
 /** Where a driver sits in the stack, in inches above the floor, and its cone area in cm². */
 export interface StackDriver {
   zIn: number;
@@ -3995,12 +3542,6 @@ export interface FloorPlacement extends FloorPoint {
   aim: number;
 }
 
-/** A box the map draws and sums: a stack, or one of the center pair of subs. */
-export interface CoverageBox extends FloorPlacement {
-  kind: "stack" | "sub";
-  label: string;
-}
-
 /** What the map averages: a named band, or one frequency (`freqHz`) summed with phase. */
 export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 
@@ -4009,9 +3550,6 @@ export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
  * count), or 1 m in front of the stacks.
  */
 export type CoverageLevelRef = "listener" | "audience" | "stacks";
-
-/** The coverage page's old level setting, read only from layouts saved before `targetDb` and `levelRef`. */
-export type CoverageLevelMode = "limit" | "listener";
 
 /** The subs in their stacks, both together in the middle, or one sub alone in the middle. */
 export type SubPlacement = "stacks" | "center" | "single";
@@ -4035,24 +3573,8 @@ export interface CoverageLayout {
   listener: FloorPoint;
 }
 
-/**
- * Each band's output at 1 m on axis, through its crossover, dB SPL against frequency: the planner's curves. The sub's
- * and mid's carry their own phase (the box's, and the sub's highpass's); the crossovers' phase comes from the stack.
- */
-export interface CoverageLevels {
-  sub: PhasePoint[] | null;
-  mid: PhasePoint[];
-  horn: FrequencyPoint[];
-}
-
 /** The planner's music balance: its crossovers, and how much less the mid band needs than the sub and the horn than the mid. */
 export type MusicBalance = Pick<PaDesignConfig, "xoLo" | "xoHi" | "tilt" | "hfTilt">;
-
-/** Each band's level after balancing, and how far each was turned down to get there, dB (0 or less). */
-export interface BalancedLevels {
-  levels: CoverageLevels;
-  pads: Record<"sub" | "mid" | "horn", number>;
-}
 
 /** The stack the map places: the dispersion model's stack, its footprint and the mid box's width, inches. */
 export interface CoverageStack extends PaStackGeometry {
@@ -4083,17 +3605,6 @@ export interface CoverageGridView {
   gain: number;
   /** the level reference's level at the limit for this grid, dB (null when it can't be worked out) */
   atLimit: number | null;
-}
-
-/** What the floor map's worker computes from: the stack and its levels, where the boxes stand, the band, the grid size. */
-export interface CoverageRequest {
-  stack: CoverageStack;
-  levels: CoverageLevels;
-  layout: Pick<
-    CoverageLayout,
-    "room" | "stacks" | "subs" | "cluster" | "band" | "freqHz" | "earFt"
-  >;
-  cols: number;
 }
 
 /** How much of the floor reaches the target, leaving out the space right in front of the boxes. */
@@ -4130,23 +3641,6 @@ export interface PaOptimizerLocks extends Partial<Record<PaLockKey, boolean>> {
   subDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
   midDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
 }
-
-/** The PA optimizer locks as the page holds them. */
-export type PaPlannerLocks = OptimizerLocks<PaLockKey, "subDim" | "midDim">;
-
-/** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */
-export interface PaOptimizerInputState {
-  room: PaRoom;
-  maxLb: number;
-  budget: number;
-  goals: PaGoal[];
-}
-
-/** What `startOptimizerSearch` takes: input fields to change for this run, or the click event when it is used as a handler. */
-export type PaSearchOverrides = Partial<PaOptimizerInputState> & { nativeEvent?: Event };
-
-/** Which PA search a run is: the quick one that improves on your design (`improve`), or the exact one over its stated grid (`full`). */
-export type PaRunMode = "improve" | "full";
 
 /** The fields an older saved design can lack; the optimizer fills these in. */
 export type PaDefaultedField =
@@ -4185,81 +3679,6 @@ export interface PaOptimizerInput {
   cutlist?: Pick<CutlistSettings, "sheet" | "stacks">;
 }
 
-/** The fields a result card sets; everything else (finish, colors, layout, balance) stays as the page has it. */
-export type PaOptimizedField =
-  | "sub"
-  | "mid"
-  | "cd"
-  | "horn"
-  | "cDim"
-  | "cVent"
-  | "portStyle"
-  | "hpf"
-  | "mDim"
-  | "wall"
-  | "xoLo"
-  | "xoHi"
-  | "ampW"
-  | "mAmpW"
-  | "hfAmpW";
-export type PaOptimizedFields = Pick<PaDesignConfig, PaOptimizedField>;
-
-/** A design as the planner evaluates it: cost, weight, output, limits and the chips for each section. */
-export interface PaEvaluation {
-  /** drivers per stack: sub, mid and compression driver */
-  price: number;
-  /** false when a driver has no published price */
-  priceKnown: boolean;
-  hornPrice: number;
-  /** the loaded sub box, lb */
-  subLb: number;
-  /** the loaded mid box, lb; in the tower its cabinet over the sub box as carried (towerUpperLoadedLb) */
-  midLb: number;
-  /** the heaviest single lift, lb (heaviestLiftLb): in the tower the whole cabinet */
-  heaviest: number;
-  /** the sub's clean music-limit level, 40 to 90 Hz, dB */
-  out: number;
-  spl45: number;
-  spl35: number;
-  /** the sub's maximum-output curve averaged over the sub-bass band (SUB_BASS_BAND_HZ), dB */
-  subBass: number;
-  f3: number;
-  Fb: number;
-  who: SubLimitWho;
-  limW: number;
-  netL: number;
-  qtc: number;
-  midF3: number;
-  /** dB the mid has to spare over what the sub needs at the crossover; negative = runs out first */
-  midGap: number;
-  hornGap: number | null;
-  mismatch: boolean;
-  port: VentGeometry;
-  chips: { sub: Chip<ChipId<"sub">>[]; mid: Chip<ChipId<"mid">>[]; horn: Chip<ChipId<"horn">>[] };
-  /** the sub's clean level for the card's chart, [Hz, dB] points from 20 to 200 Hz */
-  curve: [number, number][];
-}
-
-export interface PaMetricsSummary {
-  price: number;
-  heaviest: number;
-  out: number;
-  spl45: number;
-  subBass: number;
-  f3: number;
-  Fb: number;
-  who: SubLimitWho;
-}
-
-/** A card's change from the current design. */
-export interface PaMetricsDelta {
-  price: number;
-  heaviest: number;
-  out: number;
-  subBass: number;
-  f3: number;
-}
-
 /**
  * The tower's cabinet over the sub's footprint (lib/pa/tower `towerSpec`), heights in inches up from the cabinet's
  * bottom: the 3D view, the cutlist, the weights and the cards' front view all read it.
@@ -4284,246 +3703,8 @@ export interface TowerSpec {
 /** What the tower's cabinet reads of its horn: the section's height, the arched top and the baffle's cutout. */
 export type TowerHorn = Pick<Horn, "id" | "profile" | "rect" | "size">;
 
-/** What a card's front-view drawing needs. */
-export interface PaBoxGeometry {
-  sub: Dims3;
-  mid: Dims3;
-  /** the tower's cabinet; null in the other layouts */
-  tower: TowerSpec | null;
-  horn: Dims2 | null;
-  subSize: SubSize;
-  midSize: MidSize;
-  portStyle: PortStyle;
-  cVent: VentSpec;
-  wall: number;
-}
-
-export interface PaOptimizerCard {
-  label: string;
-  why: string;
-  /** which card it is (first, fix, closest, smallest or an alternative's goal): code reads this, never the label */
-  slot: CardSlot<PaGoal>;
-  config: PaDesignConfig;
-  metrics: PaMetricsSummary;
-  delta: PaMetricsDelta | null;
-  names: { sub: string; mid: string; cd: string; horn: string };
-  /** the vent in words */
-  vent: string;
-  /** what stops the sub's music level */
-  limitedBy: string;
-  /** the planner's warnings on this design (its sub, mid and horn chips that aren't ok) */
-  warnings: Chip<ChipId<"sub" | "mid" | "horn">>[];
-  /**
-   * the mid's Qtc and the sheets of ply each thickness needs (thickest first) from the quick packing; `parts` (one
-   * stack) and `cutlist` let the card ask the worker for the exact counts the Cutlist tab shows
-   */
-  build: {
-    qtc: number;
-    sheets: { t: number; n: number }[];
-    parts: CutPart[];
-    cutlist: CutlistSettings;
-  };
-  /** what differs from the current design: "sub driver", "vent" ... */
-  changed: ChangeName[];
-  priceKnown: boolean;
-  curve: [number, number][];
-  geom: PaBoxGeometry;
-}
-
-/** A change to the limits that would let the search find a card. */
-export interface PaNearMissOption {
-  text: string;
-  set: Partial<Pick<PaOptimizerInput, "maxLb" | "budget">>;
-}
-
-/** No card fits: the closest design, why it fails and what loosening would help. */
-export interface PaNearMiss {
-  options: PaNearMissOption[];
-  closest: PaOptimizerCard | null;
-  /** the closest design is your design as it is (the banner says so) */
-  closestIsYours: boolean;
-  blocking: string[];
-}
-
-export interface PaOptimizerResult {
-  /** the output the cards aim for, dB, and what the room alone needs */
-  target: number;
-  need: number;
-  curM: PaMetricsSummary | null;
-  curProblems: string[];
-  cur: { curve: [number, number][]; geom: PaBoxGeometry } | null;
-  cards: PaOptimizerCard[];
-  goals: PaGoal[];
-  goalMissing: string | null;
-  nearMiss: PaNearMiss | null;
-  stats: {
-    evaluated: number;
-    ms: number;
-    subs: number;
-    combos: number;
-    pool: number;
-    /** Fully optimize: the most grid rounds one card selection took (lib/pa/optimizeExact PA_EXACT_SLOT_ROUNDS) */
-    rounds?: number;
-  };
-}
-
-/** A check on the PA stack's sub, mid or horn. */
-export type PaChipId = ChipId<"sub" | "mid" | "horn">;
-/**
- * What a PA design fails, by id: a check's chip, or one of the search's own tests (it can't be modeled, the mid's Qtc,
- * horn and driver exits that differ, a box over the weight limit, drivers over the budget).
- */
-export type PaProblemId =
-  | PaChipId
-  | "unmodeled"
-  | "midQtc"
-  | "exitMismatch"
-  | "overWeight"
-  | "overBudget";
-/** A problem with a design: its id and its words. */
-export interface PaProblem {
-  id: PaProblemId;
-  text: string;
-}
-/** The limits a PA design is checked against: the heaviest box, the driver budget and the warnings let through. */
-/** The parts the driver comparison swaps: the drivers and the horn (`PaLockKey`s, so each has its lock). */
-export type PaDriverPart = Extract<PaLockKey, "sub" | "mid" | "cd" | "horn">;
-
-/** One option in the driver comparison: the part's own price, and the whole design's numbers with it in. */
-export interface PaDriverCompareRow {
-  id: string;
-  name: string;
-  /** the part's own price; null when unpublished */
-  price: number | null;
-  /** your design's part */
-  yours: boolean;
-  /** the weight it brings, lb: the sub's or mid's box with the driver in it, or the compression driver or horn itself
-   * (they add to no box); null when the box can't be modeled */
-  lb: number | null;
-  /** the design with this part (null: the planner can't model it) */
-  m: Pick<
-    PaEvaluation,
-    "price" | "priceKnown" | "out" | "f3" | "qtc" | "midGap" | "hornGap"
-  > | null;
-  /** what fails the planner's checks or the optimizer's limits (empty: passes); `yoursToo` when your design fails the
-   * same way (whatever you pick, so it doesn't tell the options apart; amounts over a limit and the mid's Qtc differ
-   * per option, so those are never marked) */
-  problems: (PaProblem & CompareProblem)[];
-}
-
 /** A slider's range and step (an amp slider's steps, with its top). */
 export type SliderSpec = AmpSteps & { max: number };
-
-export interface PaProblemLimits {
-  maxLb: number;
-  budget: number;
-  allow?: Set<PaChipId>;
-}
-/** The numbers the PA goals rank by. */
-export interface PaScore {
-  price: number;
-  heaviest: number;
-  out: number;
-  f3: number;
-}
-/** A score plus how many things differ from the current design and how many warnings it has (`w`, once evaluated). */
-export interface PaMetric extends PaScore {
-  ch: number;
-  w?: number;
-}
-/** A compression driver on a horn, with its level at the crossover. */
-export interface PaHornEntry {
-  cd: CompressionDriver;
-  h: Horn;
-  at: number;
-  price: number;
-  horn: number;
-  same: boolean;
-  /** the warnings the pair carries at the crossover on its own (no mid in view): `hornOwnWarnings` */
-  w: number;
-}
-/** An evaluated PA design. */
-export interface PaPoolEntry {
-  c: PaDesignConfig;
-  m: PaEvaluation;
-  ch: number;
-}
-/** The PA locks with both box-dimension modes present. */
-export interface PaResolvedLocks extends PaOptimizerLocks {
-  subDim: Partial<Record<keyof Dims3, DimensionLockMode>>;
-  midDim: Partial<Record<keyof Dims3, DimensionLockMode>>;
-}
-/** The PA card selection's picks from a pool (`selectCards`' result). */
-export interface PaChosen {
-  cards: SelectedCard<PaPoolEntry, PaGoal>[];
-  goalMissing: boolean;
-  fixMisses: boolean;
-}
-/** The PA card selection over the pool, within some limits and at an output target (null: no card). */
-export type PaChoose = (L: PaProblemLimits, tgt: number) => PaChosen | null;
-/**
- * What the PA search's setup and card rules hand the exact search (lib/pa/optimizeExact): your design and the amps,
- * locks and limits as the search reads them, the target and what each goal keeps, the crossovers, mids and horn pairs,
- * the ranking and comparisons the cards use, and the pool the cards are chosen from.
- */
-export interface PaSearchContext {
-  cur: PaDesignConfig;
-  /** your design at the searched amps */
-  base: PaDesignConfig;
-  amps: Pick<PaDesignConfig, "ampW" | "mAmpW" | "hfAmpW">;
-  locks: PaResolvedLocks;
-  lim: Required<PaProblemLimits>;
-  goals: PaGoal[];
-  target: number;
-  keep: Record<PaGoal, Keep>;
-  curMet: PaScore | null;
-  curFails: boolean;
-  xoHis: number[];
-  mids: MidDriver[];
-  midBoxes: (m: MidDriver, t: number) => (Dims3 | null)[];
-  /** per upper crossover, the horn pairs that load there, cheapest first */
-  hornTable: Record<number, PaHornEntry[]>;
-  /** the alternatives' axes, in the order the cards take them */
-  altAxes: PaGoal[];
-  obj: Record<PaGoal, (x: PaMetric) => number>;
-  beats: Record<PaGoal, (x: PaScore, y: PaScore) => boolean>;
-  metric: (p: PaPoolEntry) => PaMetric;
-  changes: (c: PaDesignConfig) => number;
-  pool: PaPoolEntry[];
-}
-/**
- * How the exact search plugs into the PA search: it wraps the card selection so the pool holds every design a card
- * could be (adding designs until no design on its grid beats a pick), and says how light a working sub box gets.
- */
-export interface PaExactHook {
-  close(choose: PaChoose, ctx: PaSearchContext): PaChoose;
-  lightestSubLb(): number | null;
-}
-/** The exact PA search's grid steps (lib/pa/optimizeExact's PA_EXACT_GRID). */
-export interface PaExactGrid {
-  /** net volumes run from `minNetL` (the planner's floor) up by this share each rung */
-  volumeStep: number;
-  minNetL: number;
-  /** tunings, Hz */
-  fb: { from: number; to: number; step: number };
-  /** the shortest duct, in: a vent that tunes the box only when shorter isn't used (as the quick search) */
-  minDuctIn: number;
-}
-/**
- * One share of the exact PA search's model step, per sub driver: its place in the searched list and its curves packed
- * by row (see `ROW_HEAD` in lib/pa/optimizeExact).
- */
-export interface PaExactScored {
-  sub: number;
-  rows: Float64Array;
-}
-/** A job for an exact PA search worker: one share of the model step, or the search on every share. */
-export type PaExactJob =
-  | { kind: "score"; input: PaOptimizerInput; part: number; parts: number; grid?: PaExactGrid }
-  | { kind: "select"; input: PaOptimizerInput; scored: PaExactScored[][] };
-export type PaExactJobResult =
-  | { kind: "scored"; scored: PaExactScored[] }
-  | { kind: "result"; result: PaOptimizerResult };
 
 /** What the page posts to an optimizer's worker; the PA stack's unless another input type is given. */
 export interface OptimizerRequest<I = PaOptimizerInput> {
@@ -4547,58 +3728,10 @@ export interface OptimizerRunOptions {
   signal?: AbortSignal;
 }
 
-/** A box's fields on the search grid (the rest of its config is your design's). */
-export interface HifiGridBox {
-  box: HifiBoxKind;
-  dim: Dims3;
-  wall: number;
-  port: HifiPort | null;
-  pr: PassiveRadiatorChoice | null;
-}
-/** A box from the box step, as a worker hands it back: its fields, place in the grid, and its numbers per crossover. */
-export interface HifiScoredBox extends HifiGridBox {
-  key: string;
-  /** its place in the grid's order: the woofer's, the box's, and how many vents up from the box's own */
-  order: [woofer: number, box: number, vent: number];
-  wId: string;
-  gross: number;
-  ch: number;
-  f3: number;
-  /**
-   * per crossover (null: past the woofer's range), the woofer's clean level at 1 m at the searched power, and the
-   * levels the amp alone and the driver alone allow there (a lower power moves the first, never the second)
-   */
-  levels: ({ wLevel: number; ampDb: number; drvDb: number } | null)[];
-  /** the woofer's passband sensitivity at 2.83 V, dB (`HifiSystem.refW`): what a passive network pads the tweeter to */
-  refW: number;
-}
-/** A job for a Hi-fi optimizer worker: one share of the box step, or the rest of the search on every share. */
-export type HifiOptimizerJob =
-  | {
-      kind: "score";
-      input: HifiOptimizerInput;
-      part: number;
-      parts: number;
-      /** keep this share in the worker for the select job of the same run, instead of sending it back */
-      keep?: string;
-    }
-  | {
-      kind: "select";
-      input: HifiOptimizerInput;
-      /** the other workers' shares; the share kept for this run joins them (or is scored again if it was lost) */
-      scored: HifiScoredBox[][];
-      kept?: { run: string; part: number; parts: number };
-    };
-export type HifiOptimizerJobResult =
-  | { kind: "scored"; scored: HifiScoredBox[] }
-  | { kind: "result"; result: HifiOptimizerResult };
-
 /** The worker's reply: the result, or the message of what it threw. */
-export type OptimizerResponse<R = PaOptimizerResult> =
-  | { id: number; out: R }
-  | { id: number; error: string };
+export type OptimizerResponse<R> = { id: number; out: R } | { id: number; error: string };
 /** What an optimizer's worker posts for a request: progress any number of times, then its reply. */
-export type OptimizerMessage<R = PaOptimizerResult> =
+export type OptimizerMessage<R> =
   | { id: number; progress: OptimizerProgress }
   | OptimizerResponse<R>;
 

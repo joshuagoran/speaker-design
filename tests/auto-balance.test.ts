@@ -18,15 +18,12 @@ import {
   type BalanceBand,
   type MusicTilt,
 } from "../src/lib/speaker/autoBalance";
-import { paBandLevels } from "../src/lib/speaker/paBalance";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
 import { curveLevelAt } from "../src/lib/pa/coverage";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { defaultPaDesign, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
-import { keysOf } from "../src/lib/records";
-import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts";
 import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../src/constants/autoBalance";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { DRIVER_KIND, SPEAKER_BAND } from "../src/constants/speakerSpec";
@@ -190,21 +187,6 @@ test("auto balance: a 3-band speaker (the PA tower) meets flat at both crossover
   }
 });
 
-test("auto balance: a 3-band speaker (the PA tower) with the PA music tilt gives the PA page's balance", () => {
-  const cfg = defaultPaDesign("tower");
-  const layers = layersFromPa(cfg, ID, DEFAULT_COVERAGE_LAYOUT);
-  const [tower] = layers.speakers;
-  // alone on its own input range, as the Speaker page models it
-  const levels = levelsOf(tower, PA_MUSIC_TILT);
-  const page = paBandLevels(cfg, layers);
-  assert.ok(page);
-  for (const id of [SPEAKER_BAND.low, SPEAKER_BAND.mid, SPEAKER_BAND.high]) {
-    const want: number | undefined = page[id];
-    assert.ok(want !== undefined);
-    assert.ok(Math.abs(levels[id] - want) < 0.1, `${id}: ${levels[id]} against ${want}`);
-  }
-});
-
 test("auto balance: the result names each band's Level, from the lowest band, as the line under the button shows it", () => {
   const [tower] = layersFromPa(defaultPaDesign("tower"), ID, DEFAULT_COVERAGE_LAYOUT).speakers;
   const balance = balanceOf(tower, PA_MUSIC_TILT);
@@ -350,28 +332,6 @@ test("auto balance: a speaker two members share takes the first member's crossov
   const same = [sub, top, { ...top }];
   assert.deepStrictEqual(sharedCrossovers(same), []);
   assert.deepStrictEqual(sharedCrossovers(layers.stack.members), []);
-});
-
-test("auto balance: with the PA music tilt, on every PA preset it gives the PA page's balance within 0.01 dB", () => {
-  for (const layout of keysOf(PA_LAYOUT_NAMES)) {
-    const cfg = defaultPaDesign(layout);
-    const layers = layersFromPa(cfg, ID, DEFAULT_COVERAGE_LAYOUT);
-    const page = paBandLevels(cfg, layers);
-    assert.ok(page, layout);
-    const balance = autoBalanceStack(
-      layers,
-      stackResponse(layers.stack, layers.speakers),
-      PA_MUSIC_TILT,
-    );
-    assert.equal(balance.status, AUTO_BALANCE_STATUS.balanced, layout);
-    if (balance.status !== AUTO_BALANCE_STATUS.balanced) continue;
-    const levels: Record<string, number> = Object.assign({}, ...Object.values(balance.levels));
-    for (const [band, want] of Object.entries(page))
-      assert.ok(
-        Math.abs(levels[band] - want) < 0.01,
-        `${layout} ${band}: ${levels[band]} against ${want}`,
-      );
-  }
 });
 
 test("auto balance: a protective input highpass is not a crossover; the bands meet at the woofer's lowpass", () => {

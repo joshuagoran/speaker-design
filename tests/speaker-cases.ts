@@ -7,10 +7,8 @@ import type { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import type { PaFloor } from "../src/lib/speaker/paSpec";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
-import { hifiBox, hifiGridTop, needsWaveguide } from "../src/lib/hifi/hifi";
-import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
+import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { hornResponse, midSystem, subSystem } from "../src/lib/pa/calc";
-import { paSearchDesign } from "../src/lib/pa/optimize";
 import { towerMidDims } from "../src/lib/pa/tower";
 import { savedHardware } from "../src/lib/pa/hardware";
 import { panelNominalNear } from "../src/lib/panel";
@@ -123,7 +121,26 @@ export const PA_FLOOR: PaFloor = DEFAULT_COVERAGE_LAYOUT;
 
 /** A golden PA design as the planner holds it (as tests/speaker-spec.test.ts reads it). */
 export function paDesign(c: GoldenConfig): PaPlannerDesign {
-  const cfg = paSearchDesign({ cur: c });
+  // older saved configs can lack some fields; they fall back to the planner's starting design
+  const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
+    DEFAULT_PA;
+  const cfg = {
+    xoLo,
+    xoHi,
+    tilt,
+    hfTilt,
+    ampW,
+    mAmpW,
+    hfAmpW,
+    hpType,
+    portMax,
+    wall,
+    inset,
+    layout,
+    ...c,
+    xoLoOrder: c.xoLoOrder === 8 ? (8 as const) : (4 as const),
+    xoHiOrder: c.xoHiOrder === 8 ? (8 as const) : (4 as const),
+  };
   return {
     ...cfg,
     mDim: c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box,
@@ -159,14 +176,6 @@ export const withNet = (
     chambers: spec.cabinet.chambers.map((c) => (c === chamber ? { ...c, netLiters } : c)),
   },
 });
-
-/** The Hi-fi speaker's spec on the Hi-fi engine's net air (hifiBox, with its 3% allowance for bracing and damping). */
-export function withHifiNet(spec: SpeakerSpec, state: HifiDesignState): SpeakerSpec {
-  const cfg = deriveHifiDesign(state).speakerConfig;
-  const box = hifiBox(state.woofer, cfg, hifiGridTop(cfg.xo));
-  assert.ok(box, spec.name);
-  return withNet(spec, spec.cabinet.chambers[0], box.net);
-}
 
 /** Today's PA models of a design: the sub, mid and horn as the planner runs them (the golden evaluation's configs). */
 export function paModels(cfg: PaPlannerDesign) {

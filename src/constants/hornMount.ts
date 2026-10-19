@@ -18,9 +18,6 @@ export const HORN_MOUNT_PLY = "ply" satisfies HornMountId;
 /** The mount on first load, and for designs saved before the setting. */
 export const HORN_MOUNT_DEFAULT = HORN_MOUNT_PLATE;
 
-/** The retired clamped L-bracket's id: designs saved with it load with the aluminum plate, which replaced it. */
-export const RETIRED_HORN_MOUNT_BRACKET = "bracket";
-
 /** The plywood mount's nominal size: its upright, base and gusset are all cut from it. */
 export const HORN_MOUNT_PANEL = "1/2" satisfies PanelNominal;
 

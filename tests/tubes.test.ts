@@ -6,7 +6,6 @@ import {
   tubeElbows,
   tubeLegs,
   tubeSpan,
-  tubeSpans,
   type TubeRoom,
 } from "../src/lib/tubeFold";
 import {
@@ -15,45 +14,17 @@ import {
   sticksFor,
   subTubeKit,
   tubeLayout,
-  tubeRoom,
   tubeWallEndCorrection,
 } from "../src/lib/pa/tubes";
-import {
-  ventGeometry,
-  ventSpeedLimit,
-  ventTuning,
-  FLARED_PORT_SPEED_RATIO,
-} from "../src/lib/pa/calc";
-import { ventShape, tubeLengthFor, ductLengthFor } from "../src/lib/pa/exactSub";
+import { ventGeometry, ventSpeedLimit, FLARED_PORT_SPEED_RATIO } from "../src/lib/pa/calc";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../src/data/acoustics/tube-ends";
 import { PORT_ELBOWS, PORT_PIPES, PORT_TUBES } from "../src/data/catalog/port-tubes";
 import { PA_SLIDERS } from "../src/constants/paSliders";
-import { ductFit, ductFitMax } from "../src/lib/pa/chips";
-import { hifiBox, hifiPortElbows, hifiTubeRoom, portMaxLength } from "../src/lib/hifi/hifi";
-import { HIFI_WOOFERS } from "../src/lib/data";
+import { hifiTubeRoom } from "../src/lib/hifi/hifi";
 import { close, vent, DRV18 } from "./helpers";
 
 const room: TubeRoom = { run: 20, rise: 25, stop: 9 };
-
-test("tube fold: straight, then up the back wall, then forward under the lid, each mouth a diameter clear", () => {
-  // straight: a diameter short of the back wall
-  assert.deepEqual(tubeSpan(room, 4, 0), [0, 16]);
-  // one elbow: the riser's front face behind the stop, at least a diameter up, a diameter under the lid
-  assert.deepEqual(tubeSpan(room, 4, 1), [9 + 2 + 4, 20 - 2 + 25 - 4]);
-  // two: the riser to the lid, the return leg at least a diameter, its mouth a diameter behind the stop
-  assert.deepEqual(tubeSpan(room, 4, 2), [9 + 4 + 8 + 23, 18 + 23 + (18 - 9 - 4)]);
-  assert.deepEqual(tubeSpans(room, 4), [
-    [0, 39],
-    [44, 46],
-  ]);
-  // the fewest that fit; null in the gap between counts, and past the longest
-  assert.equal(tubeElbows(room, 4, 16), 0);
-  assert.equal(tubeElbows(room, 4, 16.5), 1);
-  assert.equal(tubeElbows(room, 4, 42), null);
-  assert.equal(tubeElbows(room, 4, 45), 2);
-  assert.equal(tubeElbows(room, 4, 47), null);
-});
 
 test("tube fold: the legs add up to the length, the riser against the back wall when it can be", () => {
   for (const [len, e] of [
@@ -116,19 +87,6 @@ test("tube end correction: flanged and free ends less the flares, the wall, the 
   close(null, g.ec, e1, 1e-12);
 });
 
-test("exact solver: the shortest tube that tunes, over the elbow counts", () => {
-  const box = { w: 24, h: 34, d: 21 };
-  const v = vent({ nt: 2, dia: 4, len: 0, slotH: 3, throat: 2 });
-  const vs = ventShape("round2", box, v, 0.75, 0.75, DRV18);
-  for (const Leff of [0.2, 0.5, 0.8]) {
-    const { len, reached } = tubeLengthFor("round2", box, v, 0.75, 0.75, DRV18, Leff);
-    if (!reached) continue;
-    const at = ventShape("round2", box, { ...v, len }, 0.75, 0.75, DRV18);
-    close(null, ductLengthFor(at, Leff), len, 1e-9, `Leff ${Leff}`);
-  }
-  assert.ok(vs.area > 0);
-});
-
 test("flared tubes run faster than sharp-edged vents", () => {
   close(null, ventSpeedLimit("round2", 23.5), 30, 1e-12);
   assert.equal(ventSpeedLimit("slots", 23.5), 23.5);
@@ -173,23 +131,6 @@ test("tube kit: pipe sticks and elbows priced, and no price where an elbow has n
   );
 });
 
-test("hi-fi: the same fold rule, and each elbow tunes the port higher", () => {
-  const w = HIFI_WOOFERS.find((o) => o.id === "sb17nrx")!;
-  const dim = { w: 9, h: 15, d: 11 };
-  const straightMax = portMaxLength(dim, 0.75, { dia: 2, elbows: 0 });
-  close(null, straightMax, 11 - 0.75 - 2, 1e-12);
-  const len = straightMax + 1;
-  assert.equal(hifiPortElbows(dim, 0.75, { n: 1, dia: 2, len }), 1);
-  // the box model takes the elbow's bend correction: 1.46 r and one sharp bend
-  const b = hifiBox(
-    w,
-    { box: "vented", dim, wall: 0.75, port: { n: 1, dia: 2, len }, wAmpW: 100 },
-    2000,
-  );
-  const A = Math.PI;
-  close(null, b!.vM!.Fb, ventTuning(b!.net, A, len, 1, 1.46 + SHARP_BEND_CORRECTION * 2).Fb, 1e-9);
-});
-
 test("tube fold: no elbow up a wall too short for a leg and the mouth's gap", () => {
   // 4″: a riser needs a leg (4) plus the lid gap (4) above the axis; 7.5 isn't enough, 8 is
   assert.equal(tubeSpan({ run: 20, rise: 7.5, stop: 0 }, 4, 1), null);
@@ -230,36 +171,4 @@ test("hi-fi: a port's return leg keeps its diameter of air from the baffle's ins
   assert.ok(span);
   const legs = tubeLegs(room, 2, span[1], 2);
   assert.ok(legs.gap >= 2 - 1e-9, `${legs.gap}`);
-});
-
-test("ductFitMax is ductFit's fit, and the tubes' room reads the layout's highest axis", () => {
-  for (const style of ["slots", "vslots", "vslot1", "round1", "round2", "round4"] as const)
-    for (const box of [
-      { w: 20, h: 24, d: 16 },
-      { w: 24, h: 34, d: 21 },
-      { w: 38, h: 22, d: 28 },
-    ])
-      for (const v of [
-        vent({ slotH: 3, throat: 2, nt: 2, dia: 4, len: 0 }),
-        vent({ slotH: 6, throat: 5, nt: 4, dia: 6, len: 0 }),
-        vent({ slotH: 2, throat: 1, nt: 1, dia: 10, len: 0 }),
-      ]) {
-        const at = `${style} ${JSON.stringify(box)} ${JSON.stringify(v)}`;
-        close(
-          null,
-          ductFitMax(box, style, v, 0.75, 0.75, DRV18),
-          ductFit(box, style, v, 0.75, 0.75, DRV18).fit,
-          1e-12,
-          at,
-        );
-        const { tubes } = tubeLayout(box, style, v, 0.75, 18);
-        if (tubes.length)
-          close(
-            null,
-            tubeRoom(box, style, v, 0.75, 0.75, DRV18).rise,
-            box.h - 1.5 - Math.max(...tubes.map((p) => p.y)),
-            1e-12,
-            at,
-          );
-      }
 });

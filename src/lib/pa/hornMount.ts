@@ -1,21 +1,5 @@
-// The horn mount setting: which designs it applies to, and what a saved design holds.
-import {
-  HORN_MOUNT_DEFAULT,
-  HORN_MOUNT_NAMES,
-  RETIRED_HORN_MOUNT_BRACKET,
-} from "../../constants/hornMount";
 import { HORN_PLACEMENT } from "../../constants/speakerSpec";
-import type { Horn, HornMountId, HornPlacement, PaLayout } from "../../types";
-
-const isHornMountId = (x: unknown): x is HornMountId =>
-  typeof x === "string" && Object.hasOwn(HORN_MOUNT_NAMES, x);
-
-/**
- * A saved design's horn mount; a save from before the setting, one holding the retired L-bracket, or a bad value: the
- * aluminum plate.
- */
-export const savedHornMount = (x: unknown): HornMountId =>
-  x !== RETIRED_HORN_MOUNT_BRACKET && isHornMountId(x) ? x : HORN_MOUNT_DEFAULT;
+import type { Horn, HornPlacement, PaLayout } from "../../types";
 
 /**
  * Whether a horn mount applies to a horn where it sits: the driver bolts straight to the horn (no throat adapter, whose
