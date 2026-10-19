@@ -119,14 +119,15 @@ const CROSSOVER_MIN_HZ = 20;
 const SIZE_FACTORS: [number, number] = [0.7, 1.5];
 
 /**
- * A cone kind's candidates: same kind and nominal size (`anySize`: every size, as the driver comparison lists them; a
- * size that doesn't fit is marked there), with a US price and T/S, each driver once (`inSearchSpace`); your part always.
+ * A cone kind's candidates: same kind and nominal size, with a US price and T/S, each driver once (`inSearchSpace`);
+ * your part always. `ownSize` (in) is your part's nominal size where the catalog has it outside the search space (a
+ * template's own driver, as the driver comparison lists its options); absent, such a part keeps only itself.
  */
 export function coneCandidates(
   kind: DriverKind,
   current: string,
   catalog: SpeakerOptimizerCatalog,
-  anySize = false,
+  ownSize?: number,
 ): string[] {
   const table: readonly { id: string; size: number; price: number | null; variantOf?: string }[] =
     kind === DRIVER_KIND.sub
@@ -138,16 +139,10 @@ export function coneCandidates(
           : kind === DRIVER_KIND.coaxial
             ? catalog.coaxial
             : [];
-  const own = byId(table, current);
-  // a part outside the search space (a template's own driver) keeps only itself in the search; the comparison lists
-  // every size anyway
-  if (!own && !anySize) return [current];
+  const size = byId(table, current)?.size ?? ownSize;
+  if (size === undefined) return [current];
   const ids = table
-    .filter(
-      (d) =>
-        d.id === current ||
-        (inSearchSpace(d) && (anySize || d.size === own?.size) && d.price !== null),
-    )
+    .filter((d) => d.id === current || (inSearchSpace(d) && d.size === size && d.price !== null))
     .map((d) => d.id);
   // a coaxial with an HF section keeps one (its HF band would lose its model)
   if (kind === DRIVER_KIND.coaxial && byId(catalog.coaxial, current)?.hf)
@@ -720,8 +715,8 @@ export function withPart(d: SpeakerDriver, driverId: string, hornId: string | nu
 export function partFacts(
   kind: DriverKind,
   id: string,
-): { price: number; priced: boolean; lb: number; weighed: boolean } {
-  const row: { price: number | null; lb: number | null } | undefined =
+): { price: number; priced: boolean; lb: number; weighed: boolean; size: number | null } {
+  const row: { price: number | null; lb: number | null; size?: number } | undefined =
     kind === DRIVER_KIND.sub
       ? byId(SPEAKER_SUB_OPTIONS, id)
       : kind === DRIVER_KIND.mid
@@ -738,6 +733,7 @@ export function partFacts(
     priced: row?.price != null,
     lb: row?.lb ?? 0,
     weighed: row?.lb != null,
+    size: row?.size ?? null,
   };
 }
 

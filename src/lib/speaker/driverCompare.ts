@@ -43,15 +43,20 @@ export const ownOption = (d: Pick<SpeakerDriver, "driverId" | "horn">): DriverCo
 export type CompareOrigin = DriverCompareOption & Pick<SpeakerDriver, "kind">;
 
 /**
- * A driver entry's options, yours first: a cone's same-kind catalog drivers of every size with a US price and T/S
- * (`coneCandidates`; a size that doesn't fit its chamber fails the fit check, so it is marked and listed last), a
+ * A driver entry's options, yours first: a cone's same-kind, same-size catalog drivers with a US price and T/S
+ * (`coneCandidates`), a
  * compression driver's pairs with the horns its exit takes (`hfCandidates`), or a tweeter's on its waveguide. `origin`
  * stays among them while the entry is its kind, so a swap can always go back.
  */
 export function driverOptions(d: SpeakerDriver, origin?: CompareOrigin): DriverCompareOption[] {
   const own = ownOption(d);
   const found: DriverCompareOption[] = isConeKind(d.kind)
-    ? coneCandidates(d.kind, d.driverId, SPEAKER_OPTIMIZER_CATALOG, true).map((driverId) => ({
+    ? coneCandidates(
+        d.kind,
+        d.driverId,
+        SPEAKER_OPTIMIZER_CATALOG,
+        partFacts(d.kind, d.driverId).size ?? undefined,
+      ).map((driverId) => ({
         driverId,
         hornId: own.hornId,
       }))
