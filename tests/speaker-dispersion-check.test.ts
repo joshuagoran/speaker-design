@@ -56,7 +56,7 @@ test("the Hi-fi 2-way gives one chip, on its low band, naming the high band", ()
 test("the check's words are the Speaker page's, naming the band", () => {
   assert.equal(DISPERSION_TEXT.warnTitle("High"), "Narrower than High at the crossover");
   assert.equal(
-    DISPERSION_TEXT.warnTip(70, "High", DISPERSION_TEXT.coverage.rated(100), 2000),
+    DISPERSION_TEXT.warnTip(70, "High", DISPERSION_TEXT.coverage.degrees(100), 2000),
     "About 70° against High's 100°: an off-axis dip below 2000 Hz. Use a lower crossover.",
   );
   assert.equal(DISPERSION_TEXT.okTitle("High"), "Matches High at the crossover");
@@ -163,4 +163,22 @@ test("a cone over the crossover covers its own beam there, not a dome's", () => 
     for (const k of checks)
       assert.ok(!k.chip[2].includes(DISPERSION_TEXT.coverage.dome), `${id}: ${k.chip[2]}`);
   }
+});
+
+test("a horn-loaded cone beside a direct woofer on the same band leaves the check on the direct one", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
+  const horn = templateSpeaker(SPEAKER_TEMPLATE.th18).cabinet.chambers[0];
+  const woofer = spec.cabinet.chambers.find((c) =>
+    c.drivers.some((d) => d.bands[0] === SPEAKER_BAND.low),
+  );
+  assert.ok(horn && woofer, "the templates have the chambers");
+  const extra = { ...horn, drivers: woofer.drivers.filter((d) => d.bands[0] === SPEAKER_BAND.low) };
+  const mixed: SpeakerSpec = {
+    ...spec,
+    cabinet: { ...spec.cabinet, chambers: [...spec.cabinet.chambers, extra] },
+  };
+  assert.deepEqual(
+    dispersionChecks(mixed).map((k) => k.chip[1]),
+    dispersionChecks(spec).map((k) => k.chip[1]),
+  );
 });

@@ -35,7 +35,7 @@ export const DISPERSION_TEXT = {
   okTip: (deg: number, xo: number) => `About ${deg}° wide at ${xo} Hz.`,
   /** the upper band's coverage in a warning: a figure, degrees (a horn's, or a cone's beam); none published; a dome */
   coverage: {
-    rated: (deg: number) => `${deg}°`,
+    degrees: (deg: number) => `${deg}°`,
     unpublished: "unpublished coverage, taken as wide",
     dome: "wide dome",
   },

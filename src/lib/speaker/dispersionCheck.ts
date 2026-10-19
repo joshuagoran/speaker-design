@@ -52,16 +52,20 @@ function upperCoverage(
   band: BandId,
   hz: number,
 ): UpperCoverage | null {
-  const drivers = chambers.flatMap((c) => c.drivers);
-  const hf = drivers.find((d) => hfBandOf(d) === band);
-  const cone = drivers.find((d) => isConeKind(d.kind) && d.bands[0] === band);
-  const driver: SpeakerDriver | undefined = hf ?? cone;
+  const placed = chambers.flatMap((c) => c.drivers.map((d) => ({ c, d })));
+  const hf = placed.find(({ d }) => hfBandOf(d) === band)?.d;
+  const coneAt = placed.find(({ d }) => isConeKind(d.kind) && d.bands[0] === band);
+  // a cone in a horn-loaded chamber radiates from the mouth, which the check does not model
+  if (!hf && coneAt?.c.load.kind === CHAMBER_LOAD.horn) return null;
+  const driver: SpeakerDriver | undefined = hf ?? coneAt?.d;
   if (!driver) return null;
   const part = hf ? DRIVER_PART.hf : DRIVER_PART.cone;
   const pattern = driverPattern({ driver, part, mouth: null });
   if (pattern.horn) return { kind: DISPERSION_COVERAGE.rated, deg: Math.round(pattern.horn.covH) };
   const sd = hf ? 0 : (coneParts(driver)?.ts.Sd ?? 0);
   if (sd > 0) return { kind: DISPERSION_COVERAGE.cone, deg: Math.round(beamDeg(sd, hz)) };
+  // a compression driver with no horn has no coverage to compare
+  if (driver.kind === DRIVER_KIND.compression) return null;
   return {
     kind:
       hf && driver.kind === DRIVER_KIND.coaxial
@@ -75,8 +79,11 @@ function lowerSdCm2(chambers: SpeakerSpec["cabinet"]["chambers"], band: BandId):
   const cones = chambers.flatMap((c) =>
     c.drivers.filter((d) => isConeKind(d.kind) && d.bands[0] === band).map((d) => ({ c, d })),
   );
-  if (cones.length === 0 || cones.some(({ c }) => c.load.kind === CHAMBER_LOAD.horn)) return null;
-  const sds = cones.map(({ d }) => coneParts(d)?.ts.Sd ?? 0).filter((sd) => sd > 0);
+  // a horn-loaded chamber's cones radiate from its mouth, which the check does not model: only direct cones count
+  const sds = cones
+    .filter(({ c }) => c.load.kind !== CHAMBER_LOAD.horn)
+    .map(({ d }) => coneParts(d)?.ts.Sd ?? 0)
+    .filter((sd) => sd > 0);
   return sds.length ? Math.max(...sds) : null;
 }
 
@@ -96,15 +103,15 @@ export function dispersionChecks(spec: Pick<SpeakerSpec, "bands" | "cabinet">): 
     const sd = lowerSdCm2(cabinet.chambers, lower);
     const coverage = upperCoverage(cabinet.chambers, upper, xo);
     if (sd === null || !coverage) return [];
-    const beam = beamDeg(sd, xo);
-    const deg = Math.round(beam);
+    const deg = Math.round(beamDeg(sd, xo));
     const high = nameOf(upper);
     const covered = "deg" in coverage ? coverage.deg : DISPERSION_DOME_COVERAGE_DEG;
-    const narrower = beam < Math.min(covered, DISPERSION_FULL_BEAM_DEG) * DISPERSION_MATCH_SHARE;
+    // the rounded angles, as the tip shows them, so the words never contradict the verdict
+    const narrower = deg < Math.min(covered, DISPERSION_FULL_BEAM_DEG) * DISPERSION_MATCH_SHARE;
     const words = DISPERSION_TEXT.coverage;
     const said =
       "deg" in coverage
-        ? words.rated(coverage.deg)
+        ? words.degrees(coverage.deg)
         : coverage.kind === DISPERSION_COVERAGE.unpublished
           ? words.unpublished
           : words.dome;
