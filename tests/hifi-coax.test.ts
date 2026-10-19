@@ -29,7 +29,6 @@ import {
 import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
 import { hifiSearchSpace, optimizeHifiSpeaker } from "../src/lib/hifi/optimize";
 import { CHANGE_NAMES, PRICE_UNKNOWN_TEXT } from "../src/constants/optimizerText";
-import { useHifiPlanner, type HifiPlanner } from "../src/pages/hifi/useHifiPlanner";
 import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
@@ -43,7 +42,6 @@ import type {
   HifiOptimizerCurrent,
   HifiTweeter,
   ListenerGeometry,
-  SavedHifiConfig,
 } from "../src/types";
 
 /** A coaxial with its HF section, by id. */
@@ -433,65 +431,5 @@ describe("a coaxial with an HF figure unpublished", () => {
     expect(other.space?.wList.map((w) => w.id)).not.toContain(G.woofer.id);
     const own = hifiSearchSpace({ ...optimizerLists, cur: optimizerCur(G) }, { withGrid: false });
     expect(own.space?.wList.map((w) => w.id)).toContain(G.woofer.id);
-  });
-});
-
-/** Renders the planner once per step, each step's state updates rendering it again for the next. */
-function runSteps(steps: ((hook: HifiPlanner) => void)[]) {
-  let done = 0;
-  function Probe() {
-    const hook = useHifiPlanner();
-    if (done < steps.length) steps[done++](hook);
-    return null;
-  }
-  renderToString(createElement(Probe));
-  expect(done).toBe(steps.length);
-}
-
-describe("the page takes a coaxial from a card or a save", () => {
-  test("applying a coaxial card sets the coaxial as woofer and tweeter", () => {
-    const res = optimizeHifiSpeaker({
-      ...optimizerLists,
-      cur: optimizerCur(B10),
-      goals: ["louder"],
-    });
-    const card = res.cards[0];
-    if (!card) throw new Error("no card");
-    runSteps([
-      (h) => h.applyDesign(card.config),
-      (h) => {
-        expect(h.woofer.id).toBe(card.woofer);
-        expect(h.tweeter.id).toBe(card.tweeter);
-        expect(isCoax(h.woofer, h.tweeter)).toBe(true);
-        expect(h.speakerModel?.speakerSystem.lay.coax).toBe(true);
-      },
-    ]);
-  });
-
-  test("a coaxial design saves under its name once and restores whole", () => {
-    let saved: SavedHifiConfig | undefined;
-    runSteps([
-      (h) => {
-        h.setWoofer(B10.woofer);
-        h.setTweeter(B10.tweeter);
-      },
-      (h) => {
-        saved = h.savedConfigSnapshot();
-        expect(saved.woofer).toBe(B10.woofer.id);
-        expect(saved.tweeter).toBe(B10.tweeter.id);
-        expect(saved.summary.split(B10.woofer.name)).toHaveLength(2);
-      },
-    ]);
-    runSteps([
-      (h) => {
-        expect(h.woofer.id).toBe(DEFAULT_HIFI.woofer.id);
-        if (saved) h.restoreSavedConfig(saved);
-      },
-      (h) => {
-        expect(h.woofer).toBe(B10.woofer);
-        expect(h.tweeter).toBe(B10.tweeter);
-        expect(h.speakerModel?.speakerSystem.lay.coax).toBe(true);
-      },
-    ]);
   });
 });

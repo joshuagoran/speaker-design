@@ -9,9 +9,7 @@ import {
 } from "../src/components/stack-view/buildMembersScene";
 import { stackTotals } from "../src/lib/speaker/speakerTotals";
 import { stackLayout } from "../src/lib/speaker/stackLayout";
-import { startLayers } from "../src/pages/stack/stackPresets";
-import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import type { PaLayout } from "../src/types";
 
@@ -26,13 +24,9 @@ const PRESETS = [
 const DRAWN_IN = 1;
 
 describe("Stack 3D view: the PA presets stand as the stack places them", () => {
-  for (const [preset, layout] of PRESETS)
+  for (const [preset] of PRESETS)
     test(preset, () => {
-      const { stack, speakers } = startLayers(
-        preset,
-        { id: "test", name: "test" },
-        { pa: defaultPaDesign(layout), floor: DEFAULT_COVERAGE_LAYOUT },
-      );
+      const { stack, speakers } = presetLayers(preset, { id: "test", name: "test" });
       const root = buildMembersScene({ stack, speakers, cutaway: false });
       const box = new THREE.Box3().setFromObject(root);
       const { heightIn } = stackTotals(stack, speakers);

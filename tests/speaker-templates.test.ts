@@ -4,7 +4,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
-import { speakerStarts, isTemplate, startSpeaker } from "../src/pages/speaker/speakerStarts";
 import {
   mouthPlace,
   ventPlace,
@@ -32,15 +31,12 @@ import { byIdOrThrow } from "../src/lib/tables";
 import {
   DEFAULT_FILL,
   DEFAULT_HIFI,
-  DEFAULT_HIFI_LOOK,
   DEFAULT_MONITOR,
   DEFAULT_PA,
   PA_V2_MID_BOX,
   PA_V2_SUB_BIN,
 } from "../src/lib/defaults";
-import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import {
-  SPEAKER_START,
   SPEAKER_START_SPEAKER_NAMES,
   SPEAKER_TEMPLATE,
   type SpeakerTemplate,
@@ -161,9 +157,6 @@ test("speaker templates: each builds a draft spec the model takes whole, with it
       );
     }
     assert.equal(limits.bands.length, response.bands.length, template);
-    // the start picker gives the same speaker
-    const sources = { pa: defaultPaDesign(), hifi: DEFAULT_HIFI, hifiLook: DEFAULT_HIFI_LOOK };
-    assert.deepEqual(startSpeaker(template, sources), spec, template);
   }
 });
 
@@ -198,16 +191,6 @@ test("speaker templates: the fill's coaxial crosses at its HF section's recommen
   const [low, high] = spec.bands;
   assert.deepEqual([low.highpass, low.lowpass], [null, filter]);
   assert.deepEqual([high.highpass, high.lowpass], [filter, null]);
-});
-
-test("speaker templates: the picker lists every template, then the current designs", () => {
-  const starts = speakerStarts(DEFAULT_PA.layout);
-  assert.deepEqual(starts.filter(isTemplate), [...SPEAKER_TEMPLATES]);
-  assert.deepEqual(
-    starts.filter((s) => !isTemplate(s)),
-    [SPEAKER_START.hifi, SPEAKER_START.paSub, SPEAKER_START.paTop],
-  );
-  assert.ok(speakerStarts("tower").includes(SPEAKER_START.paTower));
 });
 
 test("speaker templates: the PA v2 sub bin's drivers share one throat, and the horn engine models it", () => {

@@ -1,11 +1,10 @@
 // The Speaker page's build settings from the PA page: the wall panels' size and the side ducts' dividers' size, and
-// the horn exit check. A PA design's speaker (and an old PA save's) carries the PA page's choices, and the Speaker
+// the horn exit check. A PA design's speaker carries the PA page's choices, and the Speaker
 // page's settings build the same box as the PA page's.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { PA_FLOOR, speakerAndFeed } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
-import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import {
@@ -13,14 +12,12 @@ import {
   withMeasuredWalls,
   withWallPanel,
 } from "../src/lib/speaker/cabinetPanels";
-import { stackFromOldSave } from "../src/pages/stack/oldSaves";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { panelIn } from "../src/lib/panel";
 import { PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
 import {
   DRIVER_KIND,
   HORN_PLACEMENT,
-  OLD_SAVE_KIND,
   PORT_SHAPE,
   SPEAKER_PART,
   VENT_KIND,
@@ -147,25 +144,6 @@ test("build settings: dividers of the walls' size share the walls' measured thic
     withDuctDivider(ductsOf(half), "5/8", set.panel).div,
     panelIn("5/8", PLYWOOD_MATERIAL, {}),
   );
-});
-
-test("build settings: an old PA save opens with its wall and divider sizes", () => {
-  const design = ductsAt("3/4", "1/2");
-  const opened = stackFromOldSave({
-    kind: OLD_SAVE_KIND.pa,
-    doc: { ...design, id: "doc1", name: "Old" },
-  });
-  const subId = opened && speakerIdentity(opened.stack, SPEAKER_PART.sub).id;
-  const sub = opened?.speakers.find((s) => s.id === subId);
-  assert.ok(sub);
-  // the walls and dividers at their sizes' thicknesses: the build, cutlist and weight read them
-  assert.deepStrictEqual(sub.cabinet.panel, {
-    nominal: "1/2",
-    material: PLYWOOD_MATERIAL,
-    thicknessIn: panelIn("1/2", PLYWOOD_MATERIAL, {}),
-  });
-  assert.equal(ductsOf(sub).divider, "3/4");
-  assert.equal(ductsOf(sub).div, panelIn("3/4", PLYWOOD_MATERIAL, {}));
 });
 
 test("build settings: the horn exit check fires on a compression driver whose horn's throat differs", () => {

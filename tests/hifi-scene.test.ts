@@ -1,5 +1,4 @@
-// The Hi-fi speaker's 3D scene (stack-view/buildHifiScene), built from the props the Hi-fi page passes for a design
-// (pages/hifi/hifiSceneProps): the box at the design's size, each vent, the passive radiators on each panel, each kind
+// The Hi-fi speaker's 3D scene (stack-view/buildHifiScene), built from a Hi-fi design's numbers (`propsFor`): the box at the design's size, each vent, the passive radiators on each panel, each kind
 // of tweeter and waveguide, and a freestanding waveguide on its mount (the aluminum plate, or the brackets it gives way
 // to).
 import { describe, expect, test } from "vite-plus/test";
@@ -18,7 +17,6 @@ import {
 } from "../src/components/stack-view/buildHorn";
 import { BRACKET_MESH_NAME } from "../src/components/stack-view/buildBracket";
 import { PLATE_MESH_NAMES, plateFit } from "../src/components/stack-view/buildPlate";
-import { hifiSceneProps } from "../src/pages/hifi/hifiSceneProps";
 import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import {
@@ -31,7 +29,7 @@ import {
   driverMountKind,
   hornMountKind,
 } from "../src/lib/data";
-import { needsWaveguide } from "../src/lib/hifi/hifi";
+import { needsWaveguide, RADIATOR_PANEL, tweeterOffset } from "../src/lib/hifi/hifi";
 import { radiatorSpots, roundPortSpots } from "../src/lib/hifi/boxLayout";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../src/constants/hifiScene";
 import { HORN_MESHES } from "../src/data/meshes";
@@ -47,13 +45,37 @@ const WAVEGUIDES = HIFI_WAVEGUIDES;
 const waveguide = (id: string) => byIdOrThrow(WAVEGUIDES, id, "waveguides");
 const tweeter = (id: string) => byIdOrThrow(HIFI_TWEETERS, id, "tweeters");
 
-/** The scene props the Hi-fi page passes for the default design with `over` changed. */
-function propsFor(over: Partial<HifiDesignState>, extra: Partial<HifiSceneProps> = {}) {
+/**
+ * The scene props for the default design with `over` changed: the numbers the model works on (the system's driver
+ * layout, the tweeter offset it keeps on the baffle, the vent or radiators the box uses), the default look, no cutaway.
+ */
+function propsFor(
+  over: Partial<HifiDesignState>,
+  extra: Partial<HifiSceneProps> = {},
+): HifiSceneProps {
   const state = { ...DEFAULT_HIFI, ...over };
   const d = deriveHifiDesign(state);
   const system = d.speakerModel?.speakerSystem;
   if (!system) throw new Error("the design can't be modeled");
-  return { ...hifiSceneProps(state, d, system, DEFAULT_HIFI_LOOK, false), ...extra };
+  const { waveguideSpec } = d;
+  return {
+    dim: d.speakerConfig.dim,
+    wall: d.wallThicknessIn,
+    roundoverIn: state.roundoverIn,
+    woofer: state.woofer,
+    tweeter: state.tweeter,
+    lay: system.lay,
+    tweeterOffsetIn: tweeterOffset(d.speakerConfig, d.tweeterWithWaveguide, system.lay),
+    port: system.kind === "vented" ? state.portSpec : null,
+    radiators: system.kind === "radiator" ? d.radiator : null,
+    radiatorPanel: RADIATOR_PANEL,
+    guide: waveguideSpec,
+    waveguide: waveguideSpec && !state.tweeter.ownGuide ? state.selectedWaveguide : null,
+    cabFinish: DEFAULT_HIFI_LOOK.cabFinish,
+    baffleColor: DEFAULT_HIFI_LOOK.baffleColor,
+    cutaway: false,
+    ...extra,
+  };
 }
 
 /** Every object named `name` (meshes and groups). */

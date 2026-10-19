@@ -9,8 +9,7 @@ import { optimizeStack } from "../src/lib/speaker/optimize/optimizeStack";
 import { evaluateStack } from "../src/lib/speaker/optimize/stackEvaluate";
 import { driverRef } from "../src/lib/speaker/optimize/space";
 import { searchedIfCurrent } from "../src/hooks/useDesignOptimizer";
-import { startLayers } from "../src/pages/stack/stackPresets";
-import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { isKept, toggleKeep } from "../src/pages/speaker/speakerKeeps";
 import { withoutMember } from "../src/pages/stack/useStack";
 import {
@@ -37,7 +36,6 @@ import {
   withSpeakerLocks,
   type HeldStackLocks,
 } from "../src/pages/stack/stackKeeps";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { LOOSEN, SPEAKER_GOAL } from "../src/constants/speakerOptimizer";
 import {
@@ -48,11 +46,7 @@ import {
 import { stackNearMissText } from "../src/pages/stack/StackOptimizerResults";
 import type { StackDesign } from "../src/types";
 
-const read = startLayers(
-  STACK_PRESET.paStack,
-  { id: "saved-stack", name: "My stack" },
-  { pa: defaultPaDesign("stack"), floor: DEFAULT_COVERAGE_LAYOUT },
-);
+const read = presetLayers(STACK_PRESET.paStack, { id: "saved-stack", name: "My stack" });
 const design: StackDesign = {
   stack: { ...read.stack, notes: "my notes" },
   speakers: read.speakers,

@@ -10,7 +10,7 @@ import {
 } from "../src/lib/pa/coverage";
 import { musicBalanceOf } from "../src/lib/pa/musicBalance";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
-import { startLayers } from "../src/pages/stack/stackPresets";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
@@ -31,12 +31,8 @@ const PRESETS = [
 ] as const satisfies readonly (readonly [string, PaLayout])[];
 
 /** A PA preset as a space on the coverage page's default floor. */
-function presetSpace(preset: (typeof PRESETS)[number][0], layout: PaLayout): SpaceDesign {
-  const read = startLayers(
-    preset,
-    { id: "test", name: "test" },
-    { pa: defaultPaDesign(layout), floor: DEFAULT_COVERAGE_LAYOUT },
-  );
+function presetSpace(preset: (typeof PRESETS)[number][0]): SpaceDesign {
+  const read = presetLayers(preset, { id: "test", name: "test" });
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
 
@@ -44,7 +40,7 @@ describe("Space target: the PA presets take the PA page's target in every band",
   for (const [preset, layout] of PRESETS)
     test(preset, () => {
       const cfg = defaultPaDesign(layout);
-      const design = presetSpace(preset, layout);
+      const design = presetSpace(preset);
       const { venue } = design.space;
       expect(venue.balance).toBe(AUTO_BALANCE_MODE.moreBass);
       expect(venue.levelRef).toBe(DEFAULT_COVERAGE_LAYOUT.levelRef);
@@ -73,7 +69,7 @@ describe("Space target: the PA presets take the PA page's target in every band",
 });
 
 test("Space target: flat, the same target in every band", () => {
-  const design = presetSpace(STACK_PRESET.paStack, "stack");
+  const design = presetSpace(STACK_PRESET.paStack);
   const crossovers = spaceCrossoversHz(design);
   for (const f of RESPONSE_FREQS)
     expect(spaceTargetAt(100, f, crossovers, AUTO_BALANCE_MODE.flat)).toBe(100);
@@ -89,7 +85,7 @@ test("Space levels: a design with no room of its own measures at the audience av
 });
 
 test("Space levels: 1 m from each box, along its aim (a mirrored pair's boxes mirrored)", () => {
-  const design = presetSpace(STACK_PRESET.paStack, "stack");
+  const design = presetSpace(STACK_PRESET.paStack);
   const spots = oneMeterSpots(design, design.space.venue.room);
   const boxes = expandPlacements(design.space.placements);
   expect(spots).toHaveLength(boxes.length);

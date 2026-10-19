@@ -1,8 +1,6 @@
 import { optimizeStack } from "../src/lib/speaker/optimize/optimizeStack";
 import { evaluateStack } from "../src/lib/speaker/optimize/stackEvaluate";
-import { startLayers } from "../src/pages/stack/stackPresets";
-import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { STACK_PRESET, type StackPreset } from "../src/constants/stackPresets";
 import type { SpeakerGoal, SpeakerSpec, StackDesign } from "../src/types";
 import type { Json } from "./optimizer-dump-merge";
@@ -64,11 +62,7 @@ const designOf = (d: StackDesign) => ({
 /** The runs' cards, in case order. */
 export function stackSnapshotRuns(): Json[] {
   return CASES.map(({ preset, goals, targetDb }) => {
-    const read = startLayers(
-      preset,
-      { id: "snapshot", name: "Snapshot" },
-      { pa: defaultPaDesign("stack"), floor: DEFAULT_COVERAGE_LAYOUT },
-    );
+    const read = presetLayers(preset, { id: "snapshot", name: "Snapshot" });
     const design: StackDesign = { stack: read.stack, speakers: read.speakers };
     const m = evaluateStack(design).metrics;
     const r = optimizeStack(design, goals, {

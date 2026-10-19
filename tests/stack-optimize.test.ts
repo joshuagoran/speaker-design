@@ -8,9 +8,7 @@ import { optimizeStack } from "../src/lib/speaker/optimize/optimizeStack";
 import { evaluateStack, speakerOf } from "../src/lib/speaker/optimize/stackEvaluate";
 import { outerSize } from "../src/lib/speaker/optimize/evaluate";
 import { driverRef } from "../src/lib/speaker/optimize/space";
-import { startLayers } from "../src/pages/stack/stackPresets";
-import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { STACK_PRESET, type StackPreset } from "../src/constants/stackPresets";
 import { SPEAKER_STEPS, STACK_STEPS } from "../src/constants/speakerSteps";
 import { AUTO_DELAY } from "../src/constants/speakerSpec";
@@ -27,11 +25,7 @@ import type {
 
 /** A preset's stack and its speakers. */
 function preset(p: StackPreset): StackDesign {
-  const read = startLayers(
-    p,
-    { id: "test", name: "Test" },
-    { pa: defaultPaDesign("stack"), floor: DEFAULT_COVERAGE_LAYOUT },
-  );
+  const read = presetLayers(p, { id: "test", name: "Test" });
   return { stack: read.stack, speakers: read.speakers };
 }
 

@@ -6,8 +6,6 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { SpeakerPage } from "../src/pages/speaker/SpeakerPage";
 import { emptySpeaker, speakerDraft, useSpeakerPage } from "../src/pages/speaker/useSpeakerPage";
-import { useHifiPlanner } from "../src/pages/hifi/useHifiPlanner";
-import { usePaPlanner } from "../src/pages/pa-stack/hooks/usePaPlanner";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
@@ -31,9 +29,7 @@ function render(spec: SpeakerSpec): string {
   });
   function Probe() {
     const speakerPage = useSpeakerPage();
-    const planner = usePaPlanner();
-    const hifi = useHifiPlanner();
-    return createElement(SpeakerPage, { speakerPage, planner, hifi });
+    return createElement(SpeakerPage, { speakerPage });
   }
   return renderToString(createElement(Probe));
 }

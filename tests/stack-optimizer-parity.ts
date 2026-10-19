@@ -1,5 +1,5 @@
 // The parity runs of tests/stack-optimize.test.ts: the PA optimizer's cards on each PA preset (stack, pole, satellites,
-// tower), read as stacks (the L1 adapters, the music balance worked out as the current-design start does), beside the
+// tower), read as stacks (the L1 adapters, the music balance worked out for each card's parts), beside the
 // Stack optimizer's cards on the same goal and limits. Both at the PA room rule's target (1000 sq ft, about 113 dB at
 // 1 m), scored by the Stack optimizer's own evaluation: each side's best on the goal among the designs that keep what the
 // goal keeps and are inside the Stack optimizer's space.
@@ -10,7 +10,9 @@ import { outerSize } from "../src/lib/speaker/optimize/evaluate";
 import { isConeKind } from "../src/lib/speaker/driverParts";
 import { WOOFER_OPTIONS } from "../src/pages/speaker/speakerParts";
 import { byId } from "../src/lib/tables";
-import { paLayers, startLayers } from "../src/pages/stack/stackPresets";
+import { presetLayers } from "../src/pages/stack/stackPresets";
+import { paBalancedLayers } from "../src/lib/speaker/paBalance";
+import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { FILL_OPTIONS } from "../src/lib/data";
@@ -142,10 +144,7 @@ export function paPresetParity(
   goal: PaParityGoal,
 ): StackParityRun {
   const identity = { id: "parity", name: "Parity" };
-  const read = startLayers(preset, identity, {
-    pa: defaultPaDesign(layout),
-    floor: DEFAULT_COVERAGE_LAYOUT,
-  });
+  const read = presetLayers(preset, identity);
   const design: StackDesign = { stack: read.stack, speakers: read.speakers };
   const cur = defaultPaDesign(layout);
   const pa = optimizePaStack({
@@ -158,7 +157,8 @@ export function paPresetParity(
   });
   // each card as the PA page applies it, read as the preset is read (its poses), its balance worked out for its parts
   const legacy = pa.cards.map((k): StackDesign => {
-    const layers = paLayers({ ...cur, ...k.config }, identity, DEFAULT_COVERAGE_LAYOUT);
+    const cfg = { ...cur, ...k.config };
+    const layers = paBalancedLayers(cfg, layersFromPa(cfg, identity, DEFAULT_COVERAGE_LAYOUT));
     return {
       stack: {
         ...layers.stack,

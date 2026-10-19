@@ -1,23 +1,19 @@
-// GPU memory check for the 3D views (the PA stack's, the Hi-fi speaker's, the Speaker page's and the Stack page's), run in
-// CI after the build
-// (not part of `vp test`).
+// GPU memory check for the 3D views (the Speaker page's and the Stack page's), run in CI after the build (not part of
+// `vp test`).
 //   node tests/three-memory-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE, PW_CHROMIUM as for tests/mobile-check.mjs.
-// On each page, rebuilds its 3D view many times (its first slider, or the Speaker and Stack pages' first number field, stepped up and
-// back) and fails if the live geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
+// On each page, rebuilds its 3D view many times (its first number field, stepped up and back) and fails if the live
+// geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
 // canvas (one WebGL renderer for the component's life).
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 
 const REBUILDS = 30;
-/** The pages with a 3D view: the PA stack (the default view), Hi-fi, the Speaker and Stack pages, and the control each steps. */
-const SLIDER = { control: 'input[type="range"]', up: "ArrowRight", down: "ArrowLeft" };
-// the first one shown: a closed settings fold keeps its fields in the page, hidden
+/** The control each page steps: the first number field shown (a closed settings fold keeps its fields in the page, hidden). */
 const NUMBER = { control: 'input[type="number"]:visible', up: "ArrowUp", down: "ArrowDown" };
 /** Waits for the view's second build: built empty when the page opens, then as the start. */
 const builtTwice = (page) =>
@@ -27,21 +23,17 @@ const builtTwice = (page) =>
     { timeout: 30_000 },
   );
 const VIEWS = [
-  { name: "PA", hash: "", ...SLIDER },
-  { name: "Hi-fi", hash: "#hifi", ...SLIDER },
-  // the PA tower started on the Speaker page (horns, a vent, shared walls), its first chamber's width stepped: one shell, then a
-  // stepped one
+  // the PA tower template on the Speaker page (horns, a vent, shared walls), its first chamber's width stepped: one shell,
+  // then a stepped one
   {
     name: "Speaker",
-    hash: "",
+    hash: "#speaker",
     ...NUMBER,
     prepare: async (page) => {
-      await page.getByRole("button", { name: PA_LAYOUT_NAMES.tower, exact: true }).first().click();
-      await page.evaluate(() => (location.hash = "#speaker"));
       // picking a start in the saving row's "New from…" list replaces the design
       await page
         .getByLabel(SAVE_ROW_TEXT.newFrom)
-        .selectOption({ label: SPEAKER_START_NAMES.paTower });
+        .selectOption({ label: SPEAKER_START_NAMES.paTowerBaffleHorn });
       await builtTwice(page);
     },
   },

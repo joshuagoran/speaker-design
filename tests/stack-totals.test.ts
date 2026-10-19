@@ -7,9 +7,8 @@ import { priceText, speakerPrice, stackTotals } from "../src/lib/speaker/speaker
 import { cabinetBuild, speakerPurchasedParts } from "../src/lib/speaker/speakerBuild";
 import { speakerBounds } from "../src/lib/speaker/speakerLayout";
 import { braceLb } from "../src/lib/pa/calc";
-import { startLayers } from "../src/pages/stack/stackPresets";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { PLINTH_HEIGHT_IN } from "../src/constants/paLayouts";
 import { UI_TEXT } from "../src/constants/uiText";
@@ -39,11 +38,7 @@ describe("Stack totals match the PA page's totals for the PA presets", () => {
       const cfg = defaultPaDesign(layout);
       const inputs = paDesignInputsOf(cfg);
       const pa = paTotals({ ...inputs, ...derivePaDesign(inputs), subBox: inputs.subBoxDims });
-      const { stack, speakers } = startLayers(
-        preset,
-        { id: "test", name: "test" },
-        { pa: cfg, floor: DEFAULT_COVERAGE_LAYOUT },
-      );
+      const { stack, speakers } = presetLayers(preset, { id: "test", name: "test" });
       const totals = stackTotals(stack, speakers);
       // the same parts, at the same prices
       expect(Math.abs(totals.dollars - pa.price.sum)).toBeLessThan(ROUND);
@@ -61,11 +56,7 @@ describe("Stack totals match the PA page's totals for the PA presets", () => {
 });
 
 test("the Speaker page's price is the Cutlist tab's purchased parts total, marked when a part has no price", () => {
-  const { speakers } = startLayers(
-    STACK_PRESET.paStack,
-    { id: "test", name: "test" },
-    { pa: defaultPaDesign(), floor: DEFAULT_COVERAGE_LAYOUT },
-  );
+  const { speakers } = presetLayers(STACK_PRESET.paStack, { id: "test", name: "test" });
   for (const { cabinet } of speakers) {
     const rows = speakerPurchasedParts(cabinet);
     const price = speakerPrice(cabinet);
@@ -81,11 +72,7 @@ test("the Speaker page's price is the Cutlist tab's purchased parts total, marke
 
 describe("a tilted member's highest point sets the stack's height", () => {
   // the PA stack preset: the top (a 15 in box, its horn on its lid) on the sub
-  const start = startLayers(
-    STACK_PRESET.paStack,
-    { id: "test", name: "test" },
-    { pa: defaultPaDesign("stack"), floor: DEFAULT_COVERAGE_LAYOUT },
-  );
+  const start = presetLayers(STACK_PRESET.paStack, { id: "test", name: "test" });
   const [sub, top] = start.speakers;
   const [horn] = speakerBounds(top.cabinet).topHorns;
   /** the top's bottom: on the sub's lid, its gap above it */
