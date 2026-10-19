@@ -60,7 +60,7 @@ export { DSP_UNITS };
 export { CABINET_FINISHES, PAINT_SWATCHES } from "../data/catalog/finishes";
 export { FORMATS } from "../data/catalog/formats";
 export { A460G2_14, ST260 } from "../data/catalog/horns";
-export { B15, MID_BOXES } from "../data/catalog/mid-boxes";
+export { B15 } from "../data/catalog/mid-boxes";
 export { HORN_AMP_SAFETY_HPF_HZ } from "../data/catalog/racks";
 // Every driver table holds the maker's excursion figures; this adds the comparable Xmax the models read.
 const withTsXmax = <D extends { name: string; maker: MakerId; ts: RawTS<ThieleSmall> }>(d: D) => ({

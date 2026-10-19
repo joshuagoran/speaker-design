@@ -6,17 +6,14 @@ import {
   internalWoodLiters,
   cutParts,
   subWeightLb,
-  midWeightLb,
   plywoodLbPerSqFt,
   subBoxBracing,
-  midBoxBracing,
   maxFoldedRearWallIn,
   maxFoldedSlotIn,
   foldedRearWallIn,
   foldedLidGapIn,
   ductDividerIn,
   SUB_FIXINGS_LB,
-  MID_FIXINGS_LB,
   sideDuctEndCorrection,
   slotMouthCorrection,
 } from "../src/lib/acoustics/boxModels";
@@ -198,19 +195,6 @@ test("plyLb: the catalog's sizes, and measured thicknesses between and beyond th
   // beyond the thinnest and thickest sizes: in proportion to the nearest
   close(t, plywoodLbPerSqFt(0.45), (1.6 * 0.45) / 0.5, 1e-9);
   close(t, plywoodLbPerSqFt(0.8), (2.3 * 0.8) / 0.75, 1e-9);
-});
-test("midWeight: 15 in cube in 3/4 birch", (t) => {
-  close(
-    t,
-    midWeightLb(
-      { w: 15, h: 15, d: 15 },
-      0.75,
-      midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined),
-    ),
-    // a 15″ cube in 3/4″ ply needs no braces: every panel clears the target as it is
-    (225 * 2.3 + (225 + 450 + 450) * 2.3) / 144 + MID_FIXINGS_LB,
-    1e-9,
-  );
 });
 test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap from the back wall", (t) => {
   // tubes run from the baffle front (`inset` behind the frame front); bottom slots and side ducts run from the frame

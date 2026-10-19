@@ -3,7 +3,7 @@
 // changed design.
 import { afterEach, test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { runSteps } from "./render-steps";
 import { layersFromPa } from "../src/lib/speaker/paSpec";

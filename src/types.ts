@@ -1559,13 +1559,6 @@ export interface SubLimits {
   spl45: number;
 }
 
-/** The most a sine can play at one frequency, and what stops it. */
-export interface PaMaxPoint {
-  f: number;
-  spl: number;
-  who: SubLimitWho;
-}
-
 /** The vent as the model uses it: openings, total area (in²), length (in), end correction (in), hydraulic diameter (in) and a description. */
 /** How many 90° elbows a round port tube takes to fit its box (lib/build/tubeFold). */
 export type ElbowCount = 0 | 1 | 2;
@@ -1661,52 +1654,6 @@ export interface SubSystemModeled extends SubSystemBase {
 /** `subSystem`: check `mdl` and `lim` narrows with it. */
 export type SubSystem = SubSystemUnmodeled | SubSystemModeled;
 
-export interface MidSystemConfig
-  extends
-    Pick<SubGeometryConfig, "braceEstimate" | "hardware">,
-    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle" | "backJoint"> {
-  /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
-  layout?: PaLayout;
-  midDims: Dims3;
-  wall: number;
-  inset: number;
-  xoLo: number;
-  xoHi: number;
-  mAmpW: number;
-  /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
-  phase?: boolean;
-}
-
-/** What a mid always has: voltages and the sealed box's volumes. */
-export interface MidSystemBase {
-  V: number;
-  grossL: number;
-  disp: number;
-  /** the liters the hardware's recesses take (lib/build/hardware) */
-  recessL: number;
-  netL: number;
-  effL: number;
-  vTherm: number;
-  useV: number;
-  /** under Qtc 0.5, the net volume, L, that gives Qtc 0.5, when a box the driver fits can be that small (midSmallerBoxNetL); else null */
-  smallerBoxNetL: number | null;
-}
-
-/** A mid with no model (the driver has no T/S): no response and no limit curve. */
-export interface MidSystemUnmodeled extends MidSystemBase {
-  mdl: null;
-  max: null;
-}
-
-/** A mid with its sealed-box model and the most it can play at each frequency. */
-export interface MidSystemModeled extends MidSystemBase {
-  mdl: SealedBoxModel;
-  max: PaMaxPoint[];
-}
-
-/** `midSystem`: check `mdl` and `max` narrows with it. */
-export type MidSystem = MidSystemUnmodeled | MidSystemModeled;
-
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
 export interface HornResponse {
   /** the compression driver's spec the response was built from */
@@ -1748,61 +1695,6 @@ export interface FillDesignState {
   ampWatts: number;
   maxPortAirSpeedMs: number;
 }
-
-export interface FillSystemConfig {
-  boxType: FillBoxType;
-  /** the box's outside size, inches */
-  dim: Dims3;
-  port: FillPort;
-  /** the highpass to the subs, Hz */
-  hp: number;
-  /** the highpass's slope: LR24 (4) or LR48 (8) */
-  hpOrder: CrossoverOrder;
-  ampW: number;
-  portMax: number;
-}
-
-/** What every modeled fill has, whichever box. */
-export interface FillSystemBase {
-  V: number;
-  gross: number;
-  pArea: number;
-  disp: number;
-  net: number;
-  eff: number;
-  max: PaMaxPoint[];
-  sens: number;
-  f3: number;
-  pad: number;
-  /** amp watts at which the HF reaches its program rating; null for a fill without an HF section */
-  hfLimW: number | null;
-  lb: number;
-  portLimited: boolean;
-}
-
-/** A ported fill: the vented-box model, no sealed one. */
-export interface FillSystemVented extends FillSystemBase {
-  boxType: Extract<FillBoxType, "vented">;
-  vM: VentedBoxModel;
-  sM: null;
-}
-
-/** A sealed fill (stuffed): the closed-box model, no vented one. */
-export interface FillSystemSealed extends FillSystemBase {
-  boxType: Extract<FillBoxType, "sealed">;
-  vM: null;
-  sM: SealedBoxModel;
-}
-
-/** `fillSystem`'s result: check `boxType`, or `vM` or `sM`, and the other model's type follows. */
-export type FillSystem = FillSystemVented | FillSystemSealed;
-
-// ---- Speaker spec (lib/speaker) ----
-//
-// One model for any box (`SpeakerSpec`), for boxes in a fixed relationship (`StackSpec`) and for a placed space
-// (`SpaceSpec`): docs/speaker-designer-plan.md, L1 and L4.
-// Sizes are in inches, as the design pages have them, except a horn's segments, which keep the horn engine's
-// (Hornresp's) cm and cm².
 
 /** Each driver kind's catalog part: `SpeakerDriver.driverId` names a row of that kind's table (lib/data). */
 export interface SpeakerDriverParts {

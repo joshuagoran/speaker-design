@@ -26,8 +26,6 @@ const ROOTS = [
   "tests/preset-levels.ts",
   "tests/update-slot-inner-end.ts",
   "tests/xmax-audit.ts",
-  // the golden snapshot (tests/golden.json) guards the box models' numbers, so the code it reads stays
-  "tests/golden-configs.ts",
 ].map((file) => path.join(ROOT, file));
 const CODE_EXT = /\.(ts|tsx|js|mjs)$/;
 const RESOLVE_EXT = [".ts", ".tsx", ".js", ".mjs", "/index.ts", "/index.tsx"];

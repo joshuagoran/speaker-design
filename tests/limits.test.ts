@@ -3,11 +3,9 @@ import assert from "node:assert";
 import {
   boxModel,
   subwooferLimits,
-  maxOutputCurve,
   thermalVoltageLimit,
   ampVoltage,
   hornPower,
-  nearestPoint,
   sineLimitAt,
 } from "../src/lib/acoustics/boxModels";
 import { CD_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
@@ -68,7 +66,7 @@ test("a 4 Ω and an 8 Ω version given the same amp power differ only by their s
   const levelAt = (ts: ReturnType<typeof tsOf>, watts: number) => {
     const m = boxModel(ts, 150, 60, 14, 25, ampVoltage(watts, ts), "BW24");
     assert.ok(m);
-    return nearestPoint(m.curve, 80).spl;
+    return near(m.curve, 80).spl;
   };
   // an 8 Ω driver and a 4 Ω copy with the same efficiency (half the Re and Le, Bl / √2): the same level at 1000 W each
   const eight = tsOf("ciarendh18");
@@ -114,15 +112,13 @@ test("limits search the whole curve, including below 20 Hz", (t) => {
   const peak = Math.max(...m.curve.map((o) => o.xmm));
   close(t, m.peakX, peak, 1e-12);
 });
-test("maxCurve never exceeds the amp-limited curve and stays below Xmax", (t) => {
+test("the sine limit never exceeds the amp's voltage and stays within Xmax and the port's speed", () => {
   const V = ampVoltage(800, EIGHT_OHM),
-    m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!,
-    mc = maxOutputCurve(m.curve, fh, V, 23.5);
-  mc.forEach((o, i) => assert.ok(o.spl <= m.curve[i].spl + 1e-9));
+    m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!;
+  for (const o of m.curve) assert.ok(sineLimitAt(o, fh, V, 23.5).V <= V * (1 + 1e-9));
   for (const f of [30, 45, 60]) {
     const o = near(m.curve, f),
-      c = near(mc, f),
-      s = 10 ** ((c.spl - o.spl) / 20);
+      s = sineLimitAt(o, fh, V, 23.5).V / V;
     assert.ok(o.xmm * s <= fh.Xmax * (1 + 1e-9) && o.vel * s <= 23.5 * (1 + 1e-9), `${f} Hz`);
   }
 });

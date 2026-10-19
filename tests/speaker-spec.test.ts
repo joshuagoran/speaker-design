@@ -3,7 +3,7 @@
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs, type GoldenConfig } from "./golden-configs";
+import { configs, type PaConfig } from "./pa-configs";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { frontLoadedOf, roomOf } from "./horn-room";
@@ -11,7 +11,6 @@ import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { flushBracing, speakerIdentity } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { towerMidDims, towerSpec } from "../src/lib/speaker/tower";
-import { boxInternalLiters, midGrossLiters } from "../src/lib/acoustics/boxModels";
 import { needsWaveguide } from "../src/lib/speaker/twoWay";
 import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
@@ -104,7 +103,7 @@ const towerArches = (cfg: PaPlannerDesign) =>
     .archTop;
 
 /** The golden PA designs, and a pole layout (no seed has one). */
-const paCases: GoldenConfig[] = [
+const paCases: PaConfig[] = [
   ...configs,
   { ...configs[0], name: "pole: tops on spacers", layout: "pole", spacerH: 18 },
 ];
@@ -259,15 +258,11 @@ test("speaker spec: the tower's chambers stack in one shell and share their part
     driversOf(tower, DRIVER_KIND.compression)[0].position.yIn,
     spec.archTop ? cfg.cDim.w / 2 - cfg.wall : hornChamber.dims.h / 2,
   );
-  // the mid's air: one wall less than a box of its own, as the PA model has it (the partition under it is the sub's)
+  // the mid's air: one wall less than a box of its own (the partition under it is the sub's)
   const t = cfg.wall;
   const clear = chamberClearFace(tower.cabinet, midChamber);
-  assert.ok(
-    Math.abs(
-      boxInternalLiters(clear.w + 2 * t, clear.h + 2 * t, midChamber.dims.d, t, cfg.inset) -
-        midGrossLiters(midChamber.dims, t, cfg.inset, cfg.layout),
-    ) < 1e-9,
-  );
+  assert.ok(Math.abs(clear.w - (midChamber.dims.w - 2 * t)) < 1e-9);
+  assert.ok(Math.abs(clear.h - (midChamber.dims.h - t)) < 1e-9);
   assert.equal(chamberClearFace(tower.cabinet, subChamber).h, cfg.cDim.h - 2 * t);
 });
 

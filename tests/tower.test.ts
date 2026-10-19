@@ -2,7 +2,7 @@
 // geometry the 3D view builds the tower from.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { cutParts, boxInternalLiters, midGrossLiters } from "../src/lib/acoustics/boxModels";
+import { cutParts } from "../src/lib/acoustics/boxModels";
 import { towerMidDims, towerSpec } from "../src/lib/speaker/tower";
 import { TOWER_MID_HEIGHT_IN } from "../src/constants/paLayouts";
 import {
@@ -262,17 +262,8 @@ test("the meshed horns' light list matches the meshes, and each mesh is its horn
   }
 });
 
-test("the tower's mid chamber: modeled at its clear height as built, between the partitions", (t) => {
+test("the tower's mid chamber: its clear height as built, between the partitions", (t) => {
   const spec = towerSpec(BOX, T, FLAT);
   const clear = spec.partitions[1] - spec.partitions[0] - T;
   close(t, clear, TOWER_MID_HEIGHT_IN - T, 1e-12);
-  close(
-    t,
-    midGrossLiters(towerMidDims(BOX), T, INSET, "tower"),
-    ((BOX.w - 2 * T) * clear * (BOX.d - INSET - 0.75 - T) * 16.387) / 1000,
-    1e-9,
-  );
-  // a mid box elsewhere loses two walls, as before
-  const box = { w: 15, h: 15, d: 15 };
-  assert.equal(midGrossLiters(box, T, INSET, "stack"), boxInternalLiters(15, 15, 15, T, INSET));
 });

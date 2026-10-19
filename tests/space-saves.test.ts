@@ -2,7 +2,7 @@
 // space, with the same model; a mirrored pair is one placement; the hardware numbers its channels.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { homeVenue } from "../src/lib/speaker/specParts";

@@ -7,7 +7,6 @@ import {
   cutParts,
   formatInches,
   midHardwarePlan,
-  midSystem,
   subBoxBracing,
   subDriverCenter,
   subGeometry,
@@ -97,22 +96,8 @@ test("each recess's liters come off the box's net volume, and the tuning follows
   close(null, fitted.recessL, liters, 1e-12);
   close(null, bare.netL - fitted.netL, liters, 1e-9);
   assert.ok(fitted.Fb > bare.Fb, "a smaller box tunes higher on the same vent");
-  // the planner's plan counts the same liters
+  // the box's hardware plan counts the same liters
   close(null, subPlan().liters, liters, 1e-12);
-  const mcfg = {
-    midDims: d.mDim,
-    wall: t,
-    inset: d.inset,
-    xoLo: d.xoLo,
-    xoHi: d.xoHi,
-    xoLoOrder: d.xoLoOrder,
-    xoHiOrder: d.xoHiOrder,
-    mAmpW: d.mAmpW,
-    layout: d.layout,
-  };
-  const m0 = midSystem(d.mid, mcfg),
-    m1 = midSystem(d.mid, { ...mcfg, hardware: DEFAULT_HARDWARE });
-  close(null, m0.netL - m1.netL, hardwareLiters(DEFAULT_HARDWARE, "mid", t, d.layout), 1e-9);
   // no handles: only the dish, which takes none; the tower's mid chamber has no hardware of its own
   const none: PaHardware = {
     ...DEFAULT_HARDWARE,

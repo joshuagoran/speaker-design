@@ -53,7 +53,7 @@ import {
   VENT_KIND,
 } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { configs, type GoldenConfig } from "./golden-configs";
+import { configs, type PaConfig } from "./pa-configs";
 import type { HifiDesignState, SpeakerChamber, SpeakerPart, SpeakerSpec } from "../src/types";
 
 const EPS = 1e-6;
@@ -61,7 +61,7 @@ const EPS = 1e-6;
 const IDENTITY = { id: "golden", name: "Golden" };
 
 /** A PA design's speaker of `part`, read through the adapter. */
-function paSpeaker(c: GoldenConfig, part: SpeakerPart): SpeakerSpec {
+function paSpeaker(c: PaConfig, part: SpeakerPart): SpeakerSpec {
   const read = layersFromPa(paDesign(c), IDENTITY, PA_FLOOR);
   const id = speakerIdentity(IDENTITY, part).id;
   const found = read.speakers.find((s) => s.id === id);

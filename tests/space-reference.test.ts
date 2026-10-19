@@ -2,7 +2,7 @@
 // (lib/acoustics/coverage audienceAverage): each reference reads its own spots, and a missing one reads nothing.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { audienceAverage, STATS_CLEARANCE_FT } from "../src/lib/acoustics/coverage";

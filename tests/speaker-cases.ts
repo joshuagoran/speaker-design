@@ -1,24 +1,21 @@
-// The designs and readers the speaker model's parity tests share (tests/speaker-response.test.ts,
-// tests/speaker-limits.test.ts): the golden Hi-fi and PA designs through the L1 adapters, today's PA models of them, and
-// curve comparisons on a log-frequency axis.
+// The designs and readers the speaker model's tests share (tests/speaker-response.test.ts,
+// tests/speaker-limits.test.ts, and others): the Hi-fi and PA designs through the L1 adapters, the PA sub box model of
+// them, and curve comparisons on a log-frequency axis.
 import assert from "node:assert";
-import type { GoldenConfig } from "./golden-configs";
+import { midBoxOf, type PaConfig } from "./pa-configs";
 import type { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import type { PaFloor } from "../src/lib/speaker/paSpec";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { needsWaveguide } from "../src/lib/speaker/twoWay";
-import { hornResponse, midSystem, subSystem } from "../src/lib/acoustics/boxModels";
+import { subSystem } from "../src/lib/acoustics/boxModels";
 import { towerMidDims } from "../src/lib/speaker/tower";
-import { savedHardware } from "../src/lib/build/hardware";
+import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
 import { panelNominalNear } from "../src/lib/build/panel";
 import {
-  CD_OPTIONS,
   HIFI_COAXES,
   HIFI_TWEETERS,
   HIFI_WAVEGUIDES,
-  HORN_OPTIONS,
-  MID_BOXES,
   MID_OPTIONS,
   SUB_OPTIONS,
 } from "../src/lib/data";
@@ -116,12 +113,12 @@ export const hifiCases: { name: string; state: HifiDesignState }[] = [
   { name: "passive", state: { ...DEFAULT_HIFI, drive: "passive" } },
 ];
 
-/** The coverage page's default floor: the stacks' spots, left then right (they don't move the speakers' responses). */
+/** The default coverage layout: the stacks' spots, left then right (they don't move the speakers' responses). */
 export const PA_FLOOR: PaFloor = DEFAULT_COVERAGE_LAYOUT;
 
-/** A golden PA design as the planner holds it (as tests/speaker-spec.test.ts reads it). */
-export function paDesign(c: GoldenConfig): PaPlannerDesign {
-  // older saved configs can lack some fields; they fall back to the planner's starting design
+/** A saved or synthetic PA design with every field set (as tests/speaker-spec.test.ts reads it). */
+export function paDesign(c: PaConfig): PaPlannerDesign {
+  // older saved configs can lack some fields; they fall back to the default PA design
   const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
     DEFAULT_PA;
   const cfg = {
@@ -143,11 +140,12 @@ export function paDesign(c: GoldenConfig): PaPlannerDesign {
   };
   return {
     ...cfg,
-    mDim: c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box,
+    mDim: midBoxOf(c),
     panel: c.panel ?? panelNominalNear(cfg.wall),
     hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
     spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
-    hardware: savedHardware(c.hardware),
+    // the seeds predate the handles and plates, so the defaults
+    hardware: c.hardware ?? DEFAULT_HARDWARE,
     divider: c.divider ?? DEFAULT_PA.divider,
   };
 }
@@ -177,18 +175,14 @@ export const withNet = (
   },
 });
 
-/** Today's PA models of a design: the sub, mid and horn as the planner runs them (the golden evaluation's configs). */
-export function paModels(cfg: PaPlannerDesign) {
+/** The PA sub box model of a design: its net air, tuning, curve, and limits. */
+export function paSubModel(cfg: PaPlannerDesign) {
   const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
   const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
-  const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);
-  const horn = HORN_OPTIONS.find((o) => o.id === cfg.horn);
-  assert.ok(sub && mid && cd?.hf && horn?.hf);
-  const midDims = cfg.layout === "tower" ? towerMidDims(cfg.cDim) : cfg.mDim;
-  const hardware = savedHardware(cfg.hardware);
+  assert.ok(sub && mid);
   const s = subSystem(sub, mid, {
     subBox: cfg.cDim,
-    midDims,
+    midDims: cfg.layout === "tower" ? towerMidDims(cfg.cDim) : cfg.mDim,
     wall: cfg.wall,
     inset: cfg.inset,
     portStyle: cfg.portStyle,
@@ -199,24 +193,9 @@ export function paModels(cfg: PaPlannerDesign) {
     portMax: cfg.portMax,
     layout: cfg.layout,
     braceStyle: cfg.braceStyle,
-    hardware,
+    hardware: cfg.hardware,
     xoLo: cfg.xoLo,
   });
-  const m = midSystem(mid, {
-    layout: cfg.layout,
-    braceStyle: cfg.braceStyle,
-    hardware,
-    midDims,
-    wall: cfg.wall,
-    inset: cfg.inset,
-    xoLo: cfg.xoLo,
-    xoHi: cfg.xoHi,
-    xoLoOrder: cfg.xoLoOrder,
-    xoHiOrder: cfg.xoHiOrder,
-    mAmpW: cfg.mAmpW,
-  });
-  // the horn at 1 W into 8 Ω: 2.83 V
-  const h = hornResponse(cd.hf, horn.hf, cfg.xoHi, 1, cfg.xoHiOrder);
-  assert.ok(s.mdl && m.mdl && h);
-  return { s, sub: s.mdl, m, mid: m.mdl, horn: h };
+  assert.ok(s.mdl);
+  return { s, sub: s.mdl };
 }

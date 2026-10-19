@@ -44,9 +44,9 @@ import { braceNoteLines } from "../src/lib/build/bracingNotes";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs";
 import { formatHz } from "../src/lib/format";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES } from "../src/lib/data";
+import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent } from "./helpers";
-import { configs } from "./golden-configs";
+import { configs, midBoxOf } from "./pa-configs";
 import type {
   BoxBracing,
   BracePanelId,
@@ -79,7 +79,7 @@ function goldenBoxes(style: BraceStyleId | undefined) {
   return configs.flatMap((c) => {
     const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
     const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
-    const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
+    const mDim = midBoxOf(c);
     const wall = c.wall ?? 0.75,
       inset = c.inset ?? 0.75,
       layout = c.layout ?? "stack";
@@ -357,7 +357,7 @@ test("the optimizers' brace estimate stays near the rule over the golden boxes, 
       for (const c of configs) {
         const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
         const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
-        const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
+        const mDim = midBoxOf(c);
         const inset = c.inset ?? 0.75;
         const ruled = subBoxBracing(
           c.cDim,

@@ -26,21 +26,13 @@ import type {
   BoxHandles,
   BoxHardwarePlan,
   CogMass,
-  Dims2,
   Dims3,
   FillDriver,
-  FillSystem,
-  FillSystemConfig,
-  FrequencyPoint,
   HighpassType,
-  HornHf,
   HornResponse,
   MidDriver,
   PlateHole,
-  MidSystem,
-  MidSystemConfig,
   PaLayout,
-  PaMaxPoint,
   PlateStock,
   PortStyle,
   SealedBoxModel,
@@ -68,8 +60,6 @@ import {
 import { defaultPanelIn, panelLbPerSqFt } from "../build/panel";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
-import { PA_SLIDERS } from "../../constants/paSliders";
-import { boxSliderMins, upToStep } from "../build/boxFit";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import {
   modelTubeElbows,
@@ -526,17 +516,6 @@ export function closedBox(
 // Internal liters with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
 export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
-/**
- * A mid box's air before the driver, braces and hardware, L. The tower's chamber (towerMidDims) is bounded by the
- * partitions (towerSpec), whose top faces stand its height apart: the sub/mid one lies under its floor line and only
- * the mid/horn one comes out of it, so its clear height is the height less one wall, not two.
- */
-export const midGrossLiters = (
-  dims: Dims3,
-  t: number,
-  inset: number,
-  layout: PaLayout | undefined,
-) => boxInternalLiters(dims.w, layout === "tower" ? dims.h + t : dims.h, dims.d, t, inset);
 // Plywood weight, lb/ft², at the wall's exact thickness (lib/build/panel).
 export const plywoodLbPerSqFt = (t: number) => panelLbPerSqFt(t, PLYWOOD_MATERIAL);
 
@@ -1066,15 +1045,6 @@ export function braceWoodEstimate(
   const frames = (ax: BoxAxis) => Math.max(0, inner[ax] / span - 1) * windowWoodIn3(inner, ax, t);
   return { windowIn3: scale * (frames("x") + frames("y") + frames("z")), ribIn3: 0 };
 }
-/** braceWoodEstimate for the mid box: none in the tower (midBoxBracing). */
-export const midBraceEstimate = (
-  box: Dims3,
-  t: number,
-  inset: number,
-  layout: PaLayout | undefined,
-  style: BraceStyleId,
-  back: BackJointId = DEFAULT_BACK_JOINT,
-) => (layout === "tower" ? null : braceWoodEstimate(box, t, inset, style, back));
 /** A box's braces' and ribs' wood, in³. */
 export const braceWoodIn3 = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined) =>
   b ? b.windowIn3 + b.ribIn3 : 0;
@@ -2065,23 +2035,9 @@ export function sineLimitAt(
   const who = V === vp ? "port" : V === vx ? "Xmax" : V === vt ? "thermal" : "amp";
   return { V, who, vp, vx, vt };
 }
-// Per-frequency sine limit: each frequency meets its own port and excursion limits.
-export function maxOutputCurve(
-  curve: { f: number; spl: number; xmm: number; vel?: number }[],
-  ts: Pick<ThieleSmall, "aes" | "imp" | "Xmax">,
-  AMP_V: number,
-  portMax: number,
-): PaMaxPoint[] {
-  return curve.map((o): PaMaxPoint => {
-    const { V, who } = sineLimitAt(o, ts, AMP_V, portMax);
-    return { f: o.f, spl: o.spl + 20 * Math.log10(V / AMP_V), who };
-  });
-}
 // The sub-bass band, Hz: the low end the sub's readout averages, an absolute level to compare designs by (F3 is relative
 // to each driver's own passband).
 export const SUB_BASS_BAND_HZ = [30, 50] as const;
-export const nearestPoint = <P extends { f: number }>(curve: P[], f: number): P =>
-  curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 /**
  * The amp power, W into the channel's `load` (lib/power), at which an HF section (at its nominal impedance) behind a
  * passive pad of `pad` dB reaches its rating `ratingW` (W into its impedance): the Fills page's and the Speaker page's
@@ -2115,26 +2071,6 @@ export function hornPower(
   const P = Math.min(pAmp, pProg);
   return { P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "thermal" };
 }
-export function hornResponse(
-  hf: CompressionHf | undefined,
-  hz: Partial<HornHf>,
-  xoHi: number,
-  hfAmpW: number,
-  order: CrossoverOrder,
-): HornResponse | null {
-  if (!hf || hf.sens == null || !hf.aes) return null;
-  const power = hornPower(hf, xoHi, hfAmpW);
-  const { P } = power;
-  const low = (hz && hz.lowHz) || 0;
-  const curve: FrequencyPoint[] = [];
-  for (let i = 0; i < 300; i++) {
-    const f = 300 * Math.pow(20000 / 300, i / 299);
-    const g = linkwitzRileyHighpass(f, xoHi, order) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
-    curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
-  }
-  return { ...power, hf, curve, flat: hf.sens + 10 * Math.log10(P) };
-}
-
 // Keele: a horn holds its angle down to f = 25 400 / (mouth width m x angle deg) (1e6 in-deg-Hz).
 export const keeleFrequency = (covDeg: number, mouthIn: number) =>
   25400 / (mouthIn * 0.0254 * covDeg);
@@ -2160,51 +2096,6 @@ export const subWeightLb = (
   (drvLb || 0) +
   hardwareLb +
   SUB_FIXINGS_LB;
-export const midWeightLb = (
-  b: Dims3,
-  wall: number,
-  bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
-  /** the handles, dish, jacks and posts (lib/build/hardware hardwareLb) */
-  hardwareLb = 0,
-) =>
-  (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
-  braceLb(bracing, wall) +
-  hardwareLb +
-  MID_FIXINGS_LB;
-/**
- * The tower's cabinet above its sub box, lb: its mid chamber and horn section (towerSpec), which the tower weighs in
- * place of midWeightLb's mid box. The shell over them by its outer faces as subWeightLb weighs a box (the sides, the
- * back, and the flat top or the arch's bent strip), the 3/4″ baffle less the mid's and the horn's cutouts, the
- * partitions over the sub box (the sub/mid one is the sub box's top in subWeightLb), and MID_FIXINGS_LB. The chamber
- * has no braces or hardware of its own.
- */
-export function towerMidWeightLb(
-  subBox: Pick<Dims3, "w" | "d">,
-  wall: number,
-  inset: number,
-  horn: TowerHorn,
-  mid: Pick<MidDriver, "size">,
-) {
-  // what sits over the sub box doesn't depend on the box's height
-  const spec = towerSpec({ w: subBox.w, h: 0 }, wall, horn);
-  const { w: W, d: D } = subBox,
-    ext = spec.extH,
-    R = W / 2;
-  // the front and back over the sub box: a rectangle, or one to the arch's springline and a half disc
-  const face = spec.archTop ? W * (ext - R) + (Math.PI / 2) * R * R : W * ext;
-  const sides = 2 * D * (spec.archTop ? ext - R : ext);
-  const top = spec.archTop ? archStripIn(W, wall) * D : W * D;
-  const partitions =
-    (spec.partitions.length - 1) * (W - 2 * wall) * (D - inset - BAFFLE_PLY_IN - wall);
-  const cutouts =
-    (Math.PI / 4) * DRIVER_CUTOUT_IN[mid.size] ** 2 + towerHornCutout(subBox, wall, horn).area;
-  return (
-    ((face + sides + top + partitions) * plywoodLbPerSqFt(wall) +
-      (face - cutouts) * plywoodLbPerSqFt(BAFFLE_PLY_IN)) /
-      144 +
-    MID_FIXINGS_LB
-  );
-}
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
 // Vent and volumes only (no model): what the optimizer's vent solver iterates on.
@@ -2286,159 +2177,12 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
   };
 }
 
-// Sub through the lowpass at the crossover (LR24, or LR48 with order 8), each frequency at its own
-// sine limit (the filter scales excursion and port speed with the output).
-export function subThroughLowpass(
-  mdl: VentedBoxModel,
-  ts: Pick<ThieleSmall, "aes" | "imp" | "Xmax">,
-  AMP_V: number,
-  portMax: number,
-  xoLo: number,
-  order: CrossoverOrder,
-): FrequencyPoint[] {
-  const vt = thermalVoltageLimit(ts);
-  return mdl.curve.map((o) => {
-    const g = linkwitzRileyLowpass(o.f, xoLo, order);
-    const vp = (AMP_V * portMax) / (o.vel * g),
-      vx = (AMP_V * ts.Xmax) / (o.xmm * g);
-    const V = Math.min(vp, vx, vt, AMP_V);
-    return { f: o.f, spl: o.spl + 20 * Math.log10(g) + 20 * Math.log10(V / AMP_V) };
-  });
-}
-
 // ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
 // cfg: { midDims, wall, inset, xoLo, xoHi, xoLoOrder, xoHiOrder, mAmpW }
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
-/**
- * The mid's net volume, L: the gross less the driver, the braces' and ribs' wood (midBoxBracing) and the hardware's
- * recesses (lib/build/hardware hardwareLiters).
- */
-export const midNetLiters = (
-  grossL: number,
-  disp: number,
-  bracing: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
-  recessL = 0,
-) => Math.max(5, grossL - disp - (braceWoodIn3(bracing) * 16.387) / 1000 - recessL);
-/** The Qtc under which the checks call a sealed box overdamped. */
-export const SEALED_QTC_MIN = 0.5;
-/**
- * The volume, L, that gives a sealed box Qtc `qtc`, as closedBox reads it (after the stuffing's gain): its own T/S
- * arithmetic solved for the box, Qtc = Qts √(1 + Vas/Vb). Null when the driver's Qts is at or above `qtc` (no box gives it).
- */
-export function sealedLitersForQtc(ts: BoxModelTS, qtc: number): number | null {
-  const Mms = ts.Mms / 1000,
-    Sd = ts.Sd / 10000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const VasL = 1.18 * 343 * 343 * Cms * Sd * Sd * 1000;
-  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
-  const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
-  return Qts >= qtc ? null : VasL / (Math.pow(qtc / Qts, 2) - 1);
-}
-/** The baffle face a mid needs, in: the driver and a rim round it. */
-export const midBaffleNeedIn = (size: MidDriver["size"]) => size + 1.2;
-/** The smallest mid box face that holds its driver, in: the page's sliders and stored size start there (lib/build/boxFit). */
-export const midBoxMin = (size: MidDriver["size"]): Dims2 => ({
-  w: midBaffleNeedIn(size),
-  h: midBaffleNeedIn(size),
-});
-/** What sizes a mid box's volume besides its dimensions. */
-type MidBoxConfig = Pick<
-  MidSystemConfig,
-  "wall" | "inset" | "layout" | "braceStyle" | "braceEstimate" | "hardware" | "backJoint"
->;
-/** The mid box's braces and ribs as midSystem deducts them: the estimate, or the rule's own. */
-const midBracingOf = (mid: MidDriver, cfg: MidBoxConfig, dims: Dims3) =>
-  cfg.braceEstimate
-    ? midBraceEstimate(
-        dims,
-        cfg.wall,
-        cfg.inset,
-        cfg.layout,
-        cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
-        cfg.backJoint,
-      )
-    : midBoxBracing(
-        dims,
-        cfg.wall,
-        cfg.inset,
-        mid,
-        cfg.layout,
-        cfg.braceStyle,
-        cfg.hardware?.mid,
-        cfg.backJoint,
-      );
-/**
- * The net volume, L, that gives the mid Qtc 0.5, when a box it fits can be that small; else null. The smallest box it
- * fits has the face it needs (midBaffleNeedIn) and room behind for its mounting depth (from the baffle's front) with
- * DRIVER_CLEARANCE_IN to spare, each up to the planner's slider step, with the same displacement, braces and hardware.
- * Null in the tower: the sub's footprint sets the mid's chamber.
- */
-export function midSmallerBoxNetL(
-  mid: MidDriver,
-  cfg: MidBoxConfig,
-  disp: number,
-  recessL: number,
-): number | null {
-  const effL = sealedLitersForQtc(mid.ts, SEALED_QTC_MIN);
-  if (effL == null || cfg.layout === "tower") return null;
-  const dims = {
-    // the face the page's sliders start at for this driver
-    ...boxSliderMins(midBoxMin(mid.size), { w: PA_SLIDERS.midW, h: PA_SLIDERS.midH }),
-    d: upToStep(
-      (mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size]) + DRIVER_CLEARANCE_IN + cfg.inset + cfg.wall,
-      PA_SLIDERS.midD,
-    ),
-  };
-  const fitNetL = midNetLiters(
-    boxInternalLiters(dims.w, dims.h, dims.d, cfg.wall, cfg.inset),
-    disp,
-    midBracingOf(mid, cfg, dims),
-    recessL,
-  );
-  const netL = effL / STUFFING_VOLUME_GAIN;
-  return netL >= fitNetL ? netL : null;
-}
 /** A mid's displacement, L: its published one, else assumed by size (4 L for a 15″, 2.5 L for a smaller one). */
 export const midDisplacementL = (mid: Pick<MidDriver, "size" | "ts">) =>
   mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5;
-export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
-  const V = ampVoltage(cfg.mAmpW, mid.ts);
-  const grossL = midGrossLiters(cfg.midDims, cfg.wall, cfg.inset, cfg.layout);
-  const disp = midDisplacementL(mid);
-  const recessL = hardwareLiters(cfg.hardware, "mid", cfg.wall, cfg.layout);
-  const netL = midNetLiters(grossL, disp, midBracingOf(mid, cfg, cfg.midDims), recessL);
-  const effL = netL * STUFFING_VOLUME_GAIN;
-  // the curve runs on past 2 kHz when the lowpass sits above 800 Hz, so its skirt shows on the system chart
-  const mdl = mid.ts
-    ? closedBox(mid.ts, effL, cfg.xoLo, cfg.xoHi, V, {
-        fTop: LOWPASS_SKIRT_SPAN * cfg.xoHi,
-        hpOrder: cfg.xoLoOrder,
-        lpOrder: cfg.xoHiOrder,
-        phase: cfg.phase,
-      })
-    : null;
-  const vTherm = mid.ts ? thermalVoltageLimit(mid.ts) : 0;
-  const useV = Math.min(vTherm, V);
-  if (!mid.ts || !mdl)
-    return {
-      V,
-      grossL,
-      disp,
-      recessL,
-      netL,
-      effL,
-      vTherm,
-      useV,
-      smallerBoxNetL: null,
-      mdl: null,
-      max: null,
-    };
-  const max = maxOutputCurve(mdl.curve, mid.ts, V, Infinity); // no port: Xmax, thermal, amp
-  const smallerBoxNetL =
-    mdl.Qtc < SEALED_QTC_MIN ? midSmallerBoxNetL(mid, cfg, disp, recessL) : null;
-  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, smallerBoxNetL, mdl, max };
-}
-
 /**
  * The pad that brings a coaxial's HF section down to its woofer behind a passive network, dB (never negative). Both
  * sensitivities are 1 W / 1 m at their own impedance, so the HF's moves to 2.83 V first (a 16 ohm section gets half
@@ -2461,47 +2205,4 @@ export function fillHfPadDb(hf: FillDriver["hf"], wooferSensDb: number): number 
  */
 export function fillDriverPadDb(drv: Pick<FillDriver, "hf" | "lfSens">): number {
   return fillHfPadDb(drv.hf, drv.lfSens);
-}
-
-// ---- passive coaxial fills ----
-// drv: FILL_OPTIONS entry. cfg: { boxType: "vented" | "sealed", dim {w,h,d} external in, port {n, dia, len},
-// hp (highpass to the subs, Hz), hpOrder (its slope: 4 = LR24, 8 = LR48), ampW (per box, watts into the woofer's
-// impedance, lib/power), portMax }. 1/2" walls throughout.
-export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem | null {
-  const { boxType, dim, port, hp, hpOrder, ampW, portMax } = cfg;
-  const ts = drv.ts,
-    V = ampVoltage(ampW, ts),
-    vented = boxType === "vented";
-  const gross = ((dim.w - 1) * (dim.h - 1) * (dim.d - 1) * 16.387) / 1000;
-  const pArea = vented ? port.n * Math.PI * Math.pow(port.dia / 2, 2) : 0;
-  const pVol = (pArea * port.len * 16.387) / 1000;
-  const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
-  const net = Math.max(3, gross - disp - (vented ? pVol : 0));
-  const eff = vented ? net : net * STUFFING_VOLUME_GAIN; // sealed boxes are stuffed
-  const vM = vented
-    ? boxModel(ts, eff, pArea, port.len, hp, V, crossoverSlopeName(hpOrder), { nPorts: port.n })
-    : null;
-  // sealed: the same highpass to the subs, and no lowpass (lpOrder is unused without one)
-  const sM = vented ? null : closedBox(ts, eff, hp, null, V, { hpOrder, lpOrder: hpOrder });
-  const m = vM || sM;
-  if (!m) return null; // a vented box with no port area or length has no model
-  const max = maxOutputCurve(m.curve, ts, V, portMax).filter((o) => o.f <= 300);
-  const sens = m.ref - 20 * Math.log10(V / 2.83);
-  // system -3 dB, highpass included, for both box types
-  const f3 = vM
-    ? vM.f3
-    : (m.curve.find((o) => o.spl >= m.ref - 3) || m.curve[m.curve.length - 1]).f;
-  // HF through a passive network, padded down to the woofer: reaches its program rating (2 x AES)
-  // only at an amp power well above what the woofer sees. The pad matches the two at the same amp voltage: both
-  // sensitivities are 1 W/1 m at their own impedance, so the HF's is moved to 2.83 V (a 16 ohm section gets half the
-  // power the 8 ohm woofer does), as the Hi-fi engine's level match does
-  const hf = drv.hf;
-  const pad = fillDriverPadDb(drv);
-  const hfLimW = hf ? hfLimitWatts(2 * hf.aes, hf, pad, ts) : null; // amp watts into the woofer's impedance
-  const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1; // 1/2" birch ~1.6 lb/ft2
-  const portLimited = vented && max.some((o) => o.who === "port");
-  const common = { V, gross, pArea, disp, net, eff, max, sens, f3, pad, hfLimW, lb, portLimited };
-  if (vM) return { ...common, boxType: "vented", vM, sM: null };
-  if (sM) return { ...common, boxType: "sealed", vM: null, sM };
-  return null;
 }

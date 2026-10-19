@@ -1,9 +1,9 @@
 // Props for the 3D scene tests: every golden config, the default PA and the other layouts.
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, HORN_OPTIONS, CD_OPTIONS } from "../src/lib/data";
+import { SUB_OPTIONS, MID_OPTIONS, HORN_OPTIONS, CD_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import type { Props } from "../src/components/stack-view/buildStackScene";
 import type { PaDesignConfig } from "../src/types";
-import { configs } from "./golden-configs";
+import { configs, midBoxOf } from "./pa-configs";
 
 const PLINTH_IN = 3; // the planner's fixed plinth
 
@@ -19,7 +19,7 @@ export function scenePropsOf(
   const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
   const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
   const horn = HORN_OPTIONS.find((o) => o.id === c.horn) ?? HORN_OPTIONS[0];
-  const midBox = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
+  const midBox = midBoxOf(c);
   return {
     sub: { ...sub, box: c.cDim },
     mid: { ...mid, box: midBox },

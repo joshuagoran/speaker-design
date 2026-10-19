@@ -3,7 +3,7 @@
 // presets and templates that set it.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs } from "./golden-configs";
+import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";

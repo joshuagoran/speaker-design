@@ -86,15 +86,6 @@ export const savedBox = (x: unknown, fallback: BoxHandles): BoxHandles => {
     backIn: offset(Reflect.get(x, "backIn")),
   };
 };
-/** A saved design's hardware: each box's handles where they read right, else the defaults (older saves have none). */
-export function savedHardware(x: unknown): PaHardware {
-  if (typeof x !== "object" || x === null) return DEFAULT_HARDWARE;
-  return {
-    sub: savedBox(Reflect.get(x, "sub"), DEFAULT_HARDWARE.sub),
-    mid: savedBox(Reflect.get(x, "mid"), DEFAULT_HARDWARE.mid),
-  };
-}
-
 /** Whether a box has hardware of its own: the tower's mid chamber is part of the sub's cabinet. */
 export const boxTakesHardware = (box: HardwareBoxId, layout: PaLayout | undefined) =>
   box === "sub" || layout !== "tower";

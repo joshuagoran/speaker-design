@@ -4,8 +4,8 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { midBoxBracing, subBoxBracing } from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES } from "../src/lib/data";
-import { configs } from "./golden-configs";
+import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
+import { configs, midBoxOf } from "./pa-configs";
 import type { BoxBracing, BraceStyleId } from "../src/types";
 
 const STYLES: readonly BraceStyleId[] = ["window", "ribs", "both"];
@@ -30,7 +30,7 @@ const designs = [
 const partsOf = (c: (typeof designs)[number]) => ({
   sub: SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0],
   mid: MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0],
-  mDim: c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box,
+  mDim: midBoxOf(c),
   wall: c.wall ?? 0.75,
   inset: c.inset ?? 0.75,
   layout: c.layout ?? "stack",

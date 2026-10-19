@@ -35,7 +35,7 @@ src/lib/optimizer/              what the optimizers share: amp steps, goal keeps
 index.html                      Vite entry
 tailwind.config.js              Tailwind, compiled at build time
 tsconfig.json                   strict TypeScript (type-checked by `vp check`; Vite does the emit)
-tests/                          Vitest suites, golden snapshot, optimizer snapshots, mobile layout and 3D memory checks
+tests/                          Vitest suites, optimizer snapshots, mobile layout and 3D memory checks
 tools/dead-exports.mjs          lists the code in src/ that nothing live uses (`vp run dead-exports`)
 build/build.sh                  vp build + build/inline.mjs -> one self-contained page
 build/serve.sh                  build + serve on :8901
@@ -53,7 +53,6 @@ Node `^22.18.0 || ^24.11.0 || >=26` and Python 3 (for the preview server). The t
 pnpm install            # or `vp install` with the global vp CLI
 pnpm exec vp check      # format, lint, type check
 pnpm exec vp test       # tests (Vitest)
-pnpm run golden         # rewrite tests/golden.json after an intentional change (golden.test.ts only reads it)
 pnpm run speaker-optimizer-snapshot   # rewrite the optimizer snapshots after an intentional change
 pnpm run stack-optimizer-snapshot
 pnpm run dead-exports   # list the code in src/ that nothing live uses
@@ -111,8 +110,8 @@ A stack names its speakers, and a space names its stacks.
 
 The old PA and Hi-fi designs (collections `configs` and `hifiConfigs`, and the
 `planner.*`, `hifi.*`, and `coverage.layout` localStorage keys) are no longer
-read. They stay in place. `data/configs-seed.json` keeps the old PA seeds for
-the golden snapshot.
+read. They stay in place. `data/configs-seed.json` keeps the old PA seeds as
+test designs.
 
 ## How the planner is put together
 
@@ -122,8 +121,8 @@ the golden snapshot.
   `FILL_OPTIONS`, ...), derived from the catalog. Drivers with a `ts` block get modeled; ones without show a note.
 - `src/lib/acoustics/` — the models, pure TypeScript:
   - `boxModels.ts` — `boxModel` (vented box: leakage QL 7, port losses Qp 50, each opening's end correction),
-    `closedBox` (sealed, LR24 or LR48 crossovers), the horn's datasheet model (`hornResponse`), the maximum-output
-    layer (`sineLimitAt`), and the weights.
+    `closedBox` (sealed, LR24 or LR48 crossovers), the horn's power (`hornPower`), the maximum-output layer
+    (`sineLimitAt`), and the weights.
   - `wooferBox.ts` — a woofer in a sealed, vented, or passive radiator box; `directivity.ts` — pistons, waveguides,
     and the baffle step.
   - `hornModel.ts` and `network/` — the 1-D horn engine (Hornresp-style).
@@ -134,9 +133,7 @@ the golden snapshot.
 - `src/lib/build/` — the cutlist packer (in a worker), bracing by rule, hardware, horn mounts, tubes, and the vent plan.
 - Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at,
   minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`).
-- Tests (`tests/`) check each function against an independent reference. `tests/golden.json` snapshots the box models'
-  key outputs for the saved and synthetic PA configs (regenerate with `vp run golden` after an intentional change).
-  The speaker and stack optimizer snapshots pin the cards each optimizer picks. CI runs them, the phone check
+- Tests (`tests/`) check each function against an independent reference. The speaker and stack optimizer snapshots pin the cards each optimizer picks. CI runs them, the phone check
   (`tests/mobile-check.mjs`), and the 3D checks (`tests/three-memory-check.mjs` and the horn mount tests) as parallel
   jobs. See `docs/testing-plan.md` and `docs/calc-audit.md`.
 - Render tool, for looking at the 3D view by eye (not in `vp test` or CI): `node tests/render-speaker.mjs [outDir]
