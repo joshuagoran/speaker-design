@@ -1,16 +1,7 @@
 import { PRESSED_CLASSES } from "./components/ui/buttonStyles";
-import { usePaPlanner } from "./pages/pa-stack/hooks/usePaPlanner";
-import { PaStackPage } from "./pages/pa-stack/PaStackPage";
 import { NotesPage } from "./pages/notes/NotesPage";
-import { FillsPage } from "./pages/fills/FillsPage";
-import { PaCutlistPage } from "./pages/cutlist/PaCutlistPage";
-import { HifiCutlistPage } from "./pages/cutlist/HifiCutlistPage";
 import { SpeakerCutlistPage } from "./pages/cutlist/SpeakerCutlistPage";
 import { StackCutlistPage } from "./pages/cutlist/StackCutlistPage";
-import { HifiPage } from "./pages/hifi/HifiPage";
-import { CoveragePage } from "./pages/coverage/CoveragePage";
-import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
-import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
 import { SpeakerPage } from "./pages/speaker/SpeakerPage";
 import { useSpeakerPage } from "./pages/speaker/useSpeakerPage";
 import { StackPage } from "./pages/stack/StackPage";
@@ -39,9 +30,9 @@ import {
 /** The page at the address (`pageAt`). */
 const viewOf = (): AppPage => pageAt(window.location.pathname, window.location.hash);
 
-/** The project a page belongs to. */
+/** The project a page belongs to (Notes, outside the nav, shows the Speaker project's tabs). */
 const projectOf = (v: AppPage): ProjectId =>
-  entriesOf(PROJECT_PAGES).find(([, pages]) => pages.some(([p]) => p === v))?.[0] ?? "pa";
+  entriesOf(PROJECT_PAGES).find(([, pages]) => pages.some(([p]) => p === v))?.[0] ?? "speaker";
 
 /** The page shell: hash routing, the header navigation, and the design state of every page (held here so it survives switching tabs). */
 export function App({ draftFailed = false }: { draftFailed?: boolean }) {
@@ -51,18 +42,15 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
-  const planner = usePaPlanner();
-  const hifi = useHifiPlanner();
-  const fills = useFillsPlanner();
   const speakerPage = useSpeakerPage();
   const stack = useStack();
   const space = useSpace();
   const project = projectOf(view);
-  // two levels: the project (PA stack, Hi-fi, Speaker, Stack or Space), then its own pages
+  // two levels: the project (Speaker, Stack, or Space), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
-      history.replaceState(null, "", v === "planner" ? " " : href);
+      history.replaceState(null, "", href);
     } catch {}
     setView(v);
     window.scrollTo(0, 0);
@@ -126,28 +114,16 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
         {/* Notes has no tab: it opens only at the path /notes */}
         {view === NOTES_PAGE ? (
           <NotesPage />
-        ) : view === "fills" ? (
-          <FillsPage fills={fills} />
-        ) : view === "hifi" ? (
-          <HifiPage hifi={hifi} />
-        ) : view === "hifiCutlist" ? (
-          <HifiCutlistPage hifi={hifi} />
-        ) : view === "cutlist" ? (
-          <PaCutlistPage planner={planner} />
-        ) : view === "speaker" ? (
-          <SpeakerPage speakerPage={speakerPage} planner={planner} hifi={hifi} />
         ) : view === "speakerCutlist" ? (
           <SpeakerCutlistPage speakerPage={speakerPage} />
         ) : view === "stack" ? (
-          <StackPage stack={stack} speakerPage={speakerPage} planner={planner} />
+          <StackPage stack={stack} speakerPage={speakerPage} />
         ) : view === "stackCutlist" ? (
           <StackCutlistPage stack={stack} />
         ) : view === "space" ? (
           <SpacePage space={space} stack={stack} speakerPage={speakerPage} />
-        ) : view === "coverage" ? (
-          <CoveragePage planner={planner} />
         ) : (
-          <PaStackPage planner={planner} />
+          <SpeakerPage speakerPage={speakerPage} />
         )}
       </div>
     </div>
