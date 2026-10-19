@@ -148,7 +148,7 @@ export function SpeakerSettings({
       folds={compareView ? undefined : folds}
       foldsAt="desktop"
       className={SETTINGS_SHEET_CLASS}
-      bodyClassName={`${settingsSheetBodyClass(sheet.open)} ${compareView ? SHEET_BELOW_CHART_CLASS : ""}`}
+      bodyClassName={`${settingsSheetBodyClass(sheet.open, !compareView)} ${compareView ? SHEET_BELOW_CHART_CLASS : ""}`}
       top={
         <SettingsSheetTabs
           sections={SPEAKER_SETTINGS_SECTIONS}

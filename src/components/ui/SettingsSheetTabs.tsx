@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { PRESSED_CLASSES } from "./buttonStyles";
 import { SectionHeading } from "./SectionHeading";
 import { UI_TEXT } from "../../constants/uiText";
-import { useStoredState } from "../../hooks/useStoredState";
+import { useStoredStateFrom } from "../../hooks/useStoredState";
 import { entriesOf } from "../../lib/records";
 
 /** A `SettingsColumn`'s classes that make it the phone settings sheet: pinned to the bottom of the screen below md. */
@@ -13,11 +13,13 @@ export const SETTINGS_SHEET_CLASS =
 const SHEET_HEIGHT_VAR = "--sheet-h";
 
 /**
- * The phone settings sheet's scrolling body: the height the viewer set (30% of the screen until then; never past 70%,
- * for a height set on a taller screen), the same on every tab; hidden while the sheet is closed.
+ * The phone settings sheet's scrolling body: the height the viewer set (30% of the screen until then; never so tall
+ * that the whole sheet passes 78%, for a height set on a taller screen or before the phone turned), the same on every
+ * tab; hidden while the sheet is closed. With no heading (Compare), the body also takes the heading's row, so the
+ * sheet stays the same height.
  */
-export const settingsSheetBodyClass = (open: boolean) =>
-  `max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:h-[min(var(--sheet-h,30dvh),70dvh)] ${open ? "" : "max-md:hidden"}`;
+export const settingsSheetBodyClass = (open: boolean, heading = true) =>
+  `max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 ${heading ? "max-md:h-[min(var(--sheet-h,30dvh),calc(78dvh-7.5rem))]" : "max-md:h-[calc(min(var(--sheet-h,30dvh),calc(78dvh-7.5rem))+2.25rem)]"} ${open ? "" : "max-md:hidden"}`;
 
 /**
  * A cap on the phone sheet's body, so the sheet stays under 58% of the screen and a chart at the top of the screen
@@ -30,7 +32,7 @@ export const SHEET_BELOW_CHART_CLASS = "max-md:max-h-[calc(58dvh-7.5rem)]";
  * also the heading and the body's height (as `settingsSheetBodyClass` sets it).
  */
 export const settingsSheetRoomClass = (open: boolean) =>
-  open ? "max-md:pb-[calc(min(var(--sheet-h,30dvh),70dvh)+9rem)]" : "max-md:pb-28";
+  open ? "max-md:pb-[calc(min(var(--sheet-h,30dvh),calc(78dvh-7.5rem))+9rem)]" : "max-md:pb-28";
 
 /** The shortest and the tallest the open sheet goes, and its "half" height, as shares of the screen's height. */
 export const SHEET_SHARE = { min: 0.18, half: 0.45, max: 0.78 } as const;
@@ -40,6 +42,9 @@ const KEY_STEP_PX = 32;
 
 /** How far the bar must move before a press counts as a drag, not a tap, px. */
 const DRAG_START_PX = 4;
+
+/** The open tab's heading row's height (`h-9`), rem: the body takes it when there is no heading. */
+const HEADING_ROW_REM = 2.25;
 
 /** How far past its shortest height the sheet must be dragged down to close, px. */
 const CLOSE_PAST_PX = 32;
@@ -78,7 +83,12 @@ export interface SettingsSheet<Id extends string> {
 export function useSettingsSheet<Id extends string>(key: string, first: Id): SettingsSheet<Id> {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Id>(first);
-  const [heightPx, setHeightPx] = useStoredState<number | null>(`${key}.sheetHeight`, null);
+  // a stored value that is not a height (an older or broken save) counts as none
+  const [heightPx, setHeightPx] = useStoredStateFrom<number | null, unknown>(
+    `${key}.sheetHeight`,
+    null,
+    (v) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null),
+  );
   return {
     open,
     tab,
@@ -148,7 +158,11 @@ export function SettingsSheetTabs<Id extends string>({
   const draw = (px: number) => {
     const d = drawn();
     if (!d) return null;
-    const body = Math.max(0, clampSheetHeight(px, innerHeight) - d.chrome);
+    // stored as the body under a heading, so the sheet keeps its height on a tab without one
+    const headingPx = heading
+      ? 0
+      : HEADING_ROW_REM * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const body = Math.max(0, clampSheetHeight(px, innerHeight) - d.chrome - headingPx);
     d.page.style.setProperty(SHEET_HEIGHT_VAR, `${Math.round(body)}px`);
     return body;
   };
@@ -158,10 +172,21 @@ export function SettingsSheetTabs<Id extends string>({
     if (sheet.heightPx === null) page?.style.removeProperty(SHEET_HEIGHT_VAR);
     else page?.style.setProperty(SHEET_HEIGHT_VAR, `${Math.round(sheet.heightPx)}px`);
   };
+  /** draws the sheet `px` tall in all and keeps that height */
+  const keep = (px: number) => {
+    const body = draw(px);
+    if (body !== null) sheet.setHeightPx(body);
+  };
   const tap = () => {
     if (!sheet.open) return sheet.show(sheet.tab);
     const d = drawn();
-    if (d) sheet.setHeightPx(draw(sheetTapHeight(d.total, innerHeight)));
+    if (d) keep(sheetTapHeight(d.total, innerHeight));
+  };
+  /** a drag that ends without a lift (cancelled, or the bar lost the pointer): back to the stored height */
+  const cancel = (pointerId: number) => {
+    if (drag.current?.id !== pointerId) return;
+    drag.current = null;
+    undraw();
   };
   return (
     <div className="md:hidden flex flex-col">
@@ -170,9 +195,16 @@ export function SettingsSheetTabs<Id extends string>({
         role="separator"
         aria-orientation="horizontal"
         aria-label={UI_TEXT.settings}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={
+          sheet.open ? Math.round((100 * (sheet.heightPx ?? 0.3 * innerHeight)) / innerHeight) : 0
+        }
         tabIndex={0}
         className="h-7 flex items-center justify-center cursor-ns-resize touch-none select-none rounded-t-lg"
         onPointerDown={(e) => {
+          // one finger, or the main mouse button, drags at a time
+          if (!e.isPrimary || e.button !== 0 || drag.current) return;
           e.currentTarget.setPointerCapture(e.pointerId);
           const d = drawn();
           drag.current = {
@@ -201,13 +233,15 @@ export function SettingsSheetTabs<Id extends string>({
           if (sheetDragCloses(p.px, innerHeight)) {
             undraw();
             sheet.close();
-          } else sheet.setHeightPx(draw(p.px));
+          } else keep(p.px);
         }}
-        onPointerCancel={() => {
-          drag.current = null;
-          undraw();
-        }}
+        onPointerCancel={(e) => cancel(e.pointerId)}
+        onLostPointerCapture={(e) => cancel(e.pointerId)}
         onKeyDown={(e) => {
+          if (e.key === "Escape" && sheet.open) {
+            e.preventDefault();
+            return sheet.close();
+          }
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             return tap();
@@ -216,7 +250,7 @@ export function SettingsSheetTabs<Id extends string>({
           const d = drawn();
           if (!step || !sheet.open || !d) return;
           e.preventDefault();
-          sheet.setHeightPx(draw(d.total + step));
+          keep(d.total + step);
         }}
       >
         <span className="block w-9 h-1 rounded-full bg-stone-300" />
@@ -242,7 +276,7 @@ export function SettingsSheetTabs<Id extends string>({
         })}
       </div>
       {sheet.open && heading && (
-        <div className="px-4 pb-2">
+        <div className="h-9 px-4">
           <SectionHeading>{sections[sheet.tab]}</SectionHeading>
         </div>
       )}
