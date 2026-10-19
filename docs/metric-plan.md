@@ -14,6 +14,9 @@ Issue: #149.
 | Volume in the types                               | Liters (L)                                                                                             |
 | Default for new users                             | Metric                                                                                                 |
 | Display first, or internal units at the same time | Display first (step 1). The internal move follows in small steps (steps 3–6). See "Why display first". |
+| Box lengths in the types                          | mm                                                                                                     |
+| Where the setting lives                           | A new settings menu in the header. The theme switch moves into it too.                                 |
+| Saved designs                                     | Deferred. Decide before step 3.                                                                        |
 
 ## Today
 
@@ -37,15 +40,15 @@ Issue: #149.
 
 Each step is one PR.
 
-| Step | Work                                                                                                                                                                                                                                                                                             | Proof that nothing else changes                                                                  |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| 1    | The Metric / US setting (in the header, beside the theme switch; saved per browser; metric by default). One display layer: a length, area, volume, and mass field and readout that convert at the edge. Every field and readout uses them. Steps per unit: 1 mm or 5 mm in metric, 1/8 in in US. | Tests: every field shows the same value in both settings, to rounding. The spec stays in inches. |
-| 2    | Cutlist and build text: mm in metric, inch fractions in US. Plywood names follow the setting (18 mm, 3/4 in).                                                                                                                                                                                    | Cutlist golden files in both settings.                                                           |
-| 3    | Mass to kg in the types and the model.                                                                                                                                                                                                                                                           | Weight tiles and goldens the same, to rounding.                                                  |
-| 4    | Room and stack places to m.                                                                                                                                                                                                                                                                      | Stack, Space, and coverage goldens the same.                                                     |
-| 5    | Box sizes, positions, and panels to mm.                                                                                                                                                                                                                                                          | Speaker, Hi-fi, and PA goldens, the optimizer snapshot, and the cutlist the same.                |
-| 6    | Horn geometry: one unit with the box (mm), not cm.                                                                                                                                                                                                                                               | Horn goldens and Hornresp parity the same.                                                       |
-| 7    | CLAUDE.md units rule. Remove the old conversions that nothing uses.                                                                                                                                                                                                                              | `vp check`, with no unused exports.                                                              |
+| Step | Work                                                                                                                                                                                                                                                                                                             | Proof that nothing else changes                                                                  |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 1    | A settings menu in the header with the Metric / US setting and the theme switch (saved per browser; metric by default). One display layer: a length, area, volume, and mass field and readout that convert at the edge. Every field and readout uses them. Steps per unit: 1 mm or 5 mm in metric, 1/8 in in US. | Tests: every field shows the same value in both settings, to rounding. The spec stays in inches. |
+| 2    | Cutlist and build text: mm in metric, inch fractions in US. Plywood names follow the setting (18 mm, 3/4 in).                                                                                                                                                                                                    | Cutlist golden files in both settings.                                                           |
+| 3    | Mass to kg in the types and the model.                                                                                                                                                                                                                                                                           | Weight tiles and goldens the same, to rounding.                                                  |
+| 4    | Room and stack places to m.                                                                                                                                                                                                                                                                                      | Stack, Space, and coverage goldens the same.                                                     |
+| 5    | Box sizes, positions, and panels to mm.                                                                                                                                                                                                                                                                          | Speaker, Hi-fi, and PA goldens, the optimizer snapshot, and the cutlist the same.                |
+| 6    | Horn geometry: one unit with the box (mm), not cm.                                                                                                                                                                                                                                                               | Horn goldens and Hornresp parity the same.                                                       |
+| 7    | CLAUDE.md units rule. Remove the old conversions that nothing uses.                                                                                                                                                                                                                                              | `vp check`, with no unused exports.                                                              |
 
 ## Rules for the internal steps
 
@@ -56,15 +59,9 @@ Each step is one PR.
 
 ## Saved designs
 
-#149 says saves can break. Saved speakers, stacks, and spaces are now in the library, so a break loses user designs. Two options:
+Deferred. Decide before step 3, the first step that changes the types. #149 says saves can break, but saved speakers, stacks, and spaces are now in the library.
 
 | Option                                                                      | Cost                     |
 | --------------------------------------------------------------------------- | ------------------------ |
 | Read old saves through one adapter per step (as `speakerSaves.ts` does now) | A small adapter per step |
 | Let old saves break                                                         | Users lose saved designs |
-
-## Questions
-
-1. Saved designs: adapters, or let them break?
-2. Mm for box lengths (exact for metric plywood), or m (pure SI)?
-3. Where does the setting live: the header beside the theme switch, or a settings menu?
