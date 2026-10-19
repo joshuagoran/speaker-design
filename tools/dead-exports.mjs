@@ -29,17 +29,6 @@ const ROOTS = [
   // the golden snapshot (tests/golden.json) guards the box models' numbers, so the code it reads stays
   "tests/golden-configs.ts",
 ].map((file) => path.join(ROOT, file));
-/**
- * Files an open branch edits (horn-speed-maxcheck): all their code counts as live until it merges, so the merge stays
- * clean. Empty this list once that branch is in main, then run the script again.
- */
-const HELD = [
-  "src/lib/acoustics/bessel.ts",
-  "src/lib/acoustics/hornModel.ts",
-  "src/lib/acoustics/network/presets.ts",
-  "src/lib/acoustics/network/solve.ts",
-  "src/lib/speaker/speakerLimits.ts",
-].map((file) => path.join(ROOT, file));
 const CODE_EXT = /\.(ts|tsx|js|mjs)$/;
 const RESOLVE_EXT = [".ts", ".tsx", ".js", ".mjs", "/index.ts", "/index.tsx"];
 /** A line at column 0 that starts a top-level statement (formatted code: continuations start with a bracket or space). */
@@ -216,11 +205,6 @@ const markFile = (file) => {
 for (const file of [...files, ...ROOTS]) get(file);
 
 for (const file of ROOTS) markFile(file);
-for (const file of HELD) {
-  markFile(file);
-  get(file).statements.forEach(markStatement);
-  for (const s of get(file).statements) s.exports.forEach((n) => markExport(file, n));
-}
 while (queue.length) {
   const item = /** @type {{ statement?: any, file?: string, name?: string }} */ (queue.pop());
   if (item.statement) {

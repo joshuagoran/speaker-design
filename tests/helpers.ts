@@ -4,6 +4,13 @@ import { spaceModelLaidOut, withSolved, type SpaceModel } from "../src/lib/speak
 import { solveFeeds } from "../src/lib/speaker/solveFeeds";
 import type { Chip, ChipId, ChipSeverity, SpaceDesign, ThieleSmall, VentSpec } from "../src/types";
 
+/**
+ * `count` log-spaced frequencies from `fmin` to `fmax`, Hz: the horn engine's grid (10 Hz–2 kHz reaches a mid horn's
+ * crossover).
+ */
+export const hornGrid = (fmin = 10, fmax = 2000, count = 500) =>
+  Array.from({ length: count }, (_, i) => fmin * Math.pow(fmax / fmin, i / (count - 1)));
+
 /** The space worked out with its Auto delays and levels solved, as the Space page shows it. */
 export function spaceModel(design: SpaceDesign): SpaceModel {
   const laid = spaceModelLaidOut(design);

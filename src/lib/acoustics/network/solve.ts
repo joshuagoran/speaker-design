@@ -411,34 +411,6 @@ function flowsOf(prepared: Prepared, unknowns: Complex[], f: number): NetworkSta
 }
 
 /**
- * A prepared network's state at frequency `f` (Hz): each node's pressure and each part's flows. Null when `f` is not
- * positive or the network cannot be solved there.
- */
-export function solvePreparedAt(prepared: PreparedNetwork, f: number): NetworkState | null {
-  if (!isPositive(f)) return null;
-  const unknowns = solveAt(prepared, f);
-  if (!unknowns) return null;
-  return {
-    pressures: unknowns.slice(0, prepared.network.nodeCount),
-    flows: flowsOf(prepared, unknowns, f),
-  };
-}
-
-/**
- * The network's state at frequency `f` (Hz) with `volts` RMS on every driver: each node's pressure and each part's
- * flows. Null when a size it divides by is not positive or the network cannot be solved. For many frequencies,
- * prepare the network once (`prepareNetwork`) and call `solvePreparedAt`.
- */
-export function solveNetworkAt(
-  network: AcousticNetwork,
-  f: number,
-  volts: number,
-): NetworkState | null {
-  const prepared = prepareNetwork(network, volts);
-  return prepared && solvePreparedAt(prepared, f);
-}
-
-/**
  * The network's response at each frequency (Hz) with `volts` RMS on every driver: the summed pressure at 1 m (on axis
  * and from radiated power), its phase and group delay, each driver's excursion and impedance, and each part's flow.
  * Null when a size it divides by is not positive or the network cannot be solved at some frequency (as the horn
