@@ -49,9 +49,10 @@ export function bandChips(
     const amp = band ? ` from the ${formatWatts(band.ampW)} amp` : "";
     // a cone or vent limit is at one frequency; the program rating and the amp hold across the band
     const mechanical = PER_FREQUENCY_LIMITS.has(b.who);
-    const where = mechanical
-      ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` Add a high-pass to the band, or set the ${SPEAKER_TEXT.inputRange}, to protect the cone.`}`
-      : "";
+    const where =
+      b.whoHz !== null
+        ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` Add a high-pass to the band, or set the ${SPEAKER_TEXT.inputRange}, to protect the cone.`}`
+        : "";
     const bandText = `The band plays clean up to ${b.musicDb.toFixed(0)} dB at 1 m, with one drive for the whole band${amp}.${where}`;
     // the band's first datasheet driver (a compression driver, a tweeter, a coaxial's HF section)
     const hf = limits.drivers.find((d) => d.band === b.id);
