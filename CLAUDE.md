@@ -28,6 +28,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - Dispersion maps (owner-approved color exception, these maps only) use the continuous VituixCAD-style scale, +6 to −36 dB with a contour every 3 dB (`DISPERSION_SCALE` in `src/styles/palette.ts`), not the CMYK brand palette. They are the one frequency chart off the 15 Hz–20 kHz axis: every map shares fixed axes of ±90° and 50 Hz–20 kHz (`src/constants/chartScales.ts`), since below about 85 Hz the default designs are flat at every angle; one `DispersionMap` component and key, with the crossovers marked.
 - US spelling everywhere (center, color): UI text, comments, docs and identifiers. Keys that saved data or links
   already carry keep their spelling (comment why).
+- Oxford comma in every list of three or more (drivers, size, and horn type): UI text, docs, and comments.
 - Level words: louder and quieter for level (dB), higher and lower for frequency (Hz). Never "lower" for "quieter".
 - Position labels name the sign's side: "Left (−) / Right (+)", "Down (−) / Up (+)", "Front (−) / Back (+)"
   (`POSITION_LABELS`, `src/constants/speakerSettings.ts`). The tooltip says where it is measured from: a part on a
