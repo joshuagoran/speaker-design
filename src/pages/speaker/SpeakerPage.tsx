@@ -49,7 +49,6 @@ import {
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
   GAP_Y,
-  MD_UP,
   resultsCellClass,
   resultsGridClass,
 } from "../../styles/layout";
@@ -292,9 +291,8 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
   if (compare && !cmp.driver) setCompare(null);
   const compareBlock = useRef<HTMLElement>(null);
   useEffect(() => {
-    // from md up the results scroll in their own pane; on a phone the page would scroll away from the settings
-    if (compare && window.matchMedia(MD_UP).matches)
-      compareBlock.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    // on a phone too: the block opens in the results, away from the Compare button
+    if (compare) compareBlock.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [compare?.opened]);
   const openCompare = (chamber: number, entry: number) => {
     const d = spec.cabinet.chambers[chamber]?.drivers[entry];

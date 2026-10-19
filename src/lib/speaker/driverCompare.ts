@@ -33,6 +33,7 @@ import { upperFirst } from "../format";
 import { SPEAKER_PROBLEM_TEXT } from "../../constants/speakerOptimizer";
 import {
   DRIVER_COMPARE_SORT,
+  SORT_DIRECTION,
   type DriverCompareSort,
   type SortDirection,
 } from "../../constants/driverCompare";
@@ -237,14 +238,14 @@ export function compareRows(
 
 /** Each sort key's best direction: the first click sorts best first. */
 export const SORT_BEST: Record<DriverCompareSort, SortDirection> = {
-  name: "ascending",
-  price: "ascending",
-  total: "ascending",
-  lb: "ascending",
-  level: "descending",
-  f3: "ascending",
-  max: "descending",
-  checks: "ascending",
+  name: SORT_DIRECTION.ascending,
+  price: SORT_DIRECTION.ascending,
+  total: SORT_DIRECTION.ascending,
+  lb: SORT_DIRECTION.ascending,
+  level: SORT_DIRECTION.descending,
+  f3: SORT_DIRECTION.ascending,
+  max: SORT_DIRECTION.descending,
+  checks: SORT_DIRECTION.ascending,
 };
 
 /** A row's value for a sort key (null: no number, always last). */
@@ -279,7 +280,7 @@ export function sortRows(
   key: DriverCompareSort,
   dir: SortDirection,
 ): DriverCompareRow[] {
-  const sign = dir === "ascending" ? 1 : -1;
+  const sign = dir === SORT_DIRECTION.ascending ? 1 : -1;
   return [...rows].sort((a, b) => {
     if (a.yours !== b.yours) return a.yours ? -1 : 1;
     if (a.fails !== b.fails) return a.fails ? 1 : -1;

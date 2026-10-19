@@ -169,7 +169,14 @@ export function CompareTable<R extends CompareRowBase>({
                 </td>
                 <td className={`py-1 text-right ${tint}`}>
                   {!r.yours && (
-                    <Button size="xs" onClick={() => onUse(r)}>
+                    <Button
+                      size="xs"
+                      onClick={(e) => {
+                        // Use clears the preview: the row's own click must not set it again
+                        e.stopPropagation();
+                        onUse(r);
+                      }}
+                    >
                       {DRIVER_COMPARE_TEXT.use}
                     </Button>
                   )}

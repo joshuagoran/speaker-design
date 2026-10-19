@@ -24,7 +24,7 @@ import { driverAcrossIn } from "../src/lib/speaker/speakerLayout";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { DRIVER_KIND } from "../src/constants/speakerSpec";
-import { DRIVER_COMPARE_SORT } from "../src/constants/driverCompare";
+import { DRIVER_COMPARE_SORT, SORT_DIRECTION } from "../src/constants/driverCompare";
 import { SPEAKER_PROBLEM, SPEAKER_PROBLEM_TEXT } from "../src/constants/speakerOptimizer";
 import { upperFirst } from "../src/lib/format";
 import type { DriverCompareOption, DriverCompareTarget, SpeakerSpec } from "../src/types";
@@ -154,7 +154,7 @@ test("sort order: yours first, then failing options last, by maximum output", ()
     rows.some((r) => !r.fails && !r.yours),
     "some option passes",
   );
-  const sorted = sortRows(rows, DRIVER_COMPARE_SORT.max, "descending");
+  const sorted = sortRows(rows, DRIVER_COMPARE_SORT.max, SORT_DIRECTION.descending);
   assert.ok(sorted[0]?.yours, "yours first");
   const rest = sorted.slice(1);
   const firstFail = rest.findIndex((r) => r.fails);
@@ -169,7 +169,60 @@ test("sort order: yours first, then failing options last, by maximum output", ()
     "the passing options by maximum output, highest first",
   );
   // reversed, yours still first and the failing ones still last
-  const up = sortRows(rows, DRIVER_COMPARE_SORT.max, "ascending");
+  const up = sortRows(rows, DRIVER_COMPARE_SORT.max, SORT_DIRECTION.ascending);
   assert.ok(up[0]?.yours);
   assert.ok(up.at(-1)?.fails);
+});
+
+test("every template's driver entries have options to compare, a template's own driver too", () => {
+  for (const id of Object.values(SPEAKER_TEMPLATE)) {
+    const spec = templateSpeaker(id);
+    spec.cabinet.chambers.forEach((c) =>
+      c.drivers.forEach((d) => {
+        const options = driverOptions(d);
+        assert.deepEqual(options[0], ownOption(d), `${id} ${d.driverId}: yours first`);
+        assert.ok(options.length > 1, `${id} ${d.driverId}: has other options`);
+        // a horn-loaded part keeps a horn in every option
+        if (d.horn)
+          assert.ok(
+            options.every((o) => o.hornId !== null),
+            `${id} ${d.driverId}: horns`,
+          );
+      }),
+    );
+  }
+});
+
+test("the part the comparison opened on stays an option only while the entry is its kind", () => {
+  const { spec, target } = hifiWoofer();
+  const own = entryOf(spec, target);
+  const origin = { driverId: "opened-on", hornId: null, kind: own.kind };
+  assert.ok(driverOptions(own, origin).some((o) => o.driverId === origin.driverId));
+  const other = { ...origin, kind: DRIVER_KIND.sub };
+  assert.ok(!driverOptions(own, other).some((o) => o.driverId === origin.driverId));
+});
+
+test("sort: a row with no number goes last, either way", () => {
+  const { spec, target } = hifiWoofer();
+  const own = entryOf(spec, target);
+  const options = driverOptions(own).slice(0, 4);
+  const runs = runsOf(spec, target, options);
+  const rows = compareRows(options, (o) => runs.get(optionKey(o)), {
+    kind: own.kind,
+    yours: optionKey(ownOption(own)),
+    nameOf: (o) => o.driverId,
+    limits: { budget: null, maxLb: null },
+    sizeLocks: {},
+  });
+  const blank = rows.find((r) => !r.yours && !r.fails);
+  assert.ok(blank, "an option that passes");
+  const withBlank = rows.map((r) =>
+    r === blank ? { ...r, run: { ...r.run, metrics: { ...r.run.metrics, f3: null } } } : r,
+  );
+  for (const dir of Object.values(SORT_DIRECTION)) {
+    const passing = sortRows(withBlank, DRIVER_COMPARE_SORT.f3, dir).filter(
+      (r) => !r.yours && !r.fails,
+    );
+    assert.equal(passing.at(-1)?.id, blank.id, `${dir}: no F3 last`);
+  }
 });

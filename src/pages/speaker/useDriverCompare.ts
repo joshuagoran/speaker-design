@@ -25,7 +25,7 @@ export type OpenCompare = DriverCompareTarget & { origin: CompareOrigin };
 
 /** How many options one worker request runs: the table fills a few rows at a time. */
 const CHUNK = 4;
-/** The most runs the cache keeps; past it, it starts over. */
+/** The most runs the cache keeps; past it, it drops the runs of other designs. */
 const CACHE_MAX = 3000;
 
 /** An option's name: the driver's, and its horn's after a "+" where it pairs with one. */
@@ -85,9 +85,12 @@ export function useDriverCompare(
   specNow.current = spec;
   useEffect(() => {
     if (!target) return;
+    // over the cap, drop the runs of other designs first, so the rows on show keep theirs
+    if (cache.current.size > CACHE_MAX)
+      for (const key of cache.current.keys())
+        if (!key.startsWith(`${rest}|`)) cache.current.delete(key);
     const missing = options.filter((o) => !cache.current.has(`${rest}|${optionKey(o)}`));
     if (!missing.length) return;
-    if (cache.current.size > CACHE_MAX) cache.current.clear();
     const ctl = new AbortController();
     const spec0 = specNow.current;
     (async () => {

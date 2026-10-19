@@ -14,8 +14,9 @@ export const DRIVER_COMPARE_SORT = {
 } as const;
 export type DriverCompareSort = (typeof DRIVER_COMPARE_SORT)[keyof typeof DRIVER_COMPARE_SORT];
 
-/** A sort's direction, as `aria-sort` names it. */
-export type SortDirection = "ascending" | "descending";
+/** A sort's directions, by id, as `aria-sort` names them. */
+export const SORT_DIRECTION = { ascending: "ascending", descending: "descending" } as const;
+export type SortDirection = (typeof SORT_DIRECTION)[keyof typeof SORT_DIRECTION];
 
 /** The mark after the sorted heading, by direction. */
 export const SORT_MARKS = { ascending: " ▲", descending: " ▼" } as const satisfies Record<

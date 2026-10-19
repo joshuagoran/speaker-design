@@ -9,6 +9,7 @@ import { DRIVER_KIND } from "../../constants/speakerSpec";
 import {
   DRIVER_COMPARE_SORT,
   DRIVER_COMPARE_TEXT,
+  SORT_DIRECTION,
   type DriverCompareSort,
   type SortDirection,
 } from "../../constants/driverCompare";
@@ -41,8 +42,11 @@ const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
   {
     key: DRIVER_COMPARE_SORT.total,
     head: DRIVER_COMPARE_TEXT.total,
-    cell: (r) =>
-      `${formatDollars(r.run.metrics.price)}${r.run.metrics.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
+    // no part with a price: unknown, not $0
+    cell: ({ run: { metrics } }) =>
+      metrics.pricePartial && metrics.price === 0
+        ? "?"
+        : `${formatDollars(metrics.price)}${metrics.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
   },
   {
     key: DRIVER_COMPARE_SORT.lb,
@@ -81,7 +85,13 @@ export function DriverCompareTable({ rows, kind, bandName, previewId, onPreview,
     if (!next) return;
     setSort((s) =>
       s.key === next
-        ? { key: next, dir: s.dir === "ascending" ? "descending" : "ascending" }
+        ? {
+            key: next,
+            dir:
+              s.dir === SORT_DIRECTION.ascending
+                ? SORT_DIRECTION.descending
+                : SORT_DIRECTION.ascending,
+          }
         : { key: next, dir: SORT_BEST[next] },
     );
   };
@@ -90,7 +100,11 @@ export function DriverCompareTable({ rows, kind, bandName, previewId, onPreview,
       nameHead={DRIVER_TYPE_NAMES[isWooferKind(kind) ? DRIVER_KIND.woofer : kind]}
       columns={COLUMNS(bandName)}
       rows={sortRows(rows, sort.key, sort.dir)}
-      onUse={(r) => onUse(r.option)}
+      onUse={(r) => {
+        // the row moves to the top as yours: the pointer is no longer over it
+        onPreview(null);
+        onUse(r.option);
+      }}
       bg="bg-panel"
       minWidth="min-w-[760px]"
       sort={{ ...sort, onSort }}
