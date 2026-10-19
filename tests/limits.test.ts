@@ -9,7 +9,7 @@ import {
   hornPower,
   nearestPoint,
   sineLimitAt,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { CD_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { FALLBACK_OHMS, ohmsOf, voltsToWatts } from "../src/lib/power";
 import { LIMIT_NAMES } from "../src/constants/limits";

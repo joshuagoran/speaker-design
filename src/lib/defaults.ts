@@ -20,8 +20,8 @@ import {
   ST260,
 } from "./data";
 import { byIdOrThrow } from "./tables";
-import { CUTLIST_DEFAULTS } from "./pa/cutlist";
-import { DEFAULT_HARDWARE } from "./pa/hardware";
+import { CUTLIST_DEFAULTS } from "./build/cutlist";
+import { DEFAULT_HARDWARE } from "./build/hardware";
 import type {
   BandFilter,
   Cabinet,
@@ -69,7 +69,7 @@ import {
 } from "../constants/speakerSpec";
 import { HORN_PROFILE } from "../constants/hornEngine";
 import { MM_PER_IN } from "../constants/units";
-import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
+import { HIFI_STUFFING_GAIN } from "./acoustics/wooferBox";
 import {
   DIRECT_LOAD,
   FLUSH_BOX,

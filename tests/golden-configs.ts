@@ -13,11 +13,11 @@ import {
   subWeightLb,
   midBoxBracing,
   subBoxBracing,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { FILL_OPTIONS } from "../src/lib/data";
 import { SEED_NAMES } from "./seeds";
-import { hardwareLb, savedHardware } from "../src/lib/pa/hardware";
-import { towerMidDims } from "../src/lib/pa/tower";
+import { hardwareLb, savedHardware } from "../src/lib/build/hardware";
+import { towerMidDims } from "../src/lib/speaker/tower";
 import type {
   Dims3,
   FillBoxType,

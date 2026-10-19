@@ -9,8 +9,8 @@ import {
   coverageStats,
   ONE_METER_FT,
   oneMeterSpot,
-} from "../src/lib/pa/coverage";
-import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
+} from "../src/lib/acoustics/coverage";
+import { materialAlpha, surfaceReflection } from "../src/lib/acoustics/roomAcoustics";
 import type { CoverageStack } from "../src/types";
 
 const stack: CoverageStack = {

@@ -1,4 +1,4 @@
-// Handles and input plates (lib/pa/hardware): the presets' fit checks, the liters their recesses take off the boxes,
+// Handles and input plates (lib/build/hardware): the presets' fit checks, the liters their recesses take off the boxes,
 // the cutlist's cutout notes and the defaults older saves load with.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
@@ -14,8 +14,8 @@ import {
   subHardwarePlan,
   subKeepOut,
   subVentMasses,
-} from "../src/lib/pa/calc";
-import { subDriverDepthIn } from "../src/lib/pa/tubes";
+} from "../src/lib/acoustics/boxModels";
+import { subDriverDepthIn } from "../src/lib/build/tubes";
 import {
   boxCenterOfGravity,
   DEFAULT_HARDWARE,
@@ -25,7 +25,7 @@ import {
   HORN_POSTS_FIT_DEPTH_IN,
   partRecessLiters,
   planBoxHardware,
-} from "../src/lib/pa/hardware";
+} from "../src/lib/build/hardware";
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../src/data/catalog/cabinet-hardware";
 import { NO_HANDLES } from "../src/constants/hardware";
 import type { BoxHandles, PaHardware, PortStyle, VentSpec } from "../src/types";

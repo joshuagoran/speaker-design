@@ -2,7 +2,7 @@
 // chambers, the stack's maximum output at SUMMARY_LOW_HZ, the members' weight, and what limits the stack for music.
 import type { StackLimits, StackResponse } from "../../types";
 import type { SummaryItem } from "../../components/ui/SummaryStrip";
-import { curveLevelAt } from "../../lib/pa/coverage";
+import { curveLevelAt } from "../../lib/acoustics/coverage";
 import { LIMIT_NAMES } from "../../constants/limits";
 import { SUMMARY_LOW_HZ, SUMMARY_STRIP_TEXT } from "../../constants/summaryStrip";
 

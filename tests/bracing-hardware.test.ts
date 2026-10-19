@@ -2,7 +2,7 @@
 // with a handle still takes its ribs beside it), and each bracing style giving its own braces, as the 3D view draws them.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { midBoxBracing, subBoxBracing } from "../src/lib/pa/calc";
+import { midBoxBracing, subBoxBracing } from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES } from "../src/lib/data";
 import { configs } from "./golden-configs";

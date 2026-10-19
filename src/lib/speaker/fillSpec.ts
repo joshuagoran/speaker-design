@@ -27,7 +27,7 @@ import {
   lrFilter,
   stuffingPctOf,
 } from "./specParts";
-import { fillDriverPadDb, STUFFING_VOLUME_GAIN } from "../pa/calc";
+import { fillDriverPadDb, STUFFING_VOLUME_GAIN } from "../acoustics/boxModels";
 import { DEFAULT_HIFI } from "../defaults";
 
 /**

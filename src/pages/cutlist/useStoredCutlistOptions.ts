@@ -2,15 +2,15 @@ import type { SetStateAction } from "react";
 import type { CutlistSettings, PanelExactIn, Setter } from "../../types";
 import type { CutlistOptions } from "./useCutlistOptions";
 import { useStoredStateFrom } from "../../hooks/useStoredState";
-import { CUTLIST_DEFAULTS, savedCutlist } from "../../lib/pa/cutlist";
-import { PLYWOOD_SHEETS } from "../../lib/pa/calc";
+import { CUTLIST_DEFAULTS, savedCutlist } from "../../lib/build/cutlist";
+import { PLYWOOD_SHEETS } from "../../lib/acoustics/boxModels";
 import { keysOf } from "../../lib/records";
 import {
   CUTLIST_PROJECTS,
   type CutlistProject,
   type StoredCutlistProject,
 } from "../../constants/cutlistProjects";
-import { savedPanelExactIn } from "../../lib/panel";
+import { savedPanelExactIn } from "../../lib/build/panel";
 
 /** Where this browser keeps each project's cutlist choices. */
 const STORE_KEYS = {

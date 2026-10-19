@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { pistonDirectivity, waveguideDirectivity } from "../src/lib/hifi/hifi";
+import { pistonDirectivity, waveguideDirectivity } from "../src/lib/acoustics/directivity";
 import { close } from "./helpers";
 
 const db = (x: number) => 20 * Math.log10(x);

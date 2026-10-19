@@ -22,7 +22,7 @@ import type {
   PlacedPart,
   PlywoodSheet,
 } from "../../types";
-import { PLYWOOD_SHEETS, formatInches } from "./calc";
+import { PLYWOOD_SHEETS, formatInches } from "../acoustics/boxModels";
 import { keysOf } from "../records";
 import { cutBoxName, cutBoxTag } from "../../constants/cutParts";
 

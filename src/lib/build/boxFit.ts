@@ -1,7 +1,7 @@
 // A box's width and height kept at least what its parts need: the one rule the sliders, the model, the 3D view and saves
-// share (Hi-fi: lib/hifi/boxLayout hifiBoxMin; PA: lib/pa/chips subBoxMin, lib/pa/calc midBoxMin). The size the user
+// share (Hi-fi: lib/build/boxLayout hifiBoxMin; PA: lib/speaker/chips subBoxMin, lib/acoustics/boxModels midBoxMin). The size the user
 // set is kept as set; the fitted size is worked out from it wherever the box is read.
-import type { Dims2, Dims3, SliderSpec } from "../types";
+import type { Dims2, Dims3, SliderSpec } from "../../types";
 
 /**
  * A size rounded up to its slider's step (a hair under a step counts as on it), and never under the slider's minimum;

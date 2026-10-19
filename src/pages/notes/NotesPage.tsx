@@ -1,6 +1,6 @@
 import { PA_SETTINGS_TABS } from "../../constants/paSettingsTabs";
 import { Fragment } from "react";
-import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { PA_PANEL_TARGET_HZ } from "../../lib/build/boxBracing";
 import { formatHz } from "../../lib/format";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";

@@ -1,5 +1,5 @@
 // The keep-up check's words (lib/speaker/keepUp): the Speaker page's bands and the Stack page's members, as the PA
-// page's "Mid limits first" and "Horn limits first" checks say them (lib/pa/chips takes its titles from here).
+// page's "Mid limits first" and "Horn limits first" checks say them (lib/speaker/chips takes its titles from here).
 
 export const KEEP_UP_TEXT = {
   /** the upper part limits first: its name */

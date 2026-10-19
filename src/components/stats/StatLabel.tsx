@@ -1,5 +1,5 @@
 import { Tooltip } from "../ui/Tooltip";
-import { SUB_BASS_BAND_HZ } from "../../lib/pa/calc";
+import { SUB_BASS_BAND_HZ } from "../../lib/acoustics/boxModels";
 import { UI_TEXT } from "../../constants/uiText";
 
 /** A statistic with plain-language help: its label, and the tooltip shown on it. */

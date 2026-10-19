@@ -1,12 +1,12 @@
 // The PA sub's vent as the views build it, from the port style and the design's vent geometry. Pure (the 3D scene's parts
 // and the speaker layout both read it: lib/speaker/speakerLayout keeps drivers off the vent's openings).
 import type { Dims3, PaPortGeometry, PortStyle, SubDriver } from "../../types";
-import { slotFinLayout, slotFinsOf, isRoundPort } from "./calc";
+import { slotFinLayout, slotFinsOf, isRoundPort } from "../acoustics/boxModels";
 import { tubeLayout } from "./tubes";
 
 /**
  * The sub's vent as the scene builds it, from the port style and the design's vent geometry (defaults where a custom
- * cabinet leaves one out): the side ducts, the round tubes where the model and the cutlist place them (lib/pa/tubes), or
+ * cabinet leaves one out): the side ducts, the round tubes where the model and the cutlist place them (lib/build/tubes), or
  * the bottom slot's band, and the duct sizes the parts behind the baffle read.
  */
 export function subVentPlan(
@@ -32,7 +32,7 @@ export function subVentPlan(
     pg.portR != null
       ? pg.portR
       : (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
-  // round tubes: where they sit on the baffle and how they fold, as the model and the cutlist take them (lib/pa/tubes)
+  // round tubes: where they sit on the baffle and how they fold, as the model and the cutlist take them (lib/build/tubes)
   const tubeVent = {
     nt: nPorts,
     dia: 2 * portR,

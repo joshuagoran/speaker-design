@@ -30,11 +30,11 @@ import {
   speakerIdentity,
 } from "../../lib/speaker/specParts";
 import { hornFace, settledCabinet, speakerLayout } from "../../lib/speaker/speakerLayout";
-import { takesHornMountAt } from "../../lib/pa/hornMount";
-import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
-import { defaultBraceStyleNear } from "../../lib/bracing";
+import { takesHornMountAt } from "../../lib/build/hornMount";
+import { PA_PANEL_TARGET_HZ } from "../../lib/build/boxBracing";
+import { defaultBraceStyleNear } from "../../lib/build/bracing";
 import { HIFI_COAXES, HORN_OPTIONS } from "../../lib/data";
-import { driverLayout, tweeterOnGuide, waveguideFor } from "../../lib/hifi/hifi";
+import { driverLayout, tweeterOnGuide, waveguideFor } from "../../lib/speaker/twoWay";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import {
   DEFAULT_FILL,
@@ -46,7 +46,7 @@ import {
   PA_V2_SUB_BIN,
   TH18_XOC1,
 } from "../../lib/defaults";
-import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/acoustics/coverageLayout";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";

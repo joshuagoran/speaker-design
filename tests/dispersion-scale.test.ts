@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { dispersionGrid, logSpacedFrequencies } from "../src/lib/hifi/hifi";
+import { dispersionGrid, logSpacedFrequencies } from "../src/lib/acoustics/directivity";
 import {
   CONTOUR_STEP_DB,
   DISPERSION_ANGLE_MAX_DEG,

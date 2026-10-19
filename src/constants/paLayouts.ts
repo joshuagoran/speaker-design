@@ -8,7 +8,7 @@ export const PA_LAYOUT_NAMES = {
   satellite: "One sub + satellites",
 } as const satisfies Record<PaLayout, string>;
 
-/** The tower's mid chamber height, in: the chamber has the sub's footprint (lib/pa/tower `towerMidDims`). */
+/** The tower's mid chamber height, in: the chamber has the sub's footprint (lib/speaker/tower `towerMidDims`). */
 export const TOWER_MID_HEIGHT_IN = 15.5;
 
 /** Gap between the sub's top and the mid box in the stack layout, in. */

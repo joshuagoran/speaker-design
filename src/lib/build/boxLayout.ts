@@ -3,11 +3,12 @@
 // read these.
 import { HIFI_BOX_LAYOUT, HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
-import { isCoax, passiveRadiatorShape, RADIATOR_PANEL, tweeterOnGuide, waveguideFor } from "./hifi";
+import { isCoax, tweeterOnGuide, waveguideFor } from "../speaker/twoWay";
+import { passiveRadiatorShape, RADIATOR_PANEL } from "../acoustics/wooferBox";
 import { HIFI_PASSIVES, passiveRadiatorMassMax } from "../data";
 import { byId } from "../tables";
-import { panelIn } from "../panel";
-import { boxSliderMins, fitBox } from "../boxFit";
+import { panelIn } from "./panel";
+import { boxSliderMins, fitBox } from "./boxFit";
 import type {
   Dims2,
   Dims3,

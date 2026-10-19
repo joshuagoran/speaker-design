@@ -20,7 +20,7 @@ import {
   pistonPattern,
   waveguideGain,
   waveguideHalfAngles,
-} from "../hifi/hifi";
+} from "./directivity";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
 import {

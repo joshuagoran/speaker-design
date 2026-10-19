@@ -1,6 +1,6 @@
 // The horn engine: a front-loaded horn box as Hornresp models one.
 //
-// The driver is the box models' acoustic circuit (lib/acoustics/driverCircuit, shared with lib/pa/calc boxModel and
+// The driver is the box models' acoustic circuit (lib/acoustics/driverCircuit, shared with lib/acoustics/boxModels boxModel and
 // closedBox): a pressure source Pg behind the driver's own impedance, with the voice coil's inductance when the driver
 // lists one (Re + jωLe, as Hornresp and the box models). Its front drives a throat chamber and the horn's segments into
 // the mouth's radiation impedance; its rear drives a sealed or vented chamber. The vent is a straight duct ended in its
@@ -77,7 +77,7 @@ export interface HornModelOptions {
 }
 
 /**
- * Unwraps a phase sequence (radians) in place, as the box models do (lib/pa/calc unwrapRawPhase): from the top
+ * Unwraps a phase sequence (radians) in place, as the box models do (lib/acoustics/boxModels unwrapRawPhase): from the top
  * frequency down, so the phases of the same design match theirs exactly, not only to a whole turn.
  */
 function unwrapFromTop(phases: number[]) {

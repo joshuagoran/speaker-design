@@ -35,13 +35,13 @@ export interface Props {
   /** a `FinishId` or a paint color (hex) */
   cabFinish?: string;
   spacerH?: number;
-  /** the boxes' braces and ribs (lib/bracing), drawn inside them (they show in the cutaway) */
+  /** the boxes' braces and ribs (lib/build/bracing), drawn inside them (they show in the cutaway) */
   subBracing?: BoxBracing;
   midBracing?: BoxBracing | null;
-  /** what each box's braces keep clear of (lib/pa/calc): their drivers are drawn in the cutaway */
+  /** what each box's braces keep clear of (lib/acoustics/boxModels): their drivers are drawn in the cutaway */
   subKeepOut?: BoxKeepOut;
   midKeepOut?: BoxKeepOut | null;
-  /** each box's handles, input dish and horn posts (lib/pa/hardware), drawn on its faces */
+  /** each box's handles, input dish and horn posts (lib/build/hardware), drawn on its faces */
   subHardware?: BoxHardwarePlan;
   midHardware?: BoxHardwarePlan | null;
 }

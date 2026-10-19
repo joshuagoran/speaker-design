@@ -3,8 +3,8 @@
 // Re alone.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxModel, closedBox } from "../src/lib/pa/calc";
-import { passiveRadiatorBox } from "../src/lib/hifi/hifi";
+import { boxModel, closedBox } from "../src/lib/acoustics/boxModels";
+import { passiveRadiatorBox } from "../src/lib/acoustics/wooferBox";
 import { coilFactor } from "../src/lib/acoustics/driverCircuit";
 import {
   abs,

@@ -32,7 +32,7 @@ import type {
   StackMember,
   StackResponse,
 } from "../../types";
-import { curveLevelAt } from "../pa/coverage";
+import { curveLevelAt } from "../acoustics/coverage";
 import { passbandCenterHz, passbandEdgesHz } from "./speakerResponse";
 import { DEFAULT_PA } from "../defaults";
 import { PA_SLIDERS } from "../../constants/paSliders";

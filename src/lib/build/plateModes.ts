@@ -1,4 +1,4 @@
-// First modes of panels and ribs whose edges are held by springs against turning (lib/bracing reads these).
+// First modes of panels and ribs whose edges are held by springs against turning (lib/build/bracing reads these).
 //
 // A glued joint holds a panel's edge between hinged (simply supported) and fixed (clamped): the panel or rib on the
 // other side of the joint bends with it and resists it as a rotational spring. Every calculation here is the
@@ -14,11 +14,11 @@
 // with the edges' springs (G. B. Warburton, "The vibration of rectangular plates", Proc. IMechE 168, 1954), so
 //     ω² ρh = Dₓ Λₓ / a⁴ + D_y Λ_y / b⁴ + 2H ηₓ η_y / (a² b²),
 // Λ the beam's frequency parameter (ω² μ L⁴ / EI, its springs as ψ = kL / EI), η = ∫X′² / ∫X² on a unit span, and H
-// Huber's √(Dₓ D_y) as in lib/bracing's header. Hinged on all four edges it is exactly lib/bracing's plateFirstModeHz.
+// Huber's √(Dₓ D_y) as in lib/build/bracing's header. Hinged on all four edges it is exactly lib/build/bracing's plateFirstModeHz.
 // A plate with a round hole (the driver's cutout) takes the full Ritz series: the whole plate's integrals exactly (by
 // Gauss's rule along each span), less the hole's (by Gauss's rule along its radius and evenly round it).
-import type { PlateHole, PlateStock } from "../types";
-import { LB_FT2_KG_M2 } from "../constants/units";
+import type { PlateHole, PlateStock } from "../../types";
+import { LB_FT2_KG_M2 } from "../../constants/units";
 
 const IN_M = 0.0254;
 /** A spring stiff enough to stand for a fixed edge (ψ = kL / EI). */

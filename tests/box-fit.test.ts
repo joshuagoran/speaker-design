@@ -1,8 +1,8 @@
-// A box's width and height always hold its parts (lib/boxFit): on Hi-fi (lib/hifi/boxLayout hifiBoxMin) the minimum
+// A box's width and height always hold its parts (lib/build/boxFit): on Hi-fi (lib/build/boxLayout hifiBoxMin) the minimum
 // follows what the parts need, and a box a driver, vent, or wall change leaves too small is modeled and drawn at the
 // fitted size.
 import { describe, expect, test } from "vite-plus/test";
-import { fitBox, upToStep } from "../src/lib/boxFit";
+import { fitBox, upToStep } from "../src/lib/build/boxFit";
 describe("fitBox", () => {
   test("keeps a box that fits as it is, and raises only what is short", () => {
     const d = { w: 10, h: 20, d: 9 };

@@ -19,10 +19,10 @@ import {
   MID_FIXINGS_LB,
   sideDuctEndCorrection,
   slotMouthCorrection,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { rectangleEndCorrection } from "../src/lib/acoustics/radiation";
-import { ductFit } from "../src/lib/pa/chips";
-import { subTubeLegs, subTubeSpan } from "../src/lib/pa/tubes";
+import { ductFit } from "../src/lib/speaker/chips";
+import { subTubeLegs, subTubeSpan } from "../src/lib/build/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../src/data/acoustics/tube-ends";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";

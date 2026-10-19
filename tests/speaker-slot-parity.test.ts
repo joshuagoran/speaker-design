@@ -9,10 +9,16 @@ import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { chamberVentModel } from "../src/lib/speaker/chamberAir";
 import { speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { portRule, PORT_RULE, speakerLayout } from "../src/lib/speaker/speakerLayout";
-import { cutParts, maxSlotFins, slotFinLayout, slotFinsOf, subGeometry } from "../src/lib/pa/calc";
+import {
+  cutParts,
+  maxSlotFins,
+  slotFinLayout,
+  slotFinsOf,
+  subGeometry,
+} from "../src/lib/acoustics/boxModels";
 import { buildSpeakerScene } from "../src/components/stack-view/buildSpeakerScene";
 import { buildSubSlotShelf } from "../src/components/stack-view/buildSubwoofer";
-import { subVentPlan } from "../src/lib/pa/subVentPlan";
+import { subVentPlan } from "../src/lib/build/ventPlan";
 import { createSceneContext } from "../src/components/stack-view/sceneContext";
 import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
 import { HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";

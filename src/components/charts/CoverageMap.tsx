@@ -3,8 +3,8 @@ import { ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { formatSigned } from "../../lib/format";
-import { contourSegments, gridLevelAt } from "../../lib/pa/coverage";
-import { materialAlpha } from "../../lib/pa/roomAcoustics";
+import { contourSegments, gridLevelAt } from "../../lib/acoustics/coverage";
+import { materialAlpha } from "../../lib/acoustics/roomAcoustics";
 import type {
   CoverageGridView,
   CoverageRoom,

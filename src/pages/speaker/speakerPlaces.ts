@@ -16,7 +16,7 @@ import {
   roundPortsAt,
   type PlacedChamber,
 } from "../../lib/speaker/speakerLayout";
-import { RADIATOR_PANEL } from "../../lib/hifi/hifi";
+import { RADIATOR_PANEL } from "../../lib/acoustics/wooferBox";
 import { PANEL } from "../../constants/cutParts";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 

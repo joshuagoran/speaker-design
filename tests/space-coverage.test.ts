@@ -1,10 +1,10 @@
-// The space model (lib/speaker/spaceCoverage) against the PA coverage page (lib/pa/coverage): the PA design read in as
+// The space model (lib/speaker/spaceCoverage) against the PA coverage page (lib/acoustics/coverage): the PA design read in as
 // a space on the coverage page's floor maps the floor as the page does; height and tilt move the levels as they should.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { audienceAverage, COVERAGE_BANDS, COVERAGE_GRID_COLS } from "../src/lib/pa/coverage";
+import { audienceAverage, COVERAGE_BANDS, COVERAGE_GRID_COLS } from "../src/lib/acoustics/coverage";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { computeSpaceGrid, spaceGridRequest, spaceLevelAt } from "../src/lib/speaker/spaceCoverage";
 import { spaceModel } from "./helpers";

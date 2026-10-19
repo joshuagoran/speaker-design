@@ -4,10 +4,10 @@
 import { describe, expect, test } from "vite-plus/test";
 import { FOLD_WALL, HORN_PATH, VENT_KIND } from "../src/constants/speakerSpec";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { cutRows } from "../src/lib/pa/cutlist";
-import { panelLbPerSqFt } from "../src/lib/panel";
+import { cutRows } from "../src/lib/build/cutlist";
+import { panelLbPerSqFt } from "../src/lib/build/panel";
 import { foldRoom } from "../src/lib/speaker/foldHorn";
-import { formatInches } from "../src/lib/pa/calc";
+import { formatInches } from "../src/lib/acoustics/boxModels";
 import { LITERS_PER_CUBIC_IN } from "../src/constants/units";
 import { cabinetBuild, chamberNetLiters, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";

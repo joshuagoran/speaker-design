@@ -10,13 +10,13 @@ import {
   subGeometry,
   maxStraightSlotIn,
   minFoldedSlotIn,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import {
   BOTH_ENDS_CORRECTION_RATIO,
   rectangleEndCorrection,
   rectangleEndCorrectionIntegral,
 } from "../src/lib/acoustics/radiation";
-import { ductFit } from "../src/lib/pa/chips";
+import { ductFit } from "../src/lib/speaker/chips";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import type { SubSystemConfig } from "../src/types";

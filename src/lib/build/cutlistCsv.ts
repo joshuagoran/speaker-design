@@ -1,13 +1,13 @@
 // The cutlist as one CSV file for spreadsheets and cutting tools: the panels (length and width in their own columns, in
 // decimal inches), then the purchased parts with a total. Not part of the .speaknow.json design file
 // (docs/import-export-spec.md). Pure.
-import type { CutPart, PurchasedPart } from "../types";
+import type { CutPart, PurchasedPart } from "../../types";
 import {
   PURCHASED_COLUMNS,
   PURCHASED_PARTIAL_NOTE,
   PURCHASED_PART_NAMES,
-} from "../constants/purchasedParts";
-import { UI_TEXT } from "../constants/uiText";
+} from "../../constants/purchasedParts";
+import { UI_TEXT } from "../../constants/uiText";
 
 /** The CSV's media type: UTF-8, so a spreadsheet reads ″, ° and × right (with the byte order mark the text starts with). */
 export const CSV_TYPE = "text/csv;charset=utf-8";

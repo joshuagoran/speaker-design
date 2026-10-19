@@ -1,11 +1,11 @@
 /**
- * Cabinet hardware ids and the words the pages use for them (lib/pa/hardware places the parts; their names come from
+ * Cabinet hardware ids and the words the pages use for them (lib/build/hardware places the parts; their names come from
  * data/catalog/cabinet-hardware). Code decides on the ids, the pages look the words up here.
  */
 import type { HardwareBoxId } from "../types";
 
 /**
- * The hardware presets by box (lib/pa/hardware planBoxHardware): the sub box's (two handles, the input dish and its
+ * The hardware presets by box (lib/build/hardware planBoxHardware): the sub box's (two handles, the input dish and its
  * jacks), and the mid box's, which adds the horn's binding posts on its top.
  */
 export const HARDWARE_BOX = { sub: "sub", mid: "mid" } as const satisfies Record<

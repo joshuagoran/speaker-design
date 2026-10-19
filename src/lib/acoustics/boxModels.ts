@@ -1,13 +1,13 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
-import { coilFactor, driverCircuit, ventResistances } from "../acoustics/driverCircuit";
-import { rectangleEndCorrection } from "../acoustics/radiation";
+import { coilFactor, driverCircuit, ventResistances } from "./driverCircuit";
+import { rectangleEndCorrection } from "./radiation";
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
   driverPressurePa,
   LID_STRESS_LIMIT_PA,
   PRESSURE_STRESS_LIMIT_PA,
   STACK_LOAD_N,
-} from "../strength";
+} from "../build/strength";
 import type {
   BoxAxis,
   BoxBracing,
@@ -65,11 +65,11 @@ import {
   DRIVER_MOTOR_DIA_IN,
   MID_DEPTH_FALLBACK_IN,
 } from "../../data/catalog/driver-cutouts";
-import { defaultPanelIn, panelLbPerSqFt } from "../panel";
+import { defaultPanelIn, panelLbPerSqFt } from "../build/panel";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { PA_SLIDERS } from "../../constants/paSliders";
-import { boxSliderMins, upToStep } from "../boxFit";
+import { boxSliderMins, upToStep } from "../build/boxFit";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import {
   modelTubeElbows,
@@ -79,7 +79,7 @@ import {
   tubeDriverOnBaffle,
   tubeLayout,
   type TubeDriver,
-} from "./tubes";
+} from "../build/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import { ELBOW_WORDS } from "../../constants/portStyles";
 import {
@@ -100,7 +100,7 @@ import {
   ribRunAxis,
   WINDOW_RAIL_IN,
   windowWoodIn3,
-} from "../bracing";
+} from "../build/bracing";
 import {
   BASKET_RING_SHARE,
   BASKET_TAPER_STEPS,
@@ -113,11 +113,11 @@ import {
   paBoxPanels,
   type PaBoxInside,
   type PaBoxSupports,
-} from "./bracing";
-import { hardwareKeepOut, hardwareLiters, mountedCutout, planBoxHardware } from "./hardware";
+} from "../build/boxBracing";
+import { hardwareKeepOut, hardwareLiters, mountedCutout, planBoxHardware } from "../build/hardware";
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
-import { towerHornCutout, towerSpec } from "./tower";
+import { towerHornCutout, towerSpec } from "../speaker/tower";
 import { KG_PER_LB } from "../../constants/units";
 import { SENSITIVITY_REFERENCE_OHMS, ohmsOf, voltsToWatts, wattsToVolts } from "../power";
 import { PA_SLOT_FINS } from "../../constants/speakerSpec";
@@ -537,11 +537,11 @@ export const midGrossLiters = (
   inset: number,
   layout: PaLayout | undefined,
 ) => boxInternalLiters(dims.w, layout === "tower" ? dims.h + t : dims.h, dims.d, t, inset);
-// Plywood weight, lb/ft², at the wall's exact thickness (lib/panel).
+// Plywood weight, lb/ft², at the wall's exact thickness (lib/build/panel).
 export const plywoodLbPerSqFt = (t: number) => panelLbPerSqFt(t, PLYWOOD_MATERIAL);
 
 // ---------------------------------------------------------------
-// Bracing by rule (lib/bracing): each panel's first plate resonance, and the window braces or ribs that lift every
+// Bracing by rule (lib/build/bracing): each panel's first plate resonance, and the window braces or ribs that lift every
 // panel over PA_PANEL_TARGET_HZ. The cutlist, the volumes, the weights and the 3D view all read these.
 // ---------------------------------------------------------------
 /** The frame's baffle ply, in: 3/4″ whatever the walls. */
@@ -553,7 +553,7 @@ const sideDuctWidthIn = (v: Pick<VentSpec, "throat">, t: number) =>
   v.throat + t + SIDE_DUCT_FLARE_IN;
 /**
  * A PA panel's stock for the plate model, from its exact thickness: the one place bracing reads the panel thickness and
- * its weight (lib/panel, plywood), with birch ply's moduli.
+ * its weight (lib/build/panel, plywood), with birch ply's moduli.
  */
 export const paPanelStock = (t: number): PlateStock => panelStock(t, PLYWOOD_MATERIAL);
 /** A PA box's inside as boxParts cuts it: behind a 3/4″ baffle set `inset` back, `band` of a bottom slot under it. */
@@ -674,7 +674,7 @@ export interface ConeBody {
 /**
  * A cone driver's room behind the baffle, which no brace or rib may enter, as boxes round its axis: the cutout's square
  * at the baffle (the basket comes through it), stepping in along the basket to the motor's and back to the back of the
- * magnet (lib/pa/bracing's shares), each with DRIVER_CLEARANCE_IN to spare. `depthIn` is the mounting depth from the
+ * magnet (lib/build/boxBracing's shares), each with DRIVER_CLEARANCE_IN to spare. `depthIn` is the mounting depth from the
  * baffle's front.
  */
 export function coneKeepOut(
@@ -871,7 +871,7 @@ function paBracing(
   back: BackJointId,
   /** the driver's cutout on the baffle, in from the baffle's corner */
   hole: PlateHole,
-  /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
+  /** the driver's figures for the pressure it puts in the box (lib/build/strength); absent: no pressure checked */
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined,
   /** every panel's first mode should clear it, Hz */
   targetHz: number,
@@ -907,13 +907,13 @@ export interface BraceInputs {
   back: BackJointId;
   /** the largest cutout on the baffle, in from the baffle's corner; absent: none */
   hole?: PlateHole;
-  /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
+  /** the driver's figures for the pressure it puts in the box (lib/build/strength); absent: no pressure checked */
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined;
   /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ, or a Speaker-page cabinet's own */
   targetHz: number;
 }
 /**
- * A box's braces and ribs by rule (lib/bracing braceBox): its six panels (paBoxPanels) to the target, the
+ * A box's braces and ribs by rule (lib/build/bracing braceBox): its six panels (paBoxPanels) to the target, the
  * braces cut from the wall stock, and the strength checks' loads: the driver's pressure in the box's air and a load
  * spread over the lid. The PA boxes' rule (paBracing), for any shell and stock.
  */
@@ -1099,7 +1099,7 @@ export const formatInches = (x: number) => {
   }
   return whole ? `${whole} ${a}/${b}` : `${a}/${b}`;
 };
-export { formatThickness } from "../panel";
+export { formatThickness } from "../build/panel";
 
 /** Whether a box's window braces have rails on its back: a frame across x or y has a rear rail; one across z stands parallel to it. */
 export const railsOnBack = (b: Pick<BoxBracing, "windows"> | null | undefined) =>
@@ -1312,7 +1312,7 @@ export function hardwareCutNotes(plan: BoxHardwarePlan, box: Dims3, t: number): 
 }
 
 /**
- * The sub's vent panels as weights for its center of gravity (lib/pa/hardware boxCenterOfGravity), each at its middle
+ * The sub's vent panels as weights for its center of gravity (lib/build/hardware boxCenterOfGravity), each at its middle
  * (`y` up from the box's bottom, `z` back from its front), cut and placed as the cutlist and the 3D view take them: a
  * bottom slot's shelf and two fins from the front, and a folded slot's rear channel wall; a side duct's wall and its two
  * dividers from the front, at the design's divider thickness. Round tubes count none.
@@ -1359,7 +1359,7 @@ export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceV
 }
 
 /**
- * The sub box's hardware from its presets (lib/pa/hardware planBoxHardware), placed before the braces: its driver where
+ * The sub box's hardware from its presets (lib/build/hardware planBoxHardware), placed before the braces: its driver where
  * the 3D view puts it, its keep-out, and its vent's panels in the center of gravity. `bracing` (absent: none) only
  * checks the parts; it doesn't move them.
  */
@@ -1551,7 +1551,7 @@ export const partitionNote = (where: string, back: BackJointId, cleats: boolean)
  * A frame shell's rows (boxParts of the whole `dims`, label `box`) with an arched top: a semicircle the full width, its
  * outer radius half the width and its springline that far below the top. The sides stop at the springline, a bent
  * strip makes the top, the back and baffle take its curve (which a straight guillotine cut can't make), one cleat runs
- * across the bottom and the uprights stop at the springline. The PA tower's top (lib/pa/tower towerSpec), on any frame
+ * across the bottom and the uprights stop at the springline. The PA tower's top (lib/speaker/tower towerSpec), on any frame
  * shell.
  */
 export function archedShellParts(
@@ -1632,7 +1632,7 @@ export function archedShellParts(
 /** An arched top's bent strip, in: the semicircle's length on its centerline, a wall in from the outer radius. */
 export const archStripIn = (w: number, t: number) => Math.PI * (w / 2 - t / 2);
 
-/** The sub's round tubes as bought: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes). */
+/** The sub's round tubes as bought: the stock pipe, its holes in the baffle and the elbows each takes (lib/build/tubes). */
 export type SubTubeKit = ReturnType<typeof subTubeKit>;
 /** The sub box's baffle note: the driver's cutout, and its tubes' holes where it has round tubes (`kit`). */
 export const subCutNote = (
@@ -1749,7 +1749,7 @@ export function cutParts({
 }: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
     all: CutPart[] = [];
-  // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
+  // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/build/tubes)
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, inset, sub) : null;
   const subExtra = {
     bracing: noBraces
@@ -1972,7 +1972,7 @@ export function ventGeometry(
         (folded ? ", folded up the back wall" : ""),
     };
   }
-  // round tubes: straight while they fit, then up the back wall and forward under the lid (lib/pa/tubes)
+  // round tubes: straight while they fit, then up the back wall and forward under the lid (lib/build/tubes)
   const r = cVent.dia / 2;
   const elbows = modelTubeElbows(box, portStyle, cVent, t, inset, drv);
   return {
@@ -2141,7 +2141,7 @@ export const keeleFrequency = (covDeg: number, mouthIn: number) =>
 // ---- weights (lb): 3/4″ baffle, other panels at the wall ply, and the braces and ribs (subBoxBracing,
 // midBoxBracing) by their wood. Without the bracing: the bare box, a floor for any bracing ----
 /**
- * What each box weighs besides its panels, braces, driver and the catalog's hardware (lib/pa/hardware hardwareLb), lb:
+ * What each box weighs besides its panels, braces, driver and the catalog's hardware (lib/build/hardware hardwareLb), lb:
  * the screws, glue, wiring and damping. The handles, the input dish and its jacks, and the horn posts are counted by
  * part, so these are only the remainder.
  */
@@ -2152,7 +2152,7 @@ export const subWeightLb = (
   wall: number,
   drvLb: number,
   bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
-  /** the handles, dish, jacks and posts (lib/pa/hardware hardwareLb) */
+  /** the handles, dish, jacks and posts (lib/build/hardware hardwareLb) */
   hardwareLb = 0,
 ) =>
   (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
@@ -2164,7 +2164,7 @@ export const midWeightLb = (
   b: Dims3,
   wall: number,
   bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
-  /** the handles, dish, jacks and posts (lib/pa/hardware hardwareLb) */
+  /** the handles, dish, jacks and posts (lib/build/hardware hardwareLb) */
   hardwareLb = 0,
 ) =>
   (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
@@ -2311,7 +2311,7 @@ export function subThroughLowpass(
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
 /**
  * The mid's net volume, L: the gross less the driver, the braces' and ribs' wood (midBoxBracing) and the hardware's
- * recesses (lib/pa/hardware hardwareLiters).
+ * recesses (lib/build/hardware hardwareLiters).
  */
 export const midNetLiters = (
   grossL: number,
@@ -2336,7 +2336,7 @@ export function sealedLitersForQtc(ts: BoxModelTS, qtc: number): number | null {
 }
 /** The baffle face a mid needs, in: the driver and a rim round it. */
 export const midBaffleNeedIn = (size: MidDriver["size"]) => size + 1.2;
-/** The smallest mid box face that holds its driver, in: the page's sliders and stored size start there (lib/boxFit). */
+/** The smallest mid box face that holds its driver, in: the page's sliders and stored size start there (lib/build/boxFit). */
 export const midBoxMin = (size: MidDriver["size"]): Dims2 => ({
   w: midBaffleNeedIn(size),
   h: midBaffleNeedIn(size),
@@ -2442,7 +2442,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
 /**
  * The pad that brings a coaxial's HF section down to its woofer behind a passive network, dB (never negative). Both
  * sensitivities are 1 W / 1 m at their own impedance, so the HF's moves to 2.83 V first (a 16 ohm section gets half
- * the power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox). Zero without
+ * the power the 8 ohm woofer does), as the Hi-fi engine's level match does. Zero without
  * an HF section. The Fills page's limits and the Fill speaker template both read it.
  * @param hf the coaxial's HF section, or null for a fill without one
  * @param wooferSensDb the woofer's sensitivity at 2.83 V / 1 m, dB
@@ -2494,7 +2494,7 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
   // HF through a passive network, padded down to the woofer: reaches its program rating (2 x AES)
   // only at an amp power well above what the woofer sees. The pad matches the two at the same amp voltage: both
   // sensitivities are 1 W/1 m at their own impedance, so the HF's is moved to 2.83 V (a 16 ohm section gets half the
-  // power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox)
+  // power the 8 ohm woofer does), as the Hi-fi engine's level match does
   const hf = drv.hf;
   const pad = fillDriverPadDb(drv);
   const hfLimW = hf ? hfLimitWatts(2 * hf.aes, hf, pad, ts) : null; // amp watts into the woofer's impedance

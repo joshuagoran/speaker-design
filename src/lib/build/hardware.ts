@@ -2,7 +2,7 @@
 // offsets), the input dish with its two Speakons low on the back, centered, and on the mid (top) box the horn's binding
 // posts on the lid. Each part's recess takes room inside the box (its liters come off the net volume) and must stay
 // clear of the driver, the vent, the other parts and the panels' edges and joints. The parts are placed first and the
-// braces and ribs after them, around their recesses (lib/bracing keeps out of hardwareKeepOut), so a brace or rib in a
+// braces and ribs after them, around their recesses (lib/build/bracing keeps out of hardwareKeepOut), so a brace or rib in a
 // part's way is a fault the check still reports, not a reason to move the part.
 import type {
   BoxBracing,
@@ -25,8 +25,8 @@ import type {
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
 import { HANDLE_OFFSET_SLIDER, NO_HANDLES } from "../../constants/hardware";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
-import { panelLbPerSqFt } from "../panel";
-import { bracingRegions } from "../bracing";
+import { panelLbPerSqFt } from "./panel";
+import { bracingRegions } from "./bracing";
 
 /** Cubic inches to liters. */
 const IN3_TO_L = 16.387 / 1000;
@@ -157,7 +157,7 @@ export interface HardwareDriver {
   lb: number;
   depthIn: number;
 }
-/** A box's inside spans on the box axes, as the bracing's (lib/pa/calc paInner). */
+/** A box's inside spans on the box axes, as the bracing's (lib/acoustics/boxModels paInner). */
 const insideOf = (box: Dims3, t: number, inset: number) => ({
   x: box.w - 2 * t,
   y: box.h - 2 * t,
@@ -167,7 +167,7 @@ const insideOf = (box: Dims3, t: number, inset: number) => ({
 /**
  * A box's center of gravity, in from its outside: `y` up from the bottom, `z` back from the front. The walls (each at
  * its middle), the baffle, the driver (its weight at half its mounting depth) and `more` (the vent's panels, where
- * they sit: lib/pa/calc subVentMasses) count; the braces spread through the box and are left out.
+ * they sit: lib/acoustics/boxModels subVentMasses) count; the braces spread through the box and are left out.
  */
 export function boxCenterOfGravity(
   box: Dims3,

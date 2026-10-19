@@ -10,7 +10,7 @@ import type { SpeakerCabinet, SpeakerSpec, StackSpec } from "../../types";
 import { cabinetBuild, speakerPurchasedParts } from "./speakerBuild";
 import { boxCorners, memberPitch, memberPoint, ORIGIN, stackLayout } from "./stackLayout";
 import { speakerBounds } from "./speakerLayout";
-import { purchasedTotal } from "../cutlistCsv";
+import { purchasedTotal } from "../build/cutlistCsv";
 import { formatDollars } from "../format";
 import { UI_TEXT } from "../../constants/uiText";
 

@@ -1,5 +1,5 @@
 // The space model: every placement's stack in the room, summed across the floor on the PA coverage page's engine
-// (lib/pa/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes).
+// (lib/acoustics/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes).
 // Each placement plays its stack's response (lib/speaker/stackResponse: each member's speaker through its crossover,
 // level and delay), with each band's amp power from its speaker; each driver spot radiates its band's share with its own
 // coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step (the speaker
@@ -35,8 +35,8 @@ import {
   type CoverageSlot,
   type CoverageVoice,
   type SceneDriver,
-} from "../pa/coverage";
-import { baffleStepShelf } from "../hifi/hifi";
+} from "../acoustics/coverage";
+import { baffleStepShelf } from "../acoustics/directivity";
 import { abs } from "../acoustics/complex";
 import { coaxParts, FILL_OPTIONS, hifiDriverById } from "../data";
 import { byId } from "../tables";

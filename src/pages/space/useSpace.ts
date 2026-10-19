@@ -8,7 +8,7 @@ import {
   COVERAGE_BANDS,
   COVERAGE_GRID_COLS,
   SINGLE_FREQ_RANGE,
-} from "../../lib/pa/coverage";
+} from "../../lib/acoustics/coverage";
 import {
   meterSpotsOf,
   playsInBand,

@@ -1,4 +1,4 @@
-// Keep-up at a crossover (the PA page's "Mid limits first" and "Horn limits first" checks, lib/pa/chips midChips and
+// Keep-up at a crossover (the PA page's "Mid limits first" and "Horn limits first" checks, lib/speaker/chips midChips and
 // hornChips), for any two parts that cross: two bands of a speaker, or two members of a stack. One input drives both.
 // At the input where the lower part reaches its music limit, the upper part must still have headroom at the crossover;
 // the band Levels (and a member's level) already hold the music balance, so the PA page's "less the music balance" is
@@ -13,8 +13,8 @@ import type {
   StackResponse,
   StackSpec,
 } from "../../types";
-import { curveLevelAt } from "../pa/coverage";
-import { KEEP_UP_SLACK_DB, type ChipBody } from "../pa/chips";
+import { curveLevelAt } from "../acoustics/coverage";
+import { KEEP_UP_SLACK_DB, type ChipBody } from "./chips";
 import { formatHz } from "../format";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { crossingPairs, type CrossingPair } from "./stackResponse";

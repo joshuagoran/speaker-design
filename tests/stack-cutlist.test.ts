@@ -1,8 +1,8 @@
-// The Stack page's Cutlist tab (lib/speaker/stackBuild) on the PA presets against the PA page's cutlist (lib/pa/calc
+// The Stack page's Cutlist tab (lib/speaker/stackBuild) on the PA presets against the PA page's cutlist (lib/acoustics/boxModels
 // cutParts): the same pieces, so the same sheets, with each member's boxes tagged apart.
 import { describe, expect, test } from "vite-plus/test";
-import { cutParts } from "../src/lib/pa/calc";
-import { layoutCutlist, CUTLIST_DEFAULTS } from "../src/lib/pa/cutlist";
+import { cutParts } from "../src/lib/acoustics/boxModels";
+import { layoutCutlist, CUTLIST_DEFAULTS } from "../src/lib/build/cutlist";
 import { stackCutParts } from "../src/lib/speaker/stackBuild";
 import { presetLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";

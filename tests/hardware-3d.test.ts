@@ -5,7 +5,7 @@ import assert from "node:assert";
 import { H1105_MESH } from "../src/data/meshes/h1105";
 import { HARDWARE_MESHES } from "../src/data/meshes";
 import { HANDLES } from "../src/data/catalog/cabinet-hardware";
-import { mountedFlange } from "../src/lib/pa/hardware";
+import { mountedFlange } from "../src/lib/build/hardware";
 const MM_IN = 1 / 25.4;
 test("the committed H1105 mesh matches the catalog: flange 220 × 162 × 5 mm, recess to its depth, within the weld grid", () => {
   const [w, h, z0, z1] = [

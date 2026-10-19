@@ -19,7 +19,7 @@ import { MM_IN } from "../src/components/stack-view/geometry";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { N314T } from "../src/data/catalog/compression-drivers";
 import { DIY_OS90X70, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
-import { takesHornMount } from "../src/lib/pa/hornMount";
+import { takesHornMount } from "../src/lib/build/hornMount";
 import {
   CLAMPED_BRACKET_NAME,
   HORN_MOUNT_PLATE_FALLBACK,

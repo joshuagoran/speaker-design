@@ -7,7 +7,7 @@ import {
   tubeLegs,
   tubeSpan,
   type TubeRoom,
-} from "../src/lib/tubeFold";
+} from "../src/lib/build/tubeFold";
 import {
   modelTubeElbows,
   subTubeEndCorrection,
@@ -15,13 +15,17 @@ import {
   subTubeKit,
   tubeLayout,
   tubeWallEndCorrection,
-} from "../src/lib/pa/tubes";
-import { ventGeometry, ventSpeedLimit, FLARED_PORT_SPEED_RATIO } from "../src/lib/pa/calc";
+} from "../src/lib/build/tubes";
+import {
+  ventGeometry,
+  ventSpeedLimit,
+  FLARED_PORT_SPEED_RATIO,
+} from "../src/lib/acoustics/boxModels";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../src/data/acoustics/tube-ends";
 import { PORT_ELBOWS, PORT_PIPES, PORT_TUBES } from "../src/data/catalog/port-tubes";
 import { PA_SLIDERS } from "../src/constants/paSliders";
-import { hifiTubeRoom } from "../src/lib/hifi/hifi";
+import { hifiTubeRoom } from "../src/lib/acoustics/wooferBox";
 import { close, vent, DRV18 } from "./helpers";
 
 const room: TubeRoom = { run: 20, rise: 25, stop: 9 };

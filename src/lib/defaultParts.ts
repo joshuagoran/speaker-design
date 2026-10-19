@@ -2,10 +2,10 @@
 // a change of default part, price or rating shows up in the prose. Nothing here names a part itself.
 import { DEFAULT_PA } from "./defaults";
 import { PANEL_NOMINAL_NAMES, PLYWOOD_MATERIAL } from "../constants/panelSizes";
-import { PANEL_NOMINALS, panelIn } from "./panel";
+import { PANEL_NOMINALS, panelIn } from "./build/panel";
 import { MAKER_NAMES } from "../data/catalog/makers";
-import { subBoxBracing, subSystem, subWeightLb } from "./pa/calc";
-import { hardwareLb } from "./pa/hardware";
+import { subBoxBracing, subSystem, subWeightLb } from "./acoustics/boxModels";
+import { hardwareLb } from "./build/hardware";
 import { formatDollars, formatHz } from "./format";
 import { crossoverSlopeName } from "../constants/crossovers";
 

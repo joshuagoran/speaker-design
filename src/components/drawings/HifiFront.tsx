@@ -1,7 +1,7 @@
 import type { Dims2 } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
-import { amtOpening } from "../../lib/hifi/boxLayout";
+import { amtOpening } from "../../lib/build/boxLayout";
 
 /**
  * A ribbon's own waveguide from the front, centered on (cx, cy), `w` by `h` px: the square plate, its flared

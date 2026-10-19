@@ -1,6 +1,6 @@
 import type { HifiTweeter } from "../../types";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../data";
-import { isAmt, isRibbon, needsWaveguide } from "./hifi";
+import { isAmt, isRibbon, needsWaveguide } from "./twoWay";
 /** Woofers listed smallest first, grouped by size in the picker, A–Z within a size. */
 export const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort(
   (a, b) => a.size - b.size || a.name.localeCompare(b.name),

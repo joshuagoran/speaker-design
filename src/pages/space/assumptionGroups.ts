@@ -5,7 +5,7 @@ import {
   COHERENT_BELOW_HZ,
   COVERAGE_BANDS,
   STATS_CLEARANCE_FT,
-} from "../../lib/pa/coverage";
+} from "../../lib/acoustics/coverage";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
   CROWD_BOUNCE,
@@ -14,7 +14,7 @@ import {
   MODAL_HZ,
   modalCrossoverHz,
   roomAbsorption,
-} from "../../lib/pa/roomAcoustics";
+} from "../../lib/acoustics/roomAcoustics";
 import type { CoverageRoom } from "../../types";
 
 /** One group of assumptions: a heading and its lines. */

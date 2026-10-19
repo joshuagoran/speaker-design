@@ -8,7 +8,7 @@ import {
   panelThicknessName,
   panelExactRange,
   savedPanelExactIn,
-} from "../src/lib/panel";
+} from "../src/lib/build/panel";
 import { PANEL_STOCK } from "../src/data/catalog/plywood";
 import { DEFAULT_PA } from "../src/lib/defaults";
 test("panel sizes: thickest first, each starting at its nominal size in both materials", () => {

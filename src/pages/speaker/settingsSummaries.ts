@@ -9,7 +9,7 @@ import type {
   SpeakerHorn,
 } from "../../types";
 import { formatHz, formatWatts } from "../../lib/format";
-import { formatThickness } from "../../lib/panel";
+import { formatThickness } from "../../lib/build/panel";
 import { CONSTRUCTION_SHORT, FILL_SUMMARY, SETTINGS_TEXT } from "../../constants/speakerSettings";
 import {
   CABINET_TOP_NAMES,
@@ -31,7 +31,7 @@ import { FILL_LEVEL_PCT } from "../../constants/speakerSteps";
 import { keysOf } from "../../lib/records";
 import { byId } from "../../lib/tables";
 import { hornById } from "../../lib/data";
-import { HIFI_PASSIVES_BY_SIZE } from "../../lib/hifi/hifiDriverLists";
+import { HIFI_PASSIVES_BY_SIZE } from "../../lib/speaker/driverLists";
 import { onTop } from "../../lib/speaker/speakerLayout";
 import { driverName } from "./speakerParts";
 import { pathIn, shownInOfCm } from "./hornSections";

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { bracingRegions } from "../../lib/bracing";
+import { bracingRegions } from "../../lib/build/bracing";
 import { BAFFLE_THICKNESS_IN } from "./buildCabinet";
 import type { SceneContext } from "./sceneContext";
 import type { BoxAxis, BoxBracing, BoxKeepOut, BoxRegion, Dims3 } from "../../types";
@@ -63,7 +63,7 @@ export function buildBracesAt(
 
 /**
  * The driver's body behind the baffle in the cutaway (the cone is drawn only on the closed cabinet): each box of its
- * keep-out (lib/pa/calc driverKeepOut) less the clearance, as a disc of the basket stepping in to the magnet.
+ * keep-out (lib/acoustics/boxModels driverKeepOut) less the clearance, as a disc of the basket stepping in to the magnet.
  */
 export function buildDriverBody(
   ctx: SceneContext,

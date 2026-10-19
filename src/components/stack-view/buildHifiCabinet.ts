@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { SceneContext } from "./sceneContext";
-import type { RadiatorSide } from "../../lib/hifi/boxLayout";
+import type { RadiatorSide } from "../../lib/build/boxLayout";
 import { NO_WALL_OPENINGS, openingRect, panelPieces, type WallOpenings } from "./wallCuts";
 import type { Dims3 } from "../../types";
 

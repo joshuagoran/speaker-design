@@ -33,10 +33,10 @@ import {
   subSystem,
   subWeightLb,
   towerMidWeightLb,
-} from "../src/lib/pa/calc";
-import { towerHornCutout, towerMidDims } from "../src/lib/pa/tower";
-import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
-import { PA_PANEL_TARGET_HZ } from "../src/lib/pa/bracing";
+} from "../src/lib/acoustics/boxModels";
+import { towerHornCutout, towerMidDims } from "../src/lib/speaker/tower";
+import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
+import { PA_PANEL_TARGET_HZ } from "../src/lib/build/boxBracing";
 import {
   BACK_JOINT_FLUSH_NOTES,
   BACK_JOINT_NAMES,

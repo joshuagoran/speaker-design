@@ -1,10 +1,10 @@
 // Panel thickness: the one place the boxes read their wall thickness and panel weight from. A design picks a nominal
 // size (PANEL_NOMINAL_NAMES); the Cutlist page keeps the measured thickness of each (PanelExactIn), and everything that
 // depends on the walls (box volume, cutlist sizes and joints, the 3D view, weights) is worked out at `panelIn`.
-import { PANEL_STOCK } from "../data/catalog/plywood";
-import { PANEL_NOMINAL_NAMES } from "../constants/panelSizes";
-import type { PanelExactIn, PanelMaterial, PanelNominal, PanelStockMaterial } from "../types";
-import { keysOf } from "./records";
+import { PANEL_STOCK } from "../../data/catalog/plywood";
+import { PANEL_NOMINAL_NAMES } from "../../constants/panelSizes";
+import type { PanelExactIn, PanelMaterial, PanelNominal, PanelStockMaterial } from "../../types";
+import { keysOf } from "../records";
 
 /** Every nominal size, thickest first, as the settings offer them. */
 export const PANEL_NOMINALS = keysOf(PANEL_STOCK);

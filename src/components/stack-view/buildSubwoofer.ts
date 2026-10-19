@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { roundedRectShape, roundedRectPath, circlePath } from "./geometry";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
-import { modelTubeElbows, subTubeLegs } from "../../lib/pa/tubes";
+import { modelTubeElbows, subTubeLegs } from "../../lib/build/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import {
   ductDividerIn,
@@ -10,9 +10,9 @@ import {
   slotFinIn,
   maxStraightSlotIn,
   slotFolds,
-} from "../../lib/pa/calc";
+} from "../../lib/acoustics/boxModels";
 import type { SceneContext } from "./sceneContext";
-import { subVentOpenings, type SubVentPlan } from "../../lib/pa/subVentPlan";
+import { subVentOpenings, type SubVentPlan } from "../../lib/build/ventPlan";
 import type { Dims3, SubDriver } from "../../types";
 import { VENT_MESH_NAME } from "./buildBraces";
 /**
@@ -153,7 +153,7 @@ export function buildSubVent(
     const elbow = (c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3) =>
       addElbow(tube, bend, c, ax, ay);
     // a quarter-round flare whose lip is the mouth `at`, opening along `dir`: inside the tube's length, as the model
-    // counts it (its run is part of the centerline, lib/pa/tubes flareShortfall)
+    // counts it (its run is part of the centerline, lib/build/tubes flareShortfall)
     const bell = (at: THREE.Vector3, dir: THREE.Vector3) => {
       const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);

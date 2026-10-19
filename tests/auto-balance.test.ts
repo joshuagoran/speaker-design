@@ -21,8 +21,8 @@ import {
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
-import { curveLevelAt } from "../src/lib/pa/coverage";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { curveLevelAt } from "../src/lib/acoustics/coverage";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { defaultPaDesign, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../src/constants/autoBalance";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";

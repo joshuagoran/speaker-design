@@ -16,8 +16,8 @@ import {
   gammaFactor,
   jointedTeeBeam,
   teeBeam,
-} from "../src/lib/bracing";
-import { NO_SUPPORTS, paBoxPanels, PA_PANEL_TARGET_HZ } from "../src/lib/pa/bracing";
+} from "../src/lib/build/bracing";
+import { NO_SUPPORTS, paBoxPanels, PA_PANEL_TARGET_HZ } from "../src/lib/build/boxBracing";
 import {
   cutParts,
   subVentLines,
@@ -30,7 +30,7 @@ import {
   braceWoodEstimate,
   braceWoodIn3,
   braceParts,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import {
   RIB_HALF_LAP_NOTE,
   braceUnderNote,
@@ -40,7 +40,7 @@ import {
   bracePanelName,
   savedBraceStyle,
 } from "../src/constants/bracing";
-import { braceNoteLines } from "../src/lib/bracingNotes";
+import { braceNoteLines } from "../src/lib/build/bracingNotes";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs";
 import { formatHz } from "../src/lib/format";
 import { DEFAULT_PA } from "../src/lib/defaults";

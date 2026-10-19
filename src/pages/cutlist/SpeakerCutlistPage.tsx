@@ -2,7 +2,7 @@ import type { PanelExactIn, Setter } from "../../types";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import type { CutlistOptions } from "./useCutlistOptions";
 import { speakerCutParts, speakerPurchasedParts } from "../../lib/speaker/speakerBuild";
-import { defaultPanelIn } from "../../lib/panel";
+import { defaultPanelIn } from "../../lib/build/panel";
 import { withMeasuredWalls } from "../../lib/speaker/cabinetPanels";
 import { CutlistPage } from "./CutlistPage";
 import { useStoredCutlistOptions } from "./useStoredCutlistOptions";

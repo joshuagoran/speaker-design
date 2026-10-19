@@ -1,6 +1,6 @@
 import { UI_TEXT } from "../../constants/uiText";
 import { AssumptionsList } from "../../components/ui/AssumptionsList";
-import { BOX_SHADOW_HZ, SINGLE_FREQ_RANGE, STATS_CLEARANCE_FT } from "../../lib/pa/coverage";
+import { BOX_SHADOW_HZ, SINGLE_FREQ_RANGE, STATS_CLEARANCE_FT } from "../../lib/acoustics/coverage";
 import { SPACE_DETAILS, SPACE_LEVEL_REF_PLACE } from "../../constants/space";
 import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";

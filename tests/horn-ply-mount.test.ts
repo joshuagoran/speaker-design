@@ -21,7 +21,7 @@ import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { DIY_ROSSE110X50 } from "../src/data/catalog/horns";
 import { N314T } from "../src/data/catalog/compression-drivers";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { takesHornMount } from "../src/lib/pa/hornMount";
+import { takesHornMount } from "../src/lib/build/hornMount";
 import { HORN_MOUNT_DEFAULT, HORN_MOUNT_PANEL } from "../src/constants/hornMount";
 import { PANEL_STOCK } from "../src/data/catalog/plywood";
 import {

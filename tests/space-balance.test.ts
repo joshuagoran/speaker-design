@@ -1,7 +1,7 @@
 // The Space page's target across the bands and where it is measured (lib/speaker/spaceBalance) against the PA Coverage
-// page (lib/pa/coverage balancedTarget, oneMeterSpot): the PA presets' spaces take the page's target in every band.
+// page (lib/acoustics/coverage balancedTarget, oneMeterSpot): the PA presets' spaces take the page's target in every band.
 import { expect, test } from "vite-plus/test";
-import { ONE_METER_FT, RESPONSE_FREQS } from "../src/lib/pa/coverage";
+import { ONE_METER_FT, RESPONSE_FREQS } from "../src/lib/acoustics/coverage";
 import { presetLayers } from "../src/pages/stack/stackPresets";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";

@@ -8,7 +8,7 @@ import {
   midSystem,
   hornResponse,
   nearestPoint,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import type { CrossoverOrder, MidSystemConfig } from "../src/types";
 import { close, db } from "./helpers";

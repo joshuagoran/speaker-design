@@ -21,7 +21,7 @@ import type {
 } from "../../types";
 import { hornDesignOf, type HornDesignRoom } from "./hornDesign";
 import { hornLayoutModel } from "./hornLayoutModel";
-import { logSpacedFrequencies } from "../hifi/hifi";
+import { logSpacedFrequencies } from "../acoustics/directivity";
 import { wattsToVolts } from "../power";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { CM_PER_M } from "../../constants/units";

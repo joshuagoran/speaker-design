@@ -1,6 +1,6 @@
 import { SwatchPicker } from "./SwatchPicker";
 import { CABINET_FINISHES, PAINT_SWATCHES, cabinetFinishName } from "../../lib/data";
-import { cssHex, hornBodyColor, pickedHornColor } from "../../lib/pa/hornColor";
+import { cssHex, hornBodyColor, pickedHornColor } from "../../lib/speaker/hornColor";
 import {
   HORN_COLOR_CATALOG,
   HORN_COLOR_CATALOG_LABEL,

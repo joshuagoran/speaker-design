@@ -10,9 +10,9 @@ import { frontLoadedOf, roomOf } from "./horn-room";
 import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { flushBracing, speakerIdentity } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
-import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
-import { boxInternalLiters, midGrossLiters } from "../src/lib/pa/calc";
-import { needsWaveguide } from "../src/lib/hifi/hifi";
+import { towerMidDims, towerSpec } from "../src/lib/speaker/tower";
+import { boxInternalLiters, midGrossLiters } from "../src/lib/acoustics/boxModels";
+import { needsWaveguide } from "../src/lib/speaker/twoWay";
 import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { hornModel } from "../src/lib/acoustics/hornModel";
@@ -98,7 +98,7 @@ const PA_MEMBER_COUNT: Record<PaLayout, number> = { stack: 2, pole: 2, satellite
 const PA_PLACEMENT_COUNT: Record<PaLayout, number> = { stack: 1, pole: 1, satellite: 2, tower: 1 };
 const PA_BOX_COUNT: Record<PaLayout, number> = { stack: 2, pole: 2, satellite: 3, tower: 2 };
 
-/** Whether the design's horn arches the tower's top (lib/pa/tower `towerSpec`). */
+/** Whether the design's horn arches the tower's top (lib/speaker/tower `towerSpec`). */
 const towerArches = (cfg: PaPlannerDesign) =>
   towerSpec(cfg.cDim, cfg.wall, byIdOrThrow(HORN_OPTIONS, cfg.horn, CATALOG_TABLE_NAMES.horns))
     .archTop;

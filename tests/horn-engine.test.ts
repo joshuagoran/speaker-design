@@ -24,7 +24,7 @@ import { hornGrid } from "./helpers";
 import { abs, add, arg, complex, divide, multiply, subtract } from "../src/lib/acoustics/complex";
 import { AIR_DENSITY, SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
-import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/pa/calc";
+import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
 import type { Complex, HornDesign, HornModel, HornPoint, HornSegment, Matrix2 } from "../src/types";

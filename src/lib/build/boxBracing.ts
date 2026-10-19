@@ -1,4 +1,4 @@
-// The PA boxes' panels for the bracing rule (lib/bracing): their spans, stock and the supports the vent's own parts give.
+// The PA boxes' panels for the bracing rule (lib/build/bracing): their spans, stock and the supports the vent's own parts give.
 import type {
   BackJointId,
   BracePanel,
@@ -27,7 +27,7 @@ export const DUCT_SUPPORT_MIN_SHARE = 2 / 3;
 /** How far every brace and rib stays from the driver's basket, magnet and cutout, inches. */
 export const DRIVER_CLEARANCE_IN = 0.5;
 /**
- * The optimizers' cursory brace estimate (lib/pa/calc braceWoodEstimate), by back joint and style: one window brace's
+ * The optimizers' cursory brace estimate (lib/acoustics/boxModels braceWoodEstimate), by back joint and style: one window brace's
  * wood for every `span` inches of each inside span past the first, times `scale`. Least squares against the rule's wood
  * over the golden sub boxes in ¾″ ply with that back (their mid boxes need none, and neither does the estimate under
  * `span`), since the rule braces a screwed back (its edges hinged) apart from a glued one. It sees only the box's
@@ -63,7 +63,7 @@ export interface PaBoxInside {
   inD: number;
   band: number;
 }
-/** The lines the vent's parts already hold the panels on, in from each panel's own edge (lib/pa/calc works them out). */
+/** The lines the vent's parts already hold the panels on, in from each panel's own edge (lib/acoustics/boxModels works them out). */
 export interface PaBoxSupports {
   /** up the left and right sides (y): the vent shelf, the side-duct dividers */
   sideL: number[];
@@ -95,7 +95,7 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
  * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band). Each edge
  * is held by the panel glued to it there (EdgeHold: its stock and its span away from the joint), except where nothing
  * is: a screwed back's joints (`back`; it is `loose`: screwed to the window braces' rear rails, which hold it as
- * jointed T beams, lib/bracing jointedTeeBeam), the bottom's front edge over a slot's mouth and the baffle's lower
+ * jointed T beams, lib/build/bracing jointedTeeBeam), the bottom's front edge over a slot's mouth and the baffle's lower
  * edge on the slot's shelf (left hinged, on the safe side).
  */
 export function paBoxPanels(

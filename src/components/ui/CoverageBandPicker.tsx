@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { ToggleGroup } from "./ToggleGroup";
-import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
+import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/acoustics/coverage";
 import { formatHz } from "../../lib/format";
 import { GAP_Y } from "../../styles/layout";
 import type { CoverageBand } from "../../types";

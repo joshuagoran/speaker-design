@@ -1,14 +1,14 @@
-// The Speaker page's chamber fit checks, in the chips' style: a PA port's duct and tubes against its chamber (lib/pa/chips)
-// and a chamber's hardware against its braces, drivers, vent and edges (lib/pa/hardware). The page shows them; the
+// The Speaker page's chamber fit checks, in the chips' style: a PA port's duct and tubes against its chamber (lib/speaker/chips)
+// and a chamber's hardware against its braces, drivers, vent and edges (lib/build/hardware). The page shows them; the
 // Speaker optimizer (lib/speaker/optimize) rules out a design that fails one. Pure.
 import type { Chip, ChipId, SpeakerCabinet } from "../../types";
 import type { CabinetBuild } from "./speakerBuild";
-import { ductFitChip, hardwareFitChip, tubeFitChip } from "../pa/chips";
+import { ductFitChip, hardwareFitChip, tubeFitChip } from "./chips";
 import { baffleInsetIn } from "./chamberAir";
 import { bracingTaken } from "./chamberBracing";
 import { BRACING_CHIP_TEXT } from "../../constants/speakerResults";
 import { NO_BRACING } from "../../constants/bracing";
-import { braceShortfalls, strengthShortfalls } from "../bracing";
+import { braceShortfalls, strengthShortfalls } from "../build/bracing";
 import { formatHz } from "../format";
 
 /** A Speaker-page check. */
@@ -16,7 +16,7 @@ type SpeakerChip = Chip<ChipId<"speaker">>;
 
 /**
  * Each chamber's fit checks, in the spec's order: a PA port's duct and tubes against the chamber, by the PA sub box's
- * rules (lib/pa/chips), and its hardware against its braces, drivers, vent and edges (lib/pa/hardware). Empty for a
+ * rules (lib/speaker/chips), and its hardware against its braces, drivers, vent and edges (lib/build/hardware). Empty for a
  * chamber with neither.
  */
 export function chamberFitChips(

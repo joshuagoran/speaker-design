@@ -12,17 +12,10 @@ import type {
   SpeakerSpec,
   SpecIdentity,
 } from "../../types";
-import {
-  driverLayout,
-  HIFI_STUFFING_GAIN,
-  hifiBox,
-  hifiGridTop,
-  hifiPortElbows,
-  isCoax,
-  tweeterLevelInBox,
-} from "../hifi/hifi";
-import { hifiBoxFit } from "../hifi/boxLayout";
-import { MAX_ELBOWS } from "../tubeFold";
+import { driverLayout, isCoax, tweeterLevelInBox } from "./twoWay";
+import { HIFI_STUFFING_GAIN, hifiBox, hifiGridTop, hifiPortElbows } from "../acoustics/wooferBox";
+import { hifiBoxFit } from "../build/boxLayout";
+import { MAX_ELBOWS } from "../build/tubeFold";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
@@ -183,7 +176,7 @@ export function speakerFromHifi(
   identity: SpecIdentity,
 ): SpeakerSpec {
   const { crossoverHz, crossoverOrder } = state;
-  /** the box as the model takes it (lib/hifi/boxLayout) */
+  /** the box as the model takes it (lib/build/boxLayout) */
   const fit = hifiBoxFit(state);
   const drive = state.drive ?? HIFI_DRIVE.active;
   const { subsonic, trimDb } = hifiBandParts(state, fit);

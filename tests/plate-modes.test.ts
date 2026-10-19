@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { beamHz, beamModeParams } from "../src/lib/plateModes";
+import { beamHz, beamModeParams } from "../src/lib/build/plateModes";
 
 /** relative difference */
 const relDiff = (a: number, b: number) => Math.abs(a - b) / Math.abs(b);

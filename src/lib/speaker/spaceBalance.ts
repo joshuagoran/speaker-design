@@ -1,5 +1,5 @@
 // The Space page's target across the bands and where it is measured (the PA Coverage page's "Measured at" and music
-// balance, lib/pa/coverage balancedTarget and useCoverageMap). Pure.
+// balance, lib/acoustics/coverage balancedTarget and useCoverageMap). Pure.
 //
 // The target is the venue's level in the lowest band. Each band above a crossover of the space's stacks is the music
 // balance's step lower there (lib/speaker/autoBalance tiltAt: flat 0 dB; the PA music tilt the mid below the sub at a
@@ -7,7 +7,7 @@
 // target at its center (or at the one frequency). The reference the space is turned down to: the audience's
 // average (as the coverage page counts it), the listener, or the mean of the levels 1 m in front of each placement, on its aim.
 import type { FloorPoint, SpaceDesign, SpaceVenue, SpeakerBand } from "../../types";
-import { oneMeterSpot, type COVERAGE_BANDS } from "../pa/coverage";
+import { oneMeterSpot, type COVERAGE_BANDS } from "../acoustics/coverage";
 import { AUTO_BALANCE_TILT, tiltAt } from "./autoBalance";
 import { expandPlacements, placementStack } from "./spaceLayout";
 import { stackCrossoversHz } from "./stackResponse";
@@ -42,7 +42,7 @@ const FRONT_SPOT = { w: 0, d: 0 };
 
 /**
  * The spots 1 m in front of each placement, ft: from its base's front center along its aim, at ear height (the PA
- * page's "1 m from the stacks", lib/pa/coverage oneMeterSpot), kept on the floor.
+ * page's "1 m from the stacks", lib/acoustics/coverage oneMeterSpot), kept on the floor.
  */
 export function oneMeterSpots(
   design: Pick<SpaceDesign, "space">,

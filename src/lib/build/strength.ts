@@ -1,4 +1,4 @@
-// The PA boxes' strength checks (lib/bracing applies them with the resonance target): the panels, ribs and window
+// The PA boxes' strength checks (lib/build/bracing applies them with the resonance target): the panels, ribs and window
 // braces' rails in bending under two loads.
 //
 // - The driver's pressure inside the box, reversing at the bass frequency for the box's whole life (a fatigue check):
@@ -10,12 +10,12 @@
 // thickness; W. C. Young & R. G. Budynas, "Roark's Formulas for Stress and Strain", 7th ed., Table 11.4: case 1a, all
 // edges simply supported, at the center, and case 8a, all edges fixed, at the middle of a long edge; a glued edge
 // sits between, so β is the larger of the two). A rib or rail is a beam carrying its strip of panel, hinged over its
-// span (M = w L² / 8, the larger midspan moment) as its T section (lib/bracing's teeBeam), σ = M / Z.
+// span (M = w L² / 8, the larger midspan moment) as its T section (lib/build/bracing's teeBeam), σ = M / Z.
 //
 // The limits are Eurocode 5's design strengths for plywood (EN 1995-1-1:2004, f_d = k_mod f_k / γ_M, γ_M = 1.2 for
 // plywood, Table 2.3; k_mod for service class 1, Table 3.1) from birch plywood's characteristic bending strength across
 // the face grain (the weaker way), 34.1 N/mm² (UPM WISA-Form Birch technical fact sheet, 18 mm, 01/2015: f_m⊥; along
-// the grain 40.2 N/mm²), the sheet lib/bracing's moduli come from.
+// the grain 40.2 N/mm²), the sheet lib/build/bracing's moduli come from.
 // - The pressure: short-term (k_mod 0.9) and fatigue, k_fat = 1 − (1 − R) / (a (b − R)) log₁₀(β N) (EN 1995-2:2004,
 //   Annex A, eq. A.1; bending a = 9.5, b = 1.1, Table A.1), the stress reversing (R = −1), FATIGUE_CYCLES cycles and
 //   β = 1 (a cracked panel is no danger to anyone).

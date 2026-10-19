@@ -26,11 +26,11 @@ import {
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
-import { bracingRegions } from "../../lib/bracing";
+import { bracingRegions } from "../../lib/build/bracing";
 import { coneDepthIn } from "../../lib/speaker/driverParts";
 import { foldDrawing } from "../../lib/speaker/foldHorn";
 import { add, drawnSeg, left, sub, unit } from "../../lib/speaker/foldGeometry";
-import { subVentPlan } from "../../lib/pa/subVentPlan";
+import { subVentPlan } from "../../lib/build/ventPlan";
 import { hornDepth } from "../../lib/data";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";

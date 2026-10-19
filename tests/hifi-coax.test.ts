@@ -12,8 +12,8 @@ import {
   HIFI_WOOFERS,
   coaxParts,
 } from "../src/lib/data";
-import { driverLayout, isCoax } from "../src/lib/hifi/hifi";
-import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
+import { driverLayout, isCoax } from "../src/lib/speaker/twoWay";
+import { hifiBoxMin } from "../src/lib/build/boxLayout";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
 import { COAX_GAP, COAXIAL_TWEETER_TYPE } from "../src/constants/coax";

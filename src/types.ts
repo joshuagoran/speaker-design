@@ -566,7 +566,7 @@ export type CoaxGap = keyof typeof COAX_GAP_NAMES;
 /**
  * A coaxial (a `FillDriver`) as the Hi-fi engine takes it (lib/data coaxParts): its woofer, and its HF section as a
  * tweeter of type "coaxial" at the woofer's center, the cone its conical waveguide (`ownGuide`). Both carry the
- * coaxial's id: a design whose woofer and tweeter ids are equal is a coaxial (lib/hifi isCoax). The woofer carries the
+ * coaxial's id: a design whose woofer and tweeter ids are equal is a coaxial (lib/speaker/twoWay isCoax). The woofer carries the
  * coaxial's weight and price, the HF part none. `tweeter` is null where the maker publishes no HF section (the woofer
  * alone can be modeled); `gaps` lists the HF figures that are missing.
  */
@@ -687,7 +687,7 @@ export interface RadiatorSelection {
 
 export type HifiBoxKind = "sealed" | "vented" | "radiator";
 
-// ---- Hi-fi design (lib/hifi) ----
+// ---- Hi-fi design ----
 
 export type HifiPlacement = "free" | "wall" | "corner";
 export type PanelMaterial = "ply" | "mdf";
@@ -697,7 +697,7 @@ export type CrossoverOrder = 4 | 8;
 /**
  * A high-pass to a sub ahead of the woofer: a Linkwitz-Riley filter of `order` at `hz`, the woofer's half of the
  * sub-to-speaker crossover. At or above the automatic subsonic's corner it takes its place; below it the subsonic stays in
- * series (lib/hifi hifiBox).
+ * series (lib/acoustics/wooferBox hifiBox).
  */
 export interface HifiHighpass {
   hz: number;
@@ -990,9 +990,9 @@ export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, Pane
 /**
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
  * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them. `div` is the side ducts'
- * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/panel); absent,
+ * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/build/panel); absent,
  * as in saves from before the choice, they are ½″ (`ductDividerIn`). `fins` is how many fins split the bottom slot;
- * absent, as the PA page always leaves it, its two (`PA_SLOT_FINS`, lib/pa/calc `slotFinsOf`); the Speaker page sets it.
+ * absent, as the PA page always leaves it, its two (`PA_SLOT_FINS`, lib/acoustics/boxModels `slotFinsOf`); the Speaker page sets it.
  */
 export interface VentSpec {
   slotH: number;
@@ -1054,7 +1054,7 @@ export interface PaDesignConfig {
   portMax: number;
   /** the mid box's outside size */
   mDim: Dims3;
-  /** side, top, bottom and back plywood, inches: the exact thickness of `panel` (lib/panel) */
+  /** side, top, bottom and back plywood, inches: the exact thickness of `panel` (lib/build/panel) */
   wall: number;
   /** the walls' nominal size; absent in designs saved before the sizes (their `wall` names it) */
   panel?: PanelNominal;
@@ -1082,7 +1082,7 @@ export interface PaDesignConfig {
   /** the music balance: how far the horn band's level sits below the mid's, dB (a level, not an angle; the saved key keeps its old name) */
   hfTilt: number;
   layout: PaLayout;
-  /** each box's handles and their offsets (lib/pa/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
+  /** each box's handles and their offsets (lib/build/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
   hardware?: PaHardware;
   baffleColor?: string;
   /** a paint color (hex) for the horn body over its catalog finish; absent: the finish (older saves have none) */
@@ -1567,7 +1567,7 @@ export interface PaMaxPoint {
 }
 
 /** The vent as the model uses it: openings, total area (in²), length (in), end correction (in), hydraulic diameter (in) and a description. */
-/** How many 90° elbows a round port tube takes to fit its box (lib/tubeFold). */
+/** How many 90° elbows a round port tube takes to fit its box (lib/build/tubeFold). */
 export type ElbowCount = 0 | 1 | 2;
 
 export interface VentGeometry {
@@ -1606,7 +1606,7 @@ export interface SubGeometryConfig {
   backJoint?: BackJointId;
   /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
   braceEstimate?: boolean;
-  /** the boxes' handles and plates, whose recesses take volume (lib/pa/hardware); absent: none */
+  /** the boxes' handles and plates, whose recesses take volume (lib/build/hardware); absent: none */
   hardware?: PaHardware;
 }
 
@@ -1628,7 +1628,7 @@ export interface SubGeometry {
   grossL: number;
   ductL: number;
   woodL: number;
-  /** the liters the hardware's recesses take (lib/pa/hardware) */
+  /** the liters the hardware's recesses take (lib/build/hardware) */
   recessL: number;
   netL: number;
   Fb: number;
@@ -1640,7 +1640,7 @@ export interface SubSystemBase {
   grossL: number;
   ductL: number;
   woodL: number;
-  /** the liters the hardware's recesses take (lib/pa/hardware) */
+  /** the liters the hardware's recesses take (lib/build/hardware) */
   recessL: number;
   netL: number;
   AMP_V: number;
@@ -1682,7 +1682,7 @@ export interface MidSystemBase {
   V: number;
   grossL: number;
   disp: number;
-  /** the liters the hardware's recesses take (lib/pa/hardware) */
+  /** the liters the hardware's recesses take (lib/build/hardware) */
   recessL: number;
   netL: number;
   effL: number;
@@ -1834,7 +1834,7 @@ export type HornPlacement = (typeof HORN_PLACEMENT)[keyof typeof HORN_PLACEMENT]
 export interface HornAttachment {
   hornId: Horn["id"];
   placement: HornPlacement;
-  /** what holds the driver on the lid; null where no mount applies (lib/pa/hornMount `takesHornMount`) */
+  /** what holds the driver on the lid; null where no mount applies (lib/build/hornMount `takesHornMount`) */
   mount: HornMountId | null;
 }
 
@@ -1897,10 +1897,10 @@ export interface SideDuctPort
 
 /**
  * Round tubes, with the PA sub's details where they are its tubes: `flared` ends (the PA tube rule: the flares, the
- * neighboring mouths, a wall facing the inner mouth, the sub driver's depth as the stop; lib/pa/tubes
+ * neighboring mouths, a wall facing the inner mouth, the sub driver's depth as the stop; lib/build/tubes
  * subTubeEndCorrection), in the baffle's `corners` round a centered driver (`round4`) or in a row along the bottom.
  * Without `flared`, the Hi-fi round port rule: the tubes can then take a `position`, where the row sits (its center),
- * on the baffle or the back; absent, the Hi-fi rule's place, centered along the baffle's bottom (lib/hifi/boxLayout
+ * on the baffle or the back; absent, the Hi-fi rule's place, centered along the baffle's bottom (lib/build/boxLayout
  * roundPortSpots). Flared tubes keep the PA layout: their place is part of the PA tube rule.
  */
 export type SpeakerRoundPort = RoundPort &
@@ -1915,7 +1915,7 @@ export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
 /**
  * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (the PA page's two), its
  * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
- * (the PA slot rule: lib/pa/calc ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
+ * (the PA slot rule: lib/acoustics/boxModels ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
  * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
  * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
  * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width. An open slot always runs the whole
@@ -1950,7 +1950,7 @@ export type ChamberVent =
       radiators: RadiatorSelection;
       /**
        * where the radiators sit (the stack's center), on the baffle or the back; absent: the Hi-fi rule's place,
-       * stacked up the back from its bottom (lib/hifi/boxLayout radiatorSpots on `RADIATOR_PANEL`)
+       * stacked up the back from its bottom (lib/build/boxLayout radiatorSpots on `RADIATOR_PANEL`)
        */
       position?: VentPosition;
     };
@@ -2282,7 +2282,7 @@ export interface SpeakerChamber {
 
 /**
  * A Box chamber's bracing as the PA boxes take it: the style (ribs, window braces or both) or none, the target every
- * panel's first mode should clear, Hz (the PA boxes' PA_PANEL_TARGET_HZ by default, lib/pa/bracing), and how its back is
+ * panel's first mode should clear, Hz (the PA boxes' PA_PANEL_TARGET_HZ by default, lib/build/boxBracing), and how its back is
  * fixed (glued or screwed).
  */
 export interface ChamberBracing extends Required<Pick<PaDesignConfig, "backJoint">> {
@@ -2318,7 +2318,7 @@ export interface SpeakerCabinet {
   construction: CabinetConstruction;
   /**
    * the top's shape: flat, or arched, a semicircle the full width of the cabinet over its top chamber (the PA tower's,
-   * lib/pa/tower `towerSpec`)
+   * lib/speaker/tower `towerSpec`)
    */
   top: CabinetTop;
   /** how far the frame's baffle sits behind its front, in; 0 flush. A flush box has none (`baffleInsetIn`). */
@@ -2328,7 +2328,7 @@ export interface SpeakerCabinet {
   /** the kick-back: the baffle tilted back so the axis points this far up, degrees */
   tiltDeg: NonNullable<HifiConfig["tiltDeg"]>;
   /**
-   * the PA boxes' handles (lib/pa/hardware), one each side of each shell's lowest chamber: a catalog handle's model and
+   * the PA boxes' handles (lib/build/hardware), one each side of each shell's lowest chamber: a catalog handle's model and
    * its offsets; null: none. (A save from before the split has one `hardware` for the handles and the dish:
    * lib/speaker/speakerSaves reads it.)
    */
@@ -3133,7 +3133,7 @@ export interface BoxKeepOut {
 
 /** A strength check's load (`STRENGTH_LOAD_NAMES` holds the words for it). */
 export type StrengthLoadId = keyof typeof STRENGTH_LOAD_NAMES;
-/** A panel's worst bending stress with its braces and ribs, under the load nearest its limit, Pa (lib/strength). */
+/** A panel's worst bending stress with its braces and ribs, under the load nearest its limit, Pa (lib/build/strength). */
 export interface PanelStrength {
   load: StrengthLoadId;
   stressPa: number;
@@ -3200,7 +3200,7 @@ export interface CabinetPart {
   flange: { w: number; h: number } | null;
   /**
    * which listed dimension, cutout's and flange's alike, runs up the panel as mounted: vertical on a side or the back,
-   * front to back on the lid; the other runs across (lib/pa/hardware mountedSize)
+   * front to back on the lid; the other runs across (lib/build/hardware mountedSize)
    */
   upright: "w" | "h";
   depthIn: number | null;
@@ -3244,7 +3244,7 @@ export interface BoxHandles {
   upIn: number;
   backIn: number;
 }
-/** Each box's handles; the input dish and the horn's posts have fixed places (lib/pa/hardware). */
+/** Each box's handles; the input dish and the horn's posts have fixed places (lib/build/hardware). */
 export type PaHardware = Record<HardwareBoxId, BoxHandles>;
 /** What a placed part is (`HARDWARE_KIND_NAMES` words each). */
 export type HardwareKind = keyof typeof HARDWARE_KIND_NAMES;
@@ -3372,7 +3372,7 @@ export interface CutPartsConfig {
   noBraces?: boolean;
   /** each box's handles and plates, for the panels' cutout notes; absent: none */
   hardware?: PaHardware;
-  /** the tower's horn, which sets its cabinet's height and baffle (lib/pa/tower `towerSpec`); the tower needs it */
+  /** the tower's horn, which sets its cabinet's height and baffle (lib/speaker/tower `towerSpec`); the tower needs it */
   horn?: TowerHorn;
 }
 
@@ -3473,7 +3473,7 @@ export interface CutlistLayout {
   notes: string[];
 }
 
-// ---- Warning chips (lib/pa/chips) ----
+// ---- Warning chips (lib/speaker/chips) ----
 
 export type ChipSeverity = "ok" | "warn" | "bad";
 /** The sections that carry checks: the PA stack's sub, mid and horn, the fills, the Hi-fi speaker and the Speaker page. */
@@ -3506,7 +3506,7 @@ export interface PaStackGeometry {
   orderHi: CrossoverOrder;
 }
 
-// ---- coverage map (lib/pa/coverage) ----
+// ---- coverage map (lib/acoustics/coverage) ----
 
 /** A side of the room. front: the wall behind the stacks. */
 export type RoomSide = "front" | "back" | "left" | "right";
@@ -3514,7 +3514,7 @@ export type RoomSide = "front" | "back" | "left" | "right";
 /** A surface the room's material is set for: the four sides and the ceiling (the floor is hard, or the crowd). */
 export type RoomSurface = RoomSide | "ceiling";
 
-/** What a side or the ceiling is made of (lib/pa/roomAcoustics has each one's absorption); "open" reflects nothing. */
+/** What a side or the ceiling is made of (lib/acoustics/roomAcoustics has each one's absorption); "open" reflects nothing. */
 export type RoomMaterial = "concrete" | "drywall" | "wood" | "glass" | "curtain" | "open";
 
 /** A value in each octave band the absorption tables give, 125 Hz–4 kHz (`OCTAVE_HZ` in data/acoustics). */
@@ -3620,7 +3620,7 @@ export interface CoverageStats {
   spread: number;
 }
 
-// ---- PA optimizer (lib/pa/optimize) ----
+// ---- PA optimizer types ----
 
 /** The goals, as the planner's buttons name them. */
 export type PaGoal = "cheaper" | "lighter" | "lower" | "louder";
@@ -3684,7 +3684,7 @@ export interface PaOptimizerInput {
 }
 
 /**
- * The tower's cabinet over the sub's footprint (lib/pa/tower `towerSpec`), heights in inches up from the cabinet's
+ * The tower's cabinet over the sub's footprint (lib/speaker/tower `towerSpec`), heights in inches up from the cabinet's
  * bottom: the 3D view, the cutlist, the weights and the cards' front view all read it.
  */
 export interface TowerSpec {

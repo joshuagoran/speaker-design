@@ -19,7 +19,12 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { NO_FILTERS, lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer } from "../src/lib/speaker/bandFilter";
 import { abs } from "../src/lib/acoustics/complex";
-import { ampVoltage, hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/pa/calc";
+import {
+  ampVoltage,
+  hornResponse,
+  subThroughLowpass,
+  ventSpeedLimit,
+} from "../src/lib/acoustics/boxModels";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_SPEAKER_BAND } from "../src/lib/defaults";
 import { settledCabinet } from "../src/lib/speaker/speakerLayout";
@@ -81,7 +86,7 @@ function scaleDb(spec: SpeakerSpec, model: ReturnType<typeof modelOf>, id: BandI
 
 /**
  * Tolerances for the PA parity, with the net air set to today's (the box models alone). Every band runs the PA's own
- * limit arithmetic (lib/pa/calc sineLimitAt) on the model's grid, so the curves differ only by reading the PA's between
+ * limit arithmetic (lib/acoustics/boxModels sineLimitAt) on the model's grid, so the curves differ only by reading the PA's between
  * its points: PA_SUB_DB on the sub (its port limit's dip at the tuning is the sharpest corner), PA_BAND_DB on the mid
  * and the horn. The horn's power is the PA's to rounding. The sub's music limit (one drive for the whole band, before
  * its lowpass) is the PA's `subwooferLimits` on a coarser grid: PA_MUSIC_DB, the same limit.

@@ -26,7 +26,7 @@ import {
   highpassGain,
   linkwitzRileyHighpass,
   linkwitzRileyLowpass,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { abs, add, complex, multiply, phasor, scale } from "../src/lib/acoustics/complex";
 import { chamberVentModel } from "../src/lib/speaker/chamberAir";
 import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";

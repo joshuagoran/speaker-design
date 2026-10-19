@@ -3,8 +3,8 @@
 import type { SpeakerCabinet, SpeakerChamber, SpeakerPort } from "../../../types";
 import { chamberVentModel, stuffedLiters } from "../chamberAir";
 import { PORT_RULE, portRule } from "../speakerLayout";
-import { ventTuning } from "../../pa/calc";
-import { hifiPortElbows } from "../../hifi/hifi";
+import { ventTuning } from "../../acoustics/boxModels";
+import { hifiPortElbows } from "../../acoustics/wooferBox";
 import { ventSizesFor } from "../../optimizer/searchSpace";
 import { passiveRadiatorMassMax, HIFI_PASSIVES } from "../../data";
 import { byId } from "../../tables";

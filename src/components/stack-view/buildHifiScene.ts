@@ -1,5 +1,5 @@
 // The Hi-fi speaker in the 3D view: one speaker (the left of the pair) on the floor, built from the same numbers the
-// Hi-fi page's model and its 2D front drawing use (lib/hifi: the driver layout, the vent and radiators' places), with
+// Hi-fi page's model and its 2D front drawing use (lib/speaker/twoWay and lib/build/boxLayout: the driver layout, the vent and radiators' places), with
 // the PA view's scene context, cone, horn, driver and horn mounts.
 import * as THREE from "three";
 import { type SceneContext } from "./sceneContext";
@@ -13,14 +13,21 @@ import {
   roundedRectShape,
 } from "./geometry";
 import { CD_OPTIONS } from "../../lib/data";
-import { hifiTubeRoom, isAmt, isRibbon } from "../../lib/hifi/hifi";
+import { hifiTubeRoom } from "../../lib/acoustics/wooferBox";
+import { isAmt, isRibbon } from "../../lib/speaker/twoWay";
 import {
   amtOpening,
   slotOpening,
   type RadiatorSpot,
   type RoundSpot,
-} from "../../lib/hifi/boxLayout";
-import { ELBOW_COUNTS, MAX_ELBOWS, tubeElbows, tubeLegs, type TubeRoom } from "../../lib/tubeFold";
+} from "../../lib/build/boxLayout";
+import {
+  ELBOW_COUNTS,
+  MAX_ELBOWS,
+  tubeElbows,
+  tubeLegs,
+  type TubeRoom,
+} from "../../lib/build/tubeFold";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
 import type { Props as StackSceneProps } from "./buildStackScene";
@@ -310,7 +317,7 @@ export function addSlotWall(
 }
 
 /**
- * The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/tubeFold). `fold`, for
+ * The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/build/tubeFold). `fold`, for
  * a port placed elsewhere (the Speaker page's set position): the room its tubes have and whether the riser heads down;
  * absent, the Hi-fi box's room (`hifiTubeRoom`), rising.
  */
@@ -331,7 +338,7 @@ export function addRoundPorts(
   },
 ) {
   const T = ctx.wall;
-  // the fewest elbows that fit, as the model takes them (lib/hifi hifiPortElbows); a port too long for any: the most
+  // the fewest elbows that fit, as the model takes them (lib/acoustics/wooferBox hifiPortElbows); a port too long for any: the most
   const room = fold?.room ?? hifiTubeRoom(dim, T);
   /** the riser's way: up, or down */
   const up = fold?.down ? -1 : 1;

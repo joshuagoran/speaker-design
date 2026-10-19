@@ -2,8 +2,8 @@
 // geometry the 3D view builds the tower from.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { cutParts, boxInternalLiters, midGrossLiters } from "../src/lib/pa/calc";
-import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
+import { cutParts, boxInternalLiters, midGrossLiters } from "../src/lib/acoustics/boxModels";
+import { towerMidDims, towerSpec } from "../src/lib/speaker/tower";
 import { TOWER_MID_HEIGHT_IN } from "../src/constants/paLayouts";
 import {
   BACK_JOINT_CUT_NOTES,

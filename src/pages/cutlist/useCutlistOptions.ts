@@ -26,7 +26,7 @@ export interface CutlistOptions {
   setOffcutShape: Setter<OffcutShape>;
   cutStyle: CutStyle;
   setCutStyle: Setter<CutStyle>;
-  /** the measured thickness of each nominal panel size (lib/panel) */
+  /** the measured thickness of each nominal panel size (lib/build/panel) */
   panelExactIn: PanelExactIn;
   setPanelExactIn: Setter<PanelExactIn>;
 }

@@ -2,7 +2,7 @@
 // second that turns it forward again. One rule for the PA sub's tubes and the Hi-fi port (each passes its own room).
 // Lengths are the tube's centerline in inches, measured from the baffle front to the mouth, with each elbow taken as a
 // sharp corner (the bend correction, SHARP_BEND_CORRECTION, is against that same centerline).
-import type { ElbowCount } from "../types";
+import type { ElbowCount } from "../../types";
 
 export type { ElbowCount };
 

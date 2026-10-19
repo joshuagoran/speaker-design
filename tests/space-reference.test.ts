@@ -1,11 +1,11 @@
 // Where the Space page reads its level (src/pages/space/useSpace referenceAtLimit) and the audience average it takes
-// (lib/pa/coverage audienceAverage): each reference reads its own spots, and a missing one reads nothing.
+// (lib/acoustics/coverage audienceAverage): each reference reads its own spots, and a missing one reads nothing.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
-import { audienceAverage, STATS_CLEARANCE_FT } from "../src/lib/pa/coverage";
+import { audienceAverage, STATS_CLEARANCE_FT } from "../src/lib/acoustics/coverage";
 import { spaceGridRequest, spaceLevelAt, computeSpaceGrid } from "../src/lib/speaker/spaceCoverage";
 import { spaceModel } from "./helpers";
 import { referenceAtLimit } from "../src/pages/space/useSpace";
@@ -15,7 +15,7 @@ import {
   type MeterSpot,
   type PassbandCorners,
 } from "../src/lib/speaker/spaceBalance";
-import { COVERAGE_BANDS } from "../src/lib/pa/coverage";
+import { COVERAGE_BANDS } from "../src/lib/acoustics/coverage";
 import { lrFilter, spacePlacement } from "../src/lib/speaker/specParts";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";

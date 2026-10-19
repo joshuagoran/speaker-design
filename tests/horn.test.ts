@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { ohmsOf } from "../src/lib/power";
-import { hornResponse } from "../src/lib/pa/calc";
+import { hornResponse } from "../src/lib/acoustics/boxModels";
 import { CD_OPTIONS } from "../src/lib/data";
 import { close, near, db } from "./helpers";
 

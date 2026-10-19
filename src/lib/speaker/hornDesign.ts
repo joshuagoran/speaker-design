@@ -15,8 +15,8 @@ import type {
 import { frontChamber, throatCones } from "./hornThroat";
 import { isSizedSegment } from "../acoustics/hornSegments";
 import { slotRunIn, stuffedLiters } from "./chamberAir";
-import { slotFinsOf } from "../pa/calc";
-import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
+import { slotFinsOf } from "../acoustics/boxModels";
+import { hifiRoundEndCorrection, portArea } from "../acoustics/wooferBox";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { HORN_LAYOUT } from "../../constants/acousticNetwork";

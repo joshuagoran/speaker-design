@@ -1,9 +1,9 @@
 // The panel sizes the Speaker page sets on a spec, as the PA page sets them on its design: the walls' size (the baffle
-// of a frame box stays ¾″, lib/pa/calc BAFFLE_PLY_IN) and the side ducts' dividers' size. The PA page shares one
+// of a frame box stays ¾″, lib/acoustics/boxModels BAFFLE_PLY_IN) and the side ducts' dividers' size. The PA page shares one
 // measured thickness per size between its walls and dividers (usePaDesign `panelExactIn`); here dividers of the walls'
 // size follow the walls' thickness, and dividers of another size keep their default (only the walls are measured). Pure.
 import type { PanelNominal, SideDuctPort, SpeakerCabinet, SpeakerPanel } from "../../types";
-import { defaultPanelIn } from "../panel";
+import { defaultPanelIn } from "../build/panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 

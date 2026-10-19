@@ -9,9 +9,14 @@ import type {
   SubSize,
   VentSpec,
 } from "../../types";
-import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
-import { subTubeSpan, tubeLayout, type TubeDriver } from "./tubes";
-import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../tubeFold";
+import {
+  isRoundPort,
+  maxFoldedSlotIn,
+  maxStraightSlotIn,
+  minFoldedSlotIn,
+} from "../acoustics/boxModels";
+import { subTubeSpan, tubeLayout, type TubeDriver } from "../build/tubes";
+import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../build/tubeFold";
 import { PA_SLIDERS } from "../../constants/paSliders";
 import {
   HARDWARE_ADVICE,
@@ -27,7 +32,7 @@ import {
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
 // shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way, nor longer
 // than leaves a slot height under the lid (maxFold). Round tubes run straight, then take one elbow up the back wall and
-// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labeled for the chip); they run
+// a second forward under the lid (lib/build/tubes), each count with its own lengths (`ways`, labeled for the chip); they run
 // from the baffle front, `inset` behind the frame front, where the slots and side ducts run from the frame front.
 // `spans` lists the lengths that fit, shortest first.
 export function ductFit(

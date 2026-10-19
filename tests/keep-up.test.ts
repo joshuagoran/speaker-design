@@ -1,4 +1,4 @@
-// Keep-up at the crossovers (lib/speaker/keepUp) against the PA page's mid and horn checks (lib/pa/chips): the golden PA
+// Keep-up at the crossovers (lib/speaker/keepUp) against the PA page's mid and horn checks (lib/speaker/chips): the golden PA
 // designs read in as stacks with their music balance in the band Levels (the PA presets').
 import { test } from "vite-plus/test";
 import assert from "node:assert";

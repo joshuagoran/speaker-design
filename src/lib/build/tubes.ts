@@ -1,5 +1,5 @@
 // The PA sub's round port tubes (`round1`, `round2`, `round4`): where they sit on the baffle, how they fold to fit
-// (the shared rule in lib/tubeFold), and their end correction. The model, the chips, the optimizers, the cutlist and the
+// (the shared rule in lib/build/tubeFold), and their end correction. The model, the chips, the optimizers, the cutlist and the
 // 3D view all take the tubes from here, so they agree.
 import type { Dims3, PortStyle, SubDriver, VentSpec } from "../../types";
 import { SUB_DEPTH_FALLBACK_IN, SUB_FRAME_DIA_IN } from "../../data/catalog/driver-cutouts";
@@ -13,7 +13,7 @@ import {
   type ElbowCount,
   type TubeLegs,
   type TubeRoom,
-} from "../tubeFold";
+} from "./tubeFold";
 
 /** What the tubes read of the sub driver: its size class and, where the datasheet gives it, its mounting depth. */
 export type TubeDriver = Pick<SubDriver, "size" | "depthIn">;

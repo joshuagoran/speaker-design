@@ -1,5 +1,9 @@
 import { test } from "vite-plus/test";
-import { highpassGain, linkwitzRileyLowpass, linkwitzRileyHighpass } from "../src/lib/pa/calc";
+import {
+  highpassGain,
+  linkwitzRileyLowpass,
+  linkwitzRileyHighpass,
+} from "../src/lib/acoustics/boxModels";
 import { db, close } from "./helpers";
 
 test("Butterworth highpasses are -3.01 dB at the corner", (t) => {

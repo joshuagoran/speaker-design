@@ -1,4 +1,4 @@
-// The maximum-output layer (lib/pa/calc sineLimitAt) against a maximum built from Hornresp 60.60's own results, for
+// The maximum-output layer (lib/acoustics/boxModels sineLimitAt) against a maximum built from Hornresp 60.60's own results, for
 // three cases: th18-xoc1 (tools/hornresp/records, a published tapped horn), sub-bin-vented and sub-direct-vented
 // (tests/hornresp). Each case's record runs on the network engine (lib/acoustics/network) at an amp's voltage, and the
 // limit function sets its maximum; the reference reads only Hornresp's exported curves and the driver's datasheet.
@@ -14,7 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { readHornrespRecord } from "../src/lib/acoustics/network/hornrespRecord";
 import { presetModel } from "../src/lib/acoustics/network/presets";
-import { sineLimitAt } from "../src/lib/pa/calc";
+import { sineLimitAt } from "../src/lib/acoustics/boxModels";
 import { wattsToVolts } from "../src/lib/power";
 import { SPEAKER_SUB_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { LIMIT_NAMES } from "../src/constants/limits";

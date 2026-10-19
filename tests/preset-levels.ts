@@ -4,7 +4,7 @@ import type { PaBandLevels } from "../src/lib/speaker/paBalance";
 import { PA_MUSIC_TILT, autoBalanceStack } from "../src/lib/speaker/autoBalance";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { keysOf } from "../src/lib/records";
 import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts";

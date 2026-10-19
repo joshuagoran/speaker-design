@@ -17,8 +17,8 @@ import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../con
 import { driverName } from "./speakerParts";
 import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
 import { dispersionChecks } from "../../lib/speaker/dispersionCheck";
-import { hfHeadroomChip } from "../../lib/pa/chips";
-import { hfLimitWatts } from "../../lib/pa/calc";
+import { hfHeadroomChip } from "../../lib/speaker/chips";
+import { hfLimitWatts } from "../../lib/acoustics/boxModels";
 import { bandLoads } from "../../lib/speaker/speakerLimits";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 

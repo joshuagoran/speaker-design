@@ -12,7 +12,7 @@ import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { SPEAKER_BAND } from "../src/constants/speakerSpec";

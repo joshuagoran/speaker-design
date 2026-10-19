@@ -3,7 +3,7 @@ import { ROUNDOVER_IN } from "./stackHeights";
 import { MM_IN, partMeshGeometry } from "./geometry";
 import type { SceneContext } from "./sceneContext";
 import type { BoxHardwarePlan, Dims3, PlacedHardware } from "../../types";
-import { mountedCutout, mountedFlange } from "../../lib/pa/hardware";
+import { mountedCutout, mountedFlange } from "../../lib/build/hardware";
 import { HARDWARE_MESHES } from "../../data/meshes";
 import type { HardwareMesh } from "../../types";
 
@@ -191,7 +191,7 @@ function stud(
 }
 
 /**
- * A box's handles, input dish and horn posts (lib/pa/hardware) on its faces, for the cabinet `box` whose bottom is at
+ * A box's handles, input dish and horn posts (lib/build/hardware) on its faces, for the cabinet `box` whose bottom is at
  * `y` and center at `x`: each part's flange in steel (PARTS_3D.hardware) with its opening in black, the handle's grip,
  * the dish's two Speakons and the cup's two posts; in the cutaway, each recess's pocket inside the box as well.
  */

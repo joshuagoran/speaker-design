@@ -2,7 +2,7 @@ import { ToggleGroup } from "./ToggleGroup";
 import { Slider } from "./Slider";
 import { SelectField } from "./SelectField";
 import { Tooltip } from "./Tooltip";
-import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
+import { ROOM_MATERIAL_OPTIONS } from "../../lib/acoustics/roomAcoustics";
 import { UI_TEXT } from "../../constants/uiText";
 import type { CoverageRoom, FloorCrowd, RoomMaterial, RoomSurface } from "../../types";
 

@@ -14,10 +14,10 @@ import {
   nearestPoint,
   sealedLitersForQtc,
   SEALED_QTC_MIN,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { PA_SLIDERS } from "../src/constants/paSliders";
-import { DRIVER_CLEARANCE_IN } from "../src/lib/pa/bracing";
+import { DRIVER_CLEARANCE_IN } from "../src/lib/build/boxBracing";
 import { MID_DEPTH_FALLBACK_IN } from "../src/data/catalog/driver-cutouts";
 import type { MidSystemConfig, SubSystemConfig } from "../src/types";
 import { close, db, LR24_ORDERS } from "./helpers";

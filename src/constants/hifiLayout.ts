@@ -2,7 +2,7 @@ import type { Dims3, SliderSpec } from "../types";
 
 /**
  * Where a Hi-fi speaker's drivers, vent and passive radiators sit, inches, and the room each needs: the model's driver
- * layout (lib/hifi driverLayout), the smallest box that holds them (lib/hifi/boxLayout hifiBoxMin), the 2D front
+ * layout (lib/speaker/twoWay driverLayout), the smallest box that holds them (lib/build/boxLayout hifiBoxMin), the 2D front
  * drawing (drawings/HifiFront) and the 3D view (stack-view/buildHifiScene) all read these, so they always agree.
  */
 export const HIFI_BOX_LAYOUT = {

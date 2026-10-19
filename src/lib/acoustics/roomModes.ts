@@ -26,7 +26,7 @@ export interface RoomModes {
 
 /** A driver as the modal sum sees it: a monopole at its place in the room, its mode shapes there, its images. */
 export interface ModalSource {
-  /** the radiator it is (lib/pa/coverage `CoverageVoice.id`): its output comes with each frequency */
+  /** the radiator it is (lib/acoustics/coverage `CoverageVoice.id`): its output comes with each frequency */
   voice: string;
   /** how much the box's DSP delays it, as a path length, m (see SceneSource.alignM) */
   alignM: number;

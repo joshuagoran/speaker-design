@@ -11,7 +11,7 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer } from "../src/lib/speaker/bandFilter";
 import { abs, add, complex, multiply, phasor, scale } from "../src/lib/acoustics/complex";
-import { hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/pa/calc";
+import { hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/acoustics/boxModels";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { AUTO_DELAY, DRIVER_KIND, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import type {

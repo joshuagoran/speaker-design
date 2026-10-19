@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { rangesOnSteps, snapDrag, snapToRanges } from "../src/components/ui/Slider";
-import { ductFit } from "../src/lib/pa/chips";
+import { ductFit } from "../src/lib/speaker/chips";
 import { vent, DRV18 } from "./helpers";
 
 test("slider ranges: edges move inward to the steps, and a range with no step drops out", () => {

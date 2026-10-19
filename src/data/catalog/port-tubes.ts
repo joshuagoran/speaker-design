@@ -99,7 +99,7 @@ export const PORT_PIPES: readonly PortPipe[] = [
 ];
 
 /**
- * The 90° elbow for each tube size (Spears Sch 40 socket 90°, part 406-0xx). The fold rule (lib/tubeFold) takes a leg
+ * The 90° elbow for each tube size (Spears Sch 40 socket 90°, part 406-0xx). The fold rule (lib/build/tubeFold) takes a leg
  * past an elbow as at least a diameter, about a short-radius fitting's center-to-socket-face length.
  */
 export const PORT_ELBOWS: readonly PortElbow[] = [

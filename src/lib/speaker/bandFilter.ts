@@ -1,7 +1,7 @@
 // A band's filters as complex transfer functions, for the speaker model's sum (lib/speaker/speakerResponse). Pure.
 import type { BandFilter, Complex, SpeakerBand } from "../../types";
 import { complex, divide, multiply } from "../acoustics/complex";
-import { HIGHPASS_ALIGNMENTS, butterworth } from "../pa/calc";
+import { HIGHPASS_ALIGNMENTS, butterworth } from "../acoustics/boxModels";
 import { FIRST_ORDER_FILTER } from "../../constants/speakerSpec";
 
 /** Which side of its corner a filter passes. */
@@ -16,7 +16,7 @@ function power(s: Complex, n: number): Complex {
 
 /**
  * The filter's transfer at `f` (Hz): first order 1/(1 + s) or s/(1 + s); Butterworth n 1/Bn(s) or sⁿ/Bn(s); a
- * Linkwitz-Riley of order n is a Butterworth n/2 squared (as lib/hifi linkwitzRileyFilter). Its magnitude is the box
+ * Linkwitz-Riley of order n is a Butterworth n/2 squared. Its magnitude is the box
  * models' highpassGain and linkwitzRileyLowpass.
  */
 export function filterTransfer(f: number, filter: BandFilter, side: FilterSide): Complex {

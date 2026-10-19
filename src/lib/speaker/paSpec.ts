@@ -33,12 +33,17 @@ import type {
 } from "../../types";
 import { HORN_OPTIONS, SUB_OPTIONS } from "../data";
 import { byIdOrThrow } from "../tables";
-import { STUFFING_VOLUME_GAIN, slotFinsOf, subDriverCenter, ventSpeedLimit } from "../pa/calc";
-import { modelTubeElbows } from "../pa/tubes";
-import { towerMidDims, towerSpec } from "../pa/tower";
-import { takesHornMount } from "../pa/hornMount";
-import { PA_PANEL_TARGET_HZ } from "../pa/bracing";
-import { defaultBraceStyleNear } from "../bracing";
+import {
+  STUFFING_VOLUME_GAIN,
+  slotFinsOf,
+  subDriverCenter,
+  ventSpeedLimit,
+} from "../acoustics/boxModels";
+import { modelTubeElbows } from "../build/tubes";
+import { towerMidDims, towerSpec } from "./tower";
+import { takesHornMount } from "../build/hornMount";
+import { PA_PANEL_TARGET_HZ } from "../build/boxBracing";
+import { defaultBraceStyleNear } from "../build/bracing";
 import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
 import { NO_HANDLES } from "../../constants/hardware";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
@@ -363,7 +368,7 @@ function towerSpeaker(cfg: PaPlannerDesign, design: SpecIdentity): SpeakerSpec {
           [hornDriver(cfg, HORN_PLACEMENT.baffle, { xIn: 0, yIn: tower.hornCenter - hornFloor })],
         ),
       ],
-      // the tower's one cabinet takes the sub box's hardware (lib/pa/hardware boxTakesHardware)
+      // the tower's one cabinet takes the sub box's hardware (lib/build/hardware boxTakesHardware)
       cfg.hardware.sub,
       tower.archTop ? CABINET_TOP.arched : CABINET_TOP.flat,
     ),

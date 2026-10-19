@@ -1,4 +1,4 @@
-// Bracing by rule, for any box (lib/pa/bracing lays out the PA boxes' panels; the Hi-fi page reads the plate model).
+// Bracing by rule, for any box (lib/build/boxBracing lays out the PA boxes' panels; the Hi-fi page reads the plate model).
 //
 // The plate: each panel, and each bay of it between supports, is a thin (Kirchhoff) plate. Hinged (simply supported)
 // on all four edges, its first mode (m = n = 1) is the orthotropic rectangular plate's,
@@ -9,11 +9,11 @@
 //     f₁₁ = (π/2) (√D₁/a² + √D₂/b²) / √(ρh),    Dᵢ = Eᵢh³ / (12(1 − ν²)).
 // An isotropic panel (MDF, E₁ = E₂) gives the familiar f₁₁ = (π/2) √(D/ρh) (1/a² + 1/b²). The weaker modulus is taken
 // across the shorter span (the span that sets the mode), so the face grain's direction on the box never reads high.
-// ρh is the panel's weight per area from the catalog (lib/panel), the same number the box weights use.
+// ρh is the panel's weight per area from the catalog (lib/build/panel), the same number the box weights use.
 // A glued edge sits between hinged and clamped (a clamped square's first mode is 1.82 × the hinged one's, 36 against
 // 19.74 in Leissa's tables): the panel glued on across the joint bends with the edge and holds it as a rotational
 // spring (EDGE_FIXITY, a low estimate), so each bay's edges on the box's joints take their neighbors' springs, and its
-// edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
+// edges on a rib, a brace or a duct part stay hinged (baysHz; lib/build/plateModes works the modes out). A screwed back's
 // joints hold nothing, but it is screwed to the window braces' rear rails, which hold it in a line as on a glued back;
 // each of those rails and the back beside it is a mechanically jointed T beam (Eurocode 5's gamma method:
 // jointedTeeBeam), as a beam and where it meets the next rail in the corner (railStiffness). The driver's cutout is
@@ -30,7 +30,7 @@
 // the corner (RING_FIXITY): a frame's rails always, ribs when the next panel's ribs stand on the same lines (a ring).
 // The panel reads the lowest of its bays and its strips, and never under its bare plate.
 //
-// Strength (lib/strength): where the box gives its loads (the driver's pressure, a load on the lid), each bay, rib and
+// Strength (lib/build/strength): where the box gives its loads (the driver's pressure, a load on the lid), each bay, rib and
 // rail is checked in bending against the load's limit too, and a panel over it counts as short as one under the
 // target does, so the rule adds ribs for either.
 //
@@ -62,9 +62,9 @@ import type {
   PanelRibs,
   PanelStrength,
   PlateStock,
-} from "../types";
-import { LB_FT2_KG_M2 } from "../constants/units";
-import { BACK_RAIL_SCREW_DIAMETER_MM, BACK_RAIL_SCREW_SPACING_IN } from "../constants/bracing";
+} from "../../types";
+import { LB_FT2_KG_M2 } from "../../constants/units";
+import { BACK_RAIL_SCREW_DIAMETER_MM, BACK_RAIL_SCREW_SPACING_IN } from "../../constants/bracing";
 import { panelLbPerSqFt, panelNominalNear } from "./panel";
 import { beamHz, holedPlateHz, restrainedPlateHz } from "./plateModes";
 import { plateStressFactor } from "./strength";
@@ -95,7 +95,7 @@ export const MDF_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
   nu: 0.25,
 };
 
-/** A panel's stock for the plate model at its exact thickness: its weight from the catalog (lib/panel), its moduli. */
+/** A panel's stock for the plate model at its exact thickness: its weight from the catalog (lib/build/panel), its moduli. */
 export const panelStock = (t: number, mat: PanelMaterial): PlateStock => ({
   t,
   lbPerSqFt: panelLbPerSqFt(t, mat),
@@ -118,7 +118,7 @@ export const RIB_DEPTHS_IN = [RIB_DEPTH_IN, 4, 5.5] as const;
 export const RIB_FREE_END_IN = 4;
 /**
  * The least share of a panel a rib must run along to count: a rib counts as a line across the whole panel, so a short
- * one would read far too high (the same share lib/pa/bracing asks of a duct part, DUCT_SUPPORT_MIN_SHARE).
+ * one would read far too high (the same share lib/build/boxBracing asks of a duct part, DUCT_SUPPORT_MIN_SHARE).
  */
 export const RIB_MIN_RUN_SHARE = 2 / 3;
 /** The narrowest bay a window brace or rib may leave, inches (room to glue and clamp it). */
@@ -463,7 +463,7 @@ const spanLines = (span: number, pts: readonly number[]) => [
  * A panel's plate resonance between its supports (`acrossU`, `acrossV`: ribs, braces and duct parts), Hz: the lowest
  * of its bays, each a plate whose edges on the panel's own edges take the glued neighbors' springs (`edges`) and whose
  * edges on a rib, brace or duct part are hinged (bays either side of a support move in turn about it, as a plate
- * continuous over hinged lines does), the bay with the driver's cutout read with it (lib/plateModes).
+ * continuous over hinged lines does), the bay with the driver's cutout read with it (lib/build/plateModes).
  */
 export function baysHz(
   p: Pick<BracePanel, "spanU" | "spanV" | "stock" | "edges" | "hole">,
@@ -530,7 +530,7 @@ function panelBays(
   );
 }
 
-/** The panels a box's bracing leaves over a strength limit (lib/strength), each with its stress, limit and load. */
+/** The panels a box's bracing leaves over a strength limit (lib/build/strength), each with its stress, limit and load. */
 export const strengthShortfalls = (b: Pick<BoxBracing, "panels">) =>
   b.panels.flatMap((p) =>
     p.strength && p.strength.stressPa > p.strength.limitPa ? [{ id: p.id, ...p.strength }] : [],
@@ -551,7 +551,7 @@ export interface BraceBoxInput {
   braceStock: PlateStock;
   keepOut: BoxKeepOut;
   /**
-   * the strength checks' loads (lib/strength): the driver's pressure on every panel and a load on the top, each in Pa
+   * the strength checks' loads (lib/build/strength): the driver's pressure on every panel and a load on the top, each in Pa
    * with its stress limit; absent: none checked
    */
   loads?: { pressurePa: number; pressureLimitPa: number; lidPa: number; lidLimitPa: number };
@@ -955,7 +955,7 @@ export function braceBox({
    * A panel's first resonance: the lowest of its bays (baysHz), its ribs as beams and its window braces' rails as
    * beams. A rib or rail bridges the widest gap between the supports that cross it, carrying the widest bay of panel
    * beside it; its ends are held where a rib or rail on the next panel meets it (RING_FIXITY), else hinged. And its
-   * strength under each load (lib/strength): the worst of its bays, ribs and rails against the load's limit.
+   * strength under each load (lib/build/strength): the worst of its bays, ribs and rails against the load's limit.
    */
   const panelEval = (p: BracePanel, w: Counts, r: RibState): PanelEval => {
     // a strip adds stiffness for little mass, so no panel reads under its bare plate (the strips' beam check leaves

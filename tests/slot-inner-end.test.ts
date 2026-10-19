@@ -2,7 +2,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { foldedSlotInnerEnd, modalInnerEnd, straightSlotInnerEnd } from "./slot-flow";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../src/data/acoustics/slot-inner-end";
-import { slotMouthCorrection } from "../src/lib/pa/calc";
+import { slotMouthCorrection } from "../src/lib/acoustics/boxModels";
 
 // The slot inner-end table and the potential-flow solver behind it (tests/slot-flow.ts). The table's own points are
 // solved on the table's grid (16 cells a slot height, graded); the other checks use a coarser one (8 cells a slot

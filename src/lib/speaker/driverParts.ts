@@ -19,9 +19,9 @@ import {
   hornById,
 } from "../data";
 import { byId } from "../tables";
-import { midDisplacementL } from "../pa/calc";
-import { hifiWooferDisplacementL } from "../hifi/hifi";
-import { subDriverDepthIn } from "../pa/tubes";
+import { midDisplacementL } from "../acoustics/boxModels";
+import { hifiWooferDisplacementL } from "../acoustics/wooferBox";
+import { subDriverDepthIn } from "../build/tubes";
 import { HIFI_DEPTH_PER_SIZE, MID_DEPTH_FALLBACK_IN } from "../../data/catalog/driver-cutouts";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { ohmsOf } from "../power";

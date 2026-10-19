@@ -6,11 +6,11 @@ import {
   PRESSURE_STRESS_LIMIT_PA,
   driverPressurePa,
   plateStressFactor,
-} from "../src/lib/strength";
-import { braceBox, strengthShortfalls } from "../src/lib/bracing";
-import { braceNoteLines } from "../src/lib/bracingNotes";
-import { NO_SUPPORTS, paBoxPanels } from "../src/lib/pa/bracing";
-import { paPanelStock, subBoxBracing } from "../src/lib/pa/calc";
+} from "../src/lib/build/strength";
+import { braceBox, strengthShortfalls } from "../src/lib/build/bracing";
+import { braceNoteLines } from "../src/lib/build/bracingNotes";
+import { NO_SUPPORTS, paBoxPanels } from "../src/lib/build/boxBracing";
+import { paPanelStock, subBoxBracing } from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
 
 const near = (a: number, b: number, tol: number, msg = "") =>

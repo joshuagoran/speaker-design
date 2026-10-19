@@ -1,38 +1,27 @@
-// Hi-fi 2-way model: woofer (sealed or vented) + tweeter, active crossover, baffle step, placement, and the
-// response at a listening position (off-axis, crossover lobing). Pure functions, no DOM.
-import { complex, divide } from "../acoustics/complex";
+// A woofer in its box: sealed, vented (a round port or a slot) or with passive radiators, the vent's end corrections
+// and fold, and the box's response before the crossover. Pure functions, no DOM.
 import {
   boxModel,
   closedBox,
   ventTuning,
   ampVoltage,
-  keeleFrequency,
   highpassGain,
   slotMouthCorrection,
   logGridCount,
   unwrapRawPhase,
-} from "../pa/calc";
-import { rectangleEndCorrection } from "../acoustics/radiation";
-import { coilFactor, driverCircuit } from "../acoustics/driverCircuit";
-import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { MAX_ELBOWS, tubeElbows, type TubeRoom } from "../tubeFold";
+} from "./boxModels";
+import { rectangleEndCorrection } from "./radiation";
+import { coilFactor, driverCircuit } from "./driverCircuit";
+import { MAX_ELBOWS, tubeElbows, type TubeRoom } from "../build/tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import type {
-  NominalImpedance,
-  Complex,
   BoxModelTS,
   Dims3,
-  DriverLayout,
   HifiConfig,
   HighpassType,
-  HifiDispersionMap,
-  HifiWaveguide,
-  LimitId,
-  WaveguideSpec,
   RoundPort,
   SizedSlotPort,
   SlotPort,
-  HifiTweeter,
   HifiWoofer,
   PassiveRadiator,
   PassiveRadiatorChoice,
@@ -40,132 +29,10 @@ import type {
   SealedBoxModel,
   VentedBoxModel,
 } from "../../types";
-import {
-  DISPERSION_ANGLE_MAX_DEG,
-  DISPERSION_ANGLE_STEP_DEG,
-  DISPERSION_FREQ_POINTS,
-  DISPERSION_FREQ_MAX_HZ,
-  DISPERSION_FREQ_MIN_HZ,
-} from "../../constants/chartScales";
-import { ownGuideCfg, waveguideSpecOf } from "../data";
 import { crossoverSlopeName } from "../../constants/crossovers";
-import {
-  HIFI_DRIVE,
-  HIFI_SUBSONIC_TYPE,
-  RIBBON_TWEETER_TYPE,
-  AMT_TWEETER_TYPE,
-} from "../../constants/hifiEngine";
-import { SENSITIVITY_REFERENCE_OHMS, ohmsOf, voltsToWatts, wattsToVolts } from "../power";
-const C = 343,
-  IN = 0.0254;
-
-// ---- baffle step, placement, compensation (magnitude shelves; the baffle step also with its phase) ----
-export const baffleStepF3 = (baffleWIn: number) => 115 / (baffleWIn * IN); // −3 dB point, Hz
-// the same step with its phase: the first-order shelf 0.5 (1 + 2jx) / (1 + jx), whose magnitude is baffleStepGain
-export function baffleStepShelf(f: number, baffleWIn: number): Complex {
-  const x = (0.707 * f) / baffleStepF3(baffleWIn);
-  return divide(complex(0.5, x), complex(1, x));
-}
-// ---- directivity ----
-// Bessel J1 (Numerical Recipes rational approximation)
-function j1(x: number) {
-  const ax = Math.abs(x);
-  if (ax < 8) {
-    const y = x * x;
-    const a =
-      x *
-      (72362614232 +
-        y *
-          (-7895059235 +
-            y * (242396853.1 + y * (-2972611.439 + y * (15704.4826 + y * -30.16036606)))));
-    const b =
-      144725228442 +
-      y * (2300535178 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y))));
-    return a / b;
-  }
-  const z = 8 / ax,
-    y = z * z,
-    xx = ax - 2.356194491;
-  const p =
-    1 + y * (0.183105e-2 + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * -0.240337019e-6)));
-  const q =
-    0.04687499995 +
-    y * (-0.2002690873e-3 + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
-  const v = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * p - z * Math.sin(xx) * q);
-  return x < 0 ? -v : v;
-}
-/** A rigid piston's pattern, 2·J1(x)/x, at x = ka·sin θ. */
-export const pistonPattern = (x: number) => (x < 1e-6 ? 1 : Math.abs((2 * j1(x)) / x));
-// rigid piston of radius a (m) in a baffle, off-axis by theta (rad): 2·J1(x)/x, x = ka·sin θ
-export function pistonDirectivity(f: number, a: number, theta: number) {
-  return pistonPattern(
-    ((2 * Math.PI * f) / C) * a * Math.sin(Math.min(Math.abs(theta), Math.PI / 2)),
-  );
-}
+import { HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 /**
- * A waveguide's half coverage angles at `f`, radians, horizontal and vertical: its rated coverage above the mouth's
- * control frequency, wider below it.
- */
-export function waveguideHalfAngles(
-  f: number,
-  covH: number,
-  covV: number,
-  mouthWIn: number,
-  mouthHIn: number,
-): [h: number, v: number] {
-  const fh = keeleFrequency(covH, mouthWIn),
-    fv = covV && mouthHIn ? keeleFrequency(covV, mouthHIn) : fh;
-  const bh = Math.min(180, f >= fh ? covH : (covH * fh) / f),
-    bv = Math.min(180, f >= fv ? covV || covH : ((covV || covH) * fv) / f);
-  return [((bh / 2) * Math.PI) / 180, ((bv / 2) * Math.PI) / 180];
-}
-/** A waveguide's level (pressure) at `th`, `tv` radians off axis, given its half angles: −6 dB at the edges, −40 dB at most. */
-export function waveguideGain(th: number, tv: number, [h, v]: [h: number, v: number]) {
-  const db = -6 * ((th / h) ** 2 + (tv / v) ** 2);
-  return Math.pow(10, Math.max(-40, db) / 20);
-}
-// waveguide: constant coverage (−6 dB at the edges) above the mouth's control frequency, wider below it
-export function waveguideDirectivity(
-  f: number,
-  covH: number,
-  covV: number,
-  mouthWIn: number,
-  mouthHIn: number,
-  th: number,
-  tv: number,
-) {
-  return waveguideGain(th, tv, waveguideHalfAngles(f, covH, covV, mouthWIn, mouthHIn));
-}
-
-/** Whether a tweeter is a planar ribbon on its own waveguide (a square plate with a slot). */
-export const isRibbon = (t: Pick<HifiTweeter, "type">): boolean => t.type === RIBBON_TWEETER_TYPE;
-
-/** Whether a tweeter is an AMT: a folded diaphragm behind a flat plate with a tall opening. */
-export const isAmt = (t: Pick<HifiTweeter, "type">): boolean => t.type === AMT_TWEETER_TYPE;
-
-/** Whether a tweeter has to be mounted on a waveguide or horn (a compression driver, or a dome made for one) rather than sit on the baffle. */
-export const needsWaveguide = (t: Pick<HifiTweeter, "type" | "needsWaveguide">): boolean =>
-  t.type === "compression" || !!t.needsWaveguide;
-
-/**
- * The waveguide a tweeter plays through: its own (a ribbon's or an AMT's plate, a coaxial's cone), the picked one for a tweeter
- * that needs one, else none.
- */
-export const waveguideFor = (tweeter: HifiTweeter, picked: HifiWaveguide): WaveguideSpec | null =>
-  tweeter.ownGuide
-    ? ownGuideCfg(tweeter)
-    : needsWaveguide(tweeter)
-      ? waveguideSpecOf(picked)
-      : null;
-
-/** The tweeter as the baffle takes it: on a waveguide, its cut-out is the waveguide's mouth. */
-export const tweeterOnGuide = (
-  tweeter: HifiTweeter,
-  guide: Pick<WaveguideSpec, "w" | "h"> | null,
-): HifiTweeter => (guide ? { ...tweeter, faceplate: { w: guide.w, h: guide.h } } : tweeter);
-
-/**
- * The room a round port has (the PA sub's fold rule, lib/tubeFold): from the baffle front to the back wall, and up the
+ * The room a round port has (the PA sub's fold rule, lib/build/tubeFold): from the baffle front to the back wall, and up the
  * back wall half the inner height, so the riser and the leg the second elbow turns forward stay clear of the woofer;
  * that leg's mouth keeps its diameter of air from the baffle's inside face (the stop, a wall behind the front).
  */
@@ -199,36 +66,6 @@ export function hifiSlotEndCorrection(
 }
 export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h">) =>
   dim.d - 2 * wall - Math.max(port.h, 1); // leave the mouth's height behind it
-/**
- * Whether the woofer and tweeter are one coaxial (lib/data coaxParts): both parts carry the coaxial's id. A design
- * names a coaxial by giving it as both its woofer and its tweeter.
- */
-export const isCoax = (w: Pick<HifiWoofer, "id">, t: Pick<HifiTweeter, "id">) => w.id === t.id;
-// where the drivers sit (inches from the box bottom): tweeter near the top, woofer just below it;
-// a freestanding waveguide sits on the box top, so the woofer moves up to the top of the baffle;
-// a coaxial's HF is at its woofer's center, the woofer at the top of the baffle
-export function driverLayout(
-  w: HifiWoofer,
-  t: HifiTweeter,
-  d: Dims3,
-  onTop: boolean,
-): DriverLayout {
-  const face = t.faceplate;
-  const { topMarginIn, driverGapIn } = HIFI_BOX_LAYOUT;
-  if (isCoax(w, t)) {
-    const wh = d.h - topMarginIn - w.size / 2;
-    return { tweeterIn: wh, wooferIn: wh, spacingIn: 0, coax: true };
-  }
-  if (onTop) {
-    const th = d.h + face.h / 2,
-      wh = d.h - topMarginIn - w.size / 2;
-    return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh, onTop: true };
-  }
-  const th = d.h - topMarginIn - face.h / 2;
-  const wh = th - face.h / 2 - driverGapIn - w.size / 2;
-  return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh };
-}
-
 // ---- passive radiator box ----
 // The vented circuit with the port's air mass replaced by the radiator: its moving mass (plus added mass), its
 // suspension compliance and its losses, n radiators in parallel. Box tuning Fb (where the cone barely moves):
@@ -251,7 +88,7 @@ export function passiveRadiatorTuning(drv: PassiveRadiator, n: number, addG: num
 }
 /**
  * The panel the radiators go on: the back, stacked, each needing its size plus a little frame margin. The fit check
- * below sizes them against it, the front view draws them dashed (behind), the 3D view on it (lib/hifi/boxLayout places
+ * below sizes them against it, the front view draws them dashed (behind), the 3D view on it (lib/build/boxLayout places
  * them for both), and the cutlist puts their cutouts on it.
  */
 export const RADIATOR_PANEL: RadiatorPanel = "back";
@@ -474,72 +311,6 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
 }
 
 /**
- * A tweeter's clean maximum level at 1 m: its sensitivity and power, derated below the frequency its rating assumes,
- * and what sets the power (the amp, or the program rating: "thermal").
- */
-export function tweeterMaxLevel(
-  t: Pick<HifiTweeter, "hf">,
-  cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain">,
-) {
-  const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
-  const imp = ohmsOf(hf);
-  // the amp power is the watts into the tweeter's impedance (lib/power)
-  const pAmp = cfg.tAmpW || 50;
-  const derate = hf.aesXo && cfg.xo < hf.aesXo ? Math.pow(cfg.xo / hf.aesXo, 2) : 1;
-  const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
-  const pMax = Math.min(pAmp, pProg);
-  const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
-  const who: Extract<LimitId, "amp" | "thermal"> = pMax === pAmp ? "amp" : "thermal";
-  return { imp, derate, pMax, pProg, who, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
-}
-/**
- * The power the tweeter gets, W into its impedance (as `tAmpW`): its own amp's when active; when passive, the one amp
- * channel's, `wAmpW` into the woofer's impedance, as a voltage through the network's pad, the level match `trim` dB
- * (lib/power). A tweeter quieter than the woofer (trim > 0) takes the full amp: a passive network can't add gain, so
- * the woofer would be padded instead, and the tweeter's level then caps the speaker's, as `maxLevel` reads it. The
- * Fills page's `hfLimW` (lib/pa/calc fillSystem) is this relation solved for the amp power that brings the HF to its
- * program rating.
- */
-export const tweeterAmpWatts = (
-  cfg: Pick<HifiConfig, "drive" | "wAmpW" | "tAmpW">,
-  trim: number,
-  woofer: NominalImpedance,
-  tweeter: NominalImpedance,
-): HifiConfig["tAmpW"] =>
-  cfg.drive === HIFI_DRIVE.passive
-    ? voltsToWatts(wattsToVolts(cfg.wAmpW, woofer) * Math.pow(10, Math.min(0, trim) / 20), tweeter)
-    : cfg.tAmpW;
-/**
- * The tweeter in a box whose woofer's passband sensitivity is `refW` (dB at 2.83 V, `HifiSystem.refW`): its own
- * figures (`tweeterMaxLevel`), its sensitivity at 2.83 V, the level match `trim` (dB applied to the tweeter in the DSP,
- * or the passive network's pad; usually negative), and its clean level from its own amp, or, passive, from the woofer
- * amp through that pad. `hifiSystemFromBox` and the optimizer's passive search both read it.
- */
-export function tweeterLevelInBox(
-  t: HifiTweeter,
-  cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain" | "drive" | "wAmpW">,
-  refW: number,
-  woofer: NominalImpedance,
-) {
-  const own = tweeterMaxLevel(t, cfg);
-  const tSens283 = own.tSens + 10 * Math.log10(SENSITIVITY_REFERENCE_OHMS / own.imp);
-  const trim = refW - tSens283;
-  const level =
-    cfg.drive === HIFI_DRIVE.passive
-      ? tweeterMaxLevel(t, { ...cfg, tAmpW: tweeterAmpWatts(cfg, trim, woofer, t.hf) })
-      : own;
-  return { ...level, tSens283, trim };
-}
-/** What the Hi-fi weights take for a part with no listed weight, lb: a woofer, a tweeter, a passive radiator. */
-export const HIFI_FALLBACK_LB = { woofer: 5, tweeter: 1.5, radiator: 0.75 } as const;
-/** A Hi-fi speaker's hardware besides its drivers, lb: the screws, the terminals and the damping. */
-export const HIFI_FIXINGS_LB = 1;
-/** Grams in a pound, as the radiators' added mass is weighed. */
-const GRAMS_PER_LB = 454;
-/** The radiators' weight, lb: each one's listed weight (or the fallback) and its added mass. */
-export const radiatorsLb = (pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">) =>
-  pr.n * ((pr.drv.lb || HIFI_FALLBACK_LB.radiator) + (pr.addG || 0) / GRAMS_PER_LB);
-/**
  * The fewest elbows that fit a port's length (0 with no port; null: too long even with two, in a gap between two
  * counts' lengths, or a slot past the back).
  */
@@ -553,18 +324,3 @@ export function hifiPortElbows(
     return ventPort.len <= slotMaxLength(dim, wall, ventPort) + 1e-9 ? 0 : null;
   return tubeElbows(hifiTubeRoom(dim, wall), ventPort.dia, ventPort.len);
 }
-export const logSpacedFrequencies = (a: number, b: number, n: number) =>
-  Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
-
-/** The grid every dispersion map (PA and Hi-fi, both planes) is sampled on: −90..90° at one step, the dispersion frequency axis (50 Hz-20 kHz). */
-export const dispersionGrid = (): Pick<HifiDispersionMap, "angles" | "freqs"> => ({
-  angles: Array.from(
-    { length: (2 * DISPERSION_ANGLE_MAX_DEG) / DISPERSION_ANGLE_STEP_DEG + 1 },
-    (_, i) => -DISPERSION_ANGLE_MAX_DEG + i * DISPERSION_ANGLE_STEP_DEG,
-  ),
-  freqs: logSpacedFrequencies(
-    DISPERSION_FREQ_MIN_HZ,
-    DISPERSION_FREQ_MAX_HZ,
-    DISPERSION_FREQ_POINTS,
-  ),
-});

@@ -1,5 +1,5 @@
 // The Speaker cutlist's purchased parts (lib/speaker/speakerBuild speakerPurchasedParts) and the cutlist CSV
-// (lib/cutlistCsv): length and width in their own columns, the bought parts with a total.
+// (lib/build/cutlistCsv): length and width in their own columns, the bought parts with a total.
 import { assert, test } from "vite-plus/test";
 import {
   CSV_BOM,
@@ -9,7 +9,7 @@ import {
   cutlistCsv,
   partLengthWidth,
   purchasedTotal,
-} from "../src/lib/cutlistCsv";
+} from "../src/lib/build/cutlistCsv";
 import { sourceOf } from "../src/lib/speaker/driverParts";
 import { speakerPurchasedParts } from "../src/lib/speaker/speakerBuild";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";

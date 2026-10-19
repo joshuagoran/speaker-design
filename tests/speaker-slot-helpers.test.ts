@@ -11,8 +11,8 @@ import {
   slotFinLayout,
   slotFinsOf,
   slotFolds,
-} from "../src/lib/pa/calc";
-import { ELBOW_COUNTS, elbowCountOf } from "../src/lib/tubeFold";
+} from "../src/lib/acoustics/boxModels";
+import { ELBOW_COUNTS, elbowCountOf } from "../src/lib/build/tubeFold";
 import { withCompressionRatio } from "../src/pages/speaker/hornSections";
 import { withSlotKind, withSlotPlace } from "../src/lib/speaker/slotPort";
 import { chamberVentModel } from "../src/lib/speaker/chamberAir";

@@ -6,12 +6,12 @@ import type { GoldenConfig } from "./golden-configs";
 import type { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import type { PaFloor } from "../src/lib/speaker/paSpec";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
-import { needsWaveguide } from "../src/lib/hifi/hifi";
-import { hornResponse, midSystem, subSystem } from "../src/lib/pa/calc";
-import { towerMidDims } from "../src/lib/pa/tower";
-import { savedHardware } from "../src/lib/pa/hardware";
-import { panelNominalNear } from "../src/lib/panel";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
+import { needsWaveguide } from "../src/lib/speaker/twoWay";
+import { hornResponse, midSystem, subSystem } from "../src/lib/acoustics/boxModels";
+import { towerMidDims } from "../src/lib/speaker/tower";
+import { savedHardware } from "../src/lib/build/hardware";
+import { panelNominalNear } from "../src/lib/build/panel";
 import {
   CD_OPTIONS,
   HIFI_COAXES,

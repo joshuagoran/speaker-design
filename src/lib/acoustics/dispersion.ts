@@ -2,7 +2,7 @@
 // its own directivity (sub and mid as pistons, the horn as constant coverage above its control frequency)
 // and its path length to the listener. The DSP is time-aligned on the horn axis at the listening distance,
 // so the map shows lobing at the crossovers (vertical) and beaming (horizontal). Bands are level-matched.
-import { pistonDirectivity, waveguideDirectivity } from "../hifi/hifi";
+import { pistonDirectivity, waveguideDirectivity } from "./directivity";
 import type { CoveragePattern } from "./coverage";
 
 /**

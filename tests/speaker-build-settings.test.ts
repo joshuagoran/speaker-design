@@ -13,7 +13,7 @@ import {
   withWallPanel,
 } from "../src/lib/speaker/cabinetPanels";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { panelIn } from "../src/lib/panel";
+import { panelIn } from "../src/lib/build/panel";
 import { PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
 import {
   DRIVER_KIND,

@@ -24,7 +24,7 @@ import { buildBracesAt, buildDriverBody } from "./buildBraces";
 import { buildHardware } from "./buildHardware";
 import { hornBaffleHole } from "./towerParts";
 import { buildSubSlotShelf, buildSubVent, subVentHoles } from "./buildSubwoofer";
-import { subVentPlan } from "../../lib/pa/subVentPlan";
+import { subVentPlan } from "../../lib/build/ventPlan";
 import {
   addRadiator,
   addRoundPorts,
@@ -64,7 +64,7 @@ import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import { driverBoardPieces } from "../../lib/speaker/driverBoard";
 import { foldDrawing } from "../../lib/speaker/foldHorn";
-import { bracingRegions } from "../../lib/bracing";
+import { bracingRegions } from "../../lib/build/bracing";
 import { PANEL } from "../../constants/cutParts";
 import {
   CD_OPTIONS,
@@ -77,12 +77,12 @@ import {
 } from "../../lib/data";
 import { byId } from "../../lib/tables";
 import { DEFAULT_PA } from "../../lib/defaults";
-import { driverKeepOut, slotFolds } from "../../lib/pa/calc";
+import { driverKeepOut, slotFolds } from "../../lib/acoustics/boxModels";
 import { PORT_STYLE } from "../../constants/portStyles";
-import { subDriverDepthIn } from "../../lib/pa/tubes";
-import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
-import { hornBodyColor } from "../../lib/pa/hornColor";
-import { TOWER_HORN_WALL_GAP_IN } from "../../lib/pa/tower";
+import { subDriverDepthIn } from "../../lib/build/tubes";
+import { DRIVER_CLEARANCE_IN } from "../../lib/build/boxBracing";
+import { hornBodyColor } from "../../lib/speaker/hornColor";
+import { TOWER_HORN_WALL_GAP_IN } from "../../lib/speaker/tower";
 import { MID_DEPTH_FALLBACK_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";

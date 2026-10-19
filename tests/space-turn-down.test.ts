@@ -11,8 +11,8 @@ import { emptySpeaker } from "../src/pages/speaker/useSpeakerPage";
 import { PAGE_DRAFT_KEYS } from "../src/constants/pageDrafts";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { SPACE_HOME_TARGET_DB } from "../src/constants/space";
-import { COVERAGE_BANDS } from "../src/lib/pa/coverage";
-import { LISTENER_TARGET_DB } from "../src/lib/pa/optimize";
+import { COVERAGE_BANDS } from "../src/lib/acoustics/coverage";
+import { LISTENER_TARGET_DB } from "../src/lib/acoustics/coverageLayout";
 import type { CoverageBand, CoverageLevelRef } from "../src/types";
 
 afterEach(() => {

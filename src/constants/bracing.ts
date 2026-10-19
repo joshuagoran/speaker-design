@@ -1,5 +1,5 @@
 /**
- * Bracing ids and the names the pages show for them (lib/bracing works the braces out). Code decides on the ids, the
+ * Bracing ids and the names the pages show for them (lib/build/bracing works the braces out). Code decides on the ids, the
  * pages look the names up here.
  */
 import { keysOf } from "../lib/records";
@@ -50,7 +50,7 @@ export const BRACE_STYLE_SUMMARY = {
 export const braceUnderNote = (panel: string, hz: string, target: string) =>
   `${panel}: ${hz}, under the ${target} target`;
 
-/** The strength checks' loads, as the notes name them (lib/strength). */
+/** The strength checks' loads, as the notes name them (lib/build/strength). */
 export const STRENGTH_LOAD_NAMES = {
   pressure: "the driver's pressure",
   lid: "a load on the lid",
@@ -116,7 +116,7 @@ export const BACK_JOINT_FLUSH_NOTES = {
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /**
  * A screwed back's screws into each window brace's rear rail: their spacing along the rail (in) and their diameter
- * (mm, a #8 wood screw). The cutlist's note names the spacing; the bracing rule's jointed rail (lib/bracing
+ * (mm, a #8 wood screw). The cutlist's note names the spacing; the bracing rule's jointed rail (lib/build/bracing
  * jointedTeeBeam) reads both.
  */
 export const BACK_RAIL_SCREW_SPACING_IN = 6;

@@ -1,5 +1,5 @@
 // Cutlist for the Hi-fi speaker: the box's six panels at its wall thickness, the slot shelf, and the cutouts and
-// bought parts as notes on their rows. lib/pa/cutlist lays them out on sheets as it does the PA boxes. The flush box's
+// bought parts as notes on their rows. lib/build/cutlist lays them out on sheets as it does the PA boxes. The flush box's
 // panels and notes are shared with the Speaker page's flush cabinets (lib/speaker/speakerBuild).
 import type {
   CornerJoint,
@@ -14,10 +14,10 @@ import type {
   RoundPort,
   SizedSlotPort,
 } from "../../types";
-import { cutoutNote, formatInches } from "../pa/calc";
-import { GRAIN_PRESETS, NOTE_SEP } from "../pa/cutlist";
+import { cutoutNote, formatInches } from "../acoustics/boxModels";
+import { GRAIN_PRESETS, NOTE_SEP } from "./cutlist";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
-import { passiveRadiatorShape } from "./hifi";
+import { passiveRadiatorShape } from "../acoustics/wooferBox";
 
 /** A driver's cutout note from its nominal size: the typical cutout, or the datasheet's where none is on file. */
 export const sizedCutout = (size: number) => {

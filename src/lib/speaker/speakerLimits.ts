@@ -1,11 +1,11 @@
 // The speaker at its limits: each band's drivers at the amp's full power through the band's filters, up to the first
 // limit the PA and Hi-fi pages already use. Pure; it reads the response's chamber runs, so no box model runs again.
 //
-// - Cones (lib/pa/calc sineLimitAt, the PA's maxOutputCurve per point): the cone's Xmax and the vent's air speed at
+// - Cones (lib/acoustics/boxModels sineLimitAt, the PA's maxOutputCurve per point): the cone's Xmax and the vent's air speed at
 //   each frequency, the driver's program rating (2 × AES) and the amp as ceilings on the whole drive. Radiators add
-//   their travel against their Xmax, as the Hi-fi engine checks it (lib/hifi hifiWooferPrep).
-// - Datasheet drivers keep their engine's power rule: a compression driver the PA's (lib/pa/calc hornPower), a tweeter
-//   and a coaxial's HF section the Hi-fi's (lib/hifi tweeterMaxLevel), derated below their rating's frequency when
+//   their travel against their Xmax, as the Hi-fi engine checks it.
+// - Datasheet drivers keep their engine's power rule: a compression driver the PA's (lib/acoustics/boxModels hornPower), a tweeter
+//   and a coaxial's HF section the Hi-fi's (lib/speaker/twoWay tweeterMaxLevel), derated below their rating's frequency when
 //   the band's highpass sits there.
 // - A band's drive: its amp power (`ampW`, the watts into its load, lib/power) as a voltage, through a passive band's pad. Its level for music is one
 //   drive for the whole band, set where the band first meets a limit (as the PA sub's music limit and the Hi-fi
@@ -36,9 +36,9 @@ import type {
   SpeakerSpec,
 } from "../../types";
 import { abs } from "../acoustics/complex";
-import { ampVoltage, ampWatts, hornPower, sineLimitAt } from "../pa/calc";
+import { ampVoltage, ampWatts, hornPower, sineLimitAt } from "../acoustics/boxModels";
 import { voltsToWatts } from "../power";
-import { tweeterMaxLevel } from "../hifi/hifi";
+import { tweeterMaxLevel } from "./twoWay";
 import { CD_OPTIONS, HIFI_PASSIVES, hifiDriverById } from "../data";
 import { byId } from "../tables";
 import { coneParts, hfParts } from "./driverParts";

@@ -10,7 +10,7 @@ import {
   STUFFING_VOLUME_GAIN,
   nearestPoint,
   linkwitzRileyHighpass,
-} from "../src/lib/pa/calc";
+} from "../src/lib/acoustics/boxModels";
 import { DEFAULT_FILL } from "../src/lib/defaults";
 import { FILL_OPTIONS } from "../src/lib/data";
 import type { FillSystemConfig } from "../src/types";

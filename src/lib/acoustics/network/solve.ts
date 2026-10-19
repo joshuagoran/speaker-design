@@ -13,7 +13,7 @@
 // 500-point curve takes a few milliseconds. The engine is pure (no DOM, no globals), so it runs in a web worker.
 //
 // The driver is the horn engine's and the box models' circuit (lib/acoustics/driverCircuit): with the same parts it
-// gives lib/acoustics/hornModel's and lib/pa/calc's results to rounding (tests/acoustic-network.test.ts).
+// gives lib/acoustics/hornModel's and lib/acoustics/boxModels's results to rounding (tests/acoustic-network.test.ts).
 //
 // Words used below: "flow" is volume velocity (m³/s); "impedance" is acoustic impedance (Pa·s/m³); "admittance" its
 // reciprocal. ω is the angular frequency 2πf (rad/s) and k = ω/c the wave number (rad/m). Pressures and flows are
