@@ -32,11 +32,16 @@ export const DRIVER_COMPARE_TEXT = {
   yours: "yours",
   passes: "passes",
   use: "Use",
+  /** the PA table's part price heading */
   price: "Its price",
-  lb: "Driver weight",
-  /** its band's level: the band's name first ("Low band level") */
-  level: (band: string) => `${band} band level`,
-  f3: "F3",
-  max: "Max output",
   checks: "Checks",
+  /** the Speaker page's headings, short for the settings column */
+  heads: {
+    price: "Price",
+    lb: "Weight",
+    /** its band's level: the band's name first ("Low dB") */
+    level: (band: string) => `${band} dB`,
+    f3: "F3",
+    max: "Max dB",
+  },
 } as const;

@@ -27,36 +27,37 @@ interface Props {
   onUse: (o: DriverCompareOption) => void;
 }
 
-/** A number with its unit, to `digits` decimals; "–" for none. */
+/** A number with its unit (none: the heading carries it), to `digits` decimals; "–" for none. */
 const amount = (x: number | null, unit: string, digits = 1) =>
-  x === null ? "–" : `${x.toFixed(digits)} ${unit}`;
+  x === null ? "–" : `${x.toFixed(digits)}${unit ? ` ${unit}` : ""}`;
 
 /** The Speaker page's columns between the name and the checks, in order. */
 const COLUMNS = (bandName: string): CompareColumn<DriverCompareRow>[] => [
   {
     key: DRIVER_COMPARE_SORT.price,
-    head: DRIVER_COMPARE_TEXT.price,
+    head: DRIVER_COMPARE_TEXT.heads.price,
     cell: (r) => (r.price === null ? "?" : formatDollars(r.price)),
   },
   {
     key: DRIVER_COMPARE_SORT.lb,
-    head: DRIVER_COMPARE_TEXT.lb,
+    head: DRIVER_COMPARE_TEXT.heads.lb,
     cell: (r) => amount(r.lb, "lb"),
   },
   {
     key: DRIVER_COMPARE_SORT.level,
-    head: DRIVER_COMPARE_TEXT.level(bandName),
-    cell: (r) => amount(r.run.bandDb, "dB"),
+    head: DRIVER_COMPARE_TEXT.heads.level(bandName),
+    // the heading carries the unit
+    cell: (r) => amount(r.run.bandDb, ""),
   },
   {
     key: DRIVER_COMPARE_SORT.f3,
-    head: DRIVER_COMPARE_TEXT.f3,
+    head: DRIVER_COMPARE_TEXT.heads.f3,
     cell: (r) => amount(r.run.metrics.f3, "Hz"),
   },
   {
     key: DRIVER_COMPARE_SORT.max,
-    head: DRIVER_COMPARE_TEXT.max,
-    cell: (r) => amount(r.run.metrics.musicDb, "dB"),
+    head: DRIVER_COMPARE_TEXT.heads.max,
+    cell: (r) => amount(r.run.metrics.musicDb, ""),
   },
 ];
 
@@ -108,7 +109,9 @@ export function DriverCompareTable({ rows, kind, bandName, previewId, onPreview,
           onPreview(null);
           onUse(r.option);
         }}
-        bg="bg-panel"
+        bg="bg-white"
+        compact
+        rowUse
         minWidth="min-w-[22rem]"
         checks={false}
         sort={{ ...sort, onSort }}

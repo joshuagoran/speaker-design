@@ -347,33 +347,31 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
   /** the driver comparison in the settings column, while it is open */
   const compareView =
     compareOpen && cmp.driver ? (
-      <section ref={compareBlock} className="min-w-0">
-        <Card>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <SectionHeading>{DRIVER_COMPARE_TEXT.heading}</SectionHeading>
-            <Button size="xs" onClick={() => setCompare(null)}>
-              {DRIVER_COMPARE_TEXT.close}
-            </Button>
-          </div>
-          <p className="text-xs text-stone-500">{DRIVER_COMPARE_TEXT.line}</p>
-          <DriverCompareTable
-            rows={cmp.rows}
-            kind={cmp.driver.kind}
-            bandName={nameOf(cmp.driver.bands[0] ?? "")}
-            previewId={previewId}
-            onPreview={setPreviewId}
-            onUse={(o) =>
-              speakerPage.editDriver(compareOpen.chamber, compareOpen.entry, (d) =>
-                withPart(d, o.driverId, o.hornId),
-              )
-            }
-          />
-          {cmp.pending && (
-            <p className="text-xs text-stone-500">
-              <Ellipsis />
-            </p>
-          )}
-        </Card>
+      <section ref={compareBlock} className={`min-w-0 ${GAP_Y}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SectionHeading>{DRIVER_COMPARE_TEXT.heading}</SectionHeading>
+          <Button size="xs" onClick={() => setCompare(null)}>
+            {DRIVER_COMPARE_TEXT.close}
+          </Button>
+        </div>
+        <p className="text-xs text-stone-500">{DRIVER_COMPARE_TEXT.line}</p>
+        <DriverCompareTable
+          rows={cmp.rows}
+          kind={cmp.driver.kind}
+          bandName={nameOf(cmp.driver.bands[0] ?? "")}
+          previewId={previewId}
+          onPreview={setPreviewId}
+          onUse={(o) =>
+            speakerPage.editDriver(compareOpen.chamber, compareOpen.entry, (d) =>
+              withPart(d, o.driverId, o.hornId),
+            )
+          }
+        />
+        {cmp.pending && (
+          <p className="text-xs text-stone-500">
+            <Ellipsis />
+          </p>
+        )}
       </section>
     ) : undefined;
   return (

@@ -50,6 +50,10 @@ interface Props<R extends CompareRowBase> {
   previewId?: string | null;
   /** show the checks column (default); without it, the page shows a row's checks elsewhere (`CompareChecks`) */
   checks?: boolean;
+  /** narrow: closer columns and headings that wrap (a settings column) */
+  compact?: boolean;
+  /** a click on a row (or Enter on it) uses it, in place of a Use column */
+  rowUse?: boolean;
 }
 
 /** A row's checks: "passes", or the problems, gray where your design has it too, orange where the option adds it. */
@@ -82,7 +86,11 @@ export function CompareTable<R extends CompareRowBase>({
   onPreview,
   previewId,
   checks = true,
+  compact = false,
+  rowUse = false,
 }: Props<R>) {
+  /** the space after each column */
+  const gap = compact ? "pr-2" : "pr-3";
   /** a heading: a button that sorts by it, where the table sorts */
   const head = (key: string, label: string) => {
     if (!sort) return label;
@@ -91,7 +99,7 @@ export function CompareTable<R extends CompareRowBase>({
       <button
         type="button"
         onClick={() => sort.onSort(key)}
-        className={`rounded whitespace-nowrap hover:text-stone-900 focus-visible:text-stone-900 ${on ? "text-stone-900" : ""} ${HOVER_TRANSITION}`}
+        className={`rounded [text-align:inherit] ${compact ? "" : "whitespace-nowrap"} hover:text-stone-900 focus-visible:text-stone-900 ${on ? "text-stone-900" : ""} ${HOVER_TRANSITION}`}
       >
         {label}
         {on && SORT_MARKS[sort.dir]}
@@ -103,9 +111,9 @@ export function CompareTable<R extends CompareRowBase>({
     <div className="overflow-x-auto">
       <table className={`text-xs w-full ${minWidth} border-collapse tabular-nums`}>
         <thead>
-          <tr className="text-stone-500 text-left border-b border-stone-300">
+          <tr className="text-stone-500 text-left align-bottom border-b border-stone-300">
             <th
-              className={`py-1 pr-3 font-normal sticky left-0 ${bg}`}
+              className={`py-1 ${gap} font-normal sticky left-0 ${bg}`}
               aria-sort={ariaSort(DRIVER_COMPARE_SORT.name)}
             >
               {head(DRIVER_COMPARE_SORT.name, nameHead)}
@@ -113,7 +121,7 @@ export function CompareTable<R extends CompareRowBase>({
             {columns.map((c) => (
               <th
                 key={c.key}
-                className="py-1 pr-3 font-normal text-right"
+                className={`py-1 ${gap} font-normal text-right`}
                 aria-sort={ariaSort(c.key)}
               >
                 {head(c.key, c.head)}
@@ -127,7 +135,7 @@ export function CompareTable<R extends CompareRowBase>({
                 {head(DRIVER_COMPARE_SORT.checks, DRIVER_COMPARE_TEXT.checks)}
               </th>
             )}
-            <th className="py-1 font-normal" />
+            {!rowUse && <th className="py-1 font-normal" />}
           </tr>
         </thead>
         <tbody
@@ -140,22 +148,42 @@ export function CompareTable<R extends CompareRowBase>({
         >
           {rows.map((r) => {
             const tint = previewId === r.id ? PREVIEW_TINT : "";
+            /** the row is used by a click on it */
+            const clickUses = rowUse && !r.yours;
             return (
               <tr
                 key={r.id}
-                className="border-b border-stone-300 last:border-0 align-top"
-                // a mouse previews the row it is over; a finger previews the row it taps (a tap leaves no pointer behind)
+                className={`border-b border-stone-300 last:border-0 align-top ${clickUses ? "cursor-pointer" : ""}`}
+                tabIndex={clickUses ? 0 : undefined}
+                // a mouse previews the row it is over; a finger previews the row it taps (a tap leaves no pointer
+                // behind), unless a click uses it
                 onPointerEnter={
                   onPreview &&
                   ((e) => {
                     if (e.pointerType === "mouse") onPreview(r);
                   })
                 }
-                onClick={onPreview && (() => onPreview(r))}
+                onClick={
+                  clickUses
+                    ? () => onUse(r)
+                    : rowUse
+                      ? undefined
+                      : onPreview && (() => onPreview(r))
+                }
+                onKeyDown={
+                  clickUses
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onUse(r);
+                        }
+                      }
+                    : undefined
+                }
                 onFocus={onPreview && (() => onPreview(r))}
               >
                 <td
-                  className={`py-1.5 pr-3 sticky left-0 ${bg} ${tint} ${r.yours ? "font-bold" : ""}`}
+                  className={`py-1.5 ${gap} sticky left-0 ${bg} ${tint} ${r.yours ? "font-bold" : ""}`}
                 >
                   {r.name}
                   {r.yours && (
@@ -166,7 +194,7 @@ export function CompareTable<R extends CompareRowBase>({
                   )}
                 </td>
                 {columns.map((c) => (
-                  <td key={c.key} className={`py-1.5 pr-3 text-right whitespace-nowrap ${tint}`}>
+                  <td key={c.key} className={`py-1.5 ${gap} text-right whitespace-nowrap ${tint}`}>
                     {c.cell(r)}
                   </td>
                 ))}
@@ -175,20 +203,22 @@ export function CompareTable<R extends CompareRowBase>({
                     <CompareChecks problems={r.problems} />
                   </td>
                 )}
-                <td className={`py-1 text-right ${tint}`}>
-                  {!r.yours && (
-                    <Button
-                      size="xs"
-                      onClick={(e) => {
-                        // Use clears the preview: the row's own click must not set it again
-                        e.stopPropagation();
-                        onUse(r);
-                      }}
-                    >
-                      {DRIVER_COMPARE_TEXT.use}
-                    </Button>
-                  )}
-                </td>
+                {!rowUse && (
+                  <td className={`py-1 text-right ${tint}`}>
+                    {!r.yours && (
+                      <Button
+                        size="xs"
+                        onClick={(e) => {
+                          // Use clears the preview: the row's own click must not set it again
+                          e.stopPropagation();
+                          onUse(r);
+                        }}
+                      >
+                        {DRIVER_COMPARE_TEXT.use}
+                      </Button>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}
