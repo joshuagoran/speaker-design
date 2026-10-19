@@ -2,7 +2,7 @@
 // with any boxes beside it. Impedances are acoustic, Pa·s/m³ (pressure over volume velocity).
 import type { Complex, RadiationAngle } from "../../types";
 import { AIR_DENSITY, SPEED_OF_SOUND } from "../../constants/acoustics";
-import { besselJ, struveH1 } from "./bessel";
+import { besselPair, struveH1 } from "./bessel";
 import { complex } from "./complex";
 
 /**
@@ -19,7 +19,8 @@ export function pistonImpedance(areaM2: number, f: number): Complex {
   /** ρc/S, Pa·s/m³ */
   const planeWave = (AIR_DENSITY * SPEED_OF_SOUND) / areaM2;
   if (ka < 1e-6) return complex(0);
-  return complex(planeWave * (1 - besselJ(1, 2 * ka) / ka), (planeWave * struveH1(2 * ka)) / ka);
+  const { j1, y1 } = besselPair(2 * ka);
+  return complex(planeWave * (1 - j1 / ka), (planeWave * struveH1(2 * ka, y1)) / ka);
 }
 
 /**

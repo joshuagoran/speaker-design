@@ -1,48 +1,8 @@
-// The Bessel and Struve functions a baffled piston's radiation impedance needs (lib/acoustics/radiation), from their
-// integral forms. The mouth's 2ka (twice the wave number times the mouth's radius) runs to about 60 for a 1.9 m² mouth
-// at 2 kHz, where power series lose their digits; the integrals stay accurate there and need no tables. The parabolic
-// flare's solutions (lib/acoustics/hornSegments) need both kinds of orders 0 and 1 at arguments far past that, at every
-// frequency: `besselPair` gives them from their series and Hankel's expansion.
-
-/** Quadrature steps per unit of x, on top of a base: enough to resolve every oscillation of the integrand. */
-const STEPS_PER_UNIT = 4,
-  BASE_STEPS = 96;
-/** The number of quadrature steps for argument x: even, for Simpson's rule. */
-const stepsFor = (x: number) => {
-  /** the step count before rounding up to even */
-  const steps = Math.ceil(Math.abs(x) * STEPS_PER_UNIT) + BASE_STEPS;
-  return steps + (steps % 2);
-};
-
-/**
- * Bessel function of the first kind, J_n(x) = (1/π) ∫₀^π cos(nτ − x·sin τ) dτ, for a whole order n. The integrand is
- * smooth and periodic, so the trapezoid rule converges exponentially.
- */
-export function besselJ(n: number, x: number): number {
-  // the number of steps, their width (radians), the integrand of τ, and the running trapezoid sum
-  const steps = stepsFor(x),
-    stepWidth = Math.PI / steps;
-  const integrand = (tau: number) => Math.cos(n * tau - x * Math.sin(tau));
-  let sum = 0.5 * (integrand(0) + integrand(Math.PI));
-  for (let i = 1; i < steps; i++) sum += integrand(i * stepWidth);
-  return (sum * stepWidth) / Math.PI;
-}
-
-/**
- * Struve function of order 1, H₁(x) = (2x/π) ∫₀^{π/2} cos²φ · sin(x·sin φ) dφ (from (2x/π) ∫₀¹ √(1 − t²)·sin(xt) dt
- * with t = sin φ), by Simpson's rule.
- */
-export function struveH1(x: number): number {
-  // Simpson's error falls as the step width to the fourth power but, unlike the periodic trapezoid above, not
-  // exponentially: four times the steps
-  // the number of steps, their width (radians), the integrand of φ, and the running Simpson sum
-  const steps = 4 * stepsFor(x),
-    stepWidth = Math.PI / 2 / steps;
-  const integrand = (phi: number) => Math.cos(phi) ** 2 * Math.sin(x * Math.sin(phi));
-  let sum = integrand(0) + integrand(Math.PI / 2);
-  for (let i = 1; i < steps; i++) sum += (i % 2 ? 4 : 2) * integrand(i * stepWidth);
-  return ((2 * x) / Math.PI) * ((sum * stepWidth) / 3);
-}
+// The Bessel and Struve functions a baffled piston's radiation impedance needs (lib/acoustics/radiation), and the
+// parabolic flare's solutions (lib/acoustics/hornSegments). Both run at every frequency of a response, at arguments far
+// past where power series lose their digits: the mouth's 2ka (twice the wave number times the mouth's radius) runs to
+// about 60 for a 1.9 m² mouth at 2 kHz. Each function takes its power series at small arguments and an asymptotic
+// expansion at large ones: `besselPair` J and Y of orders 0 and 1, `struveH1` the Struve function H₁.
 
 /** Bessel functions of orders 0 and 1 at one argument, both kinds (J the first, Y the second). */
 export interface BesselPair {
@@ -66,7 +26,7 @@ const PAIR_TERM_FLOOR = 1e-17;
 
 /**
  * J₀, J₁, Y₀ and Y₁ at x > 0, fast enough to call at every frequency of a response (the parabolic flare's solutions,
- * lib/acoustics/hornSegments; `besselJ` above integrates, which is slow at large x). Below `PAIR_SERIES_LIMIT`, the
+ * lib/acoustics/hornSegments, and the piston's radiation impedance, lib/acoustics/radiation). Below `PAIR_SERIES_LIMIT`, the
  * power series:
  *   J₀ = Σ (−x²/4)^k / (k!)², J₁ = (x/2) Σ (−x²/4)^k / (k!(k+1)!),
  *   Y₀ = (2/π)(ln(x/2) + γ)·J₀ − (2/π) Σ H_k (−x²/4)^k / (k!)²,
@@ -147,4 +107,51 @@ function hankelSeries(n: number, x: number): [p: number, q: number] {
     else p += sign * term;
   }
   return [p, q];
+}
+
+/**
+ * Where `struveH1` changes from its power series to its asymptotic expansion: both are good to about 1e-10 there (the
+ * series' largest term grows as about e^x / x; the expansion's smallest term falls as about e^(−x)).
+ */
+const STRUVE_SERIES_LIMIT = 20;
+
+/**
+ * Struve function of order 1, H₁(x), for x ≥ 0 (DLMF 11.2.1 and 11.6.1). Below `STRUVE_SERIES_LIMIT`, its power series:
+ *   H₁ = Σ (−1)^k (x/2)^(2k+2) / (Γ(k+3/2)·Γ(k+5/2)).
+ * Above it, the expansion of H₁ − Y₁ in 1/x, which needs Y₁ (`besselPair`, which a caller that has it passes in):
+ *   H₁ − Y₁ ≈ (1/π) Σ Γ(k+1/2)·(x/2)^(−2k) / Γ(3/2−k) = (2/π)·(1 + 2/x² − 6/x⁴ + …),
+ * cut before its terms start to grow.
+ *
+ * Aarts and Janssen's closed form (J. Acoust. Soc. Am. 113(5), 2003), H₁ ≈ 2/π − J₀ + (16/π − 5)·sin(x)/x +
+ * (12 − 36/π)·(1 − cos x)/x², is as fast, but its error (0.1 % at small x, up to 0.005 at large x) moves the horns' Ze
+ * past the Hornresp checks' 0.1 % (tests/hornresp.test.ts).
+ */
+export function struveH1(x: number, y1?: number): number {
+  if (x < STRUVE_SERIES_LIMIT) {
+    /** −x²/4: each term is the one before times this, over (k + 1/2)(k + 3/2) */
+    const step = (-x * x) / 4;
+    /** the k = 0 term: (x/2)² / (Γ(3/2)·Γ(5/2)), with Γ(3/2) = √π/2 and Γ(5/2) = 3√π/4 */
+    let term = (x * x) / 4 / ((3 * Math.PI) / 8),
+      sum = term;
+    for (let k = 1; k < PAIR_MAX_TERMS; k++) {
+      term *= step / ((k + 0.5) * (k + 1.5));
+      sum += term;
+      if (Math.abs(term) < PAIR_TERM_FLOOR * Math.max(1, Math.abs(sum))) break;
+    }
+    return sum;
+  }
+  /** (x/2)²: each term is the one before times (k − 1/2)(3/2 − k), over this */
+  const halfSquared = (x / 2) ** 2;
+  // the k = 0 term, Γ(1/2) / Γ(3/2) = 2; the running sum; the size of the term before
+  let term = 2,
+    sum = 2,
+    last = Infinity;
+  for (let k = 1; k < PAIR_MAX_TERMS; k++) {
+    term *= ((k - 0.5) * (1.5 - k)) / halfSquared;
+    const size = Math.abs(term);
+    if (size >= last || size < PAIR_TERM_FLOOR) break;
+    last = size;
+    sum += term;
+  }
+  return sum / Math.PI + (y1 ?? besselPair(x).y1);
 }

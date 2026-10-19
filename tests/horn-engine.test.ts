@@ -6,7 +6,7 @@
 // number 2πf/c; ka compares a piston's radius a with the wavelength; ρc/S is a plane wave's impedance across area S.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { besselJ, besselPair, struveH1 } from "../src/lib/acoustics/bessel";
+import { besselPair, struveH1 } from "../src/lib/acoustics/bessel";
 import {
   FLANGED_CIRCLE_END_RATIO,
   mouthImpedance,
@@ -85,37 +85,49 @@ const seriesH1 = (x: number) => {
   return sum;
 };
 
-test("Bessel J₀, J₁ and Struve H₁ match their power series", () => {
+/** Quadrature steps for the integral references at argument x: 4 per unit of x on top of 96, rounded up to even. */
+const integralSteps = (x: number) => {
+  const steps = Math.ceil(Math.abs(x) * 4) + 96;
+  return steps + (steps % 2);
+};
+/**
+ * J_n(x) = (1/π) ∫₀^π cos(nτ − x·sin τ) dτ, by the trapezoid rule: the integrand is smooth and periodic, so it
+ * converges exponentially and holds where the power series fail.
+ */
+const integralJ = (n: number, x: number) => {
+  const steps = integralSteps(x),
+    width = Math.PI / steps;
+  const integrand = (tau: number) => Math.cos(n * tau - x * Math.sin(tau));
+  let sum = 0.5 * (integrand(0) + integrand(Math.PI));
+  for (let i = 1; i < steps; i++) sum += integrand(i * width);
+  return (sum * width) / Math.PI;
+};
+/**
+ * H₁(x) = (2x/π) ∫₀^{π/2} cos²φ · sin(x·sin φ) dφ, by Simpson's rule with 16 times the steps: its error falls as the
+ * step width to the fourth power, not exponentially as the periodic trapezoid's above.
+ */
+const integralH1 = (x: number) => {
+  const steps = 16 * integralSteps(x),
+    width = Math.PI / 2 / steps;
+  const integrand = (phi: number) => Math.cos(phi) ** 2 * Math.sin(x * Math.sin(phi));
+  let sum = integrand(0) + integrand(Math.PI / 2);
+  for (let i = 1; i < steps; i++) sum += (i % 2 ? 4 : 2) * integrand(i * width);
+  return ((2 * x) / Math.PI) * ((sum * width) / 3);
+};
+
+test("the integral references match the power series", () => {
   for (const x of [0.01, 0.3, 1, 2.4048, 5, 9.7, 14]) {
-    near(besselJ(0, x), seriesJ(0, x), 1e-10, `J0(${x})`);
-    near(besselJ(1, x), seriesJ(1, x), 1e-10, `J1(${x})`);
-    near(struveH1(x), seriesH1(x), 1e-8, `H1(${x})`);
+    near(integralJ(0, x), seriesJ(0, x), 1e-10, `J0(${x})`);
+    near(integralJ(1, x), seriesJ(1, x), 1e-10, `J1(${x})`);
+    near(integralH1(x), seriesH1(x), 1e-8, `H1(${x})`);
   }
-  near(besselJ(0, 1), 0.7651976866, 1e-9, "J0(1) table value");
-  near(besselJ(1, 1), 0.4400505857, 1e-9, "J1(1) table value");
 });
 
-test("Bessel and Struve hold up where the series fail (2ka to 60)", () => {
-  for (const x of [20, 37.3, 60]) {
-    // the derivative of J₀ is −J₁
-    const step = 1e-4;
-    const slope = (besselJ(0, x + step) - besselJ(0, x - step)) / (2 * step);
-    near(slope, -besselJ(1, x), 1e-6, `J0'(${x})`);
-    // J₁'s large-x asymptote, good to about 1/x
-    near(
-      besselJ(1, x),
-      Math.sqrt(2 / (Math.PI * x)) * Math.cos(x - (3 * Math.PI) / 4),
-      0.4 / x,
-      `J1(${x})`,
-    );
-    // Aarts and Janssen's (2003) approximation of H₁, good to about 0.005
-    const aartsJanssen =
-      2 / Math.PI -
-      besselJ(0, x) +
-      (16 / Math.PI - 5) * (Math.sin(x) / x) +
-      (12 - 36 / Math.PI) * ((1 - Math.cos(x)) / (x * x));
-    near(struveH1(x), aartsJanssen, 0.006, `H1(${x})`);
-  }
+test("Struve H₁ matches the integral, either side of its change to the asymptotic expansion (at 20) and to 2ka of 60", () => {
+  for (const x of [1e-4, 0.01, 0.3, 1, 2.4048, 5, 9.7, 14, 19.999, 20, 20.001, 25, 37.3, 60])
+    near(struveH1(x), integralH1(x), 1e-9, `H1(${x})`);
+  // a caller's Y₁ gives the same
+  near(struveH1(37.3, besselPair(37.3).y1), struveH1(37.3), 0, "H1 with Y1 passed in");
 });
 
 test("a baffled piston's radiation impedance has its textbook limits", () => {
@@ -588,8 +600,8 @@ test("Bessel J₀, J₁, Y₀ and Y₁ (the parabolic flare's) match tables, the
     const b = besselPair(x);
     // the first kind against the integral form
     if (x < 1e3) {
-      near(b.j0, besselJ(0, x), 1e-10, `J0(${x})`);
-      near(b.j1, besselJ(1, x), 1e-10, `J1(${x})`);
+      near(b.j0, integralJ(0, x), 1e-10, `J0(${x})`);
+      near(b.j1, integralJ(1, x), 1e-10, `J1(${x})`);
     }
     // J₁Y₀ − J₀Y₁ = 2/(πx), relative
     near((b.j1 * b.y0 - b.j0 * b.y1) * ((Math.PI * x) / 2), 1, 1e-10, `Wronskian at ${x}`);

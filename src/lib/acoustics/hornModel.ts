@@ -53,8 +53,11 @@ export const MILLI = 1000;
 /** One side's air load on a piston of one cone's area Sd (cm²): 8/3·ρa³, kg, a the cone's radius. */
 export const oneSideAirMass = (coneAreaCm2: number) =>
   (8 / 3) * AIR_DENSITY * Math.pow(coneAreaCm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
-/** The vent's tuning search (duct vent): from this frequency, Hz, up in steps of this ratio, to the ceiling. */
-const TUNING_SEARCH = { from: 1, step: 1.01, ceiling: 20000 } as const;
+/**
+ * The vent's tuning search (duct vent): up in steps of `step` (a ratio) to `ceiling`, Hz, from `start` times the lumped
+ * vent's tuning, or from `from`, Hz, when the tuning is already past that start.
+ */
+const TUNING_SEARCH = { from: 1, start: 0.5, step: 1.01, ceiling: 20000 } as const;
 
 export interface HornModelOptions {
   /**
@@ -215,13 +218,19 @@ export function ventOf(
   };
   /** the vent's reactance less the chamber's (Pa·s/m³): negative below the tuning, positive just above it */
   const detuning = (f: number) => lossless(f).impedance.im - 1 / (2 * Math.PI * f * Cab);
+  /** the lumped vent's tuning, Hz: its air as one mass, ρ·length/Sp, with the chamber's compliance */
+  const lumpedFb =
+    1 / (2 * Math.PI * Math.sqrt(((AIR_DENSITY * (port.length / CM_PER_M)) / Sp) * Cab));
   let Fb: number;
   if (!radiationLoad) {
-    Fb = 1 / (2 * Math.PI * Math.sqrt(((AIR_DENSITY * (port.length / CM_PER_M)) / Sp) * Cab));
+    Fb = lumpedFb;
   } else {
     // step up to the first sign change, then halve the bracket: the duct's reactance has poles above the tuning, so a
-    // plain bisection over a wide range could land on one
-    let below: number = TUNING_SEARCH.from;
+    // plain bisection over a wide range could land on one. The exit's load adds mass, so the tuning falls below the
+    // lumped one: the steps start at a fraction of it, or at the bottom if the tuning is lower still
+    /** the search's first frequency, Hz */
+    const start = Math.max(TUNING_SEARCH.from, TUNING_SEARCH.start * lumpedFb);
+    let below: number = detuning(start) < 0 ? start : TUNING_SEARCH.from;
     while (
       below * TUNING_SEARCH.step < TUNING_SEARCH.ceiling &&
       detuning(below * TUNING_SEARCH.step) < 0
