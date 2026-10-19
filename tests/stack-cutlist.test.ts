@@ -4,9 +4,8 @@ import { describe, expect, test } from "vite-plus/test";
 import { cutParts } from "../src/lib/pa/calc";
 import { layoutCutlist, CUTLIST_DEFAULTS } from "../src/lib/pa/cutlist";
 import { stackCutParts } from "../src/lib/speaker/stackBuild";
-import { startLayers } from "../src/pages/stack/stackPresets";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { cutBoxName, cutBoxTag } from "../src/constants/cutParts";
@@ -36,11 +35,7 @@ describe("Stack cutlist: the PA presets cut as the PA page cuts them", () => {
     for (const joint of ["butt", "rabbet", "miter"] as const satisfies readonly CornerJoint[])
       test(`${preset} (${joint})`, () => {
         const cfg = defaultPaDesign(layout);
-        const { stack, speakers } = startLayers(
-          preset,
-          { id: "test", name: "test" },
-          { pa: cfg, floor: DEFAULT_COVERAGE_LAYOUT },
-        );
+        const { stack, speakers } = presetLayers(preset, { id: "test", name: "test" });
         const ours = stackCutParts(stack, speakers, joint, {}).parts;
         const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
         const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);

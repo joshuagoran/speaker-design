@@ -1,11 +1,10 @@
-// The Stack and Space pages' starts (src/pages/stack/stackPresets): the PA presets in each layout, the Hi-fi pair and
-// the current PA design read in as speakers, a stack and a space. A PA start keeps the PA page's music balance in its
-// band Levels (lib/speaker/paBalance), the highest 0 dB, every member and placement at 0 dB; the space plays each band
-// at that balance (tests/space-coverage.test.ts). The presets' Levels are saved data (src/data/presets/pa-band-levels.ts);
-// the current PA design's are worked out as it is read in.
+// The Stack and Space pages' starts (src/pages/stack/stackPresets): the PA presets in each layout and the Hi-fi pair,
+// read in as speakers, a stack and a space. A PA start keeps the PA page's music balance in its band Levels
+// (lib/speaker/paBalance), the highest 0 dB, every member and placement at 0 dB; the space plays each band at that
+// balance (tests/space-coverage.test.ts). The presets' Levels are saved data (src/data/presets/pa-band-levels.ts).
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { STACK_STARTS, startLayers, paLayers } from "../src/pages/stack/stackPresets";
+import { STACK_PRESETS, presetLayers } from "../src/pages/stack/stackPresets";
 import { paBalancedLayers, paBandLevels, type PaBandLevels } from "../src/lib/speaker/paBalance";
 import { PA_PRESET_BAND_LEVELS } from "../src/data/presets/pa-band-levels";
 import { presetLevels } from "./preset-levels";
@@ -16,13 +15,11 @@ import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
-import { STACK_START } from "../src/constants/stackPresets";
+import { STACK_PRESET } from "../src/constants/stackPresets";
 import { SPEAKER_BAND } from "../src/constants/speakerSpec";
 import type { DesignLayers } from "../src/types";
 
 const ID = { id: "draft", name: "Start" };
-/** The current PA design the current-design start reads: the PA page's tower, on the PA floor's starting layout. */
-const CURRENT = { pa: defaultPaDesign("tower"), floor: DEFAULT_COVERAGE_LAYOUT };
 
 /** Whether a band is one the PA balance sets. */
 const isPaBandId = (id: string): id is keyof PaBandLevels =>
@@ -33,8 +30,8 @@ const bandLevels = (layers: DesignLayers) =>
   layers.speakers.flatMap((s) => s.bands.map((b) => b.levelDb));
 
 test("stack starts: every start gives a stack whose members are all modeled, with a music limit", () => {
-  for (const start of STACK_STARTS) {
-    const layers = startLayers(start, ID, CURRENT);
+  for (const start of STACK_PRESETS) {
+    const layers = presetLayers(start, ID);
     assert.equal(layers.stack.id, ID.id, start);
     assert.ok(layers.stack.members.length > 0, start);
     const response = stackResponse(layers.stack, layers.speakers);
@@ -48,9 +45,9 @@ test("stack starts: every start gives a stack whose members are all modeled, wit
 });
 
 test("stack starts: a PA start keeps the music balance in its band Levels, the highest 0 dB", () => {
-  for (const start of STACK_STARTS) {
-    if (start === STACK_START.hifiPair) continue;
-    const layers = startLayers(start, ID, CURRENT);
+  for (const start of STACK_PRESETS) {
+    if (start === STACK_PRESET.hifiPair) continue;
+    const layers = presetLayers(start, ID);
     const levels = bandLevels(layers);
     assert.ok(
       levels.every((db) => db <= 0),
@@ -79,7 +76,7 @@ test("stack starts: a PA start keeps the music balance in its band Levels, the h
 test("stack starts: a PA preset is the PA design read in with its saved Levels in its bands", () => {
   const read = layersFromPa(defaultPaDesign("satellite"), ID, DEFAULT_COVERAGE_LAYOUT);
   const saved = PA_PRESET_BAND_LEVELS.satellite;
-  const layers = startLayers(STACK_START.paSatellite, ID, CURRENT);
+  const layers = presetLayers(STACK_PRESET.paSatellite, ID);
   for (const speaker of layers.speakers)
     for (const band of speaker.bands)
       if (isPaBandId(band.id))
@@ -117,13 +114,9 @@ test("stack starts: a design the page can't balance in every band keeps the adap
   assert.deepStrictEqual(paBalancedLayers(cfg, stubbed), stubbed);
 });
 
-test("stack starts: the current PA design and the Hi-fi pair read in through their adapters", () => {
+test("stack starts: the Hi-fi pair reads in through its adapter", () => {
   assert.deepStrictEqual(
-    startLayers(STACK_START.paCurrent, ID, CURRENT),
-    paLayers(CURRENT.pa, ID, CURRENT.floor),
-  );
-  assert.deepStrictEqual(
-    startLayers(STACK_START.hifiPair, ID, CURRENT),
+    presetLayers(STACK_PRESET.hifiPair, ID),
     layersFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, ID),
   );
 });

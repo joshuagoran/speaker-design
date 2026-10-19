@@ -157,7 +157,7 @@ const trimName = (v: number) => (v ? `${formatInches(v)}″` : "None");
 
 /**
  * Cutlist page, for either project: the settings beside the panels of each box and how they pack onto sheets. The
- * project's own page (`PaCutlistPage`, `HifiCutlistPage`) works out its parts and passes its choices.
+ * project's own page (`SpeakerCutlistPage`, `StackCutlistPage`) works out its parts and passes its choices.
  */
 export function CutlistPage({
   project,

@@ -91,13 +91,9 @@ import {
   usePositionFocusState,
 } from "./positionFocus";
 import type { SpeakerPageState } from "./useSpeakerPage";
-import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
-import type { HifiPlanner } from "../hifi/useHifiPlanner";
 
 interface Props {
   speakerPage: SpeakerPageState;
-  planner: PaPlanner;
-  hifi: HifiPlanner;
 }
 
 /** The sum's key on the charts: no band id takes it (the adapters' are band words, the Speaker page's "band1"…). */
@@ -115,7 +111,7 @@ const FOLDS_START = { construction: false, bands: false, look: false, optimizer:
 /**
  * The Speaker page: one speaker from its chambers, drivers and bands, its response and its maximum output on fixed axes
  * with the limits' checks, and the speaker library. A design starts from a template (empty, the PA, Hi-fi, monitor,
- * fill and PA v2 boxes), from a saved speaker, or from the current PA or Hi-fi design.
+ * fill, and PA v2 boxes) or from a saved speaker.
  */
 export function SpeakerPage(props: Props) {
   // which driver position field has focus: the settings set it, the 2D view marks its point
@@ -128,7 +124,7 @@ export function SpeakerPage(props: Props) {
 }
 
 /** The page inside its position focus (`SpeakerPage`). */
-function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
+function SpeakerPageBody({ speakerPage }: Props) {
   const pal = usePalette();
   const { spec, response, limits, build, price, optimizer, store, snapshot, restore } = speakerPage;
   const folds = useFolds(
@@ -137,7 +133,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
     {},
     FOLDS_START,
   );
-  const { options: startOptions, startWith } = useSpeakerStart(speakerPage, planner, hifi);
+  const { options: startOptions, startWith } = useSpeakerStart(speakerPage);
   /** the 2D view picked (a position field with focus shows the one that marks its point: `shownView`) */
   const [picked2d, setPicked2d] = useState<SpeakerView>(SPEAKER_VIEW.front);
   const positionFocus = usePositionFocus();

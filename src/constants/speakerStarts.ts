@@ -1,6 +1,5 @@
-// The Speaker page's starting points (src/pages/speaker/speakerStarts, speakerTemplates): their ids, names, groups and
-// the controls that pick one. It imports nothing, so the Node checks (tests/mobile-check.mjs,
-// tests/three-memory-check.mjs) can read it.
+// The Speaker page's starting points (src/pages/speaker/speakerTemplates, useSpeakerStart): their ids and names. It
+// imports nothing, so the Node checks (tests/mobile-check.mjs, tests/three-memory-check.mjs) can read it.
 
 /**
  * The templates, by id: each builds a new speaker from the catalog and the defaults (src/pages/speaker/
@@ -23,20 +22,6 @@ export const SPEAKER_TEMPLATE = {
 } as const;
 export type SpeakerTemplate = (typeof SPEAKER_TEMPLATE)[keyof typeof SPEAKER_TEMPLATE];
 
-/** The starts that read a design you have now (the L1 adapters), by id. */
-export const SPEAKER_CURRENT_START = {
-  hifi: "hifi",
-  paSub: "paSub",
-  paTop: "paTop",
-  paTower: "paTower",
-} as const;
-export type SpeakerCurrentStart =
-  (typeof SPEAKER_CURRENT_START)[keyof typeof SPEAKER_CURRENT_START];
-
-/** Where a new design starts, by id: a template, or a design you have now. */
-export const SPEAKER_START = { ...SPEAKER_TEMPLATE, ...SPEAKER_CURRENT_START } as const;
-export type SpeakerStart = SpeakerTemplate | SpeakerCurrentStart;
-
 /** What each start shows in the picker. */
 export const SPEAKER_START_NAMES = {
   empty: "Empty speaker",
@@ -52,11 +37,7 @@ export const SPEAKER_START_NAMES = {
   paV2SubBinTwo: "PA v2 sub bin, two drivers",
   paV2MidBox: "PA v2 mid box",
   th18: "TH18 tapped horn (Xoc1)",
-  hifi: "The Hi-fi design",
-  paSub: "The PA design's sub",
-  paTop: "The PA design's mid/high box",
-  paTower: "The PA design's tower",
-} as const satisfies Record<SpeakerStart, string>;
+} as const satisfies Record<SpeakerTemplate, string>;
 
 /** The name a new design takes, by start (a saved speaker keeps its own). */
 export const SPEAKER_START_SPEAKER_NAMES = {
@@ -73,8 +54,4 @@ export const SPEAKER_START_SPEAKER_NAMES = {
   paV2SubBinTwo: "Sub bin",
   paV2MidBox: "Mid box",
   th18: "TH18",
-  hifi: "Hi-fi speaker",
-  paSub: "PA sub",
-  paTop: "PA mid/high box",
-  paTower: "PA tower",
-} as const satisfies Record<SpeakerStart, string>;
+} as const satisfies Record<SpeakerTemplate, string>;

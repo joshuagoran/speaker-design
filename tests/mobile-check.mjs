@@ -2,20 +2,14 @@
 //   node tests/mobile-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary).
 // Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors, and any
-// request outside the page: everything is bundled in, so the page must work with the network blocked. Also drags a
-// toe-in handle on the Coverage map (desktop, mid band) and fails if the map doesn't follow or the layout moves.
+// request outside the page: everything is bundled in, so the page must work with the network blocked.
 // Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
-// checked here and on a desktop window. On Hi-fi (desktop) a tweeter that needs a taller box raises the Height slider
-// only while it is chosen: switching back brings the box back (the size the user set is kept).
+// checked here and on a desktop window.
 // On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { GOAL_SHORT_NAMES, PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
-import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
-import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds.ts";
+import { GOAL_SHORT_NAMES } from "../src/constants/optimizerText.ts";
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
-import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
-import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
@@ -40,19 +34,8 @@ const sizes = [
     colorScheme: "dark",
   },
 ];
-const views = [
-  "",
-  "#coverage",
-  "#cutlist",
-  "#fills",
-  "#hifi",
-  "#hifi-cutlist",
-  "#speaker",
-  "#speaker-cutlist",
-  "#stack",
-  "#stack-cutlist",
-  "#space",
-];
+// "" (no hash) opens the Speaker page
+const views = ["", "#speaker", "#speaker-cutlist", "#stack", "#stack-cutlist", "#space"];
 const failures = [];
 
 // Everything the check measures, evaluated in the page.
@@ -154,36 +137,7 @@ for (const size of sizes) {
       location.hash = h;
     }, v);
     await p.waitForTimeout(600);
-    await check(v || "#planner");
-  }
-  // planner on phones: open every folded section and every settings tab
-  await p.evaluate(() => {
-    location.hash = "";
-  });
-  await p.waitForTimeout(600);
-  if (size.name === "phone") {
-    const closed = p.locator("h2 button[aria-expanded=false]");
-    for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().tap();
-    await p.waitForTimeout(300);
-    const open = await check("#planner, sections open");
-    if (!open.notes) failures.push(`${size.name} #planner: no detail-row captions to check`);
-    for (const tab of Object.values(PA_SETTINGS_TABS)) {
-      await p.getByRole("tab", { name: tab }).tap();
-      await p.waitForTimeout(300);
-      await check(`#planner, ${tab} tab`);
-    }
-    // optimizer on: lock buttons in the settings, the panel, and result cards after a search
-    await p
-      .getByRole("button", { name: "Close settings" })
-      .tap()
-      .catch(() => {});
-    await p.locator('button:has-text("Optimizer: off")').tap();
-    await p.waitForTimeout(300);
-    await check("#planner, optimizer on");
-    await p.locator('button[title="Same output, cheaper"]').tap(); // goals start unselected
-    await p.getByRole("button", { name: PA_RUN_LABELS.improve, exact: true }).tap();
-    await p.waitForSelector("text=Searched", { timeout: 90000 });
-    await check("#planner, optimizer results");
+    await check(v || "(no hash)");
   }
   for (const e of errs) failures.push(`${size.name}: page error: ${e}`);
   await ctx.close();
@@ -215,8 +169,8 @@ for (const size of sizes) {
   await ctx.close();
 }
 
-// Detail-row captions on desktop windows, every view (sections fold on phones only, so all are open here). At these
-// widths PA Design's results column puts its detail rows two to a line, so each row is at its narrowest.
+// Detail-row captions and page errors on desktop windows, every view (sections fold on phones only, so all are open
+// here).
 for (const width of [1024, 1600]) {
   const name = `desktop ${width}`;
   const ctx = await browser.newContext({ viewport: { width, height: 900 } });
@@ -225,17 +179,14 @@ for (const width of [1024, 1600]) {
   p.on("pageerror", (e) => errs.push(e.message));
   await p.goto(page);
   await p.waitForFunction(() => document.querySelector("nav a"), null, { timeout: 30000 });
-  let notes = 0;
   for (const v of views) {
     await p.evaluate((h) => {
       location.hash = h;
     }, v);
     await p.waitForTimeout(600);
     const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
-    notes += m.notes;
-    for (const s of m.captions) failures.push(`${name} ${v || "#planner"}: detail caption ${s}`);
+    for (const s of m.captions) failures.push(`${name} ${v || "(no hash)"}: detail caption ${s}`);
   }
-  if (!notes) failures.push(`${name}: no detail-row captions to check`);
   for (const e of errs) failures.push(`${name}: page error: ${e}`);
   await ctx.close();
 }
@@ -305,7 +256,7 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
   await ctx.close();
 }
 
-// The Speaker page started from the PA design's mid/high box (or tower), and from the PA v2 sub bin (its Horn settings).
+// The Speaker page started from the PA mid/high box (or tower) template, and from the PA v2 sub bin (its Horn settings).
 for (const [width, phone, startName] of [
   [360, true, null],
   [768, true, null],
@@ -339,102 +290,6 @@ for (const [width, phone, start] of [
     fallbackStart: start,
   });
 
-// Coverage map, desktop, mid band: dragging a toe-in handle updates the map while dragging and after release, at one
-// resolution throughout, and nothing above the map moves meanwhile.
-{
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  await ctx.addInitScript(
-    ([key]) => localStorage.setItem(key, JSON.stringify({ band: "mid" })),
-    [COVERAGE_LAYOUT_KEY],
-  );
-  const p = await ctx.newPage();
-  const errs = [];
-  p.on("pageerror", (e) => errs.push(e.message));
-  await p.goto(page + "#coverage");
-  const map = p.getByTestId(COVERAGE_TEST_IDS.map);
-  const settled = () =>
-    p.waitForFunction(
-      (id) => {
-        const m = document.querySelector(`[data-testid="${id}"]`);
-        return m && m.getAttribute("aria-busy") === "false" && m.querySelector("image");
-      },
-      COVERAGE_TEST_IDS.map,
-      { timeout: 30000 },
-    );
-  const image = () => map.locator("image").getAttribute("href");
-  const top = async () => (await map.boundingBox())?.y;
-  // the grid's size: the map draws it as an image of one pixel a cell
-  const cells = (href) =>
-    p.evaluate(
-      (src) =>
-        new Promise((done) => {
-          const im = new Image();
-          im.onload = () => done(`${im.naturalWidth}x${im.naturalHeight}`);
-          im.onerror = () => done("unreadable");
-          im.src = src;
-        }),
-      href,
-    );
-  await settled();
-  const before = await image(),
-    topBefore = await top();
-  const h = await p.getByTestId(COVERAGE_TEST_IDS.aimHandle).first().boundingBox();
-  if (!h) failures.push("coverage: no toe-in handle on the map");
-  else {
-    const x = h.x + h.width / 2,
-      y = h.y + h.height / 2;
-    await p.mouse.move(x, y);
-    await p.mouse.down();
-    const live = new Set();
-    for (let i = 1; i <= 8; i++) {
-      await p.mouse.move(x + i * 8, y + i * 2);
-      await p.waitForTimeout(150);
-      live.add(await image());
-    }
-    if ((await top()) !== topBefore) failures.push("coverage: the map moved during a drag");
-    await p.mouse.up();
-    await settled();
-    const after = await image();
-    live.delete(before);
-    if (live.size < 2)
-      failures.push(`coverage: the map changed ${live.size} time(s) during a toe-in drag`);
-    if (after === before) failures.push("coverage: the settled map ignored a toe-in drag");
-    const sizes = new Set(await Promise.all([before, after, ...live].map(cells)));
-    if (sizes.size !== 1)
-      failures.push(`coverage: the grid changed size during a drag (${[...sizes].join(", ")})`);
-    if ((await top()) !== topBefore) failures.push("coverage: the map moved after a drag");
-  }
-  for (const e of errs) failures.push(`coverage drag: page error: ${e}`);
-  await ctx.close();
-}
-
-// Hi-fi box size, desktop: the tallest ribbon plate raises the box while chosen, and the starting dome brings it back.
-{
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  const p = await ctx.newPage();
-  const errs = [];
-  p.on("pageerror", (e) => errs.push(e.message));
-  await p.goto(page + "#hifi");
-  const height = p.getByLabel(HIFI_BOX_LABELS.h, { exact: true });
-  await height.waitFor({ timeout: 30000 });
-  const [ribbon] = HIFI_TWEETERS_RAW.filter((t) => t.ownGuide).sort(
-    (a, b) => b.ownGuide.h - a.ownGuide.h,
-  );
-  const pick = (id) => p.locator(`select:has(option[value="${id}"])`).selectOption(id);
-  const start = Number(await height.inputValue());
-  await pick(ribbon.id);
-  await p.waitForTimeout(300);
-  const raised = Number(await height.inputValue());
-  await pick(SB26STCN_RAW.id);
-  await p.waitForTimeout(300);
-  const back = Number(await height.inputValue());
-  if (!(raised > start))
-    failures.push(`hifi box: the ${ribbon.id} left the height at ${raised}″ (was ${start}″)`);
-  if (back !== start)
-    failures.push(`hifi box: switching back left the height at ${back}″, not ${start}″`);
-  for (const e of errs) failures.push(`hifi box: page error: ${e}`);
-  await ctx.close();
-}
 await browser.close();
 
 if (failures.length) {

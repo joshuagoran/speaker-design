@@ -1,39 +1,28 @@
-import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
-import { SPEAKER_START_NAMES, type SpeakerStart } from "../../constants/speakerStarts";
-import { paPlannerDesign } from "./paPlannerDesign";
+import { SPEAKER_TEMPLATES, templateSpeaker } from "./speakerTemplates";
+import { SPEAKER_START_NAMES, type SpeakerTemplate } from "../../constants/speakerStarts";
+import { START_PICKER_GROUPS } from "../../constants/startPicker";
 import type { SpeakerPageState } from "./useSpeakerPage";
-import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
-import type { HifiPlanner } from "../hifi/useHifiPlanner";
 
-/** A start as the lists show it: its id, its name and its group (the templates, or the designs you have now). */
+/** A start as the lists show it: its id, its name and its group (the templates). */
 export interface SpeakerStartOption {
-  id: SpeakerStart;
+  id: SpeakerTemplate;
   name: string;
   group: string;
 }
 
+/** Every start the lists show: the templates, in order. */
+const START_OPTIONS: readonly SpeakerStartOption[] = SPEAKER_TEMPLATES.map((id) => ({
+  id,
+  name: SPEAKER_START_NAMES[id],
+  group: START_PICKER_GROUPS.templates,
+}));
+
 /**
- * Where a new speaker starts: every start the lists show (the templates, then the current Hi-fi and PA designs), and
- * the call that replaces the design with one (the saving row's "New from…").
+ * Where a new speaker starts: every start the lists show (the templates), and the call that replaces the design with
+ * one (the saving row's "New from…").
  */
-export function useSpeakerStart(
-  speakerPage: Pick<SpeakerPageState, "setSpec">,
-  planner: PaPlanner,
-  hifi: HifiPlanner,
-) {
-  const options: SpeakerStartOption[] = speakerStarts(planner.layout).map((id) => ({
-    id,
-    name: SPEAKER_START_NAMES[id],
-    group: startGroup(id),
-  }));
-  /** replaces the design with the start's */
-  const startWith = (start: SpeakerStart) =>
-    speakerPage.setSpec(
-      startSpeaker(start, {
-        pa: paPlannerDesign(planner),
-        hifi,
-        hifiLook: { cabFinish: hifi.cabinetFinish, baffleColor: hifi.baffleColor },
-      }),
-    );
-  return { options, startWith };
+export function useSpeakerStart(speakerPage: Pick<SpeakerPageState, "setSpec">) {
+  /** replaces the design with the template's, as a draft under its name */
+  const startWith = (start: SpeakerTemplate) => speakerPage.setSpec(templateSpeaker(start));
+  return { options: START_OPTIONS, startWith };
 }

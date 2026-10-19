@@ -6,9 +6,8 @@ import { nearestPoint } from "../src/lib/pa/calc";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
 import { stackTotals } from "../src/lib/speaker/speakerTotals";
 import { stackSummary } from "../src/pages/stack/stackSummary";
-import { startLayers } from "../src/pages/stack/stackPresets";
+import { presetLayers } from "../src/pages/stack/stackPresets";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { LIMIT_NAMES } from "../src/constants/limits";
 import { SUMMARY_LOW_HZ } from "../src/constants/summaryStrip";
@@ -34,11 +33,7 @@ describe("Stack phone strip: the PA presets read as the PA page's strip", () => 
       const page = derivePaDesign(paDesignInputsOf(cfg)).subModeled;
       expect(page).toBeTruthy();
       if (!page) return;
-      const { stack, speakers } = startLayers(
-        preset,
-        { id: "test", name: "test" },
-        { pa: cfg, floor: DEFAULT_COVERAGE_LAYOUT },
-      );
+      const { stack, speakers } = presetLayers(preset, { id: "test", name: "test" });
       const response = stackResponse(stack, speakers);
       const items = stackSummary(
         response,

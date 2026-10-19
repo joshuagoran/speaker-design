@@ -32,14 +32,6 @@ import {
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
-import { boxReach, fitted, fromStored, stackInRoom } from "../src/pages/coverage/useCoverageLayout";
-import {
-  COVERAGE_LEVEL_REF,
-  COVERAGE_TARGET_DB,
-  LEGACY_LEVEL_MODE,
-} from "../src/constants/coverageLevel";
-import { LISTENER_TARGET_DB } from "../src/lib/pa/optimize";
 import { baffleStepGain, logSpacedFrequencies } from "../src/lib/hifi/hifi";
 import type { Complex } from "../src/types";
 import { METERS_PER_FOOT as FT } from "../src/constants/units";
@@ -504,33 +496,13 @@ test("coverage: air absorbs ISO 9613-1's dB per meter along a long path at 8 kHz
   assert.ok(Math.abs(loss + 0.105 * 100) < 0.3, `${loss.toFixed(2)} dB over 100 m`);
 });
 
-test("coverage: materials interpolate on log frequency and hold flat past the table; old layouts load", () => {
+test("coverage: materials interpolate on log frequency and hold flat past the table", () => {
   // drywall: 0.29 at 125 Hz, 0.10 at 250 Hz
   assert.ok(Math.abs(materialAlpha("drywall", Math.sqrt(125 * 250)) - (0.29 + 0.1) / 2) < 1e-9);
   assert.equal(materialAlpha("drywall", 40), 0.29);
   assert.equal(materialAlpha("drywall", 12000), 0.09);
   assert.equal(surfaceReflection("open", 1000), 0);
   assert.ok(Math.abs(surfaceReflection("curtain", 1000) - Math.sqrt(1 - 0.72)) < 1e-9);
-  // a layout stored before materials: a wall on or off per side, and one absorption
-  const old = fromStored({
-    room: {
-      widthFt: 30,
-      lengthFt: 40,
-      walls: { front: true, back: false, left: true, right: false },
-      absorption: 0.4,
-      outdoors: false,
-    },
-  });
-  assert.deepEqual(old.room.materials, {
-    front: "drywall",
-    back: "open",
-    left: "drywall",
-    right: "open",
-    ceiling: DEFAULT_COVERAGE_LAYOUT.room.materials.ceiling,
-  });
-  assert.equal(old.room.widthFt, 30);
-  assert.equal(old.room.ceilingFt, DEFAULT_COVERAGE_LAYOUT.room.ceilingFt);
-  assert.ok(!("absorption" in old.room) && !("walls" in old.room));
 });
 
 test("coverage: a full dance floor takes the top end out of the floor bounce's comb", () => {
@@ -846,79 +818,4 @@ test("coverage: a stack's 1 m spot is 1 m out from its front along its aim, insi
   assert.ok(Math.abs(Math.hypot(t.x + 8, t.y - 3) - (1 + ONE_METER_FT)) < 1e-9 && t.x > -8);
   const edge = oneMeterSpot({ x: 14, y: 1, aim: 60 }, stack.footprint, room);
   assert.ok(edge.x <= 15 && edge.x > 14);
-});
-
-test("coverage: layouts saved with the old level mode still load", () => {
-  const def = fromStored({});
-  assert.equal(def.levelRef, COVERAGE_LEVEL_REF.audience);
-  assert.equal(def.targetDb, LISTENER_TARGET_DB);
-  const atListener = fromStored({ levelMode: LEGACY_LEVEL_MODE.listener });
-  assert.equal(atListener.levelRef, COVERAGE_LEVEL_REF.listener);
-  assert.equal(atListener.targetDb, LISTENER_TARGET_DB);
-  const atLimit = fromStored({ levelMode: LEGACY_LEVEL_MODE.limit });
-  assert.equal(atLimit.levelRef, COVERAGE_LEVEL_REF.listener);
-  assert.equal(atLimit.targetDb, COVERAGE_TARGET_DB[1]);
-  assert.ok(!("levelMode" in atLimit));
-  // a newer field wins over the old one
-  assert.equal(
-    fromStored({ levelMode: LEGACY_LEVEL_MODE.limit, levelRef: COVERAGE_LEVEL_REF.stacks })
-      .levelRef,
-    COVERAGE_LEVEL_REF.stacks,
-  );
-});
-
-test("coverage layout: a box can go right against a wall, its edge and no further", () => {
-  const room = { widthFt: 30, lengthFt: 40 };
-  const footprint = { w: 24, d: 30 }; // 2 ft wide, 2.5 ft deep
-  // facing down the room, pushed past the front-left corner: its edges land on both walls
-  assert.deepEqual(stackInRoom({ x: -100, y: -100, aim: 0 }, room, footprint), {
-    x: -15 + 1,
-    y: 1.25,
-    aim: 0,
-  });
-  // and the back-right corner
-  assert.deepEqual(stackInRoom({ x: 100, y: 100, aim: 0 }, room, footprint), {
-    x: 15 - 1,
-    y: 40 - 1.25,
-    aim: 0,
-  });
-  // turned, it reaches by its rotated extent, the same either way
-  const r = boxReach(footprint, 30);
-  assert.deepEqual(boxReach(footprint, -30), r);
-  assert.ok(r.x > 1 && r.x < Math.hypot(1, 1.25));
-  const u = stackInRoom({ x: -100, y: 5, aim: 30 }, room, footprint);
-  assert.ok(Math.abs(u.x - (-15 + r.x)) < 1e-9);
-  // a point well inside is left alone (snapped to a quarter foot)
-  assert.deepEqual(stackInRoom({ x: 3.1, y: 7.9, aim: 0 }, room, footprint), {
-    x: 3,
-    y: 8,
-    aim: 0,
-  });
-});
-
-test("coverage layout: fitted to a smaller room, the boxes stand against its walls", () => {
-  const footprint = { w: 24, d: 30 };
-  const l = fitted(
-    {
-      ...DEFAULT_COVERAGE_LAYOUT,
-      room: { ...DEFAULT_COVERAGE_LAYOUT.room, widthFt: 16 },
-      stacks: [
-        { x: -20, y: 0, aim: 0 },
-        { x: 20, y: 0, aim: 0 },
-      ],
-      subs: "center",
-      cluster: { x: 20, y: 0 },
-      listener: { x: 20, y: 0 },
-    },
-    footprint,
-  );
-  // mirrored stacks each with an edge on its side wall and its back on the front wall
-  assert.deepEqual(l.stacks, [
-    { x: -7, y: 1.25, aim: 0 },
-    { x: 7, y: 1.25, aim: 0 },
-  ]);
-  // the center pair is two boxes side by side about the cluster point: the outer one's edge on the wall
-  assert.deepEqual(l.cluster, { x: 6, y: 1.25 });
-  // the listener keeps its half-foot margin
-  assert.deepEqual(l.listener, { x: 7.5, y: 0.5 });
 });

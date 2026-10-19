@@ -12,9 +12,8 @@ import {
 } from "../../constants/cutlistProjects";
 import { savedPanelExactIn } from "../../lib/panel";
 
-/** Where this browser keeps each project's cutlist choices (the Hi-fi key is the one its saves already carry). */
+/** Where this browser keeps each project's cutlist choices. */
 const STORE_KEYS = {
-  hifi: "hifi.cutlist",
   speaker: "speaker.cutlist",
   stack: "stack.cutlist",
 } as const satisfies Record<StoredCutlistProject, string>;
@@ -47,8 +46,8 @@ const fromStored =
   };
 
 /**
- * A project's cutlist choices (the Hi-fi page's, the Speaker page's), kept apart from the PA stack's and remembered in this
- * browser (the design itself isn't saved with them).
+ * A project's cutlist choices (the Speaker page's, the Stack page's), remembered in this browser (the design itself isn't
+ * saved with them).
  */
 export function useStoredCutlistOptions(project: StoredCutlistProject): CutlistOptions {
   const [s, setS] = useStoredStateFrom<StoredCutlist, Partial<StoredCutlist>>(

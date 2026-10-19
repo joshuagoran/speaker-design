@@ -1,6 +1,5 @@
-// The coverage maps' assumptions, as groups of lines (the PA Coverage page's and the Space page's lists): read from the
-// model's own constants and the room, so the lists stay in step with them. The groups both maps share are here; each
-// page adds its own levels and sources.
+// The Space page's coverage map assumptions, as groups of lines: read from the model's own constants and the room, so
+// the list stays in step with them. The page adds its own levels and sources (SpaceAssumptions).
 import {
   BAND_POINTS,
   COHERENT_BELOW_HZ,
