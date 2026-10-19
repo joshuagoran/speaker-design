@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BandId, DispersionPlane, FrequencyPoint } from "../../types";
-import { alpha } from "../../styles/palette";
+import { PREVIEW_DASH, alpha } from "../../styles/palette";
 import { bandColor } from "../../lib/speaker/bandColor";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
@@ -30,6 +30,13 @@ import { UI_TEXT } from "../../constants/uiText";
 import { FoldHornCard } from "./FoldHornCard";
 import { withHornFold } from "./chamberLoad";
 import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Ellipsis } from "../../components/ui/Ellipsis";
+import { DriverCompareTable } from "./DriverCompareTable";
+import { useDriverCompare, type OpenCompare } from "./useDriverCompare";
+import { ownOption } from "../../lib/speaker/driverCompare";
+import { withPart } from "../../lib/speaker/optimize/space";
+import { DRIVER_COMPARE_TEXT } from "../../constants/driverCompare";
 import {
   hornFlare,
   speakerLayout,
@@ -42,10 +49,12 @@ import {
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
   GAP_Y,
+  MD_UP,
   resultsCellClass,
   resultsGridClass,
 } from "../../styles/layout";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import {
   HIFI_BOT,
   HIFI_TOP,
@@ -220,6 +229,8 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
       ...lineOf(b.id),
       swatch: "dot" as const,
       tint: "transparent",
+      // faint while an option is previewed, so its curves stand out
+      ghost: previewed !== undefined,
     }));
   const sumSeries = (curve: FrequencyPoint[]) => ({
     curve,
@@ -230,6 +241,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
     tint: alpha(pal.ink, 0.05),
     // below the floor it would run along the axis as if it were data
     clipAtFloor: true,
+    ghost: previewed !== undefined,
   });
   /** the checks, one compact row per band, then per chamber (its limits, fit and bracing checks) */
   const checkRows = [
@@ -267,6 +279,134 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
       ? positionFocus.focus
       : null;
   const view = shownView(picked2d, focus);
+  // the driver comparison: the entry it is open on (with the chamber list it was opened in), and the row previewed
+  const [compare, setCompare] = useState<(OpenCompare & { key: string; opened: number }) | null>(
+    null,
+  );
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const compareOpen =
+    compare && compare.key === speakerPage.chamberKey(compare.chamber) ? compare : null;
+  const cmp = useDriverCompare(spec, compareOpen);
+  // an entry that went away (removed, or its chamber) closes the block
+  if (compare && !cmp.driver) setCompare(null);
+  const compareBlock = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // on a phone too: the block opens in the results, away from the Compare button
+    if (compare) compareBlock.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [compare?.opened]);
+  const openCompare = (chamber: number, entry: number) => {
+    const d = spec.cabinet.chambers[chamber]?.drivers[entry];
+    if (!d) return;
+    setPreviewId(null);
+    setCompare((c) => ({
+      chamber,
+      entry,
+      origin: { ...ownOption(d), kind: d.kind },
+      key: speakerPage.chamberKey(chamber),
+      opened: (c?.opened ?? 0) + 1,
+    }));
+  };
+  /** the row previewed on the charts (not yours: yours is drawn already) */
+  const previewed = compareOpen ? cmp.rows.find((r) => r.id === previewId && !r.yours) : undefined;
+  /**
+   * what the charts' legends hold room for while the block is open: the previewed row, or (hidden) the row with the
+   * longest name, so a preview that comes and goes doesn't move the table under the pointer
+   */
+  const preview =
+    previewed ??
+    (compareOpen
+      ? cmp.rows.reduce<(typeof cmp.rows)[number] | undefined>(
+          (long, r) => (!long || r.name.length > long.name.length ? r : long),
+          undefined,
+        )
+      : undefined);
+  /** the previewed option's curves on a chart: its bands' in their colors, then its sum in ink, dashed */
+  const previewSeries = (pick: "curve" | "max") =>
+    preview
+      ? [
+          ...preview.run.bands.map((b) => ({
+            curve: b[pick],
+            clipAtFloor: true,
+            id: `preview:${b.id}`,
+            label: `${nameOf(b.id)} · ${preview.name}`,
+            stroke: lineOf(b.id).stroke,
+            dash: PREVIEW_DASH,
+            swatch: "dot" as const,
+            tint: "transparent",
+            hidden: !previewed,
+            ownLine: true,
+          })),
+          {
+            curve: pick === "curve" ? preview.run.sum : preview.run.maxSum,
+            clipAtFloor: true,
+            id: "preview:sum",
+            label: `${SPEAKER_TEXT.sum} · ${preview.name}`,
+            stroke: pal.ink,
+            dash: PREVIEW_DASH,
+            tint: "transparent",
+            hidden: !previewed,
+            ownLine: true,
+          },
+        ]
+      : [];
+  /** the response chart: in the results, and on top of the driver comparison on a phone */
+  const responseChart = (
+    <ResponseChart
+      fmin={FREQ_AXIS_MIN_HZ}
+      fmax={FREQ_AXIS_MAX_HZ}
+      top={HIFI_TOP}
+      bot={HIFI_BOT}
+      step={10}
+      yLabel={SPEAKER_TEXT.yLabel}
+      series={[
+        ...(response.bands.length ? [sumSeries(response.sum)] : []),
+        ...bandSeries(response.bands),
+        ...previewSeries("curve"),
+      ]}
+      marks={fbMarks}
+    />
+  );
+  /** from md up: the comparison sits in the settings column and a click uses a row; on a phone it fills the screen */
+  const mdUp = useMediaQuery(MD_UP);
+  /** the driver comparison in the settings column, while it is open */
+  const compareView =
+    compareOpen && cmp.driver ? (
+      <section
+        ref={compareBlock}
+        className={`min-w-0 ${GAP_Y} max-md:fixed max-md:inset-0 max-md:z-40 max-md:overflow-y-auto max-md:bg-white max-md:p-4`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SectionHeading>{DRIVER_COMPARE_TEXT.heading}</SectionHeading>
+          <Button size="xs" onClick={() => setCompare(null)}>
+            {DRIVER_COMPARE_TEXT.close}
+          </Button>
+        </div>
+        {/* on a phone the chart stays on top while the list scrolls */}
+        {!mdUp && <div className="sticky -top-4 z-10 bg-white pt-4">{responseChart}</div>}
+        <p className="text-xs text-stone-500">
+          {DRIVER_COMPARE_TEXT.line(mdUp ? DRIVER_COMPARE_TEXT.hover : DRIVER_COMPARE_TEXT.tap)}
+          {mdUp && <>{DRIVER_COMPARE_TEXT.clickToSwap}</>}
+        </p>
+        <DriverCompareTable
+          rowUse={mdUp}
+          rows={cmp.rows}
+          kind={cmp.driver.kind}
+          bandName={nameOf(cmp.driver.bands[0] ?? "")}
+          previewId={previewId}
+          onPreview={setPreviewId}
+          onUse={(o) =>
+            speakerPage.editDriver(compareOpen.chamber, compareOpen.entry, (d) =>
+              withPart(d, o.driverId, o.hornId),
+            )
+          }
+        />
+        {cmp.pending && (
+          <p className="text-xs text-stone-500">
+            <Ellipsis />
+          </p>
+        )}
+      </section>
+    ) : undefined;
   return (
     <SettingsLayout
       results={
@@ -378,19 +518,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} ${resultsGridClass(wide)}`}>
             <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
               <SectionHeading>{SPEAKER_TEXT.response}</SectionHeading>
-              <ResponseChart
-                fmin={FREQ_AXIS_MIN_HZ}
-                fmax={FREQ_AXIS_MAX_HZ}
-                top={HIFI_TOP}
-                bot={HIFI_BOT}
-                step={10}
-                yLabel={SPEAKER_TEXT.yLabel}
-                series={[
-                  ...(response.bands.length ? [sumSeries(response.sum)] : []),
-                  ...bandSeries(response.bands),
-                ]}
-                marks={fbMarks}
-              />
+              {responseChart}
               {/* a chamber the model leaves out is named with its reason, never dropped silently */}
               {response.chambers.flatMap((c, i) =>
                 [...new Set(c.gaps)].map((g) => (
@@ -418,6 +546,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
                   series={[
                     sumSeries(limits.sum),
                     ...bandSeries(limits.bands.map((b) => ({ id: b.id, curve: b.max }))),
+                    ...previewSeries("max"),
                   ]}
                   marks={fbMarks}
                 />
@@ -462,7 +591,14 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
           <AssumptionsList groups={details} summary={UI_TEXT.details} columns />
         </div>
       }
-      settings={<SpeakerSettings speakerPage={speakerPage} folds={folds} />}
+      settings={
+        <SpeakerSettings
+          speakerPage={speakerPage}
+          folds={folds}
+          onCompare={openCompare}
+          compareView={compareView}
+        />
+      }
     />
   );
 }

@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { Button } from "../ui/Button";
+import { CompareTable, type CompareColumn } from "../ui/CompareTable";
 import { AnimatedDetails } from "../ui/AnimatedDetails";
 import { ToggleButton } from "../ui/ToggleButton";
 import { formatDollars } from "../../lib/format";
 import { entriesOf } from "../../lib/records";
 import { DRIVER_PART_NAMES } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
+import { DRIVER_COMPARE_SORT, DRIVER_COMPARE_TEXT } from "../../constants/driverCompare";
 import type { PaDriverCompareRow, PaDriverPart } from "../../types";
+
+/** The stack price column's heading (also its key). */
+const STACK_PRICE_HEAD = "Drivers / stack";
 
 type Metrics = NonNullable<PaDriverCompareRow["m"]>;
 /** A part-specific column: its heading and its value in words. */
@@ -50,7 +54,7 @@ export function DriverCompare({ rows, onUse }: Props) {
   const [part, setPart] = useState<PaDriverPart>("sub");
   return (
     <AnimatedDetails
-      summary="Compare drivers"
+      summary={DRIVER_COMPARE_TEXT.heading}
       className="text-sm rounded border border-stone-300 bg-stone-50 px-3 py-2"
       summaryClassName="cursor-pointer py-1"
     >
@@ -67,77 +71,39 @@ export function DriverCompare({ rows, onUse }: Props) {
                 </ToggleButton>
               ))}
             </div>
-            <div className="mt-2 overflow-x-auto">
-              <table className="text-xs w-full min-w-[600px] border-collapse tabular-nums">
-                <thead>
-                  <tr className="text-stone-500 text-left border-b border-stone-300">
-                    <th className="py-1 pr-3 font-normal sticky left-0 bg-stone-50">
-                      {DRIVER_PART_NAMES[part]}
-                    </th>
-                    <th className="py-1 pr-3 font-normal text-right">Its price</th>
-                    <th className="py-1 pr-3 font-normal text-right">Drivers / stack</th>
-                    <th className="py-1 pr-3 font-normal text-right">{WEIGHT_HEAD[part]}</th>
-                    {PART_COLUMNS[part].map((c) => (
-                      <th key={c.head} className="py-1 pr-3 font-normal text-right">
-                        {c.head}
-                      </th>
-                    ))}
-                    <th className="py-1 pr-3 font-normal">Checks</th>
-                    <th className="py-1 font-normal" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows(part).map((r) => (
-                    <tr key={r.id} className="border-b border-stone-300 last:border-0 align-top">
-                      <td
-                        className={`py-1.5 pr-3 sticky left-0 bg-stone-50 ${r.yours ? "font-bold" : ""}`}
-                      >
-                        {r.name}
-                        {r.yours && <span className="font-normal text-stone-500"> · yours</span>}
-                      </td>
-                      <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                        {r.price == null ? "?" : formatDollars(r.price)}
-                      </td>
-                      <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                        {r.m
-                          ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : UI_TEXT.partialPriceMark}`
-                          : "–"}
-                      </td>
-                      <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                        {r.lb == null ? "–" : `${r.lb.toFixed(r.lb < 10 ? 1 : 0)} lb`}
-                      </td>
-                      {PART_COLUMNS[part].map((c) => (
-                        <td key={c.head} className="py-1.5 pr-3 text-right whitespace-nowrap">
-                          {r.m ? c.value(r.m) : "–"}
-                        </td>
-                      ))}
-                      <td className="py-1.5 pr-3">
-                        {r.problems.length ? (
-                          // a problem your design has whatever you pick is gray; what this option adds is orange
-                          r.problems.map((p, i) => (
-                            <span
-                              key={`${p.id}-${i}`}
-                              className={p.yoursToo ? "text-stone-500" : "text-orange-700"}
-                            >
-                              {i > 0 && "; "}
-                              {p.text}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-green-700">passes</span>
-                        )}
-                      </td>
-                      <td className="py-1 text-right">
-                        {!r.yours && (
-                          <Button size="xs" onClick={() => onUse(part, r.id)}>
-                            Use
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-2">
+              <CompareTable
+                nameHead={DRIVER_PART_NAMES[part]}
+                columns={[
+                  {
+                    key: DRIVER_COMPARE_SORT.price,
+                    head: DRIVER_COMPARE_TEXT.price,
+                    cell: (r) => (r.price == null ? "?" : formatDollars(r.price)),
+                  },
+                  {
+                    key: STACK_PRICE_HEAD,
+                    head: STACK_PRICE_HEAD,
+                    cell: (r) =>
+                      r.m
+                        ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : UI_TEXT.partialPriceMark}`
+                        : "–",
+                  },
+                  {
+                    key: DRIVER_COMPARE_SORT.lb,
+                    head: WEIGHT_HEAD[part],
+                    cell: (r) => (r.lb == null ? "–" : `${r.lb.toFixed(r.lb < 10 ? 1 : 0)} lb`),
+                  },
+                  ...PART_COLUMNS[part].map((c): CompareColumn<PaDriverCompareRow> => ({
+                    key: c.head,
+                    head: c.head,
+                    cell: (r) => (r.m ? c.value(r.m) : "–"),
+                  })),
+                ]}
+                rows={rows(part)}
+                onUse={(r) => onUse(part, r.id)}
+                bg="bg-stone-50"
+                minWidth="min-w-[600px]"
+              />
             </div>
           </div>
         )

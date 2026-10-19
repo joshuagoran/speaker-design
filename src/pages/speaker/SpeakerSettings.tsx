@@ -64,6 +64,10 @@ const HANDLE_OPTIONS = HANDLES.map((h) => ({ id: h.id, name: h.name }));
 interface Props {
   speakerPage: SpeakerPageState;
   folds: Folds<SpeakerSettingsSection>;
+  /** opens the driver comparison for a chamber's driver entry */
+  onCompare: (chamber: number, entry: number) => void;
+  /** the driver comparison, while it is open: it takes the whole column in place of the settings */
+  compareView?: React.ReactNode;
 }
 
 /**
@@ -71,7 +75,7 @@ interface Props {
  * chamber's card), Bands and filters (the external crossover and each band), Look and Optimizer. Each section folds to
  * a summary of its key facts.
  */
-export function SpeakerSettings({ speakerPage, folds }: Props) {
+export function SpeakerSettings({ speakerPage, folds, onCompare, compareView }: Props) {
   const { spec, response, optimizer } = speakerPage;
   const { cabinet } = spec;
   const { chambers, construction, top, insetIn, panel, handles, inputDish } = cabinet;
@@ -117,6 +121,8 @@ export function SpeakerSettings({ speakerPage, folds }: Props) {
       {children}
     </SettingsSection>
   );
+  // the same column either way, so its scroll pane and the divider's measure stay
+  if (compareView) return <SettingsColumn>{compareView}</SettingsColumn>;
   return (
     <SettingsColumn folds={folds}>
       {section(
@@ -224,6 +230,7 @@ export function SpeakerSettings({ speakerPage, folds }: Props) {
               placed={layout.chambers[i]}
               onEdit={(edit) => speakerPage.editChamber(i, edit)}
               onRemove={one ? undefined : () => speakerPage.removeChamber(i)}
+              onCompare={(entry) => onCompare(i, entry)}
             />
           ))}
           <div>

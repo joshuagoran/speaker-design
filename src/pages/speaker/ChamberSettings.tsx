@@ -18,6 +18,8 @@ import type {
   SpeakerSlotPort,
 } from "../../types";
 import { Button } from "../../components/ui/Button";
+import { driverOptions } from "../../lib/speaker/driverCompare";
+import { DRIVER_COMPARE_TEXT } from "../../constants/driverCompare";
 import { Card } from "../../components/ui/Card";
 import { CardHeading } from "../../components/ui/CardHeading";
 import { FoldBox } from "../../components/ui/FoldBox";
@@ -181,6 +183,8 @@ interface Props {
   onEdit: (edit: (chamber: SpeakerChamber) => SpeakerChamber) => void;
   /** absent for the last chamber left */
   onRemove?: () => void;
+  /** opens the driver comparison for one of its driver entries */
+  onCompare: (entry: number) => void;
 }
 
 /**
@@ -196,6 +200,7 @@ export function ChamberSettings({
   placed,
   onEdit,
   onRemove,
+  onCompare,
 }: Props) {
   const { vent } = chamber;
   const vents = placed ? ventPlace(cabinet, placed) : null;
@@ -599,6 +604,7 @@ export function ChamberSettings({
             bands={bands}
             onEdit={(edit) => editDriver(i, edit)}
             onRemove={() => removeDriver(i)}
+            onCompare={() => onCompare(i)}
           />
         ))}
         {newWoofer && (
@@ -931,6 +937,8 @@ interface DriverProps {
   bands: readonly SpeakerBand[];
   onEdit: (edit: (d: SpeakerDriver) => SpeakerDriver) => void;
   onRemove: () => void;
+  /** opens the driver comparison for it */
+  onCompare: () => void;
 }
 
 /**
@@ -950,6 +958,7 @@ function DriverFields({
   bands,
   onEdit,
   onRemove,
+  onCompare,
 }: DriverProps) {
   const { setFocus, picked } = usePositionFocus();
   const woofer = isWooferKind(driver.kind);
@@ -1000,6 +1009,8 @@ function DriverFields({
   /** each section's band: its dot in the summary */
   const sectionBands = coaxial ? [lowBand, highBand] : [lowBand];
   const top = onTop(driver);
+  /** the catalog has another option for it to compare */
+  const comparable = useMemo(() => driverOptions(driver).length > 1, [driver]);
   return (
     <FoldBox
       summary={driverSummary(driver, bands)}
@@ -1013,9 +1024,16 @@ function DriverFields({
         return at < 0 ? null : <BandDot key={k} index={at} count={bands.length} />;
       })}
       actions={
-        <IconButton size="sm" label={SETTINGS_TEXT.deleteDriver(index + 1)} onClick={onRemove}>
-          <TrashIcon />
-        </IconButton>
+        <>
+          {comparable && (
+            <Button variant="primary" size="xs" onClick={onCompare}>
+              {DRIVER_COMPARE_TEXT.compare}
+            </Button>
+          )}
+          <IconButton size="sm" label={SETTINGS_TEXT.deleteDriver(index + 1)} onClick={onRemove}>
+            <TrashIcon />
+          </IconButton>
+        </>
       }
     >
       <div className={PAIR_ROW}>

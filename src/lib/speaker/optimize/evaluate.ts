@@ -56,7 +56,7 @@ const CURVE_EVERY = 4;
 const F3_DB = 3;
 
 /** What a design must keep to fail nothing new against your design: what is modeled, what fits. */
-interface SpeakerFacts {
+export interface SpeakerFacts {
   /** the bands the response models */
   bands: ReadonlySet<BandId>;
   /** each chamber: the model runs it with no gap */
@@ -264,8 +264,8 @@ const lost = (then: readonly boolean[], now: readonly boolean[]) =>
  * only the limits.
  */
 export function problemsOf(
-  ev: SpeakerEval,
-  start: SpeakerEval,
+  ev: Pick<SpeakerEval, "facts" | "metrics">,
+  start: Pick<SpeakerEval, "facts">,
   limits: Pick<SpeakerOptimizerLimits, "budget" | "maxLb">,
   caps: SizeCaps,
 ): SpeakerProblem[] {
