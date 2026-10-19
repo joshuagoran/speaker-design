@@ -84,8 +84,21 @@ jobs:
         run: node tests/three-memory-check.mjs dist/stack-planner.html
         timeout-minutes: 5
 
-  deploy:
+  # the check main's merge rule requires ("test"): it passes only when the unit, phone, and 3D jobs all pass (a skipped
+  # job counts as passed by the rule, so this job runs always and fails unless each one succeeded)
+  test:
     needs: [unit, phone, three]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "unit=${{ needs.unit.result }} phone=${{ needs.phone.result }} three=${{ needs.three.result }}"
+          test "${{ needs.unit.result }}" = success
+          test "${{ needs.phone.result }}" = success
+          test "${{ needs.three.result }}" = success
+
+  deploy:
+    needs: [test]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
