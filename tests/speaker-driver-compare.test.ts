@@ -23,8 +23,6 @@ import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { DRIVER_KIND } from "../src/constants/speakerSpec";
 import { DRIVER_COMPARE_SORT, SORT_DIRECTION } from "../src/constants/driverCompare";
-import { SPEAKER_PROBLEM, SPEAKER_PROBLEM_TEXT } from "../src/constants/speakerOptimizer";
-import { upperFirst } from "../src/lib/format";
 import type { DriverCompareOption, DriverCompareTarget, SpeakerSpec } from "../src/types";
 
 /** The Hi-fi 2-way template and its woofer entry. */
