@@ -99,8 +99,19 @@ These stay in Boundary Lab and Deploy:
 Stage B is Deploy's coupled method in lumped form.
 Deploy's matrix T maps outside pressure to each cabinet's surface flow. Here Y does that per opening.
 
-**Later, Stage C: room modes.** In a small room below its lowest modes, the room itself loads the subs.
-`roomModes.ts` could give that load. Decide after Stage B.
+**Skipped, Stage C: room modes as load.** Room modes stay in the sound at the listener, as now.
+They do not change any box's load: its flow, cone travel, or limits.
+The miss is narrow load peaks at each mode, in a small room, below its first modes.
+For cone subs it is tiny: the air load is under 1 % of the cone's own impedance.
+
+Reconsider Stage C if one of these happens:
+
+- A measured horn sub in a small room differs from the page by more than 2 dB below 80 Hz, near a mode.
+- A measured cone travel or port speed at a mode differs from the page by more than 20 %.
+- Users often plan horn subs for rooms under about 300 sq ft.
+- Stage B passes its checks outdoors and near walls, but fails indoors.
+
+If we add it, `roomModes.ts` gives the load: the modal pressure at each opening from every other opening.
 
 ### What changes in the results
 
@@ -233,7 +244,7 @@ The CLF spike:
 | --- | ------------------------------------------------------ | -------------------------------------------------------- | -------- |
 | 1   | Stage A: how close is "touching"?                      | 10 mm (0.4 in), as Deploy's clearance; Stage B is smooth | Proposed |
 | 2   | Show the "in place and alone" chart, or only the line? | Both: the line and the chart                             | Decided  |
-| 3   | Stage C (room modes as load): now or later?            | Later                                                    | Proposed |
+| 3   | Stage C (room modes as load): now or later?            | Skip; reconsider on the triggers under Stage C           | Decided  |
 | 4   | First reference speakers                               | QSC, EV, JBL, Mackie, and RCF (the table above)          | Decided  |
 | 5   | CLF import: go or no-go                                | After the spike                                          | Open     |
 | 6   | Show prices for reference speakers?                    | No                                                       | Decided  |
