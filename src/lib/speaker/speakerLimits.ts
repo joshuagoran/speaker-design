@@ -337,14 +337,16 @@ export function speakerLimits(
     });
     let worst = 0;
     for (let i = 1; i < freqs.length; i++) if (sAt(i) < sAt(worst)) worst = i;
+    const who = whoAt(worst);
     return [
       {
         id: rb.id,
         driveVolts: driveOf(band),
         max: rb.curve.map((o, i) => ({ f: o.f, spl: o.spl + room[i], who: whoAt(i) })),
         musicDb: rb.passbandDb + toFull + 20 * Math.log10(sAt(worst)),
-        who: whoAt(worst),
-        whoHz: freqs[worst],
+        who,
+        // the amp and the program rating set every frequency alike, so the search keeps the first: no frequency of its own
+        whoHz: PER_FREQUENCY_LIMITS.has(who) ? freqs[worst] : null,
       },
     ];
   });

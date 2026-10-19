@@ -27,6 +27,8 @@ import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_SPEAKER_BAND } from "../src/lib/defaults";
 import { settledCabinet } from "../src/lib/speaker/speakerLayout";
 import { newBandId } from "../src/pages/speaker/useSpeakerPage";
+import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { PALETTES, bandLine } from "../src/styles/palette";
 import {
   DRIVER_KIND,
@@ -264,6 +266,39 @@ test("speaker limits: the sum is never below a band's own ceiling, and a cone or
     const { response } = modelOf(hifiCase(name), NO_FILTERS);
     const musicRoom = limits.bands.map((b) => b.musicDb - responseOf(response, b.id).passbandDb);
     assert.equal(limits.band, limits.bands[musicRoom.indexOf(Math.min(...musicRoom))].id, name);
+  }
+});
+
+test("speaker limits: a band-wide limit (the amp) names no frequency; a cone or vent limit names its own", () => {
+  // the sub bin with a stronger driver on a 1500 W amp: the amp sets every frequency of the band alike
+  const template = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne);
+  const spec: SpeakerSpec = {
+    ...template,
+    cabinet: {
+      ...template.cabinet,
+      chambers: template.cabinet.chambers.map((c) => ({
+        ...c,
+        drivers: c.drivers.map((d) => ({ ...d, driverId: "by18qlex1600" })),
+      })),
+    },
+    bands: template.bands.map((b) => ({ ...b, ampW: 1500 })),
+  };
+  const { limits } = modelOf(spec, spec.input);
+  const [band] = limits.bands;
+  assert.equal(band.who, LIMIT_NAMES.amp);
+  assert.equal(band.whoHz, null, "the amp holds across the band: no first frequency");
+  // a cone or vent limit: the band's maximum meets that limit at the frequency it names
+  for (const name of ["DEFAULT_HIFI", "radiator"]) {
+    const hifi = modelOf(hifiCase(name), NO_FILTERS).limits;
+    for (const b of hifi.bands) {
+      if (!PER_FREQUENCY_LIMITS.has(b.who)) {
+        assert.equal(b.whoHz, null, `${name} ${b.id}`);
+        continue;
+      }
+      const at = b.max.find((o) => o.f === b.whoHz);
+      assert.ok(at, `${name} ${b.id}: a frequency of the grid`);
+      assert.equal(at.who, b.who, `${name} ${b.id} at ${at.f.toFixed(0)} Hz`);
+    }
   }
 });
 
