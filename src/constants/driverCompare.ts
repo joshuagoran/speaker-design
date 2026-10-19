@@ -28,7 +28,7 @@ export const SORT_MARKS = { ascending: " ▲", descending: " ▼" } as const sat
 export const DRIVER_COMPARE_TEXT = {
   compare: "Compare",
   heading: "Compare drivers",
-  line: "Each option in your design, all else the same. Hover a row to see it on the charts.",
+  line: "Hover a row to see it on the charts.",
   close: "Close",
   yours: "yours",
   passes: "passes",

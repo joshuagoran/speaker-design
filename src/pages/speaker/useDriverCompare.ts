@@ -15,8 +15,6 @@ import type {
   DriverCompareOption,
   DriverCompareTarget,
   SpeakerDriver,
-  SpeakerOptimizerLimits,
-  SpeakerOptimizerLocks,
   SpeakerSpec,
 } from "../../types";
 
@@ -55,15 +53,9 @@ function restKey(spec: SpeakerSpec, t: DriverCompareTarget): string {
 
 /**
  * The driver comparison for the open entry (null: closed): its options, each run through the page's model in the worker
- * while it is open (a few at a time, cached per option), and the rows with their checks against the optimizer's limits
- * and size locks.
+ * while it is open (a few at a time, cached per option), and the rows with their checks.
  */
-export function useDriverCompare(
-  spec: SpeakerSpec,
-  open: OpenCompare | null,
-  limits: Pick<SpeakerOptimizerLimits, "budget" | "maxLb">,
-  sizeLocks: SpeakerOptimizerLocks["size"],
-) {
+export function useDriverCompare(spec: SpeakerSpec, open: OpenCompare | null) {
   const driver = open ? spec.cabinet.chambers[open.chamber]?.drivers[open.entry] : undefined;
   const target = useMemo(
     () => (open && driver ? { chamber: open.chamber, entry: open.entry } : null),
@@ -119,11 +111,9 @@ export function useDriverCompare(
       kind: driver.kind,
       yours,
       nameOf: (o) => nameOf(driver.kind, o),
-      limits,
-      sizeLocks,
     });
     // `version` brings in the runs the worker posted since
-  }, [version, options, rest, yours, limits.budget, limits.maxLb, sizeLocks]);
+  }, [version, options, rest, yours]);
   return {
     driver,
     rows,

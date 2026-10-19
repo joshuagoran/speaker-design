@@ -8,8 +8,6 @@ import type {
   DriverCompareTarget,
   FrequencyPoint,
   SpeakerDriver,
-  SpeakerOptimizerLimits,
-  SpeakerOptimizerLocks,
   SpeakerSpec,
 } from "../../types";
 import {
@@ -20,13 +18,7 @@ import {
   partFacts,
   withPart,
 } from "./optimize/space";
-import {
-  capsOf,
-  evaluateSpeaker,
-  problemsOf,
-  type SizeCaps,
-  type SpeakerEval,
-} from "./optimize/evaluate";
+import { evaluateSpeaker, problemsOf, type SizeCaps, type SpeakerEval } from "./optimize/evaluate";
 import { isConeKind } from "./driverParts";
 import { settledCabinet } from "./speakerLayout";
 import { upperFirst } from "../format";
@@ -173,26 +165,22 @@ export interface DriverCompareRow {
   fails: boolean;
 }
 
-/** What the rows are made from besides the runs: the entry's kind, the option names and the optimizer's limits. */
+/** What the rows are made from besides the runs: the entry's kind and the option names. */
 export interface CompareRowsContext {
   kind: SpeakerDriver["kind"];
   /** your option's key */
   yours: string;
   nameOf: (o: DriverCompareOption) => string;
-  limits: Pick<SpeakerOptimizerLimits, "budget" | "maxLb">;
-  /** the optimizer's size locks: they hold your box's outer size (`capsOf`) */
-  sizeLocks: SpeakerOptimizerLocks["size"];
 }
 
-/** A run's problems in words: the checks against `start` and the limits, then its warnings. */
-function problemTexts(
-  run: DriverCompareRun,
-  start: DriverCompareRun,
-  limits: CompareRowsContext["limits"],
-  caps: SizeCaps,
-): string[] {
+/** The comparison checks fit and the model, not the optimizer's budget, weight, or size limits. */
+const NO_LIMITS = { budget: null, maxLb: null } as const;
+const NO_CAPS: SizeCaps = {};
+
+/** A run's problems in words: the checks against `start`, then its warnings. */
+function problemTexts(run: DriverCompareRun, start: DriverCompareRun): string[] {
   return [
-    ...problemsOf(run, start, limits, caps).map((p) => upperFirst(SPEAKER_PROBLEM_TEXT[p])),
+    ...problemsOf(run, start, NO_LIMITS, NO_CAPS).map((p) => upperFirst(SPEAKER_PROBLEM_TEXT[p])),
     ...run.warnings,
   ];
 }
@@ -209,15 +197,14 @@ export function compareRows(
   const mine = options.find((o) => optionKey(o) === ctx.yours);
   const start = mine && runOf(mine);
   if (!start) return [];
-  const caps = capsOf(start.metrics.sizeIn, ctx.sizeLocks);
-  const yoursHas = new Set(problemTexts(start, start, ctx.limits, caps));
+  const yoursHas = new Set(problemTexts(start, start));
   return options.flatMap((option): DriverCompareRow[] => {
     const run = runOf(option);
     if (!run) return [];
     const id = optionKey(option);
     const part = partFacts(ctx.kind, option.driverId);
     const horn = option.hornId === null ? null : hornFacts(option.hornId);
-    const problems = problemTexts(run, start, ctx.limits, caps).map((text) => ({
+    const problems = problemTexts(run, start).map((text) => ({
       text,
       yoursToo: yoursHas.has(text),
     }));

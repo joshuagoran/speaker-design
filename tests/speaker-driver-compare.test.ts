@@ -74,8 +74,6 @@ test("a Hi-fi 2-way woofer's options: yours, and only woofers that fit or are ma
     kind: own.kind,
     yours: optionKey(ownOption(own)),
     nameOf: (o) => o.driverId,
-    limits: { budget: null, maxLb: null },
-    sizeLocks: {},
   });
   assert.equal(rows.length, options.length, "every option has a row");
   for (const r of rows) {
@@ -138,17 +136,15 @@ test("sort order: yours first, then failing options last, by maximum output", ()
   const runs = runsOf(spec, target, options);
   const mine = runs.get(optionKey(ownOption(own)));
   assert.ok(mine);
-  // a budget at your price: the dearer options fail it, yours doesn't
+  // every size is listed: the woofers too big for the box fail the fit check, yours doesn't
   const rows = compareRows(options, (o) => runs.get(optionKey(o)), {
     kind: own.kind,
     yours: optionKey(ownOption(own)),
     nameOf: (o) => o.driverId,
-    limits: { budget: mine.metrics.price, maxLb: null },
-    sizeLocks: {},
   });
   assert.ok(
     rows.some((r) => r.fails),
-    "some option fails the budget",
+    "some option fails the fit",
   );
   assert.ok(
     rows.some((r) => !r.fails && !r.yours),
@@ -211,8 +207,6 @@ test("sort: a row with no number goes last, either way", () => {
     kind: own.kind,
     yours: optionKey(ownOption(own)),
     nameOf: (o) => o.driverId,
-    limits: { budget: null, maxLb: null },
-    sizeLocks: {},
   });
   const blank = rows.find((r) => !r.yours && !r.fails);
   assert.ok(blank, "an option that passes");

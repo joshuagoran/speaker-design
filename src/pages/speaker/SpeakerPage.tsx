@@ -281,12 +281,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const compareOpen =
     compare && compare.key === speakerPage.chamberKey(compare.chamber) ? compare : null;
-  const cmp = useDriverCompare(
-    spec,
-    compareOpen,
-    { budget: optimizer.budget, maxLb: optimizer.maxLb },
-    optimizer.locks.size,
-  );
+  const cmp = useDriverCompare(spec, compareOpen);
   // an entry that went away (removed, or its chamber) closes the block
   if (compare && !cmp.driver) setCompare(null);
   const compareBlock = useRef<HTMLElement>(null);
