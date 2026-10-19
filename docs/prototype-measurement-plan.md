@@ -87,7 +87,7 @@ Note the room: outdoors on a flat floor matches the page's half space best.
 4. Raise the voltage in 3 dB steps. Log the voltage and the level at each step.
 5. Plot level against voltage. The slope is 1 dB per dB until a limit acts.
 6. Record the voltage and level where the slope drops below 1 dB per dB.
-7. Stop at the page's maximum level, plus no more than 3 dB. Never go past the driver's rating.
+7. Stop at the page's maximum level when its limit is cone travel (Xmax) or the program rating. When the limit is port air speed, you may go up to 3 dB past it. Never go past the driver's rating.
 8. Compare with the page's maximum output at each frequency and its named limit.
 
 The limit names the page uses are cone travel (Xmax), port air speed, the driver program rating, and the amp.
