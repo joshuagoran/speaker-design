@@ -154,6 +154,8 @@ export function withGoalHorn(
         displacementLiters,
         power: throat.parts.ts,
         goals,
+        // the path the user picked: Design from goals keeps it
+        path: chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn.path : HORN_PATH.straight,
       },
       room.depthIn * CM_PER_IN,
     );
@@ -173,14 +175,17 @@ export function withGoalHorn(
   if (!found) return null;
   const wasFolded =
     chamber.load.kind === CHAMBER_LOAD.horn && chamber.load.horn.path === HORN_PATH.folded;
-  /** the straight horn kept until the user draws: folded when it was or when it is too long, with the chamber's vent */
+  /**
+   * The designed horn with no drawing: a straight horn, or a folded one the user draws next (with the chamber's vent).
+   * The path stays the one the user picked.
+   */
   const straight = (): { chamber: SpeakerChamber; fit: HornGoalFit } => ({
     chamber: wasFolded
       ? { ...found.chamber, load: { kind: CHAMBER_LOAD.horn, horn: withoutFold(found.horn) } }
       : found.chamber,
     fit: found.fit,
   });
-  if (!wasFolded && found.horn.path !== HORN_PATH.folded) return straight();
+  if (!wasFolded) return straight();
   // a folded horn: boards placed so the traced passage follows the straight horn, sized for a sealed rear chamber (the
   // vent is drawn, and the boards place none); none found: the straight horn with the chamber's vent plays until the
   // user draws

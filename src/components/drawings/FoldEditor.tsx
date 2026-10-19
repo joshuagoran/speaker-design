@@ -813,8 +813,7 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize, na
         {trace.checks.map((c, k) => (
           <Notice key={k}>{checkText(c)}</Notice>
         ))}
-        {/* front-loaded and offset are one horn type, its driver at the closed end or part way along */}
-        {trace.hornType && HORN_DRIVE_NAMES[trace.hornType] !== HORN_DRIVE_NAMES[setType] && (
+        {trace.hornType && trace.hornType !== setType && (
           <Notice>
             {FOLD_CHECK_TEXT.typeDiffers(
               HORN_DRIVE_NAMES[trace.hornType],

@@ -53,20 +53,19 @@ import {
   type HornSectionSize,
 } from "./hornSections";
 
-/**
- * The horn types to pick: front-loaded (its driver at the closed end, or part way along: the Driver position setting)
- * and tapped. A rear-loaded horn is not calculated, so it is not offered.
- */
-const DRIVE_OPTIONS: readonly SelectOption[] = [HORN_DRIVE.front, HORN_DRIVE.tapped].map((id) => ({
+/** The horn types to pick: a rear-loaded horn is not calculated, so it is not offered. */
+/** The drives the picker offers, by id. */
+const DRIVE_KINDS = [HORN_DRIVE.front, HORN_DRIVE.offset, HORN_DRIVE.tapped] as const;
+const DRIVE_OPTIONS: readonly SelectOption[] = DRIVE_KINDS.map((id) => ({
   id,
   name: HORN_DRIVE_NAMES[id],
 }));
 
-/** The Driver position choice for the closed end (a front-loaded drive); a section number puts it part way along. */
-const AT_CLOSED_END = "0";
-
 /** The least rear chamber a straight horn takes, L (as Design from goals and an import set it). */
 const MIN_REAR_L = MIN_NET_L;
+
+/** An offset drive's tap setting: its label and its tooltip. */
+const OFFSET_TAP_FIELD = { label: SETTINGS_TEXT.tap, tip: SETTINGS_TEXT.tapTip } as const;
 
 /** A tapped drive's tap settings: where each is in the drive, its label and its tooltip. */
 const TAP_FIELDS = [
@@ -109,10 +108,6 @@ type TapKey = (typeof TAP_FIELDS)[number]["key"];
 function withTap(drive: SpeakerHorn["drive"], key: TapKey, tap: number): SpeakerHorn["drive"] {
   return drive.kind === HORN_DRIVE.tapped ? { ...drive, [key]: tap } : drive;
 }
-
-/** A front-loaded drive at the Driver position `id`: at the closed end, or after a section (an offset drive). */
-const driveAt = (id: string): SpeakerHorn["drive"] =>
-  id === AT_CLOSED_END ? { kind: HORN_DRIVE.front } : { kind: HORN_DRIVE.offset, tap: Number(id) };
 
 interface Props {
   horn: SpeakerHorn;
@@ -285,18 +280,8 @@ export function HornSettings({
   const tapOptions: readonly SelectOption[] = segments
     .slice(0, -1)
     .map((_, i) => ({ id: String(i + 1), name: SPEAKER_TEXT.hornSection(i + 1) }));
-  /** where a front-loaded horn's driver can join it: at the closed end, or after any section but the last */
-  const positionOptions: readonly SelectOption[] = [
-    { id: AT_CLOSED_END, name: SETTINGS_TEXT.atClosedEnd },
-    ...tapOptions.map((o) => ({ ...o, name: SETTINGS_TEXT.afterSection(Number(o.id)) })),
-  ];
-  /** front-loaded: its driver at the closed end (front) or part way along (offset) */
-  const frontLoaded = drive.kind === HORN_DRIVE.front || drive.kind === HORN_DRIVE.offset;
-  /**
-   * Driver position shows for a straight front-loaded horn of two or more sections (a drawn horn's comes from the
-   * drawing; a one-section horn has nowhere part way along)
-   */
-  const positioned = frontLoaded && !folded && tapOptions.length > 0;
+  /** an offset horn's tap shows beside its type: straight, with a section boundary to open at */
+  const offsetTap = drive.kind === HORN_DRIVE.offset && !folded && tapOptions.length > 0;
   /** the line that says what sets the straight horn, and the one switch that unlocks it (and the rear chamber) */
   const manualRow = (
     <div className="flex items-center justify-between gap-2">
@@ -328,31 +313,26 @@ export function HornSettings({
   return (
     <>
       <InsetGroup title={SETTINGS_TEXT.horn}>
-        <div className={positioned ? PAIR_ROW : ""}>
+        <div className={offsetTap ? PAIR_ROW : ""}>
           <SelectField
             label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
             options={DRIVE_OPTIONS}
-            value={byId(DRIVE_OPTIONS, frontLoaded ? HORN_DRIVE.front : drive.kind)}
+            value={byId(DRIVE_OPTIONS, drive.kind)}
             onChange={(o) => {
-              // front-loaded keeps an offset drive's position; the picker lists only the drives it offers
-              if (o.id === HORN_DRIVE.tapped && drive.kind !== HORN_DRIVE.tapped)
-                onDrive(HORN_DRIVE.tapped);
-              if (o.id === HORN_DRIVE.front && !frontLoaded) onDrive(HORN_DRIVE.front);
+              // the picker lists exactly the drives it offers (DRIVE_OPTIONS)
+              const kind = DRIVE_KINDS.find((k) => k === o.id);
+              if (kind && kind !== drive.kind) onDrive(kind);
             }}
           />
-          {positioned && (
+          {/* a drawn horn's tap comes from the drawing */}
+          {offsetTap && drive.kind === HORN_DRIVE.offset && (
             <SelectField
-              label={
-                <Tooltip tip={SETTINGS_TEXT.driverPositionTip}>
-                  {SETTINGS_TEXT.driverPosition}
-                </Tooltip>
+              label={<Tooltip tip={OFFSET_TAP_FIELD.tip}>{OFFSET_TAP_FIELD.label}</Tooltip>}
+              options={tapOptions}
+              value={byId(tapOptions, String(drive.tap))}
+              onChange={(o) =>
+                onEdit((h) => ({ ...h, drive: { kind: HORN_DRIVE.offset, tap: Number(o.id) } }))
               }
-              options={positionOptions}
-              value={byId(
-                positionOptions,
-                drive.kind === HORN_DRIVE.offset ? String(drive.tap) : AT_CLOSED_END,
-              )}
-              onChange={(o) => onEdit((h) => ({ ...h, drive: driveAt(o.id) }))}
             />
           )}
         </div>

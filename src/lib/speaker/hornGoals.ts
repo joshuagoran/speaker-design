@@ -113,6 +113,11 @@ export interface GoalSearch {
   displacementLiters: number;
   power: DriverPower;
   goals: HornGoals;
+  /**
+   * The path the user picked: a straight horn stays within the chamber's depth, a folded one may be longer. Absent: the
+   * path follows the length (folded when longer than the depth).
+   */
+  path?: SpeakerHorn["path"];
 }
 
 /** One try: the path length, cm, the flare, the tap places (shares of the path), and the rear chamber's share. */
@@ -168,16 +173,24 @@ const TAP_COUNT: Record<GoalDrive, number> = {
   [HORN_DRIVE.tapped]: 2,
 };
 
+/** A horn without its drawn boards (`fold`), its path kept. */
+function withoutDrawing(horn: SpeakerHorn): SpeakerHorn {
+  const { fold: _fold, ...rest } = horn;
+  return rest;
+}
+
 /**
  * A starting layout for the goals, or null when no try can be modeled (no cone driver with Thiele/Small parameters, a
  * vent the engine doesn't take, no air). The horn keeps the chamber's other horn settings (its driver board, its mouth's
- * place); its path is folded when it is longer than the chamber is deep.
+ * place) but not its drawing; its path is the one the search names (a straight horn within the chamber's depth), else
+ * folded when it is longer than the chamber is deep.
  */
 export function goalHorn(search: GoalSearch, depthCm: number): GoalHorn | null {
   const { chamber, drive, goals } = search;
+  // the chamber's horn without its drawing: each try is read from its own sections, not the old boards' trace
   const base: SpeakerHorn =
     chamber.load.kind === CHAMBER_LOAD.horn
-      ? chamber.load.horn
+      ? withoutDrawing(chamber.load.horn)
       : {
           segments: [],
           portOffset: 0,
@@ -192,11 +205,13 @@ export function goalHorn(search: GoalSearch, depthCm: number): GoalHorn | null {
     const rearL = drive === HORN_DRIVE.tapped ? tappedRear : usable * shape.rearShare;
     const hornL = usable - rearL;
     if (!(hornL > 0) || !(shape.pathCm > 0) || !(shape.flare >= 1)) return null;
+    // a straight horn has to fit the chamber's depth
+    if (search.path === HORN_PATH.straight && shape.pathCm > depthCm) return null;
     const horn: SpeakerHorn = {
       ...base,
       segments: sectionsOf(shape.pathCm, shape.flare, shape.taps, hornL),
       drive: driveOf(drive),
-      path: shape.pathCm > depthCm ? HORN_PATH.folded : HORN_PATH.straight,
+      path: search.path ?? (shape.pathCm > depthCm ? HORN_PATH.folded : HORN_PATH.straight),
       goals,
     };
     const read: HornDesignResult = hornDesignOf(
@@ -225,7 +240,12 @@ export function goalHorn(search: GoalSearch, depthCm: number): GoalHorn | null {
     for (const flare of SEARCH_FLARES)
       for (const taps of tapSets)
         for (const rearShare of rearShares) {
-          const shape = { pathCm: share * quarterWaveCm, flare, taps, rearShare };
+          // a straight horn tries lengths up to the chamber's depth (the shares past it all try the full depth)
+          const pathCm =
+            search.path === HORN_PATH.straight
+              ? Math.min(share * quarterWaveCm, depthCm)
+              : share * quarterWaveCm;
+          const shape = { pathCm, flare, taps, rearShare };
           const tried = build(shape);
           if (tried && (!best || tried.score < best.score)) {
             best = tried;

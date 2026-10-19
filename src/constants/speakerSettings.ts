@@ -104,11 +104,6 @@ export const SETTINGS_TEXT = {
   frontTap: "Front tap after section",
   backTap: "Back tap after section",
   tap: "Tap after section",
-  driverPosition: "Driver position",
-  driverPositionTip:
-    "Where the cone fronts join the horn, counted from the closed end. At the closed end, or part way along.",
-  atClosedEnd: "At the closed end",
-  afterSection: (n: number) => `After section ${n}`,
   tapsTip: "Where the front and back of the cones join the horn, counted from the closed end.",
   tapTip: "Where the front of the cones joins the horn, counted from the closed end.",
   /** the Horn settings summary: a horn's sections and path length, in */
