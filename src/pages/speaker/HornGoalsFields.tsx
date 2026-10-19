@@ -65,9 +65,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
     <div className={GAP_Y_TIGHT}>
       {/* the Goals label with Start from goals on its row */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-label text-stone-500">
-          <Tooltip tip={SPEAKER_TEXT.hornGoalsTip}>{SPEAKER_TEXT.hornGoals}</Tooltip>
-        </span>
+        <span className="text-sm font-label text-stone-500">{SPEAKER_TEXT.hornGoals}</span>
         {onDesign && (
           <Button
             variant="primary"

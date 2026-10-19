@@ -494,7 +494,7 @@ export const SPEAKER_TEXT = {
     "Straight: one run from the cones to the mouth. Folded: the path runs back and forth up the box. Only the sections set the response.",
   hornDrive: "Horn type",
   hornDriveTip:
-    "Where the cones meet the horn's path. Front-loaded: at the start. Offset: part way along, the path closed behind them. Tapped: the cone fronts and backs each open into the path. Rear-loaded: the cone backs drive the horn.",
+    "Where the cones feed the horn: at the start (front-loaded), part way along (offset), from both sides (tapped), or from the back (rear-loaded).",
   hornTap: "Tap after section",
   hornTapTip: "Where the front of the cones joins the horn, counted from the closed end.",
   hornFrontTap: "Front tap after section",
@@ -508,16 +508,12 @@ export const SPEAKER_TEXT = {
   /** why a tapped horn's chamber takes no vent */
   ventTapped: "A tapped horn has no vent.",
   hornGoals: "Target band",
-  hornGoalsTip:
-    "What Start from goals aims for: the band the horn plays flat, and how loud it gets there. The lines below check the horn against them.",
   hornGoalLow: "Lowest",
-  hornGoalLowTip: "The lowest frequency the horn plays flat, Hz.",
+  hornGoalLowTip: "Lowest flat frequency goal.",
   hornGoalHigh: "Highest",
-  hornGoalHighTip:
-    "The highest frequency the horn plays flat, Hz. Usually the crossover to the box above.",
+  hornGoalHighTip: "Highest flat frequency goal. Usually the crossover.",
   hornGoalTarget: "Loudness at 1 m",
-  hornGoalTargetTip:
-    "The level at 1 m at full power, dB, over the whole band. The power rating or the cone travel of the drivers limits it.",
+  hornGoalTargetTip: "Level at full power goal.",
   hornDesign: "Start from goals",
   hornDesigning: "Starting…",
   hornDesignFailed: "No horn for these goals can be calculated in this chamber.",
