@@ -32,7 +32,7 @@ export const DRIVER_COMPARE_TEXT = {
   hover: "Hover",
   tap: "Tap",
   /** the second line from md up, where a click swaps the row in */
-  clickToSwap: "Click to swap.",
+  clickToSwap: " Click to swap.",
   /** the Speaker page's button on a phone: puts the previewed row in */
   swap: "Swap",
   close: "Close",

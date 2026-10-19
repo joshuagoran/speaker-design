@@ -385,12 +385,7 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
         {!mdUp && <div className="sticky -top-4 z-10 bg-white pt-4">{responseChart}</div>}
         <p className="text-xs text-stone-500">
           {DRIVER_COMPARE_TEXT.line(mdUp ? DRIVER_COMPARE_TEXT.hover : DRIVER_COMPARE_TEXT.tap)}
-          {mdUp && (
-            <>
-              <br />
-              {DRIVER_COMPARE_TEXT.clickToSwap}
-            </>
-          )}
+          {mdUp && <>{DRIVER_COMPARE_TEXT.clickToSwap}</>}
         </p>
         <DriverCompareTable
           rowUse={mdUp}
