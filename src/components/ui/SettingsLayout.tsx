@@ -25,7 +25,7 @@ interface Props {
   /** the settings column (a `SettingsColumn`) */
   settings: React.ReactNode;
   /** the phone settings sheet: the page leaves room for it at its bottom, and carries the height the viewer set */
-  sheet?: Pick<SettingsSheet<string>, "open" | "heightPx">;
+  sheet: Pick<SettingsSheet<string>, "open" | "heightPx">;
 }
 
 /**
@@ -70,11 +70,11 @@ export function SettingsLayout({ results, settings, sheet }: Props) {
   return (
     <main
       ref={page}
-      className={`${PAGE_WIDTH} pb-16 grid grid-cols-1 gap-8 md:h-full md:pb-0 md:gap-0 md:grid-rows-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_1.5rem_var(--settings-w)] md:[--settings-default:40%] xl:[--settings-default:26rem] ${sheet ? settingsSheetRoomClass(sheet.open) : ""}`}
+      className={`${PAGE_WIDTH} pb-16 grid grid-cols-1 gap-8 md:h-full md:pb-0 md:gap-0 md:grid-rows-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_1.5rem_var(--settings-w)] md:[--settings-default:40%] xl:[--settings-default:26rem] ${settingsSheetRoomClass(sheet.open)}`}
       style={{
         fontFamily: FONT,
         ["--settings-w" as string]: settingsWidth(widthPx), // boundary cast: React's style type has no custom properties
-        ...sheetHeightStyle(sheet?.heightPx ?? null),
+        ...sheetHeightStyle(sheet.heightPx),
       }}
     >
       {/* the pane scrolls, so it clips whatever is drawn past its edges: 4 px of room on the left (taken back from the
