@@ -225,27 +225,37 @@ Add a polarity switch per placement as a separate, small PR. It helps every desi
 
 ## Part 3: importing loudspeaker data files
 
-| Format                 | Who uses it                             | Open?                                                                           | Plan                     |
-| ---------------------- | --------------------------------------- | ------------------------------------------------------------------------------- | ------------------------ |
-| EASE GLL (`.gll`)      | AFMG EASE and its tools                 | No. AFMG licenses its SDK to makers and their providers, as a subscription      | No import                |
-| CLF (`.cf1`, `.cf2`)   | CLF group (BYU); QSC posts `.cf2` files | Described as an open format for makers to share data. Spec access not confirmed | Spike first (decision 5) |
-| Boundary Lab `.blabsp` | Boundary Lab and Deploy                 | Documented in Boundary Lab's docs (GPLv3 project)                               | Later, optional          |
+| Format                 | Who uses it                             | Open?                                                                      | Plan                   |
+| ---------------------- | --------------------------------------- | -------------------------------------------------------------------------- | ---------------------- |
+| EASE GLL (`.gll`)      | AFMG EASE and its tools                 | No. AFMG licenses its SDK to makers and their providers, as a subscription | No import              |
+| CLF (`.cf1`, `.cf2`)   | CLF group (BYU); QSC posts `.cf2` files | "Open but secure". No public file layout found                             | No import (decision 5) |
+| Boundary Lab `.blabsp` | Boundary Lab and Deploy                 | Documented in Boundary Lab's docs (GPLv3 project)                          | Later, optional        |
 
-The CLF spike:
+### CLF check (Oct 2026)
 
-1. Find the CLF file spec and its terms of use.
-2. If both allow it, write a reader from the spec, in a worker.
-3. Read the balloon and the response. Use them for a reference speaker's coverage instead of the nominal H × V.
-4. If the spec is not public, stop. Keep the spec-sheet models.
+| Finding                                                                                                   | Source                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| PRONOM calls CLF "an open file format", made "in an open but secure format", for manufacturers            | <https://pronom.nationalarchives.gov.uk/fmt/1945>                                                                        |
+| PRONOM gives only the file signature, not the layout                                                      | Same                                                                                                                     |
+| A MathWorks answer says the formats "are confidential", and "MATLAB is not allowed to read or write" them | <https://www.mathworks.com/matlabcentral/answers/1751095-using-matlab-to-read-gll-clf-and-ease-loudspeaker-format-files> |
+| No open-source reader found                                                                               | Search                                                                                                                   |
+| The CLF group's site did not answer (HTTP 503), so its documents were not read                            | <http://www.clfgroup.org/>                                                                                               |
+
+Result: no import. Keep the spec-sheet models.
+
+Reconsider CLF import if one of these happens:
+
+- The CLF group publishes the file layout with terms that allow third-party reading.
+- The CLF group or a maker gives written permission to read their files.
 
 ## Decisions
 
-| #   | Question                                               | Answer                                                   | Status   |
-| --- | ------------------------------------------------------ | -------------------------------------------------------- | -------- |
-| 1   | Stage A: how close is "touching"?                      | 10 mm (0.4 in), as Deploy's clearance; Stage B is smooth | Proposed |
-| 2   | Show the "in place and alone" chart, or only the line? | Both: the line and the chart                             | Decided  |
-| 3   | Stage C (room modes as load): now or later?            | Skip; reconsider on the triggers under Stage C           | Decided  |
-| 4   | First reference speakers                               | QSC, EV, JBL, Mackie, and RCF (the table above)          | Decided  |
-| 5   | CLF import: go or no-go                                | After the spike                                          | Open     |
-| 6   | Show prices for reference speakers?                    | No                                                       | Decided  |
-| 7   | Which part first?                                      | Loading (Part 1), then reference speakers                | Decided  |
+| #   | Question                                               | Answer                                                    | Status   |
+| --- | ------------------------------------------------------ | --------------------------------------------------------- | -------- |
+| 1   | Stage A: how close is "touching"?                      | 10 mm (0.4 in), as Deploy's clearance; Stage B is smooth  | Proposed |
+| 2   | Show the "in place and alone" chart, or only the line? | Both: the line and the chart                              | Decided  |
+| 3   | Stage C (room modes as load): now or later?            | Skip; reconsider on the triggers under Stage C            | Decided  |
+| 4   | First reference speakers                               | QSC, EV, JBL, Mackie, and RCF (the table above)           | Decided  |
+| 5   | CLF import: go or no-go                                | No-go: no public layout; reconsider on the triggers above | Decided  |
+| 6   | Show prices for reference speakers?                    | No                                                        | Decided  |
+| 7   | Which part first?                                      | Loading (Part 1), then reference speakers                 | Decided  |
