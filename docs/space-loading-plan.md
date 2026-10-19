@@ -183,7 +183,7 @@ Example: the QSC K12.2 page lists a 12 in cone, a 1.4 in compression driver, 50 
 ### Data
 
 - A new catalog kind: `src/data/catalog/reference-speakers.ts`, typed pure data.
-- Each entry: maker, model, kind (sub, top, or full range), drivers, response points, maximum SPL, coverage, size, weight, US price and vendor, source URL, and the date read.
+- Each entry: maker, model, kind (sub, top, or full range), drivers, response points, maximum SPL, coverage, size, weight, source URL, and the date read. No prices.
 - A gap stays a gap: a missing value is marked, not invented.
 - A new place group, "Reference speakers", in `placeOptions.ts`, and a new `SPACE_ITEM` kind.
 - First list (decision 4). Check each name and its specs at data entry. Drop a box if its maker publishes too little.
@@ -236,5 +236,5 @@ The CLF spike:
 | 3   | Stage C (room modes as load): now or later?            | Later                                                    | Proposed |
 | 4   | First reference speakers                               | QSC, EV, JBL, Mackie, and RCF (the table above)          | Decided  |
 | 5   | CLF import: go or no-go                                | After the spike                                          | Open     |
-| 6   | Show prices for reference speakers?                    | Yes, US vendors only, as for drivers                     | Open     |
+| 6   | Show prices for reference speakers?                    | No                                                       | Decided  |
 | 7   | Which part first?                                      | Loading (Part 1), then reference speakers                | Decided  |
