@@ -66,7 +66,7 @@ import {
   HORN_DRIVE,
   PORT_SHAPE,
   SPEAKER_BAND,
-  SPEAKER_BAND_NAMES,
+  AUTO_BAND_NAMES,
   VENT_KIND,
 } from "../constants/speakerSpec";
 import { HORN_PROFILE } from "../constants/hornEngine";
@@ -77,6 +77,7 @@ import {
   FLUSH_BOX,
   NO_FILTERS,
   flushBracing,
+  NO_HARDWARE,
   stuffingPctOf,
 } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
@@ -238,6 +239,7 @@ export const DEFAULT_SPEAKER_CHAMBER: SpeakerChamber = {
   vent: { kind: VENT_KIND.sealed },
   load: DIRECT_LOAD,
   drivers: [],
+  bracing: flushBracing(DEFAULT_PA.wall),
 };
 
 /** A band the Speaker page adds: no filters, at 0 dB, active, on the Hi-fi woofer's amp power. */
@@ -258,12 +260,11 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
     chambers: [DEFAULT_SPEAKER_CHAMBER],
     panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
     ...FLUSH_BOX,
-    ...flushBracing(DEFAULT_PA.wall),
-    hardware: null,
+    ...NO_HARDWARE,
     roundoverIn: 0,
     tiltDeg: 0,
   },
-  bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
+  bands: [{ id: SPEAKER_BAND.low, name: AUTO_BAND_NAMES.fullRange, ...DEFAULT_SPEAKER_BAND }],
   input: NO_FILTERS,
   look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
 };

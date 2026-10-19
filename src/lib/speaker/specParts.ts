@@ -3,6 +3,7 @@ import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import type {
   BandFilter,
+  ChamberBracing,
   ChamberLoad,
   CrossoverOrder,
   FloorPoint,
@@ -52,13 +53,17 @@ export const FLUSH_BOX: Pick<SpeakerCabinet, "construction" | "top" | "insetIn">
  * A flush box's bracing at walls `t` thick: the plywood's style for that thickness, a glued back (the Hi-fi box's and
  * the fill's backs are glued on), and the PA boxes' panel target.
  */
-export const flushBracing = (
-  t: number,
-): Pick<SpeakerCabinet, "braceStyle" | "backJoint" | "braceTargetHz"> => ({
+export const flushBracing = (t: number): ChamberBracing => ({
   braceStyle: defaultBraceStyleNear(t),
   backJoint: GLUED_BACK,
   braceTargetHz: PA_PANEL_TARGET_HZ,
 });
+
+/** A cabinet with no handles and no input dish (the Hi-fi box, the fill's, the Speaker page's empty speaker). */
+export const NO_HARDWARE: Pick<SpeakerCabinet, "handles" | "inputDish"> = {
+  handles: null,
+  inputDish: false,
+};
 
 /** A feed with no filters: the full range (no input range, no crossover between boxes). */
 export const NO_FILTERS: SpeakerSpec["input"] = { highpass: null, lowpass: null };

@@ -17,7 +17,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
   response charts and optimizer cards, the Speaker page's response chart) uses 50–120 dB (`HIFI_TOP` / `HIFI_BOT`).
   The coverage map colors the level against the target on a fixed −12 to +6 dB scale (`COVERAGE_MAP_DB`).
 - Colors: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
-  grays (and a lighter gray, `faint`, for one chart line beside them); status colors stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's color names are remapped from it in `tailwind.config.js`.
+  grays (and a lighter gray, `faint`, kept as a spare: no chart uses it now); status colors stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's color names are remapped from it in `tailwind.config.js`.
 - Light and dark themes (follows the device, with the header's System / Light / Dark switch): every color comes from the
   palette tokens and works in both. Classes switch through CSS variables (no `dark:` variants, no `bg-white`; cards use
   `bg-panel`); colors drawn from code read `usePalette()` (`src/hooks/useTheme.ts`). Data colors (`DISPERSION_SCALE`,
@@ -28,7 +28,13 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 - Dispersion maps (owner-approved color exception, these maps only) use the continuous VituixCAD-style scale, +6 to −36 dB with a contour every 3 dB (`DISPERSION_SCALE` in `src/styles/palette.ts`), not the CMYK brand palette. They are the one frequency chart off the 15 Hz–20 kHz axis: every map shares fixed axes of ±90° and 50 Hz–20 kHz (`src/constants/chartScales.ts`), since below about 85 Hz the default designs are flat at every angle; one `DispersionMap` component and key, with the crossovers marked.
 - US spelling everywhere (center, color): UI text, comments, docs and identifiers. Keys that saved data or links
   already carry keep their spelling (comment why).
+- Oxford comma in every list of three or more (drivers, size, and horn type): UI text, docs, and comments.
 - Level words: louder and quieter for level (dB), higher and lower for frequency (Hz). Never "lower" for "quieter".
+- Position labels name the sign's side: "Left (−) / Right (+)", "Down (−) / Up (+)", "Front (−) / Back (+)"
+  (`POSITION_LABELS`, `src/constants/speakerSettings.ts`). The tooltip says where it is measured from: a part on a
+  chamber from the chamber's center (seen from the front), its bottom, or its front edge; a chamber from the cabinet's
+  center and bottom. The code keeps x, y and z. Field labels carry no unit (every length is inches); units stay in
+  readouts and beside the box.
 - No blocks of text on a page. A line on the page is one short sentence. Longer explanations go in a Tooltip on the nearest label, or in the page's Details fold as short bullets.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
 - Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent. When a second page needs a control, first move it into `src/components/ui`, then use it on both pages.

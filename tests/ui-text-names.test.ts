@@ -2,9 +2,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 
-// UI text never names a page that may go away, or an internal rule or engine (CLAUDE.md, "UI rules").
+// UI text never names a page that may go away, or an internal rule or engine (CLAUDE.md, "UI rules"). Hornresp may be
+// named: it is the program whose records the horn import reads (owner approved, Oct 2026).
 const BANNED =
-  /\b(PA|Hi-?fi|Coverage|Fills?)( Coverage)? (page|tab|planner)\b|\bthe (horn engine|bracing rule|port rule|slot rule|brace estimate)\b|\bHornresp\b/i;
+  /\b(PA|Hi-?fi|Coverage|Fills?)( Coverage)? (page|tab|planner)\b|\bthe (horn engine|bracing rule|port rule|slot rule|brace estimate)\b/i;
 
 // ...nor a design by its internal name: the PA sub, the PA boxes, a hi-fi speaker. Strings only (code and paths keep
 // them), in the Speaker page's text. Elsewhere those names label pages and starts that exist.

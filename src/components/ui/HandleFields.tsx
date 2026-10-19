@@ -41,19 +41,30 @@ export function HandleFields({ label, handles, onChange }: Props) {
           ] as const;
         })}
       />
-      {handles.model !== NO_HANDLES &&
-        keysOf(HANDLE_AXIS_NAMES).map((k) => (
-          <Slider
-            key={k}
-            label={<Tooltip tip={handleOffsetTip(k)}>{handleOffsetLabel(k)}</Tooltip>}
-            value={handles[k]}
-            min={HANDLE_OFFSET_SLIDER.min}
-            max={HANDLE_OFFSET_SLIDER.max}
-            step={HANDLE_OFFSET_SLIDER.step}
-            unit="″"
-            onChange={(v) => onChange({ [k]: v })}
-          />
-        ))}
+      {handles.model !== NO_HANDLES && <HandleOffsetFields handles={handles} onChange={onChange} />}
     </div>
+  );
+}
+
+/**
+ * A box's handles' two offsets from the preset place, up and back. `HandleFields` shows them under its model; the
+ * Speaker page's Construction fold shows them under its Handle type.
+ */
+export function HandleOffsetFields({ handles, onChange }: Pick<Props, "handles" | "onChange">) {
+  return (
+    <>
+      {keysOf(HANDLE_AXIS_NAMES).map((k) => (
+        <Slider
+          key={k}
+          label={<Tooltip tip={handleOffsetTip(k)}>{handleOffsetLabel(k)}</Tooltip>}
+          value={handles[k]}
+          min={HANDLE_OFFSET_SLIDER.min}
+          max={HANDLE_OFFSET_SLIDER.max}
+          step={HANDLE_OFFSET_SLIDER.step}
+          unit="″"
+          onChange={(v) => onChange({ [k]: v })}
+        />
+      ))}
+    </>
   );
 }

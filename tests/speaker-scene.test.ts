@@ -512,9 +512,17 @@ test("the 3D view's key changes with what the scene draws, not with the model's 
 test("the cutaway shows the bracing, and the key and the scene change with its style and target", () => {
   const sub = CASES.find((c) => c.name === "PA sub (letterbox)");
   if (!sub) throw new Error("no sub case");
-  const withBracing = (edit: Partial<SpeakerSpec["cabinet"]>): SpeakerSpec => ({
+  const withBracing = (
+    edit: Partial<SpeakerSpec["cabinet"]["chambers"][number]["bracing"]>,
+  ): SpeakerSpec => ({
     ...sub.spec,
-    cabinet: { ...sub.spec.cabinet, ...edit },
+    cabinet: {
+      ...sub.spec.cabinet,
+      chambers: sub.spec.cabinet.chambers.map((c) => ({
+        ...c,
+        bracing: { ...c.bracing, ...edit },
+      })),
+    },
   });
   const key = (spec: SpeakerSpec, cutaway = true) => speakerSceneKey({ spec, cutaway });
   /** the braces and ribs in the cutaway, by size and place */
@@ -524,9 +532,10 @@ test("the cutaway shows the bracing, and the key and the scene change with its s
       .sort();
   const none = withBracing({ braceStyle: NO_BRACING });
   const braced = withBracing({ braceStyle: "both" });
+  const [first] = braced.cabinet.chambers;
   const tighter = withBracing({
-    braceStyle: braced.cabinet.braceStyle,
-    braceTargetHz: braced.cabinet.braceTargetHz * 2,
+    braceStyle: first?.bracing.braceStyle,
+    braceTargetHz: (first?.bracing.braceTargetHz ?? 0) * 2,
   });
   // none draws no brace; a style does, and the target moves them
   expect(braces(none)).toEqual([]);

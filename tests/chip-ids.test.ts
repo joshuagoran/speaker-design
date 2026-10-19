@@ -22,7 +22,7 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { bandChips, chamberChips } from "../src/pages/speaker/speakerChips";
-import { chamberFitChips } from "../src/lib/speaker/fitChips";
+import { chamberBraceChips, chamberFitChips } from "../src/lib/speaker/fitChips";
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
 import { stackKeepUpChips } from "../src/pages/stack/stackChips";
@@ -176,6 +176,7 @@ const speakerLists = speakerSpecs.flatMap((spec) => {
     ...bandChips(spec, limits, response).map((b) => b.chips),
     ...limits.chambers.flatMap((c) => (c ? [chamberChips(c, c.band)] : [])),
     ...chamberFitChips(spec.cabinet, cabinetBuild(spec.cabinet)),
+    ...chamberBraceChips(spec.cabinet, cabinetBuild(spec.cabinet)),
   ];
 });
 

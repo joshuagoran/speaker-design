@@ -30,6 +30,8 @@ export const DISPERSION_START_PLANE: DispersionPlane = "h";
 
 /** The section heading over the Speaker and Stack pages' maps. */
 export const DISPERSION_HEADING = "Dispersion";
+/** In place of the map for a speaker with a horn-loaded chamber, which the map does not model yet. */
+export const DISPERSION_HORN_NOTE = "Dispersion isn’t shown for horn chambers yet.";
 
 /** A dispersion plane's name: "Horizontal" or "Vertical". */
 export function dispersionPlaneName(plane: DispersionPlane): DispersionPlaneName {

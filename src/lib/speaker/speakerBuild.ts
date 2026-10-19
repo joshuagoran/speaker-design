@@ -20,8 +20,9 @@ import type {
   PurchasedPart,
   BraceStyleId,
   BoxBracing,
-  BoxHandles,
+  BackJointId,
   BoxHardwarePlan,
+  ChamberBracing,
   BoxRegion,
   ChamberCutBoxId,
   CornerJoint,
@@ -78,9 +79,10 @@ import {
 } from "../pa/calc";
 import { subTubeKit } from "../pa/tubes";
 import { towerHornCutout } from "../pa/tower";
-import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
+import { NO_HANDLE_SET, hardwareKeepOut, planBoxHardware, withoutDish } from "../pa/hardware";
 import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
 import { MIN_BAY_IN, braceShortfalls, defaultBraceStyleNear, panelStock } from "../bracing";
+import { bracingTaken, shellBackJoint } from "./chamberBracing";
 import { panelLbPerSqFt } from "../panel";
 import {
   HIFI_FALLBACK_LB,
@@ -610,22 +612,26 @@ function bracedShell(shell: BraceShell, inputs: BraceInputs): BoxBracing {
   return b;
 }
 
+/** The hardware a shell's lowest chamber takes: its handles and whether it has the input dish (`SpeakerCabinet`). */
+type ShellHardware = Pick<SpeakerCabinet, "handles" | "inputDish">;
+
 /**
  * A chamber's braces and ribs and its hardware. The hardware is placed first (the handles at the center of gravity,
  * the dish low on the back, the horn's posts on a top with a horn on it), then the braces round its recesses, then the
- * hardware checked against them, as the PA boxes do. A cabinet with no bracing (`NO_BRACING`) takes none: its panels'
- * modes are the bare shell's, held against its target.
+ * hardware checked against them, as the PA boxes do. A chamber with no bracing (`NO_BRACING`, and every horn chamber:
+ * `bracingTaken`) takes none: its panels' modes are the bare shell's, held against its target.
  */
 function chamberBracing(
   cabinet: SpeakerCabinet,
   f: ChamberFrame,
-  handles: BoxHandles | null,
+  hw: ShellHardware | null,
 ): Pick<ChamberBuild, "bracing" | "hardware"> {
-  if (cabinet.braceStyle !== NO_BRACING)
-    return chamberBracingAs(cabinet, cabinet.braceStyle, cabinet.braceTargetHz, f, handles);
+  const taken = bracingTaken(f.placed.chamber);
+  if (taken.braceStyle !== NO_BRACING)
+    return chamberBracingAs(cabinet, taken, taken.braceStyle, taken.braceTargetHz, f, hw);
   // the rule to no target adds nothing (and anything a strength check adds is taken off): the bare shell
   const t = cabinet.panel.thicknessIn;
-  const bare = chamberBracingAs(cabinet, defaultBraceStyleNear(t), 0, f, handles);
+  const bare = chamberBracingAs(cabinet, taken, defaultBraceStyleNear(t), 0, f, hw);
   const bracing: BoxBracing = {
     ...bare.bracing,
     windows: { x: [], y: [], z: [] },
@@ -633,24 +639,33 @@ function chamberBracing(
     ribs: [],
     windowIn3: 0,
     ribIn3: 0,
-    targetHz: cabinet.braceTargetHz,
+    targetHz: taken.braceTargetHz,
   };
   bracing.meets = braceShortfalls(bracing).length === 0;
   return { bracing, hardware: bare.hardware };
 }
 
-/** A chamber's braces and ribs in `style` to `targetHz`, and its hardware (`chamberBracing`). */
+/**
+ * A chamber's braces and ribs in `style` to `targetHz` with its back joint (`taken`), and its hardware
+ * (`chamberBracing`): the handles, the input dish, or both; none for no `hw` or neither.
+ */
 function chamberBracingAs(
   cabinet: SpeakerCabinet,
+  taken: Pick<ChamberBracing, "backJoint">,
   style: BraceStyleId,
   targetHz: number,
   f: ChamberFrame,
-  handles: BoxHandles | null,
+  hw: ShellHardware | null,
 ): Pick<ChamberBuild, "bracing" | "hardware"> {
   const t = cabinet.panel.thicknessIn;
   const inset = baffleInsetIn(cabinet);
-  const { backJoint: back } = cabinet;
+  const back = taken.backJoint;
   const { chamber } = f.placed;
+  /** the handles as the plan takes them; null with no hardware at all */
+  const handles = hw && (hw.handles || hw.inputDish) ? (hw.handles ?? NO_HANDLE_SET) : null;
+  /** the plan with the input dish taken off where the cabinet has none */
+  const fitted = (plan: BoxHardwarePlan | null) =>
+    plan && !hw?.inputDish ? withoutDish(plan) : plan;
   if (f.paSub) {
     const { sub, style: portStyle, vent } = f.paSub;
     return {
@@ -666,9 +681,10 @@ function chamberBracingAs(
         back,
         targetHz,
       ),
-      hardware: handles
-        ? subHardwarePlan(f.box, t, inset, portStyle, vent, sub, style, handles, back, targetHz)
-        : null,
+      hardware: fitted(
+        handles &&
+          subHardwarePlan(f.box, t, inset, portStyle, vent, sub, style, handles, back, targetHz),
+      ),
     };
   }
   const drivers = chamberDrivers(f, baffleIn(cabinet));
@@ -680,23 +696,25 @@ function chamberBracingAs(
     vent: ventRegions(cabinet, f),
   };
   const plan = (bracing: BoxBracing | null) =>
-    handles &&
-    planBoxHardware({
-      box: chamber.drivers.some((d) => onTop(d) && hornFitsWhereSet(f.placed, d))
-        ? HARDWARE_BOX.mid
-        : HARDWARE_BOX.sub,
-      dims: f.box,
-      t,
-      inset,
-      handles,
-      driver: drivers.heaviest ?? {
-        center: { x: f.inside.iw / 2, y: f.inside.ih / 2 },
-        lb: 0,
-        depthIn: 0,
-      },
-      bracing,
-      keepOut,
-    });
+    fitted(
+      handles &&
+        planBoxHardware({
+          box: chamber.drivers.some((d) => onTop(d) && hornFitsWhereSet(f.placed, d))
+            ? HARDWARE_BOX.mid
+            : HARDWARE_BOX.sub,
+          dims: f.box,
+          t,
+          inset,
+          handles,
+          driver: drivers.heaviest ?? {
+            center: { x: f.inside.iw / 2, y: f.inside.ih / 2 },
+            lb: 0,
+            depthIn: 0,
+          },
+          bracing,
+          keepOut,
+        }),
+    );
   const placed = plan(null);
   const wall = panelStock(t, cabinet.panel.material);
   const bracing = bracedShell(
@@ -961,7 +979,7 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
   const bases = shellBases(cabinet.chambers);
   const chambers = frames.map((f): ChamberBuild => {
     const isBase = bases[f.index] === f.index;
-    const { bracing, hardware } = chamberBracing(cabinet, f, isBase ? cabinet.hardware : null);
+    const { bracing, hardware } = chamberBracing(cabinet, f, isBase ? cabinet : null);
     const { chamber } = f.placed;
     const vent = chamberVentModel(cabinet, chamber);
     const radiators = chamberRadiatorsLb(chamber);
@@ -1456,10 +1474,11 @@ export function speakerCutParts(
   const t = cabinet.panel.thicknessIn;
   const frame = isFrame(cabinet);
   const inset = baffleInsetIn(cabinet);
-  const back = cabinet.backJoint;
+  /** the one back panel of a shell over several chambers (`shellBackJoint`) */
+  const back = shellBackJoint(cabinet.chambers);
   /** a flush box's back, by its joint, and screwed to the window braces' rails where they meet it */
-  const flushBack = (hwBack: string | undefined, rails: boolean) =>
-    joinNotes([BACK_JOINT_FLUSH_NOTES[back], rails && BACK_JOINT_RAIL_NOTES[back], hwBack]);
+  const flushBack = (joint: BackJointId, hwBack: string | undefined, rails: boolean) =>
+    joinNotes([BACK_JOINT_FLUSH_NOTES[joint], rails && BACK_JOINT_RAIL_NOTES[joint], hwBack]);
   const arched = cutsArchedTop(cabinet, layout);
   const roundover = frame ? false : roundoverNote(cabinet.roundoverIn, t, joint);
   const parts: CutPart[] = [],
@@ -1515,6 +1534,7 @@ export function speakerCutParts(
           top: joinNotes(notes.flatMap((n) => [...n.top, ...n.bottom])),
           baffle: [...notes.flatMap((n) => n.baffle), roundover],
           back: flushBack(
+            back,
             hw.back,
             build.chambers.some((c) => railsOnBack(c.bracing)),
           ),
@@ -1559,6 +1579,8 @@ export function speakerCutParts(
       : flushMarks(boxY, centerX, joint, t);
     const notes = chamberNotes(cabinet, f, marks, true);
     const { bracing, hardware } = build.chambers[f.index];
+    /** its own back panel's joint */
+    const chamberBack = bracingTaken(f.placed.chamber).backJoint;
     const hw = withNotes(hardware ? hardwareCutNotes(hardware, f.box, t) : undefined, {
       ...notes,
       top: [...notes.top, ...notes.bottom],
@@ -1569,19 +1591,19 @@ export function speakerCutParts(
           cutNote: joinNotes(notes.baffle),
           bracing,
           hardware: hw,
-          back,
+          back: chamberBack,
         }).P
       : flushBoxPanels(box, f.box, t, joint, {
           side: hw.side,
           top: joinNotes([...notes.top, ...notes.bottom]),
           baffle: [...notes.baffle, roundover],
-          back: flushBack(hw.back, railsOnBack(bracing)),
+          back: flushBack(chamberBack, hw.back, railsOnBack(bracing)),
         });
     const walls = withoutGivenWalls(own, shared, joint, t, frame);
     parts.push(
       ...(arched && frames.length === 1
         ? archedShellParts(walls, box, f.box, t, joint, {
-            back,
+            back: chamberBack,
             band: f.inside.band,
             sideHardware: hw.side,
           })

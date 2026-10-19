@@ -84,7 +84,7 @@ interface SectionProps<Id extends string> {
   folds: Folds<Id>;
   /** the widths it folds at; on PA phones the heading hides, as the sheet's tabs group the settings there */
   foldsAt?: FoldsAt;
-  /** one line of the section's current values, shown while it is folded */
+  /** the section's key facts, shown under its title while it is folded (two lines at most) */
   summary: React.ReactNode;
   children: React.ReactNode;
 }

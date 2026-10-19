@@ -12,11 +12,13 @@ import { pathToFileURL } from "node:url";
 import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
+import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 
 const REBUILDS = 30;
 /** The pages with a 3D view: the PA stack (the default view), Hi-fi, the Speaker and Stack pages, and the control each steps. */
 const SLIDER = { control: 'input[type="range"]', up: "ArrowRight", down: "ArrowLeft" };
-const NUMBER = { control: 'input[type="number"]', up: "ArrowUp", down: "ArrowDown" };
+// the first one shown: a closed settings fold keeps its fields in the page, hidden
+const NUMBER = { control: 'input[type="number"]:visible', up: "ArrowUp", down: "ArrowDown" };
 /** Waits for the view's second build: built empty when the page opens, then as the start. */
 const builtTwice = (page) =>
   page.waitForFunction(
@@ -36,10 +38,10 @@ const VIEWS = [
     prepare: async (page) => {
       await page.getByRole("button", { name: PA_LAYOUT_NAMES.tower, exact: true }).first().click();
       await page.evaluate(() => (location.hash = "#speaker"));
+      // picking a start in the saving row's "New from…" list replaces the design
       await page
-        .getByLabel(START_PICKER_TEXT.startFrom)
+        .getByLabel(SAVE_ROW_TEXT.newFrom)
         .selectOption({ label: SPEAKER_START_NAMES.paTower });
-      await page.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
       await builtTwice(page);
     },
   },

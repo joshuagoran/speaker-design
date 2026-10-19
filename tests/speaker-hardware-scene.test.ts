@@ -27,9 +27,9 @@ function hardwareMeshes(spec: Pick<SpeakerSpec, "cabinet" | "look">, cutaway = f
   return meshes;
 }
 
-/** A PA sub box with its handles set to `hardware` (null: no hardware at all). */
-function withHardware(cabinet: SpeakerCabinet, hardware: BoxHandles | null): SpeakerCabinet {
-  return { ...cabinet, hardware };
+/** A PA sub box with its handles set to `handles` and its input dish; null: no hardware at all. */
+function withHardware(cabinet: SpeakerCabinet, handles: BoxHandles | null): SpeakerCabinet {
+  return { ...cabinet, handles, inputDish: handles !== null };
 }
 
 const sub = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
@@ -37,7 +37,8 @@ const [HANDLE] = HANDLES;
 
 describe("the Speaker page's 3D view draws the hardware", () => {
   test("the PA sub box's template has hardware, and each of its parts adds meshes", () => {
-    expect(sub.cabinet.hardware).not.toBeNull();
+    expect(sub.cabinet.handles).not.toBeNull();
+    expect(sub.cabinet.inputDish).toBe(true);
     const plan = cabinetBuild(sub.cabinet).chambers[0].hardware;
     expect(plan).not.toBeNull();
     const meshes = hardwareMeshes(sub);
@@ -141,7 +142,7 @@ describe("the Speaker page's 3D view draws the hardware", () => {
   });
 
   test("the PA hardware's default handle is the one the template draws", () => {
-    expect(sub.cabinet.hardware).toEqual(DEFAULT_PA.hardware.sub);
+    expect(sub.cabinet.handles).toEqual(DEFAULT_PA.hardware.sub);
   });
 });
 

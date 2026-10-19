@@ -73,7 +73,11 @@ const offset = (x: unknown) =>
   typeof x === "number" && Number.isFinite(x)
     ? Math.min(HANDLE_OFFSET_SLIDER.max, Math.max(HANDLE_OFFSET_SLIDER.min, x))
     : 0;
-const savedBox = (x: unknown, fallback: BoxHandles): BoxHandles => {
+/** One box's saved handles: its model and offsets where they read right, else `fallback`'s model and no offsets. */
+/** No handles: a hardware plan with the input dish alone, or an old save whose handle model doesn't read. */
+export const NO_HANDLE_SET: BoxHandles = { model: NO_HANDLES, upIn: 0, backIn: 0 };
+
+export const savedBox = (x: unknown, fallback: BoxHandles): BoxHandles => {
   if (typeof x !== "object" || x === null) return fallback;
   const model = Reflect.get(x, "model");
   return {
@@ -554,6 +558,28 @@ function atOf(p: PlacedHardware, inner: Record<"x" | "y" | "z", number>, t: numb
  */
 export const hardwareKeepOut = (plan: Pick<BoxHardwarePlan, "parts">): BoxRegion[] =>
   plan.parts.map((p) => p.fit);
+
+/** The kinds of part that come with the input dish: the dish and, under a horn on the lid, the horn's posts. */
+const DISH_KINDS: readonly HardwareKind[] = ["plate", "posts"];
+/** The bought parts that come with the input dish: the dish, its jacks and the horn's posts. */
+const DISH_PARTS: readonly CabinetPart[] = [INPUT_PLATE, INPUT_JACK, HORN_POSTS];
+
+/**
+ * A plan with no input dish: the handles only (the Speaker page's Input dish set to None). Its liters, weight and price
+ * are the handles' alone.
+ */
+export function withoutDish(plan: BoxHardwarePlan): BoxHardwarePlan {
+  const parts = plan.parts.filter((p) => !DISH_KINDS.includes(p.kind));
+  const bought = plan.bought.filter((b) => !DISH_PARTS.includes(b.part));
+  return {
+    ...plan,
+    parts,
+    bought,
+    liters: parts.reduce((a, p) => a + p.liters, 0),
+    lb: bought.reduce((a, b) => a + b.qty * (b.part.lb ?? 0), 0),
+    price: bought.reduce((a, b) => a + b.qty * b.part.price, 0),
+  };
+}
 
 /** Whether every part of a plan fits. */
 export const hardwareFits = (plan: BoxHardwarePlan) => plan.parts.every((p) => !p.hits.length);

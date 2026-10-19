@@ -78,6 +78,7 @@ export const CHIP_IDS = {
     "speakerDuctFit",
     "speakerTubeFit",
     "speakerHardwareFit",
+    "speakerBracing",
     "speakerKeepsUp",
     "speakerHfPad",
   ],

@@ -212,9 +212,14 @@ test("horn goals: the fit's maximum output is the lower of the power and Xmax li
 });
 
 test("horn goals: a tapped horn sized for 40–100 Hz plays flat in the box and stays in its air", () => {
+  // folded: a straight horn stays within the chamber's depth, too short for 40 Hz
+  const tappedFolded: SpeakerChamber = {
+    ...TAPPED,
+    load: { kind: CHAMBER_LOAD.horn, horn: { ...hornOf(TAPPED), path: HORN_PATH.folded } },
+  };
   const found = withGoalHorn(
     BIN_SPEC.cabinet,
-    TAPPED,
+    tappedFolded,
     PLACED,
     HORN_DRIVE.tapped,
     HORN_GOALS_DEFAULT,
@@ -239,7 +244,8 @@ test("horn goals: a tapped horn sized for 40–100 Hz plays flat in the box and 
   assert.equal(check.overAir, null);
   // the same goals give the same horn
   assert.deepEqual(
-    withGoalHorn(BIN_SPEC.cabinet, TAPPED, PLACED, HORN_DRIVE.tapped, HORN_GOALS_DEFAULT)?.chamber,
+    withGoalHorn(BIN_SPEC.cabinet, tappedFolded, PLACED, HORN_DRIVE.tapped, HORN_GOALS_DEFAULT)
+      ?.chamber,
     found.chamber,
   );
 });
@@ -310,4 +316,25 @@ test("Hornresp import: an offset record keeps its tap, rear chamber and vent are
   // a record the reader cannot read says why
   const broken = hornFromRecord("not a record", null, 30);
   assert.ok(!broken.ok && broken.reason.length > 0);
+});
+
+test("horn goals: Start from goals reads only the drivers, the size, the type and the goals", () => {
+  // two starting chambers that differ in everything else: vent, fill, path and the old horn's extras
+  const other: SpeakerChamber = {
+    ...BIN,
+    stuffingPct: 25,
+    load: {
+      kind: CHAMBER_LOAD.horn,
+      horn: { ...hornOf(BIN), path: HORN_PATH.folded, doubleBoard: true, portOffset: 3 },
+    },
+  };
+  const a = withGoalHorn(BIN_SPEC.cabinet, BIN, PLACED, HORN_DRIVE.front, HORN_GOALS_DEFAULT);
+  const b = withGoalHorn(BIN_SPEC.cabinet, other, PLACED, HORN_DRIVE.front, HORN_GOALS_DEFAULT);
+  assert.ok(a && b);
+  assert.deepEqual(a.chamber.load, b.chamber.load);
+  assert.equal(a.chamber.netLiters, b.chamber.netLiters);
+  // it lays out a folded horn with a sealed rear chamber and no fill
+  assert.equal(hornOf(a.chamber).path, HORN_PATH.folded);
+  assert.equal(a.chamber.vent.kind, VENT_KIND.sealed);
+  assert.equal(a.chamber.stuffingPct, 0);
 });

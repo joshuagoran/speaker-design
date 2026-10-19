@@ -18,6 +18,7 @@ import type {
   StackSpec,
 } from "../../types";
 import { dispersionGrid } from "../hifi/hifi";
+import { CHAMBER_LOAD } from "../../constants/speakerSpec";
 import { patternDirectivity } from "../pa/dispersion";
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { bandOfPart, driverPattern, pressureAt } from "./spaceCoverage";
@@ -120,6 +121,13 @@ export function stackDispersionMap(
  * The map of one speaker on its input range (the Speaker page's), from its response: a stack of one at the base, its
  * listening height its highest band's center.
  */
+/**
+ * Whether the map models these speakers: not yet one with a horn-loaded chamber (its cones stand in for its mouth, so
+ * the map would be wrong; issue #202).
+ */
+export const dispersionModeled = (speakers: readonly Pick<SpeakerSpec, "cabinet">[]) =>
+  speakers.every((s) => s.cabinet.chambers.every((c) => c.load.kind !== CHAMBER_LOAD.horn));
+
 export function speakerDispersionMap(
   spec: SpeakerSpec,
   response: StackMemberResponse["response"],

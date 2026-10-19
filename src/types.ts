@@ -38,6 +38,7 @@ import type {
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
+import type { POSITION_AXIS } from "./constants/speakerResults";
 import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
 import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
@@ -2200,6 +2201,16 @@ export interface FacePoint {
   yIn: number;
 }
 
+/**
+ * A driver position field with focus on the Speaker page (src/pages/speaker/positionFocus): its chamber and driver
+ * entry, by their place in the spec, and the axis it sets (`POSITION_AXIS`). The 2D view marks the point it measures from.
+ */
+export interface PositionFocus {
+  chamber: number;
+  driver: number;
+  axis: (typeof POSITION_AXIS)[keyof typeof POSITION_AXIS];
+}
+
 /** A panel a vent can be cut into (`PANEL`): the baffle, or the back. */
 export type VentPanel = Extract<RadiatorPanel, "baffle" | "back">;
 
@@ -2619,6 +2630,22 @@ export interface SpeakerChamber {
   vent: ChamberVent;
   load: ChamberLoad;
   drivers: readonly SpeakerDriver[];
+  /**
+   * its bracing and back panel. A Box chamber takes them; a horn chamber keeps them for a turn back to a Box, but its
+   * boards brace its panels, so it takes no added braces and a glued back (lib/speaker/speakerBuild).
+   */
+  bracing: ChamberBracing;
+}
+
+/**
+ * A Box chamber's bracing as the PA boxes take it: the style (ribs, window braces or both) or none, the target every
+ * panel's first mode should clear, Hz (the PA boxes' PA_PANEL_TARGET_HZ by default, lib/pa/bracing), and how its back is
+ * fixed (glued or screwed).
+ */
+export interface ChamberBracing extends Required<Pick<PaDesignConfig, "backJoint">> {
+  /** the bracing style, or none: the panels unbraced */
+  braceStyle: SpeakerBraceStyle;
+  braceTargetHz: number;
 }
 
 /** A cabinet's panels: the nominal size, the material and the exact thickness the models use. */
@@ -2637,17 +2664,10 @@ export type CabinetTop = (typeof CABINET_TOP)[keyof typeof CABINET_TOP];
 /** Why an arched top is drawn and cut flat, by id (`ARCH_BLOCK`). */
 export type ArchBlock = (typeof ARCH_BLOCK)[keyof typeof ARCH_BLOCK];
 
-/**
- * A cabinet: its chambers, panels and shape, and its bracing as the PA boxes take it: the style (ribs, window braces or
- * both), how the back is fixed (glued or screwed), and the target every panel's first mode should clear.
- */
-export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "backJoint">> {
-  /** the bracing style, or none: the panels unbraced */
-  braceStyle: SpeakerBraceStyle;
+/** A cabinet: its chambers, panels, shape and hardware. Each chamber has its own bracing (`SpeakerChamber.bracing`). */
+export interface SpeakerCabinet {
   chambers: readonly SpeakerChamber[];
   panel: SpeakerPanel;
-  /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ by default (lib/pa/bracing) */
-  braceTargetHz: number;
   /**
    * how the shell is built: the PA's frame, its baffle set back by `insetIn`, or the Hi-fi's flush box, its baffle over
    * the whole front
@@ -2665,10 +2685,16 @@ export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "backJoint
   /** the kick-back: the baffle tilted back so the axis points this far up, degrees */
   tiltDeg: NonNullable<HifiConfig["tiltDeg"]>;
   /**
-   * the PA boxes' hardware (lib/pa/hardware): these handles, the input dish with its two jacks, and the horn's binding
-   * posts on a chamber whose horn stands on its top; in each shell's lowest chamber. Null: none (the Hi-fi box).
+   * the PA boxes' handles (lib/pa/hardware), one each side of each shell's lowest chamber: a catalog handle's model and
+   * its offsets; null: none. (A save from before the split has one `hardware` for the handles and the dish:
+   * lib/speaker/speakerSaves reads it.)
    */
-  hardware: BoxHandles | null;
+  handles: BoxHandles | null;
+  /**
+   * the input dish with its two jacks on the back of each shell's lowest chamber and, on a chamber whose horn stands on
+   * its top, the horn's binding posts; false: none (the Hi-fi box)
+   */
+  inputDish: boolean;
 }
 
 /** A filter's alignment and slope: Butterworth or Linkwitz-Riley at 24 or 48 dB/oct, or first order (a capacitor). */

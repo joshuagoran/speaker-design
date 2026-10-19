@@ -56,6 +56,21 @@ export const SPEAKER_BAND_NAMES = {
   air: "Air",
 } as const satisfies Record<keyof typeof SPEAKER_BAND, string>;
 
+/**
+ * The names the Speaker page gives bands it names itself, by how many bands there are: one band plays everything; two or
+ * more run low to high, the ones between named mid.
+ */
+export const AUTO_BAND_NAMES = {
+  fullRange: "Full range",
+  low: SPEAKER_BAND_NAMES.low,
+  mid: SPEAKER_BAND_NAMES.mid,
+  lowMid: "Low mid",
+  highMid: "High mid",
+  /** one of three or more middle bands, by its place among them from 1 */
+  midN: (n: number) => `Mid ${n}`,
+  high: SPEAKER_BAND_NAMES.high,
+} as const;
+
 /** Where a horn sits, by id: in the baffle, or freestanding on the box top (T1, the Hi-fi round waveguides). */
 export const HORN_PLACEMENT = {
   baffle: "baffle",

@@ -10,7 +10,7 @@ import { layersFromFill } from "../src/lib/speaker/fillSpec";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { frontLoadedOf, roomOf } from "./horn-room";
 import { chamberClearFace } from "../src/lib/speaker/chamberAir";
-import { speakerIdentity } from "../src/lib/speaker/specParts";
+import { flushBracing, speakerIdentity } from "../src/lib/speaker/specParts";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { paSearchDesign } from "../src/lib/pa/optimize";
 import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
@@ -588,6 +588,7 @@ const bassBin: SpeakerChamber = {
   dims: { w: 24, h: 32, d: 30 },
   netLiters: 120,
   stuffingPct: 0,
+  bracing: flushBracing(0.75),
   vent: {
     kind: VENT_KIND.vented,
     port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 },
@@ -652,6 +653,7 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
     dims: { w: 48, h: 32, d: 30.2 },
     netLiters: 324,
     stuffingPct: 0,
+    bracing: flushBracing(0.75),
     vent: {
       kind: VENT_KIND.vented,
       port: { shape: PORT_SHAPE.slot, n: 2, h: slotH, len: 680 / (10 * CM_PER_IN) },

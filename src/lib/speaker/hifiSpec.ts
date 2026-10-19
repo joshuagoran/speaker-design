@@ -39,6 +39,7 @@ import {
   DIRECT_LOAD,
   FLUSH_BOX,
   flushBracing,
+  NO_HARDWARE,
   NO_FILTERS,
   homeVenue,
   lrFilter,
@@ -205,6 +206,7 @@ export function speakerFromHifi(
           vent: hifiVent(state, fit),
           load: DIRECT_LOAD,
           drivers: hifiDrivers(state, fit),
+          bracing: flushBracing(fit.wallThicknessIn),
         },
       ],
       panel: {
@@ -213,9 +215,8 @@ export function speakerFromHifi(
         thicknessIn: fit.wallThicknessIn,
       },
       ...FLUSH_BOX,
-      ...flushBracing(fit.wallThicknessIn),
       // the Hi-fi page counts no handles or input dish
-      hardware: null,
+      ...NO_HARDWARE,
       roundoverIn: state.roundoverIn,
       tiltDeg: state.tiltDeg ?? 0,
     },

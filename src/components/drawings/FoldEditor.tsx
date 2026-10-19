@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type {
   FoldCheck,
+  FoldGrid,
   FoldMouth,
-  FoldWall,
   HornDrive,
   HornFold,
   HornSegment,
@@ -34,6 +34,7 @@ import {
   unit,
   JOIN_IN,
 } from "../../lib/speaker/foldGeometry";
+import { dragOpening, openingRun, placeOpening } from "../../lib/speaker/foldOpenings";
 import { FOLD_END, FOLD_MIN_ROOM_IN, FOLD_SNAP_IN } from "../../constants/foldHorn";
 import { FOLD_WALL } from "../../constants/speakerSpec";
 import {
@@ -49,20 +50,21 @@ import { formatInches } from "../../lib/format";
 import { tracedFold } from "../../lib/speaker/foldHorn";
 import { FoldPathChart } from "../charts/FoldPathChart";
 import { offTargetDb } from "../../lib/speaker/foldMatch";
-import { Icon, IconButton } from "../ui/IconButton";
+import { DRIVER_ICON_PATH, Icon, IconButton } from "../ui/IconButton";
 import { usePalette } from "../../hooks/useTheme";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { FOLD_TWO_COLUMN_PX } from "../../styles/layout";
 import { SVG_FONT } from "../../styles/fonts";
 import type { Palette } from "../../styles/palette";
 
-/** The editor's tools (each a button over the drawing). */
+/** The editor's tools (each a button in the row over the drawing). */
 const TOOL = {
   move: "move",
   board: "board",
   remove: "remove",
   drivers: "drivers",
-  opening: "opening",
+  mouth: "mouth",
+  vent: "vent",
   square: "square",
 } as const;
 type Tool = (typeof TOOL)[keyof typeof TOOL];
@@ -103,10 +105,9 @@ interface Props {
   setType: HornDrive["kind"];
   /** a wall dragged: how much to add to the chamber's depth and height, in */
   onResize: (grow: { depthIn: number; heightIn: number }) => void;
+  /** the chamber's name, at the start of the tool row; null when the speaker has one chamber */
+  name: string | null;
 }
-
-/** The walls a mouth runs up (baffle, back) rather than across (bottom, top). */
-const upright = (wall: FoldWall) => wall === FOLD_WALL.baffle || wall === FOLD_WALL.back;
 
 /** `#rrggbb` as its three channels. */
 function rgbOf(hex: string): [number, number, number] {
@@ -115,12 +116,50 @@ function rgbOf(hex: string): [number, number, number] {
 }
 
 /**
+ * By cell: the nearest air cell (itself for an air cell), stepping through the cells that share an edge; -1 where the
+ * grid has no air.
+ */
+function nearestAir(grid: Pick<FoldGrid, "nz" | "ny" | "solid">): Int32Array {
+  const { nz, ny, solid } = grid;
+  const count = nz * ny;
+  const nearest = new Int32Array(count).fill(-1);
+  const queue = new Int32Array(count);
+  let head = 0;
+  let tail = 0;
+  for (let k = 0; k < count; k++)
+    if (!solid[k]) {
+      nearest[k] = k;
+      queue[tail++] = k;
+    }
+  while (head < tail) {
+    const k = queue[head++];
+    const i = k % nz;
+    const j = (k - i) / nz;
+    const next = [
+      i > 0 ? k - 1 : -1,
+      i < nz - 1 ? k + 1 : -1,
+      j > 0 ? k - nz : -1,
+      j < ny - 1 ? k + nz : -1,
+    ];
+    for (const n of next)
+      if (n >= 0 && nearest[n] < 0) {
+        nearest[n] = nearest[k];
+        queue[tail++] = n;
+      }
+  }
+  return nearest;
+}
+
+/**
  * An image of the trace's grid, a pixel per cell, the top row first: `paint` gives each cell's color and opacity (0–1),
- * or null for none. Empty where there is no document (server rendering).
+ * or null for none. With `fill`, a board's cell takes its nearest air cell's paint: the image, scaled up smoothly and
+ * masked by the boards as drawn, then meets each board's edge with no gap and no fringe. Empty where there is no
+ * document (server rendering).
  */
 function gridImage(
   grid: ReturnType<typeof foldTrace>["grid"],
   paint: (k: number) => [number, number, number, number] | null,
+  fill = false,
 ): string {
   if (typeof document === "undefined") return "";
   const canvas = document.createElement("canvas");
@@ -129,9 +168,12 @@ function gridImage(
   const g = canvas.getContext("2d");
   if (!g) return "";
   const img = g.createImageData(grid.nz, grid.ny);
+  const from = fill ? nearestAir(grid) : null;
   for (let j = 0; j < grid.ny; j++)
     for (let i = 0; i < grid.nz; i++) {
-      const c = paint(j * grid.nz + i);
+      const k = j * grid.nz + i;
+      const source = from ? from[k] : k;
+      const c = source >= 0 ? paint(source) : null;
       if (!c) continue;
       const o = ((grid.ny - 1 - j) * grid.nz + i) * 4;
       img.data.set([c[0], c[1], c[2], Math.round(c[3] * 255)], o);
@@ -142,12 +184,15 @@ function gridImage(
 
 /**
  * A folded horn's side view as its editor: the walls, the boards, the drivers and the mouth, with the passage the trace
- * finds shaded along the path, sealed air in yellow and the closed end marked. Tool buttons sit over its top corner;
- * Ctrl+Z or Cmd+Z undoes. Under it, the passage's area along the path against the straight horn; pointing at either
- * marks the same place in the other. A drag edits a draft and hands the fold over when it ends.
+ * finds shaded along the path, sealed air in yellow and the closed end marked. The tool buttons sit in a row over it,
+ * after the chamber's name; Ctrl+Z or Cmd+Z undoes. Beside or under it, the passage's area along the path against the
+ * straight horn; pointing at either marks the same place in the other. A drag edits a draft and hands the fold over
+ * when it ends.
  */
-export function FoldEditor({ room, fold, target, onChange, setType, onResize }: Props) {
+export function FoldEditor({ room, fold, target, onChange, setType, onResize, name }: Props) {
   const pal = usePalette();
+  /** the id of the mask that keeps the field's shading off the boards (no characters a `url(#…)` reference trips on) */
+  const maskId = `fold-air-${useId().replace(/[^\w-]/g, "")}`;
   /** the drawing's width on screen, px: below the frame's when its height cap narrows it */
   const [widthPx, setWidthPx] = useState(800);
   const [wideRef, wide] = useWidthAtLeast(FOLD_TWO_COLUMN_PX);
@@ -163,7 +208,13 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
     | { kind: typeof HIT.joint; drag: EndDrag }
     | { kind: typeof HIT.board; drag: BoardDrag }
     | { kind: typeof HIT.drivers }
-    | { kind: typeof HIT.mouth; key: OpeningKey; fixedIn: number }
+    | {
+        kind: typeof HIT.mouth;
+        key: OpeningKey;
+        fixedIn: number;
+        /** the run of air along the wall the opening stays in (`openingRun`) */
+        run: ReturnType<typeof openingRun>;
+      }
     | {
         kind: typeof HIT.wall;
         wall: typeof FOLD_WALL.back | typeof FOLD_WALL.top;
@@ -243,15 +294,6 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
     return { zIn: (p.x - PAD_PX) / PX - T, yIn: Hv + T - (p.y - PAD_PX) / PX };
   };
-  /** whether `p` is air the mouth does not reach (sealed or vented air) */
-  const sealedAt = (p: SidePoint): boolean => {
-    const { grid } = trace;
-    const i = Math.floor(p.zIn / grid.cellIn);
-    const j = Math.floor(p.yIn / grid.cellIn);
-    if (i < 0 || j < 0 || i >= grid.nz || j >= grid.ny) return false;
-    const k = j * grid.nz + i;
-    return !grid.solid[k] && !Number.isFinite(grid.dist[k]);
-  };
   const pathAt = (p: SidePoint): number | null => {
     const { grid, pathIn } = trace;
     const i = Math.floor(p.zIn / grid.cellIn);
@@ -274,46 +316,29 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
       svg.current?.setPointerCapture(e.pointerId);
     };
     switch (tool) {
-      case TOOL.opening: {
-        const handle: OpeningKey | null =
-          what === HIT.vent ? "vent" : what === HIT.mouth ? "mouth" : null;
-        const at = handle && fold[handle];
-        if (handle && at && (rest[0] === "fromIn" || rest[0] === "toIn")) {
+      case TOOL.mouth:
+      case TOOL.vent: {
+        const key: OpeningKey = tool === TOOL.vent ? "vent" : "mouth";
+        const at = fold[key];
+        if (at && what === HIT[key] && (rest[0] === "fromIn" || rest[0] === "toIn")) {
           press.current = {
             kind: HIT.mouth,
-            key: handle,
+            key,
             fixedIn: rest[0] === "fromIn" ? at.toIn : at.fromIn,
+            run: openingRun(trace.grid, at),
           };
           setLatest(fold);
           capture();
           return;
         }
-        const dists: Record<FoldWall, number> = {
-          [FOLD_WALL.baffle]: Math.abs(p.zIn),
-          [FOLD_WALL.back]: Math.abs(D - p.zIn),
-          [FOLD_WALL.bottom]: Math.abs(p.yIn),
-          [FOLD_WALL.top]: Math.abs(H - p.yIn),
-        };
-        const wall = Object.values(FOLD_WALL).reduce((a, b) => (dists[b] < dists[a] ? b : a));
-        const along = upright(wall) ? p.yIn : p.zIn;
-        const span = upright(wall) ? H : D;
-        // next to the horn's passage it is the mouth; next to air the mouth does not reach, the vent
-        const inside: SidePoint =
-          wall === FOLD_WALL.baffle
-            ? { zIn: trace.grid.cellIn / 2, yIn: p.yIn }
-            : wall === FOLD_WALL.back
-              ? { zIn: D - trace.grid.cellIn / 2, yIn: p.yIn }
-              : wall === FOLD_WALL.bottom
-                ? { zIn: p.zIn, yIn: trace.grid.cellIn / 2 }
-                : { zIn: p.zIn, yIn: H - trace.grid.cellIn / 2 };
-        const key: OpeningKey = sealedAt(inside) ? "vent" : "mouth";
-        const snap = (v: number) =>
-          Math.min(span, Math.max(0, Math.round(v / FOLD_SNAP_IN) * FOLD_SNAP_IN));
-        const half = key === "vent" ? NEW_VENT_HALF_IN : NEW_MOUTH_HALF_IN;
-        commit({
-          ...fold,
-          [key]: { wall, fromIn: snap(along - half), toIn: snap(along + half) },
-        });
+        // a click on a wall opens it there, within the air next to the click (a board on the wall stops it)
+        const placed = placeOpening(
+          trace.grid,
+          box,
+          p,
+          tool === TOOL.vent ? NEW_VENT_HALF_IN : NEW_MOUTH_HALF_IN,
+        );
+        if (placed) commit({ ...fold, [key]: placed });
         return;
       }
       case TOOL.board:
@@ -402,19 +427,7 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
     } else if (held.kind === HIT.mouth) {
       const m = now[held.key];
       if (!m) return;
-      const span = upright(m.wall) ? H : D;
-      const along = Math.min(
-        span,
-        Math.max(0, Math.round((upright(m.wall) ? p.yIn : p.zIn) / FOLD_SNAP_IN) * FOLD_SNAP_IN),
-      );
-      setLatest({
-        ...now,
-        [held.key]: {
-          ...m,
-          fromIn: Math.min(held.fixedIn, along),
-          toIn: Math.max(held.fixedIn, along),
-        },
-      });
+      setLatest({ ...now, [held.key]: dragOpening(m, held.fixedIn, p, box, held.run) });
     }
   };
 
@@ -435,17 +448,29 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
     const [r, g, b] = rgbOf(pal.cyan);
     const [yr, yg, yb] = rgbOf(pal.yellow);
     const { grid, pathIn } = trace;
-    return gridImage(grid, (k) => {
-      if (grid.solid[k]) return null;
-      if (grid.vented[k]) return [yr, yg, yb, 0.2];
-      const d = grid.dist[k];
-      if (!Number.isFinite(d)) return [yr, yg, yb, 0.45];
-      /** 0 at the mouth, 1 at the closed end; a band every 6 in along the path */
-      const u = pathIn > 0 ? d / pathIn : 0;
-      const band = Math.floor((pathIn - d) / 6) % 2 === 0 ? 0 : 0.08;
-      return [r, g, b, 0.18 + 0.5 * u + band];
-    });
+    return gridImage(
+      grid,
+      (k) => {
+        if (grid.solid[k]) return null;
+        if (grid.vented[k]) return [yr, yg, yb, 0.2];
+        const d = grid.dist[k];
+        if (!Number.isFinite(d)) return [yr, yg, yb, 0.45];
+        /** 0 at the mouth, 1 at the closed end; a band every 6 in along the path */
+        const u = pathIn > 0 ? d / pathIn : 0;
+        const band = Math.floor((pathIn - d) / 6) % 2 === 0 ? 0 : 0.08;
+        return [r, g, b, 0.18 + 0.5 * u + band];
+      },
+      true,
+    );
   }, [trace, pal]);
+  /** each board's outline as drawn, as polygon points in the viewBox */
+  const boardOutlines = shown.boards.map((_, i) => {
+    const s = drawnSeg(shown.boards, i, T);
+    const n = left(unit(sub(s.b, s.a)));
+    return [add(s.a, n, T / 2), add(s.b, n, T / 2), add(s.b, n, -T / 2), add(s.a, n, -T / 2)]
+      .map((q) => `${X(q.zIn)},${Y(q.yIn)}`)
+      .join(" ");
+  });
   const band = useMemo(() => {
     if (hoverIn === null) return "";
     const [yr, yg, yb] = rgbOf(pal.yellow);
@@ -480,8 +505,8 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
             ];
   const openings = (
     [
-      { key: "mouth", hit: HIT.mouth, color: pal.cyan, at: shown.mouth },
-      { key: "vent", hit: HIT.vent, color: pal.yellow, at: shown.vent },
+      { key: "mouth", hit: HIT.mouth, tool: TOOL.mouth, color: pal.cyan, at: shown.mouth },
+      { key: "vent", hit: HIT.vent, tool: TOOL.vent, color: pal.yellow, at: shown.vent },
     ] as const
   ).flatMap((o) => (o.at ? [{ ...o, line: openingLine(o.at) }] : []));
 
@@ -501,12 +526,19 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
       id: TOOL.drivers,
       label: FOLD_EDITOR_TEXT.drivers,
       // a driver from the side: the magnet behind, the cone opening to the front
-      icon: <path d="M2 6h3v4H2zM5 6l8-4v12l-8-4" />,
+      icon: <path d={DRIVER_ICON_PATH} />,
     },
     {
-      id: TOOL.opening,
-      label: FOLD_EDITOR_TEXT.opening,
+      id: TOOL.mouth,
+      label: FOLD_EDITOR_TEXT.mouth,
+      // a gap in a wall, the sound going out through it
       icon: <path d="M3 2v4M3 10v4M6 8h7M10 5l3 3-3 3" />,
+    },
+    {
+      id: TOOL.vent,
+      label: FOLD_EDITOR_TEXT.vent,
+      // a slot through a wall: the duct's two sides
+      icon: <path d="M3 2v4M3 10v4M3 6h10M3 10h10" />,
     },
     { id: TOOL.square, label: FOLD_EDITOR_TEXT.square, icon: <path d="M3 2v11h11M3 9h4v4" /> },
   ];
@@ -521,27 +553,26 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
       tabIndex={-1}
       onKeyDown={onKeyDown}
     >
-      <div className="relative min-w-0">
-        <div
-          className="absolute top-2 left-2 flex flex-wrap gap-1"
-          role="toolbar"
-          aria-label={FOLD_EDITOR_TEXT.tools}
-        >
-          {tools.map((t) => (
-            <IconButton
-              key={t.id}
-              label={t.label}
-              pressed={tool === t.id}
-              onClick={() => setTool(t.id)}
-            >
-              <Icon>{t.icon}</Icon>
+      <div className="flex flex-col gap-2 min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {name && <span className="text-xs text-stone-500">{name}</span>}
+          <div className="flex flex-wrap gap-1" role="toolbar" aria-label={FOLD_EDITOR_TEXT.tools}>
+            {tools.map((t) => (
+              <IconButton
+                key={t.id}
+                label={t.label}
+                pressed={tool === t.id}
+                onClick={() => setTool(t.id)}
+              >
+                <Icon>{t.icon}</Icon>
+              </IconButton>
+            ))}
+            <IconButton label={FOLD_EDITOR_TEXT.undo} onClick={undo}>
+              <Icon>
+                <path d="M5 3 2 6l3 3M2 6h8a4 4 0 0 1 0 8H7" />
+              </Icon>
             </IconButton>
-          ))}
-          <IconButton label={FOLD_EDITOR_TEXT.undo} onClick={undo}>
-            <Icon>
-              <path d="M5 3 2 6l3 3M2 6h8a4 4 0 0 1 0 8H7" />
-            </Icon>
-          </IconButton>
+          </div>
         </div>
         <svg
           ref={svg}
@@ -565,6 +596,20 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
             fillOpacity={0.35}
           />
           <rect x={X(0)} y={Y(H)} width={D * PX} height={H * PX} fill={pal.panel} />
+          {/* the air as drawn: the room less the boards' outlines, so the smooth shading stops sharp at each board */}
+          <mask
+            id={maskId}
+            maskUnits="userSpaceOnUse"
+            x={X(0)}
+            y={Y(H)}
+            width={D * PX}
+            height={H * PX}
+          >
+            <rect x={X(0)} y={Y(H)} width={D * PX} height={H * PX} fill="white" />
+            {boardOutlines.map((points, i) => (
+              <polygon key={i} points={points} fill="black" />
+            ))}
+          </mask>
           {passage && (
             <image
               href={passage}
@@ -573,7 +618,7 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
               width={D * PX}
               height={H * PX}
               preserveAspectRatio="none"
-              style={{ imageRendering: "pixelated" }}
+              mask={`url(#${maskId})`}
             />
           )}
           {openings.map(({ key, hit, color, line }) => (
@@ -617,34 +662,25 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
               width={D * PX}
               height={H * PX}
               preserveAspectRatio="none"
-              style={{ imageRendering: "pixelated", pointerEvents: "none" }}
+              mask={`url(#${maskId})`}
+              style={{ pointerEvents: "none" }}
             />
           )}
-          {shown.boards.map((_, i) => {
-            const s = drawnSeg(shown.boards, i, T);
-            const n = left(unit(sub(s.b, s.a)));
-            const poly = [
-              add(s.a, n, T / 2),
-              add(s.b, n, T / 2),
-              add(s.b, n, -T / 2),
-              add(s.a, n, -T / 2),
-            ];
-            return (
-              <polygon
-                key={i}
-                data-hit={`${HIT.board}:${i}`}
-                points={poly.map((q) => `${X(q.zIn)},${Y(q.yIn)}`).join(" ")}
-                fill={pal.muted}
-                fillOpacity={0.6}
-                stroke={pal.ink}
-                strokeWidth={1}
-                style={{
-                  cursor:
-                    tool === TOOL.remove ? "not-allowed" : tool === TOOL.drivers ? "copy" : "move",
-                }}
-              />
-            );
-          })}
+          {boardOutlines.map((points, i) => (
+            <polygon
+              key={i}
+              data-hit={`${HIT.board}:${i}`}
+              points={points}
+              fill={pal.muted}
+              fillOpacity={0.6}
+              stroke={pal.ink}
+              strokeWidth={1}
+              style={{
+                cursor:
+                  tool === TOOL.remove ? "not-allowed" : tool === TOOL.drivers ? "copy" : "move",
+              }}
+            />
+          ))}
           {trace.parts.map((dp, k) => (
             <g key={k}>
               <polygon
@@ -675,7 +711,7 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize }: 
           ))}
           <JointMarks fold={shown} box={box} boardIn={T} tool={tool} X={X} Y={Y} pal={pal} u={u} />
           {openings
-            .filter(() => tool === TOOL.opening)
+            .filter((o) => o.tool === tool)
             .flatMap(({ hit, color, line }) =>
               (["fromIn", "toIn"] as const).map((end, k) => (
                 <circle
@@ -877,7 +913,7 @@ function FoldLegend({ pal }: { pal: Palette }) {
     { label: text.held, style: { background: pal.yellow, border: `1px solid ${pal.ink}` } },
   ];
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-stone-500">
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
       {items.map(({ label, style }) => (
         <span key={label} className="flex items-center gap-1.5">
           <span className="inline-block w-3 h-3 rounded-sm" style={style} />

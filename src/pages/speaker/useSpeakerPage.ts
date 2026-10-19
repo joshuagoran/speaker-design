@@ -15,14 +15,16 @@ import {
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
-import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
-import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
+import { CABINET_TOP, SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
+import { allBox } from "./settingsSummaries";
 import { speakerSummary } from "./speakerText";
 import { usePageDraft, type PageDraft } from "../../hooks/usePageDraft";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
+import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
+import { autoBandName, withAutoNames } from "../../lib/speaker/bandNames";
 import { useSpeakerOptimizer } from "./useSpeakerOptimizer";
 import type {
   BandId,
@@ -48,21 +50,6 @@ export const emptySpeaker = (): SpeakerSpec => ({
 /** What the library's row says when a document holds no speaker. */
 const MISSING_SPEAKER_TEXT = "That save holds no speaker";
 
-/**
- * Whether a library document's `speaker` reads as a spec: an object with a cabinet of chambers and a list of bands.
- * Its fields are trusted from there: `snapshot` wrote them.
- */
-export function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speaker"] {
-  if (typeof value !== "object" || value === null) return false;
-  const cabinet: unknown = Reflect.get(value, "cabinet");
-  return (
-    typeof cabinet === "object" &&
-    cabinet !== null &&
-    Array.isArray(Reflect.get(cabinet, "chambers")) &&
-    Array.isArray(Reflect.get(value, "bands"))
-  );
-}
-
 /** What the library saves: the spec without its id and name, undefined fields dropped (the stores reject them). */
 export function speakerSnapshot(spec: SpeakerSpec): SavedSpeakerData {
   const { id: _id, name: _name, ...speaker } = spec;
@@ -72,7 +59,8 @@ export function speakerSnapshot(spec: SpeakerSpec): SavedSpeakerData {
 /** A saved speaker opened: the document's id and name, and its spec; null for a document that holds no speaker. */
 export function speakerFromSaved(c: SavedConfig): SpeakerSpec | null {
   const saved: unknown = Reflect.get(c, "speaker");
-  return isSavedSpeaker(saved) ? { ...saved, id: c.id, name: c.name } : null;
+  const read = readSavedSpeaker(saved);
+  return read && { ...read, id: c.id, name: c.name };
 }
 
 /** The Speaker page's working design in the browser: the save document, with the speaker's id and name. */
@@ -100,6 +88,15 @@ export function newBandId(bands: readonly Pick<SpeakerBand, "id">[]): BandId {
 /** A list with item `i` replaced by `edit(item)`. */
 const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
   list.map((item, k) => (k === i ? edit(item) : item));
+
+/**
+ * The cabinet with a flat top once a chamber is a horn: an arched top is for speakers of Box chambers only, so the
+ * setting goes away with nothing left behind it. The same cabinet back when nothing changes.
+ */
+export const withHornTop = (cabinet: SpeakerCabinet): SpeakerCabinet =>
+  cabinet.top !== CABINET_TOP.flat && !allBox(cabinet.chambers)
+    ? { ...cabinet, top: CABINET_TOP.flat }
+    : cabinet;
 
 /** The spec with its drivers settled where the layout stands them (`settledCabinet`); the same spec back when none moves. */
 const settledSpec = (s: SpeakerSpec): SpeakerSpec => {
@@ -162,7 +159,7 @@ export function useSpeakerPage() {
   // every edit settles the drivers: a position that would leave the baffle, or overlap another driver or opening, is kept
   // where the layout stands it (the settings, the views and the cutlist then agree)
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
-    setSpec((s) => ({ ...s, cabinet: settledCabinet(edit(s.cabinet)) }));
+    setSpec((s) => ({ ...s, cabinet: settledCabinet(withHornTop(edit(s.cabinet))) }));
   const editChambers = (edit: (chambers: readonly SpeakerChamber[]) => SpeakerChamber[]) =>
     editCabinet((c) => ({ ...c, chambers: edit(c.chambers) }));
   const editChamber = (i: number, edit: (chamber: SpeakerChamber) => SpeakerChamber) =>
@@ -186,21 +183,22 @@ export function useSpeakerPage() {
       drivers: c.drivers.map((d) => ({ ...d, bands: d.bands.map((b) => (b === from ? to : b)) })),
     })),
   });
-  /** adds a band at the top, under a generated id and a name no band has ("Band 3") */
+  /** adds a band at the top, under a generated id; the bands the page named are renamed for the new count */
   const addBand = () =>
-    editBands((list) => {
-      const names = new Set(list.map((b) => b.name));
-      let n = list.length + 1;
-      while (names.has(SPEAKER_TEXT.newBandName(n))) n++;
-      return [
+    editBands((list) =>
+      withAutoNames([
         ...list,
-        { id: newBandId(list), name: SPEAKER_TEXT.newBandName(n), ...DEFAULT_SPEAKER_BAND },
-      ];
-    });
+        {
+          id: newBandId(list),
+          name: autoBandName(list.length, list.length + 1),
+          ...DEFAULT_SPEAKER_BAND,
+        },
+      ]),
+    );
   /** removes a band; its drivers move to the first band left */
   const removeBand = (id: BandId) =>
     setSpec((s) => {
-      const bands = s.bands.filter((b) => b.id !== id);
+      const bands = withAutoNames(s.bands.filter((b) => b.id !== id));
       return bands.length
         ? settledSpec({ ...s, cabinet: moveDrivers(s, id, bands[0].id), bands })
         : s;
