@@ -2995,7 +2995,11 @@ export interface SpeakerBandLimits {
    */
   musicDb: number;
   who: LimitId;
-  whoHz: number;
+  /**
+   * where a cone or vent limit (`PER_FREQUENCY_LIMITS`) sets the band's level, Hz; null for the amp and the program
+   * rating, which hold across the band
+   */
+  whoHz: number | null;
 }
 
 /** A level against a limit at the amp's full power, before any limit acts: the peak and its frequency, and the limit. */
