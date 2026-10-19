@@ -15,6 +15,9 @@ export const formatInches = (v: number): string => {
   return frac ? `${whole || ""}${frac}″` : `${+v.toFixed(2)}″`;
 };
 
+/** Words with their first letter in capitals, as a table cell starts them. */
+export const upperFirst = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
 /** Formats a frequency in whole hertz: 900 Hz, 1150 Hz (never kHz: 1150 Hz reads better than 1.15 kHz). */
 export const formatHz = (f: number): string => `${Math.round(f)} Hz`;
 

@@ -64,6 +64,8 @@ const HANDLE_OPTIONS = HANDLES.map((h) => ({ id: h.id, name: h.name }));
 interface Props {
   speakerPage: SpeakerPageState;
   folds: Folds<SpeakerSettingsSection>;
+  /** opens the driver comparison for a chamber's driver entry */
+  onCompare: (chamber: number, entry: number) => void;
 }
 
 /**
@@ -71,7 +73,7 @@ interface Props {
  * chamber's card), Bands and filters (the external crossover and each band), Look and Optimizer. Each section folds to
  * a summary of its key facts.
  */
-export function SpeakerSettings({ speakerPage, folds }: Props) {
+export function SpeakerSettings({ speakerPage, folds, onCompare }: Props) {
   const { spec, response, optimizer } = speakerPage;
   const { cabinet } = spec;
   const { chambers, construction, top, insetIn, panel, handles, inputDish } = cabinet;
@@ -224,6 +226,7 @@ export function SpeakerSettings({ speakerPage, folds }: Props) {
               placed={layout.chambers[i]}
               onEdit={(edit) => speakerPage.editChamber(i, edit)}
               onRemove={one ? undefined : () => speakerPage.removeChamber(i)}
+              onCompare={(entry) => onCompare(i, entry)}
             />
           ))}
           <div>

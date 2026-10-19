@@ -3184,6 +3184,24 @@ export interface SpeakerOptimizerMetrics {
   f3: number | null;
 }
 
+/** A driver entry the Speaker page's driver comparison is for: its chamber's index and its index in the chamber. */
+export interface DriverCompareTarget {
+  chamber: number;
+  entry: number;
+}
+
+/** An option in the driver comparison: a catalog part, and a compression driver's or tweeter's horn (null: none). */
+export interface DriverCompareOption {
+  driverId: SpeakerDriver["driverId"];
+  hornId: string | null;
+}
+
+/** A problem in a driver comparison's Checks column: its words, and whether your design has it too (it shows gray). */
+export interface CompareProblem {
+  text: string;
+  yoursToo: boolean;
+}
+
 /** A card's change from your design (null where either side has no number). */
 export interface SpeakerOptimizerDelta {
   price: number;
@@ -4390,7 +4408,7 @@ export interface PaDriverCompareRow {
   /** what fails the planner's checks or the optimizer's limits (empty: passes); `yoursToo` when your design fails the
    * same way (whatever you pick, so it doesn't tell the options apart; amounts over a limit and the mid's Qtc differ
    * per option, so those are never marked) */
-  problems: (PaProblem & { yoursToo: boolean })[];
+  problems: (PaProblem & CompareProblem)[];
 }
 
 /** A slider's range and step (an amp slider's steps, with its top). */

@@ -92,6 +92,9 @@ const BAND_DASH = "6 4";
 /** The dash pattern of a target curve drawn in ink beside a measured curve in ink (the Space page's response chart). */
 export const TARGET_DASH = BAND_DASH;
 
+/** The dash pattern of a previewed option's curves (the Speaker page's driver comparison): shorter than a band's dash. */
+export const PREVIEW_DASH = "3 3";
+
 /**
  * A band's line on a chart, by its place among `count` bands, low to high: the lowest in yellow (`yellowLine`: a sub, a
  * woofer alone), the highest in cyan (horn and tweeter), the ones between in magenta (mid-bass and woofer), every second

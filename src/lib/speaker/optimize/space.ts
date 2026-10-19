@@ -119,13 +119,14 @@ const CROSSOVER_MIN_HZ = 20;
 const SIZE_FACTORS: [number, number] = [0.7, 1.5];
 
 /**
- * A cone kind's candidates: same kind and nominal size, with a US price and T/S, each driver once (`inSearchSpace`);
- * your part always.
+ * A cone kind's candidates: same kind and nominal size (`anySize`: every size, as the driver comparison lists them; a
+ * size that doesn't fit is marked there), with a US price and T/S, each driver once (`inSearchSpace`); your part always.
  */
-function coneCandidates(
+export function coneCandidates(
   kind: DriverKind,
   current: string,
   catalog: SpeakerOptimizerCatalog,
+  anySize = false,
 ): string[] {
   const table: readonly { id: string; size: number; price: number | null; variantOf?: string }[] =
     kind === DRIVER_KIND.sub
@@ -141,7 +142,9 @@ function coneCandidates(
   if (!own) return [current];
   const ids = table
     .filter(
-      (d) => d.id === current || (inSearchSpace(d) && d.size === own.size && d.price !== null),
+      (d) =>
+        d.id === current ||
+        (inSearchSpace(d) && (anySize || d.size === own.size) && d.price !== null),
     )
     .map((d) => d.id);
   // a coaxial with an HF section keeps one (its HF band would lose its model)
@@ -151,7 +154,7 @@ function coneCandidates(
 }
 
 /** A datasheet driver's candidates with their horns (see the plan's search space). */
-function hfCandidates(
+export function hfCandidates(
   driver: SpeakerDriver,
   catalog: SpeakerOptimizerCatalog,
   driverLocked: boolean,

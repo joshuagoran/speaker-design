@@ -32,6 +32,16 @@ interface Series {
    * absent: drawn along the floor
    */
   clipAtFloor?: boolean;
+  /**
+   * a placeholder: no line, and its legend item keeps its room but shows nothing, so a curve that comes and goes (a
+   * previewed option) doesn't move what is under the pointer
+   */
+  hidden?: boolean;
+  /**
+   * its legend item takes one line of its own, cut to the width: the legend's height then never hangs on the label (a
+   * previewed option's name), so nothing below it moves
+   */
+  ownLine?: boolean;
 }
 
 /** A labeled vertical line at a frequency. */
@@ -180,6 +190,7 @@ export function ResponseChart({
   };
   const hits = hf
     ? (paths
+        .filter((p) => !p.hidden)
         .map((p) => {
           // a curve clipped at the floor reads nothing where it is not drawn
           const pts = p.curve.filter(
@@ -285,20 +296,22 @@ export function ResponseChart({
             />
           ) : null,
         )}
-        {paths.map((p) => (
-          <path
-            key={p.id ?? p.label}
-            d={p.d}
-            fill="none"
-            stroke={p.stroke}
-            strokeWidth={p.width ?? 2}
-            strokeDasharray={p.dash}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            style={{ opacity: faded(p) }}
-            className={HOVER_TRANSITION}
-          />
-        ))}
+        {paths
+          .filter((p) => !p.hidden)
+          .map((p) => (
+            <path
+              key={p.id ?? p.label}
+              d={p.d}
+              fill="none"
+              stroke={p.stroke}
+              strokeWidth={p.width ?? 2}
+              strokeDasharray={p.dash}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              style={{ opacity: faded(p) }}
+              className={HOVER_TRANSITION}
+            />
+          ))}
         {hf && (
           <g pointerEvents="none">
             <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={pal.muted} strokeWidth="1" />
@@ -378,8 +391,9 @@ export function ResponseChart({
             <span
               key={p.id ?? p.label}
               // a pointer over it or keyboard focus on it brings its curve forward
-              tabIndex={0}
-              className={`flex items-center gap-1.5 cursor-default rounded hover:text-stone-900 focus-visible:text-stone-900 ${HOVER_TRANSITION}`}
+              tabIndex={p.hidden ? -1 : 0}
+              aria-hidden={p.hidden}
+              className={`flex items-center gap-1.5 cursor-default rounded hover:text-stone-900 focus-visible:text-stone-900 ${p.hidden ? "invisible" : ""} ${p.ownLine ? "basis-full justify-center min-w-0" : ""} ${HOVER_TRANSITION}`}
               onMouseEnter={() => setHot(keyOf(p))}
               onMouseLeave={() => setHot(null)}
               onFocus={() => setHot(keyOf(p))}
@@ -395,7 +409,7 @@ export function ResponseChart({
                   }
                 />
               )}
-              {p.label}
+              {p.ownLine ? <span className="truncate min-w-0">{p.label}</span> : p.label}
             </span>
           ))}
           {paths.some((p) => p.bandD) && (
