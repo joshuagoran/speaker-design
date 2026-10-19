@@ -49,14 +49,12 @@ import {
   STACK_SETTINGS_SECTIONS,
   type StackSettingsSection,
 } from "../../constants/settingsSections";
-import { OLD_SAVE_GROUP_NAMES, STACK_TEXT } from "../../constants/stack";
+import { STACK_TEXT } from "../../constants/stack";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
-import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
-import { paPlannerDesign } from "../speaker/paPlannerDesign";
 import { MemberSettings } from "./MemberSettings";
 import { stackDispersionChips, stackKeepUpChips } from "./stackChips";
 import { stackSummary } from "./stackSummary";
@@ -65,23 +63,20 @@ import { StackOptimizerSettings, stackOptimizerSummary } from "./StackOptimizerS
 import { SummaryStrip } from "../../components/ui/SummaryStrip";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
-import { STACK_STARTS, startGroup, startLayers } from "./stackPresets";
+import { STACK_PRESETS, presetLayers } from "./stackPresets";
 import {
-  STACK_START,
+  STACK_PRESET,
   STACK_START_DESIGN_NAMES,
+  STACK_START_GROUPS,
   STACK_START_NAMES,
-  type StackStart,
+  type StackPreset,
 } from "../../constants/stackPresets";
-import { stackFromOldSave, type OldSave } from "./oldSaves";
-import { useOldSaves } from "./useOldSaves";
 import type { StackPlanner } from "./useStack";
-import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 
 interface Props {
   stack: StackPlanner;
   /** the speaker library: the Speaker page's store */
   speakerPage: Pick<SpeakerPageState, "store">;
-  planner: PaPlanner;
 }
 
 /** The sum's key on the charts: no member's key ("m0", "m1"…) takes it. */
@@ -95,10 +90,10 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
 
 /**
  * The Stack page: speakers in a fixed relationship (docs/speaker-designer-plan.md, L4a). Members from the speaker
- * library or the current PA design, where each stands, its crossover, level and delay; the stack's response and maximum
+ * library or a preset, where each stands, its crossover, level and delay; the stack's response and maximum
  * output at its listening point on fixed axes, with each member's curve, and the stacks' library.
  */
-export function StackPage({ stack, speakerPage, planner }: Props) {
+export function StackPage({ stack, speakerPage }: Props) {
   const pal = usePalette();
   const { design, response, limits, totals, optimizer, store, snapshot, restore } = stack;
   const { members, name, notes } = design.stack;
@@ -111,35 +106,23 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
   });
   const [pick, setPick] = useState<string>("");
   const picked = library.find((o) => o.id === pick) ?? library[0];
-  /** the PA and Hi-fi pages' saves, which open as stacks */
-  const oldSaves = useOldSaves();
-  const [oldPick, setOldPick] = useState<string>("");
-  const oldPicked = oldSaves.find((o) => o.id === oldPick) ?? oldSaves[0];
-  /** whether the save last opened doesn't read as its page's (it opens as nothing, and a notice says so) */
-  const [oldSaveBad, setOldSaveBad] = useState(false);
-  const openOldSave = (save: OldSave) => {
-    const opened = stackFromOldSave(save);
-    setOldSaveBad(!opened);
-    if (opened) stack.setDesign(opened);
-  };
   /** each member's name: its speaker's, numbered */
   const names = members.map(
     (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
   );
   const lineOf = (k: number) => bandLine(pal, k, members.length);
-  const startOptions = STACK_STARTS.map((id) => ({
+  const startOptions = STACK_PRESETS.map((id) => ({
     id,
     name: STACK_START_NAMES[id],
-    group: startGroup(id),
+    group: STACK_START_GROUPS.presets,
   }));
-  const [start, setStart] = useState<StackStart>(STACK_START.paStack);
-  /** replaces the stack with the start's: a preset, or the current PA design on the PA floor's starting layout */
+  const [start, setStart] = useState<StackPreset>(STACK_PRESET.paStack);
+  /** replaces the stack with the preset's */
   const startFrom = () => {
-    const { stack: started, speakers } = startLayers(
-      start,
-      { id: DRAFT_STACK_ID, name: STACK_START_DESIGN_NAMES[start] },
-      { pa: paPlannerDesign(planner), floor: DEFAULT_COVERAGE_LAYOUT },
-    );
+    const { stack: started, speakers } = presetLayers(start, {
+      id: DRAFT_STACK_ID,
+      name: STACK_START_DESIGN_NAMES[start],
+    });
     stack.setDesign({ stack: started, speakers });
   };
   const summaries: Record<StackSettingsSection, string> = {
@@ -374,23 +357,6 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 }}
                 hint={STACK_TEXT.startHint}
               />
-              {oldPicked && (
-                <>
-                  <SelectField
-                    label={STACK_TEXT.oldSave}
-                    options={oldSaves}
-                    value={oldPicked}
-                    onChange={(o) => {
-                      setOldPick(o.id);
-                      setOldSaveBad(false);
-                    }}
-                    group={(o) => OLD_SAVE_GROUP_NAMES[o.kind]}
-                  />
-                  <Button onClick={() => openOldSave(oldPicked)}>{STACK_TEXT.openOldSave}</Button>
-                  {oldSaveBad && <Notice>{STACK_TEXT.oldSaveBad}</Notice>}
-                  <p className="text-xs text-stone-500">{STACK_TEXT.oldSaveHint}</p>
-                </>
-              )}
             </>,
           )}
           {section(
