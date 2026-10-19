@@ -1,5 +1,12 @@
 import type { Folds } from "../../hooks/useFolds";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
+import {
+  SETTINGS_SHEET_CLASS,
+  SHEET_BELOW_CHART_CLASS,
+  SettingsSheetTabs,
+  settingsSheetBodyClass,
+  type SettingsSheet,
+} from "../../components/ui/SettingsSheetTabs";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { CardHeading } from "../../components/ui/CardHeading";
@@ -29,6 +36,7 @@ import { HANDLES } from "../../data/catalog/cabinet-hardware";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
 import {
   SPEAKER_SETTINGS_SECTIONS,
+  SPEAKER_SETTINGS_TABS,
   type SpeakerSettingsSection,
 } from "../../constants/settingsSections";
 import { ARCH_BLOCK_TEXT, SPEAKER_TEXT } from "../../constants/speakerPage";
@@ -64,18 +72,29 @@ const HANDLE_OPTIONS = HANDLES.map((h) => ({ id: h.id, name: h.name }));
 interface Props {
   speakerPage: SpeakerPageState;
   folds: Folds<SpeakerSettingsSection>;
+  /** the phone settings sheet: its tabs are the sections */
+  sheet: SettingsSheet<SpeakerSettingsSection>;
   /** opens the driver comparison for a chamber's driver entry */
   onCompare: (chamber: number, entry: number) => void;
-  /** the driver comparison, while it is open: it takes the whole column in place of the settings */
+  /** the driver comparison, while it is open: it takes the whole column (on a phone, the sheet) in place of the settings */
   compareView?: React.ReactNode;
+  /** closes the driver comparison: a tap on a sheet tab does */
+  onCloseCompare: () => void;
 }
 
 /**
  * The Speaker page's settings column: Construction (the shell, its walls, its top and its hardware), Chambers (each
- * chamber's card), Bands and filters (the external crossover and each band), Look and Optimizer. Each section folds to
- * a summary of its key facts.
+ * chamber's card), Bands and filters (the external crossover and each band), Look and Optimizer. From md up each
+ * section folds to a summary of its key facts; on a phone each is a tab of the settings sheet.
  */
-export function SpeakerSettings({ speakerPage, folds, onCompare, compareView }: Props) {
+export function SpeakerSettings({
+  speakerPage,
+  folds,
+  sheet,
+  onCompare,
+  compareView,
+  onCloseCompare,
+}: Props) {
   const { spec, response, optimizer } = speakerPage;
   const { cabinet } = spec;
   const { chambers, construction, top, insetIn, panel, handles, inputDish } = cabinet;
@@ -116,204 +135,225 @@ export function SpeakerSettings({ speakerPage, folds, onCompare, compareView }: 
       id={id}
       title={SPEAKER_SETTINGS_SECTIONS[id]}
       folds={folds}
+      foldsAt="desktop"
       summary={summaries[id]}
+      className={sheet.tabClass(id)}
     >
       {children}
     </SettingsSection>
   );
-  // the same column either way, so its scroll pane and the divider's measure stay
-  if (compareView) return <SettingsColumn>{compareView}</SettingsColumn>;
+  // the same column either way, so its scroll pane, the divider's measure and the phone sheet stay
   return (
-    <SettingsColumn folds={folds}>
-      {section(
-        "construction",
+    <SettingsColumn
+      folds={compareView ? undefined : folds}
+      foldsAt="desktop"
+      className={SETTINGS_SHEET_CLASS}
+      bodyClassName={`${settingsSheetBodyClass(sheet.open)} ${compareView ? SHEET_BELOW_CHART_CLASS : ""}`}
+      top={
+        <SettingsSheetTabs
+          sections={SPEAKER_SETTINGS_SECTIONS}
+          labels={SPEAKER_SETTINGS_TABS}
+          sheet={sheet}
+          heading={!compareView}
+          onTab={onCloseCompare}
+        />
+      }
+    >
+      {compareView ?? (
         <>
-          <ToggleGroup
-            label={SPEAKER_TEXT.construction}
-            value={construction}
-            onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, construction: v }))}
-            options={entriesOf(CABINET_CONSTRUCTION_NAMES)}
-          />
-          {framed && (
-            <NumberField
-              label={<Tooltip tip={SPEAKER_TEXT.insetTip}>{SPEAKER_TEXT.inset}</Tooltip>}
-              value={insetIn}
-              min={0}
-              step={0.125}
-              onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, insetIn: v }))}
-            />
-          )}
-          <ToggleGroup
-            label={
-              <Tooltip tip={SPEAKER_TEXT.wallPanelTip(formatThickness(BAFFLE_PLY_IN))}>
-                {SPEAKER_TEXT.wallPanel}
-              </Tooltip>
-            }
-            value={panel.nominal}
-            onChange={(nominal) =>
-              speakerPage.editCabinet((c) => ({ ...c, panel: withWallPanel(c.panel, nominal) }))
-            }
-            options={PANEL_NOMINAL_OPTIONS}
-          />
-          {/* an arched top only for a speaker of Box chambers (a horn chamber turns it flat: useSpeakerPage) */}
-          {boxOnly && (
-            <ToggleGroup
-              label={<Tooltip tip={SETTINGS_TEXT.topTip}>{SETTINGS_TEXT.top}</Tooltip>}
-              value={top}
-              onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, top: v }))}
-              options={entriesOf(CABINET_TOP_NAMES)}
-            />
-          )}
-          {boxOnly && top === CABINET_TOP.arched && arch !== null && (
-            <Notice>
-              {SPEAKER_TEXT.archFlat} {ARCH_BLOCK_TEXT[arch]}
-            </Notice>
-          )}
-          <ToggleGroup
-            label={<Tooltip tip={SETTINGS_TEXT.handlesTip}>{SETTINGS_TEXT.handles}</Tooltip>}
-            value={handles !== null}
-            onChange={(on) =>
-              speakerPage.editCabinet((c) => ({
-                ...c,
-                // on: the PA sub box's preset handles
-                handles: on ? (c.handles ?? DEFAULT_HARDWARE.sub) : null,
-              }))
-            }
-            options={HANDLES_OPTIONS}
-          />
-          {handles && (
+          {section(
+            "construction",
             <>
-              <SelectField
-                label={SETTINGS_TEXT.handleType}
-                options={HANDLE_OPTIONS}
-                value={byId(HANDLE_OPTIONS, handles.model)}
-                onChange={(o) => {
-                  // the picker lists exactly the catalog's handles
-                  const model = HANDLES.find((h) => h.id === o.id)?.id;
-                  if (model)
-                    speakerPage.editCabinet((c) => ({
-                      ...c,
-                      handles: c.handles && { ...c.handles, model },
-                    }));
-                }}
+              <ToggleGroup
+                label={SPEAKER_TEXT.construction}
+                value={construction}
+                onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, construction: v }))}
+                options={entriesOf(CABINET_CONSTRUCTION_NAMES)}
               />
-              <HandleOffsetFields
-                handles={handles}
-                onChange={(change) =>
+              {framed && (
+                <NumberField
+                  label={<Tooltip tip={SPEAKER_TEXT.insetTip}>{SPEAKER_TEXT.inset}</Tooltip>}
+                  value={insetIn}
+                  min={0}
+                  step={0.125}
+                  onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, insetIn: v }))}
+                />
+              )}
+              <ToggleGroup
+                label={
+                  <Tooltip tip={SPEAKER_TEXT.wallPanelTip(formatThickness(BAFFLE_PLY_IN))}>
+                    {SPEAKER_TEXT.wallPanel}
+                  </Tooltip>
+                }
+                value={panel.nominal}
+                onChange={(nominal) =>
+                  speakerPage.editCabinet((c) => ({ ...c, panel: withWallPanel(c.panel, nominal) }))
+                }
+                options={PANEL_NOMINAL_OPTIONS}
+              />
+              {/* an arched top only for a speaker of Box chambers (a horn chamber turns it flat: useSpeakerPage) */}
+              {boxOnly && (
+                <ToggleGroup
+                  label={<Tooltip tip={SETTINGS_TEXT.topTip}>{SETTINGS_TEXT.top}</Tooltip>}
+                  value={top}
+                  onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, top: v }))}
+                  options={entriesOf(CABINET_TOP_NAMES)}
+                />
+              )}
+              {boxOnly && top === CABINET_TOP.arched && arch !== null && (
+                <Notice>
+                  {SPEAKER_TEXT.archFlat} {ARCH_BLOCK_TEXT[arch]}
+                </Notice>
+              )}
+              <ToggleGroup
+                label={<Tooltip tip={SETTINGS_TEXT.handlesTip}>{SETTINGS_TEXT.handles}</Tooltip>}
+                value={handles !== null}
+                onChange={(on) =>
                   speakerPage.editCabinet((c) => ({
                     ...c,
-                    handles: c.handles && { ...c.handles, ...change },
+                    // on: the PA sub box's preset handles
+                    handles: on ? (c.handles ?? DEFAULT_HARDWARE.sub) : null,
                   }))
                 }
+                options={HANDLES_OPTIONS}
               />
-            </>
+              {handles && (
+                <>
+                  <SelectField
+                    label={SETTINGS_TEXT.handleType}
+                    options={HANDLE_OPTIONS}
+                    value={byId(HANDLE_OPTIONS, handles.model)}
+                    onChange={(o) => {
+                      // the picker lists exactly the catalog's handles
+                      const model = HANDLES.find((h) => h.id === o.id)?.id;
+                      if (model)
+                        speakerPage.editCabinet((c) => ({
+                          ...c,
+                          handles: c.handles && { ...c.handles, model },
+                        }));
+                    }}
+                  />
+                  <HandleOffsetFields
+                    handles={handles}
+                    onChange={(change) =>
+                      speakerPage.editCabinet((c) => ({
+                        ...c,
+                        handles: c.handles && { ...c.handles, ...change },
+                      }))
+                    }
+                  />
+                </>
+              )}
+              <ToggleGroup
+                label={<Tooltip tip={SETTINGS_TEXT.dishTip}>{SETTINGS_TEXT.dish}</Tooltip>}
+                value={inputDish}
+                onChange={(on) => speakerPage.editCabinet((c) => ({ ...c, inputDish: on }))}
+                options={DISH_OPTIONS}
+              />
+            </>,
           )}
-          <ToggleGroup
-            label={<Tooltip tip={SETTINGS_TEXT.dishTip}>{SETTINGS_TEXT.dish}</Tooltip>}
-            value={inputDish}
-            onChange={(on) => speakerPage.editCabinet((c) => ({ ...c, inputDish: on }))}
-            options={DISH_OPTIONS}
-          />
-        </>,
-      )}
-      {section(
-        "chambers",
-        <>
-          {chambers.map((chamber, i) => (
-            <ChamberSettings
-              key={speakerPage.chamberKey(i)}
-              index={i}
-              chamber={chamber}
-              result={response.chambers[i]}
-              bands={spec.bands}
-              cabinet={cabinet}
-              placed={layout.chambers[i]}
-              onEdit={(edit) => speakerPage.editChamber(i, edit)}
-              onRemove={one ? undefined : () => speakerPage.removeChamber(i)}
-              onCompare={(entry) => onCompare(i, entry)}
-            />
-          ))}
-          <div>
-            <Button
-              variant="primary"
-              onClick={() =>
-                speakerPage.editChambers((list) => {
-                  // stacked on the highest chamber, braced as the last one (its walls and back panel)
-                  const height = Math.max(0, ...list.map((c) => c.at.yIn + c.dims.h));
-                  const bracing = list.at(-1)?.bracing ?? DEFAULT_SPEAKER_CHAMBER.bracing;
-                  return [
-                    ...list,
-                    { ...DEFAULT_SPEAKER_CHAMBER, bracing, at: { xIn: 0, yIn: height } },
-                  ];
-                })
-              }
-            >
-              {SETTINGS_TEXT.addChamber}
-            </Button>
-          </div>
-        </>,
-      )}
-      {section(
-        "bands",
-        <>
-          <Card>
-            <CardHeading>
-              <Tooltip tip={SETTINGS_TEXT.externalCrossoverTip}>
-                {SETTINGS_TEXT.externalCrossover}
-              </Tooltip>
-            </CardHeading>
-            <FilterFields
-              filters={spec.input}
-              // a new corner at the PA's crossover to its subs
-              newCornerHz={DEFAULT_PA.xoLo}
-              onEdit={speakerPage.editInput}
-            />
-          </Card>
-          {spec.bands.map((band, i) => (
-            <BandSettings
-              key={band.id}
-              band={band}
-              index={i}
-              count={spec.bands.length}
-              newCornerHz={DEFAULT_HIFI.crossoverHz}
-              onEdit={(edit) => speakerPage.editBand(i, edit)}
-              onRemove={spec.bands.length > 1 ? () => speakerPage.removeBand(band.id) : undefined}
-            />
-          ))}
-          <div className="flex flex-wrap gap-1">
-            <Button variant="primary" onClick={speakerPage.addBand}>
-              Add band
-            </Button>
-          </div>
-          <AutoBalanceButton
-            balance={speakerPage.balance}
-            onApply={speakerPage.applyBalance}
-            mode={speakerPage.balanceMode}
-            onMode={speakerPage.setBalanceMode}
-          />
-        </>,
-      )}
-      {section(
-        "look",
-        <>
-          <CabinetFinishPicker
-            value={cabFinish}
-            onChange={(v) => speakerPage.editLook({ cabFinish: v })}
-          />
-          <BaffleColorPicker
-            value={baffleColor}
-            onChange={(v) => speakerPage.editLook({ baffleColor: v })}
-          />
-          {firstHorn && (
-            <HornColorPicker
-              value={spec.look.hornColor}
-              onChange={(hornColor) => speakerPage.editLook({ hornColor })}
-              horn={firstHorn}
-            />
+          {section(
+            "chambers",
+            <>
+              {chambers.map((chamber, i) => (
+                <ChamberSettings
+                  key={speakerPage.chamberKey(i)}
+                  index={i}
+                  chamber={chamber}
+                  result={response.chambers[i]}
+                  bands={spec.bands}
+                  cabinet={cabinet}
+                  placed={layout.chambers[i]}
+                  onEdit={(edit) => speakerPage.editChamber(i, edit)}
+                  onRemove={one ? undefined : () => speakerPage.removeChamber(i)}
+                  onCompare={(entry) => onCompare(i, entry)}
+                />
+              ))}
+              <div>
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    speakerPage.editChambers((list) => {
+                      // stacked on the highest chamber, braced as the last one (its walls and back panel)
+                      const height = Math.max(0, ...list.map((c) => c.at.yIn + c.dims.h));
+                      const bracing = list.at(-1)?.bracing ?? DEFAULT_SPEAKER_CHAMBER.bracing;
+                      return [
+                        ...list,
+                        { ...DEFAULT_SPEAKER_CHAMBER, bracing, at: { xIn: 0, yIn: height } },
+                      ];
+                    })
+                  }
+                >
+                  {SETTINGS_TEXT.addChamber}
+                </Button>
+              </div>
+            </>,
           )}
-        </>,
+          {section(
+            "bands",
+            <>
+              <Card>
+                <CardHeading>
+                  <Tooltip tip={SETTINGS_TEXT.externalCrossoverTip}>
+                    {SETTINGS_TEXT.externalCrossover}
+                  </Tooltip>
+                </CardHeading>
+                <FilterFields
+                  filters={spec.input}
+                  // a new corner at the PA's crossover to its subs
+                  newCornerHz={DEFAULT_PA.xoLo}
+                  onEdit={speakerPage.editInput}
+                />
+              </Card>
+              {spec.bands.map((band, i) => (
+                <BandSettings
+                  key={band.id}
+                  band={band}
+                  index={i}
+                  count={spec.bands.length}
+                  newCornerHz={DEFAULT_HIFI.crossoverHz}
+                  onEdit={(edit) => speakerPage.editBand(i, edit)}
+                  onRemove={
+                    spec.bands.length > 1 ? () => speakerPage.removeBand(band.id) : undefined
+                  }
+                />
+              ))}
+              <div className="flex flex-wrap gap-1">
+                <Button variant="primary" onClick={speakerPage.addBand}>
+                  Add band
+                </Button>
+              </div>
+              <AutoBalanceButton
+                balance={speakerPage.balance}
+                onApply={speakerPage.applyBalance}
+                mode={speakerPage.balanceMode}
+                onMode={speakerPage.setBalanceMode}
+              />
+            </>,
+          )}
+          {section(
+            "look",
+            <>
+              <CabinetFinishPicker
+                value={cabFinish}
+                onChange={(v) => speakerPage.editLook({ cabFinish: v })}
+              />
+              <BaffleColorPicker
+                value={baffleColor}
+                onChange={(v) => speakerPage.editLook({ baffleColor: v })}
+              />
+              {firstHorn && (
+                <HornColorPicker
+                  value={spec.look.hornColor}
+                  onChange={(hornColor) => speakerPage.editLook({ hornColor })}
+                  horn={firstHorn}
+                />
+              )}
+            </>,
+          )}
+          {section("optimizer", <SpeakerOptimizerSettings optimizer={optimizer} />)}
+        </>
       )}
-      {section("optimizer", <SpeakerOptimizerSettings optimizer={optimizer} />)}
     </SettingsColumn>
   );
 }

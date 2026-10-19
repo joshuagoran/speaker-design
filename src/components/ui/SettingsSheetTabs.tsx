@@ -20,6 +20,12 @@ export const settingsSheetBodyClass = (open: boolean) =>
   `max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:h-[min(var(--sheet-h,30dvh),70dvh)] ${open ? "" : "max-md:hidden"}`;
 
 /**
+ * A cap on the phone sheet's body, so the sheet stays under 58% of the screen and a chart at the top of the screen
+ * shows above it (the Speaker page's driver comparison, which previews rows on its response chart).
+ */
+export const SHEET_BELOW_CHART_CLASS = "max-md:max-h-[calc(58dvh-7.5rem)]";
+
+/**
  * The room a page leaves at its bottom on phones for the settings sheet: the bar and the tabs while it is closed; open,
  * also the heading and the body's height (as `settingsSheetBodyClass` sets it).
  */

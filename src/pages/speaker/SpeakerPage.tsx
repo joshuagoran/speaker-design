@@ -5,6 +5,7 @@ import { bandColor } from "../../lib/speaker/bandColor";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
+import { useSettingsSheet } from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Notice } from "../../components/ui/Notice";
@@ -64,7 +65,10 @@ import {
   MAX_OUTPUT_TOP,
   DISPERSION_DISTANCE_M,
 } from "../../constants/chartScales";
-import { SPEAKER_SETTINGS_SECTIONS } from "../../constants/settingsSections";
+import {
+  SPEAKER_SETTINGS_SECTIONS,
+  type SpeakerSettingsSection,
+} from "../../constants/settingsSections";
 import { SPEAKER_TEXT, MODEL_GAP_TEXT, FOLD_EDITOR_TEXT } from "../../constants/speakerPage";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { CHAMBER_LOAD, HORN_PATH } from "../../constants/speakerSpec";
@@ -133,6 +137,7 @@ function SpeakerPageBody({ speakerPage }: Props) {
     {},
     FOLDS_START,
   );
+  const sheet = useSettingsSheet<SpeakerSettingsSection>("speaker", "chambers");
   const { options: startOptions, startWith } = useSpeakerStart(speakerPage);
   /** the 2D view picked (a position field with focus shows the one that marks its point: `shownView`) */
   const [picked2d, setPicked2d] = useState<SpeakerView>(SPEAKER_VIEW.front);
@@ -285,10 +290,19 @@ function SpeakerPageBody({ speakerPage }: Props) {
   const cmp = useDriverCompare(spec, compareOpen);
   // an entry that went away (removed, or its chamber) closes the block
   if (compare && !cmp.driver) setCompare(null);
+  /** from md up: the comparison sits in the settings column and a click uses a row; on a phone it fills the sheet */
+  const mdUp = useMediaQuery(MD_UP);
   const compareBlock = useRef<HTMLElement>(null);
+  /** the Response section: on a phone it comes into view above the sheet while the comparison is open */
+  const responseBlock = useRef<HTMLElement>(null);
   useEffect(() => {
-    // on a phone too: the block opens in the results, away from the Compare button
-    if (compare) compareBlock.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (!compare) return;
+    if (mdUp) compareBlock.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    else {
+      // on a phone the block takes the sheet from its top, and the response chart shows above it
+      compareBlock.current?.scrollIntoView({ block: "start" });
+      responseBlock.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
   }, [compare?.opened]);
   const openCompare = (chamber: number, entry: number) => {
     const d = spec.cabinet.chambers[chamber]?.drivers[entry];
@@ -345,7 +359,7 @@ function SpeakerPageBody({ speakerPage }: Props) {
           },
         ]
       : [];
-  /** the response chart: in the results, and on top of the driver comparison on a phone */
+  /** the response chart, in the results */
   const responseChart = (
     <ResponseChart
       fmin={FREQ_AXIS_MIN_HZ}
@@ -362,23 +376,16 @@ function SpeakerPageBody({ speakerPage }: Props) {
       marks={fbMarks}
     />
   );
-  /** from md up: the comparison sits in the settings column and a click uses a row; on a phone it fills the screen */
-  const mdUp = useMediaQuery(MD_UP);
-  /** the driver comparison in the settings column, while it is open */
+  /** the driver comparison in the settings column (on a phone, the sheet), while it is open */
   const compareView =
     compareOpen && cmp.driver ? (
-      <section
-        ref={compareBlock}
-        className={`min-w-0 ${GAP_Y} max-md:fixed max-md:inset-0 max-md:z-40 max-md:overflow-y-auto max-md:bg-white max-md:p-4`}
-      >
+      <section ref={compareBlock} className={`min-w-0 ${GAP_Y}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SectionHeading>{DRIVER_COMPARE_TEXT.heading}</SectionHeading>
           <Button size="xs" onClick={() => setCompare(null)}>
             {DRIVER_COMPARE_TEXT.close}
           </Button>
         </div>
-        {/* on a phone the chart stays on top while the list scrolls */}
-        {!mdUp && <div className="sticky -top-4 z-10 bg-white pt-4">{responseChart}</div>}
         <p className="text-xs text-stone-500">
           {DRIVER_COMPARE_TEXT.line(mdUp ? DRIVER_COMPARE_TEXT.hover : DRIVER_COMPARE_TEXT.tap)}
           {mdUp && <>{DRIVER_COMPARE_TEXT.clickToSwap}</>}
@@ -404,6 +411,7 @@ function SpeakerPageBody({ speakerPage }: Props) {
     ) : undefined;
   return (
     <SettingsLayout
+      sheet={sheet}
       results={
         <div className="flex flex-col gap-5">
           <SaveRow
@@ -449,8 +457,10 @@ function SpeakerPageBody({ speakerPage }: Props) {
                         }))
                       }
                       onPickDriver={(i, j) => {
-                        // its box is in the Chambers section: open it, and the box opens and scrolls into view
+                        // its box is in the Chambers section: open it (on a phone, the sheet on its tab), and the
+                        // box opens and scrolls into view
                         if (!folds.open.chambers) folds.toggle("chambers");
+                        if (!mdUp) sheet.show("chambers");
                         positionFocus.pickDriver(i, j);
                       }}
                       focus={focus}
@@ -511,7 +521,7 @@ function SpeakerPageBody({ speakerPage }: Props) {
           </section>
           {/* Response beside Maximum output once the pane is wide enough, the tiles under each */}
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} ${resultsGridClass(wide)}`}>
-            <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
+            <section ref={responseBlock} className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
               <SectionHeading>{SPEAKER_TEXT.response}</SectionHeading>
               {responseChart}
               {/* a chamber the model leaves out is named with its reason, never dropped silently */}
@@ -590,8 +600,10 @@ function SpeakerPageBody({ speakerPage }: Props) {
         <SpeakerSettings
           speakerPage={speakerPage}
           folds={folds}
+          sheet={sheet}
           onCompare={openCompare}
           compareView={compareView}
+          onCloseCompare={() => setCompare(null)}
         />
       }
     />
