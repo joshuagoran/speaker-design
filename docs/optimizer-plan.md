@@ -1,5 +1,7 @@
 # Optimizer: proposal
 
+> History: this document describes the PA page's optimizer. The switch-over (#178) removed the PA, Hi-fi, Coverage, and Fills pages.
+
 Goal: in the planner, set limits (price, weight, amp power, box dimensions) and get the best
 configuration, plus two competitive alternatives, in about a second, without leaving the page.
 

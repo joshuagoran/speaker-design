@@ -27,7 +27,7 @@ Issue: #178 (Switch-over).
 
 ## Where the model code moves
 
-`src/lib/pa` and `src/lib/hifi` go away. Their shared code moves by what it does, not by the old page. PR 2 settles the final file names.
+`src/lib/pa` and `src/lib/hifi` go away. Their shared code moves by what it does, not by the old page. PR 2 settles the final file names: `pa/calc` is `acoustics/boxModels`, and `hifi/hifi` splits into `acoustics/wooferBox`, `acoustics/directivity`, and `speaker/twoWay`.
 
 | Folder                | What goes there                                                                        | From                                                                                                                                                                                                                                                                                            |
 | --------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,6 +41,7 @@ Issue: #178 (Switch-over).
 - Delete each export it lists, then run it again until it lists none.
 - Delete tests that cover only deleted code.
 - Delete constants, types, and strings that only deleted code used.
+- The golden snapshot (`tests/golden-configs.ts`) counts as a user, so the goldens do not change.
 
 ## Saved data
 
@@ -57,6 +58,15 @@ Two PRs. Each keeps CI green.
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Remove the old pages (all the user sees changes here). Open on the Speaker page, and remove the old pages' tabs. Old links get no redirect. Move `assumptionGroups` out of `src/pages/coverage`. Remove the starts that copy the open PA or Hi-fi design, the Stack page's old saves list, and the `planner` and `hifi` props. Delete the Fills, Coverage, Hi-fi, and PA pages, their hooks, their cutlists, their tests, and their phone check sections. | `page-route` test for the default page. `vp check`, the full suite, and the phone check pass. The owner tasks pass.                                         |
 | 2   | Clean up (no change the user sees). Move the model code (see "Where the model code moves"). Run the dead code check and delete what it finds. Remove the old scripts. Update CLAUDE.md, README.md, and the docs. Mark the old plan docs as history.                                                                                                                                                                                                       | The dead code script lists nothing. `vp check` and the full suite pass. The speaker optimizer snapshot and the goldens do not change. The owner tasks pass. |
+
+## Status
+
+| PR  | Status                                                                                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Done (#212).                                                                                                                                               |
+| 2   | Done.                                                                                                                                                      |
+| 2   | CI: the unit tests, the phone check, and the 3D checks run as parallel jobs. The 3D job runs on a PR only when the 3D view or the horn mount code changes. |
+| 2   | Horn mount tests: each horn's scene checks run with its smallest and largest driver only.                                                                  |
 
 ## Owner tasks (acceptance)
 

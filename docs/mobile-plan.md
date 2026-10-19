@@ -1,5 +1,7 @@
 # Mobile responsiveness plan
 
+> History: this document describes the old pages' phone layout. The switch-over (#178) removed the PA, Hi-fi, Coverage, and Fills pages.
+
 Audit at 390 × 844 (iPhone 14) in headless Chromium, all four views, Sep 2026.
 
 ## Findings

@@ -1,5 +1,7 @@
 # Hi-fi tab: plan (branch `hifi`)
 
+> History: this document describes the Hi-fi page. The switch-over (#178) removed the PA, Hi-fi, Coverage, and Fills pages.
+
 A fifth tab for small home speakers. It reuses the planner's box models, charts, cutlist and optimizer, and
 adds only what a home 2-way needs. Nothing on the PA tabs changes.
 

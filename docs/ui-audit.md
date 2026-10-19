@@ -1,5 +1,7 @@
 # UI audit (stack planner)
 
+> History: this document describes the old stack planner. The switch-over (#178) removed the PA, Hi-fi, Coverage, and Fills pages.
+
 Scope: `tools/stack-planner.app.jsx` (2665 lines) and `tools/stack-planner.head.html`. Line refs are approximate and from the `passive-radiator` branch.
 
 ## 1. Component consistency
