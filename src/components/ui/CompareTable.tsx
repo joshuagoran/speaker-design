@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "./Button";
+import { Tooltip } from "./Tooltip";
 import { HOVER_TRANSITION } from "./buttonStyles";
 import {
   DRIVER_COMPARE_SORT,
@@ -21,6 +22,8 @@ export interface CompareRowBase {
 export interface CompareColumn<R> {
   key: string;
   head: string;
+  /** what the heading means, in a tooltip on it; absent: none */
+  tip?: string;
   cell: (row: R) => ReactNode;
 }
 
@@ -95,7 +98,7 @@ export function CompareTable<R extends CompareRowBase>({
   /** the space after each column */
   const gap = compact ? "pr-2" : "pr-3";
   /** a heading: a button that sorts by it, where the table sorts */
-  const head = (key: string, label: string) => {
+  const head = (key: string, label: ReactNode) => {
     if (!sort) return label;
     const on = sort.key === key;
     return (
@@ -127,7 +130,7 @@ export function CompareTable<R extends CompareRowBase>({
                 className={`py-1 ${gap} font-normal text-right`}
                 aria-sort={ariaSort(c.key)}
               >
-                {head(c.key, c.head)}
+                {head(c.key, c.tip ? <Tooltip tip={c.tip}>{c.head}</Tooltip> : c.head)}
               </th>
             ))}
             {checks && (

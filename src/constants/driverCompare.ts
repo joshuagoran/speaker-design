@@ -47,8 +47,9 @@ export const DRIVER_COMPARE_TEXT = {
   heads: {
     price: "Price",
     lb: "Weight",
-    /** its band's level: the band's name first ("Low dB") */
-    level: (band: string) => `${band} dB`,
+    level: "Avg dB",
+    /** the level column's tooltip */
+    levelTip: "Average level over your driver's band, at 2.83 V and 1 m.",
     f3: "F3",
     max: "Max dB",
   },

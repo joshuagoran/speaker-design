@@ -21,6 +21,7 @@ import {
 import { evaluateSpeaker, problemsOf, type SizeCaps, type SpeakerEval } from "./optimize/evaluate";
 import { isConeKind } from "./driverParts";
 import { settledCabinet } from "./speakerLayout";
+import { passbandEdgesHz } from "./speakerResponse";
 import { upperFirst } from "../format";
 import { SPEAKER_PROBLEM_TEXT } from "../../constants/speakerOptimizer";
 import {
@@ -43,15 +44,20 @@ export const ownOption = (d: Pick<SpeakerDriver, "driverId" | "horn">): DriverCo
 export type CompareOrigin = DriverCompareOption & Pick<SpeakerDriver, "kind">;
 
 /**
- * A driver entry's options, yours first: a cone's same-kind catalog drivers of every size with a US price and T/S
- * (`coneCandidates`; a size that doesn't fit its chamber fails the fit check, so it is marked and listed last), a
+ * A driver entry's options, yours first: a cone's same-kind, same-size catalog drivers with a US price and T/S
+ * (`coneCandidates`), a
  * compression driver's pairs with the horns its exit takes (`hfCandidates`), or a tweeter's on its waveguide. `origin`
  * stays among them while the entry is its kind, so a swap can always go back.
  */
 export function driverOptions(d: SpeakerDriver, origin?: CompareOrigin): DriverCompareOption[] {
   const own = ownOption(d);
   const found: DriverCompareOption[] = isConeKind(d.kind)
-    ? coneCandidates(d.kind, d.driverId, SPEAKER_OPTIMIZER_CATALOG, true).map((driverId) => ({
+    ? coneCandidates(
+        d.kind,
+        d.driverId,
+        SPEAKER_OPTIMIZER_CATALOG,
+        partFacts(d.kind, d.driverId).size ?? undefined,
+      ).map((driverId) => ({
         driverId,
         hornId: own.hornId,
       }))
@@ -95,12 +101,10 @@ export interface CompareBandCurves {
 }
 
 /**
- * One option's run through the page's model: its numbers, the facts and warnings its checks read, its band's level, and
+ * One option's run through the page's model: its numbers, the facts and warnings its checks read, and
  * the curves the charts preview (what the comparison's worker posts back).
  */
 export type DriverCompareRun = Pick<SpeakerEval, "metrics" | "facts" | "warnings"> & {
-  /** the entry's (first) band's passband level, dB; null when the model doesn't run it */
-  bandDb: number | null;
   /** the entry's bands (a coaxial's two), each modeled one */
   bands: CompareBandCurves[];
   /** the speaker's summed response and summed maximum output */
@@ -130,7 +134,6 @@ export function runOption(
     metrics: ev.metrics,
     facts: ev.facts,
     warnings: ev.warnings,
-    bandDb: ev.response.bands.find((b) => b.id === ids[0])?.passbandDb ?? null,
     bands,
     sum: ev.response.sum,
     maxSum: points(ev.limits.sum),
@@ -158,6 +161,11 @@ export interface DriverCompareRow {
   price: number | null;
   /** the part's own weight with its horn, lb; null when the catalog lists none */
   lb: number | null;
+  /**
+   * its band's average level, dB, over your part's band (`passbandEdgesHz` of yours), so every option is read over the
+   * same frequencies; null when the model doesn't run the band
+   */
+  levelDb: number | null;
   /** your design's part */
   yours: boolean;
   run: DriverCompareRun;
@@ -165,6 +173,15 @@ export interface DriverCompareRow {
   problems: CompareProblem[];
   /** it fails something your design doesn't */
   fails: boolean;
+}
+
+/** A curve's mean level, dB, over `window` (Hz, ends included); null when no point falls in it. */
+function meanOver(
+  curve: readonly FrequencyPoint[],
+  window: NonNullable<ReturnType<typeof passbandEdgesHz>>,
+): number | null {
+  const pts = curve.filter((p) => p.f >= window.lowHz && p.f <= window.highHz);
+  return pts.length ? pts.reduce((sum, p) => sum + p.spl, 0) / pts.length : null;
 }
 
 /** What the rows are made from besides the runs: the entry's kind and the option names. */
@@ -200,6 +217,8 @@ export function compareRows(
   const start = mine && runOf(mine);
   if (!start) return [];
   const yoursHas = new Set(problemTexts(start, start));
+  const yourCurve = start.bands[0]?.curve;
+  const window = yourCurve ? passbandEdgesHz(yourCurve) : null;
   return options.flatMap((option): DriverCompareRow[] => {
     const run = runOf(option);
     if (!run) return [];
@@ -217,6 +236,7 @@ export function compareRows(
         name: ctx.nameOf(option),
         price: part.priced ? part.price + (horn?.price ?? 0) : null,
         lb: part.weighed ? part.lb + (horn?.lb ?? 0) : null,
+        levelDb: window && run.bands[0] ? meanOver(run.bands[0].curve, window) : null,
         yours: id === ctx.yours,
         run,
         problems,
@@ -248,7 +268,7 @@ function sortValue(r: DriverCompareRow, key: DriverCompareSort): number | string
     case DRIVER_COMPARE_SORT.lb:
       return r.lb;
     case DRIVER_COMPARE_SORT.level:
-      return r.run.bandDb;
+      return r.levelDb;
     case DRIVER_COMPARE_SORT.f3:
       return m.f3;
     case DRIVER_COMPARE_SORT.max:

@@ -13,20 +13,16 @@ import {
   type DriverCompareRun,
 } from "../src/lib/speaker/driverCompare";
 import { evaluateSpeaker, speakerF3 } from "../src/lib/speaker/optimize/evaluate";
-import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { passbandDb, passbandEdgesHz, speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { cabinetBuild } from "../src/lib/speaker/speakerBuild";
 import { speakerPrice } from "../src/lib/speaker/speakerTotals";
 import { HIFI_WOOFERS } from "../src/lib/data";
 import { byId } from "../src/lib/tables";
-import { chamberClearFace } from "../src/lib/speaker/chamberAir";
-import { driverAcrossIn } from "../src/lib/speaker/speakerLayout";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { DRIVER_KIND } from "../src/constants/speakerSpec";
 import { DRIVER_COMPARE_SORT, SORT_DIRECTION } from "../src/constants/driverCompare";
-import { SPEAKER_PROBLEM, SPEAKER_PROBLEM_TEXT } from "../src/constants/speakerOptimizer";
-import { upperFirst } from "../src/lib/format";
 import type { DriverCompareOption, DriverCompareTarget, SpeakerSpec } from "../src/types";
 
 /** The Hi-fi 2-way template and its woofer entry. */
@@ -59,35 +55,16 @@ function runsOf(
   return runs;
 }
 
-const DRIVER_FIT_TEXT = upperFirst(SPEAKER_PROBLEM_TEXT[SPEAKER_PROBLEM.driverFit]);
-
-test("a Hi-fi 2-way woofer's options: yours, and only woofers that fit or are marked as not fitting", () => {
-  const { spec, target } = hifiWoofer();
+test("a Hi-fi 2-way woofer's options: yours, and only woofers of its size", () => {
+  const { target, spec } = hifiWoofer();
   const own = entryOf(spec, target);
   const options = driverOptions(own);
   assert.equal(optionKey(options[0] ?? ownOption(own)), optionKey(ownOption(own)), "yours first");
-  assert.ok(options.length > 1, "the catalog has other woofers");
-  const face = chamberClearFace(spec.cabinet, spec.cabinet.chambers[target.chamber]);
-  const room = Math.min(face.w, face.h);
-  const runs = runsOf(spec, target, options);
-  const rows = compareRows(options, (o) => runs.get(optionKey(o)), {
-    kind: own.kind,
-    yours: optionKey(ownOption(own)),
-    nameOf: (o) => o.driverId,
-  });
-  assert.equal(rows.length, options.length, "every option has a row");
-  for (const r of rows) {
-    const w = byId(HIFI_WOOFERS, r.option.driverId);
-    assert.ok(w, `${r.option.driverId} is a woofer`);
-    const across = driverAcrossIn({ ...own, driverId: w.id });
-    const marked = r.problems.some((p) => p.text === DRIVER_FIT_TEXT && !p.yoursToo);
-    if (across > room) assert.ok(marked && r.fails, `${w.id} doesn't fit and is marked`);
-    else assert.ok(!marked, `${w.id} fits and isn't marked`);
-  }
-  assert.ok(
-    rows.some((r) => r.fails),
-    "a size too big for the box is listed, marked",
-  );
+  assert.ok(options.length > 1, "the catalog has other woofers of its size");
+  const size = byId(HIFI_WOOFERS, own.driverId)?.size;
+  assert.ok(size, "your woofer has a size");
+  for (const o of options)
+    assert.equal(byId(HIFI_WOOFERS, o.driverId)?.size, size, `${o.driverId}: same size`);
 });
 
 test("every row's numbers come from the page's model: yours matches the page's results", () => {
@@ -101,7 +78,7 @@ test("every row's numbers come from the page's model: yours matches the page's r
   assert.equal(run.metrics.lb, cabinetBuild(spec.cabinet).lb);
   assert.equal(run.metrics.price, speakerPrice(spec.cabinet).dollars);
   assert.equal(run.metrics.f3, speakerF3(response));
-  assert.equal(run.bandDb, response.bands.find((b) => b.id === own.bands[0])?.passbandDb);
+  assert.deepEqual(run.bands[0]?.curve, response.bands.find((b) => b.id === own.bands[0])?.curve);
   assert.deepEqual(run.sum, response.sum);
   // another option: its run is the page's on the design with it put in
   const other = driverOptions(own)[1];
@@ -136,15 +113,16 @@ test("sort order: yours first, then failing options last, by maximum output", ()
   const runs = runsOf(spec, target, options);
   const mine = runs.get(optionKey(ownOption(own)));
   assert.ok(mine);
-  // every size is listed: the woofers too big for the box fail the fit check, yours doesn't
+  // two options fail something yours doesn't (set here: same-size options all fit)
+  const failing = new Set(options.slice(1, 3).map(optionKey));
   const rows = compareRows(options, (o) => runs.get(optionKey(o)), {
     kind: own.kind,
     yours: optionKey(ownOption(own)),
     nameOf: (o) => o.driverId,
-  });
+  }).map((r) => (failing.has(r.id) ? { ...r, fails: true } : r));
   assert.ok(
     rows.some((r) => r.fails),
-    "some option fails the fit",
+    "some option fails",
   );
   assert.ok(
     rows.some((r) => !r.fails && !r.yours),
@@ -219,4 +197,29 @@ test("sort: a row with no number goes last, either way", () => {
     );
     assert.equal(passing.at(-1)?.id, blank.id, `${dir}: no F3 last`);
   }
+});
+
+test("Avg dB reads every option over your driver's band: an option with less bass reads quieter there", () => {
+  const { spec, target } = hifiWoofer();
+  const own = entryOf(spec, target);
+  const options = driverOptions(own);
+  const runs = runsOf(spec, target, options);
+  const rows = compareRows(options, (o) => runs.get(optionKey(o)), {
+    kind: own.kind,
+    yours: optionKey(ownOption(own)),
+    nameOf: (o) => o.driverId,
+  });
+  const window = passbandEdgesHz(runs.get(optionKey(ownOption(own)))?.bands[0]?.curve ?? []);
+  assert.ok(window, "your band has a passband");
+  // an option whose own passband starts well above yours loses level over your band
+  const lean = rows.filter((r) => {
+    const edges = passbandEdgesHz(r.run.bands[0]?.curve ?? []);
+    return edges !== null && edges.lowHz > window.lowHz * 2;
+  });
+  assert.ok(lean.length > 0, "the catalog has a woofer with less bass");
+  for (const r of lean)
+    assert.ok(
+      (r.levelDb ?? 0) < passbandDb(r.run.bands[0]?.curve ?? []),
+      `${r.id}: quieter over your band than over its own`,
+    );
 });
