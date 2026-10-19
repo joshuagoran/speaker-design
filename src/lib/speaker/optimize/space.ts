@@ -139,12 +139,14 @@ export function coneCandidates(
             ? catalog.coaxial
             : [];
   const own = byId(table, current);
-  if (!own) return [current];
+  // a part outside the search space (a template's own driver) keeps only itself in the search; the comparison lists
+  // every size anyway
+  if (!own && !anySize) return [current];
   const ids = table
     .filter(
       (d) =>
         d.id === current ||
-        (inSearchSpace(d) && (anySize || d.size === own.size) && d.price !== null),
+        (inSearchSpace(d) && (anySize || d.size === own?.size) && d.price !== null),
     )
     .map((d) => d.id);
   // a coaxial with an HF section keeps one (its HF band would lose its model)
