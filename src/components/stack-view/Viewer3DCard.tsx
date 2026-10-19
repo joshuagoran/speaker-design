@@ -8,6 +8,8 @@ export interface ViewerLook {
   cutaway: boolean;
   /** the drivers drawn; false leaves their cutouts open (always true where the card has no drivers button) */
   drivers: boolean;
+  /** the flat style: even light and an outline on every edge (a trial, where the card has the flat button) */
+  flat: boolean;
 }
 
 interface Props {
@@ -17,6 +19,8 @@ interface Props {
   startCutaway?: boolean;
   /** a button that shows or hides the drivers (the Speaker page's view) */
   driversButton?: boolean;
+  /** a button that switches the flat style (a trial on the Speaker page's view) */
+  flatButton?: boolean;
   /** the 3D view, drawn finished or in the cutaway, with or without its drivers */
   children: (cutaway: boolean, look: ViewerLook) => React.ReactNode;
 }
@@ -30,11 +34,13 @@ export function Viewer3DCard({
   boxClassName,
   startCutaway = false,
   driversButton = false,
+  flatButton = false,
   children,
 }: Props) {
   const [isFull, setIsFull] = useState(false);
   const [cutaway, setCutaway] = useState(startCutaway);
   const [drivers, setDrivers] = useState(true);
+  const [flat, setFlat] = useState(false);
   useEffect(() => {
     if (!isFull) return;
     const esc = (e: KeyboardEvent) => {
@@ -71,6 +77,15 @@ export function Viewer3DCard({
             </Icon>
           </IconButton>
         )}
+        {flatButton && (
+          <IconButton label={UI_TEXT.flatStyle} pressed={flat} onClick={() => setFlat((v) => !v)}>
+            {/* a circle half shaded: the light's look */}
+            <Icon>
+              <circle cx="8" cy="8" r="5.5" />
+              <path d="M8 2.5v11M8 5h3.5M8 8h5M8 11h3.5" />
+            </Icon>
+          </IconButton>
+        )}
         <IconButton
           label={isFull ? UI_TEXT.closeFullScreen : UI_TEXT.fullScreen}
           onClick={() => setIsFull((v) => !v)}
@@ -84,7 +99,7 @@ export function Viewer3DCard({
           </Icon>
         </IconButton>
       </div>
-      {children(cutaway, { cutaway, drivers })}
+      {children(cutaway, { cutaway, drivers, flat })}
     </section>
   );
 }

@@ -34,6 +34,7 @@ export const UI_TEXT = {
   cutaway: "Cutaway",
   /** the Speaker page's 3D view: its button that shows or hides the drivers (their cutouts stay open) */
   showDrivers: "Show the drivers",
+  flatStyle: "Flat style",
   hideDrivers: "Hide the drivers",
   /** the side ducts' dividers' size, on the PA page's vent and the Speaker page's side ducts, and its tip */
   ductDividers: "Dividers",

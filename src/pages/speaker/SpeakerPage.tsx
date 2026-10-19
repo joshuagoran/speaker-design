@@ -285,12 +285,13 @@ function SpeakerPageBody({ speakerPage, planner, hifi }: Props) {
           <SpeakerOptimizerResults optimizer={optimizer} />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
-              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`} driversButton>
+              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`} driversButton flatButton>
                 {(cutaway, look) => (
                   <SpeakerView3D
                     spec={{ cabinet: spec.cabinet, look: spec.look }}
                     cutaway={cutaway}
                     drivers={look.drivers}
+                    flat={look.flat}
                   />
                 )}
               </Viewer3DCard>

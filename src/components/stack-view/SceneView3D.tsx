@@ -13,6 +13,8 @@ interface Props {
   fit?: SceneFit;
   /** where the camera starts: its turn and tilt, radians, and zoom (default: the view's own; the render tool sets it) */
   start?: Partial<SceneStart>;
+  /** the flat style (a trial): even light, stepped shading, an outline on every edge, and a soft shadow, no grid */
+  flat?: boolean;
 }
 
 /** The camera's turn round the scene and tilt over it, radians, and its zoom (distance over the fit's). */
@@ -25,7 +27,7 @@ export interface SceneStart {
 const START: SceneStart = { rotY: 0.6, rotX: 0.35, zoom: 1 };
 
 /** A rotatable 3D view of whatever `build` returns, on the themed stage (floor, grid, lights). */
-export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Props) {
+export function SceneView3D({ buildKey, build, fit = fitFootprint, start, flat = false }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   // the stage (floor, grid, lights) follows the theme; the scene is rebuilt when it changes
   const theme = useThemeName();
@@ -205,12 +207,20 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     if (v.scene) disposeScene(v.scene);
     const scene = new THREE.Scene();
     const stage = STAGE[theme];
-    scene.add(new THREE.HemisphereLight(stage.sky, stage.ground, stage.hemi));
-    const key = new THREE.DirectionalLight(stage.sky, stage.key);
+    // the flat style: more even light, a weaker key
+    scene.add(
+      new THREE.HemisphereLight(
+        stage.sky,
+        stage.ground,
+        flat ? stage.hemi * FLAT_HEMI : stage.hemi,
+      ),
+    );
+    const key = new THREE.DirectionalLight(stage.sky, flat ? stage.key * FLAT_KEY : stage.key);
     key.position.set(40, 80, 30);
     scene.add(key);
 
     const group = latest.current.build();
+    if (flat) flatten(group, stage.outline);
     scene.add(group);
 
     // floor
@@ -220,12 +230,13 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     );
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
-    scene.add(new THREE.GridHelper(120, 10, stage.gridMajor, stage.gridMinor));
+    if (!flat) scene.add(new THREE.GridHelper(120, 10, stage.gridMajor, stage.gridMinor));
 
     group.position.y = 0;
 
     // Frame from the real bounding box, so nothing is cropped at any aspect ratio.
     const bbox = new THREE.Box3().setFromObject(group);
+    if (flat) scene.add(contactShadow(bbox));
     const distAt = latest.current.fit(bbox);
     const frame: SceneFrame = { target: bbox.getCenter(new THREE.Vector3()), baseDist: 0 };
     v.fit = (aspect: number) => {
@@ -242,7 +253,7 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     el.dataset.geometries = String(geometries);
     el.dataset.textures = String(textures);
     el.dataset.rebuilds = String(Number(el.dataset.rebuilds ?? 0) + 1);
-  }, [builtKey, theme]);
+  }, [builtKey, theme, flat]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }
@@ -264,6 +275,93 @@ interface ViewState {
 interface SceneFrame {
   target: THREE.Vector3;
   baseDist: number;
+}
+
+/** The flat style's light: the sky light's share and the key light's, of the stage's. */
+const FLAT_HEMI = 1;
+const FLAT_KEY = 0.5;
+/** The flat style's shading steps (a lit face's share of its color) and the angle past which an edge is outlined, °. */
+const FLAT_STEPS = [140, 195, 235];
+const OUTLINE_ANGLE_DEG = 30;
+/** A see-through part (the cutaway's ghost) more transparent than this gets no outline. */
+const OUTLINE_MIN_OPACITY = 0.6;
+/** The soft shadow: its size over the scene's footprint, its darkness at the middle, and its texture's size, px. */
+const SHADOW_SPREAD = 1.5;
+const SHADOW_ALPHA = 0.28;
+const SHADOW_PX = 128;
+
+/**
+ * The flat style on a built scene: each lit part's material swapped for a stepped toon one in its color, and an outline
+ * on its edges (not on a see-through ghost).
+ */
+function flatten(group: THREE.Group, outline: number) {
+  const steps = new Uint8Array(FLAT_STEPS);
+  const gradient = new THREE.DataTexture(steps, steps.length, 1, THREE.RedFormat);
+  gradient.minFilter = gradient.magFilter = THREE.NearestFilter;
+  gradient.needsUpdate = true;
+  const lineMaterial = new THREE.LineBasicMaterial({ color: outline });
+  const toons = new Map<THREE.Material, THREE.Material>();
+  const toon = (m: THREE.Material) => {
+    if (!(m instanceof THREE.MeshStandardMaterial || m instanceof THREE.MeshLambertMaterial))
+      return m;
+    const made = toons.get(m);
+    if (made) return made;
+    const next = new THREE.MeshToonMaterial({
+      color: m.color,
+      gradientMap: gradient,
+      transparent: m.transparent,
+      opacity: m.opacity,
+      side: m.side,
+      depthWrite: m.depthWrite,
+    });
+    toons.set(m, next);
+    m.dispose();
+    return next;
+  };
+  const meshes: THREE.Mesh[] = [];
+  group.traverse((o) => {
+    if (o instanceof THREE.Mesh) meshes.push(o);
+  });
+  for (const mesh of meshes) {
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mesh.material = Array.isArray(mesh.material) ? list.map(toon) : toon(list[0]);
+    const ghost = list.some((m) => m.transparent && m.opacity < OUTLINE_MIN_OPACITY);
+    if (!ghost)
+      mesh.add(
+        new THREE.LineSegments(
+          new THREE.EdgesGeometry(mesh.geometry, OUTLINE_ANGLE_DEG),
+          lineMaterial,
+        ),
+      );
+  }
+}
+
+/** A soft round shadow on the floor under the scene's footprint (`bbox`), fading to clear at its edge. */
+function contactShadow(bbox: THREE.Box3) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = SHADOW_PX;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const r = SHADOW_PX / 2;
+    const fade = ctx.createRadialGradient(r, r, 0, r, r, r);
+    fade.addColorStop(0, `rgba(0,0,0,${SHADOW_ALPHA})`);
+    fade.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, 0, SHADOW_PX, SHADOW_PX);
+  }
+  const size = bbox.getSize(new THREE.Vector3());
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(size.x * SHADOW_SPREAD, size.z * SHADOW_SPREAD),
+    new THREE.MeshBasicMaterial({
+      map: new THREE.CanvasTexture(canvas),
+      transparent: true,
+      depthWrite: false,
+    }),
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  const center = bbox.getCenter(new THREE.Vector3());
+  shadow.position.set(center.x, 0.05, center.z);
+  return shadow;
 }
 
 /** Frees a scene's geometries, materials and the textures they hold on the GPU (shared ones once each). */

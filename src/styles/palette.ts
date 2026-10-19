@@ -124,6 +124,8 @@ export const STAGE: Record<
     ground: number;
     hemi: number;
     key: number;
+    /** the flat style's outline on every edge (a trial: Viewer3DCard's flat button) */
+    outline: number;
   }
 > = {
   light: {
@@ -134,6 +136,7 @@ export const STAGE: Record<
     ground: 0x777766,
     hemi: 1.1,
     key: 0.6,
+    outline: 0x2b2b2b,
   },
   dark: {
     floor: 0x232528,
@@ -143,6 +146,7 @@ export const STAGE: Record<
     ground: 0x2a2a26,
     hemi: 0.95,
     key: 0.55,
+    outline: 0x0d0d0d,
   },
 };
 
