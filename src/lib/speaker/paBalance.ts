@@ -1,4 +1,4 @@
-// The PA design's music balance as band Levels (docs/speaker-designer-plan.md, L3f "Band levels in the preset"). The PA
+// The PA design's music balance as band Levels. The PA
 // page balances its bands at their limits: the mid `tilt` dB under the sub, the horn `hfTilt` dB under the mid, the
 // weakest band setting the level. A stack plays every band from one input, each
 // at its Level on its 2.83 V response. So each band's Level is what puts it where the page puts it: the page's balanced

@@ -17,7 +17,6 @@ import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import {
   boxCenterOfGravity,
   DEFAULT_HARDWARE,
-  hardwareLb,
   handlePart,
   HORN_POSTS_FIT_DEPTH_IN,
   partRecessLiters,
@@ -113,8 +112,6 @@ test("each recess's liters come off the box's net volume, and the tuning follows
   );
   assert.equal(towerMid.build.hardware, null);
   assert.equal(towerMid.build.recessL, 0);
-  assert.equal(hardwareLb(DEFAULT_HARDWARE, "mid", "tower"), 0);
-  close(null, hardwareLb(none, "sub", d.layout), INPUT_PLATE.lb + 2 * INPUT_JACK.lb, 1e-12);
 });
 
 test("the cutlist notes each cutout on its panel, from a named edge", () => {

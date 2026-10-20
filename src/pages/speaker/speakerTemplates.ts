@@ -1,6 +1,6 @@
 // The Speaker page's templates: each builds a new speaker from the catalog and the defaults (lib/defaults), through the L1
 // read adapters where a page already designs that box. A template sets only the first values: the spec keeps no
-// template or role (docs/speaker-designer-plan.md, owner decisions). Pure.
+// template or role. Pure.
 import type {
   AdapterBandId,
   ChamberBracing,

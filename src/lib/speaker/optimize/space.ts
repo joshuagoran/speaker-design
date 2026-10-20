@@ -1,4 +1,4 @@
-// The Speaker optimizer's search space (docs/speaker-designer-plan.md, "Design: the Speaker optimizer"): the units it
+// The Speaker optimizer's search space: the units it
 // varies (a chamber's cones, a datasheet driver), each unit's candidate parts, the crossovers in the box, the box's
 // size groups and the shapes that hold a set of chamber volumes, and each band's top amp power. Pure.
 import type {

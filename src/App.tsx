@@ -1,5 +1,4 @@
 import { PRESSED_CLASSES } from "./components/ui/buttonStyles";
-import { NotesPage } from "./pages/notes/NotesPage";
 import { SpeakerCutlistPage } from "./pages/cutlist/SpeakerCutlistPage";
 import { StackCutlistPage } from "./pages/cutlist/StackCutlistPage";
 import { SpeakerPage } from "./pages/speaker/SpeakerPage";
@@ -18,7 +17,6 @@ import { PageTabs } from "./components/ui/PageTabs";
 import { entriesOf } from "./lib/records";
 import { pageAt } from "./lib/pageRoute";
 import {
-  NOTES_PAGE,
   PAGE_HASHES,
   PROJECT_NAMES,
   PROJECT_NAV_LABELS,
@@ -28,9 +26,9 @@ import {
 } from "./constants/pages";
 
 /** The page at the address (`pageAt`). */
-const viewOf = (): AppPage => pageAt(window.location.pathname, window.location.hash);
+const viewOf = (): AppPage => pageAt(window.location.hash);
 
-/** The project a page belongs to (Notes, outside the nav, shows the Speaker project's tabs). */
+/** The project a page belongs to. */
 const projectOf = (v: AppPage): ProjectId =>
   entriesOf(PROJECT_PAGES).find(([, pages]) => pages.some(([p]) => p === v))?.[0] ?? "speaker";
 
@@ -57,7 +55,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   };
   return (
     // from md up the shell fills the window and doesn't scroll: the header stays, and the page below scrolls in its own
-    // panes (one for Notes; results and settings for the others, see SettingsLayout)
+    // panes (results and settings, see SettingsLayout)
     <div
       className="min-h-screen bg-stone-50 text-stone-900 md:min-h-0 md:h-dvh md:flex md:flex-col md:overflow-hidden"
       style={{ fontFamily: FONT }}
@@ -111,10 +109,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
             <Notice>{DRAFT_FAILED_TEXT}</Notice>
           </div>
         )}
-        {/* Notes has no tab: it opens only at the path /notes */}
-        {view === NOTES_PAGE ? (
-          <NotesPage />
-        ) : view === "speakerCutlist" ? (
+        {view === "speakerCutlist" ? (
           <SpeakerCutlistPage speakerPage={speakerPage} />
         ) : view === "stack" ? (
           <StackPage stack={stack} speakerPage={speakerPage} />

@@ -6,7 +6,7 @@
 // On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
 // On a phone, every page's settings sheet is checked closed and open on each tab (with its heading), and closes again.
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { GOAL_SHORT_NAMES } from "../src/constants/optimizerText.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
@@ -133,31 +133,6 @@ for (const size of sizes) {
     }
   }
   for (const e of errs) failures.push(`${size.name}: page error: ${e}`);
-  await ctx.close();
-}
-
-// The Notes page has no tab and no hash: it opens at the path /notes. Serve the page at that path and check it as the
-// views are checked, and that no tab leads to it.
-for (const size of sizes) {
-  const ctx = await browser.newContext({ ...size });
-  const p = await ctx.newPage();
-  const errs = [];
-  p.on("pageerror", (e) => errs.push(e.message));
-  await p.route("https://speaknow.test/**", (r) =>
-    r.fulfill({ path: fileURLToPath(page), contentType: "text/html" }),
-  );
-  await p.goto("https://speaknow.test/notes/");
-  await p.waitForFunction(() => document.querySelector("nav a"), null, { timeout: 30000 });
-  await p.waitForTimeout(600);
-  const m = await p.evaluate(measure);
-  if (m.sw > m.iw)
-    failures.push(`${size.name} /notes: page scrolls sideways (${m.sw} > ${m.iw} px)`);
-  for (const t of m.small) failures.push(`${size.name} /notes: small touch target ${t}`);
-  if (!(await p.locator("h2").count()))
-    failures.push(`${size.name} /notes: the Notes page is not shown`);
-  if (await p.locator("nav a", { hasText: /^Notes$/ }).count())
-    failures.push(`${size.name}: a tab leads to Notes`);
-  for (const e of errs) failures.push(`${size.name} /notes: page error: ${e}`);
   await ctx.close();
 }
 

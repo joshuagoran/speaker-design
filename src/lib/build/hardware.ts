@@ -19,7 +19,6 @@ import type {
   HardwareObstacle,
   HardwarePanel,
   PaHardware,
-  PaLayout,
   PlacedHardware,
 } from "../../types";
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
@@ -86,10 +85,6 @@ export const savedBox = (x: unknown, fallback: BoxHandles): BoxHandles => {
     backIn: offset(Reflect.get(x, "backIn")),
   };
 };
-/** Whether a box has hardware of its own: the tower's mid chamber is part of the sub's cabinet. */
-export const boxTakesHardware = (box: HardwareBoxId, layout: PaLayout | undefined) =>
-  box === "sub" || layout !== "tower";
-
 /**
  * A listed size (a part's cutout or flange) as it is mounted: `across` the panel (front to back on a side, left to right
  * on the back and the lid) and `up` it (front to back on the lid), by the part's `upright`.
@@ -109,14 +104,6 @@ export const partRecessLiters = (part: CabinetPart, t: number) =>
     ? part.cutout.w * part.cutout.h * Math.max(0, part.depthIn - t) * IN3_TO_L
     : 0;
 
-/** The parts a box is fitted with, each with its count: handles (two), the dish and its two jacks, the mid's posts. */
-export function hardwareBought(
-  hw: PaHardware,
-  box: HardwareBoxId,
-  layout: PaLayout | undefined,
-): BoxHardwarePlan["bought"] {
-  return boxTakesHardware(box, layout) ? boughtWith(box, handlePart(hw[box].model)) : [];
-}
 /** A box's parts with its handle model (null: none). */
 function boughtWith(box: HardwareBoxId, handle: CabinetPart | null): BoxHardwarePlan["bought"] {
   return [
@@ -126,12 +113,6 @@ function boughtWith(box: HardwareBoxId, handle: CabinetPart | null): BoxHardware
     ...(box === "mid" ? [{ part: HORN_POSTS, qty: 1 }] : []),
   ];
 }
-/** A box's hardware weight, lb (a part with no listed weight counts none). */
-export const hardwareLb = (
-  hw: PaHardware | undefined,
-  box: HardwareBoxId,
-  layout: PaLayout | undefined,
-) => (hw ? hardwareBought(hw, box, layout).reduce((a, b) => a + b.qty * (b.part.lb ?? 0), 0) : 0);
 /** The driver as the center of gravity reads it: its center on the baffle (box axes), weight (lb) and mounting depth (in). */
 export interface HardwareDriver {
   center: { x: number; y: number };

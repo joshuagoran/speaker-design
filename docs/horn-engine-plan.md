@@ -1,6 +1,6 @@
 # Horn engine: Hornresp-style horn modeling in the planner
 
-A plan, Oct 2026. It adds a 1-D horn model to the PA planner for the boxes in [pa-v2-plan.md](pa-v2-plan.md):
+A plan, Oct 2026. It adds a 1-D horn model to the PA planner for the owner's PA v2 boxes:
 front-loaded sub bins and mid horns with vented rear chambers, later folded and tapped horns. Phase 1 (the engine and
 its tests) is done. It matches Hornresp (see [Validation](#validation)). The horn boxes now go to the modular
 Designer, not the PA page (see [Phases](#phases)). A general acoustic network now holds the same parts (see
@@ -53,7 +53,7 @@ The chain multiplies them per frequency.
   front chamber (Hornresp's Vtc): each cone's area times that clearance, plus the air in its dish (a cone 40% of the
   driver's catalog depth deep). `lib/speaker/hornThroat` works it out; it is not a setting. With S₁ it makes a
   low-pass, f ≈ c·S₁ / (2π·Vtc): a higher ratio loads the cones more but lowers it. The PA v2 sub bins take 2:1 and
-  the mid box 2:1 (see [pa-v2-plan.md](pa-v2-plan.md#compression-ratio)).
+  the mid box 2:1.
 - **Solid angle.** The piston formula is half space (2π). Quarter and eighth space (π, π/2) use mirror images: an
   approximation. Free air (4π) is not modeled.
 - **Losses.** Leakage (QL) and vent loss (Qp), as options. The defaults are the box models' 7 and 50. Hornresp's

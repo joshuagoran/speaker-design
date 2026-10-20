@@ -41,13 +41,9 @@ import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { POSITION_AXIS } from "./constants/speakerResults";
 import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
 import type { DRIVER_PART, PAIR_SIDE } from "./constants/space";
-import type { DSP_COLUMNS } from "./constants/dspColumns";
-import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
-import type { AMP_SERIES } from "./data/catalog/amps";
-import type { DSP_UNITS } from "./data/catalog/dsp-units";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
@@ -224,7 +220,7 @@ export interface SubDriver {
   ts: SubTS;
   /** the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered */
   sens?: number;
-  /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
+  /** mounting depth in inches, from the maker's datasheet; absent where it isn't published */
   depthIn?: number;
   /**
    * another impedance version of the entry with this id (the standard one, 8 Ω where both exist): every page's picker
@@ -414,120 +410,6 @@ export interface Format {
   sub: SubSize;
   mid: 10 | 12;
   note: string;
-}
-
-/** An amp's id: one of the models in the amps catalog (`AMP_SERIES`), so a rack can't name an amp that isn't there. */
-export type AmpId = (typeof AMP_SERIES)[number]["models"][number]["id"];
-
-/** A DSP unit's id: one of the rows in the DSP catalog (`DSP_UNITS`). */
-export type DspUnitId = (typeof DSP_UNITS)[number]["id"];
-
-/** A DSP unit with a settled used price: only these can be a rack line, which takes the price from the unit. */
-export type PricedDspUnitId = Extract<(typeof DSP_UNITS)[number], { usedPrice: PriceRange }>["id"];
-
-/** A rack line that is no catalog part: description and price in dollars. */
-export type RackTextItem = readonly [text: string, price: number];
-
-/**
- * A rack line that is a used amp from the amps catalog: its name and price come from the amp entry. `use` says what
- * it drives, `rating` adds its 8 Ω power, `note` follows.
- */
-export interface RackAmpItem {
-  amp: AmpId;
-  use: string;
-  rating?: true;
-  note?: string;
-}
-
-/**
- * A rack line that is a used DSP unit from the DSP catalog: its name and used price come from the unit's entry.
- */
-export interface RackDspItem {
-  dsp: PricedDspUnitId;
-  note: string;
-}
-
-/** One line of a rack's parts list. */
-export type RackItem = RackTextItem | RackAmpItem | RackDspItem;
-
-export interface Rack {
-  id: string;
-  name: string;
-  note: string;
-  items: readonly RackItem[];
-}
-
-/** A rack as the Notes page lists it: every line resolved to its words and price. */
-export type RackView = Omit<Rack, "items"> & { items: { label: string; price: PriceRange }[] };
-
-/** A crossover / DSP unit as the Notes page's comparison table shows it: one display-text cell per column. */
-export type DspUnitRow = Readonly<Record<DspColumn, string>>;
-
-/** A column of the DSP comparison table: a cell of every unit's row (`DSP_COLUMNS` holds their order and headers). */
-export type DspColumn = keyof typeof DSP_COLUMNS;
-
-/** A DSP unit in the catalog: its id (racks name it by this) and its comparison-table row. */
-export interface DspUnit {
-  id: string;
-  row: DspUnitRow;
-  /** a used one's price range, US dollars, where settled: the table's price cell adds it and a rack line uses it */
-  usedPrice?: PriceRange;
-}
-
-/** A price in US dollars as a range, low to high (equal for a single price). */
-export type PriceRange = Pick<XmaxBand, "lo" | "hi">;
-
-/** An amp's output-stage class (`AMP_CLASSES`). */
-export type AmpClass = keyof typeof AMP_CLASSES;
-
-/** A column of the Notes page's amp table (`AMP_COLUMNS` holds their order and headers). */
-export type AmpColumn = keyof typeof AMP_COLUMNS;
-
-/** One amplifier model of a series: per-channel power, continuous with all channels driven. */
-export interface AmpModel {
-  id: string;
-  /** model name without the brand, as the notes write it (`GXD4`) */
-  model: string;
-  /** output-stage class; null where the maker doesn't state it */
-  ampClass: AmpClass | null;
-  /** output channels, unbridged */
-  channels: number;
-  /** watts per channel into 8 Ω and into 4 Ω (channel 1's, where `ch2` is set; so are w2 and w16) */
-  w8: number;
-  w4: number;
-  /** watts per channel into 2 Ω and into 16 Ω; null where the maker publishes no continuous rating */
-  w2: number | null;
-  w16: number | null;
-  /** channel 2's watts, where it differs from channel 1 (Crown's dual-level bi-amp models) */
-  ch2?: Pick<AmpModel, "w16" | "w8" | "w4" | "w2">;
-  /** voltage gain, dB; null where the maker publishes neither gain nor sensitivity */
-  gainDb: number | null;
-  /** the speaker-power range its limiter can be set to, watts; null where the limiter takes no speaker power */
-  limiterW: readonly [min: number, max: number] | null;
-  /** net weight, pounds, as the maker lists it */
-  lb: number;
-  /** a used one's price, US dollars, as the racks buy it */
-  usedPrice: number;
-  /** the used price is an estimate: no US listing was found */
-  usedPriceEst?: true;
-  /** what sets this model apart from its series, or where a figure came from; display text */
-  note?: string;
-}
-
-/** An amplifier series and the DSP its models share, as the Notes page and the signal-path drawing describe it. */
-export interface AmpSeries {
-  brand: string;
-  models: readonly AmpModel[];
-  /** whether the amps have DSP (crossovers, EQ, delay), not just fixed filters */
-  dsp: boolean;
-  /** the crossover filters (or, with no DSP, the fixed filters), display text */
-  filters: string;
-  /** the limiter's name and presets, display text */
-  limiterModes: string;
-  /** what the amp's processing can't do, display text */
-  limits: string;
-  /** where the figures come from: the maker's documents */
-  src: readonly { name: string; url: string }[];
 }
 
 /** A paint color: [hex, name]. */
@@ -2291,7 +2173,7 @@ export interface SpaceVenue {
   balance: AutoBalanceMode;
 }
 
-/** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
+/** Stacks and speakers placed in a real space, with the hardware that drives them. */
 export interface SpaceSpec {
   id: string;
   name: string;

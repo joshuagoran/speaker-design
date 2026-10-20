@@ -1,4 +1,4 @@
-// What a space asks of the processing ahead of its amps (docs/speaker-designer-plan.md, L4b): for each box and band, the
+// What a space asks of the processing ahead of its amps: for each box and band, the
 // crossover filters, the level and the delay to set. Read from the model (the stack's crossovers, levels and worked-out
 // delays, and each placement's own solved level and delay). A mirrored pair is one entry: its two boxes share the
 // settings. Pure.
