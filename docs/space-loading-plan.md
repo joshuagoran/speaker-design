@@ -77,7 +77,8 @@ At bass wavelengths, a few cm (a box's wall) acts as touching. So the box's coup
 2. Set `angle`. Start at 2: the front baffle gives a half space.
    Each coupled surface at right angles to the box's front halves it: the floor, or a side wall. Stop at 0.5.
    A wall behind the box or in front of it does not change it.
-3. Set `count`: the identical boxes (same Speaker, same Stack member) in a coupled chain.
+3. Set `count`: the identical boxes (same Speaker) in a coupled chain.
+   Members of one Stack count too: two TH18s, one on the other, give 2.
    They face the same way, and their fronts are in one plane. Otherwise 1.
    A coupled box of another design adds nothing.
 4. Pass `{ count, angle }` per member into `hornDesignOf`. The horn's vent exit takes the same load.

@@ -5,8 +5,8 @@
 // At bass wavelengths a few cm (a box's wall) acts as touching: so the box's coupling stands in for its mouth's.
 // - angle: half space from the box's front baffle; each coupled surface at right angles to its front (the floor, a side
 //   wall) halves it, to a quarter of space at most. A wall behind the box or in front of it does not change it.
-// - count: the identical boxes (the same item's same member) coupled with it in a chain, facing the same way with their
-//   fronts in one plane. A coupled box of another design adds nothing.
+// - count: the identical boxes (the same Speaker, in this item or another) coupled with it in a chain, facing the same
+//   way with their fronts in one plane. A coupled box of another design adds nothing.
 import type { BoxLoading, CoupledSurface } from "../../types";
 import type { BoxCoupling } from "./spaceCoupling";
 import type { PlacedItem, RoomPoint } from "./spaceLayout";
@@ -56,13 +56,12 @@ const dot = (a: RoomPoint, b: RoomPoint) => a.x * b.x + a.y * b.y + a.z * b.z;
  * keeps half space), in `items`' order, from `coupling` (`spaceCoupling` on the same items).
  */
 export function boxLoadings(
-  items: readonly Pick<PlacedItem, "placement" | "boxes">[],
+  items: readonly Pick<PlacedItem, "boxes">[],
   coupling: readonly BoxCoupling[],
 ): (BoxLoading | undefined)[][] {
   const fronts = items.map((it) => it.boxes.map((b) => frontOf(b.corners)));
-  /** a box's design: its item and its member */
-  const designOf = (item: number, box: number) =>
-    `${JSON.stringify(items[item].placement.item)}/${items[item].boxes[box].member}`;
+  /** a box's design: its Speaker */
+  const designOf = (item: number, box: number) => items[item].boxes[box].speaker.id;
   /** whether two boxes are identical and stand with their fronts in one plane, facing the same way */
   const alike = (a: { item: number; box: number }, b: { item: number; box: number }) => {
     const fa = fronts[a.item][a.box],

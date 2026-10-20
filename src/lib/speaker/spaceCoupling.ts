@@ -18,7 +18,10 @@ export interface RoomWall {
   at: number;
 }
 
-/** What one member box of a placement is coupled with: the floor and walls, and the other items' member boxes. */
+/**
+ * What one member box of a placement is coupled with: the floor and walls, and the other member boxes (its own item's
+ * too).
+ */
 export interface MemberCoupling {
   surfaces: CoupledSurface[];
   /** each by its item's index and its box's index in that item's `boxes` */
@@ -203,8 +206,9 @@ function sharedFace(a: Face, b: Face): { mark: CouplingMark | null } | null {
  * What each box stands right against, in `items`' order (a mirrored pair as two, `expandPlacements`): the floor (its
  * lift within the coupling gap, `COUPLING_GAP_M`), each wall a face of it is within the gap of, and each other box with
  * a face within the gap of one of its own and a shared area. Each member box on its own too: the floor only where its
- * lowest corner is within the gap of it (a box stacked on another is not). With the marks the plan draws: each stretch
- * of wall a box meets, and once each upright face two boxes share.
+ * lowest corner is within the gap of it (a box stacked on another is not), and the other member boxes it meets, its own
+ * item's too. With the marks the plan draws: each stretch of wall a box meets, and once each upright face two items'
+ * boxes share.
  */
 export function spaceCoupling(
   items: readonly StandingItem[],
@@ -244,23 +248,36 @@ export function spaceCoupling(
     }
     return { surfaces, boxes: [], members };
   });
+  /** whether two boxes' faces meet; each upright face they share marked on `into` */
+  const meet = (a: readonly Face[], b: readonly Face[], into: CouplingMark[] | null) => {
+    let met = false;
+    for (const fa of a)
+      for (const fb of b) {
+        const shared = sharedFace(fa, fb);
+        if (!shared) continue;
+        met = true;
+        if (shared.mark) into?.push(shared.mark);
+      }
+    return met;
+  };
+  /** couples box `boxA` of item `i` with box `boxB` of item `j`, each in the other's member list */
+  const link = (i: number, boxA: number, j: number, boxB: number) => {
+    boxes[i].members[boxA].boxes.push({ item: j, box: boxB });
+    boxes[j].members[boxB].boxes.push({ item: i, box: boxA });
+  };
+  // the members of one item: the plan draws the item as one box, so their shared faces are not marked
+  for (let i = 0; i < items.length; i++)
+    for (let boxA = 0; boxA < faces[i].length; boxA++)
+      for (let boxB = boxA + 1; boxB < faces[i].length; boxB++)
+        if (meet(faces[i][boxA], faces[i][boxB], null)) link(i, boxA, i, boxB);
   for (let i = 0; i < items.length; i++)
     for (let j = i + 1; j < items.length; j++) {
       let coupled = false;
       for (const [boxA, ownA] of faces[i].entries())
         for (const [boxB, ownB] of faces[j].entries()) {
-          let met = false;
-          for (const fa of ownA)
-            for (const fb of ownB) {
-              const shared = sharedFace(fa, fb);
-              if (!shared) continue;
-              met = true;
-              if (shared.mark) marks.push(shared.mark);
-            }
-          if (!met) continue;
+          if (!meet(ownA, ownB, marks)) continue;
           coupled = true;
-          boxes[i].members[boxA].boxes.push({ item: j, box: boxB });
-          boxes[j].members[boxB].boxes.push({ item: i, box: boxA });
+          link(i, boxA, j, boxB);
         }
       if (!coupled) continue;
       boxes[i].boxes.push(j);

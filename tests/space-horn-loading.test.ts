@@ -41,6 +41,14 @@ const TWO_HIGH: StackSpec = {
   ],
 };
 const STACK_ITEM = { kind: SPACE_ITEM.stack, id: TWO_HIGH.id } as const;
+/** A TH18 with the PA sub box on it. */
+const MIXED: StackSpec = {
+  ...TWO_HIGH,
+  id: "mixed",
+  name: "Mixed",
+  members: [TWO_HIGH.members[0], { ...TWO_HIGH.members[1], speakerId: OTHER.id }],
+};
+const MIXED_ITEM = { kind: SPACE_ITEM.stack, id: MIXED.id } as const;
 
 const BASE = emptySpace();
 const ROOM = BASE.space.venue.room;
@@ -55,7 +63,7 @@ const LEFT = -ROOM.widthFt / 2 + W_FT / 2;
 const spaceOf = (placements: SpacePlacement[]): SpaceDesign => ({
   ...BASE,
   space: { ...BASE.space, placements },
-  stacks: [TWO_HIGH],
+  stacks: [TWO_HIGH, MIXED],
   speakers: [HORN, OTHER],
 });
 
@@ -140,13 +148,30 @@ test("loading: identical horn subs side by side share their load; another design
   assert.deepEqual(boxLoadings(items, coupling.boxes)[0], [{ angle: 1, count: 1 }]);
 });
 
-test("loading: in a stack, the member on top is not on the floor", () => {
+test("loading: in a stack, identical members share their load; the member on top is not on the floor", () => {
   assert.deepEqual(loadings([spacePlacement({ x: 0, y: 10 }, STACK_ITEM, 0)]), [
     [
-      { angle: 1, count: 1 },
-      { angle: 2, count: 1 },
+      { angle: 1, count: 2 },
+      { angle: 2, count: 2 },
     ],
   ]);
+  // against a side wall, both members meet it
+  assert.deepEqual(loadings([spacePlacement({ x: LEFT, y: 10 }, STACK_ITEM, 0)]), [
+    [
+      { angle: 0.5, count: 2 },
+      { angle: 1, count: 2 },
+    ],
+  ]);
+  // a horn sub with another design on top: each alone
+  assert.deepEqual(loadings([spacePlacement({ x: 0, y: 10 }, MIXED_ITEM, 0)]), [
+    [{ angle: 1, count: 1 }],
+  ]);
+  // the stack's own members are coupled with each other, but not marked on the plan
+  const design = spaceOf([spacePlacement({ x: 0, y: 10 }, STACK_ITEM, 0)]);
+  const coupling = spaceCoupling(spaceLayout(design, bandOfPart), roomWalls(ROOM));
+  assert.deepEqual(coupling.boxes[0].members[0].boxes, [{ item: 0, box: 1 }]);
+  assert.deepEqual(coupling.boxes[0].boxes, []);
+  assert.deepEqual(coupling.marks, []);
 });
 
 test("loading: against a wall a horn sub is louder in the low end; the Speaker page's model is unchanged", () => {
