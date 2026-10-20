@@ -106,6 +106,7 @@ export const spacePlacement = (
   levelDb: 0,
   delayMs: AUTO_DELAY,
   fill: false,
+  upsideDown: false,
 });
 
 /** The middle of a room's floor, ft: where a new space's alignment point starts. */

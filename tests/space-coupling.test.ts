@@ -38,16 +38,16 @@ type Size = typeof CUBE;
 
 /** The placements as they stand, each one box (the cube, or its size in `sizes`) placed by the space's own frame. */
 const standing = (placements: readonly SpacePlacement[], sizes: readonly Size[] = []) =>
-  expandPlacements(placements).map((placement) => ({
-    placement,
-    boxes: [
-      {
-        corners: boxCorners(ORIGIN, sizes[placement.source] ?? CUBE).map(
-          placementFrame(placement).toRoom,
-        ),
-      },
-    ],
-  }));
+  expandPlacements(placements).map((placement) => {
+    const size = sizes[placement.source] ?? CUBE;
+    // a box turns over about the middle of its height
+    return {
+      placement,
+      boxes: [
+        { corners: boxCorners(ORIGIN, size).map(placementFrame(placement, size.h / 2).toRoom) },
+      ],
+    };
+  });
 
 /** What each box is coupled with, in the room (or another). */
 const coupled = (placements: readonly SpacePlacement[], room: CoverageRoom = ROOM) =>

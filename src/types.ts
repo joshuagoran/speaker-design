@@ -2121,7 +2121,8 @@ export interface SpacePlacement extends FloorPoint {
   aim: SpaceAim;
   /**
    * a left and right pair: the placement stands twice, as set and as its mirror image across the room's center line
-   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level and delay
+   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level, delay, and
+   * `upsideDown`
    * (`expandPlacements`)
    */
   mirrored: boolean;
@@ -2137,6 +2138,11 @@ export interface SpacePlacement extends FloorPoint {
   delayMs: number | typeof AUTO_DELAY;
   /** a fill: its Auto delay lines it up with the nearest main at its own aim point, not with the mains */
   fill: boolean;
+  /**
+   * turned over about its front-to-back axis (flown near a ceiling): its spot, aim and lift stay as set, and the lift is
+   * still the gap under its lowest point (lib/speaker/spaceLayout `placementFrame`)
+   */
+  upsideDown: boolean;
 }
 
 /** Which side of the center line a box of a mirrored pair stands on, seen from the listener, by id (`PAIR_SIDE`). */

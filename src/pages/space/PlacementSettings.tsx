@@ -47,9 +47,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const tenth = (v: number) => Math.round(v * 10) / 10;
 
 /**
- * One placement's settings: where it stands (all in feet), its aim, a flip, whether it is a mirrored pair (the box
- * stands again on the other side of the center line), whether it is a fill, and its level and delay on its feed (Auto
- * or typed; a main's level is always typed).
+ * One placement's settings: where it stands (all in feet), its aim, whether it is upside down, a flip, whether it is a
+ * mirrored pair (the box stands again on the other side of the center line), whether it is a fill, and its level and
+ * delay on its feed (Auto or typed; a main's level is always typed).
  */
 export function PlacementSettings({
   index,
@@ -150,6 +150,14 @@ export function PlacementSettings({
           step={1}
           onChange={(pitchDeg) => onEdit((p) => ({ ...p, aim: { ...p.aim, pitchDeg } }))}
         />
+        <ToggleButton
+          className="self-end"
+          on={placement.upsideDown}
+          title={SPACE_TEXT.upsideDownTip}
+          onClick={() => onEdit((p) => ({ ...p, upsideDown: !p.upsideDown }))}
+        >
+          {SPACE_TEXT.upsideDown}
+        </ToggleButton>
       </div>
       <div className="flex flex-wrap gap-2">
         <ToggleButton

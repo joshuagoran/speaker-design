@@ -22,7 +22,7 @@ import { CHAMBER_LOAD } from "../../constants/speakerSpec";
 import { patternDirectivity } from "../acoustics/dispersion";
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { bandOfPart, driverPattern, pressureAt } from "./spaceCoverage";
-import { layStack, placementFrame } from "./spaceLayout";
+import { layStack } from "./spaceLayout";
 import { stackCrossoversHz } from "./stackResponse";
 import { bandCenters } from "./stackLayout";
 import { stackMember } from "./specParts";
@@ -34,13 +34,14 @@ import { METERS_PER_FOOT, METERS_PER_INCH, RAD } from "../../constants/units";
 const MS_PER_S = 1000;
 
 /** The stack laid out where its own frame is the room's: its base's front center on the floor's origin, unturned. */
-const OWN_FRAME = placementFrame({
+const OWN_POSE = {
   x: 0,
   y: 0,
   liftIn: 0,
   aim: { yawDeg: 0, pitchDeg: 0 },
   image: false,
-});
+  upsideDown: false,
+};
 
 /** What the map reads of the stack model: each member's response and delay, and the listening height. */
 export type DispersionModel = Pick<StackResponse, "listenHeightIn"> & {
@@ -58,7 +59,7 @@ export function stackDispersionMap(
   plane: DispersionPlane,
 ): HifiDispersionMap {
   const { angles, freqs } = dispersionGrid();
-  const { drivers } = layStack({ stack, speakers }, OWN_FRAME, bandOfPart);
+  const { drivers } = layStack({ stack, speakers }, OWN_POSE, bandOfPart);
   /** how many spots feed each member's band: each plays its share */
   const spots = new Map<string, number>();
   const key = (member: number, band: BandId) => `${member}/${band}`;

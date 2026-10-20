@@ -22,6 +22,7 @@ const placement = (over: Partial<SpacePlacement>): SpacePlacement => ({
   levelDb: 0,
   delayMs: 0,
   fill: false,
+  upsideDown: false,
   ...over,
 });
 

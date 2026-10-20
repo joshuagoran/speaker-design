@@ -102,6 +102,8 @@ const isPlacement = (value: unknown) =>
   isNum(value.aim.pitchDeg) &&
   typeof value.mirrored === "boolean" &&
   typeof value.fill === "boolean" &&
+  // optional: a link from before a placement could stand upside down has none
+  (value.upsideDown === undefined || typeof value.upsideDown === "boolean") &&
   isFeed(value.levelDb, AUTO_LEVEL) &&
   isFeed(value.delayMs, AUTO_DELAY);
 
