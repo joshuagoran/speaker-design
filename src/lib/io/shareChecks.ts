@@ -25,7 +25,9 @@ import {
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import { FLOOR_ALPHA, ROOM_MATERIALS } from "../../data/acoustics/materials";
+import { COVERAGE_BAND_IDS } from "../../constants/space";
 import { ROOM_SURFACES } from "../acoustics/roomAcoustics";
+import { SINGLE_FREQ_RANGE } from "../acoustics/coverage";
 import type { ShareEnvelope, ShareError } from "../../types";
 
 /** What reading an envelope gave: the envelope, or why it is not one. */
@@ -130,6 +132,14 @@ const isVenue = (value: unknown) =>
   isNum(value.targetDb) &&
   typeof value.levelRef === "string" &&
   typeof value.balance === "string";
+
+/** Whether a value reads as a coverage view (`SpaceView`): a known band, and a frequency in the band picker's range. */
+const isView = (value: unknown) =>
+  isRecord(value) &&
+  COVERAGE_BAND_IDS.some((id) => id === value.band) &&
+  isNum(value.freqHz) &&
+  value.freqHz >= SINGLE_FREQ_RANGE[0] &&
+  value.freqHz <= SINGLE_FREQ_RANGE[1];
 
 /** Whether a value reads as a space (`SpaceSpec`). */
 const isSpace = (value: unknown) =>
@@ -277,13 +287,15 @@ function isEnvelope(json: unknown): json is ShareEnvelope {
   if (!isListOf(speakers, SHARE_MAX_SPEAKERS, isSpeaker)) return false;
   if (!isListOf(stacks, SHARE_MAX_STACKS, isStack)) return false;
   if (!isListOf(spaces, 1, isSpace)) return false;
+  // only a space carries a view
+  if (json.kind !== SHARE_KIND.space && json.view !== undefined) return false;
   switch (json.kind) {
     case SHARE_KIND.speaker:
       return speakers.length === 1 && stacks.length === 0 && spaces.length === 0;
     case SHARE_KIND.stack:
       return stacks.length === 1 && spaces.length === 0;
     case SHARE_KIND.space:
-      return spaces.length === 1;
+      return spaces.length === 1 && (json.view === undefined || isView(json.view));
     default:
       return false;
   }

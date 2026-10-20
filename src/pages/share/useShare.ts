@@ -28,6 +28,7 @@ import type {
   ShareError,
   ShareKind,
   SpaceDesign,
+  SpaceView,
   SpeakerSpec,
   StackDesign,
 } from "../../types";
@@ -48,8 +49,12 @@ interface SharePage<T> {
   store: Pick<ConfigStore, "db" | "overwrite">;
 }
 
-/** The three pages, by the kind each shares. */
-export type SharePages = { [K in ShareKind]: SharePage<ShareDesigns[K]> };
+/** The three pages, by the kind each shares; the Space page also holds the band on show, and sets it from a link. */
+export type SharePages = {
+  [K in ShareKind]: K extends "space"
+    ? SharePage<ShareDesigns[K]> & { view: SpaceView; setView: (view: SpaceView) => void }
+    : SharePage<ShareDesigns[K]>;
+};
 
 /** What a kind's page does for sharing: its design's name and envelope, and how a copy is saved. */
 interface KindOps<T> {
@@ -107,7 +112,10 @@ export function useShare(
     const p = latestPages.current;
     if (opened.kind === SHARE_KIND.speaker) p.speaker.shared.open(opened.design);
     else if (opened.kind === SHARE_KIND.stack) p.stack.shared.open(opened.design);
-    else p.space.shared.open(opened.design);
+    else {
+      p.space.shared.open(opened.design);
+      if (opened.view) p.space.setView(opened.view);
+    }
   };
 
   useEffect(() => {
@@ -183,7 +191,7 @@ export function useShare(
     space: {
       page: pages.space,
       name: (d: SpaceDesign) => d.space.name,
-      envelope: spaceEnvelope,
+      envelope: (d: SpaceDesign) => spaceEnvelope(d, pages.space.view),
       saveCopy: (d: SpaceDesign, makeId: () => string) => saveSpaceCopy(d, stores, makeId),
       needs: [SHARE_KIND.speaker, SHARE_KIND.stack, SHARE_KIND.space],
     } satisfies KindOps<SpaceDesign>,

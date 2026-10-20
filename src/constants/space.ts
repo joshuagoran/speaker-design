@@ -5,6 +5,15 @@ import type { SurfaceName } from "../components/ui/RoomFields";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
 
+/** The coverage map's bands, by id: the ones a shared Space link may name. */
+export const COVERAGE_BAND_IDS = [
+  "sub",
+  "kick",
+  "mid",
+  "high",
+  "one",
+] as const satisfies readonly CoverageBand[];
+
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 20 × 30 ft, a 12 ft ceiling, drywall all
  * round, an empty floor. A wider or longer layout grows it (lib/speaker/spaceLayout `homeVenue`).

@@ -357,6 +357,50 @@ test("a link that passes the checks but breaks a model does not open", () => {
   assert.ok(openEnvelope(asJson(speakerEnvelope(templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay)))));
 });
 
+test("a space link keeps the band and frequency on show", async () => {
+  const view = { band: "one", freqHz: 125 } as const;
+  const fragment = linkFragment(SHARE_KIND.space, await encodeLink(spaceEnvelope(START, view)));
+  const decoded = await decodeLink(fragment);
+  assert.ok(decoded.ok);
+  assert.deepStrictEqual(decoded.envelope, asJson(spaceEnvelope(START, view)));
+  const opened = openEnvelope(decoded.envelope);
+  assert.ok(opened && opened.kind === SHARE_KIND.space);
+  assert.deepStrictEqual(opened.view, view);
+});
+
+test("bad link: a band that is unknown, or a frequency out of range", async () => {
+  const withView = asJson(spaceEnvelope(START, { band: "one", freqHz: 125 }));
+  const wrong: Array<[string, unknown]> = [
+    ["unknown band", withValue(withView, ["view", "band"], "bass")],
+    ["number band", withValue(withView, ["view", "band"], 3)],
+    ["text frequency", withValue(withView, ["view", "freqHz"], "125")],
+    ["frequency too low", withValue(withView, ["view", "freqHz"], 19)],
+    ["frequency too high", withValue(withView, ["view", "freqHz"], 501)],
+    ["no frequency", withValue(withView, ["view", "freqHz"], undefined)],
+    ["view that is null", withValue(withView, ["view"], null)],
+    [
+      "view on a speaker",
+      {
+        ...asJson(speakerEnvelope(templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay))),
+        view: withView.view,
+      },
+    ],
+  ];
+  for (const [label, value] of wrong) {
+    assert.ok(await turnedAway(JSON.stringify(value)), label);
+  }
+});
+
+test("a space link without a band still opens, on no view", async () => {
+  const decoded = await decodeLink(
+    linkFragment(SHARE_KIND.space, await encodeLink(spaceEnvelope(START))),
+  );
+  assert.ok(decoded.ok);
+  const opened = openEnvelope(decoded.envelope);
+  assert.ok(opened && opened.kind === SHARE_KIND.space);
+  assert.equal(opened.view, undefined);
+});
+
 const KINDS: readonly ShareKind[] = Object.values(SHARE_KIND);
 
 test("page at an address with a share link: each kind's page", () => {

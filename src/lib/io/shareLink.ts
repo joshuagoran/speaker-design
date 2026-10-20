@@ -19,6 +19,7 @@ import type {
   ShareKind,
   SpaceDesign,
   SpaceShare,
+  SpaceView,
   SpeakerShare,
   SpeakerSpec,
   StackDesign,
@@ -54,12 +55,13 @@ export const stackEnvelope = (design: StackDesign): StackShare => ({
   spaces: [],
 });
 
-/** The envelope of a space: the space, with the stacks and speakers it places. */
-export const spaceEnvelope = (design: SpaceDesign): SpaceShare => ({
+/** The envelope of a space: the space, with the stacks and speakers it places, and the band on show (`view`). */
+export const spaceEnvelope = (design: SpaceDesign, view?: SpaceView): SpaceShare => ({
   ...marks(),
   kind: SHARE_KIND.space,
   ...usedParts(design),
   spaces: [design.space],
+  ...(view && { view: { band: view.band, freqHz: view.freqHz } }),
 });
 
 // ---- Bytes and base64url ----

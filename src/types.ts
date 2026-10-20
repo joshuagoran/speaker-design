@@ -3282,6 +3282,9 @@ export interface FloorPlacement extends FloorPoint {
 /** What the map averages: a named band, or one frequency (`freqHz`) summed with phase. */
 export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 
+/** The coverage map's view of a space: the band on show and, for one frequency, its frequency (Hz). */
+export type SpaceView = Pick<CoverageLayout, "band" | "freqHz">;
+
 /**
  * Where the coverage map's target level is measured: at the listener, as the audience's average (the floor the stats
  * count), or 1 m in front of the stacks.
@@ -3521,6 +3524,8 @@ export interface StackShare extends ShareMarks {
 export interface SpaceShare extends ShareMarks, Pick<SpaceDesign, "speakers" | "stacks"> {
   kind: typeof SHARE_KIND.space;
   spaces: readonly [SpaceSpec];
+  /** the sender's band on the coverage map; a link without it opens on the page's own band */
+  view?: SpaceView;
 }
 
 /** What a link carries: a speaker, a stack or a space, by its `kind`. */

@@ -64,7 +64,16 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
         store: speakerPage.store,
       },
       stack: { design: stack.design, shared: stack.sharedView, store: stack.store },
-      space: { design: space.design, shared: space.sharedView, store: space.store },
+      space: {
+        design: space.design,
+        shared: space.sharedView,
+        store: space.store,
+        view: { band: space.band, freqHz: space.freqHz },
+        setView: (view) => {
+          space.setBand(view.band);
+          space.setFreqHz(view.freqHz);
+        },
+      },
     },
     shareKind,
     setView,

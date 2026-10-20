@@ -12,14 +12,17 @@ import type {
   ShareEnvelope,
   ShareKind,
   SpaceDesign,
+  SpaceView,
   SpeakerSpec,
   StackDesign,
 } from "../../types";
 
 /** A shared design opened: its kind, and the design its page holds. */
-export type OpenedShare = {
-  [K in ShareKind]: { kind: K; design: ShareDesigns[K] };
-}[ShareKind];
+export type OpenedShare =
+  | {
+      [K in Exclude<ShareKind, "space">]: { kind: K; design: ShareDesigns[K] };
+    }[Exclude<ShareKind, "space">]
+  | { kind: "space"; design: SpaceDesign; view?: SpaceView };
 
 /** Runs the speaker's model once: it throws where the speaker is not one the model can read. */
 function tryModel(speaker: SpeakerSpec) {
@@ -77,7 +80,7 @@ function read(envelope: ShareEnvelope): OpenedShare | null {
       // a speaker that stands alone is not run by a stack's model
       const inStacks = new Set(design.stacks.flatMap((s) => s.members.map((m) => m.speakerId)));
       design.speakers.filter((s) => !inStacks.has(s.id)).forEach(tryModel);
-      return { kind: SHARE_KIND.space, design };
+      return { kind: SHARE_KIND.space, design, view: envelope.view };
     }
   }
 }
