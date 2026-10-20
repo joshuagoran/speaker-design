@@ -35,7 +35,7 @@ Run each in the browser before every hand-over.
 2. Another user sends a link of their living room. Open it. Move the listener and change a delay. Find the problem.
    Tap Share and send the fixed link back. The sender opens the fixed space.
 3. Open a link while the Space page holds an unsaved design. Close the shared design. The unsaved design comes back.
-4. Open a shared space, change it, and tap "Save a copy" (signed in). The space and its stacks and speakers are in
+4. Open a shared space in an empty account, change it, and tap "Save a copy". The space and its stacks and speakers are in
    the libraries as new items. The sender's items do not change.
 5. Open your own shared link and change it. The only save is "Save a copy". The saved original does not change.
 6. Open a link that a chat app cut short. A clear message shows. Nothing changes.
