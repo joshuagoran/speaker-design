@@ -279,8 +279,7 @@ export const SPACE_TEXT = {
   /** a placement's couplings line: its label, what it says when nothing is coupled, and its tooltip */
   coupledWith: "Coupled with:",
   coupledNothing: "nothing",
-  coupledTip:
-    "A floor, a wall, or another box right against this box adds bass, most for horn subs.",
+  coupledTip: "Each surface or box in contact with this one adds low end.",
   ear: "Ear height, ft",
   target: "Target level",
   /** the Target level's tooltip */
