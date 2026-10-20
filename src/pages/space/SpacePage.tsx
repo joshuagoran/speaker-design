@@ -268,7 +268,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                 (sharing.notice.problem ? (
                   <Notice>{sharing.notice.text}</Notice>
                 ) : (
-                  <span className="text-xs text-stone-500">{sharing.notice.text}</span>
+                  <span className="text-xs text-green-700">{sharing.notice.text}</span>
                 ))}
             </div>
             <CoverageMap

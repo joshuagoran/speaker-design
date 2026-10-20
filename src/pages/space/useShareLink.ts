@@ -8,14 +8,19 @@ import {
   spaceEnvelope,
   withoutShare,
 } from "../../lib/io/shareLink";
-import { SHARE_ERROR, SHARE_LONG_LINK_CHARS, SHARE_TEXT } from "../../constants/share";
+import {
+  SHARE_COPIED_SHOW_MS,
+  SHARE_ERROR,
+  SHARE_LONG_LINK_CHARS,
+  SHARE_TEXT,
+} from "../../constants/share";
 import { spaceFromSaved, usedParts } from "./spaceSaves";
 import type { ShareError, SpaceDesign, SpaceShare } from "../../types";
 
 /** The one line the page shows about sharing. */
 export interface ShareNotice {
   text: string;
-  /** a problem (a link that did not open or copy), shown as a notice; absent: a plain status line */
+  /** a problem or a warning (a link that did not open or copy, or a long link), shown as a notice; absent: the link copied */
   problem?: true;
 }
 
@@ -35,6 +40,12 @@ function openedDesign(envelope: SpaceShare): SpaceDesign | null {
  */
 export function useShareLink(design: SpaceDesign, replaceDesign: (d: SpaceDesign) => void) {
   const [notice, setNotice] = useState<ShareNotice | null>(null);
+  // "Link copied!" clears after a few seconds; a problem or a warning stays until the next share or link
+  useEffect(() => {
+    if (!notice || notice.problem) return;
+    const timer = window.setTimeout(() => setNotice(null), SHARE_COPIED_SHOW_MS);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
   /** the address a link is being opened from, so one link opens once */
   const opening = useRef<string | null>(null);
   /** the count of opens started: an open that is not the latest when it finishes is stale and changes nothing */
@@ -104,9 +115,11 @@ export function useShareLink(design: SpaceDesign, replaceDesign: (d: SpaceDesign
         const blob = link.then((text) => new Blob([text], { type: "text/plain" }));
         await navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]);
       }
-      setNotice({
-        text: (await link).length > SHARE_LONG_LINK_CHARS ? SHARE_TEXT.long : SHARE_TEXT.copied,
-      });
+      setNotice(
+        (await link).length > SHARE_LONG_LINK_CHARS
+          ? { text: SHARE_TEXT.long, problem: true }
+          : { text: SHARE_TEXT.copied },
+      );
     } catch {
       setNotice({ text: SHARE_TEXT.copyFailed, problem: true });
     }

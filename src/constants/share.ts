@@ -39,6 +39,9 @@ export const SHARE_MAX_PARTS = 64;
 /** A link longer than this many characters gets a warning: some apps cut it. */
 export const SHARE_LONG_LINK_CHARS = 8000;
 
+/** How long "Link copied!" shows before it clears, ms. Problems and warnings stay. */
+export const SHARE_COPIED_SHOW_MS = 3000;
+
 /** Why a link did not open, by id. */
 export const SHARE_ERROR = {
   cutShort: "cutShort",
@@ -52,7 +55,7 @@ export const SHARE_ERROR = {
 /** What the Space page says about a link, as one short line. */
 export const SHARE_TEXT = {
   button: "Share",
-  copied: "Link copied.",
+  copied: "Link copied!",
   long: "This link is long. Some apps cut it.",
   copyFailed: "The link did not copy.",
   openFailed: "This link did not open.",
