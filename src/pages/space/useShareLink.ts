@@ -22,6 +22,8 @@ export interface ShareNotice {
   text: string;
   /** a problem or a warning (a link that did not open or copy, or a long link), shown as a notice; absent: the link copied */
   problem?: true;
+  /** when the link copied (ms since 1970): a new copy restarts the line's fade */
+  shownAt?: number;
 }
 
 /**
@@ -118,7 +120,7 @@ export function useShareLink(design: SpaceDesign, replaceDesign: (d: SpaceDesign
       setNotice(
         (await link).length > SHARE_LONG_LINK_CHARS
           ? { text: SHARE_TEXT.long, problem: true }
-          : { text: SHARE_TEXT.copied },
+          : { text: SHARE_TEXT.copied, shownAt: Date.now() },
       );
     } catch {
       setNotice({ text: SHARE_TEXT.copyFailed, problem: true });

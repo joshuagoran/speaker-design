@@ -15,9 +15,10 @@ import { Notice } from "./components/ui/Notice";
 import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
 import { ThemeSwitch } from "./components/ui/ThemeSwitch";
 import { PageTabs } from "./components/ui/PageTabs";
-import { IconButton, ShareIcon } from "./components/ui/IconButton";
+import { ShareIcon } from "./components/ui/IconButton";
+import { Button } from "./components/ui/Button";
 import { useShareLink } from "./pages/space/useShareLink";
-import { SHARE_TEXT } from "./constants/share";
+import { SHARE_COPIED_SHOW_MS, SHARE_TEXT } from "./constants/share";
 import { entriesOf } from "./lib/records";
 import { pageAt } from "./lib/pageRoute";
 import {
@@ -111,11 +112,22 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
                     (sharing.notice.problem ? (
                       <Notice>{sharing.notice.text}</Notice>
                     ) : (
-                      <span className="text-xs text-green-700">{sharing.notice.text}</span>
+                      <span
+                        key={sharing.notice.shownAt}
+                        className="fade-out-late text-xs text-green-700"
+                        style={{ animationDuration: `${SHARE_COPIED_SHOW_MS}ms` }}
+                      >
+                        {sharing.notice.text}
+                      </span>
                     ))}
-                  <IconButton label={SHARE_TEXT.button} onClick={() => void sharing.share()}>
+                  <Button
+                    title={SHARE_TEXT.tooltip}
+                    className="inline-flex items-center gap-2"
+                    onClick={() => void sharing.share()}
+                  >
+                    {SHARE_TEXT.button}
                     <ShareIcon />
-                  </IconButton>
+                  </Button>
                 </>
               )
             }
