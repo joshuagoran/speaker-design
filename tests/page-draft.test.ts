@@ -40,6 +40,7 @@ afterEach(() => {
 /** A draft of a number: stored as `{ n }`, read back only when `n` is a number. */
 const counter: PageDraft<number> = {
   key: "test.draft",
+  sharedKey: "test.shared",
   empty: () => 0,
   toDraft: (n) => ({ n }),
   fromDraft: (raw) => {

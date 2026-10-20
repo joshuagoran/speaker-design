@@ -16,7 +16,7 @@ import {
 } from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { stackDraft, stackFromSaved, stackSnapshot } from "./stackSaves";
-import { usePageDraft } from "../../hooks/usePageDraft";
+import { usePageDraft, type SharedMode } from "../../hooks/usePageDraft";
 import { useStackOptimizer } from "./useStackOptimizer";
 import { STACK_TEXT } from "../../constants/stack";
 import type { SavedConfig, SpeakerSpec, StackDesign, StackMember, StackSpec } from "../../types";
@@ -68,15 +68,30 @@ export function withSpeaker(speakers: readonly SpeakerSpec[], speaker: SpeakerSp
  * make and the library (the signed-in user's `stacks`). Held in App, so the stack survives switching pages.
  */
 export function useStack() {
-  const [design, setDesign] = usePageDraft(stackDraft);
+  const [design, setDesign, sharedDraft] = usePageDraft(stackDraft);
   // how many times the whole stack was replaced (a start, a saved stack opened): the optimizer's locks start over with it
   const [round, setRound] = useState(0);
   /** the whole stack replaced: the optimizer's cards, locks and Undo are dropped */
-  const replaceDesign = (next: StackDesign) => {
-    setDesign(next);
+  const restart = () => {
     setRound((n) => n + 1);
     // called from an event, after `optimizer` below is set
     optimizer.clearResults();
+  };
+  const replaceDesign = (next: StackDesign) => {
+    setDesign(next);
+    restart();
+  };
+  /** the shared view: a link's stack shows in place of the page's own, and the page starts over with each switch */
+  const sharedView: SharedMode<StackDesign> = {
+    ...sharedDraft,
+    open: (next, note) => {
+      sharedDraft.open(next, note);
+      restart();
+    },
+    close: () => {
+      sharedDraft.close();
+      restart();
+    },
   };
   // the model reads only the members and the speakers (a name edit doesn't run it), a step behind the typing
   const members = useDeferredValue(design.stack.members);
@@ -115,6 +130,7 @@ export function useStack() {
     editStack((s) => ({ ...s, members: edit(s.members) }));
   return {
     design,
+    sharedView,
     /** replaces the whole stack (a start, a saved stack opened): the optimizer starts over */
     setDesign: replaceDesign,
     optimizer,

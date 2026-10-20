@@ -1,5 +1,5 @@
 import { Component, Fragment, type ReactNode } from "react";
-import { clearPageDrafts } from "../../lib/savedDraft";
+import { clearPageDrafts, clearSharedViews } from "../../lib/savedDraft";
 
 interface Props {
   /** the app; told whether a draft broke it and was dropped, so it can say so */
@@ -33,8 +33,9 @@ export function boundaryView(
 }
 
 /**
- * Keeps a design the browser restored from breaking the app for good. When the app throws while it renders, every page's
- * draft is cleared and the app renders again from the default designs. It sits above the whole app because the pages'
+ * Keeps a design the browser restored from breaking the app for good. When the app throws while it renders, the shared
+ * views are cleared if there are any (a link's design is the likelier cause, and the drafts are the user's own work),
+ * else every page's draft, and the app renders again from the default designs. It sits above the whole app because the pages'
  * design state is held there, so the throw can come from a page's state as well as from its view.
  */
 export class DraftBoundary extends Component<Props, BoundaryState> {
@@ -45,7 +46,8 @@ export class DraftBoundary extends Component<Props, BoundaryState> {
   }
 
   override componentDidCatch() {
-    clearPageDrafts();
+    // a shared view is the likelier cause, and the drafts are the user's own work: drop the shared view first
+    if (!clearSharedViews()) clearPageDrafts();
     this.setState(boundaryAfterCatch);
   }
 
