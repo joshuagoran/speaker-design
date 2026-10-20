@@ -1,6 +1,7 @@
 import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
+import type { SHARE_ERROR, SHARE_FORMAT, SHARE_KIND, SHARE_VERSION } from "./constants/share";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
 import type {
@@ -3493,6 +3494,18 @@ export type StackDesign = Pick<DesignLayers, "stack" | "speakers">;
 export interface SpaceDesign extends Pick<DesignLayers, "space" | "speakers"> {
   stacks: readonly StackSpec[];
 }
+
+/** A space as a link carries it: the envelope's marks, the space, and every stack and speaker it places. */
+export interface SpaceShare extends Pick<SpaceDesign, "speakers" | "stacks"> {
+  format: typeof SHARE_FORMAT;
+  version: typeof SHARE_VERSION;
+  kind: typeof SHARE_KIND.space;
+  /** exactly one space */
+  spaces: readonly [SpaceSpec];
+}
+
+/** Why a link did not open (`SHARE_ERROR`). */
+export type ShareError = (typeof SHARE_ERROR)[keyof typeof SHARE_ERROR];
 
 /**
  * A saved space: the space without its id and name (the document's), and a copy of each stack and speaker it places (by

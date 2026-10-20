@@ -70,6 +70,8 @@ import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
 import { emptySpace, itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
+import { useShareLink } from "./useShareLink";
+import { SHARE_TEXT } from "../../constants/share";
 import { placeOptions } from "./placeOptions";
 import { STACK_PRESETS } from "../stack/stackPresets";
 import {
@@ -106,6 +108,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   const pal = usePalette();
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
+  const sharing = useShareLink(design, space.replaceDesign);
   const folds = useFolds("space.settingsFolds", keysOf(SPACE_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<SpaceSettingsSection>("space", "space");
   const maxHeight = useMapMaxHeight();
@@ -409,6 +412,13 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             "space",
             <>
               <TextField label="Name" value={name} maxLength={60} onChange={space.setName} />
+              <Button onClick={() => void sharing.share()}>{SHARE_TEXT.button}</Button>
+              {sharing.notice &&
+                (sharing.notice.problem ? (
+                  <Notice>{sharing.notice.text}</Notice>
+                ) : (
+                  <p className="text-xs text-stone-500">{sharing.notice.text}</p>
+                ))}
               <StartPicker
                 options={startOptions}
                 value={byId(startOptions, start)}
