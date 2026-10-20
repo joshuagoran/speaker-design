@@ -18,10 +18,21 @@ export interface RoomWall {
   at: number;
 }
 
-/** What one box (`StandingItem`) is coupled with: the floor and walls, and the other boxes (their indexes). */
+/** What one member box of a placement is coupled with: the floor and walls, and the other items' member boxes. */
+export interface MemberCoupling {
+  surfaces: CoupledSurface[];
+  /** each by its item's index and its box's index in that item's `boxes` */
+  boxes: { item: number; box: number }[];
+}
+
+/**
+ * What one box (`StandingItem`) is coupled with: the floor and walls, and the other boxes (their indexes); and each of
+ * its member boxes on its own, in `boxes`' order.
+ */
 export interface BoxCoupling {
   surfaces: CoupledSurface[];
   boxes: number[];
+  members: MemberCoupling[];
 }
 
 /** A coupled face on the floor plan, ft: along a wall where a box meets it, or along the face two boxes share. */
@@ -191,8 +202,9 @@ function sharedFace(a: Face, b: Face): { mark: CouplingMark | null } | null {
 /**
  * What each box stands right against, in `items`' order (a mirrored pair as two, `expandPlacements`): the floor (its
  * lift within the coupling gap, `COUPLING_GAP_M`), each wall a face of it is within the gap of, and each other box with
- * a face within the gap of one of its own and a shared area. With the marks the plan draws: each stretch of wall a box
- * meets, and once each upright face two boxes share.
+ * a face within the gap of one of its own and a shared area. Each member box on its own too: the floor only where its
+ * lowest corner is within the gap of it (a box stacked on another is not). With the marks the plan draws: each stretch
+ * of wall a box meets, and once each upright face two boxes share.
  */
 export function spaceCoupling(
   items: readonly StandingItem[],
@@ -203,18 +215,26 @@ export function spaceCoupling(
   const boxes = items.map((it, i): BoxCoupling => {
     const surfaces: CoupledSurface[] = [];
     if (it.placement.liftIn * METERS_PER_INCH <= COUPLING_GAP_M) surfaces.push(COUPLED_FLOOR);
+    const members = it.boxes.map((b): MemberCoupling => ({
+      surfaces: Math.min(...b.corners.map((c) => c.z)) <= GAP_FT ? [COUPLED_FLOOR] : [],
+      boxes: [],
+    }));
     for (const wall of walls) {
       const { axis, along, low } = WALL_FACE[wall.side];
-      const against = faces[i]
-        .flat()
-        .filter(
-          (f) =>
-            (low ? f.normal[axis] < -0.5 : f.normal[axis] > 0.5) &&
-            f.corners.every((c) => Math.abs(c[axis] - wall.at) <= GAP_FT),
-        );
+      const against = faces[i].flatMap((own, box) =>
+        own
+          .filter(
+            (f) =>
+              (low ? f.normal[axis] < -0.5 : f.normal[axis] > 0.5) &&
+              f.corners.every((c) => Math.abs(c[axis] - wall.at) <= GAP_FT),
+          )
+          .map((f) => ({ f, box })),
+      );
       if (!against.length) continue;
       surfaces.push(wall.side);
-      for (const f of against) {
+      for (const { f, box } of against) {
+        const member = members[box].surfaces;
+        if (!member.includes(wall.side)) member.push(wall.side);
         const span = f.corners.map((c) => c[along]);
         marks.push({
           from: ON_AXIS[axis](wall.at, Math.min(...span)),
@@ -222,17 +242,25 @@ export function spaceCoupling(
         });
       }
     }
-    return { surfaces, boxes: [] };
+    return { surfaces, boxes: [], members };
   });
   for (let i = 0; i < items.length; i++)
     for (let j = i + 1; j < items.length; j++) {
       let coupled = false;
-      for (const fa of faces[i].flat())
-        for (const fb of faces[j].flat()) {
-          const met = sharedFace(fa, fb);
+      for (const [boxA, ownA] of faces[i].entries())
+        for (const [boxB, ownB] of faces[j].entries()) {
+          let met = false;
+          for (const fa of ownA)
+            for (const fb of ownB) {
+              const shared = sharedFace(fa, fb);
+              if (!shared) continue;
+              met = true;
+              if (shared.mark) marks.push(shared.mark);
+            }
           if (!met) continue;
           coupled = true;
-          if (met.mark) marks.push(met.mark);
+          boxes[i].members[boxA].boxes.push({ item: j, box: boxB });
+          boxes[j].members[boxB].boxes.push({ item: i, box: boxA });
         }
       if (!coupled) continue;
       boxes[i].boxes.push(j);

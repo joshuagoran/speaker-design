@@ -1109,6 +1109,9 @@ export interface HornDesign {
   portOffset: number;
 }
 
+/** Where a box's horn mouth and its vent exit radiate: the solid angle, and the identical boxes coupled with it. */
+export type BoxLoading = Pick<HornDesign, "count" | "angle">;
+
 /** One point of a horn model's response, before any crossover. */
 export interface HornPoint {
   /** frequency, Hz */

@@ -14,6 +14,7 @@
 //
 // Not modeled here (the Space page's): the room, the baffle step and diffraction, directivity off axis.
 import type {
+  BoxLoading,
   Complex,
   FrequencyPoint,
   SpeakerBand,
@@ -260,11 +261,13 @@ export const stackListenHeightIn = (
 
 /**
  * The stack at its listening point, moved to 1 m: each member's speaker through its crossover, level, delay and its
- * bands' paths, summed with their phase. A member whose speaker isn't in `speakers` is left out (null).
+ * bands' paths, summed with their phase. A member whose speaker isn't in `speakers` is left out (null). `loading` is
+ * each member's horn load where it stands (the Space page's); a member without one is alone in half space.
  */
 export function stackResponse(
   stack: Pick<StackSpec, "members">,
   speakers: readonly SpeakerSpec[],
+  loading: readonly (BoxLoading | undefined)[] = [],
 ): StackResponse {
   const freqs = SPEAKER_RESPONSE_FREQUENCIES;
   const placed = stackLayout(stack, speakers);
@@ -272,7 +275,7 @@ export function stackResponse(
   const models = placed.map((m, k) => {
     if (!m.speaker) return null;
     const speaker = memberSpeaker(stack.members[k], m.speaker);
-    const response = speakerResponse(speaker, { feed: speaker.input });
+    const response = speakerResponse(speaker, { feed: speaker.input, loading: loading[k] });
     const paths = new Map(m.bands.map((b) => [b.id, pathM(b.center, listenHeightIn)]));
     return { speaker, response, paths };
   });

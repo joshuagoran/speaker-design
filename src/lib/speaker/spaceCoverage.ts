@@ -5,6 +5,9 @@
 // coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step (the speaker
 // model is half-space; the floor image puts the floor back). Pure.
 //
+// A horn-loaded box's mouth and vent exit take their load from where the box stands (lib/speaker/spaceLoading, from
+// what it is coupled with, lib/speaker/spaceCoupling); every other box plays as it does alone.
+//
 // Each placement's own delay and level are its solved ones (lib/speaker/solveFeeds: Auto ones from the layout, the rest
 // as typed).
 //
@@ -12,6 +15,7 @@
 // the level; the page then turns it down so the reference (the audience's average) gets the target, never past the limit.
 import type {
   BandId,
+  BoxLoading,
   Complex,
   CoverageBand,
   CoverageGrid,
@@ -50,6 +54,8 @@ import {
 import { coneParts, isConeKind } from "./driverParts";
 import { driverHorn, speakerLayout } from "./speakerLayout";
 import { spaceLayout, type BandOfPart, type PlacedDriver, type PlacedItem } from "./spaceLayout";
+import { roomWalls, spaceCoupling } from "./spaceCoupling";
+import { boxLoadings } from "./spaceLoading";
 import { typedFeed, type SolvedFeed } from "./solveFeeds";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
@@ -143,6 +149,8 @@ export interface SpaceModel {
   headroomDb: number;
   /** a placement names a stack or speaker the design lacks */
   missing: boolean;
+  /** what each box stands right against, in `placements`' order, with the marks the plan draws */
+  coupling: ReturnType<typeof spaceCoupling>;
 }
 
 /** Milliseconds in a second. */
@@ -176,20 +184,23 @@ export function pressureAt(ps: readonly Complex[], f: number): Complex {
   return { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
 }
 
-/** A placement's stack at its speakers' amp powers: its response and limits (null when the design lacks what it places). */
+/**
+ * A placement's stack at its speakers' amp powers, each member's horn on its `loading`: its response and limits (null
+ * when the design lacks what it places).
+ */
 function placementModel(
-  design: Pick<SpaceDesign, "space">,
   item: PlacedItem,
+  loading: readonly (BoxLoading | undefined)[],
   cache: Map<string, Pick<SpacePlacementModel, "response" | "limits">>,
 ): SpacePlacementModel {
   if (!item.stack) return { item, response: null, limits: null, headroomDb: null };
   const { placement } = item;
-  // what moves the model: the item (a mirrored pair's boxes share it)
-  const key = JSON.stringify(placement.item);
+  // what moves the model: the item and its horns' loading (boxes alike and loaded alike share it, as a mirrored pair)
+  const key = JSON.stringify([placement.item, loading]);
   let run = cache.get(key);
   if (!run) {
     const { stack, speakers } = item.stack;
-    const response = stackResponse(stack, speakers);
+    const response = stackResponse(stack, speakers, loading);
     run = { response, limits: stackLimits(stack, response) };
     cache.set(key, run);
   }
@@ -227,7 +238,9 @@ export function withSolved(model: SpaceModel, solved: SolvedFeed[]): SpaceModel 
 export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
   const cache = new Map<string, Pick<SpacePlacementModel, "response" | "limits">>();
   const items = spaceLayout(design, bandOfPart);
-  const placements = items.map((item) => placementModel(design, item, cache));
+  const coupling = spaceCoupling(items, roomWalls(design.space.venue.room));
+  const loadings = boxLoadings(items, coupling.boxes);
+  const placements = items.map((item, k) => placementModel(item, loadings[k] ?? [], cache));
   const feeds = new Map<string, VoiceFeed>();
   const boxes = placements.map(({ item, response }, k): SceneDriver[] => {
     if (!response) return [];
@@ -287,6 +300,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
       solved: [],
       headroomDb: 0,
       missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
+      coupling,
     },
     design.space.placements.map(typedFeed),
   );

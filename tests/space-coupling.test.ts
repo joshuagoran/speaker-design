@@ -101,8 +101,16 @@ test("coupling: two boxes side by side, with their shared face marked once", () 
 
 test("coupling: a box lifted onto another is coupled with it, not the floor; lifted clear, with nothing", () => {
   const stacked = coupled([at(0, 10), at(0, 10, 0, CUBE.h)]);
-  assert.deepEqual(stacked.boxes[1], { surfaces: [], boxes: [0] });
-  assert.deepEqual(stacked.boxes[0], { surfaces: [COUPLED_FLOOR], boxes: [1] });
+  assert.deepEqual(stacked.boxes[1], {
+    surfaces: [],
+    boxes: [0],
+    members: [{ surfaces: [], boxes: [{ item: 0, box: 0 }] }],
+  });
+  assert.deepEqual(stacked.boxes[0], {
+    surfaces: [COUPLED_FLOOR],
+    boxes: [1],
+    members: [{ surfaces: [COUPLED_FLOOR], boxes: [{ item: 1, box: 0 }] }],
+  });
   // one on top of the other has no face to mark on the plan
   assert.equal(stacked.marks.length, 0);
   assert.deepEqual(coupled([at(0, 10), at(0, 10, 0, CUBE.h + 6)]).boxes[1].boxes, []);
@@ -150,10 +158,13 @@ test("coupling: a mirrored pair stands as two boxes, coupled with each other at 
 test("coupling: outdoors there are no walls, only the ground and the other boxes", () => {
   const outdoors = { ...ROOM, outdoors: true };
   const out = coupled([at(-HALF + 1, SIDE_FT), at(-HALF + 1 + SIDE_FT, SIDE_FT)], outdoors);
-  assert.deepEqual(out.boxes, [
-    { surfaces: [COUPLED_FLOOR], boxes: [1] },
-    { surfaces: [COUPLED_FLOOR], boxes: [0] },
-  ]);
+  assert.deepEqual(
+    out.boxes.map(({ surfaces, boxes }) => ({ surfaces, boxes })),
+    [
+      { surfaces: [COUPLED_FLOOR], boxes: [1] },
+      { surfaces: [COUPLED_FLOOR], boxes: [0] },
+    ],
+  );
 });
 
 /** A drag of box `i` of `placements` to `to` (ft), snapping flush in `room`. */
