@@ -269,7 +269,7 @@ export const SPACE_TEXT = {
   placementNote: "Some placements play later, to line up with other speakers in the room.",
   outdoors: "Outdoors",
   /** the Placements section's toggle: a dragged box snaps flush against a wall or another box */
-  snapFlush: "Snap flush",
+  snapFlush: "Snap to walls & boxes",
   /** a placement's couplings line: its label, what it says when nothing is coupled, and its tooltip */
   coupledWith: "Coupled with:",
   coupledNothing: "nothing",

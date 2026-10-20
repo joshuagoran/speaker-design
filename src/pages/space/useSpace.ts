@@ -676,7 +676,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     setSnapsFlush,
     /**
      * moves a box of the map (an index into the model's boxes) on the floor; its placement's other box follows. It
-     * snaps flush against a wall or another box while Snap flush is on, unless `free` (Alt held)
+     * snaps flush against a wall or another box while Snap to walls & boxes is on, unless `free` (Alt held)
      */
     moveBox: (i: number, p: FloorPoint, free: boolean) => {
       const box = boxAt(i);
