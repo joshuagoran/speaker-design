@@ -540,7 +540,11 @@ const SUB_HARDWARE: Pick<SpeakerCabinet, "handles" | "inputDish"> = {
   inputDish: true,
 };
 
-/** A generic box's vented chamber: its size and the PA letterbox slot along its floor. */
+/** The face a generic box's vent takes along its floor, in: the wall, and a letterbox slot's mouth above it. */
+const ventFloorIn = (box: GenericVentedBox) =>
+  DEFAULT_PA.wall + (box.port.shape === PORT_SHAPE.slot ? box.port.h : 0);
+
+/** A generic box's vented chamber: its size and its port. */
 const genericVentedChamber = (box: GenericVentedBox, drivers: SpeakerDriver[]): SpeakerChamber => ({
   at: { xIn: 0, yIn: 0 },
   dims: box.dims,
@@ -548,7 +552,7 @@ const genericVentedChamber = (box: GenericVentedBox, drivers: SpeakerDriver[]): 
   stuffingPct: 0,
   vent: {
     kind: VENT_KIND.vented,
-    port: { shape: PORT_SHAPE.slot, n: 1, ...box.slot },
+    port: box.port,
     maxSpeedMs: DEFAULT_PA.portMax,
   },
   load: DIRECT_LOAD,
@@ -556,15 +560,15 @@ const genericVentedChamber = (box: GenericVentedBox, drivers: SpeakerDriver[]): 
   bracing: GENERIC_BRACING,
 });
 
-/** One generic sub's driver entry, on the low band, its group's center `yIn` up from the chamber's bottom. */
+/** One generic sub's driver entry, on the low band, at `position` on its chamber's face. */
 const genericSubDriver = (
   driverId: SpeakerDriverParts["sub"]["id"],
-  yIn: number,
+  position: SpeakerDriver["position"],
 ): SpeakerDriver => ({
   kind: DRIVER_KIND.sub,
   driverId,
   count: 1,
-  position: { xIn: 0, yIn },
+  position,
   bands: [SPEAKER_BAND.low],
   horn: null,
 });
@@ -579,18 +583,28 @@ const subBands = (
   look: GENERIC_LOOK,
 });
 
-/** A generic vented sub (`GENERIC_SUB`): one or two 18″ in one chamber, stacked up the baffle above the slot. */
+/**
+ * A generic vented sub (`GENERIC_SUB`): one or two 18″ in one chamber above the slot, side by side in a box wider than
+ * it is tall, else stacked up the baffle.
+ */
 function genericSub(
   box: (typeof GENERIC_SUB)["single" | "dual"],
   identity: SpecIdentity,
 ): SpeakerSpec {
   const { sub, subsonic } = GENERIC_SUB;
-  const { h } = box.dims;
+  const { w, h } = box.dims;
+  const t = DEFAULT_PA.wall;
   // the slot along the floor, the drivers sharing the face above it
-  const floorIn = DEFAULT_PA.wall + box.slot.h;
-  const share = (h - DEFAULT_PA.wall - floorIn) / box.count;
+  const floorIn = ventFloorIn(box);
+  const across = w > h;
+  const share = (across ? w - 2 * t : h - t - floorIn) / box.count;
   const drivers = Array.from({ length: box.count }, (_, i) =>
-    genericSubDriver(sub.id, floorIn + share * (i + 0.5)),
+    genericSubDriver(
+      sub.id,
+      across
+        ? { xIn: -(w / 2 - t) + share * (i + 0.5), yIn: (floorIn + h - t) / 2 }
+        : { xIn: 0, yIn: floorIn + share * (i + 0.5) },
+    ),
   );
   return {
     ...identity,
@@ -631,7 +645,7 @@ const topBands = (top: GenericTop): SpeakerSpec["bands"] => {
 function genericTop(top: GenericTop, identity: SpecIdentity): SpeakerSpec {
   const { h } = top.box.dims;
   const t = DEFAULT_PA.wall;
-  const floorIn = t + top.box.slot.h;
+  const floorIn = ventFloorIn(top.box);
   const cone: SpeakerDriver = {
     kind: DRIVER_KIND.mid,
     driverId: top.mid.id,
@@ -669,7 +683,7 @@ function genericHornSub(identity: SpecIdentity): SpeakerSpec {
     stuffingPct: 0,
     vent: DEFAULT_VENTS.sealed,
     load: DIRECT_LOAD,
-    drivers: [genericSubDriver(bin.sub.id, bin.dims.h / 2)],
+    drivers: [genericSubDriver(bin.sub.id, { xIn: 0, yIn: bin.dims.h / 2 })],
     bracing: GENERIC_BRACING,
   };
   const cabinet = genericCabinet([chamber], SUB_HARDWARE);

@@ -2036,11 +2036,11 @@ export interface SpeakerSpec {
 }
 
 /**
- * A generic PA box's vented chamber: its outside size, in, and its PA letterbox slot along the floor (its height, its
- * path length and its fins, in).
+ * A generic PA box's vented chamber: its outside size, in, and its port: the PA letterbox slot along the floor, or round
+ * tubes in a row on the back.
  */
 export type GenericVentedBox = Pick<SpeakerChamber, "dims"> & {
-  slot: Required<Pick<SpeakerSlotPort, "h" | "len" | "fins">>;
+  port: SpeakerSlotPort | SpeakerRoundPort;
 };
 
 /**

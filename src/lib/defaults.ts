@@ -82,6 +82,7 @@ import {
 } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
+import { PANEL } from "../constants/cutParts";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
@@ -468,11 +469,16 @@ export const GENERIC_SUB = {
   subsonic: { hz: 33, type: "BW24" },
   single: {
     count: 1,
-    dims: { w: 22, h: 27, d: 23 },
-    slot: { h: 4.5, len: 14, fins: 2 },
+    dims: { w: 22, h: 25, d: 28 },
+    port: { shape: PORT_SHAPE.slot, n: 1, h: 4.5, len: 14, fins: 2 },
     ampW: 1600,
   },
-  dual: { count: 2, dims: { w: 22, h: 48, d: 24.5 }, slot: { h: 8, len: 13, fins: 2 }, ampW: 2400 },
+  dual: {
+    count: 2,
+    dims: { w: 46, h: 25, d: 27 },
+    port: { shape: PORT_SHAPE.slot, n: 1, h: 4, len: 13, fins: 2 },
+    ampW: 2400,
+  },
 } satisfies {
   sub: SubDriver;
   subsonic: BandFilter;
@@ -489,7 +495,16 @@ export const GENERIC_TOPS = {
   twelve: {
     mid: byIdOrThrow(MID_OPTIONS, "by12lex1300nd", CATALOG_TABLE_NAMES.mids),
     horn: byIdOrThrow(HORN_OPTIONS, "td385", CATALOG_TABLE_NAMES.horns),
-    box: { dims: { w: 15, h: 27, d: 16 }, slot: { h: 2.5, len: 12.5, fins: 1 } },
+    box: {
+      dims: { w: 14.5, h: 24, d: 14 },
+      port: {
+        shape: PORT_SHAPE.round,
+        n: 2,
+        dia: 5,
+        len: 12,
+        position: { panel: PANEL.back, xIn: 0, yIn: 17 },
+      },
+    },
     crossoverHz: 1200,
     highpass: { hz: 48, type: "BW24" },
     ampW: 800,
@@ -500,7 +515,16 @@ export const GENERIC_TOPS = {
   fifteen: {
     mid: byIdOrThrow(MID_OPTIONS, "by15g40", CATALOG_TABLE_NAMES.mids),
     horn: byIdOrThrow(HORN_OPTIONS, "hd1403", CATALOG_TABLE_NAMES.horns),
-    box: { dims: { w: 18, h: 31, d: 13.5 }, slot: { h: 2.5, len: 9, fins: 1 } },
+    box: {
+      dims: { w: 17, h: 28, d: 15.5 },
+      port: {
+        shape: PORT_SHAPE.round,
+        n: 2,
+        dia: 4,
+        len: 10,
+        position: { panel: PANEL.back, xIn: 0, yIn: 20 },
+      },
+    },
     crossoverHz: 1200,
     highpass: { hz: 42, type: "BW24" },
     ampW: 1000,
@@ -511,14 +535,15 @@ export const GENERIC_TOPS = {
 } satisfies { cd: CompressionDriver; [top: string]: CompressionDriver | GenericTop };
 
 /**
- * The generic 18″ horn sub: an approximation of the common commercial folded front-loaded 18″ bins, not one product.
+ * The generic 18″ horn sub: an approximation of the common commercial folded front-loaded 18″ bins, not one product,
+ * at the Cerwin-Vega EL-36's size.
  * One B&C 18SW115 in a sealed rear chamber, its horn laid out from its goals (Start from goals: the horn engine's
  * folded front-loaded design).
  */
 export const GENERIC_HORN_SUB = {
   sub: byIdOrThrow(SUB_OPTIONS, "bc18sw", CATALOG_TABLE_NAMES.subs),
-  dims: { w: 24, h: 36, d: 27 },
-  goals: { lowHz: 45, highHz: 130, targetDb: 131 },
+  dims: { w: 24, h: 36, d: 36 },
+  goals: { lowHz: 40, highHz: 130, targetDb: 131 },
   subsonic: { hz: 35, type: "BW24" },
   ampW: 1200,
 } satisfies {

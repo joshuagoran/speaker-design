@@ -21,12 +21,14 @@ import { byIdOrThrow } from "../src/lib/tables";
 import { SPEAKER_START_NAMES, SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { CHAMBER_LOAD, DRIVER_KIND, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
-import type { FrequencyPoint, SpeakerSpec } from "../src/types";
+import type { Dims3, FrequencyPoint, SpeakerSpec } from "../src/types";
 
 /** How far a frequency, a volume or a coverage angle may miss its target, as a share of it. */
 const SHARE_SLACK = 0.15;
 /** How far a level may miss its target, dB. */
 const DB_SLACK = 3;
+/** How far an outside size may miss its target, in. */
+const SIZE_SLACK_IN = 1;
 /**
  * A maker's peak figure over the level the page gives for music (`SpeakerLimits.musicDb`, its continuous level), dB:
  * makers rate peak power at four times the continuous.
@@ -38,8 +40,8 @@ type Target = readonly [low: number, high: number];
 
 /** What one template must reach. Low points: the response's −N dB points below its passband, Hz. */
 interface Targets {
-  /** the net air of its first chamber, L; for a horn box, the outside volume */
-  liters?: Target;
+  /** its outside width, height, and depth, in: the commercial boxes' range */
+  size: Record<keyof Dims3, Target>;
   low: Partial<Record<3 | 6 | 10, Target>>;
   /** the highest frequency still within 6 dB of the passband, Hz */
   high6?: Target;
@@ -49,42 +51,45 @@ interface Targets {
 }
 
 /**
- * The targets, from the published specs such boxes share. Measured when the templates were set (Oct 2026):
- * - 18″ sub: 147 L, −3/−6/−10 dB at 37.5/35.0/32.4 Hz, music 127.4 dB (133.4 peak);
- * - dual 18″ sub: 295 L, −3 dB at 34.1 Hz, music 131.5 dB (137.5 peak);
- * - 12″ top: 68 L, −6 dB at 55.0 Hz to 20 kHz, music 124.8 dB (130.8 peak), 80° × 50°;
- * - 15″ top: 83 L, −6 dB at 45.2 Hz to 20 kHz, music 125.8 dB (131.8 peak), 80° × 60°;
- * - 18″ horn sub: 382 L outside, −6 dB from 44.3 to 104 Hz, music 131.5 dB (137.5 peak).
+ * The targets, from the published specs such boxes share. The sizes span the makers' boxes (Oct 2026): QSC KS118 and
+ * KW181, EV EKX-18SP, and JBL PRX918XLF; JBL SRX828SP and RCF SUB 8006-AS; QSC K12.2, EV ELX200-12P and ETX-12P, JBL
+ * PRX912, and RCF ART 912-A; QSC KW152, EV ELX200-15P and ETX-15P, JBL PRX915, and RCF ART 915-A; the Cerwin-Vega
+ * EL-36. Measured when the templates were set (Oct 2026):
+ * - 18″ sub: 22 × 25 × 28 in, −3/−6/−10 dB at 35.8/33.6/31.2 Hz, music 127.0 dB (133.0 peak);
+ * - dual 18″ sub: 46 × 25 × 27 in, −3 dB at 34.9 Hz, music 132.6 dB (138.6 peak);
+ * - 12″ top: 14.5 × 24 × 14 in, −6 dB at 52.9 Hz to 20 kHz, music 124.2 dB (130.2 peak), 80° × 50°;
+ * - 15″ top: 17 × 28 × 15.5 in, −6 dB at 45.5 Hz to 20 kHz, music 125.2 dB (131.2 peak), 80° × 60°;
+ * - 18″ horn sub: 24 × 36 × 36 in, −6 dB from 36.4 to 136 Hz, music 130.1 dB (136.1 peak).
  */
 const TARGETS = {
   [SPEAKER_TEMPLATE.genericSub18]: {
-    liters: [150, 150],
+    size: { w: [20.5, 23.9], h: [20.3, 27.3], d: [24.1, 30.9] },
     low: { 3: [40, 40], 10: [35, 35] },
     peakDb: [133, 133],
   },
   [SPEAKER_TEMPLATE.genericDualSub18]: {
-    liters: [300, 300],
+    size: { w: [43.7, 47.4], h: [22.6, 27.9], d: [26.8, 27.6] },
     low: { 3: [38, 38] },
     peakDb: [139, 139],
   },
   [SPEAKER_TEMPLATE.genericTop12]: {
-    liters: [60, 60],
+    size: { w: [14, 15.5], h: [23.7, 25.3], d: [13.1, 15.7] },
     low: { 6: [50, 50] },
     high6: [20000, 20000],
     peakDb: [132, 132],
     coverage: { h: [75, 90] },
   },
   [SPEAKER_TEMPLATE.genericTop15]: {
-    liters: [80, 90],
+    size: { w: [16.3, 18.3], h: [27.2, 32.1], d: [15.1, 17.6] },
     low: { 6: [45, 45] },
     high6: [20000, 20000],
     peakDb: [133, 133],
     coverage: { h: [90, 90], v: [60, 60] },
   },
   [SPEAKER_TEMPLATE.genericHornSub18]: {
-    liters: [300, 400],
-    low: { 6: [45, 45] },
-    high6: [120, 120],
+    size: { w: [24, 24], h: [36, 36], d: [36, 36] },
+    low: { 6: [40, 40] },
+    high6: [130, 130],
     peakDb: [136, 138],
   },
 } as const satisfies Partial<Record<keyof typeof SPEAKER_TEMPLATE, Targets>>;
@@ -163,14 +168,14 @@ test("generic speakers: each fits as it is set and lands in its targets", () => 
       assert.equal(severity, "ok", `${name}: ${title}`);
     assert.deepEqual(ev.warnings, [], `${name}: a band limits first at its crossover`);
     assertBafflesClear(spec, name);
-    // the size
-    if (targets.liters) {
-      const [first] = spec.cabinet.chambers;
-      const liters =
-        first.load.kind === CHAMBER_LOAD.horn
-          ? ev.metrics.volumeL
-          : ev.response.chambers[0].netLiters;
-      assertIn(liters, targets.liters, `${name} L`, true);
+    // the outside size
+    for (const axis of ["w", "h", "d"] as const) {
+      const [low, high] = targets.size[axis];
+      const x = ev.metrics.sizeIn[axis];
+      assert.ok(
+        x >= low - SIZE_SLACK_IN && x <= high + SIZE_SLACK_IN,
+        `${name} ${axis}: ${x} in is outside ${low}–${high} in`,
+      );
     }
     // the response as the page shows it, with its input range
     const { sum } = ev.response;
