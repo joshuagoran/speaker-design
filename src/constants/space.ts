@@ -10,7 +10,12 @@ import type {
 } from "../types";
 import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
-import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
+import {
+  ALIGNMENT_POINT,
+  COVERAGE_LEVEL_REF,
+  COVERAGE_LEVEL_REF_PLACE,
+  COVERAGE_LEVEL_REFS,
+} from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
 import type { SaveRowWords } from "./saveRow";
 
@@ -194,6 +199,9 @@ const ADD_PLACEMENT = "Add speaker or stack";
 /** The DOM id of placement `k`'s item in the Placements list, so a pick on the map can scroll it into view. */
 export const placementDomId = (k: number) => `space-placement-${k}`;
 
+/** The coverage map's key for its two marks: the listener (the blue circle) and the alignment point (the yellow diamond). */
+export const MAP_MARK_NAMES = { listener: "Listener", alignAt: ALIGNMENT_POINT } as const;
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New Space",
@@ -295,8 +303,6 @@ export const SPACE_TEXT = {
   /** one band's level and target there, dB (already formatted) */
   bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
   targetCurve: "Target, band balance",
-  listenerHint: "Tap the map, or drag the cyan dot, to move the listener.",
-  alignAtHint: "Drag the yellow diamond to move the alignment point.",
   arrivals: "Arrival at the listener",
   arrivalsTip: `Each box against the last main. Mains want 0 ms. A fill wants ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms.`,
   /** one arrival row: the placement's name, then its time (ms) and distance (ft) after the last main, already formatted */
@@ -320,6 +326,27 @@ export const SPACE_TEXT = {
 
 /** The Space page's Details fold: its own groups and lines (the room's groups come from pages/space/assumptionGroups). */
 export const SPACE_DETAILS = {
+  /** the first group: what the alignment point and the listener do, each with its own lines */
+  marks: "Listener and alignment point",
+  markLines: [
+    [
+      MAP_MARK_NAMES.alignAt,
+      [
+        "The main boxes with Auto delay get delays so their sound arrives here at the same time.",
+        "Fills align at their own aim points, not here.",
+        "Moving it changes those delays, so the level can change at every location.",
+        `It can set the target level: choose ${ALIGNMENT_POINT} under ${SPACE_TEXT.measuredAt}.`,
+        "Drag the yellow diamond to move it.",
+      ],
+    ],
+    [
+      MAP_MARK_NAMES.listener,
+      [
+        "It shows the level, the response, and the arrivals at its location. It changes nothing else.",
+        "Tap the map, or drag the cyan dot, to move it.",
+      ],
+    ],
+  ],
   map: "The map",
   mapLines: (limitHz: number) => [
     "Drag a placement to move it.",
@@ -367,6 +394,3 @@ export const SPACE_SAVE_WORDS = {
 
 /** The name of each wall's and the ceiling's mesh in the 3D view (stack-view/buildSpaceScene), so a check can find them. */
 export const ROOM_SURFACE_NAME = "roomSurface";
-
-/** The coverage map's key for its two marks: the listener (the blue circle) and the alignment point (the yellow diamond). */
-export const MAP_MARK_NAMES = { listener: "Listener", alignAt: "Alignment point" } as const;

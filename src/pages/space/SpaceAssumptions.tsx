@@ -21,6 +21,7 @@ interface Props {
  */
 export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
   const groups: AssumptionGroup[] = [
+    [SPACE_DETAILS.marks, [...SPACE_DETAILS.markLines]],
     [SPACE_DETAILS.map, [...SPACE_DETAILS.mapLines(SINGLE_FREQ_RANGE[1])]],
     [
       SPACE_DETAILS.levels,

@@ -16,9 +16,10 @@ import {
   roomAbsorption,
 } from "../../lib/acoustics/roomAcoustics";
 import type { CoverageRoom } from "../../types";
+import type { AssumptionLine } from "../../components/ui/AssumptionsList";
 
-/** One group of assumptions: a heading and its lines. */
-export type AssumptionGroup = [heading: string, lines: string[]];
+/** One group of assumptions: a heading and its lines (a line may hold lines of its own). */
+export type AssumptionGroup = [heading: string, lines: AssumptionLine[]];
 
 /** A frequency in the list's short form: 2k for 2000 Hz. */
 const hz = (f: number) => (f >= 1000 ? `${f / 1000}k` : `${f}`);

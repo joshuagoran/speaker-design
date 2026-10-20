@@ -518,8 +518,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
                 />
               </div>
-              <p className="text-xs text-stone-500">{SPACE_TEXT.listenerHint}</p>
-              <p className="text-xs text-stone-500">{SPACE_TEXT.alignAtHint}</p>
             </>,
           )}
           {section(

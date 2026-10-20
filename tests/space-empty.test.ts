@@ -13,6 +13,7 @@ import {
   SEATED_EAR_FT,
   SPACE_HOME_ROOM,
   SPACE_HOME_SEAT,
+  SPACE_DETAILS,
   SPACE_TEXT,
 } from "../src/constants/space";
 import { COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds";
@@ -71,6 +72,14 @@ test("a first visit shows the empty room: the map and 3D view drawn, one line as
   assert.ok(html.includes("Front wall") && !html.includes("Behind the stacks"), "wall names");
   assert.ok(!html.includes("Your current designs"), "no current-design start");
   assert.ok(html.includes(">Details<") && !html.includes("Assumptions"), "the Details fold");
+  // the Details fold opens on the listener and the alignment point, each with its own lines nested under it
+  const [[alignAt, alignLines]] = SPACE_DETAILS.markLines;
+  assert.ok(
+    html.indexOf(SPACE_DETAILS.marks) < html.indexOf(SPACE_DETAILS.map),
+    "the marks group first",
+  );
+  assert.ok(html.includes(`<li>${alignAt}<ul`), "the alignment point's lines nested under it");
+  assert.ok(html.includes(alignLines[0]), "the alignment point's first line");
   assert.ok(!html.includes(SPACE_TEXT.bandLevels), "no band levels");
   assert.ok(!html.includes(SPACE_TEXT.response), "no response chart");
   assert.ok(!/NaN|Infinity/.test(html), "no NaN or Infinity text");
