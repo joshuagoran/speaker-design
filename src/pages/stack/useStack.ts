@@ -190,6 +190,7 @@ export function useStack() {
           crossover: copy.input,
           levelDb: 0,
           delayMs: 0,
+          invertPolarity: false,
         };
         return {
           stack: { ...d.stack, members: [...d.stack.members, member] },

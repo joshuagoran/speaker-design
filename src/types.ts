@@ -2077,6 +2077,8 @@ export interface StackMember {
   levelDb: number;
   /** the front end's delay, ms, or the stack's own alignment (lib/speaker/stackResponse) */
   delayMs: number | typeof AUTO_DELAY;
+  /** its feed inverted (its pressure times −1); a save or link from before it has none: not inverted */
+  invertPolarity: boolean;
 }
 
 /**
@@ -2121,9 +2123,8 @@ export interface SpacePlacement extends FloorPoint {
   aim: SpaceAim;
   /**
    * a left and right pair: the placement stands twice, as set and as its mirror image across the room's center line
-   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level, delay, and
-   * `upsideDown`
-   * (`expandPlacements`)
+   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level, delay, polarity,
+   * and `upsideDown` (`expandPlacements`)
    */
   mirrored: boolean;
   /**
@@ -2136,6 +2137,8 @@ export interface SpacePlacement extends FloorPoint {
    * (lib/speaker/solveFeeds). A mirrored pair's boxes share it.
    */
   delayMs: number | typeof AUTO_DELAY;
+  /** its whole feed inverted (its pressure times −1); a save or link from before it has none: not inverted */
+  invertPolarity: boolean;
   /** a fill: its Auto delay lines it up with the nearest main at its own aim point, not with the mains */
   fill: boolean;
   /**

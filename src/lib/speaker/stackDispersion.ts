@@ -2,12 +2,13 @@
 // against angle and frequency, relative to on axis, on the shared grid (−90 to +90°, 50 Hz to 20 kHz). Pure.
 //
 // Each driver spot radiates its band's share as the stack model plays it (lib/speaker/stackResponse: each member's
-// speaker through its crossover, its level and delay), with its own coverage (lib/speaker/spaceCoverage driverPattern:
-// a cone or a horn mouth as a piston, a horn or waveguide by its rated coverage), at its place in the stack and along
-// its member's aim (lib/speaker/spaceLayout). The arc is DISPERSION_DISTANCE_M out from the middle of the stack's
-// front at its listening height (the highest band's center, as the stack model's listening point): horizontal at that
-// height, vertical below (−) to above (+) it. Each spot's path sets its level (1/r) and its time against the arc's
-// radius, as the stack model does at its listening point. Not modeled: the room, the baffle step, diffraction.
+// speaker through its crossover, its level, polarity and delay), with its own coverage (lib/speaker/spaceCoverage
+// driverPattern: a cone or a horn mouth as a piston, a horn or waveguide by its rated coverage), at its place in the
+// stack and along its member's aim (lib/speaker/spaceLayout). The arc is DISPERSION_DISTANCE_M out from the middle of
+// the stack's front at its listening height (the highest band's center, as the stack model's listening point):
+// horizontal at that height, vertical below (−) to above (+) it. Each spot's path sets its level (1/r) and its time
+// against the arc's radius, as the stack model does at its listening point. Not modeled: the room, the baffle step,
+// diffraction.
 import type {
   BandId,
   DispersionPlane,
@@ -23,7 +24,7 @@ import { patternDirectivity } from "../acoustics/dispersion";
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { bandOfPart, driverPattern, pressureAt } from "./spaceCoverage";
 import { layStack } from "./spaceLayout";
-import { stackCrossoversHz } from "./stackResponse";
+import { memberGain, stackCrossoversHz } from "./stackResponse";
 import { bandCenters } from "./stackLayout";
 import { stackMember } from "./specParts";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
@@ -69,7 +70,7 @@ export function stackDispersionMap(
     const m = model.members[d.member];
     const band = m?.response.bands.find((b) => b.id === d.band);
     if (!m || !band) return [];
-    const gain = Math.pow(10, stack.members[d.member].levelDb / 20);
+    const gain = memberGain(stack.members[d.member]);
     return [
       {
         // across, forward and up, m

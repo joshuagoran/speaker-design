@@ -10,6 +10,7 @@ import { byId } from "../../lib/tables";
 import { AUTO_DELAY } from "../../constants/speakerSpec";
 import { STACK_STEPS } from "../../constants/speakerSteps";
 import { STACK_TEXT } from "../../constants/stack";
+import { UI_TEXT } from "../../constants/uiText";
 import { STACK_EDIT_TEXT } from "../../constants/stackSpeakerEdit";
 import { SPACE_PITCH_DEG } from "../../constants/space";
 import { shownIn } from "../speaker/speakerFields";
@@ -31,7 +32,7 @@ interface Props {
 /** The picker's id for the stack's base (a member's index for one under it). */
 const BASE_ID = "base";
 
-/** One member's settings: what it stands on and where, a mirror image, its level and its delay. */
+/** One member's settings: what it stands on and where, a mirror image, its level, its delay, and its polarity. */
 export function MemberSettings({
   index,
   member,
@@ -128,6 +129,12 @@ export function MemberSettings({
         }
         onChange={(ms) => onEdit((m) => ({ ...m, delayMs: ms }))}
       />
+      <ToggleButton
+        on={member.invertPolarity}
+        onClick={() => onEdit((m) => ({ ...m, invertPolarity: !m.invertPolarity }))}
+      >
+        {UI_TEXT.invertPolarity}
+      </ToggleButton>
     </Card>
   );
 }
