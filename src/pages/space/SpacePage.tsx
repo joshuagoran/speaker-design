@@ -70,8 +70,6 @@ import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
 import { emptySpace, itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
-import { useShareLink } from "./useShareLink";
-import { SHARE_TEXT } from "../../constants/share";
 import { placeOptions } from "./placeOptions";
 import { STACK_PRESETS } from "../stack/stackPresets";
 import {
@@ -108,7 +106,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   const pal = usePalette();
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
-  const sharing = useShareLink(design, space.replaceDesign);
   const folds = useFolds("space.settingsFolds", keysOf(SPACE_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<SpaceSettingsSection>("space", "space");
   const maxHeight = useMapMaxHeight();
@@ -261,15 +258,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
               <p className="text-sm text-stone-500">
                 {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
               </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => void sharing.share()}>{SHARE_TEXT.button}</Button>
-              {sharing.notice &&
-                (sharing.notice.problem ? (
-                  <Notice>{sharing.notice.text}</Notice>
-                ) : (
-                  <span className="text-xs text-green-700">{sharing.notice.text}</span>
-                ))}
             </div>
             <CoverageMap
               view={view}

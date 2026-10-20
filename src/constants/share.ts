@@ -54,7 +54,7 @@ export const SHARE_ERROR = {
 
 /** What the Space page says about a link, as one short line. */
 export const SHARE_TEXT = {
-  button: "Share",
+  button: "Copy a link to this Space",
   copied: "Link copied!",
   long: "This link is long. Some apps cut it.",
   copyFailed: "The link did not copy.",

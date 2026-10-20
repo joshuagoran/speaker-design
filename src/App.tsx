@@ -15,6 +15,9 @@ import { Notice } from "./components/ui/Notice";
 import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
 import { ThemeSwitch } from "./components/ui/ThemeSwitch";
 import { PageTabs } from "./components/ui/PageTabs";
+import { IconButton, ShareIcon } from "./components/ui/IconButton";
+import { useShareLink } from "./pages/space/useShareLink";
+import { SHARE_TEXT } from "./constants/share";
 import { entriesOf } from "./lib/records";
 import { pageAt } from "./lib/pageRoute";
 import {
@@ -45,6 +48,8 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   const speakerPage = useSpeakerPage();
   const stack = useStack();
   const space = useSpace();
+  // a shared link opens on the Space page; the header shares the open Space from there
+  const sharing = useShareLink(space.design, space.replaceDesign);
   const project = projectOf(view);
   // two levels: the project (Speaker, Stack, or Space), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
@@ -99,6 +104,21 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
             current={view}
             label={PROJECT_NAV_LABELS[project]}
             onNavigate={navigateTo}
+            end={
+              view === "space" && (
+                <>
+                  {sharing.notice &&
+                    (sharing.notice.problem ? (
+                      <Notice>{sharing.notice.text}</Notice>
+                    ) : (
+                      <span className="text-xs text-green-700">{sharing.notice.text}</span>
+                    ))}
+                  <IconButton label={SHARE_TEXT.button} onClick={() => void sharing.share()}>
+                    <ShareIcon />
+                  </IconButton>
+                </>
+              )
+            }
           />
         </header>
       </div>
