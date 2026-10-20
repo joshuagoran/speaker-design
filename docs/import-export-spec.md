@@ -13,7 +13,7 @@ is built yet.
 
 ## Not in scope
 
-- Share links (a design packed into a URL). A later step can reuse the same format.
+- Share links (a design packed into a URL). [share-plan.md](share-plan.md) adds them, with the same format.
 - Old saves from the PA and Hi-fi pages. Owner policy: clean code comes first. An old PA or Hi-fi save opens
   through the L3f read adapter, as speakers and a stack, and the user exports it from the Speaker or Stack page.
 - Cutlist, chart and 3D exports. See [Later](#later).
@@ -141,7 +141,7 @@ The file is untrusted data.
 - Cutlist export: CSV and a printable sheet layout.
 - Chart export: PNG, and CSV of the curves.
 - 3D export: STL or glTF of the cabinet, for a visual or a print.
-- Share links with the same format, packed and compressed into the URL.
+- Share links: see [share-plan.md](share-plan.md).
 
 ## Owner decisions (Oct 2026)
 
