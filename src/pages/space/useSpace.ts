@@ -49,7 +49,7 @@ import {
   spaceFromSaved,
   spaceSnapshot,
 } from "./spaceSaves";
-import { usePageDraft } from "../../hooks/usePageDraft";
+import { usePageDraft, type SharedMode } from "../../hooks/usePageDraft";
 import type {
   BandId,
   CoverageBand,
@@ -296,7 +296,7 @@ export const withItemPlaced = (d: SpaceDesign, item: PlaceItem): SpaceDesign =>
  * settings make and the library (the signed-in user's `spaces`). Held in App, so the space survives switching pages.
  */
 export function useSpace(initialBand: CoverageBand = "mid") {
-  const [design, setDesign] = usePageDraft(spaceDraft);
+  const [design, setDesign, sharedDraft] = usePageDraft(spaceDraft);
   const [band, setBand] = useState<CoverageBand>(initialBand);
   const [freqHz, setFreqHz] = useState(63);
   /** how many times the design was replaced whole (a start, a clear, an opened save): a page's picks into it end then */
@@ -572,8 +572,21 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     setDesign(d);
     setReplaced((n) => n + 1);
   };
+  /** the shared view: a link's space shows in place of the page's own, and the page's picks end with each switch */
+  const sharedView: SharedMode<SpaceDesign> = {
+    ...sharedDraft,
+    open: (d) => {
+      sharedDraft.open(d);
+      setReplaced((n) => n + 1);
+    },
+    close: () => {
+      sharedDraft.close();
+      setReplaced((n) => n + 1);
+    },
+  };
   return {
     design,
+    sharedView,
     setDesign,
     replaced,
     /** replaces the design whole: a start, a clear or an opened save */

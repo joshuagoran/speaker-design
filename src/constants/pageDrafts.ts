@@ -8,6 +8,16 @@ export const PAGE_DRAFT_KEYS = {
   space: "space.draft",
 } as const;
 
+/**
+ * The session storage key each page keeps its shared view under (`usePageDraft`): the design a link opened, with the one
+ * as it was opened, so a reload keeps it. It is never the draft's key.
+ */
+export const PAGE_SHARED_KEYS = {
+  speaker: "speaker.shared",
+  stack: "stack.shared",
+  space: "space.shared",
+} as const;
+
 /** How long after the last change a page's draft is written, ms. */
 export const DRAFT_WRITE_MS = 300;
 

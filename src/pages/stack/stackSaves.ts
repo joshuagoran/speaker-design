@@ -9,8 +9,9 @@ import type {
 } from "../../types";
 import { isSavedSpeakerShape } from "../../lib/speaker/speakerSaves";
 import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
+import { stackSpeakers } from "../../lib/speaker/usedParts";
 import { STACK_TEXT } from "../../constants/stack";
-import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
 import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import type { PageDraft } from "../../hooks/usePageDraft";
@@ -36,13 +37,8 @@ export const stackSummary = ({ stack, speakers }: StackDesign) =>
  */
 export function stackSnapshot(design: StackDesign): SavedStackData {
   const { id: _id, name: _name, ...stack } = design.stack;
-  const used = new Set(stack.members.map((m) => m.speakerId));
   return JSON.parse(
-    JSON.stringify({
-      summary: stackSummary(design),
-      stack,
-      speakers: design.speakers.filter((s) => used.has(s.id)),
-    }),
+    JSON.stringify({ summary: stackSummary(design), stack, speakers: stackSpeakers(design) }),
   );
 }
 
@@ -88,6 +84,7 @@ export function stackFromSaved(c: SavedConfig): StackDesign | null {
 /** The Stack page's working design in the browser: the save document, with the stack's id and name. */
 export const stackDraft: PageDraft<StackDesign> = {
   key: PAGE_DRAFT_KEYS.stack,
+  sharedKey: PAGE_SHARED_KEYS.stack,
   empty: emptyStack,
   toDraft: (design) => draftDocument(stackSnapshot(design), design.stack),
   fromDraft: (raw) => {

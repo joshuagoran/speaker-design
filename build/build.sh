@@ -13,5 +13,7 @@ if [ "$1" = "pages" ]; then
   SPEAKNOW_SPLIT_FIREBASE=1 "$VP" build --mode pages --outDir dist/build-pages --emptyOutDir --logLevel warn
   node build/inline.mjs dist/build-pages dist/site/index.html
   cp data/configs-seed.json dist/site/
+  # the link preview card's image (index.html's og:image)
+  cp build/og-image.png dist/site/
   touch dist/site/.nojekyll
 fi

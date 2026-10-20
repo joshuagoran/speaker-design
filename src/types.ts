@@ -1,6 +1,7 @@
 import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
+import type { SHARE_ERROR, SHARE_FORMAT, SHARE_KIND, SHARE_VERSION } from "./constants/share";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
 import type {
@@ -3163,6 +3164,9 @@ export interface FloorPlacement extends FloorPoint {
 /** What the map averages: a named band, or one frequency (`freqHz`) summed with phase. */
 export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 
+/** The coverage map's view of a space: the band on show and, for one frequency, its frequency (Hz). */
+export type SpaceView = Pick<CoverageLayout, "band" | "freqHz">;
+
 /**
  * Where the coverage map's target level is measured: at the listener, as the audience's average (the floor the stats
  * count), or 1 m in front of the stacks.
@@ -3375,6 +3379,52 @@ export type StackDesign = Pick<DesignLayers, "stack" | "speakers">;
 export interface SpaceDesign extends Pick<DesignLayers, "space" | "speakers"> {
   stacks: readonly StackSpec[];
 }
+
+/** What every shared envelope has: its marks. */
+interface ShareMarks {
+  format: typeof SHARE_FORMAT;
+  version: typeof SHARE_VERSION;
+}
+
+/** A speaker as a link carries it: exactly one speaker. */
+export interface SpeakerShare extends ShareMarks {
+  kind: typeof SHARE_KIND.speaker;
+  speakers: readonly [SpeakerSpec];
+  stacks: readonly [];
+  spaces: readonly [];
+}
+
+/** A stack as a link carries it: exactly one stack, and the speakers its members name. */
+export interface StackShare extends ShareMarks {
+  kind: typeof SHARE_KIND.stack;
+  speakers: readonly SpeakerSpec[];
+  stacks: readonly [StackSpec];
+  spaces: readonly [];
+}
+
+/** A space as a link carries it: exactly one space, and every stack and speaker it places. */
+export interface SpaceShare extends ShareMarks, Pick<SpaceDesign, "speakers" | "stacks"> {
+  kind: typeof SHARE_KIND.space;
+  spaces: readonly [SpaceSpec];
+  /** the sender's band on the coverage map; a link without it opens on the page's own band */
+  view?: SpaceView;
+}
+
+/** What a link carries: a speaker, a stack or a space, by its `kind`. */
+export type ShareEnvelope = SpeakerShare | StackShare | SpaceShare;
+
+/** What a share kind opens as: the design its page holds. */
+export interface ShareDesigns {
+  speaker: SpeakerSpec;
+  stack: StackDesign;
+  space: SpaceDesign;
+}
+
+/** Which kind a link carries (`SHARE_KIND`). */
+export type ShareKind = (typeof SHARE_KIND)[keyof typeof SHARE_KIND];
+
+/** Why a link did not open (`SHARE_ERROR`). */
+export type ShareError = (typeof SHARE_ERROR)[keyof typeof SHARE_ERROR];
 
 /**
  * A saved space: the space without its id and name (the document's), and a copy of each stack and speaker it places (by

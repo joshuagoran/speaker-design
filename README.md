@@ -33,6 +33,10 @@ A push to `main` deploys the site to GitHub Pages. `build/serve.sh` builds the p
 
 On GitHub Pages, users sign in with Google. Then they can save speakers, stacks, and spaces in Firestore. The dev server and local builds cannot save. The page tells the user.
 
+## Sharing
+
+The Speaker, Stack, and Space pages have a Share button. It copies a link to the open design. The link holds the whole design, so it needs no account and no server. Whoever opens it sees the design in a shared view. Their own work stays as it was. Signed-in users can save a copy of a shared design as new items in their libraries.
+
 ## Tests
 
 CI runs the unit tests, the phone layout check, the save row check, and the 3D checks.

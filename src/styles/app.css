@@ -81,6 +81,25 @@ canvas {
     animation: none;
   }
 }
+/* A status line that shows, then fades out over its last third (the Share button's "Link copied!"); its length is
+   set where it is used. With reduced motion it shows without a fade until it clears. */
+.fade-out-late {
+  animation: fade-out-late 3s ease-in forwards;
+}
+@keyframes fade-out-late {
+  0%,
+  67% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-out-late {
+    animation: none;
+  }
+}
 /* touch screens: 40 px minimum tap targets */
 @media (pointer: coarse) {
   button,

@@ -19,8 +19,8 @@ import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { CABINET_TOP, SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { allBox } from "./settingsSummaries";
 import { speakerSummary } from "./speakerText";
-import { usePageDraft, type PageDraft } from "../../hooks/usePageDraft";
-import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { usePageDraft, type PageDraft, type SharedMode } from "../../hooks/usePageDraft";
+import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
 import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
@@ -67,6 +67,7 @@ export function speakerFromSaved(c: SavedConfig): SpeakerSpec | null {
 /** The Speaker page's working design in the browser: the save document, with the speaker's id and name. */
 export const speakerDraft: PageDraft<SpeakerSpec> = {
   key: PAGE_DRAFT_KEYS.speaker,
+  sharedKey: PAGE_SHARED_KEYS.speaker,
   empty: emptySpeaker,
   toDraft: (spec) => draftDocument(speakerSnapshot(spec), spec),
   fromDraft: (raw) => {
@@ -110,18 +111,33 @@ const settledSpec = (s: SpeakerSpec): SpeakerSpec => {
  * signed-in user's `speakers`). Held in App, so the design survives switching pages.
  */
 export function useSpeakerPage() {
-  const [spec, setSpec] = usePageDraft(speakerDraft);
+  const [spec, setSpec, sharedDraft] = usePageDraft(speakerDraft);
   /**
    * how many times the chamber list was replaced (a start, a saved speaker opened) or lost a chamber: each chamber's
    * settings take it with their index as their key, so no settings state carries over to another chamber
    */
   const [chamberRound, setChamberRound] = useState(0);
   /** the whole spec replaced: every chamber's settings start again, and the optimizer's cards and Undo are dropped */
-  const replaceSpec = (next: SpeakerSpec) => {
-    setSpec(settledSpec(next));
+  const restart = () => {
     setChamberRound((n) => n + 1);
     // called from an event, after `optimizer` below is set
     optimizer.clearResults();
+  };
+  const replaceSpec = (next: SpeakerSpec) => {
+    setSpec(settledSpec(next));
+    restart();
+  };
+  /** the shared view: a link's speaker shows in place of the page's own, and the page starts over with each switch */
+  const sharedView: SharedMode<SpeakerSpec> = {
+    ...sharedDraft,
+    open: (next) => {
+      sharedDraft.open(settledSpec(next));
+      restart();
+    },
+    close: () => {
+      sharedDraft.close();
+      restart();
+    },
   };
   // the model reads only the cabinet, the bands and the input range (a name edit doesn't run it), a step behind the
   // typing: a horn chamber takes tens of ms, so the settings stay responsive
@@ -218,6 +234,7 @@ export function useSpeakerPage() {
   };
   return {
     spec,
+    sharedView,
     setSpec: replaceSpec,
     /** chamber `i`'s settings key: its index in this chamber list */
     chamberKey: (i: number) => `${chamberRound}:${i}`,

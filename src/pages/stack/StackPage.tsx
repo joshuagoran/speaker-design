@@ -17,6 +17,7 @@ import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
 import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
+import { SharedNotice, type SharedNoticeProps } from "../../components/ui/SharedNotice";
 import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
@@ -73,6 +74,8 @@ interface Props {
   stack: StackPlanner;
   /** the speaker library: the Speaker page's store */
   speakerPage: Pick<SpeakerPageState, "store">;
+  /** the shared view's notice, while a link's stack shows in place of the page's own */
+  sharedNotice: SharedNoticeProps | null;
 }
 
 /** The sum's key on the charts: no member's key ("m0", "m1"…) takes it. */
@@ -92,7 +95,7 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  * library or a preset, where each stands, its crossover, level and delay; the stack's response and maximum
  * output at its listening point on fixed axes, with each member's curve, and the stacks' library.
  */
-export function StackPage({ stack, speakerPage }: Props) {
+export function StackPage({ stack, speakerPage, sharedNotice }: Props) {
   const pal = usePalette();
   const { design, response, limits, totals, optimizer, store, snapshot, restore } = stack;
   const { members, name, notes } = design.stack;
@@ -174,19 +177,23 @@ export function StackPage({ stack, speakerPage }: Props) {
       sheet={sheet}
       results={
         <>
-          <SaveRow
-            store={store}
-            snapshot={snapshot}
-            restore={restore}
-            name={name}
-            onName={stack.setName}
-            openId={design.stack.id}
-            onOpenId={stack.setOpenId}
-            words={STACK_SAVE_WORDS}
-            starts={START_OPTIONS}
-            group={(o) => o.group}
-            onStart={(o) => stack.setDesign(stackFromStart(o.id))}
-          />
+          {sharedNotice ? (
+            <SharedNotice {...sharedNotice} />
+          ) : (
+            <SaveRow
+              store={store}
+              snapshot={snapshot}
+              restore={restore}
+              name={name}
+              onName={stack.setName}
+              openId={design.stack.id}
+              onOpenId={stack.setOpenId}
+              words={STACK_SAVE_WORDS}
+              starts={START_OPTIONS}
+              group={(o) => o.group}
+              onStart={(o) => stack.setDesign(stackFromStart(o.id))}
+            />
+          )}
           {summary && <SummaryStrip items={summary} />}
           <StackOptimizerResults optimizer={optimizer} />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>

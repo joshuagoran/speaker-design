@@ -6,6 +6,15 @@ import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } fro
 import { AMP_POWER_TIP } from "./ampPower";
 import type { SaveRowWords } from "./saveRow";
 
+/** The coverage map's bands, by id: the ones a shared Space link may name. */
+export const COVERAGE_BAND_IDS = [
+  "sub",
+  "kick",
+  "mid",
+  "high",
+  "one",
+] as const satisfies readonly CoverageBand[];
+
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 20 × 30 ft, a 12 ft ceiling, drywall all
  * round, an empty floor. A wider or longer layout grows it (lib/speaker/spaceLayout `homeVenue`).
@@ -142,7 +151,7 @@ export const placementDomId = (k: number) => `space-placement-${k}`;
 
 export const SPACE_TEXT = {
   /** the name a new space starts with */
-  newName: "New space",
+  newName: "New Space",
   coverage: "Coverage",
   side: "Side view",
   /** the Side view heading's tooltip, and the one line under the drawing */

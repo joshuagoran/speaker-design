@@ -30,7 +30,7 @@ const rememberSignedIn = (yes: boolean) => {
 const DOC_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const DOC_ID_LENGTH = 20;
 /** A new document id, random as Firestore's auto ids (both stores take any id). */
-const newDocId = () =>
+export const newDocId = () =>
   Array.from(
     crypto.getRandomValues(new Uint8Array(DOC_ID_LENGTH)),
     (b) => DOC_ID_CHARS[b % DOC_ID_CHARS.length],
@@ -175,7 +175,7 @@ export function useConfigStore(collection: string) {
     const id = newDocId();
     return (await write(id, name, data, "Saved")) ? id : null;
   };
-  /** a saved configuration's data replaced by `data`, under `name` */
+  /** a saved configuration's data replaced by `data`, under `name` (a new document when `id` is one nothing has) */
   const overwrite = (id: string, name: string, data: SavedConfigData) =>
     write(id, name, data, "Saved");
   /** whether the saved configuration `id` exists (it may be past the list); null (and a message) when the read fails */

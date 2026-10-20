@@ -21,3 +21,27 @@ export const removeStored = (key: string) => {
     localStorage.removeItem(key);
   } catch {}
 };
+
+/** Reads a JSON value from session storage (kept until the tab closes), or `fallback` when it is missing or unavailable. */
+export const readSessionJson = <T>(key: string, fallback: T): T => {
+  try {
+    const v = sessionStorage.getItem(key);
+    return v == null ? fallback : (JSON.parse(v) as T); // boundary cast: as `readStoredJson`
+  } catch {
+    return fallback;
+  }
+};
+
+/** Writes a JSON value to session storage; does nothing when it is unavailable. */
+export const writeSessionJson = (key: string, value: unknown) => {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+};
+
+/** Removes a key from session storage; does nothing when it is unavailable. */
+export const removeSession = (key: string) => {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {}
+};

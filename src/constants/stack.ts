@@ -4,7 +4,7 @@ import type { SaveRowWords } from "./saveRow";
 
 export const STACK_TEXT = {
   /** the name a new stack starts with */
-  newName: "New stack",
+  newName: "New Stack",
   views: "Views",
   front:
     "The boxes as the stack places them, to scale. A mirrored box is drawn flipped. The dashed line is the listening axis.",
