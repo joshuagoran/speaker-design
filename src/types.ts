@@ -2052,17 +2052,13 @@ export interface GenericTopBands {
   hfLevelDb: SpeakerBand["levelDb"];
 }
 
-/** One generic top (lib/defaults `GENERIC_TOPS`): its cone and horn, its box, its bands, its kick-back. */
+/** One generic top (lib/defaults `GENERIC_TOPS`): its cone and horn, its box, its bands. */
 export interface GenericTop extends GenericTopBands {
   mid: MidDriver;
   horn: Horn;
   box: GenericVentedBox;
   /** its handles and input dish */
   hardware: Pick<SpeakerCabinet, "handles" | "inputDish">;
-  /** the kick-back, degrees: a floor wedge's */
-  tiltDeg: SpeakerCabinet["tiltDeg"];
-  /** a wedge: the horn beside the cone, across a low box */
-  sideBySide: boolean;
 }
 
 /** A spec's identity, as a read adapter takes it. */

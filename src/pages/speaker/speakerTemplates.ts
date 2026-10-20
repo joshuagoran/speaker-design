@@ -513,12 +513,11 @@ function th18(identity: SpecIdentity): SpeakerSpec {
 
 /**
  * A generic PA box's plywood shell: the PA's frame, panels and inset, its handles and input dish (`hardware`), a flat
- * top, kicked back `tiltDeg`.
+ * top.
  */
 const genericCabinet = (
   chambers: SpeakerChamber[],
   hardware: Pick<SpeakerCabinet, "handles" | "inputDish">,
-  tiltDeg = 0,
 ): SpeakerCabinet => ({
   chambers,
   panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
@@ -526,7 +525,7 @@ const genericCabinet = (
   top: CABINET_TOP.flat,
   insetIn: DEFAULT_PA.inset,
   roundoverIn: 0,
-  tiltDeg,
+  tiltDeg: 0,
   ...hardware,
 });
 
@@ -628,14 +627,12 @@ const topBands = (top: GenericTopBands): SpeakerSpec["bands"] => {
 };
 
 /**
- * A generic top or wedge (`GENERIC_TOPS`): the cone low on the baffle and the horn above it, or (a wedge) side by side
- * across a low box; full range, its input range open.
+ * A generic top (`GENERIC_TOPS`): the cone low on the baffle and the horn above it; full range, its input range open.
  */
 function genericTop(top: GenericTop, identity: SpecIdentity): SpeakerSpec {
-  const { w, h } = top.box.dims;
+  const { h } = top.box.dims;
   const t = DEFAULT_PA.wall;
   const floorIn = t + top.box.slot.h;
-  const clearH = h - t - floorIn;
   const cone: SpeakerDriver = {
     kind: DRIVER_KIND.mid,
     driverId: top.mid.id,
@@ -648,19 +645,12 @@ function genericTop(top: GenericTop, identity: SpecIdentity): SpeakerSpec {
   const coneIn = driverAcrossIn(cone) / 2 + DEFAULT_PA.inset;
   const mid: SpeakerDriver = {
     ...cone,
-    position: top.sideBySide
-      ? { xIn: -(w / 2 - t - coneIn), yIn: floorIn + clearH / 2 }
-      : { xIn: 0, yIn: floorIn + coneIn },
+    position: { xIn: 0, yIn: floorIn + coneIn },
   };
-  const hf = hornInBaffle(
-    top.horn,
-    top.sideBySide
-      ? { xIn: w / 2 - t - top.horn.size.w / 2, yIn: floorIn + clearH / 2 }
-      : { xIn: 0, yIn: h - t - top.horn.size.h / 2 },
-  );
+  const hf = hornInBaffle(top.horn, { xIn: 0, yIn: h - t - top.horn.size.h / 2 });
   return {
     ...identity,
-    cabinet: genericCabinet([genericVentedChamber(top.box, [mid, hf])], top.hardware, top.tiltDeg),
+    cabinet: genericCabinet([genericVentedChamber(top.box, [mid, hf])], top.hardware),
     bands: topBands(top),
     input: NO_FILTERS,
     look: PA_LOOK,
@@ -772,7 +762,6 @@ const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec
   genericDualSub18: (identity) => genericSub(GENERIC_SUB.dual, identity),
   genericTop12: (identity) => genericTop(GENERIC_TOPS.twelve, identity),
   genericTop15: (identity) => genericTop(GENERIC_TOPS.fifteen, identity),
-  genericWedge12: (identity) => genericTop(GENERIC_TOPS.wedge, identity),
   genericHornSub18: genericHornSub,
   genericHornTop12: genericHornTop,
 };

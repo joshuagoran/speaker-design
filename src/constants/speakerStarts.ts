@@ -23,7 +23,6 @@ export const SPEAKER_TEMPLATE = {
   genericDualSub18: "genericDualSub18",
   genericTop12: "genericTop12",
   genericTop15: "genericTop15",
-  genericWedge12: "genericWedge12",
   genericHornSub18: "genericHornSub18",
   genericHornTop12: "genericHornTop12",
 } as const;
@@ -48,7 +47,6 @@ export const SPEAKER_START_NAMES = {
   genericDualSub18: 'Generic Dual 18" Sub',
   genericTop12: 'Generic 12" Top',
   genericTop15: 'Generic 15" Top',
-  genericWedge12: 'Generic 12" Wedge',
   genericHornSub18: 'Generic 18" Horn Sub',
   genericHornTop12: 'Generic 12" Horn Top',
 } as const satisfies Record<SpeakerTemplate, string>;
@@ -72,7 +70,6 @@ export const SPEAKER_START_SPEAKER_NAMES = {
   genericDualSub18: SPEAKER_START_NAMES.genericDualSub18,
   genericTop12: SPEAKER_START_NAMES.genericTop12,
   genericTop15: SPEAKER_START_NAMES.genericTop15,
-  genericWedge12: SPEAKER_START_NAMES.genericWedge12,
   genericHornSub18: SPEAKER_START_NAMES.genericHornSub18,
   genericHornTop12: SPEAKER_START_NAMES.genericHornTop12,
 } as const satisfies Record<SpeakerTemplate, string>;

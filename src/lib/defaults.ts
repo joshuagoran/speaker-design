@@ -481,7 +481,7 @@ export const GENERIC_SUB = {
 };
 
 /**
- * The generic tops: an approximation of the common commercial 12″ and 15″ powered tops and floor wedges (QSC, EV, JBL,
+ * The generic tops: an approximation of the common commercial 12″ and 15″ powered tops (QSC, EV, JBL,
  * Mackie, RCF), not one product. A cone and the Eminence N314T (1.4″) on a cast constant-directivity horn in the
  * baffle, in a vented box with a letterbox slot.
  */
@@ -497,8 +497,6 @@ export const GENERIC_TOPS = {
     hfAmpW: 100,
     hfLevelDb: -15,
     hardware: { handles: DEFAULT_PA.hardware.mid, inputDish: true },
-    tiltDeg: 0,
-    sideBySide: false,
   },
   fifteen: {
     mid: byIdOrThrow(MID_OPTIONS, "by15g40", CATALOG_TABLE_NAMES.mids),
@@ -510,22 +508,6 @@ export const GENERIC_TOPS = {
     hfAmpW: 100,
     hfLevelDb: -13,
     hardware: { handles: DEFAULT_PA.hardware.mid, inputDish: true },
-    tiltDeg: 0,
-    sideBySide: false,
-  },
-  wedge: {
-    mid: byIdOrThrow(MID_OPTIONS, "by12lex1300nd", CATALOG_TABLE_NAMES.mids),
-    horn: byIdOrThrow(HORN_OPTIONS, "td385", CATALOG_TABLE_NAMES.horns),
-    box: { dims: { w: 26, h: 17, d: 12 }, slot: { h: 1, len: 9.5, fins: 1 } },
-    crossoverHz: 1200,
-    highpass: { hz: 55, type: "BW24" },
-    ampW: 800,
-    hfAmpW: 100,
-    hfLevelDb: -14.5,
-    // the cone and the horn run to the side walls: no room for the side handles
-    hardware: { handles: null, inputDish: true },
-    tiltDeg: 40,
-    sideBySide: true,
   },
 } satisfies { cd: CompressionDriver; [top: string]: CompressionDriver | GenericTop };
 

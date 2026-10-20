@@ -55,7 +55,6 @@ interface Targets {
  * - dual 18″ sub: 301 L, −3 dB at 34.0 Hz, music 131.5 dB (137.5 peak);
  * - 12″ top: 63 L, −6 dB at 49.3 Hz to 20 kHz, music 124.8 dB (130.8 peak), 80° × 50°;
  * - 15″ top: 84 L, −6 dB at 45.1 Hz to 20 kHz, music 125.8 dB (131.8 peak), 80° × 60°;
- * - 12″ wedge: 50 L, −6 dB at 51.2 Hz to 20 kHz, music 124.6 dB (130.6 peak), 80° × 50°;
  * - 18″ horn sub: 382 L outside, −6 dB from 45.5 to 104 Hz, music 131.5 dB (137.5 peak);
  * - 12″ horn top: −6 dB at 153 Hz to 20 kHz, music 131.1 dB (137.1 peak), 60° × 40°.
  */
@@ -83,13 +82,6 @@ const TARGETS = {
     high6: [20000, 20000],
     peakDb: [133, 133],
     coverage: { h: [90, 90], v: [60, 60] },
-  },
-  [SPEAKER_TEMPLATE.genericWedge12]: {
-    liters: [45, 50],
-    low: { 6: [50, 50] },
-    high6: [20000, 20000],
-    peakDb: [132, 132],
-    coverage: { h: [75, 90] },
   },
   [SPEAKER_TEMPLATE.genericHornSub18]: {
     liters: [300, 400],

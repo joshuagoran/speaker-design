@@ -101,10 +101,6 @@ const EXPECTED: Record<SpeakerTemplate, { chambers: DriverKind[][]; bands: strin
     chambers: [[DRIVER_KIND.mid, DRIVER_KIND.compression]],
     bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
   },
-  genericWedge12: {
-    chambers: [[DRIVER_KIND.mid, DRIVER_KIND.compression]],
-    bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
-  },
   genericHornSub18: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
   genericHornTop12: {
     chambers: [[DRIVER_KIND.mid], [DRIVER_KIND.compression]],
