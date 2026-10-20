@@ -1,7 +1,8 @@
 // A Space in the 3D view: the room (its floor in the coverage map's colors, its walls and ceiling), each box as the
 // Stack page draws it (buildMembersScene) at its spot, lift, aim, side, and roll as the space model places it
 // (lib/speaker/spaceLayout `placementFrame`), the listener, the alignment point, and each driver's beam (lib/speaker/
-// spaceBeams) as its aim line and its dashed −6 dB edge lines, clipped at the walls, floor and ceiling.
+// spaceBeams) as its aim line, its dashed −6 dB edge lines, and its fainter dotted −3 dB edge lines, clipped at the
+// walls, floor and ceiling.
 //
 // Scene coordinates are inches, three's: x across (the room's x), y up (the room's z), z down the room (the room's y),
 // the front wall at z = 0 and the room's center line at x = 0.
@@ -46,9 +47,13 @@ export interface SpaceSceneProps {
 
 /** A see-through wall's opacity: one between the camera and the room. */
 const WALL_SEE_THROUGH = 0.15;
-/** A beam's edge lines' dashes and the gaps between them, in. */
+/** A beam's −6 dB edge lines' dashes and the gaps between them, in. */
 const BEAM_DASH_IN = 8;
 const BEAM_GAP_IN = 6;
+/** A beam's −3 dB edge lines' dots, the gaps between them, in, and their opacity. */
+const BEAM_DOT_IN = 1.5;
+const BEAM_DOT_GAP_IN = 4;
+const BEAM_DOT_OPACITY = 0.55;
 /** The listener figure, in: its head's radius, its body's radius, and the gap between them. */
 const HEAD_IN = 4.5;
 const BODY_IN = 6;
@@ -158,23 +163,55 @@ function roomSurfaces(room: SpaceSceneProps["room"], color: string): THREE.Mesh[
 
 /**
  * A beam's lines, from the driver at the origin along +z, each `length` in long: its aim along its axis, its two
- * horizontal edges `half[0]` radians to each side (in its x–z plane), and its two vertical edges `half[1]` radians up
- * and down (in its y–z plane). Each line as its far end; every line starts at the origin.
+ * horizontal edges `edges[0]` radians to each side (in its x–z plane), and its two vertical edges `edges[1]` radians up
+ * and down (in its y–z plane); none in a plane whose edge is null. Each line as its far end; every line starts at the
+ * origin.
  */
 export function beamLineEnds(
-  half: SpaceBeam["half"],
+  edges: SpaceBeam["edges6"],
   length: number,
 ): { aim: THREE.Vector3; edges: THREE.Vector3[] } {
-  const [h, v] = half;
+  const [h, v] = edges;
   return {
     aim: new THREE.Vector3(0, 0, length),
     edges: [
-      new THREE.Vector3(-Math.sin(h) * length, 0, Math.cos(h) * length),
-      new THREE.Vector3(Math.sin(h) * length, 0, Math.cos(h) * length),
-      new THREE.Vector3(0, -Math.sin(v) * length, Math.cos(v) * length),
-      new THREE.Vector3(0, Math.sin(v) * length, Math.cos(v) * length),
+      ...(h === null
+        ? []
+        : [
+            new THREE.Vector3(-Math.sin(h) * length, 0, Math.cos(h) * length),
+            new THREE.Vector3(Math.sin(h) * length, 0, Math.cos(h) * length),
+          ]),
+      ...(v === null
+        ? []
+        : [
+            new THREE.Vector3(0, -Math.sin(v) * length, Math.cos(v) * length),
+            new THREE.Vector3(0, Math.sin(v) * length, Math.cos(v) * length),
+          ]),
     ],
   };
+}
+
+/** Clipped broken lines from the origin to each end: dashes `dash` in long, `gap` in apart. */
+function brokenRays(
+  ends: readonly THREE.Vector3[],
+  planes: THREE.Plane[],
+  dash: number,
+  gap: number,
+  opacity = 1,
+): THREE.LineSegments {
+  const lines = new THREE.LineSegments(
+    raysFromOrigin(ends),
+    new THREE.LineDashedMaterial({
+      color: ON_DATA.cyan,
+      dashSize: dash,
+      gapSize: gap,
+      transparent: opacity < 1,
+      opacity,
+      clippingPlanes: planes,
+    }),
+  );
+  lines.computeLineDistances();
+  return lines;
 }
 
 /** Line segments from the origin to each end. */
@@ -360,25 +397,18 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
   const planes = roomClipPlanes(room);
   for (const beam of props.beams) {
     const length = beam.reachFt * INCHES_PER_FOOT;
-    const { aim, edges } = beamLineEnds(beam.half, length);
-    const edgeLines = new THREE.LineSegments(
-      raysFromOrigin(edges),
-      new THREE.LineDashedMaterial({
-        color: ON_DATA.cyan,
-        dashSize: BEAM_DASH_IN,
-        gapSize: BEAM_GAP_IN,
-        clippingPlanes: planes,
-      }),
-    );
-    edgeLines.computeLineDistances();
+    const { aim, edges: edges6 } = beamLineEnds(beam.edges6, length);
+    const { edges: edges3 } = beamLineEnds(beam.edges3, length);
     const holder = new THREE.Group();
     holder.add(
       new THREE.LineSegments(
         raysFromOrigin([aim]),
         new THREE.LineBasicMaterial({ color: ON_DATA.cyan, clippingPlanes: planes }),
       ),
-      edgeLines,
     );
+    if (edges6.length) holder.add(brokenRays(edges6, planes, BEAM_DASH_IN, BEAM_GAP_IN));
+    if (edges3.length)
+      holder.add(brokenRays(edges3, planes, BEAM_DOT_IN, BEAM_DOT_GAP_IN, BEAM_DOT_OPACITY));
     holder.position.copy(roomPointIn(beam.at));
     holder.rotation.set(-beam.pitch, beam.yaw, 0, "YXZ");
     root.add(holder);

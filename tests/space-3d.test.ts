@@ -1,6 +1,6 @@
 // The Space page's 3D view (stack-view/buildSpaceScene) and its beams (lib/speaker/spaceBeams): each box stands where
 // the space model places it (spaceLayout `placementFrame`), the room's clipping planes keep a beam inside it, a wall
-// between the camera and the room is the near one, and a beam's angles are where the driver pattern falls 6 dB.
+// between the camera and the room is the near one, and a beam's edges are where the driver pattern falls 6 and 3 dB.
 import { describe, expect, test } from "vite-plus/test";
 import * as THREE from "three";
 import {
@@ -15,13 +15,19 @@ import {
 } from "../src/components/stack-view/buildSpaceScene";
 import { FRAME_BOX_KEY } from "../src/components/stack-view/sceneFraming";
 import { buildMembersScene } from "../src/components/stack-view/buildMembersScene";
-import { beamHalfAngles, spaceBeams } from "../src/lib/speaker/spaceBeams";
+import { beamHalfAngles, spaceBeams, type SpaceBeam } from "../src/lib/speaker/spaceBeams";
 import { placementFrame } from "../src/lib/speaker/spaceLayout";
 import { pistonDirectivity, waveguideHalfAngles } from "../src/lib/acoustics/directivity";
 import { spaceFromStart } from "../src/pages/space/useSpace";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { INCHES_PER_FOOT, METERS_PER_FOOT } from "../src/constants/units";
-import { BEAM_FALL_DB, DRIVER_PART, ROOM_SURFACE_NAME } from "../src/constants/space";
+import {
+  BEAM_EDGE_DB,
+  BEAM_FALL_DB,
+  BEAM_INNER_EDGE_DB,
+  DRIVER_PART,
+  ROOM_SURFACE_NAME,
+} from "../src/constants/space";
 import { airDbPerM } from "../src/lib/acoustics/roomAcoustics";
 import { spaceModel } from "./helpers";
 import type { DriverPart } from "../src/types";
@@ -130,18 +136,27 @@ test("a wall between the camera and the room is the near one", () => {
   expect(wallIsNear(front, behindAudience)).toBe(false);
 });
 
-test("a beam's angles: where the pattern falls 6 dB", () => {
-  // a piston small against the wavelength never falls 6 dB in front: a quarter turn each way
-  expect(beamHalfAngles({ a: 0.05 }, 100)).toEqual([Math.PI / 2, Math.PI / 2]);
-  // a 15 inch cone at 2 kHz: the pattern is one half at the angle
+test("a beam's angles: where the pattern falls 6 dB, and 3 dB", () => {
+  // a piston small against the wavelength never falls 6 or 3 dB in front: a quarter turn each way
+  for (const fall of [BEAM_EDGE_DB, BEAM_INNER_EDGE_DB])
+    expect(beamHalfAngles({ a: 0.05 }, 100, fall)).toEqual([Math.PI / 2, Math.PI / 2]);
+  // a 15 inch cone at 2 kHz: the pattern falls 6 dB, and 3 dB, at the angles
   const a = 0.19;
-  const [h, v] = beamHalfAngles({ a }, 2000);
+  const [h, v] = beamHalfAngles({ a }, 2000, BEAM_EDGE_DB);
   expect(h).toBe(v);
-  expect(20 * Math.log10(pistonDirectivity(2000, a, h))).toBeCloseTo(-6.02, 1);
-  // a horn: its own half angles, never past a quarter turn
+  expect(20 * Math.log10(pistonDirectivity(2000, a, h))).toBeCloseTo(-6, 1);
+  const [h3] = beamHalfAngles({ a }, 2000, BEAM_INNER_EDGE_DB);
+  expect(h3).toBeLessThan(h);
+  expect(20 * Math.log10(pistonDirectivity(2000, a, h3))).toBeCloseTo(-3, 1);
+  // a horn: its own half angles at 6 dB, never past a quarter turn; at 3 dB, where −6·(θ/half)² dB is −3
   const horn = { covH: 90, covV: 40, wIn: 20, hIn: 10 };
-  expect(beamHalfAngles({ horn }, 8000)).toEqual(waveguideHalfAngles(8000, 90, 40, 20, 10));
-  for (const half of beamHalfAngles({ horn }, 40)) expect(half).toBeLessThanOrEqual(Math.PI / 2);
+  const own = waveguideHalfAngles(8000, 90, 40, 20, 10);
+  expect(beamHalfAngles({ horn }, 8000, BEAM_EDGE_DB)).toEqual(own);
+  beamHalfAngles({ horn }, 8000, BEAM_INNER_EDGE_DB).forEach((half, i) =>
+    expect(half).toBeCloseTo(own[i] / Math.SQRT2, 9),
+  );
+  for (const half of beamHalfAngles({ horn }, 40, BEAM_EDGE_DB))
+    expect(half).toBeLessThanOrEqual(Math.PI / 2);
 });
 
 test("a beam's lines: its aim, and its edges at its half angles, each as long as its reach", () => {
@@ -169,6 +184,11 @@ test("a beam's lines: its aim, and its edges at its half angles, each as long as
     expect(Math.sign(end.y)).toBe(side);
     expect(end.angleTo(aim)).toBeCloseTo(v, 9);
   }
+  // no edge in a plane where it never falls that far: the vertical ones only, or none
+  const high = beamLineEnds([null, v], 100).edges;
+  expect(high).toHaveLength(2);
+  for (const end of high) expect(end.x).toBe(0);
+  expect(beamLineEnds([null, null], 100).edges).toEqual([]);
 });
 
 describe("Space 3D view: the PA stack preset", () => {
@@ -208,14 +228,22 @@ describe("Space 3D view: the PA stack preset", () => {
         item.drivers.filter((d) => !part || d.part === part).map((d) => spot(d.at)),
       ),
     );
-  test("each driver that plays the map's band and narrows has a beam of its own, from where it sits", () => {
+  /** whether a beam has no edge lines: its aim alone */
+  const aimOnly = (b: SpaceBeam) => [...b.edges6, ...b.edges3].every((e) => e === null);
+  test("each driver that plays the map's band has a beam of its own, from where it sits", () => {
     const hf = driverSpots(DRIVER_PART.hf),
       cone = driverSpots(DRIVER_PART.cone);
-    // in the Mid band each top's horn beams, from its own spot; its cone spreads every way there, so draws none
-    const mid = spaceBeams(model, "mid", 1000).map((b) => spot(b.at));
+    // in the Mid band each top's horn beams with both edges, from its own spot; its cone spreads every way there, so
+    // draws its aim alone
+    const midBeams = spaceBeams(model, "mid", 1000);
+    const mid = midBeams.map((b) => spot(b.at));
     expect(new Set(mid).size).toBe(mid.length);
-    expect(mid.filter((at) => hf.has(at)).length).toBe(2);
-    expect(mid.filter((at) => cone.has(at)).length).toBe(0);
+    const horns = midBeams.filter((b) => hf.has(spot(b.at)));
+    expect(horns.length).toBe(2);
+    for (const b of horns) expect([...b.edges6, ...b.edges3].every((e) => e !== null)).toBe(true);
+    const cones = midBeams.filter((b) => cone.has(spot(b.at)));
+    expect(cones.length).toBe(2);
+    expect(cones.every(aimOnly)).toBe(true);
     // the subs don't play the Mid band: no beams from them
     const subs = new Set(
       model.placements.flatMap(({ item }) =>
@@ -223,8 +251,26 @@ describe("Space 3D view: the PA stack preset", () => {
       ),
     );
     for (const at of mid) expect(subs.has(at)).toBe(false);
-    // in the Sub band only the subs play, and they spread every way (never 6 dB down inside a quarter turn): no beams
-    expect(spaceBeams(model, "sub", 1000)).toEqual([]);
+    // in the Sub band only the subs play, and they spread every way (never 3 dB down inside a quarter turn): aims alone
+    const subBeams = spaceBeams(model, "sub", 1000);
+    expect(subBeams.length).toBeGreaterThan(0);
+    for (const b of subBeams) expect(subs.has(spot(b.at)) && aimOnly(b)).toBe(true);
+  });
+
+  test("at 800 Hz, a top's cone falls 3 dB inside a quarter turn, but not 6 dB: its −3 dB edges alone", () => {
+    const topCone = new Set(
+      model.placements.flatMap(({ item }) =>
+        item.drivers
+          .filter((d) => d.part === DRIVER_PART.cone && d.member !== 0)
+          .map((d) => spot(d.at)),
+      ),
+    );
+    const cones = spaceBeams(model, "one", 800).filter((b) => topCone.has(spot(b.at)));
+    expect(cones.length).toBeGreaterThan(0);
+    for (const b of cones) {
+      expect(b.edges6).toEqual([null, null]);
+      expect(b.edges3.every((e) => e !== null && e < Math.PI / 2)).toBe(true);
+    }
   });
 
   test("in the Mid band each horn's beam reaches past the listener, or to a wall", () => {
@@ -257,12 +303,12 @@ describe("Space 3D view: the PA stack preset", () => {
   test("at one frequency, a cone's beam narrows as the frequency rises", () => {
     const cone = driverSpots(DRIVER_PART.cone);
     const coneBeam = (f: number) =>
-      spaceBeams(model, "one", f).find((b) => cone.has(spot(b.at)) && b.half[0] < Math.PI / 2);
+      spaceBeams(model, "one", f).find((b) => cone.has(spot(b.at)) && b.edges6[0] !== null);
     const [lower, higher] = [1000, 1500].map(coneBeam);
     expect(lower && higher && spot(lower.at) === spot(higher.at)).toBe(true);
     if (!lower || !higher) return;
-    expect(higher.half[0]).toBeLessThan(lower.half[0]);
-    expect(higher.half[1]).toBeLessThan(lower.half[1]);
+    for (const key of ["edges6", "edges3"] as const)
+      for (const i of [0, 1]) expect(higher[key][i] ?? 0).toBeLessThan(lower[key][i] ?? 0);
   });
 
   test("a beam reaches where its driver's direct level falls BEAM_FALL_DB below its level at 1 m", () => {
@@ -283,7 +329,7 @@ describe("Space 3D view: the PA stack preset", () => {
     }
   });
 
-  test("each beam draws as clipped lines, its aim solid and its edges dashed, with no surface", () => {
+  test("each beam draws as clipped lines, its aim solid, its −6 dB edges dashed, its −3 dB edges fainter dots", () => {
     const clipped: THREE.Object3D[] = [];
     buildSpaceScene(props()).traverse((o) => {
       if (
@@ -293,12 +339,38 @@ describe("Space 3D view: the PA stack preset", () => {
       )
         clipped.push(o);
     });
-    expect(clipped).toHaveLength(2 * spaceBeams(model, "high", 1000).length);
-    const dashed = clipped.filter(
-      (o) => o instanceof THREE.LineSegments && o.material instanceof THREE.LineDashedMaterial,
+    const beams = spaceBeams(model, "high", 1000);
+    expect(clipped).toHaveLength(3 * beams.length);
+    const broken = clipped.flatMap((o) =>
+      o instanceof THREE.LineSegments && o.material instanceof THREE.LineDashedMaterial
+        ? [o.material]
+        : [],
     );
-    expect(dashed).toHaveLength(clipped.length / 2);
+    expect(broken).toHaveLength(2 * beams.length);
+    // the dotted ones: shorter dashes, and fainter
+    const dotted = broken.filter((m) => m.transparent);
+    expect(dotted).toHaveLength(beams.length);
+    for (const m of dotted) {
+      expect(m.opacity).toBeLessThan(1);
+      expect(broken.every((d) => d.transparent || m.dashSize < d.dashSize)).toBe(true);
+    }
     expect(clipped.every((o) => o instanceof THREE.LineSegments)).toBe(true);
+    // a beam with no edges draws its aim alone
+    const aims = (scene: THREE.Object3D) => {
+      let n = 0;
+      scene.traverse((o) => {
+        if (o instanceof THREE.LineSegments && o.material instanceof THREE.Material) n++;
+      });
+      return n;
+    };
+    const bare = beams.map((b): SpaceBeam => ({
+      ...b,
+      edges6: [null, null],
+      edges3: [null, null],
+    }));
+    expect(aims(buildSpaceScene(props({ beams: bare })))).toBe(
+      aims(buildSpaceScene(props({ beams: [] }))) + beams.length,
+    );
   });
 
   test("the floor shows the map only while its grid is for the room on show", () => {

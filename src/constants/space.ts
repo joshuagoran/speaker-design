@@ -30,6 +30,9 @@ export const COVERAGE_BAND_IDS = [
 
 /** How far a driver's direct level on its axis falls below its level at 1 m where its beam in the 3D view ends, dB. */
 export const BEAM_FALL_DB = 20;
+/** A beam's edge lines: where its driver falls this far off its axis, dB (dashed), and this far (dotted, fainter). */
+export const BEAM_EDGE_DB = 6;
+export const BEAM_INNER_EDGE_DB = 3;
 
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 20 × 30 ft, a 12 ft ceiling, drywall all
