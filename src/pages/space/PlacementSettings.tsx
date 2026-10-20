@@ -153,7 +153,6 @@ export function PlacementSettings({
         <ToggleButton
           className="self-end"
           on={placement.upsideDown}
-          title={SPACE_TEXT.upsideDownTip}
           onClick={() => onEdit((p) => ({ ...p, upsideDown: !p.upsideDown }))}
         >
           {SPACE_TEXT.upsideDown}
