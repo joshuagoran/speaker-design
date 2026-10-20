@@ -20,7 +20,7 @@ Move it into a plain module that both the page and the tests import.
   - horn: `hornModel(cd, horn, xoHi, hfAmpW)`, `pistonBeam(Sd, f)`, `hornBeam(horn, f)` (Keele)
   - weights: `subWeight`, `midWeight` (with `PLY_LB`)
   - fills: `fillHfLimit` (today's `hfLimW`)
-  - cutlist: `boxParts`, `cutParts`, `packSheets`, `f8`
+  - cutlist: `boxParts`, `speakerCutParts`, `packSheets`, `f8`
 - Build: add `--bundle` to the esbuild call in `tools/build.sh` so the page imports
   `calc.js` (React/three stay globals). Output stays one HTML file.
 - Driver/horn/cabinet tables move to `tools/data.js` so tests can iterate them.

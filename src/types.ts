@@ -1510,17 +1510,6 @@ export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
 /** How many 90° elbows a round port tube takes to fit its box (lib/build/tubeFold). */
 export type ElbowCount = 0 | 1 | 2;
 
-export interface VentGeometry {
-  n: number;
-  area: number;
-  len: number;
-  ec: number;
-  dh: number;
-  /** round tubes: the elbows each takes to fit (0 straight) */
-  elbows?: ElbowCount;
-  desc: string;
-}
-
 /** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches), and the bottom slot's fins (absent: two). */
 export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
   ductH: number;
@@ -1529,36 +1518,6 @@ export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
   tubeLen: number;
   throat: number;
   divider: number;
-}
-
-/** What `subGeometry` needs: boxes, plywood, vent and layout. */
-export interface SubGeometryConfig {
-  subBox: Dims3;
-  midDims: Dims3;
-  wall: number;
-  inset: number;
-  portStyle: PortStyle;
-  cVent: VentSpec;
-  layout: PaLayout;
-  /** absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
-  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
-  backJoint?: BackJointId;
-  /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
-  braceEstimate?: boolean;
-  /** the boxes' handles and plates, whose recesses take volume (lib/build/hardware); absent: none */
-  hardware?: PaHardware;
-}
-
-/** The sub's vent and volumes, without the model. */
-export interface SubGeometry {
-  port: VentGeometry;
-  grossL: number;
-  ductL: number;
-  woodL: number;
-  /** the liters the hardware's recesses take (lib/build/hardware) */
-  recessL: number;
-  netL: number;
 }
 
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
@@ -1714,7 +1673,7 @@ export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
 /**
  * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (two by default), its
  * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
- * (the PA slot rule: lib/acoustics/boxModels ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
+ * (the PA slot rule: lib/speaker/chamberAir chamberVentModel, lib/acoustics/boxModels slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
  * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
  * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
  * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width. An open slot always runs the whole
@@ -3147,32 +3106,6 @@ export interface PurchasedPart {
   unit: number | null;
   /** where the price comes from (the catalog's free-text source: a vendor, an estimate); null where none is known */
   source: string | null;
-}
-
-/** What the cutlist needs for a sub and mid pair. */
-export interface CutPartsConfig {
-  sub: SubDriver;
-  mid: MidDriver;
-  subBox: Dims3;
-  midDims: Dims3;
-  wall: number;
-  inset: number;
-  joint: CornerJoint;
-  portStyle: PortStyle;
-  cVent: VentSpec;
-  layout: PaLayout;
-  /** absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
-  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
-  backJoint?: BackJointId;
-  /** the sub box's parts only (its volume reads no more): the mid box is left out */
-  subOnly?: boolean;
-  /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */
-  noBraces?: boolean;
-  /** each box's handles and plates, for the panels' cutout notes; absent: none */
-  hardware?: PaHardware;
-  /** the tower's horn, which sets its cabinet's height and baffle (lib/speaker/tower `towerSpec`); the tower needs it */
-  horn?: TowerHorn;
 }
 
 /** The panel a Hi-fi box's passive radiators are cut into. */

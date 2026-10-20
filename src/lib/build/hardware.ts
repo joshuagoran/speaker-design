@@ -126,16 +126,6 @@ function boughtWith(box: HardwareBoxId, handle: CabinetPart | null): BoxHardware
     ...(box === "mid" ? [{ part: HORN_POSTS, qty: 1 }] : []),
   ];
 }
-/** The liters a box's recesses take (none for a box without hardware, or with no `hw`). */
-export const hardwareLiters = (
-  hw: PaHardware | undefined,
-  box: HardwareBoxId,
-  t: number,
-  layout: PaLayout | undefined,
-) =>
-  hw
-    ? hardwareBought(hw, box, layout).reduce((a, b) => a + b.qty * partRecessLiters(b.part, t), 0)
-    : 0;
 /** A box's hardware weight, lb (a part with no listed weight counts none). */
 export const hardwareLb = (
   hw: PaHardware | undefined,
@@ -148,7 +138,7 @@ export interface HardwareDriver {
   lb: number;
   depthIn: number;
 }
-/** A box's inside spans on the box axes, as the bracing's (lib/acoustics/boxModels paInner). */
+/** A box's inside spans on the box axes, as the bracing's (lib/acoustics/boxModels braceShell). */
 const insideOf = (box: Dims3, t: number, inset: number) => ({
   x: box.w - 2 * t,
   y: box.h - 2 * t,

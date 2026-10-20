@@ -172,7 +172,7 @@ export function chamberVentModel(
       // the slot's long side: the whole clear face (`slotRunIn`)
       const w = slotRunIn(face, port);
       if (port.fins !== undefined) {
-        // the PA letterbox (lib/acoustics/boxModels ventGeometry): its fins take their thickness off the width; its mouth on the
+        // the PA letterbox: its fins take their thickness off the width; its mouth on the
         // floor (which mirrors it), its inner end as the PA slot's, folded up the back wall when too long to run
         // straight (as the PA rule, the cutlist and the 3D view fold it)
         const open = w - slotFinsOf({ fins: port.fins, slotH: port.h }, w, t) * t;
