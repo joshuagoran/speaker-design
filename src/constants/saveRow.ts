@@ -1,6 +1,9 @@
 // The saving row (src/components/saved-configs/SaveRow): its actions and messages. A page passes the nouns that name
 // its own designs (`SaveRowWords`). It imports nothing, so the Node checks (tests/mobile-check.mjs) can read it.
 
+/** The id a design has until a save holds it (no save has it). Saved drafts carry it, so keep its value. */
+export const DRAFT_ID = "draft";
+
 /** The row's actions and messages, the same on every page that has it. */
 export const SAVE_ROW_TEXT = {
   /** the row's group name, as screen readers hear it */

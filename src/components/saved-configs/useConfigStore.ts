@@ -178,6 +178,16 @@ export function useConfigStore(collection: string) {
   /** a saved configuration's data replaced by `data`, under `name` */
   const overwrite = (id: string, name: string, data: SavedConfigData) =>
     write(id, name, data, "Saved");
+  /** whether the saved configuration `id` exists (it may be past the list); null (and a message) when the read fails */
+  const exists = async (id: string): Promise<boolean | null> => {
+    if (!db) return null;
+    try {
+      return (await db.collection(collection).doc(id).get()).exists;
+    } catch {
+      flash(UI_TEXT.saveFailed);
+      return null;
+    }
+  };
   /** a saved configuration under a new name, its data kept */
   const rename = ({ id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
     write(id, name, data, "Renamed");
@@ -207,6 +217,7 @@ export function useConfigStore(collection: string) {
     signOut,
     create,
     overwrite,
+    exists,
     rename,
     duplicate,
     remove,

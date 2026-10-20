@@ -57,7 +57,12 @@ function installDb(key) {
     return {
       ...query,
       doc: (id = `auto${Date.now()}${made++}`) => ({
-        set: (data) => write((docs) => (docs[id] = data)),
+        get: () => Promise.resolve({ exists: id in (read()[name] || {}) }),
+        // a write takes a moment, as the real stores' do, so a double click lands while one runs
+        set: (data) =>
+          new Promise((done) => setTimeout(done, 150)).then(() =>
+            write((docs) => (docs[id] = data)),
+          ),
         delete: () => write((docs) => delete docs[id]),
       }),
     };
@@ -279,6 +284,15 @@ for (const pageDef of PAGES)
         (await docNamed("Design B after reload"))?.id === copy?.id,
         "Save after a reload made a new save",
       );
+      // a double click on Save, on a new design, makes exactly one save
+      await p.getByLabel(SAVE_ROW_TEXT.newFrom).selectOption({ label: pageDef.starts[0] });
+      await openInNone();
+      await nameBox.fill("Design C");
+      await button(SAVE_ROW_TEXT.save).dblclick();
+      await p.waitForTimeout(800);
+      await waitCount(2);
+      const c = await docNamed("Design C");
+      check(c && (await openIs((id) => id === c.id)), "a double-clicked Save is not the open one");
       await noScroll("at the end");
     } catch (e) {
       fail(`stopped: ${e.message.split("\n")[0]}`);

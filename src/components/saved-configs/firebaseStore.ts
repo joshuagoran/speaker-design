@@ -1,6 +1,6 @@
 // Firebase for the GitHub Pages build, bundled from npm (the modular SDK) instead of the compat scripts from Google's CDN.
 // It exposes the small surface the app's config store uses, in the shape of the claude.ai artifact database:
-// collection(path).orderBy(field, dir).limit(n).onSnapshot(next, error), collection(path).doc(id?).set(data) / .delete().
+// collection(path).orderBy(field, dir).limit(n).onSnapshot(next, error), collection(path).doc(id?).get() / .set(data) / .delete().
 import { initializeApp, type FirebaseOptions } from "firebase/app";
 import {
   getAuth,
@@ -16,6 +16,7 @@ import {
   getFirestore,
   collection as fsCollection,
   doc as fsDoc,
+  getDoc,
   setDoc,
   deleteDoc,
   query,
@@ -58,6 +59,7 @@ export function createFirebase(config: FirebaseOptions = FIREBASE_CONFIG): Fireb
       doc: (id?: string) => {
         const d = id == null ? fsDoc(ref) : fsDoc(ref, id);
         return {
+          get: () => getDoc(d).then((snap) => ({ exists: snap.exists() })),
           set: (data: Record<string, unknown>) => setDoc(d, data),
           delete: () => deleteDoc(d),
         };

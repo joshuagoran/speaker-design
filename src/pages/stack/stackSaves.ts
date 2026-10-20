@@ -11,11 +11,12 @@ import { isSavedSpeakerShape } from "../../lib/speaker/speakerSaves";
 import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
 import { STACK_TEXT } from "../../constants/stack";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import type { PageDraft } from "../../hooks/usePageDraft";
 
 /** The id a stack has until the library saves it (then it takes the document's). */
-export const DRAFT_STACK_ID = "draft";
+export const DRAFT_STACK_ID = DRAFT_ID;
 
 /** A stack with no members, named as a new one. */
 export const emptyStack = (): StackDesign => ({

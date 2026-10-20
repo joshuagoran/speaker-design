@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "../ui/Button";
 import { TextField } from "../ui/TextField";
 import { RowSelect } from "../ui/RowSelect";
@@ -6,7 +6,14 @@ import type { SelectOption } from "../ui/SelectField";
 import { SAVE_ROW_TEXT, type SaveRowWords } from "../../constants/saveRow";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 import type { ConfigStore } from "./useConfigStore";
-import { deleteSave, openSave, saveDesign, saveDesignAs } from "./saveActions";
+import {
+  deleteSave,
+  nameAfterRename,
+  oneAtATime,
+  openSave,
+  saveDesign,
+  saveDesignAs,
+} from "./saveActions";
 import type { SavedConfig, SavedConfigData } from "../../types";
 
 interface Props<T extends SelectOption> {
@@ -58,6 +65,13 @@ export function SaveRow<T extends SelectOption>({
   const [newName, setNewName] = useState<string | null>(null);
   /** whether the row asks to confirm Delete (an inline step: a browser dialog can be blocked in the artifact host) */
   const [confirming, setConfirming] = useState(false);
+  /** whether a store call runs: the row's actions wait for it */
+  const [busy, setBusy] = useState(false);
+  const [run] = useState(() => oneAtATime(setBusy));
+  /** the design's id and name now, read after a store call resolves */
+  const latest = useRef({ openId, name });
+  latest.current = { openId, name };
+  const openIdNow = () => latest.current.openId;
   const list = saved ?? [];
   const open = openSave(saved, openId);
   const cur = list.find((c) => c.id === (sel || openId));
@@ -66,36 +80,41 @@ export function SaveRow<T extends SelectOption>({
     setNewName(null);
     setConfirming(false);
   };
-  // each action shows its own failure message (the store's)
-  const doSave = async () => {
-    const id = await saveDesign(store, openId, trimmed, snapshot());
-    if (id) {
-      onOpenId(id);
-      setSel(id);
-    }
-    reset();
-  };
-  const doSaveAs = async () => {
-    const made = await saveDesignAs(store, trimmed, snapshot());
-    if (made) {
-      onName(made.name);
-      onOpenId(made.id);
-      setSel(made.id);
-    }
-    reset();
-  };
-  const doRename = async () => {
-    const to = newName?.trim();
-    if (!cur || !to || !(await store.rename(cur, to))) return;
-    // the open save renamed: the design takes the name, so the next Save keeps it
-    if (cur.id === openId) onName(to);
-    setNewName(null);
-  };
-  const doDelete = async (target: SavedConfig) => {
-    setSel("");
-    reset();
-    if (await deleteSave(store, target.id, openId)) onOpenId(null);
-  };
+  // each action shows its own failure message (the store's); the list then shows the open save
+  const doSave = () =>
+    run(async () => {
+      const id = await saveDesign(store, openId, trimmed, snapshot(), openIdNow);
+      if (id) {
+        onOpenId(id);
+        setSel("");
+      }
+      reset();
+    });
+  const doSaveAs = () =>
+    run(async () => {
+      const made = await saveDesignAs(store, openId, trimmed, snapshot(), openIdNow);
+      if (made) {
+        onName(made.name);
+        onOpenId(made.id);
+        setSel("");
+      }
+      reset();
+    });
+  const doRename = () =>
+    run(async () => {
+      const to = newName?.trim();
+      if (!cur || !to || !(await store.rename(cur, to))) return;
+      // the open save renamed: the design takes the name, so the next Save keeps it
+      const now = latest.current;
+      onName(nameAfterRename(now.name, cur.id === now.openId, cur.name, to));
+      setNewName(null);
+    });
+  const doDelete = (target: SavedConfig) =>
+    run(async () => {
+      setSel("");
+      reset();
+      if (await deleteSave(store, target.id, openId)) onOpenId(null);
+    });
   /** each saved design as the list shows it: its name and the day it was saved */
   const savedOptions = list.map((c) => ({
     id: c.id,
@@ -116,7 +135,7 @@ export function SaveRow<T extends SelectOption>({
           value={name}
           onChange={onName}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && db && trimmed) void doSave();
+            if (e.key === "Enter" && db && trimmed && !busy) void doSave();
           }}
           maxLength={NAME_MAX}
           className="py-2 w-56 max-w-full"
@@ -125,13 +144,17 @@ export function SaveRow<T extends SelectOption>({
           <>
             <Button
               variant="primary"
-              onClick={doSave}
-              disabled={!trimmed}
+              onClick={() => void doSave()}
+              disabled={!trimmed || busy}
               title={SAVE_ROW_TEXT.saveTip(open && open.name)}
             >
               {SAVE_ROW_TEXT.save}
             </Button>
-            <Button onClick={doSaveAs} disabled={!trimmed} title={SAVE_ROW_TEXT.saveAsTip}>
+            <Button
+              onClick={() => void doSaveAs()}
+              disabled={!trimmed || busy}
+              title={SAVE_ROW_TEXT.saveAsTip}
+            >
               {SAVE_ROW_TEXT.saveAs}
             </Button>
             <RowSelect
@@ -149,9 +172,10 @@ export function SaveRow<T extends SelectOption>({
             <Button
               onClick={() => {
                 if (cur) restore(cur);
+                setSel("");
                 reset();
               }}
-              disabled={!cur}
+              disabled={!cur || busy}
             >
               {SAVE_ROW_TEXT.open}
             </Button>
@@ -178,7 +202,12 @@ export function SaveRow<T extends SelectOption>({
           title={words.newFromTip}
           options={starts}
           value=""
-          onChange={onStart}
+          onChange={(start) => {
+            onStart(start);
+            setSel("");
+            reset();
+          }}
+          disabled={busy}
           group={group}
           prompt={SAVE_ROW_TEXT.newFromPrompt}
           className="min-w-0 max-w-full w-56"
@@ -195,7 +224,12 @@ export function SaveRow<T extends SelectOption>({
           {newName === null && confirming && (
             <>
               <span className="text-sm">{SAVE_ROW_TEXT.confirmDelete(cur.name)}</span>
-              <Button size="xs" variant="primary" onClick={() => void doDelete(cur)}>
+              <Button
+                size="xs"
+                variant="primary"
+                onClick={() => void doDelete(cur)}
+                disabled={busy}
+              >
                 {SAVE_ROW_TEXT.yes}
               </Button>
               <Button size="xs" onClick={() => setConfirming(false)}>
@@ -205,17 +239,21 @@ export function SaveRow<T extends SelectOption>({
           )}
           {newName === null && !confirming && (
             <>
-              <Button size="xs" onClick={() => setNewName(cur.name)}>
+              <Button size="xs" onClick={() => setNewName(cur.name)} disabled={busy}>
                 {SAVE_ROW_TEXT.rename}
               </Button>
               <Button
                 size="xs"
-                onClick={() => void store.duplicate(cur, SAVE_ROW_TEXT.copyName(cur.name))}
+                onClick={() =>
+                  void run(() => store.duplicate(cur, SAVE_ROW_TEXT.copyName(cur.name)))
+                }
+                disabled={busy}
               >
                 {SAVE_ROW_TEXT.duplicate}
               </Button>
               <button
                 onClick={() => setConfirming(true)}
+                disabled={busy}
                 aria-label={SAVE_ROW_TEXT.deleteLabel(cur.name)}
                 className="text-xs text-stone-500 hover:text-red-700 px-1"
               >
@@ -230,13 +268,18 @@ export function SaveRow<T extends SelectOption>({
                 value={newName}
                 onChange={setNewName}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") void doRename();
+                  if (e.key === "Enter" && !busy) void doRename();
                   if (e.key === "Escape") setNewName(null);
                 }}
                 maxLength={NAME_MAX}
                 className="py-1 w-48 max-w-full"
               />
-              <Button size="xs" variant="primary" onClick={doRename} disabled={!newName.trim()}>
+              <Button
+                size="xs"
+                variant="primary"
+                onClick={() => void doRename()}
+                disabled={!newName.trim() || busy}
+              >
                 {SAVE_ROW_TEXT.rename}
               </Button>
               <Button size="xs" onClick={() => setNewName(null)}>

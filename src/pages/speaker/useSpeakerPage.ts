@@ -21,6 +21,7 @@ import { allBox } from "./settingsSummaries";
 import { speakerSummary } from "./speakerText";
 import { usePageDraft, type PageDraft } from "../../hooks/usePageDraft";
 import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
@@ -38,7 +39,7 @@ import type {
 } from "../../types";
 
 /** The id a design has until the library saves it (then it takes the document's). */
-export const DRAFT_SPEAKER_ID = "draft";
+export const DRAFT_SPEAKER_ID = DRAFT_ID;
 
 /** The empty speaker, named as a new one. */
 export const emptySpeaker = (): SpeakerSpec => ({
