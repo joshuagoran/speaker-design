@@ -13,7 +13,7 @@ import { HORN_MESHES } from "../src/data/meshes";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
-import { midHardwarePlan } from "../src/lib/acoustics/boxModels";
+import { paDesignWith, paMidBuild } from "./pa-build";
 import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "../src/constants/paLayouts";
 import { SCENE_CASE_NAMES, sceneCases } from "./scene-cases";
 import type { CompressionDriver, PaLayout, PartMesh } from "../src/types";
@@ -79,15 +79,18 @@ export function scene(props: Partial<Props>, { lidHardware = true } = {}) {
           ? subTop + (p.spacerH ?? DEFAULT_PA.spacerH)
           : subTop + MID_GAP_IN;
     const xs = p.layout === "satellite" ? [-satX, satX] : [0];
-    const plan = midHardwarePlan(
-      box,
-      wall,
-      inset,
-      p.mid,
-      p.layout,
-      undefined,
-      DEFAULT_HARDWARE.mid,
-    );
+    // the mid box's hardware as the Speaker page builds it (the default horn on its lid)
+    const plan = paMidBuild(
+      paDesignWith({
+        layout: p.layout,
+        mid: p.mid.id,
+        mDim: box,
+        wall,
+        inset,
+        hardware: DEFAULT_HARDWARE,
+      }),
+      "design",
+    ).build.hardware;
     for (const x of xs) {
       buildCabinet(ctx, {
         dims: box,

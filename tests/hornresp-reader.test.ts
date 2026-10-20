@@ -33,6 +33,7 @@ const RECORDS = [
   "sub-bin-vented",
   "sub-bin-eighth",
   "sub-direct-vented",
+  "pa-sub-box",
   "mid-vented",
   "mid-pair",
   "sub-bin-le",

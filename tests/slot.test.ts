@@ -2,12 +2,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
   sideDuctEndCorrection,
-  cutParts,
-  ventGeometry,
-  boxModel,
-  subSystem,
   slotMouthCorrection,
-  subGeometry,
   maxStraightSlotIn,
   minFoldedSlotIn,
 } from "../src/lib/acoustics/boxModels";
@@ -18,9 +13,26 @@ import {
 } from "../src/lib/acoustics/radiation";
 import { ductFit } from "../src/lib/speaker/chips";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
-import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
-import type { SubSystemConfig } from "../src/types";
+import { SUB_OPTIONS } from "../src/lib/data";
+import { portOfEffectiveLength, ventTuningHz } from "../src/lib/acoustics/hornModel";
+import { chamberHornPort, chamberVentModel, stuffedLiters } from "../src/lib/speaker/chamberAir";
+import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
+import { PORT_SHAPE, VENT_KIND } from "../src/constants/speakerSpec";
+import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
+import type { Dims3, SpeakerChamber, SpeakerSpec } from "../src/types";
 import { C, rel, close, vent, DRV18 } from "./helpers";
+import { paSubBox, paSubBuild, paSubVent } from "./pa-build";
+
+/** The tuning, Hz, of `liters` with a vent of `areaIn2` and effective length `effectiveIn` (the engine's duct). */
+const engineFb = (liters: number, areaIn2: number, effectiveIn: number) =>
+  ventTuningHz(liters, portOfEffectiveLength(areaIn2 * CM2_PER_IN2, effectiveIn * CM_PER_IN)) ??
+  NaN;
+/** Helmholtz's tuning, Hz, of `liters` with a vent of `areaIn2` and effective length `effectiveIn` (lumped). */
+const helmholtzFb = (liters: number, areaIn2: number, effectiveIn: number) =>
+  (C / (2 * Math.PI)) *
+  Math.sqrt((areaIn2 * 0.00064516) / ((liters / 1000) * effectiveIn * 0.0254));
 // Independent check of the closed form: integrate the potential of the rectangle numerically.
 // phi(x, y) = integral of 1/distance over the rectangle, from its four corner sub-rectangles.
 const F = (p: number, q: number) =>
@@ -59,32 +71,32 @@ test("long thin slot: end correction grows only as log of the width", (t) => {
 });
 test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   const box = { w: 22, h: 30, d: 20 },
-    g = ventGeometry("slots", box, vent({ slotH: 3, len: 14 }), 0.75, 0.75, DRV18);
+    g = paSubVent(box, "slots", { slotH: 3, len: 14 });
   const W = box.w - 1.5 - 1.5;
   // outside, the floor mirrors the mouth (a slot twice as tall); inside, its mouth on the floor, the back wall behind,
   // its shelf running into the box's air from behind the baffle (set 0.75 back, 0.75 thick)
   close(
     t,
-    g.ec!,
+    g.endCorrectionIn,
     rectangleEndCorrection(6, W) +
       slotMouthCorrection(3, 30 - 1.5, 20 - 0.75 - 14, 0.75, 14 - 0.75 - 0.75),
     1e-12,
   );
-  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
-  const m = boxModel(ts, 120, g.area, g.len, 25, 20, "BW24", { ecIn: g.ec })!;
-  const Sp = g.area * 0.00064516,
-    Leff = (14 + g.ec!) * 0.0254;
-  rel(t, m.Fb, (C / (2 * Math.PI)) * Math.sqrt(Sp / (0.12 * Leff)), 1e-9);
+  // the engine's duct tunes a little below Helmholtz at the same effective length (its air's springiness, its exit's load)
+  const duct = engineFb(120, g.areaIn2, 14 + g.endCorrectionIn),
+    lumped = helmholtzFb(120, g.areaIn2, 14 + g.endCorrectionIn);
+  assert.ok(duct < lumped);
+  rel(t, duct, lumped, 0.03);
 });
 test("side ducts: each opening's correction, outside its throat x open height, inside a slot mouth on its side", (t) => {
   const box = { w: 22, h: 30, d: 20 };
   for (const st of ["vslots", "vslot1"] as const) {
-    const g = ventGeometry(st, box, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18);
+    const g = paSubVent(box, st, { throat: 2, len: 12 });
     // outside, the ground mirrors the mouth's bottom (2 x 27.5 open, under two 1/2" dividers); inside, the side wall its
     // floor, the duct's inner wall its shelf from behind the baffle, the back wall behind it, the box's width (or half) across
     close(
       t,
-      g.ec ?? NaN,
+      g.endCorrectionIn,
       rectangleEndCorrection(2, 2 * 27.5) +
         slotMouthCorrection(
           2,
@@ -97,36 +109,31 @@ test("side ducts: each opening's correction, outside its throat x open height, i
       st,
     );
   }
-  // per-opening: two ducts tune like one duct in the mirrored half of the box
-  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
+  // per-opening: two ducts tune like one duct in the mirrored half of the box (each opening its own correction; the
+  // engine's duct, its exit one round opening of all the area, tunes them within 0.5 %)
   // the mirror image of one half: half the inner width, half the volume
   const half = { ...box, w: (box.w - 1.5) / 2 + 1.5 };
-  const two = ventGeometry("vslots", box, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18),
-    one = ventGeometry("vslot1", half, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18);
-  const a = boxModel(ts, 120, two.area, 12, 25, 20, "BW24", { nPorts: 2, ecIn: two.ec })!;
-  const b = boxModel(ts, 60, one.area, 12, 25, 20, "BW24", { nPorts: 1, ecIn: one.ec })!;
-  rel(t, a.Fb, b.Fb, 1e-9);
+  const two = paSubVent(box, "vslots", { throat: 2, len: 12 }),
+    one = paSubVent(half, "vslot1", { throat: 2, len: 12 });
+  /** a vent's effective length, in */
+  const eff = (v: typeof two) => v.lenIn + v.endCorrectionIn;
+  rel(t, two.endCorrectionIn, one.endCorrectionIn, 1e-9, "each opening's correction");
+  rel(t, helmholtzFb(120, two.areaIn2, eff(two)), helmholtzFb(60, one.areaIn2, eff(one)), 1e-9);
+  rel(t, engineFb(120, two.areaIn2, eff(two)), engineFb(60, one.areaIn2, eff(one)), 0.005);
 });
-test("subSystem passes the slot end correction to the model", (t) => {
-  const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500")!,
-    mid = MID_OPTIONS[0];
-  const cfg: SubSystemConfig = {
-    subBox: { w: 22, h: 30, d: 22 },
-    midDims: { w: 15, h: 15, d: 15 },
-    wall: 0.75,
-    inset: 0.75,
-    portStyle: "slots",
-    cVent: vent({ slotH: 3, len: 14 }),
-    hpf: 30,
-    hpType: "BW24",
-    ampW: 800,
-    portMax: 20,
-    layout: "stack",
-  };
-  const s = subSystem(sub, mid, cfg);
-  const Sp = s.port.area * 0.00064516,
-    Leff = (s.port.len + s.port.ec!) * 0.0254;
-  rel(t, s.mdl!.Fb, (C / (2 * Math.PI)) * Math.sqrt(Sp / ((s.netL / 1000) * Leff)), 1e-9);
+test("the speaker model passes the letterbox's end corrections to the engine", (t) => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
+  const [chamber] = spec.cabinet.chambers;
+  const port = chamberVentModel(spec.cabinet, chamber);
+  assert.ok(port);
+  const response = speakerResponse(spec);
+  const air = stuffedLiters(chamber, response.chambers[0].netLiters);
+  rel(
+    t,
+    response.chambers[0].fb ?? NaN,
+    engineFb(air, port.areaIn2, port.lenIn + port.endCorrectionIn),
+    1e-12,
+  );
 });
 
 test("side duct: the mouth's gap to the back wall is the one the cutlist and the 3D view build", (t) => {
@@ -146,18 +153,9 @@ test("side duct: the mouth's gap to the back wall is the one the cutlist and the
       slotMouthCorrection(2.5, (24 - 1.5) / 2, 2.5, wall, v.len - 0.75 - 0.75),
     1e-12,
   );
-  const { parts } = cutParts({
-    sub: SUB_OPTIONS[0],
-    mid: MID_OPTIONS[0],
-    subBox: box,
-    midDims: { w: 15, h: 15, d: 15 },
-    wall,
-    inset: 0.75,
-    joint: "butt",
-    portStyle: "vslots",
-    cVent: v,
-    layout: "stack",
-  });
+  const parts = paSubBuild(
+    paSubBox(box, "vslots", v, { sub: SUB_OPTIONS[0].id, wall, inset: 0.75 }),
+  ).parts();
   const duct = parts.find((p) => p.part === "sideDuctWall");
   assert.equal(duct?.b, v.len);
   assert.equal(duct?.qty, 2);
@@ -175,25 +173,36 @@ test("bottom slot: straight while it fits, folded past that (a sharp bend, and i
   const box = { w: 22, h: 30, d: 20 },
     outer = rectangleEndCorrection(6, 19);
   // the straight run holds d - t - slotH = 16.25 (from the frame front); its mouth is a slot height from the back wall
-  const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75, 0.75, DRV18);
-  close(t, straight.ec ?? NaN, outer + slotMouthCorrection(3, 28.5, 3, 0.75, 16.25 - 1.5), 1e-12);
-  assert.ok(!straight.desc.includes("folded"));
+  /** the Speaker build's vent of a slot `len` long, and whether its cutlist folds it up the back wall */
+  const slot = (len: number) => {
+    const sub = paSubBuild(paSubBox(box, "slots", { slotH: 3, len }));
+    assert.ok(sub.vent);
+    return { ...sub.vent, folded: sub.parts().some((p) => p.part === "ductRearWall") };
+  };
+  const straight = slot(16.25);
+  close(
+    t,
+    straight.endCorrectionIn,
+    outer + slotMouthCorrection(3, 28.5, 3, 0.75, 16.25 - 1.5),
+    1e-12,
+  );
+  assert.ok(!straight.folded);
   // folded 20 long: the rear wall would rise 20 - 19.25 = 0.75, held at the least 1 (0.25 over the roof), so the mouth
   // is 28.5 - 3 - 1 under the lid, the box's inside depth (20 less the 0.75 inset, the 0.75 baffle and the
   // 0.75 back) across it
-  const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75, 0.75, DRV18);
+  const folded = slot(20);
   close(
     t,
-    folded.ec ?? NaN,
+    folded.endCorrectionIn,
     outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 17.75, 24.5, 0.75, 0.25),
     1e-12,
   );
-  assert.ok(folded.desc.includes("folded"));
+  assert.ok(folded.folded);
   // folded as far as it goes: the mouth a slot height under the lid, the rear wall 28.5 - 6 up
-  const top = ventGeometry("slots", box, vent({ slotH: 3, len: 50 }), 0.75, 0.75, DRV18);
+  const top = slot(50);
   close(
     t,
-    top.ec ?? NaN,
+    top.endCorrectionIn,
     outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 17.75, 3, 0.75, 22.5 - 0.75),
     1e-12,
   );
@@ -212,7 +221,7 @@ test("bottom slot: the shortest fold tunes a little above the longest straight r
   // but its sharp bend takes some back, and its mouth opens wide under the lid, so its effective length is within about
   // an inch of the longest straight slot's in these boxes (tests/slot-flow.ts), and with the rear wall's wood and the
   // duct's own air off the box it tunes 0.4–1.2 Hz higher.
-  const cases: [SubSystemConfig["subBox"], number][] = [
+  const cases: [Dims3, number][] = [
     [{ w: 22, h: 30, d: 20 }, 3],
     [{ w: 21, h: 37, d: 18 }, 3],
     [{ w: 24, h: 24, d: 24 }, 4],
@@ -220,19 +229,57 @@ test("bottom slot: the shortest fold tunes a little above the longest straight r
   ];
   for (const [box, slotH] of cases) {
     const at = (len: number) =>
-      subGeometry(SUB_OPTIONS[0], MID_OPTIONS[0], {
-        subBox: box,
-        midDims: { w: 15, h: 15, d: 15 },
-        wall: 0.75,
-        inset: 0.75,
-        portStyle: "slots",
-        cVent: vent({ slotH, len }),
-        layout: "stack",
-      });
+      paSubBuild(
+        paSubBox(box, "slots", { slotH, len }, { sub: SUB_OPTIONS[0].id, wall: 0.75, inset: 0.75 }),
+      );
     const straight = at(maxStraightSlotIn(box, slotH, 0.75)),
       fold = at(minFoldedSlotIn(box, 0.75));
-    assert.ok(!straight.port.desc.includes("folded") && fold.port.desc.includes("folded"));
-    const step = fold.Fb - straight.Fb;
-    assert.ok(step > 0.3 && step < 3, `${box.h}: ${straight.Fb} -> ${fold.Fb} Hz`);
+    /** whether a build's cutlist folds its slot up the back wall */
+    const folds = (g: typeof straight) => g.parts().some((p) => p.part === "ductRearWall");
+    assert.ok(!folds(straight) && folds(fold));
+    /** the tuning of a build's net air with its vent, Hz */
+    const fbOf = (g: typeof straight) =>
+      g.vent ? engineFb(g.netL, g.vent.areaIn2, g.vent.lenIn + g.vent.endCorrectionIn) : NaN;
+    const step = fbOf(fold) - fbOf(straight);
+    assert.ok(step > 0.3 && step < 3, `${box.h}: ${fbOf(straight)} -> ${fbOf(fold)} Hz`);
+  }
+});
+
+test("short, wide slots still model: the engine keeps the rule's effective length, so Fb is Helmholtz's", (t) => {
+  const start = templateSpeaker(SPEAKER_TEMPLATE.monitorCoax);
+  const [chamber] = start.cabinet.chambers;
+  assert.ok(chamber.vent.kind === VENT_KIND.vented, "a vented template");
+  const { vent: ported } = chamber;
+  const wall = start.cabinet.panel.thicknessIn;
+  /** the chamber's air, L, that puts Helmholtz's tuning of a vent at 30 Hz: low, where the exit's load is a mass */
+  const litersAt30 = (areaIn2: number, effectiveIn: number) =>
+    100 * Math.pow(helmholtzFb(100, areaIn2, effectiveIn) / 30, 2);
+  // `n` openings `h` high, running `w` (the clear face), `len` long: short beside a round exit's own end correction
+  for (const { n, h, w, len } of [
+    { n: 4, h: 1, w: 30, len: 0.5 },
+    { n: 1, h: 1, w: 30, len: 0.5 },
+    { n: 1, h: 2, w: 30, len: 1 },
+    { n: 1, h: 3, w: 20, len: 0.5 },
+  ]) {
+    const name = `${n} × ${h} × ${w} in, ${len} in long`;
+    // the bare vent: its length and its opening's flanged end correction only, shorter than the round exit's own
+    const areaIn2 = n * h * w;
+    const bareIn = len + rectangleEndCorrection(h, w);
+    const bare = portOfEffectiveLength(areaIn2 * CM2_PER_IN2, bareIn * CM_PER_IN);
+    assert.ok(bare.length > 0 && bare.exitReactanceRatio !== undefined, `${name}: a short duct`);
+    const bareLiters = litersAt30(areaIn2, bareIn);
+    rel(t, engineFb(bareLiters, areaIn2, bareIn), 30, 0.005, `${name}, bare`);
+    // the same slot in a chamber whose clear face it runs: the chamber models, at the rule's effective length
+    const slotChamber: SpeakerChamber = {
+      ...chamber,
+      dims: { ...chamber.dims, w: w + 2 * wall, h: Math.max(chamber.dims.h, n * h + 6) },
+      vent: { ...ported, port: { shape: PORT_SHAPE.slot, n, h, len } },
+    };
+    const spec: SpeakerSpec = { ...start, cabinet: { ...start.cabinet, chambers: [slotChamber] } };
+    const vent = chamberVentModel(spec.cabinet, slotChamber);
+    assert.ok(vent && chamberHornPort(spec.cabinet, slotChamber), `${name}: a port`);
+    const effectiveIn = vent.lenIn + vent.endCorrectionIn;
+    rel(t, engineFb(litersAt30(areaIn2, effectiveIn), areaIn2, effectiveIn), 30, 0.005, name);
+    assert.ok(speakerResponse(spec).chambers[0].fb !== null, `${name}: the chamber models`);
   }
 });

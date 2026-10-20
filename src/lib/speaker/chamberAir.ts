@@ -1,10 +1,11 @@
 // A chamber's clear face inside its walls, with the partition rule of `SpeakerChamber.dims`: two chambers that touch
-// share one wall, the lower (or left) chamber's; and its vent as the box models take it (its net air: lib/speaker
+// share one wall, the lower (or left) chamber's; and its vent as the horn engine takes it (its net air: lib/speaker
 // speakerBuild). Pure.
 //
 // Symbols kept short are the established ones: t is the wall's thickness, in (as lib/acoustics/boxModels and lib/acoustics/wooferBox name it).
 import type {
   Dims2,
+  HornPort,
   PortStyle,
   SpeakerCabinet,
   SpeakerChamber,
@@ -19,6 +20,8 @@ import {
   slotInnerEndCorrection,
 } from "../acoustics/boxModels";
 import { rectangleEndCorrection } from "../acoustics/radiation";
+import { portOfEffectiveLength } from "../acoustics/hornModel";
+import { CM2_PER_IN2, CM_PER_IN } from "../../constants/units";
 import { subTubeEndCorrection, type TubeDriver } from "../build/tubes";
 import { elbowCountOf } from "../build/tubeFold";
 import { MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
@@ -135,7 +138,7 @@ const TUBE_SIZE_SPLIT_IN = 16.5;
 /** The parts of a cabinet the air and vent rules read. */
 type CabinetAir = Pick<SpeakerCabinet, "chambers" | "panel" | "construction" | "insetIn">;
 
-/** A vented chamber's vent as the vented box model takes it (lib/acoustics/boxModels boxModel). */
+/** A vented chamber's vent by its rule: its size and its effective length (`chamberHornPort` makes the engine's port). */
 export interface ChamberVentModel {
   /** the open area of all the openings together, in² */
   areaIn2: number;
@@ -169,7 +172,7 @@ export function chamberVentModel(
       // the slot's long side: the whole clear face (`slotRunIn`)
       const w = slotRunIn(face, port);
       if (port.fins !== undefined) {
-        // the PA letterbox (lib/acoustics/boxModels ventGeometry): its fins take their thickness off the width; its mouth on the
+        // the PA letterbox: its fins take their thickness off the width; its mouth on the
         // floor (which mirrors it), its inner end as the PA slot's, folded up the back wall when too long to run
         // straight (as the PA rule, the cutlist and the 3D view fold it)
         const open = w - slotFinsOf({ fins: port.fins, slotH: port.h }, w, t) * t;
@@ -224,6 +227,27 @@ export function chamberVentModel(
       };
     }
   }
+}
+
+/**
+ * A vented chamber's vent as the horn engine's port (lib/acoustics/hornModel), null for any other: its open area and
+ * its effective length by its rule (`chamberVentModel`: the path length plus each opening's end corrections). Null too
+ * for a vent the engine can't run on (no area, length, or openings).
+ */
+export function chamberHornPort(cabinet: CabinetAir, chamber: SpeakerChamber): HornPort | null {
+  const vent = chamberVentModel(cabinet, chamber);
+  if (!vent) return null;
+  const port = portOfEffectiveLength(
+    vent.areaIn2 * CM2_PER_IN2,
+    (vent.lenIn + vent.endCorrectionIn) * CM_PER_IN,
+  );
+  const positive = (x: number) => Number.isFinite(x) && x > 0;
+  return positive(vent.areaIn2) &&
+    positive(vent.lenIn) &&
+    positive(vent.openings) &&
+    positive(port.length)
+    ? port
+    : null;
 }
 
 /**

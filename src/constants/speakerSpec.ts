@@ -144,7 +144,7 @@ export const SLOT_PLACE = {
   sides: "sides",
 } as const;
 
-/** The fins across the PA sub's letterbox slot (lib/acoustics/boxModels ventGeometry splits it in three). */
+/** The fins across the PA sub's letterbox slot (two split it in three: lib/speaker/chamberAir chamberVentModel). */
 export const PA_SLOT_FINS = 2;
 
 /**

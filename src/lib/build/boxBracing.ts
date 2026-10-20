@@ -1,12 +1,5 @@
 // The PA boxes' panels for the bracing rule (lib/build/bracing): their spans, stock and the supports the vent's own parts give.
-import type {
-  BackJointId,
-  BracePanel,
-  BraceStyleId,
-  EdgeHold,
-  PlateHole,
-  PlateStock,
-} from "../../types";
+import type { BackJointId, BracePanel, EdgeHold, PlateHole, PlateStock } from "../../types";
 import { DEFAULT_BACK_JOINT, GLUED_BACK } from "../../constants/bracing";
 
 /** The sub-to-mid crossover the PA boxes are braced for, Hz: the top of the optimizers' range (XO_LO_OPTIONS, tested). */
@@ -26,26 +19,6 @@ export const PA_PANEL_TARGET_HZ = PANEL_TARGET_CROSSOVER_MULTIPLE * PA_BRACING_C
 export const DUCT_SUPPORT_MIN_SHARE = 2 / 3;
 /** How far every brace and rib stays from the driver's basket, magnet and cutout, inches. */
 export const DRIVER_CLEARANCE_IN = 0.5;
-/**
- * The optimizers' cursory brace estimate (lib/acoustics/boxModels braceWoodEstimate), by back joint and style: one window brace's
- * wood for every `span` inches of each inside span past the first, times `scale`. Least squares against the rule's wood
- * over the saved and synthetic PA designs' sub boxes (tests/pa-configs) in ¾″ ply with that back (their mid boxes need none, and neither does the estimate under
- * `span`), since the rule braces a screwed back (its edges hinged) apart from a glued one. It sees only the box's
- * dimensions, not the driver's and the vent's keep-outs, so the rule's frames can differ widely by vent style at one
- * size (the idk and lil tower boxes, both 24 × 32 × 20: 3.6 L of frames and none); issue #75 re-checks shown cards.
- */
-export const BRACE_ESTIMATE = {
-  screwed: {
-    window: { span: 19.5, scale: 1.826 },
-    ribs: { span: 17.5, scale: 1.087 },
-    both: { span: 21, scale: 3.762 },
-  },
-  glued: {
-    window: { span: 24, scale: 3.861 },
-    ribs: { span: 21, scale: 1.917 },
-    both: { span: 22, scale: 4.325 },
-  },
-} as const satisfies Record<BackJointId, Record<BraceStyleId, { span: number; scale: number }>>;
 /**
  * A driver's shape behind the baffle as the braces keep clear of it, as shares of its depth there: the cutout's full
  * width (the frame's ring, the surround and the basket's widest) for the first BASKET_RING_SHARE, the basket narrowing

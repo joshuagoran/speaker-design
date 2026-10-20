@@ -1106,52 +1106,6 @@ export interface PaDesignConfig {
   summary?: string;
 }
 
-/** One point of a vented-box response: raw box SPL, system SPL with the highpass, cone excursion (mm, peak) and port air speed (m/s, peak). */
-export interface VentedPoint {
-  f: number;
-  raw: number;
-  spl: number;
-  xmm: number;
-  vel: number;
-  /** the phase of `raw` (the box alone), radians, unwrapped; only with the model's `phase` option */
-  rawPhase?: number;
-}
-
-export interface VentedBoxModel {
-  curve: VentedPoint[];
-  Fb: number;
-  f3: number;
-  f3Box: number;
-  ref: number;
-  spl30: number;
-  spl35: number;
-  spl45: number;
-  peakVel: number;
-  peakVelF: number;
-  peakX: number;
-  peakXF: number;
-  xmaxPct: number;
-}
-
-/** One point of a sealed-box response (no port). */
-export interface SealedPoint {
-  f: number;
-  raw: number;
-  spl: number;
-  xmm: number;
-  /** the phase of `raw` (the box alone, no crossover), radians, unwrapped; only with the model's `phase` option */
-  rawPhase?: number;
-}
-
-export interface SealedBoxModel {
-  curve: SealedPoint[];
-  Fc: number;
-  Qtc: number;
-  f3: number;
-  ref: number;
-  peakX: number;
-}
-
 /**
  * A driver as an acoustic circuit (lib/acoustics/driverCircuit), in the box models' terms: a pressure source Pg behind
  * Ras + Rae + j(ωMas − 1/(ωCas)). Mechanical values are seen through the cone's area Sd: a mass or resistance divides
@@ -1232,6 +1186,12 @@ export interface HornPort {
    * correction; slots split only by a fin radiate as one wider opening, so give that one. Absent: round.
    */
   slot?: { width: number; height: number };
+  /**
+   * the exit's reactance over a round exit's of `area` (its end correction over the round exit's), when set: a vent
+   * shorter than the round exit's own correction keeps its effective length with a smaller exit load
+   * (`portOfEffectiveLength`). Absent: from `slot`, or 1 (round).
+   */
+  exitReactanceRatio?: number;
 }
 
 /** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
@@ -1547,31 +1507,8 @@ export type HornrespReading =
 /** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator, no horn throat). */
 export type SubLimitWho = Exclude<LimitId, "radiator" | "throat">;
 
-/** The sub's music limit: the drive level (volts, and watts into the driver) where the first of port, cone, driver and amp gives out. */
-export interface SubLimits {
-  who: SubLimitWho;
-  V: number;
-  W: number;
-  vel: number;
-  xPct: number;
-  spl30: number;
-  spl35: number;
-  spl45: number;
-}
-
 /** How many 90° elbows a round port tube takes to fit its box (lib/build/tubeFold). */
 export type ElbowCount = 0 | 1 | 2;
-
-export interface VentGeometry {
-  n: number;
-  area: number;
-  len: number;
-  ec: number;
-  dh: number;
-  /** round tubes: the elbows each takes to fit (0 straight) */
-  elbows?: ElbowCount;
-  desc: string;
-}
 
 /** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches), and the bottom slot's fins (absent: two). */
 export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
@@ -1582,76 +1519,6 @@ export interface PaPortGeometry extends Pick<VentSpec, "fins"> {
   throat: number;
   divider: number;
 }
-
-/** What `subGeometry` needs: boxes, plywood, vent and layout. */
-export interface SubGeometryConfig {
-  subBox: Dims3;
-  midDims: Dims3;
-  wall: number;
-  inset: number;
-  portStyle: PortStyle;
-  cVent: VentSpec;
-  layout: PaLayout;
-  /** absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
-  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
-  backJoint?: BackJointId;
-  /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
-  braceEstimate?: boolean;
-  /** the boxes' handles and plates, whose recesses take volume (lib/build/hardware); absent: none */
-  hardware?: PaHardware;
-}
-
-/** `subSystem` adds the highpass, the amp and the port air speed limit. */
-export interface SubSystemConfig extends SubGeometryConfig {
-  hpf: number;
-  hpType: HighpassType;
-  ampW: number;
-  portMax: number;
-  /** the sub-to-mid crossover, for a curve that shows the lowpass skirt; the optimizer's screening leaves it out */
-  xoLo?: number;
-  /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
-  phase?: boolean;
-}
-
-/** The sub's vent and volumes, without the model. */
-export interface SubGeometry {
-  port: VentGeometry;
-  grossL: number;
-  ductL: number;
-  woodL: number;
-  /** the liters the hardware's recesses take (lib/build/hardware) */
-  recessL: number;
-  netL: number;
-  Fb: number;
-}
-
-/** What a sub always has: its vent, volumes and the amp's peak voltage. */
-export interface SubSystemBase {
-  port: VentGeometry;
-  grossL: number;
-  ductL: number;
-  woodL: number;
-  /** the liters the hardware's recesses take (lib/build/hardware) */
-  recessL: number;
-  netL: number;
-  AMP_V: number;
-}
-
-/** A sub with no model: the driver has no T/S, or the box or vent is degenerate (no net volume, no port area, port length at or under 0). */
-export interface SubSystemUnmodeled extends SubSystemBase {
-  mdl: null;
-  lim: null;
-}
-
-/** A sub with its vented-box model and the music limit that comes from it. */
-export interface SubSystemModeled extends SubSystemBase {
-  mdl: VentedBoxModel;
-  lim: SubLimits;
-}
-
-/** `subSystem`: check `mdl` and `lim` narrows with it. */
-export type SubSystem = SubSystemUnmodeled | SubSystemModeled;
 
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
 export interface HornResponse {
@@ -1806,7 +1673,7 @@ export type SlotPlace = (typeof SLOT_PLACE)[keyof typeof SLOT_PLACE];
 /**
  * A slot. With `fins`, the PA sub's letterbox: that many fins of the wall's thickness across it (two by default), its
  * mouth on the floor, running from the frame front, folded up the back wall whenever it is too long to run straight
- * (the PA slot rule: lib/acoustics/boxModels ventGeometry, slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
+ * (the PA slot rule: lib/speaker/chamberAir chamberVentModel, lib/acoustics/boxModels slotFolds). Without `fins`, the Hi-fi slot rule: `n` stacked slots, and
  * `folded` lets a slot too long to run straight fold up the back wall (lib/speaker/speakerBuild hifiSlotFits).
  * `place` (absent: the floor) says where the openings are on the baffle: along the floor, stacked, or up each front
  * side (`SLOT_PLACE`), where the slot's narrow side `h` is its opening's width. An open slot always runs the whole
@@ -3239,32 +3106,6 @@ export interface PurchasedPart {
   unit: number | null;
   /** where the price comes from (the catalog's free-text source: a vendor, an estimate); null where none is known */
   source: string | null;
-}
-
-/** What the cutlist needs for a sub and mid pair. */
-export interface CutPartsConfig {
-  sub: SubDriver;
-  mid: MidDriver;
-  subBox: Dims3;
-  midDims: Dims3;
-  wall: number;
-  inset: number;
-  joint: CornerJoint;
-  portStyle: PortStyle;
-  cVent: VentSpec;
-  layout: PaLayout;
-  /** absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
-  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
-  backJoint?: BackJointId;
-  /** the sub box's parts only (its volume reads no more): the mid box is left out */
-  subOnly?: boolean;
-  /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */
-  noBraces?: boolean;
-  /** each box's handles and plates, for the panels' cutout notes; absent: none */
-  hardware?: PaHardware;
-  /** the tower's horn, which sets its cabinet's height and baffle (lib/speaker/tower `towerSpec`); the tower needs it */
-  horn?: TowerHorn;
 }
 
 /** The panel a Hi-fi box's passive radiators are cut into. */

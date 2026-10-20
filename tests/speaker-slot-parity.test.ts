@@ -1,6 +1,7 @@
-// The Speaker page's PA sub template against the PA box models' sub (the same design, DEFAULT_PA): the letterbox's fins,
-// its size and length, the model's vent, the net air, the cutlist's pieces and the 3D view's fins match. And a
-// letterbox built from the settings with another fin count carries it into the cutlist, the model and the views.
+// The Speaker page's PA sub template against the PA design's sub (the same design, DEFAULT_PA): the letterbox's fins,
+// its size and length, the model's vent and net air by the PA slot rule and the PA sub box's sum, the cutlist's pieces
+// and the 3D view's fins match. And a letterbox built from the settings with another fin count carries it into the
+// cutlist, the model and the views.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import * as THREE from "three";
@@ -10,18 +11,19 @@ import { chamberVentModel } from "../src/lib/speaker/chamberAir";
 import { speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { portRule, PORT_RULE, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import {
-  cutParts,
   maxSlotFins,
   slotFinLayout,
   slotFinsOf,
-  subGeometry,
+  slotMouthCorrection,
 } from "../src/lib/acoustics/boxModels";
+import { rectangleEndCorrection } from "../src/lib/acoustics/radiation";
+import { paSubBuild, paSubNetAir } from "./pa-build";
 import { buildSpeakerScene } from "../src/components/stack-view/buildSpeakerScene";
 import { buildSubSlotShelf } from "../src/components/stack-view/buildSubwoofer";
 import { subVentPlan } from "../src/lib/build/ventPlan";
 import { createSceneContext } from "../src/components/stack-view/sceneContext";
 import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
-import { HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import { SUB_OPTIONS } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { PA_SLOT_FINS, PORT_SHAPE, VENT_KIND } from "../src/constants/speakerSpec";
@@ -50,43 +52,11 @@ function finsIn(group: THREE.Object3D, t: number, slotH: number) {
   return n;
 }
 
-/** The PA box models' sub: its parts, its geometry (vent and net air) and its cutlist, from the default PA design. */
+/** The default PA design's sub: the design, its driver, and its box's cutlist as the PA adapter's spec builds it. */
 function paSub() {
   const cfg = defaultPaDesign();
   const sub = byIdOrThrow(SUB_OPTIONS, cfg.sub, "subs");
-  const mid = byIdOrThrow(MID_OPTIONS, cfg.mid, "mids");
-  const geometry = subGeometry(sub, mid, {
-    subBox: cfg.cDim,
-    midDims: cfg.mDim,
-    wall: cfg.wall,
-    inset: cfg.inset,
-    portStyle: cfg.portStyle,
-    cVent: cfg.cVent,
-    layout: cfg.layout,
-    braceStyle: cfg.braceStyle,
-    backJoint: cfg.backJoint,
-    hardware: cfg.hardware,
-  });
-  const { parts } = cutParts({
-    sub,
-    mid,
-    subBox: cfg.cDim,
-    midDims: cfg.mDim,
-    wall: cfg.wall,
-    inset: cfg.inset,
-    joint: "butt",
-    portStyle: cfg.portStyle,
-    cVent: cfg.cVent,
-    layout: cfg.layout,
-    braceStyle: cfg.braceStyle,
-    backJoint: cfg.backJoint,
-    hardware: cfg.hardware,
-    horn: byIdOrThrow(HORN_OPTIONS, cfg.horn, "horns"),
-  });
-  // the sub box's own rows (the cutlist's first box)
-  const subBox = parts[0]?.box;
-  assert.ok(subBox);
-  return { cfg, sub, geometry, parts: parts.filter((p) => p.box === subBox) };
+  return { cfg, sub, parts: paSubBuild(cfg, "design").parts() };
 }
 
 /** The template's one chamber and its letterbox. */
@@ -99,7 +69,7 @@ function letterboxOf(spec: SpeakerSpec) {
   return { chamber, vent, port };
 }
 
-test("the Speaker page's PA sub matches the PA box models': fins, slot, vent, net air, cutlist and 3D fins", () => {
+test("the Speaker page's PA sub matches the PA design's: fins, slot, vent, net air, cutlist and 3D fins", () => {
   assert.equal(DEFAULT_PA.portStyle, "slots", "the PA's starting sub has the letterbox");
   const pa = paSub();
   const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
@@ -110,16 +80,25 @@ test("the Speaker page's PA sub matches the PA box models': fins, slot, vent, ne
   assert.deepEqual([port.h, port.len], [pa.cfg.cVent.slotH, pa.cfg.cVent.len]);
   assert.equal(t, pa.cfg.wall);
   assert.equal(portRule(chamber)?.rule, PORT_RULE.pa);
-  // the model's vent: the box model's area (the fins off the width), length and end correction
+  // the model's vent: the PA slot rule's area (the fins off the inside width), length and end correction (outside, the
+  // floor mirrors the mouth; inside, its mouth on the floor, the back wall behind, its shelf from behind the baffle)
+  const box = pa.cfg.cDim,
+    inset = pa.cfg.inset;
+  const open = box.w - 2 * t - PA_SLOT_FINS * t;
   const vent = chamberVentModel(spec.cabinet, chamber);
   assert.ok(vent);
-  assert.ok(Math.abs(vent.areaIn2 - pa.geometry.port.area) < 1e-9, `area ${vent.areaIn2}`);
-  assert.equal(vent.lenIn, pa.geometry.port.len);
-  assert.ok(Math.abs(vent.endCorrectionIn - pa.geometry.port.ec) < 1e-9, "end correction");
-  // the net air
+  assert.ok(Math.abs(vent.areaIn2 - port.h * open) < 1e-9, `area ${vent.areaIn2}`);
+  assert.equal(vent.lenIn, port.len);
+  assert.ok(port.len < box.d - t - port.h, "a straight slot");
+  const ec =
+    rectangleEndCorrection(2 * port.h, open) +
+    slotMouthCorrection(port.h, box.h - 2 * t, box.d - t - port.len, t, port.len - inset - 0.75);
+  assert.ok(Math.abs(vent.endCorrectionIn - ec) < 1e-9, "end correction");
+  // the net air: the PA sub box's sum
   const net = speakerResponse(spec).chambers[0].netLiters;
-  assert.ok(Math.abs(net - pa.geometry.netL) < 1e-9 * pa.geometry.netL, `net ${net}`);
-  // the cutlist: the same pieces, the fins among them
+  const netL = paSubNetAir(pa.cfg);
+  assert.ok(Math.abs(net - netL) < 1e-9 * netL, `net ${net}`);
+  // the cutlist: the PA design's sub's pieces, the fins among them
   const parts = speakerCutParts(spec.cabinet, "butt").parts;
   assert.deepEqual(pieces(parts), pieces(pa.parts));
   const fins = parts.find((p) => p.part === "ductFin");

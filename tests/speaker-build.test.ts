@@ -1,10 +1,11 @@
 // The Speaker page's build of any speaker spec (lib/speaker/speakerBuild): the read adapters' specs of the saved and
-// synthetic PA designs give the PA box models' bracing, sub net air and weight, and cutlist; and the general rules
-// (shared walls, one shell, an arched top, a horn-loaded chamber).
+// synthetic PA designs give the PA sub rules' bracing, net air and weight; and the general rules (shared walls, one
+// shell, an arched top, a horn-loaded chamber).
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./pa-configs";
 import { PA_FLOOR, paDesign, speakerAndFeed } from "./speaker-cases";
+import { paSubNetAir } from "./pa-build";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
@@ -20,16 +21,12 @@ import {
 import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEXT } from "../src/constants/speakerPage";
 import {
-  braceParts,
-  cutParts,
   hornCutoutWords,
-  midBoxBracing,
   subBoxBracing,
   subHardwarePlan,
-  subSystem,
   subWeightLb,
 } from "../src/lib/acoustics/boxModels";
-import { towerHornCutout, towerMidDims } from "../src/lib/speaker/tower";
+import { towerHornCutout } from "../src/lib/speaker/tower";
 import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
 import { PA_PANEL_TARGET_HZ } from "../src/lib/build/boxBracing";
 import {
@@ -39,7 +36,7 @@ import {
   GLUED_BACK,
   NO_BRACING,
 } from "../src/constants/bracing";
-import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, EMPTY_SPEAKER } from "../src/lib/defaults";
 import { SHELL_CUT_BOX, chamberCutBox } from "../src/constants/cutParts";
 import { keysOf } from "../src/lib/records";
@@ -55,134 +52,40 @@ import {
   SPEAKER_PART,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
-import type {
-  CornerJoint,
-  CutPart,
-  PaDesign,
-  SpeakerCabinet,
-  SpeakerChamber,
-  SpeakerSpec,
-} from "../src/types";
+import type { CutPart, PaDesign, SpeakerCabinet, SpeakerChamber, SpeakerSpec } from "../src/types";
 
-/** The PA box models' numbers for a design (with the design's back joint and handles). */
-function paBoxModels(cfg: PaDesign, joint: CornerJoint) {
+/** The PA sub rules' numbers for a design (with the design's back joint and handles): its bracing and loaded weight. */
+function paSubRules(cfg: PaDesign) {
   const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
-  const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
-  const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);
-  const horn = HORN_OPTIONS.find((o) => o.id === cfg.horn);
-  assert.ok(sub && mid && cd && horn);
-  const tower = cfg.layout === "tower";
-  const midDims = tower ? towerMidDims(cfg.cDim) : cfg.mDim;
-  const { hardware, braceStyle, backJoint, wall, inset, layout } = cfg;
-  const s = subSystem(sub, mid, {
-    subBox: cfg.cDim,
-    midDims: cfg.mDim,
-    wall,
-    inset,
-    portStyle: cfg.portStyle,
-    cVent: cfg.cVent,
-    hpf: cfg.hpf,
-    hpType: cfg.hpType,
-    ampW: cfg.ampW,
-    portMax: cfg.portMax,
-    layout,
-    braceStyle,
-    backJoint,
-    hardware,
-    xoLo: cfg.xoLo,
-  });
+  assert.ok(sub);
+  const { hardware, braceStyle, backJoint, wall, inset } = cfg;
   const vent = [cfg.cDim, wall, inset, cfg.portStyle, cfg.cVent, sub, braceStyle] as const;
   const subBracing = subBoxBracing(...vent, hardware.sub, backJoint);
   const subHw = subHardwarePlan(...vent, hardware.sub, backJoint);
-  const midArgs = [midDims, wall, inset, mid, layout, braceStyle, hardware.mid, backJoint] as const;
-  const midBracing = midBoxBracing(...midArgs);
   return {
-    subNetL: s.netL,
     subBracing,
-    midBracing,
     /** the loaded sub box */
     subLb: subWeightLb(cfg.cDim, wall, sub.lb, subBracing, subHw.lb),
-    parts: cutParts({
-      sub,
-      mid,
-      subBox: cfg.cDim,
-      midDims,
-      wall,
-      inset,
-      joint,
-      portStyle: cfg.portStyle,
-      cVent: cfg.cVent,
-      layout,
-      braceStyle,
-      backJoint,
-      hardware,
-      horn,
-    }).parts,
   };
-}
-
-/** A cutlist's pieces by part and size, whatever the box, row and note: each part's count at each size. */
-function pieces(parts: readonly CutPart[]) {
-  const out = new Map<string, number>();
-  for (const p of parts) {
-    const k = `${p.part} ${p.a.toFixed(4)} × ${p.b.toFixed(4)} × ${p.t.toFixed(4)}`;
-    out.set(k, (out.get(k) ?? 0) + p.qty);
-  }
-  return out;
-}
-/** Where two cutlists' pieces differ, as words; empty when they match. */
-function piecesDiff(a: readonly CutPart[], b: readonly CutPart[]) {
-  const pa = pieces(a),
-    pb = pieces(b);
-  return [...new Set([...pa.keys(), ...pb.keys()])]
-    .filter((k) => pa.get(k) !== pb.get(k))
-    .map((k) => `${k}: ${pa.get(k) ?? 0} vs ${pb.get(k) ?? 0}`);
 }
 
 /** Weights agree to this, lb (the same arithmetic in another order). */
 const LB = 1e-9;
 
-test("speaker build: the PA designs match the PA box models (bracing, sub net air and weight, cutlist)", () => {
+test("speaker build: the PA designs' subs take the PA sub rules (bracing, net air and weight)", () => {
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
     const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
     const subSpec = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.sub).spec;
-    const topSpec = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top).spec;
     const subBuild = cabinetBuild(subSpec.cabinet);
-    const topBuild = cabinetBuild(topSpec.cabinet);
-    const midIndex = tower ? 1 : 0;
-    const midBuild = topBuild.chambers[midIndex];
-    for (const joint of ["butt", "rabbet", "miter"] as const) {
-      const page = paBoxModels(cfg, joint);
-      // the sub: its bracing, net air and weight are the box models'
-      assert.deepEqual(subBuild.chambers[0].bracing, page.subBracing, `${c.name}: sub bracing`);
-      const subNet = speakerResponse(subSpec).chambers[0].netLiters;
-      assert.ok(Math.abs(subNet - page.subNetL) < 1e-9 * page.subNetL, `${c.name}: sub net air`);
-      assert.ok(Math.abs(subBuild.chambers[0].lb.total - page.subLb) < LB, `${c.name}: sub lb`);
-      // the mid: its own box's bracing is the box models'; the tower's mid chamber takes the rule's braces, which the
-      // box models' cutlist leaves out
-      const midBraces = tower ? midBuild.bracing : null;
-      if (!tower) assert.deepEqual(midBuild.bracing, page.midBracing, `${c.name}: mid bracing`);
-      // the cutlist: the same pieces, and in the tower the mid chamber's braces as well
-      const parts = [
-        ...speakerCutParts(subSpec.cabinet, joint).parts,
-        ...(tower ? [] : speakerCutParts(topSpec.cabinet, joint).parts),
-      ];
-      const extra = midBraces
-        ? braceParts(
-            chamberCutBox(midIndex),
-            midBraces,
-            {
-              x: midBuild.inside.iw,
-              y: midBuild.inside.ih,
-              z: midBuild.inside.inD,
-            },
-            cfg.wall,
-          )
-        : [];
-      assert.deepEqual(piecesDiff(parts, [...page.parts, ...extra]), [], `${c.name} (${joint})`);
-    }
+    const rules = paSubRules(cfg);
+    // the sub: its bracing and weight are the rules', its net air the PA sub box's sum
+    assert.deepEqual(subBuild.chambers[0].bracing, rules.subBracing, `${c.name}: sub bracing`);
+    const subNet = speakerResponse(subSpec).chambers[0].netLiters;
+    const netL = paSubNetAir(cfg);
+    assert.ok(Math.abs(subNet - netL) < 1e-9 * netL, `${c.name}: sub net air`);
+    assert.ok(Math.abs(subBuild.chambers[0].lb.total - rules.subLb) < LB, `${c.name}: sub lb`);
   }
 });
 

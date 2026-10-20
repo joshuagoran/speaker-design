@@ -1,9 +1,9 @@
-// The acoustic network engine (lib/acoustics/network) against the app's own box models, and the physics its new
-// presets must obey.
+// The acoustic network engine (lib/acoustics/network) against the app's horn engine, and the physics its new presets
+// must obey.
 //
 // - Parity: with the same parts it gives the horn engine's results (lib/acoustics/hornModel) for every Hornresp case
-//   that engine passes, and the box models' (lib/acoustics/boxModels closedBox and boxModel). The task's bar is 0.01 dB in level
-//   and 0.1 % in excursion; the checks hold it to rounding (1e-9).
+//   that engine passes. The task's bar is 0.01 dB in level and 0.1 % in excursion; the checks hold it to rounding
+//   (1e-9).
 // - Physics: an offset-driver horn tapped at its throat is the front-loaded horn; a tapped horn's response moves
 //   smoothly as its taps move; every node's flows add to zero; a tapped horn rolls off below its path's quarter wave.
 // - Equivalents: a chamber's loss is a non-radiating leak; a duct with no sections is its loss; a driver bank is its

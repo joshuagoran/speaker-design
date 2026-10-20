@@ -4,7 +4,9 @@ import { DEFAULT_PA } from "./defaults";
 import { PANEL_NOMINAL_NAMES, PLYWOOD_MATERIAL } from "../constants/panelSizes";
 import { PANEL_NOMINALS, panelIn } from "./build/panel";
 import { MAKER_NAMES } from "../data/catalog/makers";
-import { subBoxBracing, subSystem, subWeightLb } from "./acoustics/boxModels";
+import { subBoxBracing, subWeightLb } from "./acoustics/boxModels";
+import { midbandLevelDb } from "./acoustics/driverCircuit";
+import { ONE_WATT_VOLTS } from "../constants/speakerSpec";
 import { hardwareLb } from "./build/hardware";
 import { formatDollars, formatHz } from "./format";
 import { crossoverSlopeName } from "../constants/crossovers";
@@ -61,25 +63,10 @@ export const DEFAULT_SUB_WEIGHTS = PANEL_NOMINALS.map((n) => {
   };
 });
 
-/** The default sub's 2.83 V sensitivity from its T/S in the default box. */
+/** The default sub's 2.83 V sensitivity from its T/S: its midband level (`midbandLevelDb`). */
 function subTsSensitivity(): number {
-  const sys = subSystem(d.sub, d.mid, {
-    subBox: d.cDim,
-    midDims: d.mDim,
-    wall: d.wall,
-    inset: d.inset,
-    portStyle: d.portStyle,
-    cVent: d.cVent,
-    hpf: d.hpf,
-    hpType: d.hpType,
-    ampW: d.ampW,
-    portMax: d.portMax,
-    layout: d.layout,
-    hardware: d.hardware,
-    xoLo: d.xoLo,
-  });
-  if (!sys.mdl) throw new Error(`${d.sub.name}: the default sub can't be modeled`);
-  return sys.mdl.ref - 20 * Math.log10(sys.AMP_V / 2.83);
+  if (!d.sub.ts) throw new Error(`${d.sub.name}: the default sub can't be modeled`);
+  return midbandLevelDb(d.sub.ts, ONE_WATT_VOLTS);
 }
 
 /** The default sub: its name, maker, published sensitivity and mounting depth (where entered) and its T/S sensitivity. */

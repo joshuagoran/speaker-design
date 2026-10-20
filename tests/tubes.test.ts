@@ -16,17 +16,17 @@ import {
   tubeLayout,
   tubeWallEndCorrection,
 } from "../src/lib/build/tubes";
-import {
-  ventGeometry,
-  ventSpeedLimit,
-  FLARED_PORT_SPEED_RATIO,
-} from "../src/lib/acoustics/boxModels";
+import { ventSpeedLimit, FLARED_PORT_SPEED_RATIO } from "../src/lib/acoustics/boxModels";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../src/data/acoustics/tube-ends";
 import { PORT_ELBOWS, PORT_PIPES, PORT_TUBES } from "../src/data/catalog/port-tubes";
 import { PA_SLIDERS } from "../src/constants/paSliders";
 import { hifiTubeRoom } from "../src/lib/acoustics/wooferBox";
+import { SUB_OPTIONS } from "../src/lib/data";
+import { byIdOrThrow } from "../src/lib/tables";
+import { PORT_SHAPE, VENT_KIND } from "../src/constants/speakerSpec";
 import { close, vent, DRV18 } from "./helpers";
+import { paSubBox, paSubBuild } from "./pa-build";
 
 const room: TubeRoom = { run: 20, rise: 25, stop: 9 };
 
@@ -84,11 +84,21 @@ test("tube end correction: flanged and free ends less the flares, the wall, the 
   // a second tube beside it adds the mutual mass of the two mouths
   const two = subTubeEndCorrection(box, "round2", { ...one, nt: 2 }, 0.75, 0.75, DRV18, 0);
   assert.ok(two > straight);
-  // the box model's vent carries it, and the fewest elbows that fit
-  const g = ventGeometry("round1", box, elbowed, 0.75, 0.75, DRV18);
-  assert.equal(g.elbows, modelTubeElbows(box, "round1", elbowed, 0.75, 0.75, DRV18));
-  assert.equal(g.elbows, 1);
-  close(null, g.ec, e1, 1e-12);
+  // the Speaker build's vent carries it, with the fewest elbows that fit (for the design's sub, whose depth stops the run)
+  const cfg = paSubBox(box, "round1", elbowed);
+  const sub = paSubBuild(cfg);
+  const drv = byIdOrThrow(SUB_OPTIONS, cfg.sub, "subs");
+  const { vent: chamberVent } = sub.chamber;
+  assert.ok(chamberVent.kind === VENT_KIND.vented && chamberVent.port.shape === PORT_SHAPE.round);
+  const elbows = modelTubeElbows(box, "round1", elbowed, 0.75, 0.75, drv);
+  assert.equal(chamberVent.port.elbows, elbows);
+  assert.equal(elbows, 1);
+  close(
+    null,
+    sub.vent?.endCorrectionIn ?? NaN,
+    subTubeEndCorrection(box, "round1", elbowed, 0.75, 0.75, drv, elbows),
+    1e-12,
+  );
 });
 
 test("flared tubes run faster than sharp-edged vents", () => {

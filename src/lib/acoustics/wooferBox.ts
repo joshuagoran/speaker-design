@@ -1,17 +1,10 @@
 // A woofer in its box: sealed, vented (a round port or a slot) or with passive radiators, the vent's end corrections
-// and fold, and the box's response before the crossover. Pure functions, no DOM.
-import {
-  boxModel,
-  closedBox,
-  ventTuning,
-  ampVoltage,
-  highpassGain,
-  slotMouthCorrection,
-  logGridCount,
-  unwrapRawPhase,
-} from "./boxModels";
+// and fold, the radiator box's response, and the Hi-fi box's subsonic and level. Pure functions, no DOM.
+import { ampVoltage, highpassGain, slotMouthCorrection, unwrapRawPhase } from "./boxModels";
 import { rectangleEndCorrection } from "./radiation";
-import { coilFactor, driverCircuit } from "./driverCircuit";
+import { coilFactor, driverCircuit, midbandLevelDb } from "./driverCircuit";
+import { portOfEffectiveLength, ventTuningHz } from "./hornModel";
+import { CM2_PER_IN2, CM_PER_IN } from "../../constants/units";
 import { MAX_ELBOWS, tubeElbows, type TubeRoom } from "../build/tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import type {
@@ -26,11 +19,7 @@ import type {
   PassiveRadiator,
   PassiveRadiatorChoice,
   RadiatorPanel,
-  SealedBoxModel,
-  VentedBoxModel,
 } from "../../types";
-import { crossoverSlopeName } from "../../constants/crossovers";
-import { HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 /**
  * The room a round port has (the PA sub's fold rule, lib/build/tubeFold): from the baffle front to the back wall, and up the
  * back wall half the inner height, so the riser and the leg the second elbow turns forward stay clear of the woofer;
@@ -106,17 +95,16 @@ export function passiveRadiatorBox(
     N?: number;
     fmin?: number;
     fmax?: number;
-    fTop?: number;
-    /** give each point the box's phase, `rawPhase`, as boxModel's option does (the speaker model sums with it) */
+    /** give each point the box's phase, `rawPhase` (the speaker model sums with it) */
     phase?: boolean;
   } = {},
 ) {
-  const { QL = 7, N = 420, fmin = 12, fmax = 300, fTop, phase } = opts;
+  const { QL = 7, N = 420, fmin = 12, fmax = 300, phase } = opts;
   const { drv, n } = pr;
   if (!ts || !VbL || !drv || !n) return null;
   const rho = 1.18;
-  // the driver's circuit (lib/acoustics/driverCircuit, shared with the PA box models and the horn engine)
-  const { Sd, Mms, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
+  // the driver's circuit (lib/acoustics/driverCircuit, shared with the horn engine)
+  const { Sd, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
   const { Map, Cap, Cab, Fb, Fp } = passiveRadiatorTuning(drv, n, pr.addG, VbL);
   const Sp = drv.Sd / 1e4;
   const Rap = (2 * Math.PI * drv.Fs * (drv.Mms / 1000)) / (drv.Qms || 5) / (Sp * Sp) / n;
@@ -129,11 +117,10 @@ export function passiveRadiatorBox(
     prx: number;
     rawPhase?: number;
   }[] = [];
-  const count = logGridCount(N, fmin, fmax, fTop);
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < N; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     // the same circuit in plain real arithmetic (the optimizer runs this loop for every radiator box it tries), the
-    // coil's inductance on the motor as boxModel takes it (k = Re/(Re + jωLe), exactly 1 without Le):
+    // coil's inductance on the motor as the horn engine takes it (k = Re/(Re + jωLe), exactly 1 without Le):
     // Zd = Ras + Rae·k + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; Zp = Rap + j(w Map - 1/(w Cap)); Zbox = 1 / (1/Zc + 1/Zp + 1/Ral)
     const w = 2 * Math.PI * f;
     const k = coilFactor(ts, w);
@@ -168,29 +155,23 @@ export function passiveRadiatorBox(
       spl: raw + 20 * Math.log10(hp),
       xmm: Math.SQRT2 * (Ud / (w * Sd)) * hp * 1000,
       prx: Math.SQRT2 * (Up / (w * Sp * n)) * hp * 1000,
-      // as in boxModel: the radiated pressure is jω × the flow into the box air, in phase with −Ud Zbox
+      // the radiated pressure is jω × the flow into the box air, in phase with −Ud Zbox
       ...(phase && { rawPhase: Math.atan2(-vIm, -vRe) }),
     });
   }
   if (phase) unwrapRawPhase(out);
-  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
+  const ref = midbandLevelDb(ts, volts);
   const f3 = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f;
   return { curve: out, Fb, Fp, f3, ref };
 }
 
 // ---- the whole speaker ----
-/** What the box models return that `hifiSystem` reads: a response curve and its F3 and level reference. */
-interface BoxModel {
-  curve: { f: number; spl: number; raw: number; xmm: number; vel?: number; prx?: number }[];
-  f3: number;
-  ref: number;
-}
-/** The fields of a design the box model reads (the crossover, tweeter and room come after it). */
+/** The fields of a design the box reads (the crossover, tweeter and room come after it). */
 export type HifiBoxConfig = Pick<
   HifiConfig,
-  "box" | "port" | "pr" | "dim" | "wall" | "wAmpW" | "hpf" | "hp" | "N"
+  "box" | "port" | "pr" | "dim" | "wall" | "wAmpW" | "hpf" | "hp"
 >;
-/** The woofer in its box, before the crossover, tweeter and room: volumes, the vent or radiators and the box's response. */
+/** The woofer in its box, before the crossover, tweeter and room: volumes, the vent or radiators and the filters. */
 export interface HifiBox {
   gross: number;
   net: number;
@@ -204,17 +185,9 @@ export interface HifiBox {
   hpf: number | null;
   /** the high-pass to a sub in use (LR, `HifiConfig.hp`); null for none */
   hp: NonNullable<HifiConfig["hp"]> | null;
-  /** points 15 Hz-2 kHz; the curve runs on at the same spacing to fTop */
-  N: number;
-  vM: VentedBoxModel | null;
-  rM: ReturnType<typeof passiveRadiatorBox>;
-  sM: SealedBoxModel | null;
-  m: BoxModel;
+  /** the woofer's midband level at `V`, dB at 1 m in half space: its mass-controlled line (`midbandLevelDb`) */
+  ref: number;
 }
-// the woofer's frequency grid: N points 15 Hz-2 kHz (about 92 per decade), run on at the same spacing to 3 × the
-// crossover, so a box modeled once to the highest crossover reads exactly as it does at a lower one
-const GRID = { fmin: 15, fmax: 2000, N: 196 };
-export const hifiGridTop = (xo: number) => Math.max(GRID.fmax, xo * 3);
 /** The port a vented box's model uses (a slot is one opening across the whole baffle); null for any other box. */
 export const hifiVentPort = (
   cfg: Pick<HifiConfig, "box" | "port" | "dim" | "wall">,
@@ -232,8 +205,8 @@ export const hifiWooferDisplacementL = (
 ) => (w.ts.disp != null ? w.ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6));
 /** A sealed box's effective volume over its net: light stuffing. */
 export const HIFI_STUFFING_GAIN = 1.1;
-/** The box alone, its curve run to fTop (Hz): xo-independent, so one box serves every crossover. */
-export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBox | null {
+/** The box: its volumes, its vent or radiators, its subsonic and its midband level. */
+export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig): HifiBox | null {
   const ts = w.ts,
     dim = cfg.dim,
     wall = cfg.wall || 0.75;
@@ -245,7 +218,7 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   // a slot's inner end reads the box; a round port's elbows shorten it acoustically (the fewest that fit; a port too
   // long for any is modeled with the most)
   const ec = !ventPort
-    ? undefined
+    ? 0
     : ventPort.shape === "slot"
       ? hifiSlotEndCorrection(dim, wall, ventPort)
       : hifiRoundEndCorrection(ventPort, hifiPortElbows(dim, wall, ventPort) ?? MAX_ELBOWS);
@@ -255,16 +228,19 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
     : 0;
   const disp = hifiWooferDisplacementL(w);
   const net = Math.max(1, gross * HIFI_NET_SHARE - disp - pVol);
-  const V = ampVoltage(cfg.wAmpW, w.ts),
-    N = cfg.N || GRID.N;
-  const opts = { fmin: GRID.fmin, fmax: GRID.fmax, N, fTop };
+  const V = ampVoltage(cfg.wAmpW, w.ts);
+  if (!ts || (ventPort && !(pA > 0 && ventPort.len > 0))) return null;
   const hp = cfg.hp ?? null;
+  /** the vent's tuning, Hz, as the horn engine finds it (its effective length: the length and its end corrections) */
+  const ventFb =
+    ventPort &&
+    ventTuningHz(net, portOfEffectiveLength(pA * CM2_PER_IN2, (ventPort.len + ec) * CM_PER_IN));
   // a vented box unloads below its tuning; with DSP you'd highpass it there (default 0.75 × Fb, BW24)
   const subsonic =
     cfg.hpf != null
       ? cfg.hpf
-      : ventPort
-        ? Math.round(0.75 * ventTuning(net, pA, ventPort.len, ventPort.n, ec).Fb)
+      : ventFb
+        ? Math.round(0.75 * ventFb)
         : pr
           ? Math.round(0.75 * passiveRadiatorTuning(pr.drv, pr.n, pr.addG, net).Fb)
           : null;
@@ -274,40 +250,7 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   // is no sub crossover, and the subsonic stays in series with it: the woofer's level is read from 30 Hz up, so it
   // couldn't see the protection gone.
   const hpf = hp && (subsonic == null || hp.hz >= subsonic) ? null : subsonic;
-  // the filter the box models run: the high-pass to a sub, else the subsonic
-  const hpHz = hp ? hp.hz : hpf,
-    hpType: HighpassType = hp ? crossoverSlopeName(hp.order) : HIFI_SUBSONIC_TYPE;
-  const vM = ventPort
-    ? boxModel(ts, net, pA, ventPort.len, hpHz || 1, V, hpType, {
-        ...opts,
-        nPorts: ventPort.n,
-        ecIn: ec,
-      })
-    : null;
-  const rM = pr ? passiveRadiatorBox(ts, net, pr, hpHz || 1, V, hpType, opts) : null;
-  // lightly stuffed; an LR highpass (only with a high-pass to a sub), and no lowpass here (the crossover's is applied
-  // in hifiSystemFromBox)
-  const sM =
-    ventPort || pr
-      ? null
-      : closedBox(ts, net * HIFI_STUFFING_GAIN, hpHz || null, null, V, {
-          ...opts,
-          hpOrder: hp ? hp.order : 4,
-          lpOrder: 4,
-        });
-  const m: BoxModel | null = vM || rM || sM;
-  if (!m) return null;
-  // a subsonic kept in series with a low high-pass to a sub: its gain on every point the filters reach (the models'
-  // own peak figures, which nothing here reads, stay the high-pass's alone)
-  if (hp && hpf)
-    for (const o of m.curve) {
-      const g = highpassGain(o.f, hpf, HIFI_SUBSONIC_TYPE);
-      o.spl += 20 * Math.log10(g);
-      o.xmm *= g;
-      if (o.vel != null) o.vel *= g;
-      if (o.prx != null) o.prx *= g;
-    }
-  return { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, hp, N, vM, rM, sM, m };
+  return { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, hp, ref: midbandLevelDb(ts, V) };
 }
 
 /**

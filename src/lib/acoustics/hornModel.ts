@@ -1,11 +1,12 @@
-// The horn engine: a front-loaded horn box as Hornresp models one.
+// The horn engine: a front-loaded horn box as Hornresp models one, and the app's one model of a plain sealed or vented
+// box (no segments: the cones radiate straight, lib/speaker/speakerResponse).
 //
-// The driver is the box models' acoustic circuit (lib/acoustics/driverCircuit, shared with lib/acoustics/boxModels boxModel and
-// closedBox): a pressure source Pg behind the driver's own impedance, with the voice coil's inductance when the driver
-// lists one (Re + jωLe, as Hornresp and the box models). Its front drives a throat chamber and the horn's segments into
-// the mouth's radiation impedance; its rear drives a sealed or vented chamber. The vent is a straight duct ended in its
-// exit's radiation impedance, as in Hornresp. With no segments, no throat chamber and no radiation load it is exactly
-// those box models, lumped vent and inductance included (tests/horn-engine.test.ts checks this).
+// The driver is Thiele and Small's acoustic circuit (lib/acoustics/driverCircuit, shared with the radiator box model):
+// a pressure source Pg behind the driver's own impedance, with the voice coil's inductance when the driver lists one
+// (Re + jωLe, as Hornresp). Its front drives a throat chamber and the horn's segments into the mouth's radiation
+// impedance; its rear drives a sealed or vented chamber. The vent is a straight duct ended in its exit's radiation
+// impedance, as in Hornresp. With no radiation load (`radiationLoad: false`) it is the lumped circuit of Small's
+// closed-form equations (tests/sealed.test.ts and tests/vented.test.ts check them).
 //
 // Words used below:
 // - "flow" is volume velocity, m³/s: air speed times area.
@@ -13,12 +14,18 @@
 // - "compliance" is an air volume's springiness, m³/Pa; "acoustic mass" is a column of air's (or the cone's) inertia,
 //   kg/m⁴.
 //
-// Symbols kept short are the established ones, from Thiele and Small's papers and the box models; each is defined
+// Symbols kept short are the established ones, from Thiele and Small's papers; each is defined
 // where it is made or in its type (DriverCircuit, VentResistances). ω is the angular frequency 2πf (rad/s), and
 // k = ω/c the wave number (rad/m).
-import type { Complex, HornDesign, HornModel, HornPoint } from "../../types";
-import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../../constants/acoustics";
-import { HORN_PROFILE } from "../../constants/hornEngine";
+import type { BoxModelTS, Complex, HornDesign, HornModel, HornPoint, HornPort } from "../../types";
+import {
+  AIR_DENSITY,
+  BOX_LEAK_Q,
+  BOX_PORT_Q,
+  SPEED_OF_SOUND,
+  SPL_REFERENCE_PA,
+} from "../../constants/acoustics";
+import { HORN_PROFILE, ONE_BOX_HALF_SPACE } from "../../constants/hornEngine";
 import { CM_PER_M, LITERS_PER_CUBIC_M, SQ_CM_PER_SQ_M } from "../../constants/units";
 import {
   abs,
@@ -45,8 +52,6 @@ import {
 
 /** ρc²: an air volume V has compliance V/(ρc²). */
 export const AIR_STIFFNESS = AIR_DENSITY * SPEED_OF_SOUND * SPEED_OF_SOUND;
-/** The reference pressure for SPL, Pa (0 dB SPL). */
-export const SPL_REFERENCE_PA = 2e-5;
 /** Millimeters per meter, and milliseconds per second. */
 export const MILLI = 1000;
 
@@ -55,21 +60,28 @@ export const oneSideAirMass = (coneAreaCm2: number) =>
   (8 / 3) * AIR_DENSITY * Math.pow(coneAreaCm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
 /**
  * The vent's tuning search (duct vent): up in steps of `step` (a ratio) to `ceiling`, Hz, from `start` times the lumped
- * vent's tuning, or from `from`, Hz, when the tuning is already past that start.
+ * vent's tuning, or from `from`, Hz, when the tuning is already past that start; then `halvings` halvings of the last
+ * step (to the last bit of a double).
  */
-const TUNING_SEARCH = { from: 1, start: 0.5, step: 1.01, ceiling: 20000 } as const;
+const TUNING_SEARCH = { from: 1, start: 0.5, step: 1.01, ceiling: 20000, halvings: 45 } as const;
+/**
+ * Duct vents' tunings already found, Hz, by everything the search reads: the optimizers model the same chamber and vent
+ * with many drivers. Cleared when it holds `TUNINGS_KEPT`.
+ */
+const TUNINGS = new Map<string, number>();
+const TUNINGS_KEPT = 4096;
 
 export interface HornModelOptions {
   /**
-   * Load the mouth (or the cone, with no segments) with its radiation impedance. On by default; off reproduces the box
-   * models, which leave it out. With it on, the driver's moving mass drops by one side's air load (8/3·ρa³, a the
+   * Load the mouth (or the cone, with no segments) with its radiation impedance. On by default; off is the lumped
+   * circuit of Small's equations, which leaves it out. With it on, the driver's moving mass drops by one side's air load (8/3·ρa³, a the
    * cone's radius), which the datasheet's moving mass includes and the radiation impedance now carries. It also makes
-   * the vent a duct with its exit's radiation load (off: a lumped mass, as the box models).
+   * the vent a duct with its exit's radiation load (off: a lumped mass).
    */
   radiationLoad?: boolean;
   /**
    * Small's vented-box quality factors at the tuning: QL for the box's leakage, Qp for the vent's own losses. A lower
-   * Q means more loss; Infinity means none. The box models' 7 and 50 by default. Hornresp's horn rear chamber is
+   * Q means more loss; Infinity means none. 7 and 50 by default (BOX_LEAK_Q, BOX_PORT_Q). Hornresp's horn rear chamber is
    * lossless; its direct-radiator vented box takes QL = 7 and no Qp.
    */
   QL?: number;
@@ -77,8 +89,8 @@ export interface HornModelOptions {
 }
 
 /**
- * Unwraps a phase sequence (radians) in place, as the box models do (lib/acoustics/boxModels unwrapRawPhase): from the top
- * frequency down, so the phases of the same design match theirs exactly, not only to a whole turn.
+ * Unwraps a phase sequence (radians) in place, as the radiator box model does (lib/acoustics/boxModels unwrapRawPhase):
+ * from the top frequency down, so a phase is fixed by its top, not only to a whole turn.
  */
 function unwrapFromTop(phases: number[]) {
   for (let i = phases.length - 2; i >= 0; i--)
@@ -141,6 +153,13 @@ function frontLoad(design: HornDesign, f: number, radiationLoad: boolean) {
   };
 }
 
+/**
+ * A round exit's own end correction, cm, for an exit of `areaCm2` in half space with one box: what its radiation load
+ * adds to the vent's length at low frequency (a flanged piston's 8/(3π)·r, r the exit's radius).
+ */
+const roundExitCorrection = (areaCm2: number) =>
+  FLANGED_CIRCLE_END_RATIO * Math.sqrt(areaCm2 / Math.PI);
+
 /** The vent as a straight duct of its area and length (a segment of equal areas). */
 export const ventDuct = (area: number, length: number) => ({
   profile: HORN_PROFILE.conical,
@@ -153,8 +172,8 @@ export const ventDuct = (area: number, length: number) => ({
  * The rear chamber's vent, when it has one, in Small's vented-box symbols.
  *
  * With the radiation load on, the vent is a straight duct (a transmission line, as in Hornresp) ended in its exit's
- * radiation impedance, which adds the outer end's correction. With it off (the box models' mode) it is a lumped
- * acoustic mass. Losses come from QL and Qp at the tuning, as in the box models.
+ * radiation impedance, which adds the outer end's correction. With it off (the lumped mode) it is a lumped acoustic
+ * mass. Losses come from QL and Qp at the tuning, as in Small's vented-box model.
  *
  * A slot's exit is a round exit of the same total area with its reactance scaled to the rectangle's end correction
  * (each opening's): exact at low frequency, where a vent works, for openings apart from each other in half space with
@@ -182,12 +201,13 @@ export function ventOf(
   /**
    * The exit's reactance over a round exit's: a slot opening's end correction over a circle's of the vent's whole area
    * (cm over cm). n openings side by side each carry their own correction, so their mass is the opening's correction
-   * over the total area. 1 for a round vent.
+   * over the total area. 1 for a round vent. A port that sets its own ratio keeps it.
    */
-  const exitReactanceRatio = port.slot
-    ? rectangleEndCorrection(port.slot.width, port.slot.height) /
-      (FLANGED_CIRCLE_END_RATIO * Math.sqrt(port.area / Math.PI))
-    : 1;
+  const exitReactanceRatio =
+    port.exitReactanceRatio ??
+    (port.slot
+      ? rectangleEndCorrection(port.slot.width, port.slot.height) / roundExitCorrection(port.area)
+      : 1);
   /** the lossless vent at frequency f: impedance from the chamber, exit flow per flow in, and the exit's load */
   const lossless = (f: number) => {
     if (!radiationLoad) {
@@ -214,9 +234,12 @@ export function ventOf(
   /** the lumped vent's tuning, Hz: its air as one mass, ρ·length/Sp, with the chamber's compliance */
   const lumpedFb =
     1 / (2 * Math.PI * Math.sqrt(((AIR_DENSITY * (port.length / CM_PER_M)) / Sp) * Cab));
+  /** the tuning's key in TUNINGS: everything `detuning` reads */
+  const key = `${port.area}|${port.length}|${exitReactanceRatio}|${Cab}|${design.angle}|${design.count}`;
+  const known = radiationLoad ? TUNINGS.get(key) : lumpedFb;
   let Fb: number;
-  if (!radiationLoad) {
-    Fb = lumpedFb;
+  if (known !== undefined) {
+    Fb = known;
   } else {
     // step up to the first sign change, then halve the bracket: the duct's reactance has poles above the tuning, so a
     // plain bisection over a wide range could land on one. The exit's load adds mass, so the tuning falls below the
@@ -230,12 +253,14 @@ export function ventOf(
     )
       below *= TUNING_SEARCH.step;
     let above = below * TUNING_SEARCH.step;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < TUNING_SEARCH.halvings; i++) {
       const middle = Math.sqrt(below * above);
       if (detuning(middle) < 0) below = middle;
       else above = middle;
     }
     Fb = Math.sqrt(below * above);
+    if (TUNINGS.size >= TUNINGS_KEPT) TUNINGS.clear();
+    TUNINGS.set(key, Fb);
   }
   /** the vent's acoustic mass that tunes Cab to Fb, kg/m⁴: ρ·length/Sp when lumped */
   const Map = 1 / (Math.pow(2 * Math.PI * Fb, 2) * Cab);
@@ -251,6 +276,68 @@ export function ventOf(
       return { ...vent, impedance: add(vent.impedance, complex(Rap)) };
     },
   };
+}
+
+/**
+ * The shortest duct `portOfEffectiveLength` keeps, as a share of the vent's effective length: below it the exit's load
+ * scales down instead, so a short, wide vent still models (a duct of no length would be no vent).
+ */
+const MIN_DUCT_SHARE = 0.1;
+
+/**
+ * A vent as the engine's port from its effective length, cm: its physical length plus both ends' corrections, as a
+ * vent rule works them out. The duct is that length less the round exit's own correction, which the exit's radiation
+ * load adds back (half space, one box). So the vent keeps the rule's effective length at low frequency; only the duct's
+ * wave behavior and the exit's load are new. `areaCm2` is all the openings together. A short, wide vent, whose duct
+ * would come out shorter than `MIN_DUCT_SHARE` of its effective length (or not positive), keeps a duct that long, and its
+ * exit's load scales down to the rest.
+ */
+export function portOfEffectiveLength(areaCm2: number, effectiveLengthCm: number): HornPort {
+  const exit = roundExitCorrection(areaCm2);
+  const duct = effectiveLengthCm - exit;
+  /** the shortest duct this keeps, cm: a share of the effective length */
+  const shortest = MIN_DUCT_SHARE * effectiveLengthCm;
+  if (duct >= shortest) return { area: areaCm2, length: duct };
+  // a short, wide vent: the round exit's own correction takes (nearly) all its effective length. Keep a short duct and
+  // scale the exit's load down so the duct and the exit's correction still add up to the rule's effective length
+  return {
+    area: areaCm2,
+    length: shortest,
+    exitReactanceRatio: (effectiveLengthCm - shortest) / exit,
+  };
+}
+
+/**
+ * The tuning Fb, Hz, of a chamber of `liters` with this vent, as `hornModel` finds it (the duct with its exit's load,
+ * half space, one box); null for no vent.
+ */
+export function ventTuningHz(liters: number, port: HornPort | null): number | null {
+  const positive = (x: number) => Number.isFinite(x) && x > 0;
+  if (!port || !positive(liters) || !positive(port.area) || !positive(port.length)) return null;
+  /** the chamber's compliance, m³/Pa */
+  const Cab = liters / LITERS_PER_CUBIC_M / AIR_STIFFNESS;
+  const vent = ventOf(
+    { rear: { liters, port }, ...ONE_BOX_HALF_SPACE },
+    Cab,
+    true,
+    BOX_LEAK_Q,
+    BOX_PORT_Q,
+  );
+  return vent ? vent.Fb : null;
+}
+
+/**
+ * Small's closed-box Qtc for a sealed chamber of `liters`: the driver's Qts times Fc/Fs, Fc the cone's moving mass
+ * against its suspension and the box's air in series.
+ */
+export function closedBoxQtc(driver: BoxModelTS, liters: number) {
+  const { Mms, Cas } = driverCircuit(driver, 1);
+  /** the box's compliance, m³/Pa */
+  const Cab = liters / LITERS_PER_CUBIC_M / AIR_STIFFNESS;
+  /** the electrical Q, Qes: 2π·Fs·Mms·Re/Bl² */
+  const Qes = (2 * Math.PI * driver.Fs * Mms * driver.Re) / (driver.Bl * driver.Bl);
+  const Qts = (Qes * driver.Qms) / (Qes + driver.Qms);
+  return Qts * Math.sqrt(1 + Cas / Cab);
 }
 
 /**
@@ -285,7 +372,7 @@ function isModelable(design: HornDesign, freqs: readonly number[]) {
 
 /**
  * The design's response at each frequency (Hz) with `volts` RMS on each driver; null when a size it divides by is zero
- * or negative (as the box models return null).
+ * or negative.
  */
 export function hornModel(
   design: HornDesign,
@@ -333,7 +420,7 @@ export function hornModel(
       k = omega / SPEED_OF_SOUND;
     // The voice coil's blocked impedance, Re + jωLe (Hornresp's plain inductance). The motor is a source
     // volts·(Bl/Sd)/coil behind the electrical damping (Bl/Sd)²/coil: one cone's Pg and Rae times the coil's factor
-    // Re/coil, as the box models take it (lib/acoustics/driverCircuit coilFactor); the bank's damping divides by the
+    // Re/coil (lib/acoustics/driverCircuit coilFactor); the bank's damping divides by the
     // number of cones.
     const coil = coilImpedance(driver, omega);
     const motor = coilFactor(driver, omega);
@@ -390,7 +477,7 @@ export function hornModel(
     /** Ze, one voice coil's impedance, ohms */
     const electrical = add(coil, divide(complex(forcePerArea * forcePerArea), motionalLoad));
     phases.push(arg(pressure));
-    // volts are RMS: √2 turns RMS travel and air speed into sine peaks, as the box models do
+    // volts are RMS: √2 turns RMS travel and air speed into sine peaks, which Xmax and the vent's speed limit mean
     curve.push({
       f,
       spl: 20 * Math.log10(abs(pressure) / SPL_REFERENCE_PA),

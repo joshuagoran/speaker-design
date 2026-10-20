@@ -16,8 +16,7 @@ function power(s: Complex, n: number): Complex {
 
 /**
  * The filter's transfer at `f` (Hz): first order 1/(1 + s) or s/(1 + s); Butterworth n 1/Bn(s) or sⁿ/Bn(s); a
- * Linkwitz-Riley of order n is a Butterworth n/2 squared. Its magnitude is the box
- * models' highpassGain and linkwitzRileyLowpass.
+ * Linkwitz-Riley of order n is a Butterworth n/2 squared. A highpass's magnitude is highpassGain's.
  */
 export function filterTransfer(f: number, filter: BandFilter, side: FilterSide): Complex {
   const s = complex(0, f / filter.hz);

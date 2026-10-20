@@ -12,8 +12,8 @@
 // partial pivoting, on rows scaled to their largest entry, solves the system: a horn box has 10 to 20 unknowns, so a
 // 500-point curve takes a few milliseconds. The engine is pure (no DOM, no globals), so it runs in a web worker.
 //
-// The driver is the horn engine's and the box models' circuit (lib/acoustics/driverCircuit): with the same parts it
-// gives lib/acoustics/hornModel's and lib/acoustics/boxModels's results to rounding (tests/acoustic-network.test.ts).
+// The driver is the horn engine's circuit (lib/acoustics/driverCircuit): with the same parts it gives
+// lib/acoustics/hornModel's results to rounding (tests/acoustic-network.test.ts).
 //
 // Words used below: "flow" is volume velocity (m³/s); "impedance" is acoustic impedance (Pa·s/m³); "admittance" its
 // reciprocal. ω is the angular frequency 2πf (rad/s) and k = ω/c the wave number (rad/m). Pressures and flows are
@@ -28,7 +28,7 @@ import type {
   NetworkState,
   OpeningLoad,
 } from "../../../types";
-import { AIR_DENSITY, SPEED_OF_SOUND } from "../../../constants/acoustics";
+import { AIR_DENSITY, SPEED_OF_SOUND, SPL_REFERENCE_PA } from "../../../constants/acoustics";
 import { NETWORK_PART, OPENING_LOAD } from "../../../constants/acousticNetwork";
 import { CM_PER_M, GRAMS_PER_KG, LITERS_PER_CUBIC_M } from "../../../constants/units";
 import {
@@ -46,7 +46,7 @@ import {
 import { coilFactor, coilImpedance, driverCircuit } from "../driverCircuit";
 import { chainMatrix, isSizedSegment } from "../hornSegments";
 import { mouthImpedance } from "../radiation";
-import { AIR_STIFFNESS, MILLI, SPL_REFERENCE_PA, powerScale, setPhaseAndDelay } from "../hornModel";
+import { AIR_STIFFNESS, MILLI, powerScale, setPhaseAndDelay } from "../hornModel";
 
 /**
  * The smallest pivot the elimination takes, against rows scaled to 1: below it the system is singular to rounding (a

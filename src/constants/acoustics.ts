@@ -14,12 +14,15 @@ export const MODAL_SUBPOINTS = 4;
  */
 export const MODAL_SUBPOINTS_WHOLE_BAND = 2;
 
-/** The density of air, kg/m³: the value the PA box models and the horn engine use. */
+/** The density of air, kg/m³: the value every model in the app uses. */
 export const AIR_DENSITY = 1.18;
 
 /**
- * A vented box's leakage and its vent's losses, each as a quality factor Q at the vent's tuning Fb: the box models'
- * defaults (lib/acoustics/boxModels boxModel's QL and Qp) and the horn engine's. A lower Q means more loss.
+ * A vented box's leakage and its vent's losses, each as a quality factor Q at the vent's tuning Fb: the horn engine's
+ * defaults (Small's QL and Qp). A lower Q means more loss.
  */
 export const BOX_LEAK_Q = 7;
 export const BOX_PORT_Q = 50;
+
+/** The reference pressure for SPL, Pa (0 dB SPL). */
+export const SPL_REFERENCE_PA = 2e-5;

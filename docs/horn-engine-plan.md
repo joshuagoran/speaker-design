@@ -120,23 +120,24 @@ box models keep their own grids.
 3. **Published designs.** Skipped: the forums that post Hornresp inputs and plots block automated access. Step 4
    replaces it.
 4. **Hornresp golden files.** Done, with Hornresp 60.60 under Wine (see [Running Hornresp](#running-hornresp)).
-   `tests/hornresp.test.ts` compares nine designs (eleven readings), 10 Hz–2 kHz (`tests/hornresp/`: each record and its results).
+   `tests/hornresp.test.ts` compares ten designs (twelve readings), 10 Hz–2 kHz (`tests/hornresp/`: each record and its results).
 5. **Measurement** of the built boxes with REW.
 
 ### Hornresp results
 
-| Case                | Checks                                                         | SPL       | Ze, excursion |
-| ------------------- | -------------------------------------------------------------- | --------- | ------------- |
-| `sub-sealed-exp`    | Exponential horn, throat chamber, sealed rear                  | < 0.01 dB | < 0.1 %       |
-| `sub-bin-vented`    | Four conical segments, vented rear (the sub bin's first model) | < 0.01 dB | < 0.1 %       |
-| `sub-bin-eighth`    | The same in eighth space (images)                              | < 0.01 dB | < 0.1 %       |
-| `sub-direct-vented` | Direct radiator, vented box, QL 7                              | < 0.6 dB  | < 0.1 %       |
-| `mid-vented`        | Exponential mid horn, throat chamber, vented rear              | < 0.01 dB | < 0.1 %       |
-| `mid-pair`          | Two boxes side by side (count 2) vs Hornresp's composite       | < 0.01 dB | < 0.1 %       |
-| `mid-pair`          | Two drivers on one throat (`drivers: 2`), same record          | < 0.01 dB | < 0.1 %       |
-| `sub-bin-le`        | The sub bin with Le 1.6 mH                                     | < 0.01 dB | < 0.1 %       |
-| `mid-le`            | The mid horn with Le 0.6 mH                                    | < 0.01 dB | < 0.1 %       |
-| `mid-pair-le`       | Two drivers with Le, on one throat and as two boxes            | < 0.01 dB | < 0.1 %       |
+| Case                | Checks                                                              | SPL       | Ze, excursion |
+| ------------------- | ------------------------------------------------------------------- | --------- | ------------- |
+| `sub-sealed-exp`    | Exponential horn, throat chamber, sealed rear                       | < 0.01 dB | < 0.1 %       |
+| `sub-bin-vented`    | Four conical segments, vented rear (the sub bin's first model)      | < 0.01 dB | < 0.1 %       |
+| `sub-bin-eighth`    | The same in eighth space (images)                                   | < 0.01 dB | < 0.1 %       |
+| `sub-direct-vented` | Direct radiator, vented box, QL 7                                   | < 0.6 dB  | < 0.1 %       |
+| `pa-sub-box`        | The PA sub template's box: Le 1.85 mH, the slot as the app's length | < 0.9 dB  | < 0.1 %       |
+| `mid-vented`        | Exponential mid horn, throat chamber, vented rear                   | < 0.01 dB | < 0.1 %       |
+| `mid-pair`          | Two boxes side by side (count 2) vs Hornresp's composite            | < 0.01 dB | < 0.1 %       |
+| `mid-pair`          | Two drivers on one throat (`drivers: 2`), same record               | < 0.01 dB | < 0.1 %       |
+| `sub-bin-le`        | The sub bin with Le 1.6 mH                                          | < 0.01 dB | < 0.1 %       |
+| `mid-le`            | The mid horn with Le 0.6 mH                                         | < 0.01 dB | < 0.1 %       |
+| `mid-pair-le`       | Two drivers with Le, on one throat and as two boxes                 | < 0.01 dB | < 0.1 %       |
 
 The first run found three differences. The engine now follows Hornresp in the first two:
 

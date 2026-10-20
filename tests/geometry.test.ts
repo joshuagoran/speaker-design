@@ -1,13 +1,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
-  boxInternalLiters,
-  ventGeometry,
   internalWoodLiters,
-  cutParts,
-  subWeightLb,
   plywoodLbPerSqFt,
-  subBoxBracing,
   maxFoldedRearWallIn,
   maxFoldedSlotIn,
   foldedRearWallIn,
@@ -21,74 +16,51 @@ import { rectangleEndCorrection } from "../src/lib/acoustics/radiation";
 import { ductFit } from "../src/lib/speaker/chips";
 import { subTubeLegs, subTubeSpan } from "../src/lib/build/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../src/data/acoustics/tube-ends";
-import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
+import { SUB_OPTIONS } from "../src/lib/data";
+import { chamberCutBox } from "../src/constants/cutParts";
 import { close, vent, DRV18 } from "./helpers";
+import { paSubBox, paSubBuild, paSubVent } from "./pa-build";
 import type { CutPart } from "../src/types";
 
 const IN3_L = 16.387 / 1000;
-test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {
-  close(t, boxInternalLiters(20, 24, 16, 0.75, 0.75), 18.5 * 22.5 * 13.75 * IN3_L, 1e-9);
-  close(t, boxInternalLiters(20, 24, 16, 0.5, 0), 19 * 23 * 14.75 * IN3_L, 1e-9);
-  close(t, boxInternalLiters(20, 24, 16, 0.5, 1.5), 19 * 23 * 13.25 * IN3_L, 1e-9);
+/** The sub chamber's rows in the Speaker page's cutlist. */
+const SUB_BOX = chamberCutBox(0);
+test("clear volume: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {
+  const clearL = (wall: number, inset: number) =>
+    paSubBuild(paSubBox({ w: 20, h: 24, d: 16 }, "round2", {}, { wall, inset })).build.clearL;
+  close(t, clearL(0.75, 0.75), 18.5 * 22.5 * 13.75 * IN3_L, 1e-9);
+  close(t, clearL(0.5, 0), 19 * 23 * 14.75 * IN3_L, 1e-9);
+  close(t, clearL(0.5, 1.5), 19 * 23 * 13.25 * IN3_L, 1e-9);
 });
-test("ventGeom: letterbox area = slot height x inner width less two fins", (t) => {
-  const g = ventGeometry(
-    "slots",
-    { w: 22, h: 30, d: 20 },
-    vent({ slotH: 3, len: 14 }),
-    0.75,
-    0.75,
-    DRV18,
-  );
-  close(t, g.area, 3 * (22 - 1.5 - 1.5), 1e-9);
-  assert.equal(g.n, 1);
+test("vent: letterbox area = slot height x inner width less two fins", (t) => {
+  const g = paSubVent({ w: 22, h: 30, d: 20 }, "slots", { slotH: 3, len: 14 });
+  close(t, g.areaIn2, 3 * (22 - 1.5 - 1.5), 1e-9);
+  assert.equal(g.openings, 1);
 });
-test("ventGeom: side ducts = throat x inner height less dividers, one opening each", (t) => {
-  const g2 = ventGeometry(
-    "vslots",
-    { w: 22, h: 30, d: 20 },
-    vent({ throat: 2, len: 16 }),
-    0.75,
-    0.75,
-    DRV18,
-  );
-  close(t, g2.area, 2 * 2 * (28.5 - 1), 1e-9);
-  assert.equal(g2.n, 2);
-  assert.equal(
-    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75, 0.75, DRV18)
-      .n,
-    1,
-  );
+test("vent: side ducts = throat x inner height less dividers, one opening each", (t) => {
+  const box = { w: 22, h: 30, d: 20 };
+  const g2 = paSubVent(box, "vslots", { throat: 2, len: 16 });
+  close(t, g2.areaIn2, 2 * 2 * (28.5 - 1), 1e-9);
+  assert.equal(g2.openings, 2);
+  assert.equal(paSubVent(box, "vslot1", { throat: 2, len: 16 }).openings, 1);
 });
-test("ventGeom: round tubes = n circles, n openings", (t) => {
-  const g = ventGeometry(
-    "round2",
-    { w: 20, h: 24, d: 16 },
-    vent({ nt: 2, dia: 3.5, len: 14 }),
-    0.75,
-    0.75,
-    DRV18,
-  );
-  close(t, g.area, 2 * Math.PI * 1.75 ** 2, 1e-9);
-  assert.equal(g.n, 2);
+test("vent: round tubes = n circles, n openings", (t) => {
+  const g = paSubVent({ w: 20, h: 24, d: 16 }, "round2", { nt: 2, dia: 3.5, len: 14 });
+  close(t, g.areaIn2, 2 * Math.PI * 1.75 ** 2, 1e-9);
+  assert.equal(g.openings, 2);
 });
-test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => {
-  const sub = SUB_OPTIONS[0],
-    mid = MID_OPTIONS[0];
+test("wood inside: duct shelf + fins + brace rails + cleats, by hand", (t) => {
   const box = { w: 22, h: 30, d: 20 },
     t0 = 0.75;
-  const parts = cutParts({
-    sub,
-    mid,
-    subBox: box,
-    midDims: { w: 15, h: 15, d: 15 },
-    wall: t0,
-    inset: 0.75,
-    joint: "butt",
-    portStyle: "slots",
-    cVent: vent({ slotH: 3, len: 14 }),
-    layout: "stack",
-  }).parts;
+  const sub = paSubBuild(
+    paSubBox(
+      box,
+      "slots",
+      { slotH: 3, len: 14 },
+      { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 },
+    ),
+  );
+  const parts = sub.parts();
   const iw = 20.5,
     ih = 28.5,
     band = 3.75,
@@ -112,7 +84,10 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
   );
   // the fins run on to the back panel
   const duct = iw * len * t0 + 2 * 3 * (20 - t0) * t0;
-  close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
+  const hand = (cleats + braces + duct) * IN3_L;
+  close(t, internalWoodLiters(parts, SUB_BOX), hand, 1e-9);
+  // the build's wood inside the chamber, which its net air takes off, is the cutlist's
+  close(t, sub.build.woodL, hand, 1e-9);
 });
 test("folded slot: the longest fold leaves a slot height under the lid, in the fit, the model and the cutlist", (t) => {
   const box = { w: 22, h: 30, d: 20 },
@@ -128,58 +103,33 @@ test("folded slot: the longest fold leaves a slot height under the lid, in the f
     const v = vent({ slotH, len });
     close(t, foldedRearWallIn(box, v, t0), 22.5, 1e-12);
     close(t, foldedLidGapIn(box, v, t0), slotH, 1e-12);
-    const parts = cutParts({
-      sub: SUB_OPTIONS[0],
-      mid: MID_OPTIONS[0],
-      subBox: box,
-      midDims: { w: 15, h: 15, d: 15 },
-      wall: t0,
-      inset: 0.75,
-      joint: "butt",
-      portStyle: "slots",
-      cVent: v,
-      layout: "stack",
-    }).parts;
+    const parts = paSubBuild(
+      paSubBox(box, "slots", v, { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 }),
+    ).parts();
     close(t, parts.find((p) => p.part === "ductRearWall")?.b ?? NaN, 22.5, 1e-12);
   }
 });
 test("weights: shell from panel areas at the ply density matches the cutlist parts", (t) => {
-  // independent: sum the cutlist panels (butt joints), + driver + hardware; formula counts full outer
-  // faces and full-size braces, so it should read a little high, never low, and within ~12 %
+  // independent: sum the cutlist panels (butt joints), + the fixings; the build's formula counts full outer faces and
+  // full-size braces, so it should read a little high, never low, and within ~12 %
   for (const wall of [0.75, 0.5]) {
     const box = { w: 22, h: 30, d: 20 };
-    const parts = cutParts({
-      sub: SUB_OPTIONS[0],
-      mid: MID_OPTIONS[0],
-      subBox: box,
-      midDims: { w: 15, h: 15, d: 15 },
-      wall,
-      inset: 0.75,
-      joint: "butt",
-      portStyle: "round2",
-      cVent: vent({ nt: 2, dia: 4, len: 12 }),
-      layout: "stack",
-    }).parts.filter((p) => p.box === "sub");
+    const sub = paSubBuild(
+      paSubBox(
+        box,
+        "round2",
+        { nt: 2, dia: 4, len: 12 },
+        { sub: SUB_OPTIONS[0].id, wall, inset: 0.75 },
+      ),
+    );
+    const parts = sub.parts().filter((p) => p.box === SUB_BOX);
     // a window brace weighs its rails only (its center is cut out)
     const area = (p: CutPart) =>
       p.part === "windowBrace" ? p.a * p.b - (p.a - 4) * (p.b - 4) : p.a * p.b;
     const lb =
       parts.reduce((a, p) => a + ((area(p) * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) +
       SUB_FIXINGS_LB;
-    const w = subWeightLb(
-      box,
-      wall,
-      0,
-      subBoxBracing(
-        box,
-        wall,
-        0.75,
-        "round2",
-        vent({ nt: 2, dia: 4, len: 12 }),
-        SUB_OPTIONS[0],
-        undefined,
-      ),
-    );
+    const w = sub.build.lb.wood;
     assert.ok(
       w >= lb * 0.98 && w <= lb * 1.12,
       `wall ${wall}: formula ${w.toFixed(1)} vs parts ${lb.toFixed(1)}`,
@@ -247,7 +197,7 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
     close(t, back - slotLen, slot.slotH, 1e-12, `slots ${at}`);
     close(
       t,
-      ventGeometry("slots", box, { ...slot, len: slotLen }, wall, inset, DRV18).ec,
+      paSubVent(box, "slots", { ...slot, len: slotLen }, { wall, inset }).endCorrectionIn,
       rectangleEndCorrection(2 * slot.slotH, box.w - 4 * wall) +
         slotMouthCorrection(slot.slotH, box.h - 2 * wall, slot.slotH, wall, inD - slot.slotH),
       1e-12,

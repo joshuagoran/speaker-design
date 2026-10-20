@@ -1,18 +1,13 @@
-// The speaker's limits (lib/speaker/speakerLimits) against the box models' own: the Hi-fi and PA designs, read
-// through the L1 adapters, meet the same limits at the same levels.
+// The speaker's limits (lib/speaker/speakerLimits): the Hi-fi and PA designs, read through the L1 adapters, meet the
+// PA rules' horn power, and each band limits the sum only where it carries signal.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./pa-configs";
-import {
-  PA_FLOOR,
-  hifiCases,
-  paDesign,
-  paSubModel,
-  speakerAndFeed,
-  withNet,
-} from "./speaker-cases";
+import { PA_FLOOR, hifiCases, paDesign, speakerAndFeed } from "./speaker-cases";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
-import { bandDriveVolts, speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { bandDriveVolts, bandLoads, speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { filtersTransfer } from "../src/lib/speaker/bandFilter";
+import { abs } from "../src/lib/acoustics/complex";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { NO_FILTERS, lrFilter } from "../src/lib/speaker/specParts";
@@ -63,57 +58,24 @@ function responseOf(response: SpeakerResponse, id: BandId) {
   return band;
 }
 
-/**
- * A band's drive at each frequency where its first limit gives out, dB against the amp at full power (0 dB): its
- * curve at the limit against its response moved to the full drive.
- */
-function scaleDb(spec: SpeakerSpec, model: ReturnType<typeof modelOf>, id: BandId) {
-  const band = bandOf(model.limits, id);
-  const { curve } = responseOf(model.response, id);
-  const toFull =
-    20 * Math.log10(band.driveVolts / SPEAKER_RESPONSE_VOLTS) -
-    (spec.bands.find((b) => b.id === id)?.levelDb ?? 0);
-  return band.max.map((o, i) => ({ f: o.f, spl: o.spl - curve[i].spl - toFull, who: o.who }));
-}
-
-/**
- * Tolerance for the PA sub's music limit (one drive for the whole band, before its lowpass): the PA sub box model's
- * `subwooferLimits` on a coarser grid, PA_MUSIC_DB, the same limit.
- */
-const PA_MUSIC_DB = 0.02;
-
-test("speaker limits: the PA designs meet the PA box models' horn power and sub music limit", () => {
+test("speaker limits: the PA designs meet the PA rules' horn power", () => {
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
     const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
-    const models = paSubModel(cfg);
     const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);
     assert.ok(cd?.hf);
     const subSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.sub);
     const topSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
-    const subChamber = subSide.spec.cabinet.chambers[0];
     // each speaker's input range is its source's filters, and the Speaker page models it with that range
     assert.deepEqual(subSide.spec.input, subSide.feed, `${c.name}: the sub's input range`);
     assert.deepEqual(topSide.spec.input, topSide.feed, `${c.name}: the top's input range`);
-    // the sub box with the box model's net air
-    const subSpec = withNet(subSide.spec, subChamber, models.s.netL);
-    const topSpec = tower ? subSpec : topSide.spec;
-    const topModel = modelOf(topSpec, topSpec.input);
+    const topModel = modelOf(topSide.spec, topSide.spec.input);
     // the horn's power: the amp's or the driver's program rating, the lower
     const h = hornPower(cd.hf, cfg.xoHi, cfg.hfAmpW);
     const [power] = topModel.limits.drivers;
     assert.ok(Math.abs(power.watts - h.P) < 1e-9 * h.P, `${c.name}: horn power`);
     assert.equal(power.who, h.who, `${c.name}: what sets the horn's power`);
-    // the sub's music limit: the sub box alone (the tower's low band carries its lowpass, which the box model leaves out)
-    if (tower) continue;
-    const alone = modelOf(subSpec, NO_FILTERS);
-    const lim = models.s.lim;
-    assert.ok(lim);
-    const worst = Math.min(...scaleDb(subSpec, alone, SPEAKER_BAND.low).map((o) => o.spl));
-    const musicDb = Math.abs(worst - 20 * Math.log10(lim.V / models.s.AMP_V));
-    assert.ok(musicDb <= PA_MUSIC_DB, `${c.name}: music limit off by ${musicDb.toFixed(3)} dB`);
-    assert.equal(bandOf(alone.limits, SPEAKER_BAND.low).who, lim.who, `${c.name}: music limit`);
   }
 });
 
@@ -337,4 +299,28 @@ test("speaker limits: bands are a free list: a 4-way box, with a band the user n
   // each band its own line on the charts
   const lines = four.bands.map((_, i) => JSON.stringify(bandLine(PALETTES.light, i, 4)));
   assert.equal(new Set(lines).size, 4);
+});
+
+test("speaker limits: the peak excursion searches the engine's whole curve, below 20 Hz too (no highpass)", () => {
+  // a vented box with no highpass: below the tuning the cone unloads, so its excursion rises to the grid's bottom
+  const start = hifiCase("DEFAULT_HIFI");
+  const spec: SpeakerSpec = { ...start, bands: start.bands.map((b) => ({ ...b, highpass: null })) };
+  const { response, limits } = modelOf(spec, NO_FILTERS);
+  const freqs = response.sum.map((o) => o.f);
+  assert.ok(freqs[0] < 20, "the grid reaches below 20 Hz");
+  const chamber = limits.chambers[0];
+  const drive = response.chambers[0]?.drive;
+  assert.ok(chamber && drive, "the woofer's chamber");
+  const band = spec.bands.find((b) => b.id === chamber.band);
+  assert.ok(band, "its band");
+  // the engine's excursion at the band's full drive, through its own filters, at every point of the grid
+  const toDrive = bandDriveVolts(band, bandLoads(spec).get(band.id) ?? {}) / SPEAKER_RESPONSE_VOLTS;
+  const xmm = drive.map((d, i) => d.xmm * toDrive * abs(filtersTransfer(freqs[i], band)));
+  const most = Math.max(...xmm);
+  assert.ok(Math.abs(chamber.excursion.peak - most) <= 1e-12 * most, "the curve's most");
+  assert.equal(chamber.excursion.hz, freqs[xmm.indexOf(most)]);
+  assert.ok(
+    chamber.excursion.hz < 20,
+    `the peak is below 20 Hz (${chamber.excursion.hz.toFixed(1)} Hz)`,
+  );
 });

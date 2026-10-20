@@ -1,6 +1,6 @@
 // Presets for the acoustic network engine (lib/acoustics/network/solve): small builders that wire the parts of a
 // known box or horn into a network. Front-loaded, offset-driver and tapped horns are one horn path with the driver's
-// sides at different points; the sealed and vented boxes are the box models' circuits (lib/acoustics/boxModels).
+// sides at different points; the sealed and vented boxes are Small's lumped circuits.
 //
 // A horn path runs from segment boundary 0 to boundary n (n segments). Every boundary a driver side taps gets a node,
 // and so do boundary 0 (a closed end, unless a side taps it) and the mouth (boundary n). Ducts join the nodes in order.
