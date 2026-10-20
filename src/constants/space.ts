@@ -75,6 +75,9 @@ export const PAIR_SIDE = { left: "L", right: "R" } as const;
  */
 export const SNAP_FLUSH_IN = 6;
 
+/** Shift held while turning a box on the map: its yaw steps in multiples of this, degrees. */
+export const AIM_SNAP_DEG = 45;
+
 /** A box is coupled with a surface or another box whose face is this near, m (lib/speaker/spaceCoupling). */
 export const COUPLING_GAP_M = 0.01;
 

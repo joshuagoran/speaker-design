@@ -35,7 +35,7 @@ import {
   type RoomWall,
   type StandingItem,
 } from "../../lib/speaker/spaceCoupling";
-import { SNAP_FLUSH_IN } from "../../constants/space";
+import { AIM_SNAP_DEG, SNAP_FLUSH_IN } from "../../constants/space";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { presetLayers } from "../stack/stackPresets";
@@ -167,8 +167,9 @@ export function withBoxAimed(
   placements: readonly SpacePlacement[],
   box: DraggedBox,
   p: FloorPoint,
+  stepDeg?: number,
 ): SpacePlacement[] {
-  return placements.map((o, i) => (i === box.source ? aimedPlacement(o, box, p) : o));
+  return placements.map((o, i) => (i === box.source ? aimedPlacement(o, box, p, stepDeg) : o));
 }
 
 /**
@@ -686,10 +687,11 @@ export function useSpace(initialBand: CoverageBand = "mid") {
           : undefined;
       if (box) editPlacements((list) => withBoxMoved(list, box, p, venue.room, flush));
     },
-    /** turns a box of the map to face `p` on the floor; its placement's other box follows */
-    aimBox: (i: number, p: FloorPoint) => {
+    /** turns a box of the map to face `p` on the floor; its placement's other box follows. `stepped` (Shift held): in `AIM_SNAP_DEG` steps */
+    aimBox: (i: number, p: FloorPoint, stepped: boolean) => {
       const box = boxAt(i);
-      if (box) editPlacements((list) => withBoxAimed(list, box, p));
+      if (box)
+        editPlacements((list) => withBoxAimed(list, box, p, stepped ? AIM_SNAP_DEG : undefined));
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /** moves the alignment point, where the mains arrive together */

@@ -2,7 +2,13 @@
 // back of the room stays continuous, and a mirrored pair's image turns the other way at any angle.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { expandPlacements, wrapYawDeg, yawToward } from "../src/lib/speaker/spaceLayout";
+import {
+  aimedPlacement,
+  expandPlacements,
+  wrapYawDeg,
+  yawToward,
+} from "../src/lib/speaker/spaceLayout";
+import { AIM_SNAP_DEG } from "../src/constants/space";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
 import type { SpacePlacement } from "../src/types";
 
@@ -59,5 +65,21 @@ test("a mirrored pair's image mirrors the yaw at any angle", () => {
     assert.equal(r.aim.yawDeg, image);
     assert.equal(r.x, -6);
     assert.equal(r.aim.pitchDeg, 5);
+  }
+});
+
+test("Shift held: a drag turns a box in 45° steps, to the nearest step", () => {
+  const p = placement({ x: 0, y: 10 });
+  const box = { x: 0, y: 10, image: false };
+  for (const toward of [
+    { x: 1, y: 11.2 },
+    { x: 1, y: 13 },
+    { x: 3, y: 10.4 },
+    { x: -2, y: 7 },
+  ]) {
+    const free = aimedPlacement(p, box, toward).aim.yawDeg;
+    const stepped = aimedPlacement(p, box, toward, AIM_SNAP_DEG).aim.yawDeg;
+    assert.equal(Math.abs(stepped % AIM_SNAP_DEG), 0);
+    assert.ok(Math.abs(wrapYawDeg(stepped - free)) <= AIM_SNAP_DEG / 2);
   }
 });

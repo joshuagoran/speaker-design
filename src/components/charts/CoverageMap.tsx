@@ -77,7 +77,7 @@ export interface MapBox extends FloorPlacement {
  */
 export interface MapActions {
   moveBox: (i: number, p: FloorPoint, free: boolean) => void;
-  aimBox: (i: number, p: FloorPoint) => void;
+  aimBox: (i: number, p: FloorPoint, stepped: boolean) => void;
   moveListener: (p: FloorPoint) => void;
   moveAlignAt?: (p: FloorPoint) => void;
 }
@@ -205,11 +205,12 @@ export function CoverageMap({
     const r = e.currentTarget.getBoundingClientRect();
     return { X: ((e.clientX - r.left) / r.width) * W, Y: ((e.clientY - r.top) / r.height) * H };
   };
-  const apply = (d: Drag, X: number, Y: number, free: boolean) => {
+  /** `free` (Alt held): a box moves without snapping; `stepped` (Shift held): a box turns in 45° steps */
+  const apply = (d: Drag, X: number, Y: number, free: boolean, stepped: boolean) => {
     const p = toFt(X, Y);
     if (d.kind === "listener") actions.moveListener(p);
     else if (d.kind === "alignAt") actions.moveAlignAt?.(p);
-    else if (d.kind === "aim") actions.aimBox(d.i, p);
+    else if (d.kind === "aim") actions.aimBox(d.i, p, stepped);
     else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy }, free);
   };
   const down = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -239,7 +240,7 @@ export function CoverageMap({
       return;
     e.currentTarget.setPointerCapture(e.pointerId);
     setDrag(d);
-    if (d.kind === "listener") apply(d, X, Y, e.altKey);
+    if (d.kind === "listener") apply(d, X, Y, e.altKey, e.shiftKey);
   };
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
@@ -249,7 +250,7 @@ export function CoverageMap({
         ? p
         : null,
     );
-    if (drag) apply(drag, X, Y, e.altKey);
+    if (drag) apply(drag, X, Y, e.altKey, e.shiftKey);
   };
   const up = () => setDrag(null);
   const key = (e: React.KeyboardEvent<SVGSVGElement>) => {
