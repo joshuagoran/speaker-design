@@ -45,18 +45,22 @@ Run each in the browser before every hand-over.
 
 ## Size (measured, Oct 2026)
 
-| Design (stack preset as a space) | JSON    | Compressed | In the link   |
-| -------------------------------- | ------- | ---------- | ------------- |
-| PA stack                         | 3.0 KB  | 1.0 KB     | ≈ 1,400 chars |
-| PA tower                         | 2.7 KB  | 1.0 KB     | ≈ 1,350 chars |
-| Hi-fi pair                       | 1.9 KB  | 0.9 KB     | ≈ 1,150 chars |
-| All five stack presets together  | 13.9 KB | 1.5 KB     | ≈ 2,030 chars |
-| TH18 speaker alone (traced horn) | 2.2 KB  | 1.0 KB     | ≈ 1,280 chars |
+| Design (stack preset as a space)  | JSON    | Compressed | In the link   |
+| --------------------------------- | ------- | ---------- | ------------- |
+| PA stack                          | 3.0 KB  | 1.0 KB     | ≈ 1,400 chars |
+| PA tower                          | 2.7 KB  | 1.0 KB     | ≈ 1,350 chars |
+| Hi-fi pair                        | 1.9 KB  | 0.9 KB     | ≈ 1,150 chars |
+| All five stack presets together   | 13.9 KB | 1.5 KB     | ≈ 2,030 chars |
+| TH18 speaker alone (drawn horn)   | 2.2 KB  | 1.0 KB     | ≈ 1,280 chars |
+| PA stack and two different horns  | 7.0 KB  | 1.9 KB     | ≈ 2,530 chars |
+| PA stack and four different horns | 10.7 KB | 2.4 KB     | ≈ 3,250 chars |
 
 - Compression is deflate, then base64url.
 - Similar speakers compress well together: five presets take ≈ 2,030 characters, not five times one.
 - A space with three different stacks and fills should stay under about 5,000 characters. A test measures it.
-- Traced horns are the main risk. TH18 is the largest speaker. A horn traced with many points can be much larger.
+- Drawn horns stay small. A link stores only the boards, drivers, mouth, and vent. The app traces the passage again.
+- TH18 is the largest speaker. Its drawing has 8 boards, about 460 characters.
+- Each extra horn speaker adds about 370 characters, even when every number differs.
 - Email, Slack, iMessage, and WhatsApp keep links of this length. Some SMS apps cut long links.
 - So links need no server, and no stored short links (see [Not in scope](#not-in-scope)).
 
@@ -131,7 +135,7 @@ A link is untrusted data, the same as a file.
 ## Tests
 
 - Round trip: encode, then decode, gives the same envelope. For each template and stack preset.
-- A large space (three stacks, fills, mirrored pairs, and a traced horn) stays under the length the test sets.
+- A large space (three stacks, fills, mirrored pairs, and two different drawn horns) stays under the length the test sets.
 - Bad links: cut short, wrong base64, not deflate, too large when unpacked, other version, wrong format. Each gives
   its message and changes nothing.
 - The shared view never writes the draft key.
