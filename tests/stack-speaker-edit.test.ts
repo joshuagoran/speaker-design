@@ -279,7 +279,7 @@ test("stack speaker edit: a Stack without the speaker is not changed, and the St
   assert.deepEqual(writes, ["create new1"]);
   assert.equal(run.replaces, 0);
   assert.equal(run.stackNow, design);
-  assert.deepEqual(run.flashes, [STACK_EDIT_TEXT.notInStack]);
+  assert.deepEqual(run.flashes, [STACK_EDIT_TEXT.boxRemoved(gone.name, true)]);
   assert.deepEqual(run.pages, ["stack"]);
 });
 

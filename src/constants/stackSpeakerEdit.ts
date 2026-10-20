@@ -12,6 +12,9 @@ export const STACK_EDIT_TEXT = {
   /** the same button when the speaker cannot be saved (signed out, or saving is unavailable) */
   returnOnly: "Return to Stack",
   cancel: "Cancel",
-  /** what the Stack page says when the Stack no longer has the speaker the edit was for */
-  notInStack: "The Stack no longer has this Speaker, so it did not change.",
+  /** what the Stack page says when the box was removed during the edit: saved, or (signed out) not */
+  boxRemoved: (speaker: string, saved: boolean) =>
+    saved
+      ? `Saved “${speaker}”. Its box was removed from this Stack.`
+      : `Its box was removed from this Stack.`,
 } as const;

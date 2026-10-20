@@ -62,7 +62,7 @@ export function useStackSpeakerEdit({ speakerPage, stack, goTo }: Pages) {
         if (design.current.speakers.some((s) => s.id === edit.speakerId)) {
           // a whole replace: the optimizer's cards, locks and Undo name the old speaker id
           stack.setDesign((d) => withStackSpeaker(d, edit.speakerId, saved));
-        } else stack.store.flash(STACK_EDIT_TEXT.notInStack);
+        } else stack.store.flash(STACK_EDIT_TEXT.boxRemoved(saved.name, canSave));
         back();
         // the save the edit wrote over is no longer the own design's
         if (canSave) stackEditView.detachOwn(saved.id);
