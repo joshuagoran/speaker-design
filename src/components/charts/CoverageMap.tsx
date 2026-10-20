@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MAP_DRAG_UPDATE_MS } from "../../constants/space";
 import { ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
@@ -242,6 +243,22 @@ export function CoverageMap({
     setDrag(d);
     if (d.kind === "listener") apply(d, X, Y, e.altKey, e.shiftKey);
   };
+  // a drag moves the design at most every MAP_DRAG_UPDATE_MS (each move runs the room model again); the latest move
+  // waits, and runs when the time is up or the drag ends, so the drag always ends where the pointer let go
+  const pending = useRef<(() => void) | null>(null);
+  const lastRun = useRef(0);
+  const timer = useRef<number | undefined>(undefined);
+  const runPending = () => {
+    window.clearTimeout(timer.current);
+    timer.current = undefined;
+    const run = pending.current;
+    pending.current = null;
+    if (run) {
+      lastRun.current = performance.now();
+      run();
+    }
+  };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
       p = toFt(X, Y);
@@ -250,9 +267,17 @@ export function CoverageMap({
         ? p
         : null,
     );
-    if (drag) apply(drag, X, Y, e.altKey, e.shiftKey);
+    if (!drag) return;
+    const { altKey, shiftKey } = e;
+    pending.current = () => apply(drag, X, Y, altKey, shiftKey);
+    const wait = MAP_DRAG_UPDATE_MS - (performance.now() - lastRun.current);
+    if (wait <= 0) runPending();
+    else if (timer.current === undefined) timer.current = window.setTimeout(runPending, wait);
   };
-  const up = () => setDrag(null);
+  const up = () => {
+    runPending();
+    setDrag(null);
+  };
   const key = (e: React.KeyboardEvent<SVGSVGElement>) => {
     const step = e.shiftKey ? 5 : 1;
     const dir: Record<string, [number, number]> = {
