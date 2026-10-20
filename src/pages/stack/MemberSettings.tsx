@@ -10,6 +10,7 @@ import { byId } from "../../lib/tables";
 import { AUTO_DELAY } from "../../constants/speakerSpec";
 import { STACK_STEPS } from "../../constants/speakerSteps";
 import { STACK_TEXT } from "../../constants/stack";
+import { STACK_EDIT_TEXT } from "../../constants/stackSpeakerEdit";
 import { SPACE_PITCH_DEG } from "../../constants/space";
 import { shownIn } from "../speaker/speakerFields";
 import { FIELD_ROW } from "../../styles/layout";
@@ -23,13 +24,23 @@ interface Props {
   delayMs: number | null;
   onEdit: (edit: (member: StackMember) => StackMember) => void;
   onRemove: () => void;
+  /** opens its speaker on the Speaker page for an edit; absent when the stack holds no copy of it */
+  onEditSpeaker?: () => void;
 }
 
 /** The picker's id for the stack's base (a member's index for one under it). */
 const BASE_ID = "base";
 
 /** One member's settings: what it stands on and where, a mirror image, its level and its delay. */
-export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove }: Props) {
+export function MemberSettings({
+  index,
+  member,
+  names,
+  delayMs,
+  onEdit,
+  onRemove,
+  onEditSpeaker,
+}: Props) {
   const { pose } = member;
   const base: SelectOption = { id: BASE_ID, name: STACK_TEXT.base };
   // it can stand on an earlier member only
@@ -41,9 +52,19 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
     <Card>
       <div className="flex items-center justify-between gap-2">
         <h4 className="font-semibold min-w-0 truncate">{names[index]}</h4>
-        <Button size="xs" onClick={onRemove}>
-          {STACK_TEXT.remove}
-        </Button>
+        <div className="flex flex-none gap-2">
+          <Button
+            size="xs"
+            aria-label={STACK_EDIT_TEXT.editLabel(names[index])}
+            onClick={onEditSpeaker}
+            disabled={!onEditSpeaker}
+          >
+            {STACK_EDIT_TEXT.edit}
+          </Button>
+          <Button size="xs" onClick={onRemove}>
+            {STACK_TEXT.remove}
+          </Button>
+        </div>
       </div>
       <SelectField
         label={STACK_TEXT.standsOn}

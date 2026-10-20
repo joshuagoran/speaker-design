@@ -18,6 +18,12 @@ export const PAGE_SHARED_KEYS = {
   space: "space.shared",
 } as const;
 
+/**
+ * The session storage key of the Speaker page's edit for a Stack: the Stack's speaker as edited, and which Stack it is
+ * for, so a reload keeps the edit. Apart from the shared view's key, so an edit leaves a link's speaker as it is.
+ */
+export const STACK_EDIT_KEY = "speaker.stackEdit";
+
 /** How long after the last change a page's draft is written, ms. */
 export const DRAFT_WRITE_MS = 300;
 

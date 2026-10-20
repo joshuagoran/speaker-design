@@ -5,6 +5,7 @@ import { SpeakerPage } from "./pages/speaker/SpeakerPage";
 import { useSpeakerPage } from "./pages/speaker/useSpeakerPage";
 import { StackPage } from "./pages/stack/StackPage";
 import { useStack } from "./pages/stack/useStack";
+import { useStackSpeakerEdit } from "./pages/stack/useStackSpeakerEdit";
 import { SpacePage } from "./pages/space/SpacePage";
 import { useSpace } from "./pages/space/useSpace";
 import { useEffect, useState, type MouseEvent } from "react";
@@ -77,15 +78,21 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
     setView,
   );
   const project = projectOf(view);
-  // two levels: the project (Speaker, Stack, or Space), then its own pages
-  const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
+  /** shows page `v` at `href` (its hash) */
+  const goTo = (v: AppPage, href: string = PAGE_HASHES[v]) => {
     try {
       history.replaceState(null, "", href);
     } catch {}
     setView(v);
     window.scrollTo(0, 0);
   };
+  // two levels: the project (Speaker, Stack, or Space), then its own pages
+  const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    goTo(v, href);
+  };
+  // a Stack's speaker, edited on the Speaker page
+  const stackSpeakerEdit = useStackSpeakerEdit({ speakerPage, stack, goTo });
   return (
     // from md up the shell fills the window and doesn't scroll: the header stays, and the page below scrolls in its own
     // panes (results and settings, see SettingsLayout)
@@ -177,6 +184,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
             stack={stack}
             speakerPage={speakerPage}
             sharedNotice={sharing.sharedNotice(SHARE_KIND.stack)}
+            onEditSpeaker={stackSpeakerEdit.edit}
           />
         ) : view === "stackCutlist" ? (
           <StackCutlistPage stack={stack} />
@@ -191,6 +199,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
           <SpeakerPage
             speakerPage={speakerPage}
             sharedNotice={sharing.sharedNotice(SHARE_KIND.speaker)}
+            stackEditNotice={stackSpeakerEdit.notice}
           />
         )}
       </div>

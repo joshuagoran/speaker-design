@@ -1,4 +1,11 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
@@ -19,8 +26,14 @@ import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { CABINET_TOP, SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { allBox } from "./settingsSummaries";
 import { speakerSummary } from "./speakerText";
-import { usePageDraft, type PageDraft, type SharedMode } from "../../hooks/usePageDraft";
-import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
+import {
+  useDelayedWrite,
+  usePageDraft,
+  type PageDraft,
+  type SharedMode,
+} from "../../hooks/usePageDraft";
+import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS, STACK_EDIT_KEY } from "../../constants/pageDrafts";
+import { readSessionJson, removeSession, writeSessionJson } from "../../lib/storage";
 import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
@@ -36,6 +49,7 @@ import type {
   SpeakerChamber,
   SpeakerDriver,
   SpeakerSpec,
+  StackSpeakerEdit,
 } from "../../types";
 
 /** The id a design has until the library saves it (then it takes the document's). */
@@ -76,6 +90,27 @@ export const speakerDraft: PageDraft<SpeakerSpec> = {
   },
 };
 
+/** A Stack's speaker open on the Speaker page for an edit: which Stack it is for, and the speaker as edited. */
+interface StackEditSlot {
+  edit: StackSpeakerEdit;
+  design: SpeakerSpec;
+}
+
+/** The edit for a Stack session storage kept; null when there is none or it does not fit. */
+function readStackEdit(): StackEditSlot | null {
+  const raw = readSessionJson<unknown>(STACK_EDIT_KEY, null);
+  if (typeof raw !== "object" || raw === null) return null;
+  const stackName: unknown = Reflect.get(raw, "stackName");
+  const speakerId: unknown = Reflect.get(raw, "speakerId");
+  if (typeof stackName !== "string" || typeof speakerId !== "string") return null;
+  try {
+    const design = speakerDraft.fromDraft(Reflect.get(raw, "design"));
+    return design && { edit: { stackName, speakerId }, design };
+  } catch {
+    return null;
+  }
+}
+
 /** The prefix of the ids the Speaker page gives the bands it adds. */
 const NEW_BAND_ID = "band";
 
@@ -111,7 +146,27 @@ const settledSpec = (s: SpeakerSpec): SpeakerSpec => {
  * signed-in user's `speakers`). Held in App, so the design survives switching pages.
  */
 export function useSpeakerPage() {
-  const [spec, setSpec, sharedDraft] = usePageDraft(speakerDraft);
+  const [pageSpec, setPageSpec, sharedDraft] = usePageDraft(speakerDraft);
+  /**
+   * the edit for a Stack: a Stack's speaker shows in place of the page's design (its own, or a link's), which stays as
+   * it is. It has its own slot, kept in session storage, so a reload keeps it.
+   */
+  const [stackEdit, setStackEdit] = useState(readStackEdit);
+  /** the edit open now, read by the setter below (stable) and after a save resolves */
+  const openEdit = useRef(stackEdit?.edit ?? null);
+  useDelayedWrite(stackEdit, (slot) => {
+    if (slot)
+      writeSessionJson(STACK_EDIT_KEY, { ...slot.edit, design: speakerDraft.toDraft(slot.design) });
+    else removeSession(STACK_EDIT_KEY);
+  });
+  const spec = stackEdit ? stackEdit.design : pageSpec;
+  /** edits the design shown: the edit for a Stack while one is open */
+  const setSpec = useCallback((next: SetStateAction<SpeakerSpec>) => {
+    if (!openEdit.current) return setPageSpec(next);
+    setStackEdit(
+      (slot) => slot && { ...slot, design: typeof next === "function" ? next(slot.design) : next },
+    );
+  }, []);
   /**
    * how many times the chamber list was replaced (a start, a saved speaker opened) or lost a chamber: each chamber's
    * settings take it with their index as their key, so no settings state carries over to another chamber
@@ -127,10 +182,19 @@ export function useSpeakerPage() {
     setSpec(settledSpec(next));
     restart();
   };
+  /** ends the edit for a Stack: the page shows its design again */
+  const endStackEdit = () => {
+    if (!openEdit.current) return;
+    openEdit.current = null;
+    setStackEdit(null);
+    restart();
+  };
   /** the shared view: a link's speaker shows in place of the page's own, and the page starts over with each switch */
   const sharedView: SharedMode<SpeakerSpec> = {
     ...sharedDraft,
     open: (next) => {
+      // a link opened: it shows, in place of an edit for a Stack
+      endStackEdit();
       sharedDraft.open(settledSpec(next));
       restart();
     },
@@ -138,6 +202,27 @@ export function useSpeakerPage() {
       sharedDraft.close();
       restart();
     },
+  };
+  /** a Stack's speaker on the page for an edit, in place of the page's design (`stackEdit`) */
+  const stackEditView = {
+    /** the Stack it is for; null while the page shows its own design or a link's */
+    edit: stackEdit?.edit ?? null,
+    /** whether `edit` is still the edit open */
+    isOpen: (edit: StackSpeakerEdit) => openEdit.current === edit,
+    /** shows a Stack's `speaker` for an edit */
+    open: (speaker: SpeakerSpec, edit: StackSpeakerEdit) => {
+      openEdit.current = edit;
+      setStackEdit({ edit, design: settledSpec(speaker) });
+      restart();
+    },
+    /** back to the page's design (its own, or a link's) */
+    close: endStackEdit,
+    /**
+     * gives the page's own design the draft id where it has `id`: a save the edit wrote over, so a later Save from the own
+     * design makes a new save
+     */
+    detachOwn: (id: SpeakerSpec["id"]) =>
+      sharedDraft.editOwn((own) => (own.id === id ? { ...own, id: DRAFT_SPEAKER_ID } : own)),
   };
   // the model reads only the cabinet, the bands and the input range (a name edit doesn't run it), a step behind the
   // typing: a horn chamber takes tens of ms, so the settings stay responsive
@@ -235,6 +320,7 @@ export function useSpeakerPage() {
   return {
     spec,
     sharedView,
+    stackEditView,
     setSpec: replaceSpec,
     /** chamber `i`'s settings key: its index in this chamber list */
     chamberKey: (i: number) => `${chamberRound}:${i}`,

@@ -105,7 +105,7 @@ const sharedDocument = <T>(draft: PageDraft<T>, shared: SharedDesign<T>) => ({
  * Calls `write` with `value` `DRAFT_WRITE_MS` after its last change, and at once when the page is left (a reload inside
  * the delay would lose the last change). Nothing is written while `value` is the same one.
  */
-function useDelayedWrite<V>(value: V, write: (value: V) => void) {
+export function useDelayedWrite<V>(value: V, write: (value: V) => void) {
   /** the value waiting to be written; null when what is stored is current */
   const pending = useRef<{ value: V } | null>(null);
   const flush = () => {
@@ -141,6 +141,8 @@ export interface SharedMode<T> {
   changed: () => boolean;
   /** closes the shared view after a copy saved: `copy` (the saved copy, with its new ids) becomes the page's own design */
   keep: (copy: T) => void;
+  /** one edit of the page's own design, even while a shared design shows in its place */
+  editOwn: (edit: (own: T) => T) => void;
 }
 
 /**
@@ -171,6 +173,7 @@ export function usePageDraft<T>(
     close: () => setState(withoutShared),
     changed: () => (state.shared ? sharedChanged(draft, state.shared) : false),
     keep: (copy) => setState(withCopyKept(copy)),
+    editOwn: (edit) => setState((s) => ({ ...s, own: edit(s.own) })),
   };
   // stable, as `useState`'s setter is: pages hand it on to the optimizer
   const setDesign = useCallback<Dispatch<SetStateAction<T>>>(

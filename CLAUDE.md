@@ -28,7 +28,6 @@ Vite+ docs: `node_modules/vite-plus/docs`.
   words (a speaker on a stand, the space of a room) stay lower case.
 - Position labels name the sign's side (`POSITION_LABELS`); the tooltip says where it is measured from. Field labels
   carry no unit (inches); readouts do.
-- Capitalize Speaker, Stack, and Space when they name the app's items or pages; plain words stay lower case.
 - Font Inconsolata. Corners 4 px (6 px on large boxes).
 - Reuse `src/components/ui`; a control a second page needs moves there first. Layouts own the spacing; shared controls
   carry no outer margin.

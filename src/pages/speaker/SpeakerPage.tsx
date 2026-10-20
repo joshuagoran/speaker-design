@@ -96,11 +96,14 @@ import {
   usePositionFocusState,
 } from "./positionFocus";
 import type { SpeakerPageState } from "./useSpeakerPage";
+import { StackEditNotice, type StackEditNoticeProps } from "./StackEditNotice";
 
 interface Props {
   speakerPage: SpeakerPageState;
   /** the shared view's notice, while a link's speaker shows in place of the page's own */
   sharedNotice: SharedNoticeProps | null;
+  /** the notice while a Stack's speaker shows in place of the page's own, for an edit */
+  stackEditNotice: StackEditNoticeProps | null;
 }
 
 /** The sum's key on the charts: no band id takes it (the adapters' are band words, the Speaker page's "band1"…). */
@@ -131,7 +134,7 @@ export function SpeakerPage(props: Props) {
 }
 
 /** The page inside its position focus (`SpeakerPage`). */
-function SpeakerPageBody({ speakerPage, sharedNotice }: Props) {
+function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) {
   const pal = usePalette();
   const { spec, response, limits, build, price, optimizer, store, snapshot, restore } = speakerPage;
   const folds = useFolds(
@@ -417,7 +420,9 @@ function SpeakerPageBody({ speakerPage, sharedNotice }: Props) {
       sheet={sheet}
       results={
         <div className="flex flex-col gap-5">
-          {sharedNotice ? (
+          {stackEditNotice ? (
+            <StackEditNotice {...stackEditNotice} />
+          ) : sharedNotice ? (
             <SharedNotice {...sharedNotice} />
           ) : (
             <SaveRow

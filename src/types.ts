@@ -2087,6 +2087,14 @@ export interface StackSpec {
   notes: string;
 }
 
+/** A Stack's speaker open on the Speaker page for an edit, in place of the page's own design. */
+export interface StackSpeakerEdit {
+  /** the Stack's name, as the Speaker page shows it */
+  stackName: StackSpec["name"];
+  /** the id the Stack's members name the speaker by */
+  speakerId: StackMember["speakerId"];
+}
+
 /**
  * Where a placed stack or speaker points, degrees: its yaw on the floor from straight down the room (+ turns toward +x,
  * a toe-in or pan) and its pitch (+ up). The one aim model: a member's tilt in its stack (`StackPose.pitchDeg`) and its
