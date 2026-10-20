@@ -38,16 +38,10 @@ export function StackEditNotice({
             {STACK_EDIT_TEXT.editing(speakerName, stackName)}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="primary"
-              size="xs"
-              title={canSave ? STACK_EDIT_TEXT.saveAndReturnTip : STACK_EDIT_TEXT.returnOnlyTip}
-              onClick={onSave}
-              disabled={busy}
-            >
+            <Button variant="primary" size="xs" onClick={onSave} disabled={busy}>
               {canSave ? STACK_EDIT_TEXT.saveAndReturn : STACK_EDIT_TEXT.returnOnly}
             </Button>
-            <Button size="xs" title={STACK_EDIT_TEXT.cancelTip} onClick={onCancel} disabled={busy}>
+            <Button size="xs" onClick={onCancel} disabled={busy}>
               {STACK_EDIT_TEXT.cancel}
             </Button>
             {status && <span>{status}</span>}

@@ -6,7 +6,10 @@ import assert from "node:assert";
 import { saveStackSpeaker, withStackSpeaker } from "../src/pages/stack/stackSpeakerEdit";
 import { useStackSpeakerEdit } from "../src/pages/stack/useStackSpeakerEdit";
 import { stackFromStart } from "../src/pages/stack/stackPresets";
-import { useSpeakerPage } from "../src/pages/speaker/useSpeakerPage";
+import { useState } from "react";
+import { DRAFT_SPEAKER_ID, useSpeakerPage } from "../src/pages/speaker/useSpeakerPage";
+import { useStack } from "../src/pages/stack/useStack";
+import { STACK_EDIT_TEXT } from "../src/constants/stackSpeakerEdit";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import type { ConfigStore } from "../src/components/saved-configs/useConfigStore";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow";
@@ -14,7 +17,7 @@ import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import type { StackEditNoticeProps } from "../src/pages/speaker/StackEditNotice";
 import { runSteps } from "./render-steps";
-import type { SavedConfig, SpeakerSpec, StackDesign } from "../src/types";
+import type { ConfigDb, SavedConfig, SpeakerSpec, StackDesign } from "../src/types";
 
 /** A store held in memory, with `docs` saved at the start: its saves, and the writes made. */
 function memoryStore(docs: SavedConfig[] = []) {
@@ -134,46 +137,221 @@ test("stack speaker edit: the Speaker page shows the speaker in place of its own
   assert.deepEqual(seen.slice(1), ["Stack's box", seen[0]]);
 });
 
-test("stack speaker edit: signed out, Return to Stack changes only the Stack's copy and goes back", async () => {
-  const design = sharedStack("doc1");
-  const held = design.speakers[0];
-  const edited = { ...held, name: "Edited box" };
-  let stackNow = design;
-  const pages: string[] = [];
-  let closed = false;
-  const notices: StackEditNoticeProps[] = [];
+/** A database that stands for a signed-in user: the edit hook reads only whether there is one. */
+const SIGNED_IN_DB: ConfigDb = {
+  collection: () => {
+    throw new Error("the edit hook saves through the store");
+  },
+};
+
+/** What the edit hook did: the pages it went to, the Stack's whole replaces, its messages, and the speaker page's calls. */
+interface EditRun {
+  stackNow: StackDesign;
+  pages: string[];
+  replaces: number;
+  flashes: string[];
+  closed: number;
+  detached: string[];
+  notices: StackEditNoticeProps[];
+}
+
+/**
+ * Runs the edit hook for `held` (a speaker of `design`), edited as `edited`, through `steps`: each step gets the hook
+ * and `rerender`, which renders it again with the Stack page's `round` given.
+ */
+function runEdit(
+  design: StackDesign,
+  held: SpeakerSpec,
+  edited: SpeakerSpec,
+  signedIn: { store: ReturnType<typeof memoryStore>["store"] } | null,
+  steps: ((
+    hook: ReturnType<typeof useStackSpeakerEdit>,
+    rerender: (round: number) => void,
+  ) => void)[],
+): EditRun {
+  const result: EditRun = {
+    stackNow: design,
+    pages: [],
+    replaces: 0,
+    flashes: [],
+    closed: 0,
+    detached: [],
+    notices: [],
+  };
+  const edit = { stackName: design.stack.name, speakerId: held.id };
+  let open = true;
   runSteps(
-    () =>
-      useStackSpeakerEdit({
+    () => {
+      const [round, setRound] = useState(0);
+      const hook = useStackSpeakerEdit({
         speakerPage: {
           spec: edited,
-          store: { ...memoryStore().store, db: null, cfgMsg: "" },
+          store: {
+            ...(signedIn?.store ?? memoryStore().store),
+            db: signedIn ? SIGNED_IN_DB : null,
+            cfgMsg: "",
+          },
           stackEditView: {
-            edit: { stackName: design.stack.name, speakerId: held.id },
+            edit: open ? edit : null,
+            isOpen: (e) => open && e === edit,
             open: () => {},
             close: () => {
-              closed = true;
+              if (open) result.closed++;
+              open = false;
             },
+            detachOwn: (id) => result.detached.push(id),
           },
         },
         stack: {
           design,
-          editDesign: (edit) => (stackNow = typeof edit === "function" ? edit(stackNow) : edit),
+          round,
+          setDesign: (next) => {
+            result.replaces++;
+            result.stackNow = typeof next === "function" ? next(result.stackNow) : next;
+          },
+          store: { flash: (m) => result.flashes.push(m) },
         },
-        goTo: (page) => pages.push(page),
-      }),
-    [(hook) => void (hook.notice && notices.push(hook.notice))],
+        goTo: (page) => result.pages.push(page),
+      });
+      if (hook.notice) result.notices.push(hook.notice);
+      return { hook, rerender: setRound };
+    },
+    steps.map(
+      (step) =>
+        ({
+          hook,
+          rerender,
+        }: {
+          hook: ReturnType<typeof useStackSpeakerEdit>;
+          rerender: (round: number) => void;
+        }) =>
+          step(hook, rerender),
+    ),
   );
-  const [shown] = notices;
+  return result;
+}
+
+/** Lets the save's awaits finish. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test("stack speaker edit: signed out, Return to Stack changes only the Stack's copy and goes back", async () => {
+  const design = sharedStack("doc1");
+  const held = design.speakers[0];
+  const run = runEdit(design, held, { ...held, name: "Edited box" }, null, [() => {}]);
+  const [shown] = run.notices;
   assert.ok(shown);
   assert.equal(shown.canSave, false);
   shown.onSave();
-  await Promise.resolve();
-  assert.deepEqual(pages, ["stack"]);
-  assert.ok(closed);
+  await settle();
+  assert.deepEqual(run.pages, ["stack"]);
+  assert.equal(run.closed, 1);
+  // a whole replace: the Stack's optimizer cards, locks and Undo go with the old ids
+  assert.equal(run.replaces, 1);
   assert.deepEqual(
-    stackNow.stack.members.slice(0, 2).map((m) => m.speakerId),
+    run.stackNow.stack.members.slice(0, 2).map((m) => m.speakerId),
     ["doc1", "doc1"],
   );
-  assert.equal(stackNow.speakers.find((s) => s.id === "doc1")?.name, "Edited box");
+  assert.equal(run.stackNow.speakers.find((s) => s.id === "doc1")?.name, "Edited box");
+  // nothing saved: the own design keeps its id
+  assert.deepEqual(run.detached, []);
+});
+
+test("stack speaker edit: signed in, the own design with the save's id is detached", async () => {
+  const design = sharedStack("doc1");
+  const held = design.speakers[0];
+  const { store, writes } = memoryStore([{ id: "doc1", name: held.name }]);
+  const run = runEdit(design, held, { ...held, name: "Edited box" }, { store }, [() => {}]);
+  run.notices[0]?.onSave();
+  await settle();
+  assert.deepEqual(writes, ["overwrite doc1"]);
+  assert.deepEqual(run.detached, ["doc1"]);
+  assert.deepEqual(run.pages, ["stack"]);
+});
+
+test("stack speaker edit: a Stack without the speaker is not changed, and the Stack page says so", async () => {
+  const design = preset();
+  const gone = { ...templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay), id: "gone" };
+  const { store, writes } = memoryStore();
+  const run = runEdit(design, gone, gone, { store }, [() => {}]);
+  run.notices[0]?.onSave();
+  await settle();
+  // saved to the library, but the Stack stays as it was
+  assert.deepEqual(writes, ["create new1"]);
+  assert.equal(run.replaces, 0);
+  assert.equal(run.stackNow, design);
+  assert.deepEqual(run.flashes, [STACK_EDIT_TEXT.notInStack]);
+  assert.deepEqual(run.pages, ["stack"]);
+});
+
+test("stack speaker edit: another stack on the Stack page ends the edit; a save that resolves after goes nowhere", async () => {
+  const design = sharedStack("doc1");
+  const held = design.speakers[0];
+  let save: (() => void) | undefined;
+  const run = runEdit(design, held, held, null, [
+    (hook, rerender) => {
+      save = hook.notice?.onSave;
+      rerender(1);
+    },
+    // the round's render ends the edit and renders again
+    () => {},
+    (hook) => assert.equal(hook.notice, null),
+  ]);
+  assert.equal(run.closed, 1);
+  save?.();
+  await settle();
+  assert.deepEqual(run.pages, []);
+  assert.equal(run.replaces, 0);
+});
+
+test("stack speaker edit: the edit has its own slot, so a link's speaker is back after it", () => {
+  const linked = { ...templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay), name: "Linked box" };
+  const stackSpeaker = { ...preset().speakers[0], name: "Stack's box" };
+  const seen: string[] = [];
+  runSteps(useSpeakerPage, [
+    (page) => page.sharedView.open(linked),
+    (page) => {
+      seen.push(page.spec.name);
+      page.stackEditView.open(stackSpeaker, { stackName: "My Stack", speakerId: stackSpeaker.id });
+    },
+    (page) => {
+      seen.push(page.spec.name);
+      page.setSpec({ ...page.spec, name: "Stack's box, edited" });
+    },
+    (page) => {
+      seen.push(page.spec.name);
+      page.stackEditView.close();
+    },
+    (page) => {
+      seen.push(page.spec.name);
+      assert.equal(page.sharedView.active, true);
+      assert.equal(page.stackEditView.edit, null);
+    },
+  ]);
+  assert.deepEqual(seen, ["Linked box", "Stack's box", "Stack's box, edited", "Linked box"]);
+});
+
+test("stack speaker edit: detaching gives the own design the draft id only where it has the save's id", () => {
+  const ids: string[] = [];
+  runSteps(useSpeakerPage, [
+    (page) => page.setOpenId("doc1"),
+    (page) => page.stackEditView.detachOwn("doc2"),
+    (page) => {
+      ids.push(page.spec.id);
+      page.stackEditView.detachOwn("doc1");
+    },
+    (page) => ids.push(page.spec.id),
+  ]);
+  assert.deepEqual(ids, ["doc1", DRAFT_SPEAKER_ID]);
+});
+
+test("stack speaker edit: a whole replace of the Stack starts its optimizer over", () => {
+  const rounds: number[] = [];
+  runSteps(useStack, [
+    (stack) => {
+      rounds.push(stack.round);
+      stack.setDesign((d) => d);
+    },
+    (stack) => rounds.push(stack.round),
+  ]);
+  assert.deepEqual(rounds, [0, 1]);
 });

@@ -55,7 +55,6 @@ export function MemberSettings({
         <div className="flex flex-none gap-2">
           <Button
             size="xs"
-            title={STACK_EDIT_TEXT.editTip}
             aria-label={STACK_EDIT_TEXT.editLabel(names[index])}
             onClick={onEditSpeaker}
             disabled={!onEditSpeaker}

@@ -2,8 +2,9 @@
 // `vp test`. It uses the stand-in database of tests/save-row-check.mjs (tests/stand-in-db.mjs).
 //   node tests/stack-edit-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary).
-// Fails on: Edit, Save & return to Stack, or Cancel not doing what the notice says; the Speaker page's own design not
-// back after each; a reload that loses the edit; page errors; and horizontal page scroll.
+// Fails on: Edit, Save & return to Stack, or Cancel not doing what the notice says; the Speaker page's own design (or
+// a link's speaker open before) not back after each; a reload that loses the edit; page errors; and horizontal page
+// scroll.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
@@ -11,6 +12,8 @@ import { PAGE_DRAFT_KEYS, DRAFT_WRITE_MS } from "../src/constants/pageDrafts.ts"
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { STACK_START_NAMES } from "../src/constants/stackPresets.ts";
 import { STACK_EDIT_TEXT } from "../src/constants/stackSpeakerEdit.ts";
+import { SHARE_TEXT } from "../src/constants/share.ts";
+import { PROJECT_NAMES } from "../src/constants/pages.ts";
 import { DB_KEY, installDb } from "./stand-in-db.mjs";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
@@ -40,6 +43,13 @@ for (const size of WIDTHS) {
     hasTouch: size.hasTouch,
   });
   await ctx.addInitScript(installDb, DB_KEY);
+  // the link Share copies, kept on the page: the check reads it there, not from the clipboard
+  await ctx.addInitScript(() => {
+    const keep = (text) => void (window.copiedLink = text);
+    navigator.clipboard.writeText = async (text) => keep(text);
+    navigator.clipboard.write = async ([item]) =>
+      keep(await (await item.getType("text/plain")).text());
+  });
   const p = await ctx.newPage();
   const errs = [];
   p.on("pageerror", (e) => errs.push(e.message));
@@ -112,6 +122,10 @@ for (const size of WIDTHS) {
   const edit = async (k, name) => {
     const target = p.getByRole("button", { name: STACK_EDIT_TEXT.editLabel(`${k + 1}. ${name}`) });
     await reveal(target);
+    check(
+      (await target.textContent())?.trim() === STACK_EDIT_TEXT.edit,
+      `the Edit button does not say "${STACK_EDIT_TEXT.edit}"`,
+    );
     await target.click();
     await p.waitForTimeout(400);
     check(
@@ -224,6 +238,28 @@ for (const size of WIDTHS) {
       "Cancel changed the save",
     );
     await ownBack("after Cancel");
+
+    // A link's speaker open on the Speaker page: an edit leaves it as it is, and Cancel brings it back
+    await goTo("#speaker");
+    await closeSheet();
+    await button(SHARE_TEXT.button).click();
+    const link = await p
+      .waitForFunction(() => window.copiedLink, null, { timeout: 5000 })
+      .then((h) => h.jsonValue());
+    await goTo(link.slice(link.indexOf("#")));
+    const linked = p.getByText(SHARE_TEXT.shared(PROJECT_NAMES.speaker, OWN_NAME));
+    await linked.waitFor({ timeout: 10000 });
+    await goTo("#stack");
+    await edit(0, presetName);
+    await closeSheet();
+    check(!(await linked.isVisible()), "the link's notice shows during the edit");
+    await button(STACK_EDIT_TEXT.cancel).click();
+    await p.waitForTimeout(400);
+    await goTo("#speaker");
+    await closeSheet();
+    check(await linked.isVisible(), "the link's speaker is not back after Cancel");
+    await button(SHARE_TEXT.close).click();
+    await ownBack("after the link's speaker closed");
     await noScroll("at the end");
   } catch (e) {
     fail(`stopped: ${e.message.split("\n")[0]}`);

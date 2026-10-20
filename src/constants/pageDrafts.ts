@@ -19,8 +19,8 @@ export const PAGE_SHARED_KEYS = {
 } as const;
 
 /**
- * The session storage key of the Speaker page's edit for a Stack: which Stack's speaker shows in its shared view (the
- * design itself is under `PAGE_SHARED_KEYS.speaker`), so a reload keeps the edit.
+ * The session storage key of the Speaker page's edit for a Stack: the Stack's speaker as edited, and which Stack it is
+ * for, so a reload keeps the edit. Apart from the shared view's key, so an edit leaves a link's speaker as it is.
  */
 export const STACK_EDIT_KEY = "speaker.stackEdit";
 

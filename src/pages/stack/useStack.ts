@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState, type SetStateAction } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { stackLimits, stackResponse } from "../../lib/speaker/stackResponse";
 import { stackTotals } from "../../lib/speaker/speakerTotals";
@@ -77,7 +77,7 @@ export function useStack() {
     // called from an event, after `optimizer` below is set
     optimizer.clearResults();
   };
-  const replaceDesign = (next: StackDesign) => {
+  const replaceDesign = (next: SetStateAction<StackDesign>) => {
     setDesign(next);
     restart();
   };
@@ -90,6 +90,10 @@ export function useStack() {
     },
     close: () => {
       sharedDraft.close();
+      restart();
+    },
+    keep: (copy) => {
+      sharedDraft.keep(copy);
       restart();
     },
   };
@@ -133,8 +137,8 @@ export function useStack() {
     sharedView,
     /** replaces the whole stack (a start, a saved stack opened): the optimizer starts over */
     setDesign: replaceDesign,
-    /** one edit of the stack shown (its members and speakers), as the settings make */
-    editDesign: setDesign,
+    /** how many times the whole stack was replaced (`setDesign`, a link's stack shown or closed) */
+    round,
     optimizer,
     response,
     limits,

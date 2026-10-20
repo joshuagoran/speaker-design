@@ -33,7 +33,7 @@ A push to `main` deploys the site to GitHub Pages. `build/serve.sh` builds the p
 
 On GitHub Pages, users sign in with Google. Then they can save speakers, stacks, and spaces in Firestore. The dev server and local builds cannot save. The page tells the user.
 
-On the Stack page, Edit opens a box's speaker on the Speaker page. The user's own design there stays as it was. "Save & return to Stack" saves the speaker and gives it to every box of the Stack that uses it. Signed out, only the Stack changes.
+On the Stack page, "Edit Speaker" opens a box's speaker on the Speaker page. The user's own design there stays as it was. "Save & return to Stack" saves the speaker and gives it to every box of the Stack that uses it. Signed out, only the Stack changes.
 
 ## Sharing
 
