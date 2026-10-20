@@ -7,9 +7,13 @@ interface Props {
   className?: string;
 }
 
-/** The tooltip's widest, px (`max-w-[18rem]`), and its gap from the window's edge, px. */
+/** The tooltip's widest, px (`max-w-[18rem]`), and a tip's gap from the window's edge, px. */
 const TIP_W = 288;
-const EDGE = 8;
+export const TIP_EDGE_PX = 8;
+
+/** A tip's box, drawn above the whole page: the term tooltips' and the icon buttons' names. */
+export const TIP_CLASS =
+  "fixed z-50 w-max max-w-[18rem] rounded bg-stone-900 text-stone-50 text-xs font-normal normal-case tracking-normal leading-snug px-2 py-1.5 text-left pointer-events-none";
 
 /**
  * Term with a tooltip. Opens on hover, keyboard focus or tap; Esc or a tap elsewhere closes it. The tip is drawn above
@@ -27,7 +31,7 @@ export function Tooltip({ tip, children, className = "" }: Props) {
       const r = ref.current?.getBoundingClientRect();
       if (!r) return;
       setAt({
-        left: Math.max(EDGE, Math.min(r.left, window.innerWidth - TIP_W - EDGE)),
+        left: Math.max(TIP_EDGE_PX, Math.min(r.left, window.innerWidth - TIP_W - TIP_EDGE_PX)),
         top: r.bottom + 4,
       });
     };
@@ -77,12 +81,7 @@ export function Tooltip({ tip, children, className = "" }: Props) {
         at &&
         typeof document !== "undefined" &&
         createPortal(
-          <span
-            role="tooltip"
-            id={id}
-            style={{ left: at.left, top: at.top }}
-            className="fixed z-50 w-max max-w-[18rem] rounded bg-stone-900 text-stone-50 text-xs font-normal normal-case tracking-normal leading-snug px-2 py-1.5 text-left pointer-events-none"
-          >
+          <span role="tooltip" id={id} style={{ left: at.left, top: at.top }} className={TIP_CLASS}>
             {tip}
           </span>,
           document.body,

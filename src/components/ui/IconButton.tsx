@@ -1,4 +1,7 @@
+import { useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { HOVER_TRANSITION, PRESSED_CLASSES } from "./buttonStyles";
+import { TIP_CLASS, TIP_EDGE_PX } from "./Tooltip";
 
 interface Props {
   /** what it does, as screen readers hear it and its tooltip shows it */
@@ -12,18 +15,51 @@ interface Props {
   children: React.ReactNode;
 }
 
-/** A square icon-only button, for the controls laid over a view (the 3D view's full screen and cutaway). */
+/**
+ * A square icon-only button, for the controls laid over a view (the 3D view's full screen and cutaway). Its name shows
+ * in a tip under it while a mouse is over it or the keyboard puts focus on it.
+ */
 export function IconButton({ label, onClick, pressed, size = "md", children }: Props) {
+  const [tip, setTip] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const box = useRef<HTMLSpanElement>(null);
+  // the tip centered under the button, kept inside the window
+  useLayoutEffect(() => {
+    const b = button.current?.getBoundingClientRect();
+    const t = box.current;
+    if (!tip || !b || !t) return;
+    const w = t.offsetWidth;
+    const left = Math.max(
+      TIP_EDGE_PX,
+      Math.min(b.left + b.width / 2 - w / 2, window.innerWidth - w - TIP_EDGE_PX),
+    );
+    t.style.left = `${left}px`;
+    t.style.top = `${b.bottom + 4}px`;
+    t.style.visibility = "visible";
+  }, [tip, label]);
   return (
     <button
+      ref={button}
       type="button"
       onClick={onClick}
       aria-label={label}
       aria-pressed={pressed}
-      title={label}
+      // a mouse only: after a tap the tip would stay open
+      onPointerEnter={(e) => setTip(e.pointerType === "mouse")}
+      onPointerLeave={() => setTip(false)}
+      onFocus={(e) => setTip(e.currentTarget.matches(":focus-visible"))}
+      onBlur={() => setTip(false)}
       className={`${size === "sm" ? "w-[30px] h-[30px] shrink-0" : "w-9 h-9"} inline-flex items-center justify-center rounded border ${HOVER_TRANSITION} ${pressed ? PRESSED_CLASSES : "border-stone-300 bg-panel/90 hover:border-stone-500"}`}
     >
       {children}
+      {tip &&
+        createPortal(
+          // the button's aria-label names it already
+          <span ref={box} aria-hidden="true" className={TIP_CLASS} style={{ visibility: "hidden" }}>
+            {label}
+          </span>,
+          document.body,
+        )}
     </button>
   );
 }
