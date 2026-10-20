@@ -2173,7 +2173,7 @@ export interface SpaceVenue {
   balance: AutoBalanceMode;
 }
 
-/** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
+/** Stacks and speakers placed in a real space, with the hardware that drives them. */
 export interface SpaceSpec {
   id: string;
   name: string;

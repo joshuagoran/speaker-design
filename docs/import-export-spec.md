@@ -1,8 +1,7 @@
 # Import and export: spec
 
 Owner request, Oct 2026. This spec adds files to SpeakNow: export a design to a file, and import a file as a design.
-It builds on the Speaker / Stack / Space layers in [speaker-designer-plan.md](speaker-designer-plan.md). Nothing here
-is built yet.
+It builds on the Speaker, Stack, and Space pages. Nothing here is built yet.
 
 ## Goals
 

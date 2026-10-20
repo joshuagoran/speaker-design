@@ -1,5 +1,4 @@
-// The Stack optimizer (src/lib/speaker/optimize/optimizeStack; docs/speaker-designer-plan.md, "Design: the Stack
-// optimizer"). Each card is checked on its own design, run again through the page's code: its numbers, its label against
+// The Stack optimizer (src/lib/speaker/optimize/optimizeStack). Each card is checked on its own design, run again through the page's code: its numbers, its label against
 // your stack, the locks, the limits and the field steps. Then the near miss, determinism, a runtime bound, and parity
 // with the PA optimizer on the four PA presets.
 import { test } from "vite-plus/test";

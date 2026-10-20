@@ -98,7 +98,7 @@ const relClass = (rel: number) =>
   rel >= -3 ? "text-green-700" : rel >= COVERAGE_EDGE_DB ? "text-orange-700" : "text-red-700";
 
 /**
- * The Space page (docs/speaker-designer-plan.md, L4b): stacks and speakers placed in a room, each at its spot, lift and
+ * The Space page: stacks and speakers placed in a room, each at its spot, lift and
  * aim, a mirrored pair as one placement; their amp power and alignment; the coverage across the floor on the fixed
  * scale, the levels at the reference, a side view of the heights and tilts, and the response at the listener.
  */

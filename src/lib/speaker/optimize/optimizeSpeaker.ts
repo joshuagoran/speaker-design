@@ -1,4 +1,4 @@
-// The Speaker optimizer (docs/speaker-designer-plan.md, "Design: the Speaker optimizer"): any speaker spec, the goals
+// The Speaker optimizer: any speaker spec, the goals
 // in tap order, a target level at 1 m, a budget, a weight and size per axis, and locks in; up to three cards and a near
 // miss out. It changes only the unlocked parts and sizes: drivers of the same kind and size, chamber sizes, vents,
 // crossovers in the box, amps. Never the chamber kind, the band count or the input range.

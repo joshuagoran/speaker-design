@@ -265,7 +265,7 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
 type StartBox = Pick<HifiDesignState, "boxDims" | "portSpec">;
 
 /**
- * The Speaker page's DJ booth monitor templates (docs/speaker-designer-plan.md P4 and the owner decisions): a pair, one on
+ * The Speaker page's DJ booth monitor templates: a pair, one on
  * each side of the DJ, hung or on pedestals (not floor wedges), 0.5–1.5 m away, 90–100° wide, crossed to the subs at
  * 70 Hz LR24 (60–80 Hz). Two options:
  * - a coaxial in a small vented box: the Celestion FTX1025 (10″, 100°) in the default fill design's box and port with ½″ walls,

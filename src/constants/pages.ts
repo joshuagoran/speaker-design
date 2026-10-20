@@ -15,11 +15,11 @@ export type AppPage = keyof typeof PAGE_HASHES;
 
 /** The projects the header switches between, by id, and the name each button shows. */
 export const PROJECT_NAMES = {
-  /** the Speaker page: any single box (docs/speaker-designer-plan.md, L3) */
+  /** the Speaker page: any single box */
   speaker: "Speaker",
-  /** speakers in a fixed relationship (docs/speaker-designer-plan.md, L4a) */
+  /** speakers in a fixed relationship */
   stack: "Stack",
-  /** stacks and speakers placed in a room (docs/speaker-designer-plan.md, L4b) */
+  /** stacks and speakers placed in a room */
   space: "Space",
 } as const;
 export type ProjectId = keyof typeof PROJECT_NAMES;

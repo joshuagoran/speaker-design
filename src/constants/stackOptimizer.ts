@@ -1,5 +1,4 @@
-// The Stack optimizer's ids and words (lib/speaker/optimize/optimizeStack; docs/speaker-designer-plan.md, "Design: the
-// Stack optimizer"). The goals, the alternatives, the fixes and the "nothing beats" notices are the Speaker optimizer's
+// The Stack optimizer's ids and words (lib/speaker/optimize/optimizeStack). The goals, the alternatives, the fixes and the "nothing beats" notices are the Speaker optimizer's
 // (constants/speakerOptimizer); these are the words that name a stack, its boxes or its height. Code compares the ids,
 // never the words.
 import {
