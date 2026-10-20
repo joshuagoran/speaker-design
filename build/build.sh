@@ -16,5 +16,7 @@ if [ "$1" = "pages" ]; then
   node build/inline.mjs dist/build-pages dist/site/index.html dist/site/notes/index.html
   cp data/configs-seed.json dist/site/
   cp data/configs-seed.json dist/site/notes/
+  # the link preview card's image (index.html's og:image)
+  cp build/og-image.png dist/site/
   touch dist/site/.nojekyll
 fi
