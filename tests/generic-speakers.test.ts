@@ -12,7 +12,6 @@ import {
   baffleOpenings,
   driverFrame,
   driverSpots,
-  hornFlare,
   onTop,
   speakerLayout,
   type EdgeBox,
@@ -55,8 +54,7 @@ interface Targets {
  * - dual 18″ sub: 301 L, −3 dB at 34.0 Hz, music 131.5 dB (137.5 peak);
  * - 12″ top: 63 L, −6 dB at 49.3 Hz to 20 kHz, music 124.8 dB (130.8 peak), 80° × 50°;
  * - 15″ top: 84 L, −6 dB at 45.1 Hz to 20 kHz, music 125.8 dB (131.8 peak), 80° × 60°;
- * - 18″ horn sub: 382 L outside, −6 dB from 45.5 to 104 Hz, music 131.5 dB (137.5 peak);
- * - 12″ horn top: −6 dB at 153 Hz to 20 kHz, music 131.1 dB (137.1 peak), 60° × 40°.
+ * - 18″ horn sub: 382 L outside, −6 dB from 45.5 to 104 Hz, music 131.5 dB (137.5 peak).
  */
 const TARGETS = {
   [SPEAKER_TEMPLATE.genericSub18]: {
@@ -88,12 +86,6 @@ const TARGETS = {
     low: { 6: [45, 45] },
     high6: [120, 120],
     peakDb: [136, 138],
-  },
-  [SPEAKER_TEMPLATE.genericHornTop12]: {
-    low: { 6: [150, 150] },
-    high6: [20000, 20000],
-    peakDb: [135, 135],
-    coverage: { h: [60, 60], v: [40, 40] },
   },
 } as const satisfies Partial<Record<keyof typeof SPEAKER_TEMPLATE, Targets>>;
 
@@ -205,12 +197,4 @@ test("generic speakers: the horn sub's horn is the engine's folded front-loaded 
   assert.equal(horn.path, HORN_PATH.folded);
   assert.equal(horn.drive.kind, HORN_DRIVE.front);
   assert.ok(isDrawn(horn.fold), "the fold is drawn");
-});
-
-test("generic speakers: the horn top's mid horn fits its box, its mouth unclipped", () => {
-  const spec = templateSpeaker(SPEAKER_TEMPLATE.genericHornTop12);
-  const [placed] = speakerLayout(spec.cabinet).chambers;
-  const flare = hornFlare(spec.cabinet, placed);
-  assert.ok(flare && !flare.mouthClipped, "the mouth fits");
-  assert.ok(flare.path.fits, "the path fits the box");
 });

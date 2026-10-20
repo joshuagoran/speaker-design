@@ -52,7 +52,6 @@ import type {
   SubDriver,
   FoldBoard,
   GenericTop,
-  GenericTopBands,
   HornDrive,
   HornFold,
   HornGoals,
@@ -528,34 +527,4 @@ export const GENERIC_HORN_SUB = {
   goals: HornGoals;
   subsonic: BandFilter;
   ampW: number;
-};
-
-/**
- * The generic 12″ horn top: an approximation of the common commercial horn-loaded 12″ tops, not one product. A 12″ on
- * a straight front-loaded mid horn (sealed rear chamber) and, in its own section above, the tops' compression driver
- * (`GENERIC_TOPS.cd`) on a 60° × 40° horn.
- */
-export const GENERIC_HORN_TOP = {
-  mid: byIdOrThrow(MID_OPTIONS, "bc12ndl76", CATALOG_TABLE_NAMES.mids),
-  horn: byIdOrThrow(HORN_OPTIONS, "xr1464c", CATALOG_TABLE_NAMES.horns),
-  /** the mid horn's box, in: its width and depth, and its height (the HF section's above it) */
-  dims: { w: 22, h: 20, d: 29 },
-  hfHeightIn: 13,
-  /** the mid horn: the compression ratio, its length, cm, and the rear chamber's net air, L */
-  compression: 2,
-  flareCm: 50,
-  rearLiters: 15,
-  highpass: { hz: 120, type: "LR24" },
-  crossoverHz: 1200,
-  ampW: 200,
-  hfAmpW: 150,
-  hfLevelDb: -6,
-  // the mid horn's driver fills the lowest chamber's back: no place for the input dish
-  hardware: { handles: DEFAULT_PA.hardware.mid, inputDish: false },
-} satisfies GenericTopBands & {
-  mid: MidDriver;
-  horn: Horn;
-  dims: SpeakerChamber["dims"];
-  hardware: GenericTop["hardware"];
-  [figure: string]: unknown;
 };

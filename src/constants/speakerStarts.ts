@@ -24,7 +24,6 @@ export const SPEAKER_TEMPLATE = {
   genericTop12: "genericTop12",
   genericTop15: "genericTop15",
   genericHornSub18: "genericHornSub18",
-  genericHornTop12: "genericHornTop12",
 } as const;
 export type SpeakerTemplate = (typeof SPEAKER_TEMPLATE)[keyof typeof SPEAKER_TEMPLATE];
 
@@ -48,7 +47,6 @@ export const SPEAKER_START_NAMES = {
   genericTop12: 'Generic 12" Top',
   genericTop15: 'Generic 15" Top',
   genericHornSub18: 'Generic 18" Horn Sub',
-  genericHornTop12: 'Generic 12" Horn Top',
 } as const satisfies Record<SpeakerTemplate, string>;
 
 /** The name a new design takes, by start (a saved speaker keeps its own). */
@@ -71,7 +69,6 @@ export const SPEAKER_START_SPEAKER_NAMES = {
   genericTop12: SPEAKER_START_NAMES.genericTop12,
   genericTop15: SPEAKER_START_NAMES.genericTop15,
   genericHornSub18: SPEAKER_START_NAMES.genericHornSub18,
-  genericHornTop12: SPEAKER_START_NAMES.genericHornTop12,
 } as const satisfies Record<SpeakerTemplate, string>;
 
 /** The groups "New from…" lists the starts under: the templates. */

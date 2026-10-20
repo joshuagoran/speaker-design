@@ -2043,22 +2043,21 @@ export type GenericVentedBox = Pick<SpeakerChamber, "dims"> & {
   slot: Required<Pick<SpeakerSlotPort, "h" | "len" | "fins">>;
 };
 
-/** A generic full-range top's bands: its crossover to the horn, Hz (LR24), the cone's protective high-pass, the amps. */
-export interface GenericTopBands {
-  crossoverHz: number;
-  highpass: BandFilter;
-  ampW: SpeakerBand["ampW"];
-  hfAmpW: SpeakerBand["ampW"];
-  hfLevelDb: SpeakerBand["levelDb"];
-}
-
-/** One generic top (lib/defaults `GENERIC_TOPS`): its cone and horn, its box, its bands. */
-export interface GenericTop extends GenericTopBands {
+/**
+ * One generic top (lib/defaults `GENERIC_TOPS`): its cone and horn, its box, and its bands: the crossover to the horn,
+ * Hz (LR24), the cone's protective high-pass, the amps.
+ */
+export interface GenericTop {
   mid: MidDriver;
   horn: Horn;
   box: GenericVentedBox;
   /** its handles and input dish */
   hardware: Pick<SpeakerCabinet, "handles" | "inputDish">;
+  crossoverHz: number;
+  highpass: BandFilter;
+  ampW: SpeakerBand["ampW"];
+  hfAmpW: SpeakerBand["ampW"];
+  hfLevelDb: SpeakerBand["levelDb"];
 }
 
 /** A spec's identity, as a read adapter takes it. */
