@@ -265,7 +265,7 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
 type StartBox = Pick<HifiDesignState, "boxDims" | "portSpec">;
 
 /**
- * The Speaker page's DJ booth monitor templates (docs/speaker-designer-plan.md P4 and the owner decisions): a pair, one on
+ * The Speaker page's DJ booth monitor templates: a pair, one on
  * each side of the DJ, hung or on pedestals (not floor wedges), 0.5–1.5 m away, 90–100° wide, crossed to the subs at
  * 70 Hz LR24 (60–80 Hz). Two options:
  * - a coaxial in a small vented box: the Celestion FTX1025 (10″, 100°) in the default fill design's box and port with ½″ walls,
@@ -301,7 +301,7 @@ export const DEFAULT_MONITOR = {
 };
 
 /**
- * The PA v2 sub bin (docs/pa-v2-plan.md, the lead option and its mock-up docs/pa-v2-boxes.svg): 18″ subs stacked in one
+ * The PA v2 sub bin: 18″ subs stacked in one
  * throat, front-loaded on a straight-sided 1-D flare (the box's own top and bottom, two flat side walls that angle out:
  * a parabolic flare, its area growing linearly), a vented rear chamber with one slot on each front side, folded once
  * along the back wall, tuned to ~35 Hz with a 30 Hz BW24 subsonic, on the PA's 800 W. The sizes are each driver's
@@ -322,7 +322,7 @@ export const PA_V2_SUB_BIN = {
   /**
    * the flare: its compression ratio (the cones' area over the throat's: the side walls' back edges cover the cones'
    * outer parts, lib/speaker/hornThroat; the owner's pick from the sweep of 1 to 3 in quarter steps, for the flatter
-   * band, docs/pa-v2-plan.md), and its length, cm
+   * band), and its length, cm
    */
   compression: 2,
   flareCm: 50,
@@ -417,7 +417,7 @@ export const TH18_XOC1 = {
 };
 
 /**
- * The PA v2 mid box (docs/pa-v2-plan.md, the lead option and its mock-up; the Hornresp case tests/hornresp/mid-pair):
+ * The PA v2 mid box (the Hornresp case tests/hornresp/mid-pair):
  * two 10″ in one throat, ~280 mm apart, the side walls' back edges over the cones' outer parts (the front chamber
  * follows them), an exponential 1-D flare (the box's own top and bottom, two curved side walls), a vented rear chamber
  * (~34 L, the wedges sealed) with a straight slot on each front side, tuned to ~95 Hz, on 450 W per driver. It crosses
@@ -440,7 +440,7 @@ export const PA_V2_MID_BOX = {
   coneSpacingMm: 280,
   /**
    * the flare's compression ratio (the cones' area over the throat's: the side walls' back edges cover the cones' outer
-   * parts, lib/speaker/hornThroat; the best of 1 to 3 in quarter steps, docs/pa-v2-plan.md) and its length, cm; the
+   * parts, lib/speaker/hornThroat; the best of 1 to 3 in quarter steps) and its length, cm; the
    * mouth is the face between the side slots at the box's inside height (~500 × 560 mm, 2800 cm², in the mock-up; the
    * template's eighth-inch box gives ~2750 cm²)
    */

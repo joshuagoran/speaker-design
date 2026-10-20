@@ -38,7 +38,6 @@ import {
   savedBraceStyle,
 } from "../src/constants/bracing";
 import { braceNoteLines } from "../src/lib/build/bracingNotes";
-import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs";
 import { formatHz } from "../src/lib/format";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
@@ -46,6 +45,9 @@ import { close, vent } from "./helpers";
 import { configs } from "./pa-configs";
 import { paDesign } from "./speaker-cases";
 import { paDesignWith, paMidBuild, paSubBox, paSubBuild } from "./pa-build";
+
+/** The box names the brace notes are worded with. */
+const BOX_NAMES = { sub: "Sub", mid: "Mid" } as const;
 import type {
   BoxAxis,
   BoxBracing,
@@ -242,23 +244,19 @@ test("the notes under the Bracing setting name the cabinet and each panel left u
     sub,
     "ribs",
   );
-  const notes = braceNoteLines(PA_SETTINGS_TABS.sub, b);
+  const notes = braceNoteLines(BOX_NAMES.sub, b);
   const under = braceShortfalls(b);
   assert.ok(under.some((p) => p.id === "baffle"));
   assert.deepStrictEqual(
     notes,
     under.map((p) =>
-      braceUnderNote(
-        bracePanelName(PA_SETTINGS_TABS.sub, p.id),
-        formatHz(p.hz),
-        formatHz(b.targetHz),
-      ),
+      braceUnderNote(bracePanelName(BOX_NAMES.sub, p.id), formatHz(p.hz), formatHz(b.targetHz)),
     ),
   );
   // a box that needs nothing has no note
   const mid = paMidBuild(paDesignWith({ layout: "stack", wall: 0.75, braceStyle: "ribs" }), "none")
     .build.bracing;
-  assert.deepStrictEqual(braceNoteLines(PA_SETTINGS_TABS.mid, mid), []);
+  assert.deepStrictEqual(braceNoteLines(BOX_NAMES.mid, mid), []);
 });
 
 test("braceShortfalls: exactly the panels under the target, with their first mode", () => {

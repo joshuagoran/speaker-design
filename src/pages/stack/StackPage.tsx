@@ -98,7 +98,7 @@ const SUM_LINE_PX = 4;
 const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
 
 /**
- * The Stack page: speakers in a fixed relationship (docs/speaker-designer-plan.md, L4a). Members from the speaker
+ * The Stack page: speakers in a fixed relationship. Members from the speaker
  * library or a preset, where each stands, its crossover, level and delay; the stack's response and maximum
  * output at its listening point on fixed axes, with each member's curve, and the stacks' library.
  */

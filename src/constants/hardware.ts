@@ -41,8 +41,6 @@ export const HARDWARE_OBSTACLE_NAMES = {
 } as const;
 
 /** The section's name wherever the handles and dishes are listed (Details, Notes). */
-export const HARDWARE_SECTION_TITLE = "Handles and input dishes";
-
 /** The two ways the handles move on their sides, each a handle offset (BoxHandles' `upIn` and `backIn`). */
 export const HANDLE_AXIS_NAMES = {
   upIn: "Height",

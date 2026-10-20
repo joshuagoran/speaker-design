@@ -405,11 +405,10 @@ const KINDS: readonly ShareKind[] = Object.values(SHARE_KIND);
 
 test("page at an address with a share link: each kind's page", () => {
   for (const kind of KINDS) {
-    assert.equal(pageAt("/", `${PAGE_HASHES[kind]}&s=1.abc`), kind);
-    assert.equal(pageAt("/speaker-design/", `${PAGE_HASHES[kind]}&s=1.abc`), kind);
-    assert.equal(pageAt("/", `${PAGE_HASHES[kind]}&x&s=1.abc`), kind);
+    assert.equal(pageAt(`${PAGE_HASHES[kind]}&s=1.abc`), kind);
+    assert.equal(pageAt(`${PAGE_HASHES[kind]}&x&s=1.abc`), kind);
     // an address made by `linkFragment` opens its kind's page
-    assert.equal(pageAt("/", linkFragment(kind, "abc")), kind);
+    assert.equal(pageAt(linkFragment(kind, "abc")), kind);
   }
-  assert.equal(pageAt("/", "#unknown&s=1.abc"), "speaker");
+  assert.equal(pageAt("#unknown&s=1.abc"), "speaker");
 });

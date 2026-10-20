@@ -1,4 +1,4 @@
-// The Stack optimizer (docs/speaker-designer-plan.md, "Design: the Stack optimizer"; #167): a stack design, the goals in
+// The Stack optimizer (#167): a stack design, the goals in
 // tap order, a target level at 1 m, a budget, a weight per box, a height and locks in; up to three cards and a near miss
 // out. It runs the Speaker optimizer's search on each speaker (./optimizeSpeaker searchSpeaker) and changes what is
 // between the boxes: the crossovers, the members' levels (each keeps its passband, so the balance stays) and the set

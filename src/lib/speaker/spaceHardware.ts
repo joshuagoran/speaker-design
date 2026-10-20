@@ -1,4 +1,4 @@
-// The amp power a space's speakers have (docs/speaker-designer-plan.md, L4b): one figure per band, or per passive network,
+// The amp power a space's speakers have: one figure per band, or per passive network,
 // kept in the space's own copy of each speaker (`SpeakerBand.ampW`), which the model reads. Pure.
 import type { BandId, SpaceDesign, SpeakerSpec } from "../../types";
 import { expandPlacements, placementStack } from "./spaceLayout";

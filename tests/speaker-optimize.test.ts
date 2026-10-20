@@ -1,4 +1,4 @@
-// The Speaker optimizer (src/lib/speaker/optimize; docs/speaker-designer-plan.md, "Design: the Speaker optimizer").
+// The Speaker optimizer (src/lib/speaker/optimize).
 // Each card is checked on its own design, run again through the page's code: its numbers, its label against your
 // design, the locks, the limits and the field steps. Then the near miss, determinism, a runtime bound, and parity with
 // the PA and Hi-fi optimizers on their templates.

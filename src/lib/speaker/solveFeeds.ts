@@ -1,6 +1,5 @@
-// The space's feed solver: every Auto placement delay and every Auto fill level, worked out from the layout alone
-// (docs/speaker-designer-plan.md, L4b). Pure. It reads no value it set before, so the result never depends on the order
-// of edits, and running it again changes nothing.
+// The space's feed solver: every Auto placement delay and every Auto fill level, worked out from the layout alone.
+// Pure. It reads no value it set before, so the result never depends on the order of edits, and running it again changes nothing.
 //
 // Mains (every placement that is not a fill) line up at the venue's alignment point: each main's first arrival there
 // (each driver's path at the speed of sound, with its member's delay) is found, and the latest one sets the time. An
