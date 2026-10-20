@@ -24,7 +24,8 @@ Vite+ docs: `node_modules/vite-plus/docs`.
   ring, and the cabinet finishes. `tests/contrast.test.ts` checks contrast.
 - Writing: US spelling (a key that saved data or links carry keeps its spelling, with a comment). Oxford comma.
   Louder/quieter for dB, higher/lower for Hz. One short sentence per line on a page; more goes in a Tooltip or the
-  Details fold.
+  Details fold. Speaker, Stack, and Space start with a capital when they mean the design item or the page; the plain
+  words (a speaker on a stand, the space of a room) stay lower case.
 - Position labels name the sign's side (`POSITION_LABELS`); the tooltip says where it is measured from. Field labels
   carry no unit (inches); readouts do.
 - Font Inconsolata. Corners 4 px (6 px on large boxes).

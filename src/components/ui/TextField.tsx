@@ -15,7 +15,7 @@ interface Props {
   className?: string;
 }
 
-/** A one-line text box: a labeled field, or a bare box in a row of controls (a save's or rename's name). */
+/** A one-line text box: a labeled field, or a bare box in a row of controls (a save's name). */
 export function TextField({
   value,
   onChange,

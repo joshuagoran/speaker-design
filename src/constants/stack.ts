@@ -30,7 +30,7 @@ export const STACK_TEXT = {
   gaps: "The response leaves out part of a box's speaker. Open that speaker on the Speaker page to see which part.",
   fullRange: "full range",
   /** the empty start in "New from…" */
-  empty: "Empty stack",
+  empty: "Empty Stack",
   notes: "Notes",
   librarySpeaker: "Saved speaker",
   addMember: "Add box",
@@ -62,9 +62,9 @@ export const STACK_TEXT = {
 /** The saving row's nouns on the Stack page (`SaveRowWords`, constants/saveRow). */
 export const STACK_SAVE_WORDS = {
   namePlaceholder: "Stack name",
-  savedList: "Saved stacks",
-  pick: (n: number) => `Saved stacks (${n})`,
-  noSaved: "No saved stacks yet",
+  savedList: "Saved Stacks",
+  pick: (n: number) => `Saved Stacks (${n})`,
+  noSaved: "No saved Stacks yet",
   newFromTip:
-    "Starts a new stack, empty or from a preset. It replaces the current design. A PA start sets each band's level to the More bass band balance.",
+    "Starts a new Stack, empty or from a preset. It replaces the current design. A PA start sets each band's level to the More bass band balance.",
 } as const satisfies SaveRowWords;

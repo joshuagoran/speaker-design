@@ -9,11 +9,7 @@ export const SAVE_ROW_TEXT = {
   /** the row's group name, as screen readers hear it */
   row: "Saved configurations",
   save: "Save",
-  /** Save's tooltip: what it does, by the save the design is open in (none: a new one) */
-  saveTip: (open: string | null) =>
-    open === null ? "Saves this design as a new save." : `Saves this design over “${open}”.`,
   saveAs: "Save as",
-  saveAsTip: "Saves this design as a new save. Save then updates that one.",
   open: "Open",
   /** the start list, as screen readers hear it (the Node checks find it by this), and its first line */
   newFrom: "New from a template",
@@ -23,9 +19,6 @@ export const SAVE_ROW_TEXT = {
   unavailable: "Saving is unavailable in this view.",
   yes: "Yes",
   cancel: "Cancel",
-  rename: "Rename",
-  renameLabel: (name: string) => `New name for ${name}`,
-  duplicate: "Duplicate",
   copyName: (name: string) => `${name} (copy)`,
   delete: "Delete",
   deleteLabel: (name: string) => `Delete ${name}`,

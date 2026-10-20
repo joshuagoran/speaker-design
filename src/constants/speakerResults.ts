@@ -32,10 +32,10 @@ export type PositionAxis = (typeof POSITION_AXIS)[keyof typeof POSITION_AXIS];
 /** The saving row's nouns on the Speaker page (`SaveRowWords`, constants/saveRow). */
 export const SPEAKER_SAVE_WORDS = {
   namePlaceholder: "Speaker name",
-  savedList: "Saved speakers",
-  pick: (n: number) => `Saved speakers (${n})`,
-  noSaved: "No saved speakers yet",
-  newFromTip: "Starts a new speaker from a template. It replaces the current design.",
+  savedList: "Saved Speakers",
+  pick: (n: number) => `Saved Speakers (${n})`,
+  noSaved: "No saved Speakers yet",
+  newFromTip: "Starts a new Speaker from a template. It replaces the current design.",
 } as const;
 
 /** The checks' row labels: a band's, by its name, and a chamber's, by its place. */

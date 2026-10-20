@@ -156,7 +156,7 @@ export const SPACE_TEXT = {
   noPlacements: `Nothing is placed yet. Pick a stack or speaker and press ${ADD_PLACEMENT}.`,
   missing: "A placement names a stack or speaker that is not in this space, so it is left out.",
   /** the empty start in "New from…" */
-  empty: "Empty space",
+  empty: "Empty Space",
   addPlacement: ADD_PLACEMENT,
   /** the Place list's groups */
   placeGroups: {
@@ -305,9 +305,9 @@ export const SPACE_DETAILS = {
 /** The saving row's nouns on the Space page (`SaveRowWords`, constants/saveRow). */
 export const SPACE_SAVE_WORDS = {
   namePlaceholder: "Space name",
-  savedList: "Saved spaces",
-  pick: (n: number) => `Saved spaces (${n})`,
-  noSaved: "No saved spaces yet",
+  savedList: "Saved Spaces",
+  pick: (n: number) => `Saved Spaces (${n})`,
+  noSaved: "No saved Spaces yet",
   newFromTip:
-    "Starts a new space, empty or from a preset. It replaces the current design. A preset brings its own room. A PA preset also sets the band balance to More bass.",
+    "Starts a new Space, empty or from a preset. It replaces the current design. A preset brings its own room. A PA preset also sets the band balance to More bass.",
 } as const satisfies SaveRowWords;

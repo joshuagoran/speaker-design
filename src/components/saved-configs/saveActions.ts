@@ -57,13 +57,6 @@ export async function saveDesignAs(
 }
 
 /**
- * The name box after a save is renamed `from` → `to`: the open save's new name, while the box still holds its old one;
- * otherwise the box as it is (a name typed since is kept).
- */
-export const nameAfterRename = (box: string, isOpen: boolean, from: string, to: string) =>
-  isOpen && box.trim() === from ? to : box;
-
-/**
  * One store call at a time: `run(action)` drops the call while another runs (a double click makes one save).
  * `onBusy` hears when one starts and ends, so the row can disable its buttons.
  */

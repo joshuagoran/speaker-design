@@ -6,14 +6,7 @@ import type { SelectOption } from "../ui/SelectField";
 import { SAVE_ROW_TEXT, type SaveRowWords } from "../../constants/saveRow";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 import type { ConfigStore } from "./useConfigStore";
-import {
-  deleteSave,
-  nameAfterRename,
-  oneAtATime,
-  openSave,
-  saveDesign,
-  saveDesignAs,
-} from "./saveActions";
+import { deleteSave, oneAtATime, saveDesign, saveDesignAs } from "./saveActions";
 import type { SavedConfig, SavedConfigData } from "../../types";
 
 interface Props<T extends SelectOption> {
@@ -22,7 +15,7 @@ interface Props<T extends SelectOption> {
   snapshot: () => SavedConfigData;
   /** opens a saved design: the design takes the save's id, so it is open in that save */
   restore: (config: SavedConfig) => void;
-  /** the design's name, which a save takes */
+  /** the design's name, which a save takes: edited and saved, it renames the open save */
   name: string;
   onName: (name: string) => void;
   /** the id of the save the design is open in: the design's own id (a new design's is a draft id, which no save has) */
@@ -42,8 +35,8 @@ const NAME_MAX = 60;
 
 /**
  * A results pane's top row (the Speaker, Stack, and Space pages'): the design's name; Save (into the save the design is
- * open in, or a new one); Save as (always a new one); the saved designs and Open; and "New from…" (a start, which
- * replaces this design). A picked saved design also takes Rename, Duplicate, and Delete on a second line.
+ * open in, under the name in the box, or a new one); Save as (always a new one); the saved designs and Open; and "New
+ * from…" (a start, which replaces this design). A picked saved design also takes Delete on a second line.
  */
 export function SaveRow<T extends SelectOption>({
   store,
@@ -61,25 +54,19 @@ export function SaveRow<T extends SelectOption>({
   const { db, saved, fb, fbUser, cfgMsg, signIn, signOut } = store;
   /** the save picked in the list; "" shows the open one */
   const [sel, setSel] = useState("");
-  /** the new name typed while renaming the picked one; null when not renaming */
-  const [newName, setNewName] = useState<string | null>(null);
   /** whether the row asks to confirm Delete (an inline step: a browser dialog can be blocked in the artifact host) */
   const [confirming, setConfirming] = useState(false);
   /** whether a store call runs: the row's actions wait for it */
   const [busy, setBusy] = useState(false);
   const [run] = useState(() => oneAtATime(setBusy));
-  /** the design's id and name now, read after a store call resolves */
-  const latest = useRef({ openId, name });
-  latest.current = { openId, name };
-  const openIdNow = () => latest.current.openId;
+  /** the design's id now, read after a store call resolves */
+  const latest = useRef(openId);
+  latest.current = openId;
+  const openIdNow = () => latest.current;
   const list = saved ?? [];
-  const open = openSave(saved, openId);
   const cur = list.find((c) => c.id === (sel || openId));
   const trimmed = name.trim();
-  const reset = () => {
-    setNewName(null);
-    setConfirming(false);
-  };
+  const reset = () => setConfirming(false);
   // each action shows its own failure message (the store's); the list then shows the open save
   const doSave = () =>
     run(async () => {
@@ -99,15 +86,6 @@ export function SaveRow<T extends SelectOption>({
         setSel("");
       }
       reset();
-    });
-  const doRename = () =>
-    run(async () => {
-      const to = newName?.trim();
-      if (!cur || !to || !(await store.rename(cur, to))) return;
-      // the open save renamed: the design takes the name, so the next Save keeps it
-      const now = latest.current;
-      onName(nameAfterRename(now.name, cur.id === now.openId, cur.name, to));
-      setNewName(null);
     });
   const doDelete = (target: SavedConfig) =>
     run(async () => {
@@ -142,19 +120,10 @@ export function SaveRow<T extends SelectOption>({
         />
         {db ? (
           <>
-            <Button
-              variant="primary"
-              onClick={() => void doSave()}
-              disabled={!trimmed || busy}
-              title={SAVE_ROW_TEXT.saveTip(open && open.name)}
-            >
+            <Button variant="primary" onClick={() => void doSave()} disabled={!trimmed || busy}>
               {SAVE_ROW_TEXT.save}
             </Button>
-            <Button
-              onClick={() => void doSaveAs()}
-              disabled={!trimmed || busy}
-              title={SAVE_ROW_TEXT.saveAsTip}
-            >
+            <Button onClick={() => void doSaveAs()} disabled={!trimmed || busy}>
               {SAVE_ROW_TEXT.saveAs}
             </Button>
             <RowSelect
@@ -221,7 +190,7 @@ export function SaveRow<T extends SelectOption>({
       </div>
       {cur && db && (
         <div className="flex flex-wrap items-center gap-2">
-          {newName === null && confirming && (
+          {confirming ? (
             <>
               <span className="text-sm">{SAVE_ROW_TEXT.confirmDelete(cur.name)}</span>
               <Button
@@ -236,56 +205,15 @@ export function SaveRow<T extends SelectOption>({
                 {SAVE_ROW_TEXT.cancel}
               </Button>
             </>
-          )}
-          {newName === null && !confirming && (
-            <>
-              <Button size="xs" onClick={() => setNewName(cur.name)} disabled={busy}>
-                {SAVE_ROW_TEXT.rename}
-              </Button>
-              <Button
-                size="xs"
-                onClick={() =>
-                  void run(() => store.duplicate(cur, SAVE_ROW_TEXT.copyName(cur.name)))
-                }
-                disabled={busy}
-              >
-                {SAVE_ROW_TEXT.duplicate}
-              </Button>
-              <button
-                onClick={() => setConfirming(true)}
-                disabled={busy}
-                aria-label={SAVE_ROW_TEXT.deleteLabel(cur.name)}
-                className="text-xs text-stone-500 hover:text-red-700 px-1"
-              >
-                {SAVE_ROW_TEXT.delete}
-              </button>
-            </>
-          )}
-          {newName !== null && (
-            <>
-              <TextField
-                ariaLabel={SAVE_ROW_TEXT.renameLabel(cur.name)}
-                value={newName}
-                onChange={setNewName}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !busy) void doRename();
-                  if (e.key === "Escape") setNewName(null);
-                }}
-                maxLength={NAME_MAX}
-                className="py-1 w-48 max-w-full"
-              />
-              <Button
-                size="xs"
-                variant="primary"
-                onClick={() => void doRename()}
-                disabled={!newName.trim() || busy}
-              >
-                {SAVE_ROW_TEXT.rename}
-              </Button>
-              <Button size="xs" onClick={() => setNewName(null)}>
-                {SAVE_ROW_TEXT.cancel}
-              </Button>
-            </>
+          ) : (
+            <button
+              onClick={() => setConfirming(true)}
+              disabled={busy}
+              aria-label={SAVE_ROW_TEXT.deleteLabel(cur.name)}
+              className="text-xs text-stone-500 hover:text-red-700 px-1"
+            >
+              {SAVE_ROW_TEXT.delete}
+            </button>
           )}
           {cur.summary && (
             <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>

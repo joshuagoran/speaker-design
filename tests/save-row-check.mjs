@@ -227,19 +227,24 @@ for (const pageDef of PAGES)
       await button(SAVE_ROW_TEXT.open).click();
       check((await nameBox.inputValue()) === "Design A edited", "Open did not load the name");
       check(await openIs((id) => id === a?.id), "Open did not make the save the open one");
-      // rename the open save: the name box follows
-      await button(SAVE_ROW_TEXT.rename).click();
-      await p.getByLabel(SAVE_ROW_TEXT.renameLabel("Design A edited")).fill("Design A renamed");
-      await button(SAVE_ROW_TEXT.rename).click();
+      // a new name and Save: the open save takes it (one name per save)
+      await nameBox.fill("Design A renamed");
+      await button(SAVE_ROW_TEXT.save).click();
       await p.waitForTimeout(300);
-      check((await docNamed("Design A renamed"))?.id === a?.id, "Rename did not rename the save");
-      check((await nameBox.inputValue()) === "Design A renamed", "Rename left the name box");
-      // duplicate
-      await button(SAVE_ROW_TEXT.duplicate).click();
+      await waitCount(2);
+      check(
+        (await docNamed("Design A renamed"))?.id === a?.id,
+        "Save did not rename the open save",
+      );
+      // Save as again, for a save to delete that is not the open one
+      await pick("Design A renamed");
+      await button(SAVE_ROW_TEXT.saveAs).click();
       await waitCount(3);
       const dupName = SAVE_ROW_TEXT.copyName("Design A renamed");
-      check(Boolean(await docNamed(dupName)), "Duplicate made no copy");
-      check(await openIs((id) => id === a?.id), "Duplicate changed the open save");
+      check(Boolean(await docNamed(dupName)), "Save as made no copy");
+      await pick("Design A renamed");
+      await button(SAVE_ROW_TEXT.open).click();
+      check(await openIs((id) => id === a?.id), "Open did not reopen the first save");
       // delete asks first: Cancel keeps it, Yes deletes it
       await pick(dupName);
       await p.getByRole("button", { name: SAVE_ROW_TEXT.deleteLabel(dupName) }).click();
@@ -264,10 +269,8 @@ for (const pageDef of PAGES)
       check(await openIs((id) => id === copy?.id), "Open did not open Design B");
       await p.getByLabel(SAVE_ROW_TEXT.newFrom).selectOption({ label: pageDef.starts[1] });
       check(await openInNone(), "New from left a save open");
-      check(
-        (await button(SAVE_ROW_TEXT.save).getAttribute("title")) === SAVE_ROW_TEXT.saveTip(null),
-        "Save's tip does not say it makes a new save",
-      );
+      for (const action of [SAVE_ROW_TEXT.save, SAVE_ROW_TEXT.saveAs])
+        check((await button(action).getAttribute("title")) === null, `${action} has a tooltip`);
       // a reload keeps the open save, so Save still updates it
       await pick("Design B");
       await button(SAVE_ROW_TEXT.open).click();

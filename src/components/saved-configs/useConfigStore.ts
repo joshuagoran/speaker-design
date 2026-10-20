@@ -144,9 +144,9 @@ export function useConfigStore(collection: string) {
   const signOut = async () => {
     if (fb) await fb.signOut();
   };
-  /** writes `data` under `name` to the document `id`, or to a new one; false (and a message) when it fails */
+  /** writes `data` under `name` to the document `id`; false (and a message) when it fails */
   const write = async (
-    id: string | undefined,
+    id: string,
     name: string,
     data: SavedConfigData,
     done: string,
@@ -188,12 +188,6 @@ export function useConfigStore(collection: string) {
       return null;
     }
   };
-  /** a saved configuration under a new name, its data kept */
-  const rename = ({ id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
-    write(id, name, data, "Renamed");
-  /** a copy of a saved configuration under `name` */
-  const duplicate = ({ id: _id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
-    write(undefined, name, data, "Duplicated");
   /** deletes a saved configuration; false (and a message) when it fails */
   const remove = async (id: string): Promise<boolean> => {
     if (!db) return false;
@@ -218,8 +212,6 @@ export function useConfigStore(collection: string) {
     create,
     overwrite,
     exists,
-    rename,
-    duplicate,
     remove,
   };
 }

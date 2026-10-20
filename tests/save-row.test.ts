@@ -6,7 +6,6 @@ import assert from "node:assert";
 import {
   deleteSave,
   freeName,
-  nameAfterRename,
   oneAtATime,
   openSave,
   saveDesign,
@@ -77,7 +76,7 @@ test("Save with no save open makes one, which the design is then open in", async
   assert.deepEqual(openSave(store.saved, id), { summary: "first", id, name: "Bookshelf" });
 });
 
-test("Save with a save open updates that save: the count stays, and it holds the edit and the name", async () => {
+test("Save with a save open updates that save: the count stays, and it holds the edit and the new name (a rename)", async () => {
   const { store } = memoryStore();
   const id = await saveDesign(store, DRAFT_STACK_ID, "Left", { summary: "first" });
   assert.ok(id);
@@ -171,12 +170,6 @@ test("one store call at a time: a double click makes one save, and the row hears
   assert.deepEqual(heard, [true, false]);
   assert.ok(await save());
   assert.equal(all().length, 2);
-});
-
-test("renaming the open save renames the name box only while it holds the old name", () => {
-  assert.equal(nameAfterRename("Left", true, "Left", "Left side"), "Left side");
-  assert.equal(nameAfterRename("Left typed", true, "Left", "Left side"), "Left typed");
-  assert.equal(nameAfterRename("Left", false, "Left", "Left side"), "Left");
 });
 
 test("every start is a new design, open in no save", () => {

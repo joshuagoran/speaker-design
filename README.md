@@ -35,4 +35,4 @@ On GitHub Pages, users sign in with Google. Then they can save speakers, stacks,
 
 ## Tests
 
-CI runs the unit tests, the phone layout check, and the 3D checks.
+CI runs the unit tests, the phone layout check, the save row check, and the 3D checks.
