@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { DispersionPlane, SpeakerSpec } from "../../types";
+import type { DispersionPlane, SpeakerSpec, StackMember } from "../../types";
 import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
@@ -76,6 +76,8 @@ interface Props {
   speakerPage: Pick<SpeakerPageState, "store">;
   /** the shared view's notice, while a link's stack shows in place of the page's own */
   sharedNotice: SharedNoticeProps | null;
+  /** opens the speaker a member names, by its id, on the Speaker page for an edit */
+  onEditSpeaker: (speakerId: StackMember["speakerId"]) => void;
 }
 
 /** The sum's key on the charts: no member's key ("m0", "m1"…) takes it. */
@@ -95,7 +97,7 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  * library or a preset, where each stands, its crossover, level and delay; the stack's response and maximum
  * output at its listening point on fixed axes, with each member's curve, and the stacks' library.
  */
-export function StackPage({ stack, speakerPage, sharedNotice }: Props) {
+export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: Props) {
   const pal = usePalette();
   const { design, response, limits, totals, optimizer, store, snapshot, restore } = stack;
   const { members, name, notes } = design.stack;
@@ -363,6 +365,11 @@ export function StackPage({ stack, speakerPage, sharedNotice }: Props) {
                   delayMs={response.members[k]?.delayMs ?? null}
                   onEdit={(edit) => stack.editMember(k, edit)}
                   onRemove={() => stack.removeMember(k)}
+                  onEditSpeaker={
+                    design.speakers.some((s) => s.id === member.speakerId)
+                      ? () => onEditSpeaker(member.speakerId)
+                      : undefined
+                  }
                 />
               ))}
               {picked ? (

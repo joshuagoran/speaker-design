@@ -133,6 +133,8 @@ export function useStack() {
     sharedView,
     /** replaces the whole stack (a start, a saved stack opened): the optimizer starts over */
     setDesign: replaceDesign,
+    /** one edit of the stack shown (its members and speakers), as the settings make */
+    editDesign: setDesign,
     optimizer,
     response,
     limits,

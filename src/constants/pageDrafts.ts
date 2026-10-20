@@ -18,6 +18,12 @@ export const PAGE_SHARED_KEYS = {
   space: "space.shared",
 } as const;
 
+/**
+ * The session storage key of the Speaker page's edit for a Stack: which Stack's speaker shows in its shared view (the
+ * design itself is under `PAGE_SHARED_KEYS.speaker`), so a reload keeps the edit.
+ */
+export const STACK_EDIT_KEY = "speaker.stackEdit";
+
 /** How long after the last change a page's draft is written, ms. */
 export const DRAFT_WRITE_MS = 300;
 

@@ -20,7 +20,8 @@ import { CABINET_TOP, SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { allBox } from "./settingsSummaries";
 import { speakerSummary } from "./speakerText";
 import { usePageDraft, type PageDraft, type SharedMode } from "../../hooks/usePageDraft";
-import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
+import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS, STACK_EDIT_KEY } from "../../constants/pageDrafts";
+import { readSessionJson, removeSession, writeSessionJson } from "../../lib/storage";
 import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
@@ -36,6 +37,7 @@ import type {
   SpeakerChamber,
   SpeakerDriver,
   SpeakerSpec,
+  StackSpeakerEdit,
 } from "../../types";
 
 /** The id a design has until the library saves it (then it takes the document's). */
@@ -75,6 +77,17 @@ export const speakerDraft: PageDraft<SpeakerSpec> = {
     return doc && speakerFromSaved(doc);
   },
 };
+
+/** The edit for a Stack session storage kept; null when there is none or it does not fit. */
+function readStackEdit(): StackSpeakerEdit | null {
+  const raw = readSessionJson<unknown>(STACK_EDIT_KEY, null);
+  if (typeof raw !== "object" || raw === null) return null;
+  const stackName: unknown = Reflect.get(raw, "stackName");
+  const speakerId: unknown = Reflect.get(raw, "speakerId");
+  return typeof stackName === "string" && typeof speakerId === "string"
+    ? { stackName, speakerId }
+    : null;
+}
 
 /** The prefix of the ids the Speaker page gives the bands it adds. */
 const NEW_BAND_ID = "band";
@@ -127,17 +140,44 @@ export function useSpeakerPage() {
     setSpec(settledSpec(next));
     restart();
   };
+  /**
+   * the edit for a Stack: a Stack's speaker shows in the shared view (in place of the page's own design, which stays),
+   * and this says which Stack it is for. Kept only with a shared view: one without it is a link's.
+   */
+  const [stackEdit, setStackEdit] = useState(() => (sharedDraft.active ? readStackEdit() : null));
+  const clearStackEdit = () => {
+    setStackEdit(null);
+    removeSession(STACK_EDIT_KEY);
+  };
   /** the shared view: a link's speaker shows in place of the page's own, and the page starts over with each switch */
   const sharedView: SharedMode<SpeakerSpec> = {
     ...sharedDraft,
+    // the edit for a Stack is not a link's speaker
+    active: sharedDraft.active && stackEdit === null,
     open: (next) => {
+      clearStackEdit();
       sharedDraft.open(settledSpec(next));
       restart();
     },
     close: () => {
+      clearStackEdit();
       sharedDraft.close();
       restart();
     },
+  };
+  /** a Stack's speaker on the page for an edit, in place of the page's own design (`stackEdit`) */
+  const stackEditView = {
+    /** the Stack it is for; null while the page shows its own design or a link's */
+    edit: sharedDraft.active ? stackEdit : null,
+    /** shows a Stack's `speaker` for an edit */
+    open: (speaker: SpeakerSpec, edit: StackSpeakerEdit) => {
+      sharedDraft.open(settledSpec(speaker));
+      restart();
+      setStackEdit(edit);
+      writeSessionJson(STACK_EDIT_KEY, edit);
+    },
+    /** back to the page's own design */
+    close: sharedView.close,
   };
   // the model reads only the cabinet, the bands and the input range (a name edit doesn't run it), a step behind the
   // typing: a horn chamber takes tens of ms, so the settings stay responsive
@@ -235,6 +275,7 @@ export function useSpeakerPage() {
   return {
     spec,
     sharedView,
+    stackEditView,
     setSpec: replaceSpec,
     /** chamber `i`'s settings key: its index in this chamber list */
     chamberKey: (i: number) => `${chamberRound}:${i}`,
