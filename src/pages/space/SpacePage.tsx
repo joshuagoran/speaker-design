@@ -96,8 +96,13 @@ interface Props {
 /** The starts "New from…" lists: the empty space, then the presets. */
 const START_OPTIONS = designStartOptions(SPACE_TEXT.empty);
 
-/** The 3D view's height: on a phone, under the map; from md up, about as tall as the map beside it. */
+/** The 3D view's height under the map: on a phone, and in a narrow results pane. */
 const VIEW_HEIGHT = "h-[320px] md:h-[clamp(340px,55vh,620px)]";
+/**
+ * Beside the map: its cell stretches to the map's row (never shorter than this) and the view fills it, out of the flow
+ * so its canvas never makes the row taller than the map.
+ */
+const VIEW_CELL_BESIDE = "relative self-stretch min-h-[340px]";
 
 /** A share as a whole percentage. */
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -120,7 +125,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const maxHeight = useMapMaxHeight();
   // a wide results pane shows the map and the 3D view side by side; a narrow one, the 3D view under the map
   const [coverageGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
-  /** each box's beams in the band on show, each as far as it stays as loud as the map's target (none without a map) */
+  /** each driver's beam in the band on show, each as far as it stays as loud as the map's target (none without a map) */
   const target = view?.target ?? null;
   const beams = useMemo(
     () => (target === null ? [] : spaceBeams(model, space.band, space.freqHz, target)),
@@ -301,43 +306,53 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               </p>
             </div>
             <div ref={coverageGrid} className={resultsGridClass(wide)}>
-              <div className={`${resultsCellClass(wide, "col-start-1 row-start-1")} ${GAP_Y}`}>
-                <CoverageMap
-                  view={view}
-                  room={venue.room}
-                  listener={venue.listener}
-                  alignAt={venue.alignAt}
-                  boxes={boxes}
-                  coupling={space.coupling.marks}
-                  selected={model.placements.flatMap((p, i) =>
-                    p.item.placement.source === selected ? [i] : [],
-                  )}
-                  onSelect={(i) => {
-                    const box = model.placements[i];
-                    if (box) pickOnMap(box.item.placement.source);
-                  }}
-                  actions={{
-                    moveBox: space.moveBox,
-                    aimBox: space.aimBox,
-                    moveListener: space.moveListener,
-                    moveAlignAt: space.moveAlignAt,
-                  }}
-                  busy={space.isPending}
-                  maxHeight={maxHeight}
-                  quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
-                />
-                {space.error && <Notice>Map failed: {space.error}</Notice>}
-                {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
-                <CoverageBandPicker
-                  band={space.band}
-                  freqHz={space.freqHz}
-                  onBand={space.setBand}
-                  onFreqHz={space.setFreqHz}
-                  oneNote={SPACE_TEXT.oneNote}
-                />
+              {/* two columns: the map's cell sets the first row's height, and the 3D view fills it */}
+              <div className={wide ? "contents" : `min-w-0 ${GAP_Y}`}>
+                <div className={resultsCellClass(wide, "col-start-1 row-start-1")}>
+                  <CoverageMap
+                    view={view}
+                    room={venue.room}
+                    listener={venue.listener}
+                    alignAt={venue.alignAt}
+                    boxes={boxes}
+                    coupling={space.coupling.marks}
+                    selected={model.placements.flatMap((p, i) =>
+                      p.item.placement.source === selected ? [i] : [],
+                    )}
+                    onSelect={(i) => {
+                      const box = model.placements[i];
+                      if (box) pickOnMap(box.item.placement.source);
+                    }}
+                    actions={{
+                      moveBox: space.moveBox,
+                      aimBox: space.aimBox,
+                      moveListener: space.moveListener,
+                      moveAlignAt: space.moveAlignAt,
+                    }}
+                    busy={space.isPending}
+                    maxHeight={maxHeight}
+                    quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
+                  />
+                </div>
+                <div className={`${resultsCellClass(wide, "col-start-1 row-start-2")} ${GAP_Y}`}>
+                  {space.error && <Notice>Map failed: {space.error}</Notice>}
+                  {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
+                  <CoverageBandPicker
+                    band={space.band}
+                    freqHz={space.freqHz}
+                    onBand={space.setBand}
+                    onFreqHz={space.setFreqHz}
+                    oneNote={SPACE_TEXT.oneNote}
+                  />
+                </div>
               </div>
-              <div className={resultsCellClass(wide, "col-start-2 row-start-1")}>
-                <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`} beamsButton>
+              <div
+                className={resultsCellClass(wide, `col-start-2 row-start-1 ${VIEW_CELL_BESIDE}`)}
+              >
+                <Viewer3DCard
+                  boxClassName={wide ? "absolute inset-0" : `relative ${VIEW_HEIGHT}`}
+                  beamsButton
+                >
                   {(cutaway, look) => (
                     <SpaceView3D
                       room={venue.room}

@@ -22,8 +22,11 @@ import { spaceFromStart } from "../src/pages/space/useSpace";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { INCHES_PER_FOOT, METERS_PER_FOOT } from "../src/constants/units";
 import { DRIVER_PART, ROOM_SURFACE_NAME } from "../src/constants/space";
+import { computeSpaceGrid, spaceGridRequest } from "../src/lib/speaker/spaceCoverage";
+import { spaceCrossoversHz, spaceTargetAt } from "../src/lib/speaker/spaceBalance";
+import { audienceAverage, bandCenterHz, COVERAGE_GRID_COLS } from "../src/lib/acoustics/coverage";
 import { spaceModel } from "./helpers";
-import type { DriverPart } from "../src/types";
+import type { CoverageBand, DriverPart } from "../src/types";
 import type { RoomPoint } from "../src/lib/speaker/spaceLayout";
 
 const POSES: Parameters<typeof placementFrame>[0][] = [
@@ -185,36 +188,75 @@ describe("Space 3D view: the PA stack preset", () => {
 
   /** Each beam's origin, rounded to 0.01 ft, as a key. */
   const spot = (p: RoomPoint) => [p.x, p.y, p.z].map((v) => v.toFixed(2)).join();
-  /** The middle of each box's drivers of each part, by its spot. */
-  const partSpots = (part: DriverPart) =>
+  /** Each driver's spot, of one part (all of them without one), as keys. */
+  const driverSpots = (part?: DriverPart) =>
     new Set(
-      model.placements.flatMap(({ item }) => {
-        const groups = new Map<string, RoomPoint[]>();
-        for (const d of item.drivers)
-          if (d.part === part)
-            groups.set(`${d.member}/${d.band}`, [
-              ...(groups.get(`${d.member}/${d.band}`) ?? []),
-              d.at,
-            ]);
-        return [...groups.values()].map((at) => {
-          const mean = (pick: (p: RoomPoint) => number) =>
-            at.reduce((s, p) => s + pick(p), 0) / at.length;
-          return spot({ x: mean((p) => p.x), y: mean((p) => p.y), z: mean((p) => p.z) });
-        });
-      }),
+      model.placements.flatMap(({ item }) =>
+        item.drivers.filter((d) => !part || d.part === part).map((d) => spot(d.at)),
+      ),
     );
+  /** The map's target in a band, on the grid's scale, as the page sets it: the target less the space's turn-down. */
+  const mapTarget = (band: CoverageBand) => {
+    const spots = model.placements.map(({ item }) => item.placement);
+    const sub = computeSpaceGrid({
+      ...spaceGridRequest(model, venue, "sub", 0, COVERAGE_GRID_COLS),
+      cols: COVERAGE_GRID_COLS,
+    });
+    const crossovers = spaceCrossoversHz(design);
+    const target = (b: CoverageBand) =>
+      spaceTargetAt(venue.targetDb, bandCenterHz(b, 0), crossovers, venue.balance);
+    const atLimit = audienceAverage(sub, venue.room, spots);
+    if (atLimit === null) throw new Error("the Sub band reaches no one");
+    const gain = Math.min(0, target("sub") - atLimit);
+    return target(band) - gain;
+  };
 
-  test("the beams come from the drivers that play the map's band", () => {
-    const hf = partSpots(DRIVER_PART.hf),
-      cone = partSpots(DRIVER_PART.cone);
-    // a target any band reaches: every band that plays the high band beams, the cones as well as the horns
-    const all = spaceBeams(model, "high", 1000, 0).map((b) => spot(b.at));
-    expect(all.some((at) => hf.has(at))).toBe(true);
-    expect(all.some((at) => cone.has(at))).toBe(true);
-    for (const at of all) expect(hf.has(at) || cone.has(at)).toBe(true);
-    // the bass bands spread every way: no beams
-    expect(spaceBeams(model, "sub", 1000, 0)).toEqual([]);
-    expect(spaceBeams(model, "kick", 1000, 0)).toEqual([]);
+  test("each driver that plays the map's band has a beam of its own, from where it sits", () => {
+    const hf = driverSpots(DRIVER_PART.hf),
+      cone = driverSpots(DRIVER_PART.cone);
+    // a target every band reaches: in the Mid band each top's cone and horn beams, each from its own spot
+    const mid = spaceBeams(model, "mid", 1000, 0).map((b) => spot(b.at));
+    expect(new Set(mid).size).toBe(mid.length);
+    expect(mid.filter((at) => hf.has(at)).length).toBe(2);
+    expect(mid.filter((at) => cone.has(at)).length).toBe(2);
+    // the subs don't play the Mid band: no beams from them, however low the target
+    const subs = new Set(
+      model.placements.flatMap(({ item }) =>
+        item.drivers.filter((d) => d.member === 0).map((d) => spot(d.at)),
+      ),
+    );
+    for (const at of mid) expect(subs.has(at)).toBe(false);
+    // in the Sub band only the subs beam (spreading every way, a quarter turn to each side)
+    const low = spaceBeams(model, "sub", 1000, 0);
+    expect(low.length).toBe(2);
+    for (const b of low) {
+      expect(subs.has(spot(b.at))).toBe(true);
+      expect(b.half).toEqual([Math.PI / 2, Math.PI / 2]);
+    }
+  });
+
+  test("at the map's own target, each box beams in the Mid band", () => {
+    const beams = spaceBeams(model, "mid", 1000, mapTarget("mid"));
+    const cone = driverSpots(DRIVER_PART.cone);
+    for (const { item } of model.placements) {
+      const mine = beams.filter((b) => item.drivers.some((d) => spot(d.at) === spot(b.at)));
+      expect(mine.length).toBeGreaterThan(0);
+      for (const b of mine) {
+        expect(cone.has(spot(b.at))).toBe(true);
+        expect(b.reachFt).toBeGreaterThan(1 / METERS_PER_FOOT);
+      }
+    }
+  });
+
+  test("at one frequency, a cone's beam narrows as the frequency rises", () => {
+    const cone = driverSpots(DRIVER_PART.cone);
+    const coneBeam = (f: number) =>
+      spaceBeams(model, "one", f, 0).find((b) => cone.has(spot(b.at)) && b.half[0] < Math.PI / 2);
+    const [lower, higher] = [1000, 1500].map(coneBeam);
+    expect(lower && higher && spot(lower.at) === spot(higher.at)).toBe(true);
+    if (!lower || !higher) return;
+    expect(higher.half[0]).toBeLessThan(lower.half[0]);
+    expect(higher.half[1]).toBeLessThan(lower.half[1]);
   });
 
   test("a beam reaches where its level falls to the target, 6 dB each time the distance doubles", () => {

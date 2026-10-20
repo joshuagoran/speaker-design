@@ -234,6 +234,12 @@ export function withSolved(model: SpaceModel, solved: SolvedFeed[]): SpaceModel 
   };
 }
 
+/** The voice a box's driver plays (a feed's id): its box, member, band, and pattern. */
+export const voiceId = (
+  box: number,
+  d: Pick<PlacedDriver, "member" | "band" | "driver" | "part" | "mouth">,
+) => `${box}/${d.member}/${d.band}/${JSON.stringify(driverPattern(d))}`;
+
 /**
  * The space worked out with each placement's typed delay and level, Auto ones at 0 (what the solver reads; `withSolved`
  * sets the solved ones). Moving the listener or the alignment point doesn't change it.
@@ -259,7 +265,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
       const band = member?.response.bands.find((b) => b.id === d.band);
       if (!member || !band) return [];
       const pattern = driverPattern(d);
-      const id = `${k}/${d.member}/${d.band}/${JSON.stringify(pattern)}`;
+      const id = voiceId(k, d);
       if (!feeds.has(id))
         feeds.set(id, {
           placement: placement.source,

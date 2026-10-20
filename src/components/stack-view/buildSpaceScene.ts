@@ -1,6 +1,6 @@
 // A Space in the 3D view: the room (its floor in the coverage map's colors, its walls and ceiling), each box as the
 // Stack page draws it (buildMembersScene) at its spot, lift, aim, side, and roll as the space model places it
-// (lib/speaker/spaceLayout `placementFrame`), the listener, the alignment point, and each box's beam (lib/speaker/
+// (lib/speaker/spaceLayout `placementFrame`), the listener, the alignment point, and each driver's beam (lib/speaker/
 // spaceBeams), clipped at the walls, floor and ceiling.
 //
 // Scene coordinates are inches, three's: x across (the room's x), y up (the room's z), z down the room (the room's y),

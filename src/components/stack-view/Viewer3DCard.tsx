@@ -11,7 +11,7 @@ export interface ViewerLook {
   cutaway: boolean;
   /** the drivers drawn; false leaves their cutouts open (always true where the card has no drivers button) */
   drivers: boolean;
-  /** each box's coverage wedge drawn (always true where the card has no beams button) */
+  /** each driver's coverage wedge drawn (always true where the card has no beams button) */
   beams: boolean;
 }
 
@@ -22,7 +22,7 @@ interface Props {
   startCutaway?: boolean;
   /** a button that shows or hides the drivers (the Speaker page's view) */
   driversButton?: boolean;
-  /** a button that shows or hides the boxes' beams (the Space page's view) */
+  /** a button that shows or hides the drivers' beams (the Space page's view) */
   beamsButton?: boolean;
   /** the 3D view, drawn finished or in the cutaway, with or without its drivers */
   children: (cutaway: boolean, look: ViewerLook) => React.ReactNode;
