@@ -1,5 +1,5 @@
 // A folded horn laid out for a straight horn: boards, drivers and a mouth placed so the traced passage (foldTrace)
-// follows the straight horn's areas, taps and length. Pure. See docs/traced-horn-plan.md ("Straight horn first", step 2).
+// follows the straight horn's areas, taps and length. Pure.
 //
 // Each family is a shape with a few settings (board heights and ends, the drivers' place). A seed for each family asks
 // each leg for the target's width where the leg falls along the path, fitted to the room's height. The search traces

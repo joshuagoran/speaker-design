@@ -410,7 +410,7 @@ Each PR stands alone. Lowest risk first.
       | Optimizer                                                 | See "Optimizer rethink"                                 | Stays on the Hi-fi page until the rethink         |
 
     - **Optimizer rethink** (owner, Oct 2026; planned).
-      - **Today: the PA optimizer** (`lib/pa/optimize`, `optimizeExact`; `docs/optimizer-plan.md`).
+      - **Today: the PA optimizer** (`lib/pa/optimize`, `optimizeExact`).
         - Inputs. It starts from the current PA design. The user taps goals in order: cheaper, lighter, lower,
           louder. A room size (500, 750 or 1000 sq ft, or outdoors) sets the output target. The limits are a maximum
           weight per box and a budget. Locks hold 11 parts and settings. Each box size has a lock per axis: free,

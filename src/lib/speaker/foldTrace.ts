@@ -1,6 +1,6 @@
 // The trace of a folded horn: from the boards, the drivers and the mouth the user draws in the side section, find the air
 // the mouth reaches (the passage), its length and width along the path, the air it does not reach (sealed pockets), where
-// each side of the cones opens, the horn type that makes, and the checks. Pure; no DOM. See docs/traced-horn-plan.md.
+// each side of the cones opens, the horn type that makes, and the checks. Pure; no DOM.
 import {
   FOLD_BASKET_FLARE,
   FOLD_BASKET_SHARE,
