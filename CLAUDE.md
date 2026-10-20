@@ -54,7 +54,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 
 ## Project conventions
 
-- Driver prices come from US vendors only; don't drop a driver because some specs are missing (mark the gap).
+- Don't drop a driver because some specs are missing (mark the gap).
 - The parts catalog (drivers, horns, waveguides, passive radiators, port tubes, amps, makers, cabinets, racks, DSP units, plywood, driver cutouts) lives in `src/data/catalog/<kind>.ts`, and the acoustics tables (room materials, air absorption, the generated slot inner-end table) in `src/data/acoustics/`, as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
 - UI text that names parts or defaults (Notes, racks, signal path) reads them from the catalog and the defaults (`src/lib/defaults.ts`), never hardcoded.
 - Optimizer tests: `tests/speaker-optimizer-snapshot.test.ts` and `tests/stack-optimizer-snapshot.test.ts` (normal suite)
@@ -64,7 +64,7 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
   code uses (tests don't count). Delete what it lists.
 - When a change makes code obsolete, delete it in the same PR. Run `vp run dead-exports` before each push; it must list
   nothing.
-- `README.md` describes the app as it is now: its layout, commands, build, saving, and model assumptions. A PR that changes any of these updates the README in the same PR.
+- `README.md` is short and describes the app as it is now: what it does, how to run, build, and deploy it, saving, and tests. A PR that changes any of these updates the README in the same PR. The README names no code that may change; the code documents itself.
 - Docs (`docs/`) use ASD-STE100 style: short sentences (20 words max), one idea each, active voice, plain verbs, no filler. Prefer tables and lists to prose.
 - Never push straight to `main` (it deploys via GitHub Actions). Every change goes through a PR; don't ask.
 - Feature branches: merge `main` into a feature branch with a merge commit pushed straight to that branch, with no
