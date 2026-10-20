@@ -415,7 +415,7 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
   root.add(boxes);
   root.add(listenerFigure(props.listener, props.earFt, pal.muted));
   root.add(alignMark(props.alignAt, props.earFt, pal.muted));
-  // each beam runs as far as it stays as loud as the target, cut off where it meets a surface
+  // each beam runs as far as its driver falls BEAM_FALL_DB from 1 m, cut off where it meets a surface
   const planes = roomClipPlanes(room);
   for (const beam of props.beams) {
     const length = beam.reachFt * INCHES_PER_FOOT;

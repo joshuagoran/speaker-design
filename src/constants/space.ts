@@ -23,6 +23,9 @@ export const COVERAGE_BAND_IDS = [
   "one",
 ] as const satisfies readonly CoverageBand[];
 
+/** How far a driver's direct level on its axis falls below its level at 1 m where its beam in the 3D view ends, dB. */
+export const BEAM_FALL_DB = 20;
+
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 20 × 30 ft, a 12 ft ceiling, drywall all
  * round, an empty floor. A wider or longer layout grows it (lib/speaker/spaceLayout `homeVenue`).
