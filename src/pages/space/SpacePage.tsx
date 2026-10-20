@@ -287,6 +287,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             />
             {space.error && <Notice>Map failed: {space.error}</Notice>}
             {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
+            {sharing.notice && <Notice>{sharing.notice.text}</Notice>}
             <CoverageBandPicker
               band={space.band}
               freqHz={space.freqHz}
@@ -413,12 +414,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             <>
               <TextField label="Name" value={name} maxLength={60} onChange={space.setName} />
               <Button onClick={() => void sharing.share()}>{SHARE_TEXT.button}</Button>
-              {sharing.notice &&
-                (sharing.notice.problem ? (
-                  <Notice>{sharing.notice.text}</Notice>
-                ) : (
-                  <p className="text-xs text-stone-500">{sharing.notice.text}</p>
-                ))}
               <StartPicker
                 options={startOptions}
                 value={byId(startOptions, start)}

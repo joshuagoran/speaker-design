@@ -16,6 +16,26 @@ export const SHARE_PARAM = "s";
 /** The most JSON a link may unpack to, in bytes. A small link can unpack to a very large text. */
 export const SHARE_MAX_JSON_BYTES = 1024 * 1024;
 
+/** The longest payload a link may carry, in characters. A real link is about 5,000; a longer one is not opened. */
+export const SHARE_MAX_PAYLOAD_CHARS = 65536;
+
+/** The bytes the unpacker takes at a time, so the unpacked size is checked between slices. */
+export const SHARE_INFLATE_SLICE_BYTES = 4096;
+
+/** The longest id or name a link may carry, in characters. */
+export const SHARE_MAX_TEXT_CHARS = 200;
+
+/** The longest stack notes a link may carry, in characters. */
+export const SHARE_MAX_NOTES_CHARS = 5000;
+
+/** The most placements, stacks and speakers a link may carry. */
+export const SHARE_MAX_PLACEMENTS = 200;
+export const SHARE_MAX_STACKS = 100;
+export const SHARE_MAX_SPEAKERS = 200;
+
+/** The most members in a stack, bands in a speaker, or chambers in a cabinet a link may carry. */
+export const SHARE_MAX_PARTS = 64;
+
 /** A link longer than this many characters gets a warning: some apps cut it. */
 export const SHARE_LONG_LINK_CHARS = 8000;
 
@@ -33,8 +53,9 @@ export const SHARE_ERROR = {
 export const SHARE_TEXT = {
   button: "Share",
   copied: "Link copied.",
-  long: "This link is long. Some apps cut it. Send a file instead.",
+  long: "This link is long. Some apps cut it.",
   copyFailed: "The link did not copy.",
+  openFailed: "This link did not open.",
   /** by reason: what is true about a link that did not open */
   errors: {
     cutShort: "This link is cut short. Ask for it again.",

@@ -10,12 +10,11 @@ import {
 } from "../../lib/io/shareLink";
 import { SHARE_ERROR, SHARE_LONG_LINK_CHARS, SHARE_TEXT } from "../../constants/share";
 import { spaceFromSaved, usedParts } from "./spaceSaves";
-import type { SpaceDesign, SpaceShare } from "../../types";
+import type { ShareError, SpaceDesign, SpaceShare } from "../../types";
 
-/** The one line the page shows about sharing: what it says, and whether it is a problem. */
+/** The one line the page shows about sharing. */
 export interface ShareNotice {
   text: string;
-  problem: boolean;
 }
 
 /**
@@ -36,46 +35,79 @@ export function useShareLink(design: SpaceDesign, replaceDesign: (d: SpaceDesign
   const [notice, setNotice] = useState<ShareNotice | null>(null);
   /** the address a link is being opened from, so one link opens once */
   const opening = useRef<string | null>(null);
+  /** the count of opens started: an open that is not the latest when it finishes is stale and changes nothing */
+  const latest = useRef(0);
+  /** the page's replace, kept current: the address effect below runs once and must not keep the first one */
+  const replace = useRef(replaceDesign);
+  useEffect(() => {
+    replace.current = replaceDesign;
+  });
   useEffect(() => {
     const open = async () => {
       const { hash, pathname, search } = window.location;
       if (shareValue(hash) === null || opening.current === hash) return;
       opening.current = hash;
-      const decoded = await decodeLink(hash);
-      const opened = decoded.ok ? openedDesign(decoded.envelope) : null;
-      if (opened) {
-        replaceDesign(opened);
-        setNotice(null);
-      } else {
-        const error = decoded.ok ? SHARE_ERROR.wrongFormat : decoded.error;
-        setNotice({ text: SHARE_TEXT.errors[error], problem: true });
-      }
+      latest.current += 1;
+      const mine = latest.current;
       try {
-        history.replaceState(null, "", pathname + search + withoutShare(window.location.hash));
+        const decoded = await decodeLink(hash);
+        if (latest.current !== mine) return;
+        let error: ShareError | null = decoded.ok ? null : decoded.error;
+        if (decoded.ok) {
+          try {
+            const opened = openedDesign(decoded.envelope);
+            if (opened) replace.current(opened);
+            else error = SHARE_ERROR.wrongFormat;
+          } catch {
+            // a link that passes the checks but does not read: nothing is written
+            error = SHARE_ERROR.wrongFormat;
+          }
+        }
+        setNotice(error ? { text: SHARE_TEXT.errors[error] } : null);
       } catch {
-        // an address that cannot change keeps its link; the page goes on
+        if (latest.current === mine) setNotice({ text: SHARE_TEXT.openFailed });
+      } finally {
+        if (latest.current === mine) {
+          opening.current = null;
+          // the link comes off the address only if the address is still the one opened
+          if (window.location.hash === hash) {
+            try {
+              history.replaceState(null, "", pathname + search + withoutShare(hash));
+            } catch {
+              // an address that cannot change keeps its link; the page goes on
+            }
+          }
+        }
       }
-      opening.current = null;
     };
     void open();
     window.addEventListener("hashchange", open);
     return () => window.removeEventListener("hashchange", open);
   }, []);
-  /** copies a link to the open design */
+  /**
+   * copies a link to the open design. The copy starts before the link is made (the clipboard takes the link as a
+   * promise), so the browser still counts it as the click's own.
+   */
   const share = async () => {
-    const { origin, pathname, search } = window.location;
-    const payload = await encodeLink(spaceEnvelope({ ...design, ...usedParts(design) }));
-    const link = origin + pathname + search + linkFragment(payload);
     try {
-      await navigator.clipboard.writeText(link);
+      const { origin, pathname, search } = window.location;
+      const link = encodeLink(spaceEnvelope({ ...design, ...usedParts(design) })).then(
+        (payload) => origin + pathname + search + linkFragment(payload),
+      );
+      // read below; this keeps a failed copy from leaving the promise unhandled
+      link.catch(() => undefined);
+      if (typeof ClipboardItem === "undefined") {
+        await navigator.clipboard.writeText(await link);
+      } else {
+        const blob = link.then((text) => new Blob([text], { type: "text/plain" }));
+        await navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]);
+      }
+      setNotice({
+        text: (await link).length > SHARE_LONG_LINK_CHARS ? SHARE_TEXT.long : SHARE_TEXT.copied,
+      });
     } catch {
-      setNotice({ text: SHARE_TEXT.copyFailed, problem: true });
-      return;
+      setNotice({ text: SHARE_TEXT.copyFailed });
     }
-    setNotice({
-      text: link.length > SHARE_LONG_LINK_CHARS ? SHARE_TEXT.long : SHARE_TEXT.copied,
-      problem: false,
-    });
   };
   return { notice, share };
 }

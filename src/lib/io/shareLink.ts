@@ -4,11 +4,22 @@ import { PAGE_HASHES } from "../../constants/pages";
 import {
   SHARE_ERROR,
   SHARE_FORMAT,
+  SHARE_INFLATE_SLICE_BYTES,
   SHARE_KIND,
   SHARE_MAX_JSON_BYTES,
+  SHARE_MAX_NOTES_CHARS,
+  SHARE_MAX_PARTS,
+  SHARE_MAX_PAYLOAD_CHARS,
+  SHARE_MAX_PLACEMENTS,
+  SHARE_MAX_SPEAKERS,
+  SHARE_MAX_STACKS,
+  SHARE_MAX_TEXT_CHARS,
   SHARE_PARAM,
   SHARE_VERSION,
 } from "../../constants/share";
+import { AUTO_DELAY, AUTO_LEVEL, SPACE_ITEM } from "../../constants/speakerSpec";
+import { FLOOR_ALPHA, ROOM_MATERIALS } from "../../data/acoustics/materials";
+import { ROOM_SURFACES } from "../acoustics/roomAcoustics";
 import type { ShareError, SpaceDesign, SpaceShare } from "../../types";
 
 /** What decoding a link gives: the envelope, or why it did not open. */
@@ -65,13 +76,20 @@ const ENDED_EARLY = /unexpected end|incomplete|truncat|ended early|premature|Z_B
 
 /**
  * Raw inflate of the bytes, stopping at `SHARE_MAX_JSON_BYTES` of output: a small input can unpack to a huge text, so
- * the output is counted as it comes, not after.
+ * the input goes in slices of `SHARE_INFLATE_SLICE_BYTES` and the output is counted as it comes, not after.
  */
 async function inflate(bytes: Uint8Array<ArrayBuffer>): Promise<Inflated> {
-  const reader = new Blob([bytes])
-    .stream()
-    .pipeThrough(new DecompressionStream("deflate-raw"))
-    .getReader();
+  const stream = new DecompressionStream("deflate-raw");
+  const writer = stream.writable.getWriter();
+  const reader = stream.readable.getReader();
+  const feed = async () => {
+    for (let at = 0; at < bytes.length; at += SHARE_INFLATE_SLICE_BYTES) {
+      await writer.write(bytes.subarray(at, at + SHARE_INFLATE_SLICE_BYTES));
+    }
+    await writer.close();
+  };
+  // a bad stream also fails the reader, which is where the error is read
+  const fed = feed().catch(() => undefined);
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
@@ -81,6 +99,7 @@ async function inflate(bytes: Uint8Array<ArrayBuffer>): Promise<Inflated> {
       size += value.length;
       if (size > SHARE_MAX_JSON_BYTES) {
         await reader.cancel();
+        await fed;
         return { ok: false, error: SHARE_ERROR.tooLarge };
       }
       chunks.push(value);
@@ -95,6 +114,7 @@ async function inflate(bytes: Uint8Array<ArrayBuffer>): Promise<Inflated> {
       error: ENDED_EARLY.test(message) ? SHARE_ERROR.cutShort : SHARE_ERROR.notDeflate,
     };
   }
+  await fed;
   const out = new Uint8Array(size);
   let at = 0;
   for (const chunk of chunks) {
@@ -136,27 +156,120 @@ export function withoutShare(hash: string): string {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Whether a value is an object with these fields of these kinds (`"list"` for an array). */
-const hasKinds = (value: unknown, kinds: Record<string, "string" | "object" | "list">): boolean =>
-  isRecord(value) &&
-  Object.entries(kinds).every(([field, kind]) =>
-    kind === "list" ? Array.isArray(value[field]) : typeof value[field] === kind,
-  );
+/** Whether a value is a finite number (a link's text can put anything in a number's place). */
+const isNum = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
 
-/** Whether a value is a list of objects that each have these fields. */
-const isListOf = (value: unknown, kinds: Record<string, "string" | "object" | "list">) =>
-  Array.isArray(value) && value.every((item: unknown) => hasKinds(item, kinds));
+/** Whether a value is a string of at most `max` characters. */
+const isText = (value: unknown, max = SHARE_MAX_TEXT_CHARS): value is string =>
+  typeof value === "string" && value.length <= max;
+
+/** Whether a value is a list of at most `max` items that each pass `check`. */
+const isListOf = (value: unknown, max: number, check: (item: unknown) => boolean) =>
+  Array.isArray(value) && value.length <= max && value.every(check);
+
+/** Whether a value is a spot on the floor. */
+const isPoint = (value: unknown) => isRecord(value) && isNum(value.x) && isNum(value.y);
+
+/** Whether a value is a level or a delay that a feed takes: a number, or the solver's Auto. */
+const isFeed = (value: unknown, auto: string) => isNum(value) || value === auto;
+
+/** Whether a value reads as a placement (`SpacePlacement`). */
+const isPlacement = (value: unknown) =>
+  isRecord(value) &&
+  isPoint(value) &&
+  isNum(value.liftIn) &&
+  isRecord(value.item) &&
+  (value.item.kind === SPACE_ITEM.stack || value.item.kind === SPACE_ITEM.speaker) &&
+  isText(value.item.id) &&
+  isRecord(value.aim) &&
+  isNum(value.aim.yawDeg) &&
+  isNum(value.aim.pitchDeg) &&
+  typeof value.mirror === "boolean" &&
+  typeof value.mirrored === "boolean" &&
+  typeof value.fill === "boolean" &&
+  isFeed(value.levelDb, AUTO_LEVEL) &&
+  isFeed(value.delayMs, AUTO_DELAY);
+
+/** Whether a value reads as a room (`CoverageRoom`): sizes above zero, a known material on each surface. */
+const isRoom = (value: unknown) =>
+  isRecord(value) &&
+  [value.widthFt, value.lengthFt, value.ceilingFt].every((n) => isNum(n) && n > 0) &&
+  typeof value.outdoors === "boolean" &&
+  isText(value.crowd) &&
+  Object.hasOwn(FLOOR_ALPHA, value.crowd) &&
+  isRecord(value.materials) &&
+  ROOM_SURFACES.every((surface) => {
+    const material = isRecord(value.materials) ? value.materials[surface] : undefined;
+    return isText(material) && Object.hasOwn(ROOM_MATERIALS, material);
+  });
 
 /**
- * Whether a parsed value is a space envelope of this version: the kind, and lists of objects that have the fields a
- * space design needs. A light check: the page checks each part as it opens it.
+ * Whether a value reads as a venue (`SpaceVenue`): its numbers and spots. Which level reference and balance it names is
+ * checked as the space opens.
+ */
+const isVenue = (value: unknown) =>
+  isRecord(value) &&
+  isRoom(value.room) &&
+  isPoint(value.listener) &&
+  isPoint(value.alignAt) &&
+  isNum(value.earFt) &&
+  isNum(value.targetDb) &&
+  typeof value.levelRef === "string" &&
+  typeof value.balance === "string";
+
+/** Whether a value reads as a space (`SpaceSpec`). */
+const isSpace = (value: unknown) =>
+  isRecord(value) &&
+  isText(value.id) &&
+  isText(value.name) &&
+  isListOf(value.placements, SHARE_MAX_PLACEMENTS, isPlacement) &&
+  isVenue(value.venue);
+
+/** Whether a value reads as a stack member (`StackMember`). */
+const isMember = (value: unknown) =>
+  isRecord(value) &&
+  isText(value.speakerId) &&
+  isRecord(value.pose) &&
+  [value.pose.xIn, value.pose.yIn, value.pose.zIn, value.pose.pitchDeg].every(isNum) &&
+  (value.pose.on === null || isNum(value.pose.on)) &&
+  typeof value.mirror === "boolean" &&
+  isRecord(value.crossover) &&
+  isNum(value.levelDb) &&
+  isFeed(value.delayMs, AUTO_DELAY);
+
+/** Whether a value reads as a stack (`StackSpec`). */
+const isStackShare = (value: unknown) =>
+  isRecord(value) &&
+  isText(value.id) &&
+  isText(value.name) &&
+  isText(value.notes, SHARE_MAX_NOTES_CHARS) &&
+  isListOf(value.members, SHARE_MAX_PARTS, isMember);
+
+/**
+ * Whether a value reads as a speaker (`SpeakerSpec`) at the top: its id and name, and the parts it is built of, as
+ * objects. The speaker's inner numbers are read as the space opens, which catches a speaker that does not read.
+ */
+const isSpeakerShare = (value: unknown) =>
+  isRecord(value) &&
+  isText(value.id) &&
+  isText(value.name) &&
+  isRecord(value.cabinet) &&
+  isListOf(value.cabinet.chambers, SHARE_MAX_PARTS, isRecord) &&
+  isListOf(value.bands, SHARE_MAX_PARTS, isRecord) &&
+  isRecord(value.input) &&
+  isRecord(value.look);
+
+/**
+ * Whether a parsed value is a space envelope of this version: the kind, and one space, and the stacks and speakers,
+ * each checked inside (objects that are not null, finite numbers, short text, and capped counts).
  */
 const isSpaceShare = (value: unknown): value is SpaceShare =>
   isRecord(value) &&
   value.kind === SHARE_KIND.space &&
-  isListOf(value.speakers, { id: "string", name: "string" }) &&
-  isListOf(value.stacks, { id: "string", name: "string", members: "list" }) &&
-  isListOf(value.spaces, { id: "string", name: "string", placements: "list", venue: "object" }) &&
+  isListOf(value.speakers, SHARE_MAX_SPEAKERS, isSpeakerShare) &&
+  isListOf(value.stacks, SHARE_MAX_STACKS, isStackShare) &&
+  isListOf(value.spaces, 1, isSpace) &&
   Array.isArray(value.spaces) &&
   value.spaces.length === 1;
 
@@ -190,6 +303,7 @@ export async function decodeLink(fragment: string): Promise<DecodedLink> {
   }
   const payload = value.slice(dot + 1);
   if (payload === "") return failure(SHARE_ERROR.cutShort);
+  if (payload.length > SHARE_MAX_PAYLOAD_CHARS) return failure(SHARE_ERROR.tooLarge);
   if (!/^[A-Za-z0-9_-]+$/.test(payload)) return failure(SHARE_ERROR.badBase64);
   // base64 text is never one character past a whole group: only a cut leaves that
   if (payload.length % 4 === 1) return failure(SHARE_ERROR.cutShort);

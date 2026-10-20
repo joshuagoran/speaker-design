@@ -17,6 +17,7 @@ import {
   SHARE_ERROR,
   SHARE_FORMAT,
   SHARE_MAX_JSON_BYTES,
+  SHARE_MAX_PAYLOAD_CHARS,
   SHARE_VERSION,
 } from "../src/constants/share";
 import { STACK_PRESETS } from "../src/pages/stack/stackPresets";
@@ -110,6 +111,14 @@ test("bad link: too large when unpacked", async () => {
   assert.equal(decoded.error, SHARE_ERROR.tooLarge);
 });
 
+test("bad link: a payload over the cap is too large", async () => {
+  const decoded = await decodeLink(fragmentOf("A".repeat(SHARE_MAX_PAYLOAD_CHARS + 1)));
+  assert.ok(!decoded.ok);
+  assert.equal(decoded.error, SHARE_ERROR.tooLarge);
+  // a real link is far under the cap
+  assert.ok((await encodeLink(envelope)).length < SHARE_MAX_PAYLOAD_CHARS / 4);
+});
+
 test("bad link: another version", async () => {
   const payload = await encodeLink(envelope);
   const prefixed = await decodeLink(fragmentOf(payload, 2));
@@ -144,6 +153,49 @@ test("bad link: not a shared space", async () => {
   assert.equal(none.error, SHARE_ERROR.wrongFormat);
   const text = await decodeLink(fragmentOf(await packed("not json")));
   assert.ok(!text.ok);
+});
+
+/** The envelope as JSON with the value at `path` replaced (a key, or a list index). */
+function withValue(path: readonly (string | number)[], value: unknown): unknown {
+  const root: unknown = asJson(envelope);
+  let node: unknown = root;
+  for (const key of path.slice(0, -1))
+    node = typeof node === "object" ? Reflect.get(node ?? {}, key) : null;
+  const last = path[path.length - 1];
+  assert.ok(typeof node === "object" && node !== null && last !== undefined, path.join("."));
+  Reflect.set(node, last, value);
+  return root;
+}
+
+test("bad link: inside parts that are null, wrong, or too many", async () => {
+  assert.ok(envelope.spaces[0].placements[0], "the start places something");
+  const place = ["spaces", 0, "placements", 0] as const;
+  const room = ["spaces", 0, "venue", "room"] as const;
+  const wrong: Array<[string, unknown]> = [
+    ["null item", withValue([...place, "item"], null)],
+    ["null aim", withValue([...place, "aim"], null)],
+    ["text x", withValue([...place, "x"], "3")],
+    ["null lift", withValue([...place, "liftIn"], null)],
+    ["null room", withValue(room, null)],
+    ["text room size", withValue([...room, "widthFt"], "20")],
+    ["unknown material", withValue([...room, "materials", "front"], "lava")],
+    ["null listener", withValue(["spaces", 0, "venue", "listener"], null)],
+    ["null member pose", withValue(["stacks", 0, "members", 0, "pose"], null)],
+    ["null cabinet", withValue(["speakers", 0, "cabinet"], null)],
+    ["long id", withValue(["spaces", 0, "id"], "x".repeat(1000))],
+    [
+      "many placements",
+      withValue(
+        ["spaces", 0, "placements"],
+        Array.from({ length: 1000 }, () => envelope.spaces[0].placements[0]),
+      ),
+    ],
+  ];
+  for (const [label, value] of wrong) {
+    const decoded = await decodeLink(fragmentOf(await packed(JSON.stringify(value))));
+    assert.ok(!decoded.ok, label);
+    assert.equal(decoded.error, SHARE_ERROR.wrongFormat, label);
+  }
 });
 
 test("page at an address with a share link: the Space page", () => {
