@@ -311,7 +311,9 @@ export const SPACE_TEXT = {
   /** one arrival row: the placement's name, then its time (ms) and distance (ft) after the last main, already formatted */
   arrivalIs: (name: string, ms: string, ft: string) => `${name}: ${ms} ms (${ft} ft)`,
   /** under the one-frequency slider */
-  oneNote: "One frequency adds all sources with phase.",
+  /** under the single-frequency slider: where it still adds with phase */
+  oneNote: (coherentHz: number) =>
+    `One frequency adds all sources with phase (below ${coherentHz} Hz).`,
   audienceAverage: "Audience average",
   audienceMax: "Audience at the limit",
   listener: "Listener",
@@ -356,8 +358,8 @@ export const SPACE_DETAILS = {
     "Drag its dot to turn it.",
     "Drag the listener, or tap the floor to put the listener there.",
     "Drag the alignment point. The mains arrive together there.",
-    "One frequency shows the interference between the placements.",
-    `One frequency goes up to ${limitHz} Hz. Above ${coherentHz} Hz, it adds the placements by power.`,
+    `One frequency shows the interference between the placements (below ${coherentHz} Hz).`,
+    `One frequency goes up to ${limitHz / 1000} kHz. Above ${coherentHz} Hz, it adds the placements by power.`,
   ],
   levels: "Levels",
   /** the target in the band on show, where it is measured (`SPACE_LEVEL_REF_PLACE`), dB */

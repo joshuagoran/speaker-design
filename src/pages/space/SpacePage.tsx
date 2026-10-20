@@ -28,7 +28,7 @@ import { CoverageMap, type MapBox } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SaveRow } from "../../components/saved-configs/SaveRow";
-import { COVERAGE_BANDS } from "../../lib/acoustics/coverage";
+import { COHERENT_BELOW_HZ, COVERAGE_BANDS } from "../../lib/acoustics/coverage";
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -342,7 +342,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     freqHz={space.freqHz}
                     onBand={space.setBand}
                     onFreqHz={space.setFreqHz}
-                    oneNote={SPACE_TEXT.oneNote}
+                    oneNote={SPACE_TEXT.oneNote(COHERENT_BELOW_HZ)}
                   />
                 </div>
               </div>
