@@ -1,19 +1,19 @@
 # SpeakNow
 
-Plan DIY speakers, from one box to a room full of stacks.
+SpeakNow is a planner for DIY speakers. It has these pages:
 
-- **Speaker:** design one cabinet: its drivers, chambers, and crossovers. See its response, maximum output, and 3D view.
-- **Stack:** put speakers on top of or beside each other, and set the crossovers between them.
-- **Space:** place stacks in a room or outdoors, and see the coverage and the amp power.
-- **Cutlist:** get the panels and the sheet layout for a speaker or a stack.
+- **Speaker:** design one cabinet. Set its drivers, chambers, and crossovers. The page shows the response, the maximum output, and a 3D view.
+- **Stack:** put speakers on top of each other or side by side. Set the crossovers between them.
+- **Space:** put stacks in a room or outdoors. The page shows the coverage and the amp power.
+- **Cutlist:** the page lists the panels and the sheet layout for a speaker or a stack.
 
-Speaker and Stack each have an optimizer.
+The Speaker and Stack pages each have an optimizer.
 
-All results come from models, not measurements. Use them to compare designs and to find a bad alignment before you cut wood. Measure the prototype before you trust a number.
+The results come from models, not from measurements. Use them to compare designs and to find problems before you build. Measure the prototype to confirm the results.
 
 ## Run it
 
-You need Node `^22.18.0 || ^24.11.0 || >=26`.
+Use Node `^22.18.0 || ^24.11.0 || >=26`.
 
 ```sh
 pnpm install
@@ -26,13 +26,13 @@ pnpm test             # tests
 
 ## Build and deploy
 
-`pnpm run build` builds `dist/site/`. The app is one self-contained page: nothing loads from a CDN, so it works offline.
+`pnpm run build` builds `dist/site/`. The app is one self-contained page. It loads nothing from a CDN, so it works offline.
 
 A push to `main` deploys the site to GitHub Pages. `build/serve.sh` builds the page and serves it at `http://127.0.0.1:8901/site/`.
 
 ## Saving
 
-On GitHub Pages, people sign in with Google to save speakers, stacks, and spaces in Firestore. The dev server and local builds cannot save. The page says so.
+On GitHub Pages, users sign in with Google. Then they can save speakers, stacks, and spaces in Firestore. The dev server and local builds cannot save. The page tells the user.
 
 One-time Firebase setup:
 
