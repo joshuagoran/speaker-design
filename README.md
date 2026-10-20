@@ -1,15 +1,15 @@
 # SpeakNow
 
-SpeakNow is a planner for DIY speakers. It has these pages:
+SpeakNow is a planner for DIY speakers and deploying them in physical space. Pages:
 
 - **Speaker:** design one cabinet. Set its drivers, chambers, and crossovers. The page shows the response, the maximum output, and a 3D view.
 - **Stack:** put speakers on top of each other or side by side. Set the crossovers between them.
 - **Space:** put stacks in a room or outdoors. The page shows the coverage and the amp power.
 - **Cutlist:** the page lists the panels and the sheet layout for a speaker or a stack.
 
-The Speaker and Stack pages each have an optimizer.
+The Speaker and Stack pages each have an "Optimizer", intended to adjust a given design to meet the user's chosen goals.
 
-The results come from models, not from measurements. Use them to compare designs and to find problems before you build. Measure the prototype to confirm the results.
+To date, all results are based on textbook models, not yet validated with live measurements.
 
 ## Run it
 
