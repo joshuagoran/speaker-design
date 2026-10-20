@@ -24,7 +24,6 @@ const FOLDERS = [
   "src/pages/stack",
   "src/pages/space",
   "src/pages/cutlist",
-  "src/pages/notes",
   "src/lib/optimizer",
   "src/lib/speaker",
 ];

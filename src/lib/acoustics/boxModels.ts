@@ -725,12 +725,6 @@ export function subBoxBracing(
 /** A box's braces' and ribs' wood, in³. */
 export const braceWoodIn3 = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined) =>
   b ? b.windowIn3 + b.ribIn3 : 0;
-/** Their weight at the wall ply, lb. */
-export const braceLb = (
-  b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined,
-  wall: number,
-) => (braceWoodIn3(b) * plywoodLbPerSqFt(wall)) / 144 / wall;
-
 export { PLYWOOD_SHEETS } from "../../data/catalog/plywood";
 export const formatInches = (x: number) => {
   // inches to the nearest 1/16, as 12 5/8
@@ -1461,28 +1455,14 @@ export function hornPower(
 // Keele: a horn holds its angle down to f = 25 400 / (mouth width m x angle deg) (1e6 in-deg-Hz).
 export const keeleFrequency = (covDeg: number, mouthIn: number) =>
   25400 / (mouthIn * 0.0254 * covDeg);
-// ---- weights (lb): 3/4″ baffle, other panels at the wall ply, and the braces and ribs (subBoxBracing) by their
-// wood. Without the bracing: the bare box, a floor for any bracing ----
+// ---- weights (lb) ----
 /**
- * What each box weighs besides its panels, braces, driver and the catalog's hardware (lib/build/hardware hardwareLb), lb:
+ * What each box weighs besides its panels, braces, driver and the catalog's hardware, lb:
  * the screws, glue, wiring and damping. The handles, the input dish and its jacks, and the horn posts are counted by
  * part, so these are only the remainder.
  */
 export const SUB_FIXINGS_LB = 3.5;
 export const MID_FIXINGS_LB = 0.5;
-export const subWeightLb = (
-  b: Dims3,
-  wall: number,
-  drvLb: number,
-  bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
-  /** the handles, dish, jacks and posts (lib/build/hardware hardwareLb) */
-  hardwareLb = 0,
-) =>
-  (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
-  braceLb(bracing, wall) +
-  (drvLb || 0) +
-  hardwareLb +
-  SUB_FIXINGS_LB;
 // ---- the mid-bass box: sealed, always lightly stuffed ----
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
 /** A mid's displacement, L: its published one, else assumed by size (4 L for a 15″, 2.5 L for a smaller one). */

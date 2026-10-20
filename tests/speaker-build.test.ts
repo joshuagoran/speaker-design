@@ -24,7 +24,9 @@ import {
   hornCutoutWords,
   subBoxBracing,
   subHardwarePlan,
-  subWeightLb,
+  braceWoodIn3,
+  plywoodLbPerSqFt,
+  SUB_FIXINGS_LB,
 } from "../src/lib/acoustics/boxModels";
 import { towerHornCutout } from "../src/lib/speaker/tower";
 import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
@@ -53,6 +55,23 @@ import {
   VENT_KIND,
 } from "../src/constants/speakerSpec";
 import type { CutPart, PaDesign, SpeakerCabinet, SpeakerChamber, SpeakerSpec } from "../src/types";
+
+/**
+ * The PA sub rules' loaded weight, lb, worked out here as an independent check: a 3/4″ baffle at 2.3 lb/ft², the other
+ * panels at the wall ply, the braces' wood, the driver, the hardware, and the fixings.
+ */
+const subWeightLb = (
+  b: { w: number; h: number; d: number },
+  wall: number,
+  drvLb: number,
+  bracing: Parameters<typeof braceWoodIn3>[0],
+  hardwareLb: number,
+) =>
+  (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
+  (braceWoodIn3(bracing) * plywoodLbPerSqFt(wall)) / 144 / wall +
+  drvLb +
+  hardwareLb +
+  SUB_FIXINGS_LB;
 
 /** The PA sub rules' numbers for a design (with the design's back joint and handles): its bracing and loaded weight. */
 function paSubRules(cfg: PaDesign) {

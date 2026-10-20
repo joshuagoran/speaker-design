@@ -1,7 +1,6 @@
 /**
  * Every page of the nav, by id, and the address hash it lives at. The Speaker Design page is the default (`#speaker`,
  * an empty hash, or any unknown hash, such as an old page's: no redirect); `tests/mobile-check.mjs` visits each hash.
- * The Notes page is not here: it has no tab and no hash, and opens only at the path `/notes` (`pageAt`).
  */
 export const PAGE_HASHES = {
   speakerCutlist: "#speaker-cutlist",
@@ -11,10 +10,8 @@ export const PAGE_HASHES = {
   space: "#space",
 } as const;
 
-/** The Notes page's id: the owner's reference page, outside the nav. */
-export const NOTES_PAGE = "notes";
-/** A page of the app: one of the nav's, or Notes. */
-export type AppPage = keyof typeof PAGE_HASHES | typeof NOTES_PAGE;
+/** A page of the app. */
+export type AppPage = keyof typeof PAGE_HASHES;
 
 /** The projects the header switches between, by id, and the name each button shows. */
 export const PROJECT_NAMES = {
