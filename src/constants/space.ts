@@ -313,7 +313,7 @@ export const SPACE_TEXT = {
   /** under the one-frequency slider */
   /** under the single-frequency slider: where it still adds with phase */
   oneNote: (coherentHz: number) =>
-    `One frequency adds all sources with phase (below ${coherentHz} Hz).`,
+    `One frequency adds all sources (including phase below ${coherentHz} Hz).`,
   audienceAverage: "Audience average",
   audienceMax: "Audience at the limit",
   listener: "Listener",
