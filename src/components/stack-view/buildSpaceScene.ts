@@ -46,8 +46,8 @@ export const ROOM_SURFACE_NAME = "roomSurface";
 /** A see-through wall's opacity: one between the camera and the room. */
 const WALL_SEE_THROUGH = 0.15;
 /** A beam's opacity, and its outline's. */
-const BEAM_OPACITY = 0.07;
-const BEAM_EDGE_OPACITY = 0.3;
+const BEAM_OPACITY = 0.1;
+const BEAM_EDGE_OPACITY = 0.4;
 /** Segments along each edge of a beam's far end, so a wide beam's end stays round. */
 const BEAM_SEGMENTS = 8;
 /** The listener figure, in: its head's radius, its body's radius, and the gap between them. */
