@@ -3469,9 +3469,11 @@ export interface ConfigQuery {
   onSnapshot(next: (snap: ConfigSnapshot) => void, error: (e: Error) => void): () => void;
 }
 
-/** A config collection: a query, plus `doc(id?)` (a new id when none is given) to write or delete one. */
+/** A config collection: a query, plus `doc(id?)` (a new id when none is given) to read, write, or delete one. */
 export interface ConfigCollection extends ConfigQuery {
   doc(id?: string): {
+    /** whether the document exists (false also when this user cannot see it) */
+    get(): Promise<{ exists: boolean }>;
     set(data: Record<string, unknown>): Promise<unknown>;
     delete(): Promise<unknown>;
   };

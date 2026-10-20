@@ -1,4 +1,4 @@
-// The Space page with nothing placed (a new page, Start empty, the last placement removed): the default living room,
+// The Space page with nothing placed (a new page, the empty start, the last placement removed): the default living room,
 // quiet, with the room's map, side view and listener drawn and no level text that reads NaN or -Infinity.
 import { afterEach, test } from "vite-plus/test";
 import assert from "node:assert";

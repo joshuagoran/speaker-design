@@ -39,4 +39,4 @@ The Speaker, Stack, and Space pages have a Share button. It copies a link to the
 
 ## Tests
 
-CI runs the unit tests, the phone layout check, and the 3D checks.
+CI runs the unit tests, the phone layout check, the save row check, and the 3D checks.

@@ -18,11 +18,12 @@ import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
 import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
+import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import type { PageDraft } from "../../hooks/usePageDraft";
 
 /** The id a space has until the library saves it (then it takes the document's). */
-export const DRAFT_SPACE_ID = "draft";
+export const DRAFT_SPACE_ID = DRAFT_ID;
 
 /**
  * A space with nothing placed, named as a new one, in the default living room (20 × 30 × 12 ft) with a seated listener

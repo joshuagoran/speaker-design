@@ -1,5 +1,6 @@
 // The Stack page's words (src/pages/stack).
 import { STACK_LISTEN_DISTANCE_M } from "./speakerSpec";
+import type { SaveRowWords } from "./saveRow";
 
 export const STACK_TEXT = {
   /** the name a new stack starts with */
@@ -28,9 +29,8 @@ export const STACK_TEXT = {
   missing: "A box's speaker is missing from this stack, so the response leaves it out.",
   gaps: "The response leaves out part of a box's speaker. Open that speaker on the Speaker page to see which part.",
   fullRange: "full range",
-  startHint:
-    "Both replace this stack. A PA start sets each band's level to the More bass band balance. Open a saved stack from the library above.",
-  clear: "Start empty",
+  /** the empty start in "New from…" */
+  empty: "Empty Stack",
   notes: "Notes",
   librarySpeaker: "Saved speaker",
   addMember: "Add box",
@@ -58,3 +58,13 @@ export const STACK_TEXT = {
   /** a library speaker's newer copy beside the one the stack's boxes already name */
   copyName: (name: string, n: number) => `${name} (copy ${n})`,
 } as const;
+
+/** The saving row's nouns on the Stack page (`SaveRowWords`, constants/saveRow). */
+export const STACK_SAVE_WORDS = {
+  namePlaceholder: "Stack name",
+  savedList: "Saved Stacks",
+  pick: (n: number) => `Saved Stacks (${n})`,
+  noSaved: "No saved Stacks yet",
+  newFromTip:
+    "Starts a new Stack, empty or from a preset. It replaces the current design. A PA start sets each band's level to the More bass band balance.",
+} as const satisfies SaveRowWords;

@@ -144,9 +144,9 @@ export function useConfigStore(collection: string) {
   const signOut = async () => {
     if (fb) await fb.signOut();
   };
-  /** writes `data` under `name` to the document `id`, or to a new one; false (and a message) when it fails */
+  /** writes `data` under `name` to the document `id`; false (and a message) when it fails */
   const write = async (
-    id: string | undefined,
+    id: string,
     name: string,
     data: SavedConfigData,
     done: string,
@@ -170,8 +170,6 @@ export function useConfigStore(collection: string) {
       return false;
     }
   };
-  /** a new saved configuration */
-  const save = (name: string, data: SavedConfigData) => write(undefined, name, data, "Saved");
   /** a new saved configuration under an id made here, so the caller can pick it: that id, or null when it fails */
   const create = async (name: string, data: SavedConfigData) => {
     const id = newDocId();
@@ -180,18 +178,25 @@ export function useConfigStore(collection: string) {
   /** a saved configuration's data replaced by `data`, under `name` (a new document when `id` is one nothing has) */
   const overwrite = (id: string, name: string, data: SavedConfigData) =>
     write(id, name, data, "Saved");
-  /** a saved configuration under a new name, its data kept */
-  const rename = ({ id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
-    write(id, name, data, "Renamed");
-  /** a copy of a saved configuration under `name` */
-  const duplicate = ({ id: _id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
-    write(undefined, name, data, "Duplicated");
-  const remove = async (id: string) => {
-    if (!db) return;
+  /** whether the saved configuration `id` exists (it may be past the list); null (and a message) when the read fails */
+  const exists = async (id: string): Promise<boolean | null> => {
+    if (!db) return null;
+    try {
+      return (await db.collection(collection).doc(id).get()).exists;
+    } catch {
+      flash(UI_TEXT.saveFailed);
+      return null;
+    }
+  };
+  /** deletes a saved configuration; false (and a message) when it fails */
+  const remove = async (id: string): Promise<boolean> => {
+    if (!db) return false;
     try {
       await db.collection(collection).doc(id).delete();
+      return true;
     } catch {
       flash("Couldn't delete");
+      return false;
     }
   };
   return {
@@ -204,11 +209,9 @@ export function useConfigStore(collection: string) {
     flash,
     signIn,
     signOut,
-    save,
     create,
     overwrite,
-    rename,
-    duplicate,
+    exists,
     remove,
   };
 }

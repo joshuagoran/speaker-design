@@ -426,6 +426,8 @@ function SpeakerPageBody({ speakerPage, sharedNotice }: Props) {
               restore={restore}
               name={spec.name}
               onName={speakerPage.setName}
+              openId={spec.id}
+              onOpenId={speakerPage.setOpenId}
               words={SPEAKER_SAVE_WORDS}
               starts={startOptions}
               group={(o) => o.group}

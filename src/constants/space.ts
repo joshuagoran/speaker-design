@@ -4,6 +4,7 @@ import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
+import type { SaveRowWords } from "./saveRow";
 
 /** The coverage map's bands, by id: the ones a shared Space link may name. */
 export const COVERAGE_BAND_IDS = [
@@ -61,7 +62,7 @@ export const SPACE_HOME_MARGIN_FT = 4;
  */
 export const PAIR_SIDE = { left: "L", right: "R" } as const;
 
-/** The Target level a new space starts with (and Start empty, and a fill or Hi-fi preset that names none), dB SPL: as the default coverage layout. */
+/** The Target level a new space starts with (and the empty start, and a fill or Hi-fi preset that names none), dB SPL: as the default coverage layout. */
 export const SPACE_HOME_TARGET_DB = 105;
 
 /** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
@@ -163,11 +164,8 @@ export const SPACE_TEXT = {
   quietRoom: "Add a speaker or stack to hear the room.",
   noPlacements: `Nothing is placed yet. Pick a stack or speaker and press ${ADD_PLACEMENT}.`,
   missing: "A placement names a stack or speaker that is not in this space, so it is left out.",
-  /** under the start buttons, and its tooltip */
-  startHint: "A preset brings its own room.",
-  startTip:
-    "A PA preset also sets the band balance to More bass. Open a saved space from the library above.",
-  clear: "Start empty",
+  /** the empty start in "New from…" */
+  empty: "Empty Space",
   addPlacement: ADD_PLACEMENT,
   /** the Place list's groups */
   placeGroups: {
@@ -312,3 +310,13 @@ export const SPACE_DETAILS = {
     "Each cone band has a first-order baffle-step shelf.",
   ],
 } as const;
+
+/** The saving row's nouns on the Space page (`SaveRowWords`, constants/saveRow). */
+export const SPACE_SAVE_WORDS = {
+  namePlaceholder: "Space name",
+  savedList: "Saved Spaces",
+  pick: (n: number) => `Saved Spaces (${n})`,
+  noSaved: "No saved Spaces yet",
+  newFromTip:
+    "Starts a new Space, empty or from a preset. It replaces the current design. A preset brings its own room. A PA preset also sets the band balance to More bass.",
+} as const satisfies SaveRowWords;

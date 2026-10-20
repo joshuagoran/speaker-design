@@ -55,3 +55,8 @@ export const SPEAKER_START_SPEAKER_NAMES = {
   paV2MidBox: "Mid box",
   th18: "TH18",
 } as const satisfies Record<SpeakerTemplate, string>;
+
+/** The groups "New from…" lists the starts under: the templates. */
+export const SPEAKER_START_GROUPS = {
+  templates: "Templates",
+} as const;

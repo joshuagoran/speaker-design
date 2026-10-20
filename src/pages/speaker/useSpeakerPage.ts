@@ -21,6 +21,7 @@ import { allBox } from "./settingsSummaries";
 import { speakerSummary } from "./speakerText";
 import { usePageDraft, type PageDraft, type SharedMode } from "../../hooks/usePageDraft";
 import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
+import { DRAFT_ID } from "../../constants/saveRow";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import { speakerPrice } from "../../lib/speaker/speakerTotals";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
@@ -38,7 +39,7 @@ import type {
 } from "../../types";
 
 /** The id a design has until the library saves it (then it takes the document's). */
-export const DRAFT_SPEAKER_ID = "draft";
+export const DRAFT_SPEAKER_ID = DRAFT_ID;
 
 /** The empty speaker, named as a new one. */
 export const emptySpeaker = (): SpeakerSpec => ({
@@ -266,6 +267,8 @@ export function useSpeakerPage() {
     snapshot,
     restore,
     setName: (name: string) => setSpec((s) => ({ ...s, name })),
+    /** sets the save the speaker is open in, as its id; null: none (a new speaker's draft id) */
+    setOpenId: (id: string | null) => setSpec((s) => ({ ...s, id: id ?? DRAFT_SPEAKER_ID })),
     editInput: (edit: (input: SpeakerSpec["input"]) => SpeakerSpec["input"]) =>
       setSpec((s) => ({ ...s, input: edit(s.input) })),
     /** sets part of the look (the cabinet finish, the baffle and horn colors) */

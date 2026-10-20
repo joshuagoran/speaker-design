@@ -31,14 +31,24 @@ import { aimedPlacement, movedPlacement } from "../../lib/speaker/spaceLayout";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { presetLayers } from "../stack/stackPresets";
-import { STACK_START_DESIGN_NAMES, type StackPreset } from "../../constants/stackPresets";
+import {
+  EMPTY_START,
+  STACK_START_DESIGN_NAMES,
+  type DesignStart,
+} from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
 import { listenerArrivals, solveFeeds } from "../../lib/speaker/solveFeeds";
 import { withSpeaker } from "../stack/useStack";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
 import type { PlaceItem } from "./placeOptions";
-import { DRAFT_SPACE_ID, spaceDraft, spaceFromSaved, spaceSnapshot } from "./spaceSaves";
+import {
+  DRAFT_SPACE_ID,
+  emptySpace,
+  spaceDraft,
+  spaceFromSaved,
+  spaceSnapshot,
+} from "./spaceSaves";
 import { usePageDraft, type SharedMode } from "../../hooks/usePageDraft";
 import type {
   BandId,
@@ -169,10 +179,12 @@ export function withStack(
 }
 
 /**
- * A preset read in as a space: a PA layout on the PA floor's starting layout, or the Hi-fi pair in its room. A PA preset
- * takes its music balance in its band Levels.
+ * A new space from a start: the empty space, or a preset read in as a space (a PA layout on the PA floor's starting
+ * layout, or the Hi-fi pair in its room). A PA preset takes its music balance in its band Levels. Its id is the draft
+ * id: no save.
  */
-export function spaceFromStart(start: StackPreset): SpaceDesign {
+export function spaceFromStart(start: DesignStart): SpaceDesign {
+  if (start === EMPTY_START) return emptySpace();
   const read = presetLayers(start, { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] });
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
@@ -616,6 +628,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       else store.flash(MISSING_SPACE_TEXT);
     },
     setName: (name: string) => editSpace((s) => ({ ...s, name })),
+    /** sets the save the space is open in, as its id; null: none (a new space's draft id) */
+    setOpenId: (id: string | null) => editSpace((s) => ({ ...s, id: id ?? DRAFT_SPACE_ID })),
     editVenue,
     editPlacement,
     /** places a Place choice's item at the new spot, its speakers copied into the space */

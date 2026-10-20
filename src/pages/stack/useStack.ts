@@ -15,7 +15,7 @@ import {
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
-import { stackDraft, stackFromSaved, stackSnapshot } from "./stackSaves";
+import { DRAFT_STACK_ID, stackDraft, stackFromSaved, stackSnapshot } from "./stackSaves";
 import { usePageDraft, type SharedMode } from "../../hooks/usePageDraft";
 import { useStackOptimizer } from "./useStackOptimizer";
 import { STACK_TEXT } from "../../constants/stack";
@@ -167,6 +167,8 @@ export function useStack() {
       else store.flash(MISSING_STACK_TEXT);
     },
     setName: (name: string) => editStack((s) => ({ ...s, name })),
+    /** sets the save the stack is open in, as its id; null: none (a new stack's draft id) */
+    setOpenId: (id: string | null) => editStack((s) => ({ ...s, id: id ?? DRAFT_STACK_ID })),
     setNotes: (notes: string) => editStack((s) => ({ ...s, notes })),
     editMember: (k: number, edit: (member: StackMember) => StackMember) =>
       editMembers((list) => list.map((m, i) => (i === k ? edit(m) : m))),

@@ -25,7 +25,7 @@ jobs:
       - run: vp check
       - run: vp test --exclude tests/horn-plate.test.ts --exclude tests/horn-ply-mount.test.ts
 
-  # the build, and the phone and tablet layout check (tests/mobile-check.mjs)
+  # the build, the phone and tablet layout check (tests/mobile-check.mjs), and the save row check
   phone:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -42,6 +42,9 @@ jobs:
       - run: vp exec playwright install chromium
         timeout-minutes: 5
       - run: node tests/mobile-check.mjs dist/stack-planner.html
+        timeout-minutes: 5
+      # the save row on each page, against a stand-in database (tests/save-row-check.mjs), on the same build
+      - run: node tests/save-row-check.mjs dist/stack-planner.html
         timeout-minutes: 5
 
   # the 3D checks: the 3D view's GPU memory stays flat over rebuilds (tests/three-memory-check.mjs), and the horn mount
