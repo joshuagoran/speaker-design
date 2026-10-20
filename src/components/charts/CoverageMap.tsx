@@ -13,11 +13,14 @@ import type {
   FloorPoint,
   RoomSide,
 } from "../../types";
+import type { CouplingMark } from "../../lib/speaker/spaceCoupling";
 import { SVG_FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
 import { CONTOUR_STEP_DB, COVERAGE_MAP_DB } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
+import { OPEN_SIDE } from "../../constants/space";
+import { INCHES_PER_FOOT, RAD } from "../../constants/units";
 import {
   COVERAGE_CONTOURS,
   COVERAGE_GRADIENT,
@@ -34,6 +37,8 @@ const HANDLE_FT = 5;
 /** how far the horn's coverage edges are drawn, ft */
 const EDGE_FT = 30;
 const PAD = { l: 30, r: 10, t: 24, b: 24 };
+/** A coupled face's bar on the map, px wide. */
+const COUPLING_BAR_PX = 5;
 
 /** The quiet line's font size and the width of one of its characters, px (the map's font). */
 const QUIET_FONT_PX = 12;
@@ -67,11 +72,11 @@ export interface MapBox extends FloorPlacement {
 }
 
 /**
- * What a drag on the map does: move box `i` to a spot, turn it to face one, move the listener, or move the alignment
- * point (where it has one).
+ * What a drag on the map does: move box `i` to a spot (`free`: Alt held, so it places freely), turn it to face one, move
+ * the listener, or move the alignment point (where it has one).
  */
 export interface MapActions {
-  moveBox: (i: number, p: FloorPoint) => void;
+  moveBox: (i: number, p: FloorPoint, free: boolean) => void;
   aimBox: (i: number, p: FloorPoint) => void;
   moveListener: (p: FloorPoint) => void;
   moveAlignAt?: (p: FloorPoint) => void;
@@ -86,6 +91,8 @@ interface Props {
   alignAt?: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
+  /** the coupled faces, drawn in yellow: along a wall where a box meets it, and where two boxes meet (absent: none) */
+  coupling?: readonly CouplingMark[];
   /**
    * the boxes picked (their indexes; a mirrored pair's two boxes are one pick) and the pick of one by a press on it or
    * its aim dot; both absent, the map has no pick
@@ -115,6 +122,7 @@ export function CoverageMap({
   alignAt,
   actions,
   boxes,
+  coupling = [],
   selected = [],
   onSelect,
   maxHeight,
@@ -179,7 +187,13 @@ export function CoverageMap({
     );
   }, [view, gx, gy, gw, gh]);
 
-  const boxPx = (b: MapBox) => Math.max(14, (b.footprint.w / 12) * k);
+  const boxPx = (b: MapBox) => Math.max(14, (b.footprint.w / INCHES_PER_FOOT) * k);
+  /** a box's middle on the plan, ft: half its depth behind its spot (its front center), along its aim */
+  const boxMiddle = (b: MapBox): FloorPoint => {
+    const a = b.aim * RAD,
+      half = b.footprint.d / INCHES_PER_FOOT / 2;
+    return { x: b.x - Math.sin(a) * half, y: b.y - Math.cos(a) * half };
+  };
   const handle = (b: MapBox) => {
     const a = (b.aim * Math.PI) / 180;
     return { x: px(b.x + Math.sin(a) * HANDLE_FT), y: py(b.y + Math.cos(a) * HANDLE_FT) };
@@ -191,12 +205,12 @@ export function CoverageMap({
     const r = e.currentTarget.getBoundingClientRect();
     return { X: ((e.clientX - r.left) / r.width) * W, Y: ((e.clientY - r.top) / r.height) * H };
   };
-  const apply = (d: Drag, X: number, Y: number) => {
+  const apply = (d: Drag, X: number, Y: number, free: boolean) => {
     const p = toFt(X, Y);
     if (d.kind === "listener") actions.moveListener(p);
     else if (d.kind === "alignAt") actions.moveAlignAt?.(p);
     else if (d.kind === "aim") actions.aimBox(d.i, p);
-    else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy });
+    else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy }, free);
   };
   const down = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
@@ -207,7 +221,10 @@ export function CoverageMap({
       const hp = handle(b);
       return b.turnable && near(hp.x, hp.y, 16);
     });
-    const onBox = boxes.findIndex((b) => near(px(b.x), py(b.y), boxPx(b) / 2 + 8));
+    const onBox = boxes.findIndex((b) => {
+      const m = boxMiddle(b);
+      return near(px(m.x), py(m.y), boxPx(b) / 2 + 8);
+    });
     if (aimAt >= 0) {
       d = { kind: "aim", i: aimAt };
       onSelect?.(aimAt);
@@ -222,7 +239,7 @@ export function CoverageMap({
       return;
     e.currentTarget.setPointerCapture(e.pointerId);
     setDrag(d);
-    if (d.kind === "listener") apply(d, X, Y);
+    if (d.kind === "listener") apply(d, X, Y, e.altKey);
   };
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
@@ -232,7 +249,7 @@ export function CoverageMap({
         ? p
         : null,
     );
-    if (drag) apply(drag, X, Y);
+    if (drag) apply(drag, X, Y, e.altKey);
   };
   const up = () => setDrag(null);
   const key = (e: React.KeyboardEvent<SVGSVGElement>) => {
@@ -262,7 +279,7 @@ export function CoverageMap({
   // the map against the page, so they follow the theme
   const sideLine = (side: RoomSide) => {
     const m = room.materials[side];
-    if (room.outdoors || m === "open")
+    if (room.outdoors || m === OPEN_SIDE)
       return { stroke: pal.muted, strokeWidth: 1.25, strokeDasharray: "4 4" };
     return { stroke: pal.ink, strokeWidth: materialAlpha(m, 1000) >= 0.5 ? 2 : 4 };
   };
@@ -421,7 +438,8 @@ export function CoverageMap({
         {boxes.map((b, i) => {
           const hp = handle(b);
           const bw = boxPx(b),
-            bh = Math.max(14, (b.footprint.d / 12) * k);
+            bh = Math.max(14, (b.footprint.d / INCHES_PER_FOOT) * k);
+          const m = boxMiddle(b);
           return (
             <g key={b.label + i}>
               {b.turnable && (
@@ -446,9 +464,10 @@ export function CoverageMap({
                 </>
               )}
               <g transform={`translate(${px(b.x)},${py(b.y)}) rotate(${-b.aim})`}>
+                {/* the box behind its spot (its front center), as it stands */}
                 <rect
                   x={-bw / 2}
-                  y={-bh / 2}
+                  y={-bh}
                   width={bw}
                   height={bh}
                   rx="3"
@@ -458,8 +477,8 @@ export function CoverageMap({
                 />
               </g>
               <text
-                x={px(b.x)}
-                y={py(b.y) + 4}
+                x={px(m.x)}
+                y={py(m.y) + 4}
                 textAnchor="middle"
                 fill={ON_DATA.white}
                 {...font}
@@ -470,6 +489,18 @@ export function CoverageMap({
             </g>
           );
         })}
+        {coupling.map((m, i) => (
+          <line
+            key={`coupling${i}`}
+            x1={px(m.from.x)}
+            y1={py(m.from.y)}
+            x2={px(m.to.x)}
+            y2={py(m.to.y)}
+            stroke={pal.yellow}
+            strokeWidth={COUPLING_BAR_PX}
+            pointerEvents="none"
+          />
+        ))}
         {alignAt && (
           <g transform={`translate(${px(alignAt.x)} ${py(alignAt.y)}) rotate(45)`}>
             <rect x="-8" y="-8" width="16" height="16" fill={ON_DATA.ink} />
