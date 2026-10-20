@@ -1,0 +1,337 @@
+<!doctype html>
+<!-- Space loading mock: the "in place against alone" line and chart. The numbers are SHAPED, not calculated:
+     a simple near-surface rule stands in for the real model, only so the owner can try the tasks in the plan
+     (docs/space-loading-plan.md). Open this file in a browser. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Space loading mock</title>
+    <style>
+      :root {
+        --ink: #111111;
+        --muted: #595959;
+        --edge: #e6e6e6;
+        --panel: #ffffff;
+        --page: #fafaf9;
+        --cyan: #0077b8;
+        --magenta: #e5007e;
+        --yellow: #ffd400;
+        --green: #1a7f37;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--page);
+        color: var(--ink);
+        font-family: Inconsolata, ui-monospace, monospace;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 0 16px;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      @media (min-width: 900px) {
+        .grid {
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        }
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--edge);
+        border-radius: 6px;
+        padding: 12px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      select,
+      button,
+      input[type="range"] {
+        font: inherit;
+        font-size: 13px;
+      }
+      button,
+      select {
+        border: 1px solid #c8c8c8;
+        border-radius: 4px;
+        background: var(--panel);
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: var(--muted);
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        touch-action: none;
+      }
+      .box {
+        cursor: grab;
+      }
+      .line {
+        font-size: 15px;
+        margin: 4px 0 2px;
+      }
+      .line b {
+        font-weight: 700;
+      }
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .louder {
+        color: var(--green);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Space: in place against alone (mock)</h1>
+    <p class="note">The numbers are shaped, not calculated. Drag a box. Try the plan's tasks.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <label for="type">Box</label>
+          <select id="type">
+            <option value="horn">18 in horn sub</option>
+            <option value="vented">18 in vented sub</option>
+            <option value="sealed">18 in sealed sub</option>
+          </select>
+          <label for="lift">Lift</label>
+          <input id="lift" type="range" min="0" max="72" step="1" value="0" />
+          <span id="liftOut" class="small">0 in</span>
+        </div>
+        <div class="row">
+          <button data-place="middle">Middle</button>
+          <button data-place="wall">Front wall</button>
+          <button data-place="corner">Corner</button>
+          <button id="second">Add a second box</button>
+          <button data-place="touch">Touching pair</button>
+          <button data-place="apart">10 ft apart</button>
+          <label><input id="outdoors" type="checkbox" /> Outdoors</label>
+        </div>
+        <svg id="room" viewBox="-2 -2 34 44" aria-label="Room, seen from above"></svg>
+        <p class="small">
+          Room 30 × 40 ft, seen from above. The front wall is at the top. A box within 10 mm of a
+          wall touches it.
+        </p>
+      </div>
+      <div class="card">
+        <p class="small" id="which">Selected box: A</p>
+        <p class="line" id="line"></p>
+        <p class="small" id="limit"></p>
+        <svg id="chart" viewBox="0 0 520 300" aria-label="Maximum output, in place and alone"></svg>
+        <p class="small">
+          <span style="color: var(--magenta)">━</span> in place
+          <span style="color: var(--muted)">┅</span> alone (half space)
+        </p>
+      </div>
+    </div>
+    <script>
+      const FT = 0.3048,
+        C = 343,
+        TOUCH_M = 0.01,
+        BOX_FT = 2,
+        ROOM = { w: 30, l: 40 };
+      /** How strongly each kind of box follows its load (shaped): a horn mouth a lot, a cone very little. */
+      const FOLLOW = { horn: 0.75, vented: 0.12, sealed: 0.03 };
+      /** Maximum output alone, dB at 1 m, flat part (shaped). */
+      const FLAT = { horn: 131, vented: 127, sealed: 122 };
+      /** Lower corner, Hz (shaped). */
+      const LOW = { horn: 38, vented: 33, sealed: 45 };
+      const boxes = [{ id: "A", x: 15 - BOX_FT / 2, y: 20 - BOX_FT / 2 }];
+      let selected = 0;
+      const $ = (id) => document.getElementById(id);
+
+      /** Distances (m) from box i's mouth to the surfaces and the other mouths that load it. */
+      function loads(i) {
+        const b = boxes[i],
+          outdoors = $("outdoors").checked,
+          lift = Number($("lift").value) * 0.0254;
+        const d = [{ m: lift + 0.15 }]; // the floor: the mouth is near the box bottom
+        if (!outdoors) {
+          d.push(
+            { m: b.y * FT },
+            { m: (ROOM.l - b.y - BOX_FT) * FT },
+            { m: b.x * FT },
+            { m: (ROOM.w - b.x - BOX_FT) * FT },
+          );
+        }
+        boxes.forEach((o, j) => {
+          if (j === i) return;
+          const gap = Math.max(Math.abs(o.x - b.x), Math.abs(o.y - b.y)) - BOX_FT; // ft between faces
+          d.push({ m: Math.max(0, gap * FT) + 0.3, neighbor: true });
+        });
+        return d;
+      }
+      /** Extra load at frequency f: the radiated-power ratio of a source near rigid surfaces, 1 + Σ sin(2kd)/(2kd). */
+      function loadRatio(f, ds) {
+        const k = (2 * Math.PI * f) / C;
+        return ds.reduce((r, { m }) => {
+          const x = 2 * k * Math.max(m, TOUCH_M);
+          return r + Math.sin(x) / x;
+        }, 1);
+      }
+      /** In-place change, dB, at f (shaped): the load's ratio, scaled by how much this kind of box follows it. */
+      function changeDb(f, type, ds) {
+        const fade = f < 500 ? 1 : f > 1000 ? 0 : 1 - (f - 500) / 500;
+        return FOLLOW[type] * 10 * Math.log10(Math.max(0.2, loadRatio(f, ds))) * fade;
+      }
+      function aloneDb(f, type) {
+        const hp = 1 / Math.sqrt(1 + (LOW[type] / f) ** 8),
+          lp = 1 / Math.sqrt(1 + (f / 110) ** 8);
+        return FLAT[type] + 20 * Math.log10(hp * lp);
+      }
+      const freqs = Array.from({ length: 160 }, (_, i) => 15 * Math.pow(20000 / 15, i / 159));
+
+      function drawRoom() {
+        const svg = $("room");
+        const outdoors = $("outdoors").checked;
+        let s = outdoors
+          ? `<rect x="0" y="0" width="${ROOM.w}" height="${ROOM.l}" fill="#f3f3f3" stroke="none"/>`
+          : `<rect x="0" y="0" width="${ROOM.w}" height="${ROOM.l}" fill="#fff" stroke="#111" stroke-width="0.25"/>`;
+        boxes.forEach((b, i) => {
+          s += `<rect class="box" data-i="${i}" x="${b.x}" y="${b.y}" width="${BOX_FT}" height="${BOX_FT}" rx="0.15"
+            fill="${i === selected ? "#e5007e" : "#9a9a9a"}" stroke="#111" stroke-width="0.12"/>
+            <text x="${b.x + BOX_FT / 2}" y="${b.y + BOX_FT / 2 + 0.45}" font-size="1.2" text-anchor="middle" fill="#fff" pointer-events="none">${b.id}</text>`;
+        });
+        svg.innerHTML = s;
+      }
+      function drawChart() {
+        const type = $("type").value,
+          ds = loads(selected);
+        const W = 520,
+          H = 300,
+          L = 40,
+          R = 10,
+          T = 10,
+          B = 26;
+        const xOf = (f) =>
+          L +
+          ((Math.log10(f) - Math.log10(15)) / (Math.log10(20000) - Math.log10(15))) * (W - L - R);
+        const yOf = (db) => T + ((140 - Math.min(140, Math.max(80, db))) / 60) * (H - T - B);
+        let s = "";
+        for (let db = 80; db <= 140; db += 10)
+          s += `<line x1="${L}" x2="${W - R}" y1="${yOf(db)}" y2="${yOf(db)}" stroke="#e6e6e6"/><text x="${L - 4}" y="${yOf(db) + 4}" font-size="11" text-anchor="end" fill="#595959">${db}</text>`;
+        for (const [f, t] of [
+          [20, "20"],
+          [50, "50"],
+          [100, "100"],
+          [200, "200"],
+          [500, "500"],
+          [1000, "1k"],
+          [2000, "2k"],
+          [5000, "5k"],
+          [10000, "10k"],
+          [20000, "20k"],
+        ])
+          s += `<line x1="${xOf(f)}" x2="${xOf(f)}" y1="${T}" y2="${H - B}" stroke="#e6e6e6"/><text x="${xOf(f)}" y="${H - 8}" font-size="11" text-anchor="middle" fill="#595959">${t}</text>`;
+        const path = (fn) =>
+          freqs
+            .map((f, i) => `${i ? "L" : "M"}${xOf(f).toFixed(1)},${yOf(fn(f)).toFixed(1)}`)
+            .join("");
+        s += `<path d="${path((f) => aloneDb(f, type))}" fill="none" stroke="#595959" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+        s += `<path d="${path((f) => aloneDb(f, type) + changeDb(f, type, ds))}" fill="none" stroke="#e5007e" stroke-width="2"/>`;
+        s += `<text x="${L}" y="${T + 10}" font-size="11" fill="#595959"> dB at 1 m</text>`;
+        $("chart").innerHTML = s;
+
+        const at40 = changeDb(40, type, ds);
+        const travel = type === "horn" ? -at40 * 4.5 : type === "vented" ? at40 * 2 : at40 * 0.5; // shaped
+        const word =
+          Math.abs(at40) < 0.05
+            ? "the same as"
+            : at40 > 0
+              ? `louder by ${at40.toFixed(1)} dB than`
+              : `quieter by ${(-at40).toFixed(1)} dB than`;
+        $("line").innerHTML =
+          `In place: <b class="${at40 > 0.05 ? "louder" : ""}">${word}</b> alone at 40 Hz. Cone travel ${travel >= 0 ? "+" : ""}${travel.toFixed(0)} %.`;
+        $("limit").textContent =
+          `Maximum output at 40 Hz: ${(aloneDb(40, type) + at40).toFixed(1)} dB in place, ${aloneDb(40, type).toFixed(1)} dB alone.`;
+        $("which").textContent = `Selected box: ${boxes[selected].id}`;
+        $("liftOut").textContent = `${$("lift").value} in`;
+      }
+      const draw = () => {
+        drawRoom();
+        drawChart();
+      };
+      const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+      const place = (b, x, y) => {
+        b.x = clamp(x, 0, ROOM.w - BOX_FT);
+        b.y = clamp(y, 0, ROOM.l - BOX_FT);
+      };
+
+      // drag a box; the nearest wall snaps within 10 mm (the touching gap)
+      let drag = null;
+      $("room").addEventListener("pointerdown", (e) => {
+        const i = e.target.dataset && e.target.dataset.i;
+        if (i === undefined) return;
+        selected = Number(i);
+        const pt = toRoom(e);
+        drag = { i: selected, dx: pt.x - boxes[selected].x, dy: pt.y - boxes[selected].y };
+        e.target.setPointerCapture(e.pointerId);
+        draw();
+      });
+      window.addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        const pt = toRoom(e);
+        place(boxes[drag.i], pt.x - drag.dx, pt.y - drag.dy);
+        draw();
+      });
+      window.addEventListener("pointerup", () => (drag = null));
+      function toRoom(e) {
+        const svg = $("room"),
+          p = svg.createSVGPoint();
+        p.x = e.clientX;
+        p.y = e.clientY;
+        return p.matrixTransform(svg.getScreenCTM().inverse());
+      }
+
+      document.querySelectorAll("[data-place]").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const a = boxes[0];
+          const where = btn.dataset.place;
+          if (where === "middle") place(a, 15 - BOX_FT / 2, 20 - BOX_FT / 2);
+          if (where === "wall") place(a, 15 - BOX_FT / 2, 0);
+          if (where === "corner") place(a, 0, 0);
+          if (where === "touch" || where === "apart") {
+            if (boxes.length < 2) boxes.push({ id: "B", x: 0, y: 0 });
+            place(boxes[1], a.x + BOX_FT + (where === "apart" ? 10 : 0), a.y);
+            if (boxes[1].x + BOX_FT > ROOM.w)
+              place(boxes[1], a.x - BOX_FT - (where === "apart" ? 10 : 0), a.y);
+          }
+          selected = 0;
+          draw();
+        }),
+      );
+      $("second").addEventListener("click", () => {
+        if (boxes.length < 2) boxes.push({ id: "B", x: 20, y: 20 });
+        selected = 1;
+        draw();
+      });
+      ["type", "lift", "outdoors"].forEach((id) => $(id).addEventListener("input", draw));
+      draw();
+    </script>
+  </body>
+</html>
