@@ -3,7 +3,7 @@
 // the center line, y down the room from the front wall, z up from the floor. Pure.
 import type { CoupledSurface, CoverageRoom, FloorPoint, PlacedSource, RoomSide } from "../../types";
 import type { PlacedBox, RoomPoint } from "./spaceLayout";
-import { COUPLED_FLOOR, COUPLING_GAP_M, OPEN_SIDE } from "../../constants/space";
+import { COUPLED_CEILING, COUPLED_FLOOR, COUPLING_GAP_M, OPEN_SIDE } from "../../constants/space";
 import { INCHES_PER_FOOT, METERS_PER_FOOT, METERS_PER_INCH } from "../../constants/units";
 
 /** One box of a placement as it stands (`expandPlacements`): its spot, aim and lift, and its members' corners. */
@@ -19,8 +19,8 @@ export interface RoomWall {
 }
 
 /**
- * What one member box of a placement is coupled with: the floor and walls, and the other member boxes (its own item's
- * too).
+ * What one member box of a placement is coupled with: the floor, the ceiling, and walls, and the other member boxes
+ * (its own item's too).
  */
 export interface MemberCoupling {
   surfaces: CoupledSurface[];
@@ -203,26 +203,37 @@ function sharedFace(a: Face, b: Face): { mark: CouplingMark | null } | null {
 }
 
 /**
- * What each box stands right against, in `items`' order (a mirrored pair as two, `expandPlacements`): the floor (its
- * lift within the coupling gap, `COUPLING_GAP_M`), each wall a face of it is within the gap of, and each other box with
+ * What each box stands right against in `room`, in `items`' order (a mirrored pair as two, `expandPlacements`): the
+ * floor (its lift within the coupling gap, `COUPLING_GAP_M`), the ceiling (its top within the gap; none outdoors or
+ * open; not marked, as the plan can't show it), each wall a face of it is within the gap of, and each other box with
  * a face within the gap of one of its own and a shared area. Each member box on its own too: the floor only where its
- * lowest corner is within the gap of it (a box stacked on another is not), and the other member boxes it meets, its own
+ * lowest corner is within the gap of it (a box stacked on another is not), the ceiling where its top is, and the other member boxes it meets, its own
  * item's too. With the marks the plan draws: each stretch of wall a box meets, and once each upright face two items'
  * boxes share.
  */
 export function spaceCoupling(
   items: readonly StandingItem[],
-  walls: readonly RoomWall[],
+  room: Pick<CoverageRoom, "widthFt" | "lengthFt" | "ceilingFt" | "outdoors" | "materials">,
 ): { boxes: BoxCoupling[]; marks: CouplingMark[] } {
+  const walls = roomWalls(room);
+  /** the ceiling's height, ft: none outdoors, or open */
+  const ceilingFt =
+    room.outdoors || room.materials[COUPLED_CEILING] === OPEN_SIDE ? null : room.ceilingFt;
+  /** whether corners reach the ceiling, within the gap */
+  const atCeiling = (corners: readonly RoomPoint[]) =>
+    ceilingFt !== null && Math.max(...corners.map((c) => c.z)) >= ceilingFt - GAP_FT;
   const marks: CouplingMark[] = [];
   const faces = items.map((it) => it.boxes.map((b) => facesOf(b.corners)));
   const boxes = items.map((it, i): BoxCoupling => {
     const surfaces: CoupledSurface[] = [];
     if (it.placement.liftIn * METERS_PER_INCH <= COUPLING_GAP_M) surfaces.push(COUPLED_FLOOR);
-    const members = it.boxes.map((b): MemberCoupling => ({
-      surfaces: Math.min(...b.corners.map((c) => c.z)) <= GAP_FT ? [COUPLED_FLOOR] : [],
-      boxes: [],
-    }));
+    if (atCeiling(it.boxes.flatMap((b) => b.corners))) surfaces.push(COUPLED_CEILING);
+    const members = it.boxes.map((b): MemberCoupling => {
+      const own: CoupledSurface[] = [];
+      if (Math.min(...b.corners.map((c) => c.z)) <= GAP_FT) own.push(COUPLED_FLOOR);
+      if (atCeiling(b.corners)) own.push(COUPLED_CEILING);
+      return { surfaces: own, boxes: [] };
+    });
     for (const wall of walls) {
       const { axis, along, low } = WALL_FACE[wall.side];
       const against = faces[i].flatMap((own, box) =>

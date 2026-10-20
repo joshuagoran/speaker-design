@@ -4,7 +4,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { bandOfPart, spaceModelLaidOut, spaceResponse } from "../src/lib/speaker/spaceCoverage";
-import { roomWalls, spaceCoupling } from "../src/lib/speaker/spaceCoupling";
+import { spaceCoupling } from "../src/lib/speaker/spaceCoupling";
 import { boxLoadings } from "../src/lib/speaker/spaceLoading";
 import { spaceLayout } from "../src/lib/speaker/spaceLayout";
 import { speakerLayout } from "../src/lib/speaker/speakerLayout";
@@ -71,7 +71,7 @@ const spaceOf = (placements: SpacePlacement[]): SpaceDesign => ({
 function loadings(placements: SpacePlacement[]) {
   const design = spaceOf(placements);
   const items = spaceLayout(design, bandOfPart);
-  return boxLoadings(items, spaceCoupling(items, roomWalls(design.space.venue.room)).boxes);
+  return boxLoadings(items, spaceCoupling(items, design.space.venue.room).boxes);
 }
 
 /** The level of a curve nearest `f`, dB. */
@@ -92,6 +92,18 @@ test("loading: one horn sub alone: the floor, a side wall at right angles, nothi
     [{ angle: 0.5, count: 1 }],
   ]);
   assert.deepEqual(loadings([spacePlacement({ x: 0, y: 10 }, HORN_ITEM, 24)]), [
+    [{ angle: 2, count: 1 }],
+  ]);
+  // lifted to the ceiling mid-room: the ceiling halves it as the floor does; outdoors there is none
+  const toCeiling = ROOM.ceilingFt * INCHES_PER_FOOT - HORN_SIZE.h;
+  assert.deepEqual(loadings([spacePlacement({ x: 0, y: 10 }, HORN_ITEM, toCeiling)]), [
+    [{ angle: 1, count: 1 }],
+  ]);
+  const items = spaceLayout(
+    spaceOf([spacePlacement({ x: 0, y: 10 }, HORN_ITEM, toCeiling)]),
+    bandOfPart,
+  );
+  assert.deepEqual(boxLoadings(items, spaceCoupling(items, { ...ROOM, outdoors: true }).boxes), [
     [{ angle: 2, count: 1 }],
   ]);
   // the front wall behind it changes nothing: with the floor, a quarter space; in the corner, still an eighth
@@ -143,7 +155,7 @@ test("loading: identical horn subs side by side share their load; another design
     ),
   ]);
   const items = spaceLayout(mixed, bandOfPart);
-  const coupling = spaceCoupling(items, roomWalls(ROOM));
+  const coupling = spaceCoupling(items, ROOM);
   assert.deepEqual(coupling.boxes[0].boxes, [1]);
   assert.deepEqual(boxLoadings(items, coupling.boxes)[0], [{ angle: 1, count: 1 }]);
 });
@@ -168,7 +180,7 @@ test("loading: in a stack, identical members share their load; the member on top
   ]);
   // the stack's own members are coupled with each other, but not marked on the plan
   const design = spaceOf([spacePlacement({ x: 0, y: 10 }, STACK_ITEM, 0)]);
-  const coupling = spaceCoupling(spaceLayout(design, bandOfPart), roomWalls(ROOM));
+  const coupling = spaceCoupling(spaceLayout(design, bandOfPart), ROOM);
   assert.deepEqual(coupling.boxes[0].members[0].boxes, [{ item: 0, box: 1 }]);
   assert.deepEqual(coupling.boxes[0].boxes, []);
   assert.deepEqual(coupling.marks, []);

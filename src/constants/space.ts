@@ -6,6 +6,7 @@ import type {
   CoverageRoom,
   FloorPoint,
   RoomMaterial,
+  RoomSurface,
 } from "../types";
 import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
@@ -87,12 +88,16 @@ export const COUPLING_GAP_M = 0.01;
 /** The floor, as a box's couplings name it beside the walls (`CoupledSurface`). */
 export const COUPLED_FLOOR = "floor";
 
+/** The ceiling, as a box's couplings name it (`CoupledSurface`), and as the room's materials name it. */
+export const COUPLED_CEILING = "ceiling" as const satisfies RoomSurface;
+
 /** A side that is open: no wall stands there, so nothing couples with it or snaps to it. */
 export const OPEN_SIDE = "open" as const satisfies RoomMaterial;
 
 /** Each surface a box can be coupled with, as the placement's "Coupled with" line names it. */
 export const COUPLED_NAMES: Record<CoupledSurface, string> = {
   floor: "floor",
+  ceiling: "ceiling",
   front: "front wall",
   back: "back wall",
   left: "left wall",

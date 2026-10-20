@@ -3,14 +3,14 @@
 // the box is coupled with (lib/speaker/spaceCoupling). Pure.
 //
 // At bass wavelengths a few cm (a box's wall) acts as touching: so the box's coupling stands in for its mouth's.
-// - angle: half space from the box's front baffle; each coupled surface at right angles to its front (the floor, a side
-//   wall) halves it, to a quarter of space at most. A wall behind the box or in front of it does not change it.
+// - angle: half space from the box's front baffle; each coupled surface at right angles to its front (the floor, the
+//   ceiling, a side wall) halves it, to a quarter of space at most. A wall behind the box or in front of it does not change it.
 // - count: the identical boxes (the same Speaker, in this item or another) coupled with it in a chain, facing the same
 //   way with their fronts in one plane. A coupled box of another design adds nothing.
 import type { BoxLoading, CoupledSurface } from "../../types";
 import type { BoxCoupling } from "./spaceCoupling";
 import type { PlacedItem, RoomPoint } from "./spaceLayout";
-import { COUPLED_FLOOR, COUPLING_GAP_M } from "../../constants/space";
+import { COUPLED_CEILING, COUPLED_FLOOR, COUPLING_GAP_M } from "../../constants/space";
 import { CHAMBER_LOAD } from "../../constants/speakerSpec";
 import { ONE_BOX_HALF_SPACE, RADIATION_ANGLES } from "../../constants/hornEngine";
 import { METERS_PER_FOOT } from "../../constants/units";
@@ -18,6 +18,7 @@ import { METERS_PER_FOOT } from "../../constants/units";
 /** The room axis each coupled surface stands across. */
 const SURFACE_AXIS: Record<CoupledSurface, keyof RoomPoint> = {
   [COUPLED_FLOOR]: "z",
+  [COUPLED_CEILING]: "z",
   front: "y",
   back: "y",
   left: "x",

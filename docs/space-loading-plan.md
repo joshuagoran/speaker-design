@@ -71,11 +71,12 @@ It uses the box's coupling, not the mouth's edge.
 
 At bass wavelengths, a few cm (a box's wall) acts as touching. So the box's coupling stands in for its mouth's.
 
-1. Find what each box is coupled with: the floor, the walls, and other boxes (`spaceCoupling`).
+1. Find what each box is coupled with: the floor, the ceiling, the walls, and other boxes (`spaceCoupling`).
    "Coupled" means a gap of 10 mm (0.4 in) or less, as Deploy's minimum clearance (decision 1).
    In a Stack, use the member box that holds the chamber. A member on top of another is not on the floor.
 2. Set `angle`. Start at 2: the front baffle gives a half space.
-   Each coupled surface at right angles to the box's front halves it: the floor, or a side wall. Stop at 0.5.
+   Each coupled surface at right angles to the box's front halves it: the floor, the ceiling, or a side wall.
+   Stop at 0.5.
    A wall behind the box or in front of it does not change it.
 3. Set `count`: the identical boxes (same Speaker) in a coupled chain.
    Members of one Stack count too: two TH18s, one on the other, give 2.
@@ -85,7 +86,8 @@ At bass wavelengths, a few cm (a box's wall) acts as touching. So the box's coup
 5. Scale the box's sound back to one box in half space. The room's images and the other boxes add theirs, as now.
    So only the change in the mouth's flow is new.
 
-Stage A does not load the port exits of plain vented boxes, or the ceiling.
+Stage A does not load the port exits of plain vented boxes. Their exit mass falls off fast with distance, so Stage B handles them.
+A box whose top is at the ceiling is coupled with it. Outdoors, or with an open ceiling, there is none.
 
 **Stage B: mutual load at any distance.** This replaces Stage A's steps 2–3.
 

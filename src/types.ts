@@ -41,7 +41,7 @@ import type {
 import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { POSITION_AXIS } from "./constants/speakerResults";
 import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
-import type { COUPLED_FLOOR, DRIVER_PART, PAIR_SIDE } from "./constants/space";
+import type { COUPLED_CEILING, COUPLED_FLOOR, DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
@@ -3136,8 +3136,11 @@ export interface PaStackGeometry {
 /** A side of the room. front: the wall behind the stacks. */
 export type RoomSide = "front" | "back" | "left" | "right";
 
-/** What a box can be coupled with besides another box: the floor, or a side of the room (lib/speaker/spaceCoupling). */
-export type CoupledSurface = typeof COUPLED_FLOOR | RoomSide;
+/**
+ * What a box can be coupled with besides another box: the floor, the ceiling, or a side of the room
+ * (lib/speaker/spaceCoupling).
+ */
+export type CoupledSurface = typeof COUPLED_FLOOR | typeof COUPLED_CEILING | RoomSide;
 
 /** A surface the room's material is set for: the four sides and the ceiling (the floor is hard, or the crowd). */
 export type RoomSurface = RoomSide | "ceiling";

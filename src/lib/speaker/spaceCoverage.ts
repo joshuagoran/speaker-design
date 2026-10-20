@@ -54,7 +54,7 @@ import {
 import { coneParts, isConeKind } from "./driverParts";
 import { driverHorn, speakerLayout } from "./speakerLayout";
 import { spaceLayout, type BandOfPart, type PlacedDriver, type PlacedItem } from "./spaceLayout";
-import { roomWalls, spaceCoupling } from "./spaceCoupling";
+import { spaceCoupling } from "./spaceCoupling";
 import { boxLoadings } from "./spaceLoading";
 import { typedFeed, type SolvedFeed } from "./solveFeeds";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
@@ -238,7 +238,7 @@ export function withSolved(model: SpaceModel, solved: SolvedFeed[]): SpaceModel 
 export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
   const cache = new Map<string, Pick<SpacePlacementModel, "response" | "limits">>();
   const items = spaceLayout(design, bandOfPart);
-  const coupling = spaceCoupling(items, roomWalls(design.space.venue.room));
+  const coupling = spaceCoupling(items, design.space.venue.room);
   const loadings = boxLoadings(items, coupling.boxes);
   const placements = items.map((item, k) => placementModel(item, loadings[k] ?? [], cache));
   const feeds = new Map<string, VoiceFeed>();

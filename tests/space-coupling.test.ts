@@ -7,7 +7,13 @@ import { expandPlacements, placementFrame } from "../src/lib/speaker/spaceLayout
 import { boxCorners, ORIGIN } from "../src/lib/speaker/stackLayout";
 import { spacePlacement } from "../src/lib/speaker/specParts";
 import { withBoxMoved } from "../src/pages/space/useSpace";
-import { COUPLED_FLOOR, OPEN_SIDE, SNAP_FLUSH_IN, SPACE_HOME_ROOM } from "../src/constants/space";
+import {
+  COUPLED_CEILING,
+  COUPLED_FLOOR,
+  OPEN_SIDE,
+  SNAP_FLUSH_IN,
+  SPACE_HOME_ROOM,
+} from "../src/constants/space";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
 import { INCHES_PER_FOOT, METERS_PER_INCH } from "../src/constants/units";
 import type { CoverageRoom, SpacePlacement } from "../src/types";
@@ -45,7 +51,7 @@ const standing = (placements: readonly SpacePlacement[], sizes: readonly Size[] 
 
 /** What each box is coupled with, in the room (or another). */
 const coupled = (placements: readonly SpacePlacement[], room: CoverageRoom = ROOM) =>
-  spaceCoupling(standing(placements), roomWalls(room));
+  spaceCoupling(standing(placements), room);
 
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
@@ -153,6 +159,22 @@ test("coupling: a mirrored pair stands as two boxes, coupled with each other at 
     apart.boxes.map((b) => b.surfaces),
     [[COUPLED_FLOOR], [COUPLED_FLOOR], [COUPLED_FLOOR]],
   );
+});
+
+test("coupling: the ceiling when the top is within the gap, not marked; none outdoors or open", () => {
+  /** the lift that puts the cube's top at the ceiling, in */
+  const toCeiling = ROOM.ceilingFt * INCHES_PER_FOOT - CUBE.h;
+  const up = coupled([at(0, 10, 0, toCeiling)]);
+  assert.deepEqual(up.boxes[0].surfaces, [COUPLED_CEILING]);
+  assert.deepEqual(up.boxes[0].members[0].surfaces, [COUPLED_CEILING]);
+  assert.deepEqual(up.marks, []);
+  assert.deepEqual(coupled([at(0, 10, 0, toCeiling - 1)]).boxes[0].surfaces, []);
+  assert.deepEqual(
+    coupled([at(0, 10, 0, toCeiling)], { ...ROOM, outdoors: true }).boxes[0].surfaces,
+    [],
+  );
+  const open = { ...ROOM, materials: { ...ROOM.materials, [COUPLED_CEILING]: OPEN_SIDE } };
+  assert.deepEqual(coupled([at(0, 10, 0, toCeiling)], open).boxes[0].surfaces, []);
 });
 
 test("coupling: outdoors there are no walls, only the ground and the other boxes", () => {
