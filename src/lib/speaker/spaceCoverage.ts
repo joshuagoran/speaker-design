@@ -1,15 +1,15 @@
 // The space model: every placement's stack in the room, summed across the floor on the coverage engine
 // (lib/acoustics/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes).
 // Each placement plays its stack's response (lib/speaker/stackResponse: each member's speaker through its crossover,
-// level and delay), with each band's amp power from its speaker; each driver spot radiates its band's share with its own
-// coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step (the speaker
-// model is half-space; the floor image puts the floor back). Pure.
+// level, polarity and delay), with each band's amp power from its speaker; each driver spot radiates its band's share
+// with its own coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step
+// (the speaker model is half-space; the floor image puts the floor back). Pure.
 //
 // A horn-loaded box's mouth and vent exit take their load from where the box stands (lib/speaker/spaceLoading, from
 // what it is coupled with, lib/speaker/spaceCoupling); every other box plays as it does alone.
 //
 // Each placement's own delay and level are its solved ones (lib/speaker/solveFeeds: Auto ones from the layout, the rest
-// as typed).
+// as typed). Its polarity, as set, turns its whole feed over, on top of each member's own.
 //
 // The whole space plays from one input. At its music limit the placement with the least headroom (less its level) sets
 // the level; the page then turns it down so the reference (the audience's average) gets the target, never past the limit.
@@ -44,7 +44,7 @@ import { baffleStepShelf } from "../acoustics/directivity";
 import { abs } from "../acoustics/complex";
 import { coaxParts, FILL_OPTIONS, hifiDriverById } from "../data";
 import { byId } from "../tables";
-import { stackLimits, stackResponse } from "./stackResponse";
+import { polaritySign, stackLimits, stackResponse } from "./stackResponse";
 import {
   chamberCones,
   hfBandOf,
@@ -134,6 +134,8 @@ interface VoiceFeed extends CoverageVoice {
   delayMs: number;
   /** of that delay, the member's: the stack's own alignment, ms */
   memberDelayMs: number;
+  /** its sign: −1 where the member's polarity or the placement's (not both) is inverted */
+  sign: number;
   /** the baffle's width for a cone band's baffle step, in; null for an HF section */
   baffleWIn: number | null;
   /** the band's share each of its spots plays: one over their count */
@@ -280,6 +282,9 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
           memberLevelDb: item.stack ? item.stack.stack.members[d.member].levelDb : 0,
           delayMs: 0,
           memberDelayMs: member.delayMs,
+          sign:
+            polaritySign(placement) *
+            (item.stack ? polaritySign(item.stack.stack.members[d.member]) : 1),
           baffleWIn: d.part === DRIVER_PART.cone ? speakerLayout(d.speaker.cabinet).size.w : null,
           share: 1 / (spots.get(`${d.member}/${d.band}`) ?? 1),
         });
@@ -317,7 +322,10 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
   );
 }
 
-/** Each voice's output at 1 m at `f`, the space at its music limit: its band's share, level, delay and baffle step. */
+/**
+ * Each voice's output at 1 m at `f`, the space at its music limit: its band's share, level, polarity, delay and baffle
+ * step.
+ */
 export function spaceOutputs(
   model: Pick<SpaceModel, "feeds" | "headroomDb">,
   f: number,
@@ -325,7 +333,7 @@ export function spaceOutputs(
   const out: CoverageSlot["out"] = {};
   for (const v of model.feeds) {
     const p = pressureAt(v.pressure, f);
-    let mag = abs(p) * Math.pow(10, (v.gainDb + model.headroomDb) / 20) * v.share,
+    let mag = v.sign * abs(p) * Math.pow(10, (v.gainDb + model.headroomDb) / 20) * v.share,
       ph = Math.atan2(p.im, p.re) - (2 * Math.PI * f * v.delayMs) / MS_PER_S;
     if (v.baffleWIn !== null) {
       const shelf = baffleStepShelf(f, v.baffleWIn);

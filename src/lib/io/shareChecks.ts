@@ -63,6 +63,9 @@ const isFace = (value: unknown) => isRecord(value) && isNum(value.xIn) && isNum(
 /** Whether a value is a level or a delay that a feed takes: a number, or the solver's Auto. */
 const isFeed = (value: unknown, auto: string) => isNum(value) || value === auto;
 
+/** Whether a value is a yes or no a link from before it was added may lack (`invertPolarity`). */
+const isOptionalFlag = (value: unknown) => value === undefined || typeof value === "boolean";
+
 /** Whether a value is one of a const record's values (a text that names an id the app has). */
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
   typeof value === "string" && Object.hasOwn(ids, value);
@@ -104,6 +107,7 @@ const isPlacement = (value: unknown) =>
   typeof value.fill === "boolean" &&
   // optional: a link from before a placement could stand upside down has none
   (value.upsideDown === undefined || typeof value.upsideDown === "boolean") &&
+  isOptionalFlag(value.invertPolarity) &&
   isFeed(value.levelDb, AUTO_LEVEL) &&
   isFeed(value.delayMs, AUTO_DELAY);
 
@@ -163,7 +167,8 @@ const isMember = (value: unknown) =>
   isRecord(value.crossover) &&
   withinBounds(value.crossover) &&
   isNum(value.levelDb) &&
-  isFeed(value.delayMs, AUTO_DELAY);
+  isFeed(value.delayMs, AUTO_DELAY) &&
+  isOptionalFlag(value.invertPolarity);
 
 /** Whether a value reads as a stack (`StackSpec`). */
 const isStack = (value: unknown) =>

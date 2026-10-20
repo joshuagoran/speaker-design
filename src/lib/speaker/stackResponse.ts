@@ -1,7 +1,7 @@
 // The stack model: speakers in a fixed relationship, summed at a listening point. Each member is its speaker through
 // the speaker model (lib/speaker/speakerResponse) with the member's crossover as its input range; then the member's
-// level and delay, and each band's path to the listening point; the members summed with their phase. Its limits take
-// each member's own (lib/speaker/speakerLimits) on one input. Pure.
+// level, polarity and delay, and each band's path to the listening point; the members summed with their phase. Its
+// limits take each member's own (lib/speaker/speakerLimits) on one input. Pure.
 //
 // The listening point is STACK_LISTEN_DISTANCE_M in front of the stack's front, on its center line, level with the
 // highest band's center (on the horn's or tweeter's axis). A band's path there sets its delay and its level against the
@@ -9,8 +9,9 @@
 //
 // An auto delay puts the member in phase with the member it crosses (one's lowpass and the other's highpass within an
 // octave) at their crossover, at the listening point: the crossovers' share wrapped to a turn, each crossing band's own phase unwrapped
-// from its loudest point, and the paths. It solves for the relative delay; where the auto member would have to play
-// early, the others wait instead (every delay moves up together), so no delay is below 0.
+// from its loudest point, and the paths. It leaves out the members' polarity, so it never undoes an inverted one. It
+// solves for the relative delay; where the auto member would have to play early, the others wait instead (every delay
+// moves up together), so no delay is below 0.
 //
 // Not modeled here (the Space page's): the room, the baffle step and diffraction, directivity off axis.
 import type {
@@ -41,6 +42,14 @@ const levelOf = (p: Complex) => 20 * Math.log10(Math.max(1e-9, abs(p)));
 
 /** Milliseconds in a second. */
 const MS_PER_S = 1000;
+
+/** A feed's sign: −1 where its polarity is inverted (a save from before it has none: 1). */
+export const polaritySign = (feed: Pick<StackMember, "invertPolarity">) =>
+  feed.invertPolarity ? -1 : 1;
+
+/** A member's gain on its feed: its level as a ratio, with its polarity's sign. */
+export const memberGain = (member: Pick<StackMember, "levelDb" | "invertPolarity">) =>
+  polaritySign(member) * Math.pow(10, member.levelDb / 20);
 
 /** The speaker as a stack member feeds it: its input range is the member's crossover. */
 export const memberSpeaker = (member: Pick<StackMember, "crossover">, speaker: SpeakerSpec) => ({
@@ -260,9 +269,9 @@ export const stackListenHeightIn = (
 ): number => listenHeightOf(stackLayout(stack, speakers));
 
 /**
- * The stack at its listening point, moved to 1 m: each member's speaker through its crossover, level, delay and its
- * bands' paths, summed with their phase. A member whose speaker isn't in `speakers` is left out (null). `loading` is
- * each member's horn load where it stands (the Space page's); a member without one is alone in half space.
+ * The stack at its listening point, moved to 1 m: each member's speaker through its crossover, level, polarity, delay
+ * and its bands' paths, summed with their phase. A member whose speaker isn't in `speakers` is left out (null).
+ * `loading` is each member's horn load where it stands (the Space page's); a member without one is alone in half space.
  */
 export function stackResponse(
   stack: Pick<StackSpec, "members">,
@@ -284,8 +293,7 @@ export function stackResponse(
   const members = models.map((m, k): StackMemberResponse | null => {
     const delayMs = delays[k];
     if (!m || delayMs === null) return null;
-    const { levelDb } = stack.members[k];
-    const gain = Math.pow(10, levelDb / 20);
+    const gain = memberGain(stack.members[k]);
     let pressure = freqs.map(() => complex(0));
     for (const band of m.response.bands) {
       const path = m.paths.get(band.id) ?? STACK_LISTEN_DISTANCE_M;

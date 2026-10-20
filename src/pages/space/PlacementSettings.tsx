@@ -17,6 +17,7 @@ import {
   SPACE_PITCH_DEG,
   SPACE_TEXT,
 } from "../../constants/space";
+import { UI_TEXT } from "../../constants/uiText";
 import { formatSigned } from "../../lib/format";
 import { INCHES_PER_FOOT } from "../../constants/units";
 import { shownIn } from "../speaker/speakerFields";
@@ -220,6 +221,12 @@ export function PlacementSettings({
       />
       {solved?.delayNote === DELAY_NOTE.clamped && <Notice>{SPACE_TEXT.delayClamped}</Notice>}
       {solved?.delayNote === DELAY_NOTE.noMain && <Notice>{SPACE_TEXT.delayNoMain}</Notice>}
+      <ToggleButton
+        on={placement.invertPolarity}
+        onClick={() => onEdit((p) => ({ ...p, invertPolarity: !p.invertPolarity }))}
+      >
+        {UI_TEXT.invertPolarity}
+      </ToggleButton>
     </CardFold>
   );
 }

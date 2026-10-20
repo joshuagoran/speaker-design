@@ -21,6 +21,7 @@ const placement = (over: Partial<SpacePlacement>): SpacePlacement => ({
   mirrored: false,
   levelDb: 0,
   delayMs: 0,
+  invertPolarity: false,
   fill: false,
   upsideDown: false,
   ...over,

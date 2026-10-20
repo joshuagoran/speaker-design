@@ -46,8 +46,18 @@ export function stackSnapshot(design: StackDesign): SavedStackData {
 const isStackSpeaker = (value: unknown): value is SpeakerSpec =>
   isSavedSpeakerShape(value) && typeof Reflect.get(value, "id") === "string";
 
+/** A member as a save holds it: one from before a member's polarity could be inverted has no `invertPolarity`. */
+type SavedMember = Omit<StackMember, "invertPolarity"> &
+  Partial<Pick<StackMember, "invertPolarity">>;
+
+/** A saved member read: not inverted when the save has no polarity. */
+export const readMember = (m: SavedMember): StackMember => ({
+  ...m,
+  invertPolarity: m.invertPolarity ?? false,
+});
+
 /** Whether a value reads as a list of members: each names a speaker and has a pose and a crossover. */
-const isMembers = (value: unknown): value is StackMember[] =>
+const isMembers = (value: unknown): value is SavedMember[] =>
   Array.isArray(value) &&
   value.every(
     (m: unknown) =>
@@ -76,7 +86,7 @@ export function stackFromSaved(c: SavedConfig): StackDesign | null {
   )
     return null;
   return {
-    stack: { id: c.id, name: c.name, members, notes },
+    stack: { id: c.id, name: c.name, members: members.map(readMember), notes },
     speakers: speakers.map(readSpeakerCopy),
   };
 }

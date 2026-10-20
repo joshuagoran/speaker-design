@@ -77,16 +77,24 @@ export const speakerIdentity = (design: SpecIdentity, part: SpeakerPart): SpecId
 /** A member's place on the stack's base, at its origin. */
 export const BASE_POSE: StackPose = { xIn: 0, yIn: 0, zIn: 0, on: null, pitchDeg: 0 };
 
-/** A stack member at `pose` on `crossover`, with no level, delay or mirror of its own. */
+/** A stack member at `pose` on `crossover`, with no level, delay, mirror, or inverted polarity of its own. */
 export const stackMember = (
   speakerId: StackMember["speakerId"],
   crossover: StackMember["crossover"],
   pose: StackPose = BASE_POSE,
-): StackMember => ({ speakerId, pose, mirror: false, crossover, levelDb: 0, delayMs: 0 });
+): StackMember => ({
+  speakerId,
+  pose,
+  mirror: false,
+  crossover,
+  levelDb: 0,
+  delayMs: 0,
+  invertPolarity: false,
+});
 
 /**
- * A placement at `spot`, `liftIn` up, turned `yawDeg` on the floor: no tilt, level or delay of its own; `mirrored`
- * stands it twice, the second a mirror image across the center line (a left and right pair).
+ * A placement at `spot`, `liftIn` up, turned `yawDeg` on the floor: no tilt, level, delay, or inverted polarity of its
+ * own; `mirrored` stands it twice, the second a mirror image across the center line (a left and right pair).
  */
 export const spacePlacement = (
   spot: FloorPoint,
@@ -105,6 +113,7 @@ export const spacePlacement = (
   mirrored,
   levelDb: 0,
   delayMs: AUTO_DELAY,
+  invertPolarity: false,
   fill: false,
   upsideDown: false,
 });
