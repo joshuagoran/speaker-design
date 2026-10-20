@@ -348,13 +348,13 @@ export const SPACE_DETAILS = {
     ],
   ],
   map: "The map",
-  mapLines: (limitHz: number) => [
+  mapLines: (limitHz: number, coherentHz: number) => [
     "Drag a placement to move it.",
     "Drag its dot to turn it.",
     "Drag the listener, or tap the floor to put the listener there.",
     "Drag the alignment point. The mains arrive together there.",
     "One frequency shows the interference between the placements.",
-    `One frequency goes up to ${limitHz} Hz. Above it, the pattern is finer than the map.`,
+    `One frequency goes up to ${limitHz} Hz. Above ${coherentHz} Hz, it adds the placements by power.`,
   ],
   levels: "Levels",
   /** the target in the band on show, where it is measured (`SPACE_LEVEL_REF_PLACE`), dB */

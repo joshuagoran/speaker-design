@@ -1,6 +1,11 @@
 import { UI_TEXT } from "../../constants/uiText";
 import { AssumptionsList } from "../../components/ui/AssumptionsList";
-import { BOX_SHADOW_HZ, SINGLE_FREQ_RANGE, STATS_CLEARANCE_FT } from "../../lib/acoustics/coverage";
+import {
+  BOX_SHADOW_HZ,
+  COHERENT_BELOW_HZ,
+  SINGLE_FREQ_RANGE,
+  STATS_CLEARANCE_FT,
+} from "../../lib/acoustics/coverage";
 import { SPACE_DETAILS, SPACE_LEVEL_REF_PLACE } from "../../constants/space";
 import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
@@ -22,7 +27,7 @@ interface Props {
 export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
   const groups: AssumptionGroup[] = [
     [SPACE_DETAILS.marks, [...SPACE_DETAILS.markLines]],
-    [SPACE_DETAILS.map, [...SPACE_DETAILS.mapLines(SINGLE_FREQ_RANGE[1])]],
+    [SPACE_DETAILS.map, [...SPACE_DETAILS.mapLines(SINGLE_FREQ_RANGE[1], COHERENT_BELOW_HZ)]],
     [
       SPACE_DETAILS.levels,
       [

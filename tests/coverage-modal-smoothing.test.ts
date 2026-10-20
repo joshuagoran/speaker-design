@@ -4,6 +4,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
   BAND_POINTS,
+  COHERENT_BELOW_HZ,
   COVERAGE_BANDS,
   COVERAGE_GRID_COLS,
   coverageFrequencies,
@@ -65,6 +66,12 @@ test("modal smoothing: sub-points are log-spaced across their point's share of t
     assert.ok(Math.abs(sub[i] / sub[i - 1] - Math.pow(ratio, 1 / 4)) < 1e-9);
   // centered on the point
   assert.ok(Math.abs(Math.sqrt(sub[0] * sub[3]) - f0) < 1e-9);
+});
+
+test("one frequency sums with phase below COHERENT_BELOW_HZ, by power from it up", () => {
+  assert.equal(coverageFrequencies("one", COHERENT_BELOW_HZ - 1, 120).coherent, true);
+  assert.equal(coverageFrequencies("one", COHERENT_BELOW_HZ, 120).coherent, false);
+  assert.equal(coverageFrequencies("one", 8000, 120).coherent, false);
 });
 
 test("modal smoothing: one frequency is never split, nor is a band outdoors", () => {

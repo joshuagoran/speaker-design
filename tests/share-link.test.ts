@@ -358,14 +358,17 @@ test("a link that passes the checks but breaks a model does not open", () => {
 });
 
 test("a space link keeps the band and frequency on show", async () => {
-  const view = { band: "one", freqHz: 125 } as const;
-  const fragment = linkFragment(SHARE_KIND.space, await encodeLink(spaceEnvelope(START, view)));
-  const decoded = await decodeLink(fragment);
-  assert.ok(decoded.ok);
-  assert.deepStrictEqual(decoded.envelope, asJson(spaceEnvelope(START, view)));
-  const opened = openEnvelope(decoded.envelope);
-  assert.ok(opened && opened.kind === SHARE_KIND.space);
-  assert.deepStrictEqual(opened.view, view);
+  // 500 Hz was the top of the old range: those links still open; 16 kHz is the top now
+  for (const freqHz of [125, 500, 16000]) {
+    const view = { band: "one", freqHz } as const;
+    const fragment = linkFragment(SHARE_KIND.space, await encodeLink(spaceEnvelope(START, view)));
+    const decoded = await decodeLink(fragment);
+    assert.ok(decoded.ok);
+    assert.deepStrictEqual(decoded.envelope, asJson(spaceEnvelope(START, view)));
+    const opened = openEnvelope(decoded.envelope);
+    assert.ok(opened && opened.kind === SHARE_KIND.space);
+    assert.deepStrictEqual(opened.view, view);
+  }
 });
 
 test("bad link: a band that is unknown, or a frequency out of range", async () => {
@@ -375,7 +378,7 @@ test("bad link: a band that is unknown, or a frequency out of range", async () =
     ["number band", withValue(withView, ["view", "band"], 3)],
     ["text frequency", withValue(withView, ["view", "freqHz"], "125")],
     ["frequency too low", withValue(withView, ["view", "freqHz"], 19)],
-    ["frequency too high", withValue(withView, ["view", "freqHz"], 501)],
+    ["frequency too high", withValue(withView, ["view", "freqHz"], 16001)],
     ["no frequency", withValue(withView, ["view", "freqHz"], undefined)],
     ["view that is null", withValue(withView, ["view"], null)],
     [
