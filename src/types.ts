@@ -3193,8 +3193,8 @@ export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 export type SpaceView = Pick<CoverageLayout, "band" | "freqHz">;
 
 /**
- * Where the coverage map's target level is measured: at the listener, as the audience's average (the floor the stats
- * count), or 1 m in front of the stacks.
+ * Where the coverage map's target level is measured: at the alignment point ("listener": saves and share links carry
+ * that spelling), as the audience's average (the floor the stats count), or 1 m in front of the stacks.
  */
 export type CoverageLevelRef = "listener" | "audience" | "stacks";
 

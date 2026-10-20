@@ -13,14 +13,22 @@ import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { SPACE_HOME_TARGET_DB } from "../src/constants/space";
 import { COVERAGE_BANDS } from "../src/lib/acoustics/coverage";
 import { LISTENER_TARGET_DB } from "../src/lib/acoustics/coverageLayout";
-import type { CoverageBand, CoverageLevelRef } from "../src/types";
+import type { CoverageBand, CoverageLevelRef, SpaceVenue } from "../src/types";
 
 afterEach(() => {
   Reflect.deleteProperty(globalThis, "localStorage");
 });
 
-/** The space hook's figures for a stack placed in the room, measured at `levelRef`, with `band` on show. */
-function figures(levelRef: CoverageLevelRef, band: CoverageBand, targetDb = 105) {
+/**
+ * The space hook's figures for a stack placed in the room, measured at `levelRef`, with `band` on show (and the venue
+ * changed by `venueOver`).
+ */
+function figures(
+  levelRef: CoverageLevelRef,
+  band: CoverageBand,
+  targetDb = 105,
+  venueOver: Partial<SpaceVenue> = {},
+) {
   const options = placeOptions({
     openStack: emptyStack(),
     openSpeaker: emptySpeaker(),
@@ -31,7 +39,7 @@ function figures(levelRef: CoverageLevelRef, band: CoverageBand, targetDb = 105)
   const { venue } = placed.space;
   const draft = spaceDraft.toDraft({
     ...placed,
-    space: { ...placed.space, venue: { ...venue, levelRef, targetDb } },
+    space: { ...placed.space, venue: { ...venue, levelRef, targetDb, ...venueOver } },
   });
   Object.defineProperty(globalThis, "localStorage", {
     value: {
@@ -83,4 +91,17 @@ test("a new space starts at the default coverage layout's 105 dB target", () => 
   expect(SPACE_HOME_TARGET_DB).toBe(105);
   expect(emptySpace().space.venue.targetDb).toBe(SPACE_HOME_TARGET_DB);
   expect(SPACE_HOME_TARGET_DB).toBe(LISTENER_TARGET_DB);
+});
+
+test("measured at the alignment point: moving the listener changes only its readouts, moving the point the turn-down", () => {
+  const start = figures(COVERAGE_LEVEL_REF.listener, "sub");
+  const listenerMoved = figures(COVERAGE_LEVEL_REF.listener, "sub", 105, {
+    listener: { x: 4, y: 20 },
+  });
+  expect(listenerMoved.turn).toEqual(start.turn);
+  expect(listenerMoved.listenerDb).not.toBe(start.listenerDb);
+  const pointMoved = figures(COVERAGE_LEVEL_REF.listener, "sub", 105, {
+    alignAt: { x: 4, y: 20 },
+  });
+  expect(pointMoved.turn.atLimit).not.toBe(start.turn.atLimit);
 });
