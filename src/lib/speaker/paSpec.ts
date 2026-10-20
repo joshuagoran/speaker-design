@@ -424,7 +424,7 @@ function paStack(cfg: PaDesign, design: SpecIdentity): StackSpec {
 /** The PA design's floor (the default coverage layout): where the stacks stand, the room and the listener. */
 export type PaFloor = Pick<
   CoverageLayout,
-  "stacks" | "mirror" | "room" | "listener" | "earFt" | "targetDb" | "levelRef"
+  "stacks" | "room" | "listener" | "earFt" | "targetDb" | "levelRef"
 >;
 
 /**
@@ -446,7 +446,7 @@ export function paVenue(floor: PaFloor): SpaceVenue {
 
 /**
  * The PA design read in: its speakers, its stack (`paStack`) and its space on the PA floor: the stacks at
- * its spots (`stacks`, left then right; where the floor mirrors them, one mirrored placement stands for both)
+ * its spots (`stacks`: one mirrored placement at the left spot stands for both)
  * on their plinths. Satellite places no stack: one sub on its plinth midway, and the tops on their stands at the spots,
  * each on its own input range, `tilt` under the sub as in the stack. Each band's amp power is the design's; the venue
  * is the floor's room and listener (`paVenue`).
@@ -461,14 +461,10 @@ export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor
   const [left, right] = floor.stacks;
   const stackItem = { kind: SPACE_ITEM.stack, id: stack.id } as const;
   const speakerItem = (id: SpeakerSpec["id"]) => ({ kind: SPACE_ITEM.speaker, id }) as const;
-  /** the placements of `item` at the left and right spots: one mirrored placement where the page mirrors them */
-  const pair = (item: SpacePlacement["item"], liftIn: number) =>
-    floor.mirror
-      ? [spacePlacement(left, item, liftIn, { yawDeg: left.aim, mirrored: true })]
-      : [
-          spacePlacement(left, item, liftIn, { yawDeg: left.aim }),
-          spacePlacement(right, item, liftIn, { yawDeg: right.aim }),
-        ];
+  /** the placements of `item` at the left and right spots: one mirrored placement at the left spot */
+  const pair = (item: SpacePlacement["item"], liftIn: number) => [
+    spacePlacement(left, item, liftIn, { yawDeg: left.aim, mirrored: true }),
+  ];
   const placements: SpacePlacement[] =
     cfg.layout === "satellite"
       ? [

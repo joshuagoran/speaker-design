@@ -225,13 +225,6 @@ test("presets: the PA, satellite and Hi-fi presets set `mirrored` on one placeme
   const hifi = layersFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, ids).space.placements;
   assert.equal(hifi.length, 1);
   assert.equal(hifi[0].mirrored, true);
-  // a floor that does not mirror its stacks gives two placements on their own
-  const unmirrored = layersFromPa(paDesign(configs[0]), ids, { ...PA_FLOOR, mirror: false }).space
-    .placements;
-  assert.deepEqual(
-    unmirrored.map((p) => p.mirrored),
-    [false, false],
-  );
   // an empty space round-trips too
   const empty = emptySpace();
   assert.deepStrictEqual(roundTrip(empty)?.space.placements, []);
