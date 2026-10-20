@@ -1,8 +1,9 @@
 import * as THREE from "three";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useThemeName } from "../../hooks/useTheme";
 import { STAGE } from "../../styles/palette";
 import { FRAME_BOX_KEY, VIEW_FOV_DEG, fitFootprint, type SceneFit } from "./sceneFraming";
+import { ViewResetContext } from "./viewReset";
 
 interface Props {
   /** changes exactly when the scene does (the JSON of the builder's inputs) */
@@ -79,9 +80,16 @@ export function SceneView3D({
     ly: 0,
     pan: new THREE.Vector3(),
   });
-  // the latest builder and fit, read when the key says the scene changed
-  const latest = useRef({ build, fit, withStage });
-  latest.current = { build, fit, withStage };
+  // the latest builder, fit and start, read when the key says the scene changed (or the card resets the camera)
+  const latest = useRef({ build, fit, withStage, start });
+  latest.current = { build, fit, withStage, start };
+  // the card's reset button: the camera back to where it started, unpanned (the render loop draws it next frame)
+  const resets = useContext(ViewResetContext);
+  useEffect(() => {
+    if (!resets) return;
+    Object.assign(state.current, START, latest.current.start);
+    state.current.pan.set(0, 0, 0);
+  }, [resets]);
   // Rebuild the scene only when the caller's key changes (the parent recreates the builder's inputs every render), and
   // at most every 120 ms while a slider is dragged, so the controls stay responsive.
   const [builtKey, setBuiltKey] = useState(buildKey);

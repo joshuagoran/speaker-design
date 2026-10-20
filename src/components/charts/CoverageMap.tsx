@@ -211,11 +211,10 @@ export function CoverageMap({
     else if (d.kind === "aim") actions.aimBox(d.i, p, stepped);
     else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy }, free);
   };
-  const down = (e: React.PointerEvent<SVGSVGElement>) => {
-    const { X, Y } = at(e),
-      p = toFt(X, Y);
+  /** The movable item under a point, px, and the drag it starts (none: open floor or past the room). */
+  const grabAt = (X: number, Y: number): Drag | null => {
+    const p = toFt(X, Y);
     const near = (x: number, y: number, r: number) => Math.hypot(X - x, Y - y) < r;
-    let d: Drag = { kind: "listener" };
     const aimAt = boxes.findIndex((b) => {
       const hp = handle(b);
       return b.turnable && near(hp.x, hp.y, 16);
@@ -224,18 +223,30 @@ export function CoverageMap({
       const m = boxMiddle(b);
       return near(px(m.x), py(m.y), boxPx(b) / 2 + 8);
     });
-    if (aimAt >= 0) {
-      d = { kind: "aim", i: aimAt };
-      onSelect?.(aimAt);
-    } else if (onBox >= 0) {
-      onSelect?.(onBox);
+    if (aimAt >= 0) return { kind: "aim", i: aimAt };
+    if (onBox >= 0) {
       const b = boxes[onBox];
-      d = { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
-    } else if (near(px(listener.x), py(listener.y), 18)) d = { kind: "listener" };
-    else if (alignAt && actions.moveAlignAt && near(px(alignAt.x), py(alignAt.y), 18))
-      d = { kind: "alignAt" };
-    else if (p.x < -room.widthFt / 2 || p.x > room.widthFt / 2 || p.y < 0 || p.y > room.lengthFt)
-      return;
+      return { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
+    }
+    if (near(px(listener.x), py(listener.y), 18)) return { kind: "listener" };
+    if (alignAt && actions.moveAlignAt && near(px(alignAt.x), py(alignAt.y), 18))
+      return { kind: "alignAt" };
+    return null;
+  };
+  /** the pointer is over a movable item (an open hand shows) */
+  const [grabbable, setGrabbable] = useState(false);
+  const down = (e: React.PointerEvent<SVGSVGElement>) => {
+    const { X, Y } = at(e),
+      p = toFt(X, Y);
+    const grabbed = grabAt(X, Y);
+    if (grabbed?.kind === "aim" || grabbed?.kind === "box") onSelect?.(grabbed.i);
+    // a tap on the open floor puts the listener there
+    const d: Drag | null =
+      grabbed ??
+      (p.x < -room.widthFt / 2 || p.x > room.widthFt / 2 || p.y < 0 || p.y > room.lengthFt
+        ? null
+        : { kind: "listener" });
+    if (!d) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     setDrag(d);
     if (d.kind === "listener") apply(d, X, Y, e.altKey, e.shiftKey);
@@ -264,6 +275,7 @@ export function CoverageMap({
         ? p
         : null,
     );
+    setGrabbable(grabAt(X, Y) !== null);
     if (!drag) return;
     const { altKey, shiftKey } = e;
     pending.current = () => apply(drag, X, Y, altKey, shiftKey);
@@ -339,7 +351,10 @@ export function CoverageMap({
         // select-none: a drag would otherwise select the labels, and the next drag that starts on that selection
         // becomes the browser's own drag-and-drop (a ghost of the map, the pointer canceled, the map frozen)
         className="block max-w-full h-auto mx-auto select-none outline-none focus-visible:outline-2 focus-visible:outline-stone-900"
-        style={{ touchAction: "none", cursor: drag ? "grabbing" : "crosshair" }}
+        style={{
+          touchAction: "none",
+          cursor: drag ? "grabbing" : grabbable ? "grab" : "crosshair",
+        }}
         tabIndex={0}
         role="img"
         aria-busy={busy}
@@ -349,7 +364,10 @@ export function CoverageMap({
         onPointerMove={move}
         onPointerUp={up}
         onPointerCancel={up}
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={() => {
+          setHover(null);
+          setGrabbable(false);
+        }}
         onKeyDown={key}
       >
         <defs>

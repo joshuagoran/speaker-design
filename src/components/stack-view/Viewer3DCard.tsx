@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { DRIVER_ICON_PATH, Icon, IconButton, STRIKE_ICON_PATH } from "../ui/IconButton";
 import { UI_TEXT } from "../../constants/uiText";
+import { ViewResetContext } from "./viewReset";
 
 /** A wedge opening from a point on the left to an edge on the right: a driver's aim and coverage (a 16 px icon's path). */
 const BEAM_ICON_PATH = "M2.5 8L13.5 3.5M2.5 8l11 4.5M13.5 3.5v9";
+
+/** A circle open at the top right, its arrowhead at the open end: back to the start (a 16 px icon's path). */
+const RESET_ICON_PATH = "M13 8a5 5 0 1 1-1.46-3.54M13 2.5v3h-3";
 
 /** What the card's buttons set: how the view draws the design. */
 export interface ViewerLook {
@@ -30,7 +34,7 @@ interface Props {
 
 /**
  * A 3D view's card, the Speaker page's, the Stack page's and the Space page's alike: the view with its buttons laid over
- * it, the cutaway, the drivers or the beams (where the page asks for them) and full screen. They are how you look at
+ * it, the cutaway, the drivers or the beams (where the page asks for them), the camera's reset, and full screen. They are how you look at
  * the design, not part of it, so they live here and are never saved.
  */
 export function Viewer3DCard({
@@ -44,6 +48,8 @@ export function Viewer3DCard({
   const [cutaway, setCutaway] = useState(startCutaway);
   const [drivers, setDrivers] = useState(true);
   const [beams, setBeams] = useState(true);
+  /** how many times the reset button was pressed: each press puts the camera back where it started */
+  const [resets, setResets] = useState(0);
   useEffect(() => {
     if (!isFull) return;
     const esc = (e: KeyboardEvent) => {
@@ -92,6 +98,12 @@ export function Viewer3DCard({
             </Icon>
           </IconButton>
         )}
+        <IconButton label={UI_TEXT.resetView} onClick={() => setResets((n) => n + 1)}>
+          {/* a circular arrow */}
+          <Icon>
+            <path d={RESET_ICON_PATH} />
+          </Icon>
+        </IconButton>
         <IconButton
           label={isFull ? UI_TEXT.closeFullScreen : UI_TEXT.fullScreen}
           onClick={() => setIsFull((v) => !v)}
@@ -105,7 +117,9 @@ export function Viewer3DCard({
           </Icon>
         </IconButton>
       </div>
-      {children(cutaway, { cutaway, drivers, beams })}
+      <ViewResetContext.Provider value={resets}>
+        {children(cutaway, { cutaway, drivers, beams })}
+      </ViewResetContext.Provider>
     </section>
   );
 }

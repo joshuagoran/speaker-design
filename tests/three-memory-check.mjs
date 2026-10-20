@@ -6,12 +6,14 @@
 // geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
 // canvas (one WebGL renderer for the component's life). The counts are read once the view has settled: the Space's
-// view also rebuilds when a new coverage grid arrives.
+// view also rebuilds when a new coverage grid arrives. Then it turns the view with a drag and presses "Reset 3D view":
+// the view must draw as it did before the drag.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { STACK_START_NAMES } from "../src/constants/stackPresets.ts";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
+import { UI_TEXT } from "../src/constants/uiText.ts";
 
 const REBUILDS = 30;
 /** The control each page steps: the first number field shown (a closed settings fold keeps its fields in the page, hidden). */
@@ -118,6 +120,27 @@ for (const { name, hash, control, up, down, prepare } of VIEWS) {
   }
   await settle();
   counts.push(await read());
+  // the reset button: a drag turns the view; the reset draws it as it was before the drag
+  const shot = async () => {
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(300);
+    // the buttons over the view masked: a pressed or hovered one draws differently
+    return view.screenshot({ mask: [page.locator("section button")] });
+  };
+  const before = await shot();
+  const box = await view.boundingBox();
+  if (box) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 40, { steps: 6 });
+    await page.mouse.up();
+  }
+  const turned = await shot();
+  await page.getByRole("button", { name: UI_TEXT.resetView }).click();
+  const reset = await shot();
+  if (turned.equals(before)) failures.push(`${name}: a drag did not turn the view`);
+  if (!reset.equals(before))
+    failures.push(`${name}: "${UI_TEXT.resetView}" did not put the view back`);
   await page.close();
 
   const last = counts[counts.length - 1];
@@ -142,4 +165,6 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log(`three memory check: ok (${REBUILDS} rebuilds each; ${results.join("; ")}; 1 canvas)`);
+console.log(
+  `three memory check: ok (${REBUILDS} rebuilds each; ${results.join("; ")}; 1 canvas; reset puts the view back)`,
+);

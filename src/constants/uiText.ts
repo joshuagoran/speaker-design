@@ -32,6 +32,8 @@ export const UI_TEXT = {
   fullScreen: "Full screen",
   closeFullScreen: "Close full screen",
   cutaway: "Cutaway",
+  /** the 3D view's button that puts the camera back where it started */
+  resetView: "Reset 3D view",
   /** the Speaker page's 3D view: its button that shows or hides the drivers (their cutouts stay open) */
   showDrivers: "Show the drivers",
   hideDrivers: "Hide the drivers",
