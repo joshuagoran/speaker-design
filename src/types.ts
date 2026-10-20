@@ -220,7 +220,7 @@ export interface SubDriver {
   ts: SubTS;
   /** the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered */
   sens?: number;
-  /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
+  /** mounting depth in inches, from the maker's datasheet; absent where it isn't published */
   depthIn?: number;
   /**
    * another impedance version of the entry with this id (the standard one, 8 Ω where both exist): every page's picker

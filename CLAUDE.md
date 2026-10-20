@@ -1,6 +1,6 @@
 # SpeakNow (speaker-design)
 
-DIY speaker planner: the Speaker, Stack, and Space pages, their cutlists, and Notes (at the path `/notes` only, no tab).
+DIY speaker planner: the Speaker, Stack, and Space pages, and their cutlists.
 One self-contained page (React, three.js, Tailwind, and the font bundled; no CDN), built by `build/build.sh`. Strict
 TypeScript in `src/`; shared types in `src/types.ts`; models in `src/lib/acoustics`, `build`, and `speaker`.
 
