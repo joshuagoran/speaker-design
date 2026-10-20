@@ -2,9 +2,12 @@
 // and paint swatches [hex, name]. To add one, extend the table; the compiler checks it (src/types.ts).
 import type { CabinetFinish, FinishId, PaintSwatch } from "../../types";
 
+/** The near-black paint: the generic PA boxes' cabinet and baffle. */
+export const NEAR_BLACK_PAINT = "#2b2725";
+
 export const PAINT_SWATCHES: readonly PaintSwatch[] = [
   ["#e8b4a8", "Dusty pink"],
-  ["#2b2725", "Near black"],
+  [NEAR_BLACK_PAINT, "Near black"],
   ["#c8cdc4", "Pale sage"],
   ["#eeff00", "Acid yellow"],
   ["#8fa3ad", "Slate blue"],

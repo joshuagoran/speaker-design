@@ -2035,6 +2035,31 @@ export interface SpeakerSpec {
   look: Pick<PaDesignConfig, "cabFinish" | "baffleColor" | "hornColor">;
 }
 
+/**
+ * A generic PA box's vented chamber: its outside size, in, and its port: the PA letterbox slot along the floor, or round
+ * tubes in a row on the back.
+ */
+export type GenericVentedBox = Pick<SpeakerChamber, "dims"> & {
+  port: SpeakerSlotPort | SpeakerRoundPort;
+};
+
+/**
+ * One generic top (lib/defaults `GENERIC_TOPS`): its cone and horn, its box, and its bands: the crossover to the horn,
+ * Hz (LR24), the cone's protective high-pass, the amps.
+ */
+export interface GenericTop {
+  mid: MidDriver;
+  horn: Horn;
+  box: GenericVentedBox;
+  /** its handles and input dish */
+  hardware: Pick<SpeakerCabinet, "handles" | "inputDish">;
+  crossoverHz: number;
+  highpass: BandFilter;
+  ampW: SpeakerBand["ampW"];
+  hfAmpW: SpeakerBand["ampW"];
+  hfLevelDb: SpeakerBand["levelDb"];
+}
+
 /** A spec's identity, as a read adapter takes it. */
 export type SpecIdentity = Pick<SpeakerSpec, "id" | "name">;
 

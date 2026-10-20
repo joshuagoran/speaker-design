@@ -3,10 +3,14 @@
 // template or role. Pure.
 import type {
   AdapterBandId,
+  BandFilter,
   ChamberBracing,
   ChamberLoad,
+  GenericTop,
+  GenericVentedBox,
   Dims2,
   HifiDesignState,
+  Horn,
   HornSegment,
   PaLayout,
   PaDesign,
@@ -14,6 +18,7 @@ import type {
   SpeakerCabinet,
   SpeakerChamber,
   SpeakerDriver,
+  SpeakerDriverParts,
   SpeakerPart,
   SpeakerSpec,
   SpecIdentity,
@@ -25,15 +30,21 @@ import {
   DIRECT_LOAD,
   FLUSH_BOX,
   flushBracing,
+  NO_FILTERS,
   NO_HARDWARE,
   lrFilter,
   speakerIdentity,
 } from "../../lib/speaker/specParts";
-import { hornFace, settledCabinet, speakerLayout } from "../../lib/speaker/speakerLayout";
+import {
+  driverAcrossIn,
+  hornFace,
+  settledCabinet,
+  speakerLayout,
+} from "../../lib/speaker/speakerLayout";
 import { takesHornMountAt } from "../../lib/build/hornMount";
 import { PA_PANEL_TARGET_HZ } from "../../lib/build/boxBracing";
 import { defaultBraceStyleNear } from "../../lib/build/bracing";
-import { HIFI_COAXES, HORN_OPTIONS } from "../../lib/data";
+import { HIFI_COAXES, HORN_OPTIONS, NEAR_BLACK_PAINT } from "../../lib/data";
 import { driverLayout, tweeterOnGuide, waveguideFor } from "../../lib/speaker/twoWay";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import {
@@ -42,6 +53,9 @@ import {
   DEFAULT_HIFI_LOOK,
   DEFAULT_MONITOR,
   DEFAULT_PA,
+  GENERIC_HORN_SUB,
+  GENERIC_SUB,
+  GENERIC_TOPS,
   PA_V2_MID_BOX,
   PA_V2_SUB_BIN,
   TH18_XOC1,
@@ -76,6 +90,7 @@ import {
 import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useSpeakerPage";
 import { DEFAULT_VENTS } from "./speakerParts";
 import { conesAreaCm2, throatAreaCm2 } from "../../lib/speaker/hornThroat";
+import { withGoalHorn } from "./chamberLoad";
 
 /** The PA layout with the tower's one speaker. */
 const TOWER = "tower" satisfies PaLayout;
@@ -494,6 +509,194 @@ function th18(identity: SpecIdentity): SpeakerSpec {
   };
 }
 
+/**
+ * A generic PA box's plywood shell: a flush box of the PA's panels, its handles and input dish (`hardware`), a flat
+ * top.
+ */
+const genericCabinet = (
+  chambers: SpeakerChamber[],
+  hardware: Pick<SpeakerCabinet, "handles" | "inputDish">,
+): SpeakerCabinet => ({
+  chambers,
+  panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
+  ...FLUSH_BOX,
+  roundoverIn: 0,
+  tiltDeg: 0,
+  ...hardware,
+});
+
+/** A generic box's bracing: a flush box's at the PA's walls. */
+const GENERIC_BRACING = flushBracing(DEFAULT_PA.wall);
+
+/** A generic box's look: black, the cabinet and the baffle painted alike. */
+const GENERIC_LOOK: SpeakerSpec["look"] = {
+  cabFinish: NEAR_BLACK_PAINT,
+  baffleColor: NEAR_BLACK_PAINT,
+};
+
+/** A generic sub's handles and input dish: the PA sub's. */
+const SUB_HARDWARE: Pick<SpeakerCabinet, "handles" | "inputDish"> = {
+  handles: DEFAULT_PA.hardware.sub,
+  inputDish: true,
+};
+
+/** The face a generic box's vent takes along its floor, in: the wall, and a letterbox slot's mouth above it. */
+const ventFloorIn = (box: GenericVentedBox) =>
+  DEFAULT_PA.wall + (box.port.shape === PORT_SHAPE.slot ? box.port.h : 0);
+
+/** A generic box's vented chamber: its size and its port. */
+const genericVentedChamber = (box: GenericVentedBox, drivers: SpeakerDriver[]): SpeakerChamber => ({
+  at: { xIn: 0, yIn: 0 },
+  dims: box.dims,
+  netLiters: null,
+  stuffingPct: 0,
+  vent: {
+    kind: VENT_KIND.vented,
+    port: box.port,
+    maxSpeedMs: DEFAULT_PA.portMax,
+  },
+  load: DIRECT_LOAD,
+  drivers,
+  bracing: GENERIC_BRACING,
+});
+
+/** One generic sub's driver entry, on the low band, at `position` on its chamber's face. */
+const genericSubDriver = (
+  driverId: SpeakerDriverParts["sub"]["id"],
+  position: SpeakerDriver["position"],
+): SpeakerDriver => ({
+  kind: DRIVER_KIND.sub,
+  driverId,
+  count: 1,
+  position,
+  bands: [SPEAKER_BAND.low],
+  horn: null,
+});
+
+/** A sub's bands and input range: its subsonic on its band, the PA's crossover to the tops as its input range. */
+const subBands = (
+  subsonic: BandFilter,
+  ampW: SpeakerBand["ampW"],
+): Pick<SpeakerSpec, "bands" | "input" | "look"> => ({
+  bands: [paV2Band(SPEAKER_BAND.low, { highpass: subsonic, lowpass: null }, ampW)],
+  input: { highpass: null, lowpass: lrFilter(DEFAULT_PA.xoLo, DEFAULT_PA.xoLoOrder) },
+  look: GENERIC_LOOK,
+});
+
+/**
+ * A generic vented sub (`GENERIC_SUB`): one or two 18″ in one chamber above the slot, side by side in a box wider than
+ * it is tall, else stacked up the baffle.
+ */
+function genericSub(
+  box: (typeof GENERIC_SUB)["single" | "dual"],
+  identity: SpecIdentity,
+): SpeakerSpec {
+  const { sub, subsonic } = GENERIC_SUB;
+  const { w, h } = box.dims;
+  const t = DEFAULT_PA.wall;
+  // the slot along the floor, the drivers sharing the face above it
+  const floorIn = ventFloorIn(box);
+  const across = w > h;
+  const share = (across ? w - 2 * t : h - t - floorIn) / box.count;
+  const drivers = Array.from({ length: box.count }, (_, i) =>
+    genericSubDriver(
+      sub.id,
+      across
+        ? { xIn: -(w / 2 - t) + share * (i + 0.5), yIn: (floorIn + h - t) / 2 }
+        : { xIn: 0, yIn: floorIn + share * (i + 0.5) },
+    ),
+  );
+  return {
+    ...identity,
+    cabinet: genericCabinet([genericVentedChamber(box, drivers)], SUB_HARDWARE),
+    ...subBands(subsonic, box.ampW),
+  };
+}
+
+/** An HF section's compression driver on its horn in the baffle, the PA's mount where the driver bolts to the horn. */
+const hornInBaffle = (horn: Horn, position: SpeakerDriver["position"]): SpeakerDriver => ({
+  kind: DRIVER_KIND.compression,
+  driverId: GENERIC_TOPS.cd.id,
+  count: 1,
+  position,
+  bands: [SPEAKER_BAND.high],
+  horn: {
+    hornId: horn.id,
+    placement: HORN_PLACEMENT.baffle,
+    mount: takesHornMountAt(horn, HORN_PLACEMENT.baffle) ? DEFAULT_PA.hornMount : null,
+  },
+});
+
+/** A full-range top's two bands: the cone below its crossover (with its protective high-pass), the horn above. */
+const topBands = (top: GenericTop): SpeakerSpec["bands"] => {
+  const xo = lrFilter(top.crossoverHz, DEFAULT_PA.xoHiOrder);
+  return [
+    paV2Band(SPEAKER_BAND.low, { highpass: top.highpass, lowpass: xo }, top.ampW),
+    {
+      ...paV2Band(SPEAKER_BAND.high, { highpass: xo, lowpass: null }, top.hfAmpW),
+      levelDb: top.hfLevelDb,
+    },
+  ];
+};
+
+/**
+ * A generic top (`GENERIC_TOPS`): the cone low on the baffle and the horn above it; full range, its input range open.
+ */
+function genericTop(top: GenericTop, identity: SpecIdentity): SpeakerSpec {
+  const { h } = top.box.dims;
+  const t = DEFAULT_PA.wall;
+  const floorIn = ventFloorIn(top.box);
+  const cone: SpeakerDriver = {
+    kind: DRIVER_KIND.mid,
+    driverId: top.mid.id,
+    count: 1,
+    position: { xIn: 0, yIn: 0 },
+    bands: [SPEAKER_BAND.low],
+    horn: null,
+  };
+  // half the cone's frame across, and a gap to the clear face's edge
+  const coneIn = driverAcrossIn(cone) / 2 + DEFAULT_PA.inset;
+  const mid: SpeakerDriver = {
+    ...cone,
+    position: { xIn: 0, yIn: floorIn + coneIn },
+  };
+  const hf = hornInBaffle(top.horn, { xIn: 0, yIn: h - t - top.horn.size.h / 2 });
+  return {
+    ...identity,
+    cabinet: genericCabinet([genericVentedChamber(top.box, [mid, hf])], top.hardware),
+    bands: topBands(top),
+    input: NO_FILTERS,
+    look: GENERIC_LOOK,
+  };
+}
+
+/**
+ * The generic 18″ horn sub (`GENERIC_HORN_SUB`): one 18″ in a sealed rear chamber, its folded front-loaded horn laid
+ * out from its goals (Start from goals, pages/speaker/chamberLoad `withGoalHorn`), drawn where a fold is found.
+ */
+function genericHornSub(identity: SpecIdentity): SpeakerSpec {
+  const bin = GENERIC_HORN_SUB;
+  const chamber: SpeakerChamber = {
+    at: { xIn: 0, yIn: 0 },
+    dims: bin.dims,
+    netLiters: null,
+    stuffingPct: 0,
+    vent: DEFAULT_VENTS.sealed,
+    load: DIRECT_LOAD,
+    drivers: [genericSubDriver(bin.sub.id, { xIn: 0, yIn: bin.dims.h / 2 })],
+    bracing: GENERIC_BRACING,
+  };
+  const cabinet = genericCabinet([chamber], SUB_HARDWARE);
+  const [placed] = speakerLayout(cabinet).chambers;
+  const found = withGoalHorn(cabinet, chamber, placed, HORN_DRIVE.front, bin.goals);
+  if (!found) throw new Error("The generic horn sub's goals give no horn");
+  return {
+    ...identity,
+    cabinet: { ...cabinet, chambers: [found.chamber] },
+    ...subBands(bin.subsonic, bin.ampW),
+  };
+}
+
 /** Each template's speaker, from its identity. */
 const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec> = {
   empty: (identity) => ({ ...emptySpeaker(), ...identity }),
@@ -509,6 +712,11 @@ const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec
   paV2SubBinTwo: (identity) => paV2SubBin(2, identity),
   paV2MidBox,
   th18,
+  genericSub18: (identity) => genericSub(GENERIC_SUB.single, identity),
+  genericDualSub18: (identity) => genericSub(GENERIC_SUB.dual, identity),
+  genericTop12: (identity) => genericTop(GENERIC_TOPS.twelve, identity),
+  genericTop15: (identity) => genericTop(GENERIC_TOPS.fifteen, identity),
+  genericHornSub18: genericHornSub,
 };
 
 /** The templates in the picker's order. */
