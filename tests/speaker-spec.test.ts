@@ -280,9 +280,9 @@ test("speaker spec: each PA layout stands the tops where the 3D view draws them,
   assert.ok(top.pose.on !== null);
   assert.equal(stack.stack.members[top.pose.on].speakerId, speakerOf(stack, SPEAKER_PART.sub).id);
   assert.equal(top.pose.yIn, MID_GAP_IN);
-  // the stack at both spots: one mirrored placement, the right box its mirror image
+  // the stack at both spots: one mirrored placement, the right box its mirror image (flipped)
   assert.deepEqual(
-    expandPlacements(stack.space.placements).map((p) => [p.item, p.x, p.mirror]),
+    expandPlacements(stack.space.placements).map((p) => [p.item, p.x, p.image]),
     [
       [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, PA_FLOOR.stacks[0].x, false],
       [{ kind: SPACE_ITEM.stack, id: stack.stack.id }, PA_FLOOR.stacks[1].x, true],
@@ -299,7 +299,7 @@ test("speaker spec: each PA layout stands the tops where the 3D view draws them,
   assert.deepEqual(
     expandPlacements(satRead.space.placements)
       .filter((p) => p.item.id === topId)
-      .map((p) => [p.item.kind, p.liftIn, p.x, p.mirror]),
+      .map((p) => [p.item.kind, p.liftIn, p.x, p.image]),
     [
       [SPACE_ITEM.speaker, SATELLITE_COLUMN_H_IN, PA_FLOOR.stacks[0].x, false],
       [SPACE_ITEM.speaker, SATELLITE_COLUMN_H_IN, PA_FLOOR.stacks[1].x, true],

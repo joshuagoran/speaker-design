@@ -7,7 +7,13 @@ import { expandPlacements, placementFrame } from "../src/lib/speaker/spaceLayout
 import { boxCorners, ORIGIN } from "../src/lib/speaker/stackLayout";
 import { spacePlacement } from "../src/lib/speaker/specParts";
 import { withBoxMoved } from "../src/pages/space/useSpace";
-import { COUPLED_FLOOR, OPEN_SIDE, SNAP_FLUSH_IN, SPACE_HOME_ROOM } from "../src/constants/space";
+import {
+  COUPLED_CEILING,
+  COUPLED_FLOOR,
+  OPEN_SIDE,
+  SNAP_FLUSH_IN,
+  SPACE_HOME_ROOM,
+} from "../src/constants/space";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
 import { INCHES_PER_FOOT, METERS_PER_INCH } from "../src/constants/units";
 import type { CoverageRoom, SpacePlacement } from "../src/types";
@@ -32,20 +38,20 @@ type Size = typeof CUBE;
 
 /** The placements as they stand, each one box (the cube, or its size in `sizes`) placed by the space's own frame. */
 const standing = (placements: readonly SpacePlacement[], sizes: readonly Size[] = []) =>
-  expandPlacements(placements).map((placement) => ({
-    placement,
-    boxes: [
-      {
-        corners: boxCorners(ORIGIN, sizes[placement.source] ?? CUBE).map(
-          placementFrame(placement).toRoom,
-        ),
-      },
-    ],
-  }));
+  expandPlacements(placements).map((placement) => {
+    const size = sizes[placement.source] ?? CUBE;
+    // a box turns over about the middle of its height
+    return {
+      placement,
+      boxes: [
+        { corners: boxCorners(ORIGIN, size).map(placementFrame(placement, size.h / 2).toRoom) },
+      ],
+    };
+  });
 
 /** What each box is coupled with, in the room (or another). */
 const coupled = (placements: readonly SpacePlacement[], room: CoverageRoom = ROOM) =>
-  spaceCoupling(standing(placements), roomWalls(room));
+  spaceCoupling(standing(placements), room);
 
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
@@ -101,8 +107,16 @@ test("coupling: two boxes side by side, with their shared face marked once", () 
 
 test("coupling: a box lifted onto another is coupled with it, not the floor; lifted clear, with nothing", () => {
   const stacked = coupled([at(0, 10), at(0, 10, 0, CUBE.h)]);
-  assert.deepEqual(stacked.boxes[1], { surfaces: [], boxes: [0] });
-  assert.deepEqual(stacked.boxes[0], { surfaces: [COUPLED_FLOOR], boxes: [1] });
+  assert.deepEqual(stacked.boxes[1], {
+    surfaces: [],
+    boxes: [0],
+    members: [{ surfaces: [], boxes: [{ item: 0, box: 0 }] }],
+  });
+  assert.deepEqual(stacked.boxes[0], {
+    surfaces: [COUPLED_FLOOR],
+    boxes: [1],
+    members: [{ surfaces: [COUPLED_FLOOR], boxes: [{ item: 1, box: 0 }] }],
+  });
   // one on top of the other has no face to mark on the plan
   assert.equal(stacked.marks.length, 0);
   assert.deepEqual(coupled([at(0, 10), at(0, 10, 0, CUBE.h + 6)]).boxes[1].boxes, []);
@@ -147,13 +161,32 @@ test("coupling: a mirrored pair stands as two boxes, coupled with each other at 
   );
 });
 
+test("coupling: the ceiling when the top is within the gap, not marked; none outdoors or open", () => {
+  /** the lift that puts the cube's top at the ceiling, in */
+  const toCeiling = ROOM.ceilingFt * INCHES_PER_FOOT - CUBE.h;
+  const up = coupled([at(0, 10, 0, toCeiling)]);
+  assert.deepEqual(up.boxes[0].surfaces, [COUPLED_CEILING]);
+  assert.deepEqual(up.boxes[0].members[0].surfaces, [COUPLED_CEILING]);
+  assert.deepEqual(up.marks, []);
+  assert.deepEqual(coupled([at(0, 10, 0, toCeiling - 1)]).boxes[0].surfaces, []);
+  assert.deepEqual(
+    coupled([at(0, 10, 0, toCeiling)], { ...ROOM, outdoors: true }).boxes[0].surfaces,
+    [],
+  );
+  const open = { ...ROOM, materials: { ...ROOM.materials, [COUPLED_CEILING]: OPEN_SIDE } };
+  assert.deepEqual(coupled([at(0, 10, 0, toCeiling)], open).boxes[0].surfaces, []);
+});
+
 test("coupling: outdoors there are no walls, only the ground and the other boxes", () => {
   const outdoors = { ...ROOM, outdoors: true };
   const out = coupled([at(-HALF + 1, SIDE_FT), at(-HALF + 1 + SIDE_FT, SIDE_FT)], outdoors);
-  assert.deepEqual(out.boxes, [
-    { surfaces: [COUPLED_FLOOR], boxes: [1] },
-    { surfaces: [COUPLED_FLOOR], boxes: [0] },
-  ]);
+  assert.deepEqual(
+    out.boxes.map(({ surfaces, boxes }) => ({ surfaces, boxes })),
+    [
+      { surfaces: [COUPLED_FLOOR], boxes: [1] },
+      { surfaces: [COUPLED_FLOOR], boxes: [0] },
+    ],
+  );
 });
 
 /** A drag of box `i` of `placements` to `to` (ft), snapping flush in `room`. */

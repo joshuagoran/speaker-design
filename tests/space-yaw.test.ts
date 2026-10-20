@@ -18,11 +18,11 @@ const placement = (over: Partial<SpacePlacement>): SpacePlacement => ({
   y: 10,
   liftIn: 0,
   aim: { yawDeg: 0, pitchDeg: 0 },
-  mirror: false,
   mirrored: false,
   levelDb: 0,
   delayMs: 0,
   fill: false,
+  upsideDown: false,
   ...over,
 });
 

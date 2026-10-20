@@ -6,6 +6,7 @@ import type {
   CoverageRoom,
   FloorPoint,
   RoomMaterial,
+  RoomSurface,
 } from "../types";
 import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
@@ -87,12 +88,16 @@ export const COUPLING_GAP_M = 0.01;
 /** The floor, as a box's couplings name it beside the walls (`CoupledSurface`). */
 export const COUPLED_FLOOR = "floor";
 
+/** The ceiling, as a box's couplings name it (`CoupledSurface`), and as the room's materials name it. */
+export const COUPLED_CEILING = "ceiling" as const satisfies RoomSurface;
+
 /** A side that is open: no wall stands there, so nothing couples with it or snaps to it. */
 export const OPEN_SIDE = "open" as const satisfies RoomMaterial;
 
 /** Each surface a box can be coupled with, as the placement's "Coupled with" line names it. */
 export const COUPLED_NAMES: Record<CoupledSurface, string> = {
   floor: "floor",
+  ceiling: "ceiling",
   front: "front wall",
   back: "back wall",
   left: "left wall",
@@ -237,9 +242,7 @@ export const SPACE_TEXT = {
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
   pitch: "Tilt, °",
   pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
-  mirror: "Flip left and right",
-  mirrorTip:
-    "Turns the box over, so its left and right sides swap. Use it for a speaker made as a left or right model.",
+  upsideDown: "Upside down",
   level: "Level, dB",
   delay: "Delay, ms",
   delayTip: `Auto delays the early boxes so they arrive with the last one at the alignment point. A fill arrives ${FILL_PRECEDENCE_MS} ms after the mains in its area.`,
