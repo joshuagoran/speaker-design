@@ -28,6 +28,9 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
   rainbow ring and the cabinet finish data.
   `tests/contrast.test.ts` checks text 4.5:1 and lines 3:1 in both.
 - Dispersion maps (owner-approved color exception, these maps only) use the continuous VituixCAD-style scale, +6 to −36 dB with a contour every 3 dB (`DISPERSION_SCALE` in `src/styles/palette.ts`), not the CMYK brand palette. They are the one frequency chart off the 15 Hz–20 kHz axis: every map shares fixed axes of ±90° and 50 Hz–20 kHz (`src/constants/chartScales.ts`), since below about 85 Hz the default designs are flat at every angle; one `DispersionMap` component and key, with the crossovers marked.
+- The app's design items are proper names: Speaker, Stack, and Space start with a capital when they mean the item a
+  user makes in the app (a Speaker, your Stacks, the open Space), in UI text, docs, and PR descriptions. A page name
+  ("the Space page") keeps its capital too. The plain words (a speaker on a stand, the space of a room) stay lower case.
 - US spelling everywhere (center, color): UI text, comments, docs and identifiers. Keys that saved data or links
   already carry keep their spelling (comment why).
 - Oxford comma in every list of three or more (drivers, size, and horn type): UI text, docs, and comments.

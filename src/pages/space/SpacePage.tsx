@@ -262,6 +262,9 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                 {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
               </p>
             </div>
+            <div>
+              <Button onClick={() => void sharing.share()}>{SHARE_TEXT.button}</Button>
+            </div>
             <CoverageMap
               view={view}
               room={venue.room}
@@ -413,7 +416,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             "space",
             <>
               <TextField label="Name" value={name} maxLength={60} onChange={space.setName} />
-              <Button onClick={() => void sharing.share()}>{SHARE_TEXT.button}</Button>
               <StartPicker
                 options={startOptions}
                 value={byId(startOptions, start)}

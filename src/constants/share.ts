@@ -63,6 +63,6 @@ export const SHARE_TEXT = {
     notDeflate: "This link is damaged. Ask for it again.",
     tooLarge: "This link holds too much to open.",
     otherVersion: "This link is from another version of the app.",
-    wrongFormat: "This link is not a shared space.",
+    wrongFormat: "This link is not a shared Space.",
   } as const satisfies Record<ShareError, string>,
 };
