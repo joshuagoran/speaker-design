@@ -44,6 +44,7 @@ import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLe
 import { AUTO_BALANCE_MODE_LABEL, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { BAND_BALANCE_TIP } from "../../lib/speaker/autoBalance";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import {
   SPACE_SETTINGS_SECTIONS,
@@ -51,6 +52,7 @@ import {
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
 import {
+  COUPLED_NAMES,
   NO_DELAY_MS,
   placementDomId,
   SPACE_LEVEL_REF_PLACE,
@@ -170,6 +172,24 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const picked = byId(placeList, placePick) ?? placeList[0];
   /** each placement's name: its number and what it places */
   const names = placements.map((p, k) => `${k + 1}. ${itemName(design, p.item)}`);
+  /**
+   * what placement `k`'s boxes stand right against, by name: the floor and the walls in the order `COUPLED_NAMES` lists
+   * them, then the other placements in the space's order
+   */
+  const coupledWith = (k: number): string[] => {
+    const own = model.placements.flatMap((p, i) => (p.item.placement.source === k ? [i] : []));
+    const couplings = own.flatMap((i) => space.coupling.boxes[i] ?? []);
+    const surfaces = new Set(couplings.flatMap((c) => c.surfaces));
+    const sources = new Set(
+      couplings.flatMap((c) => c.boxes.map((j) => model.placements[j]?.item.placement.source)),
+    );
+    return [
+      ...keysOf(COUPLED_NAMES)
+        .filter((s) => surfaces.has(s))
+        .map((s) => COUPLED_NAMES[s]),
+      ...names.filter((_, source) => sources.has(source)),
+    ];
+  };
   /** the boxes the map draws: a mirrored placement is two, labeled with its number and its side ("1L", "1R") */
   const boxes: MapBox[] = model.placements.map(({ item }) => {
     const sizes = item.boxes.map((b) => speakerLayout(b.speaker.cabinet).size);
@@ -270,6 +290,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               listener={venue.listener}
               alignAt={venue.alignAt}
               boxes={boxes}
+              coupling={space.coupling.marks}
               selected={model.placements.flatMap((p, i) =>
                 p.item.placement.source === selected ? [i] : [],
               )}
@@ -488,6 +509,14 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   {signedIn ? SPACE_TEXT.noLibrarySaved : SPACE_TEXT.noLibrary}
                 </p>
               )}
+              <div className="flex flex-wrap gap-2">
+                <ToggleButton
+                  on={space.snapsFlush}
+                  onClick={() => space.setSnapsFlush(!space.snapsFlush)}
+                >
+                  {SPACE_TEXT.snapFlush}
+                </ToggleButton>
+              </div>
               {placements.map((p, k) => (
                 <PlacementSettings
                   key={k}
@@ -505,6 +534,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     afterRemoved(k);
                   }}
                   solved={model.solved[k]}
+                  coupledWith={coupledWith(k)}
                 />
               ))}
             </>,

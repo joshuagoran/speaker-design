@@ -28,6 +28,14 @@ import {
   type SpaceGridRequest,
 } from "../../lib/speaker/spaceCoverage";
 import { aimedPlacement, movedPlacement } from "../../lib/speaker/spaceLayout";
+import {
+  roomWalls,
+  snapFlush,
+  spaceCoupling,
+  type RoomWall,
+  type StandingItem,
+} from "../../lib/speaker/spaceCoupling";
+import { AIM_SNAP_DEG, SNAP_FLUSH_IN } from "../../constants/space";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { presetLayers } from "../stack/stackPresets";
@@ -122,16 +130,32 @@ export function fittedSpace(space: SpaceSpec): SpaceSpec {
 export type DraggedBox = Pick<PlacedSource, "source" | "image" | "x" | "y">;
 
 /**
+ * What a drag snaps flush against (`snapFlush`): the boxes as they stand, the dragged one's index among them, and the
+ * room's walls.
+ */
+export interface FlushSnap {
+  items: readonly StandingItem[];
+  at: number;
+  walls: readonly RoomWall[];
+}
+
+/**
  * The placements after a map drag moved a box to `p`, snapped and kept on the floor: the box as set moves its placement
  * there; the mirror image of a pair moves it to the mirror image of the spot, so the other box follows as its mirror.
+ * With `flush`, a box near a wall or another box snaps flush against it (`snapFlush`); without, it moves on the
+ * quarter-foot grid.
  */
 export function withBoxMoved(
   placements: readonly SpacePlacement[],
   box: DraggedBox,
   p: FloorPoint,
   room: RoomFloor,
+  flush?: FlushSnap,
 ): SpacePlacement[] {
-  const to = onFloor(p, room);
+  const grid = onFloor(p, room);
+  const to = flush
+    ? inRoom(snapFlush(p, grid, flush.items, flush.at, flush.walls, SNAP_FLUSH_IN), room)
+    : grid;
   return placements.map((o, i) => (i === box.source ? movedPlacement(o, box.image, to) : o));
 }
 
@@ -143,8 +167,9 @@ export function withBoxAimed(
   placements: readonly SpacePlacement[],
   box: DraggedBox,
   p: FloorPoint,
+  stepDeg?: number,
 ): SpacePlacement[] {
-  return placements.map((o, i) => (i === box.source ? aimedPlacement(o, box, p) : o));
+  return placements.map((o, i) => (i === box.source ? aimedPlacement(o, box, p, stepDeg) : o));
 }
 
 /**
@@ -301,6 +326,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   const [freqHz, setFreqHz] = useState(63);
   /** how many times the design was replaced whole (a start, a clear, an opened save): a page's picks into it end then */
   const [replaced, setReplaced] = useState(0);
+  /** whether a dragged box snaps flush against a wall or another box */
+  const [snapsFlush, setSnapsFlush] = useState(true);
   const { space } = design;
   const { venue } = space;
   // the model reads the placements, the room, the stacks and the speakers, a step behind the typing
@@ -345,6 +372,15 @@ export function useSpace(initialBand: CoverageBand = "mid") {
         COVERAGE_GRID_COLS,
       ),
     [model, room, venue.earFt],
+  );
+  /** what each box stands right against: the floor, the walls and the other boxes, with the map's marks */
+  const coupling = useMemo(
+    () =>
+      spaceCoupling(
+        model.placements.map((p) => p.item),
+        roomWalls(room),
+      ),
+    [model, room],
   );
   /** the boxes' spots: the stats leave the floor right in front of them out */
   const spots = useMemo(
@@ -636,15 +672,26 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     place: (item: PlaceItem) => setDesign((d) => withItemPlaced(d, item)),
     /** removes a placement; a stack or speaker nothing places any more stays (the save keeps only what is placed) */
     removePlacement: (k: number) => editPlacements((list) => list.filter((_, i) => i !== k)),
-    /** moves a box of the map (an index into the model's boxes) on the floor; its placement's other box follows */
-    moveBox: (i: number, p: FloorPoint) => {
+    coupling,
+    snapsFlush,
+    setSnapsFlush,
+    /**
+     * moves a box of the map (an index into the model's boxes) on the floor; its placement's other box follows. It
+     * snaps flush against a wall or another box while Snap to walls & boxes is on, unless `free` (Alt held)
+     */
+    moveBox: (i: number, p: FloorPoint, free: boolean) => {
       const box = boxAt(i);
-      if (box) editPlacements((list) => withBoxMoved(list, box, p, venue.room));
+      const flush: FlushSnap | undefined =
+        snapsFlush && !free
+          ? { items: model.placements.map((m) => m.item), at: i, walls: roomWalls(venue.room) }
+          : undefined;
+      if (box) editPlacements((list) => withBoxMoved(list, box, p, venue.room, flush));
     },
-    /** turns a box of the map to face `p` on the floor; its placement's other box follows */
-    aimBox: (i: number, p: FloorPoint) => {
+    /** turns a box of the map to face `p` on the floor; its placement's other box follows. `stepped` (Shift held): in `AIM_SNAP_DEG` steps */
+    aimBox: (i: number, p: FloorPoint, stepped: boolean) => {
       const box = boxAt(i);
-      if (box) editPlacements((list) => withBoxAimed(list, box, p));
+      if (box)
+        editPlacements((list) => withBoxAimed(list, box, p, stepped ? AIM_SNAP_DEG : undefined));
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /** moves the alignment point, where the mains arrive together */

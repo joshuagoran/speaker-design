@@ -1,5 +1,12 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
-import type { CoverageBand, CoverageLevelRef, CoverageRoom, FloorPoint } from "../types";
+import type {
+  CoupledSurface,
+  CoverageBand,
+  CoverageLevelRef,
+  CoverageRoom,
+  FloorPoint,
+  RoomMaterial,
+} from "../types";
 import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
@@ -61,6 +68,36 @@ export const SPACE_HOME_MARGIN_FT = 4;
  * labels the box with it after the placement's number ("1L", "1R").
  */
 export const PAIR_SIDE = { left: "L", right: "R" } as const;
+
+/**
+ * How near a dragged box must come to a wall, or to another box's face, to snap flush against it, in. The map's drag
+ * passes it to the snap (lib/speaker/spaceCoupling `snapFlush`).
+ */
+export const SNAP_FLUSH_IN = 6;
+
+/** Shift held while turning a box on the map: its yaw steps in multiples of this, degrees. */
+export const AIM_SNAP_DEG = 45;
+
+/** While a box, the listener, or the alignment point is dragged on the map, the design moves at most this often, ms. */
+export const MAP_DRAG_UPDATE_MS = 100;
+
+/** A box is coupled with a surface or another box whose face is this near, m (lib/speaker/spaceCoupling). */
+export const COUPLING_GAP_M = 0.01;
+
+/** The floor, as a box's couplings name it beside the walls (`CoupledSurface`). */
+export const COUPLED_FLOOR = "floor";
+
+/** A side that is open: no wall stands there, so nothing couples with it or snaps to it. */
+export const OPEN_SIDE = "open" as const satisfies RoomMaterial;
+
+/** Each surface a box can be coupled with, as the placement's "Coupled with" line names it. */
+export const COUPLED_NAMES: Record<CoupledSurface, string> = {
+  floor: "floor",
+  front: "front wall",
+  back: "back wall",
+  left: "left wall",
+  right: "right wall",
+};
 
 /** The Target level a new space starts with (and the empty start, and a fill or Hi-fi preset that names none), dB SPL: as the default coverage layout. */
 export const SPACE_HOME_TARGET_DB = 105;
@@ -237,6 +274,12 @@ export const SPACE_TEXT = {
   offsetNote: "Some boxes need a time offset to line up at their crossovers.",
   placementNote: "Some placements play later, to line up with other speakers in the room.",
   outdoors: "Outdoors",
+  /** the Placements section's toggle: a dragged box snaps flush against a wall or another box */
+  snapFlush: "Snap to walls & boxes",
+  /** a placement's couplings line: its label, what it says when nothing is coupled, and its tooltip */
+  coupledWith: "Coupled with:",
+  coupledNothing: "nothing",
+  coupledTip: "Each surface or box in contact with this one adds low end.",
   ear: "Ear height, ft",
   target: "Target level",
   /** the Target level's tooltip */

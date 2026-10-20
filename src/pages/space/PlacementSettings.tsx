@@ -36,6 +36,8 @@ interface Props {
   onRemove: () => void;
   /** its delay and level as the space's solver sets them; undefined until the model holds it */
   solved: SolvedFeed | undefined;
+  /** what its boxes stand right against, by name: the floor, the walls and the other placements */
+  coupledWith: readonly string[];
 }
 
 /** A value kept between `lo` and `hi`. */
@@ -59,6 +61,7 @@ export function PlacementSettings({
   onEdit,
   onRemove,
   solved,
+  coupledWith,
 }: Props) {
   /** the delay and level it plays with, solved or typed */
   const delayMs = solved?.delayMs ?? (placement.delayMs === AUTO_DELAY ? 0 : placement.delayMs);
@@ -118,6 +121,18 @@ export function PlacementSettings({
           }
         />
       </div>
+      <p className="text-sm">
+        {coupledWith.length > 0 ? (
+          <>
+            <Tooltip tip={SPACE_TEXT.coupledTip}>
+              <span className="rounded border-2 border-cmy-y px-1">{SPACE_TEXT.coupledWith}</span>
+            </Tooltip>{" "}
+            {coupledWith.join(", ")}
+          </>
+        ) : (
+          `${SPACE_TEXT.coupledWith} ${SPACE_TEXT.coupledNothing}`
+        )}
+      </p>
       <div className={FIELD_ROW}>
         <NumberField
           label={<Tooltip tip={SPACE_TEXT.yawTip}>{SPACE_TEXT.yaw}</Tooltip>}

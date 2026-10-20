@@ -90,14 +90,16 @@ export function movedPlacement(p: SpacePlacement, image: boolean, to: FloorPoint
 
 /**
  * The placement after a drag turned one of its boxes (as `PlacedSource` stands, at `box`) to face `toward` (ft): the
- * image's yaw is the placement's, turned over.
+ * image's yaw is the placement's, turned over. With `stepDeg` (Shift held), the yaw rounds to a multiple of it.
  */
 export function aimedPlacement(
   p: SpacePlacement,
   box: Pick<PlacedSource, "x" | "y" | "image">,
   toward: FloorPoint,
+  stepDeg?: number,
 ): SpacePlacement {
-  const yawDeg = yawToward(box, toward);
+  const exact = yawToward(box, toward);
+  const yawDeg = stepDeg ? wrapYawDeg(Math.round(exact / stepDeg) * stepDeg) : exact;
   return { ...p, aim: { ...p.aim, yawDeg: box.image ? wrapYawDeg(-yawDeg) : yawDeg } };
 }
 
