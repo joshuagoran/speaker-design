@@ -27,9 +27,7 @@ Vite+ docs: `node_modules/vite-plus/docs`.
   Details fold.
 - Position labels name the sign's side (`POSITION_LABELS`); the tooltip says where it is measured from. Field labels
   carry no unit (inches); readouts do.
-- Speaker, Stack, and Space start with a capital when they mean the item a user makes in the app (a Speaker, your
-  Stacks, the open Space), in UI text, docs, and PR descriptions; page names too ("the Space page"). The plain words (a
-  speaker on a stand, the space of a room) stay lower case.
+- Capitalize Speaker, Stack, and Space when they name the app's items or pages; plain words stay lower case.
 - Font Inconsolata. Corners 4 px (6 px on large boxes).
 - Reuse `src/components/ui`; a control a second page needs moves there first. Layouts own the spacing; shared controls
   carry no outer margin.
@@ -72,8 +70,7 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 
 - Build a working mock of the core task first; the owner tests it with real tasks. The plan lists those tasks; run each
   in the browser before every hand-over.
-- Mock it before you build it, in every phase: a new control, step, or field the owner has not used yet gets a quick
-  mock (or a minimal version) and the owner's OK first. One new interaction per step; never build a whole phase untried.
+- In every phase, mock each new interaction and get the owner's OK before building it. One new interaction per step.
 - Hand editing before automation. Physical checks before scores; a score never decides what is buildable.
 - A rule reused from another page gets checked on the new page.
 - Three bugs reported in one area: stop, check the model, and tell the owner before the next fix.
