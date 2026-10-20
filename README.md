@@ -51,6 +51,7 @@ Node `^22.18.0 || ^24.11.0 || >=26` and Python 3 (for the preview server). The t
 
 ```sh
 pnpm install            # or `vp install` with the global vp CLI
+pnpm start              # dev server with live reload (`vp dev`): http://localhost:5173/
 pnpm exec vp check      # format, lint, type check
 pnpm exec vp test       # tests (Vitest)
 pnpm run speaker-optimizer-snapshot   # rewrite the optimizer snapshots after an intentional change
@@ -72,6 +73,8 @@ The Pages build (`--mode pages`) also bundles Firebase for saving; the artifact 
 doesn't include it.
 
 ## Local preview
+
+`pnpm start` runs the dev server: edits show in the page at once. To check the built page, use:
 
 ```sh
 build/serve.sh          # http://127.0.0.1:8901/stack-planner.html
