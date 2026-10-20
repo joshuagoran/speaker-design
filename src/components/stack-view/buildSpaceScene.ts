@@ -360,7 +360,7 @@ export function spaceSceneKey(props: SpaceSceneProps): string {
   });
 }
 
-/** The Space in the scene's inches, framed on the room (the beams reach past it, cut off at its walls). */
+/** The Space in the scene's inches, framed on the room (a beam may reach past it, cut off at its walls). */
 export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
   const { room, view, theme } = props;
   const pal = PALETTES[theme];
@@ -405,10 +405,10 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
   root.add(boxes);
   root.add(listenerFigure(props.listener, props.earFt, pal.muted));
   root.add(alignMark(props.alignAt, props.earFt, pal.muted));
-  // each beam runs past the far corner of the room, cut off where it meets a surface
+  // each beam runs as far as it stays as loud as the target, cut off where it meets a surface
   const planes = roomClipPlanes(room);
-  const length = Math.hypot(w, l, room.outdoors ? 0 : h);
   for (const beam of props.beams) {
+    const length = beam.reachFt * INCHES_PER_FOOT;
     const holder = new THREE.Group();
     holder.add(
       new THREE.Mesh(

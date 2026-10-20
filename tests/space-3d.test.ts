@@ -19,7 +19,7 @@ import { placementFrame } from "../src/lib/speaker/spaceLayout";
 import { pistonDirectivity, waveguideHalfAngles } from "../src/lib/acoustics/directivity";
 import { spaceFromStart } from "../src/pages/space/useSpace";
 import { STACK_PRESET } from "../src/constants/stackPresets";
-import { INCHES_PER_FOOT } from "../src/constants/units";
+import { INCHES_PER_FOOT, METERS_PER_FOOT } from "../src/constants/units";
 import { DRIVER_PART, ROOM_SURFACE_NAME } from "../src/constants/space";
 import { spaceModel } from "./helpers";
 import type { DriverPart, SpacePlacement } from "../src/types";
@@ -116,6 +116,8 @@ describe("Space 3D view: the PA stack preset", () => {
   const design = spaceFromStart(STACK_PRESET.paStack);
   const model = spaceModel(design);
   const { venue } = design.space;
+  /** a map's target the horns reach across the room, dB */
+  const TARGET_DB = 100;
   const props = (over: Partial<SpaceSceneProps> = {}): SpaceSceneProps => ({
     room: venue.room,
     items: model.placements.map((p) => p.item),
@@ -123,14 +125,14 @@ describe("Space 3D view: the PA stack preset", () => {
     alignAt: venue.alignAt,
     earFt: venue.earFt,
     view: null,
-    beams: spaceBeams(model, "high", 1000),
+    beams: spaceBeams(model, "high", 1000, TARGET_DB),
     cutaway: false,
     theme: "light",
     ...over,
   });
 
   test("each box beams along its aim, from inside the room", () => {
-    const beams = spaceBeams(model, "high", 1000);
+    const beams = spaceBeams(model, "high", 1000, TARGET_DB);
     expect(beams.length).toBeGreaterThan(0);
     const yaws = new Set(model.placements.map((p) => p.item.placement.aim.yawDeg));
     for (const b of beams) {
@@ -164,18 +166,26 @@ describe("Space 3D view: the PA stack preset", () => {
   test("the beams come from the drivers that play the map's band", () => {
     const hf = partSpots(DRIVER_PART.hf),
       cone = partSpots(DRIVER_PART.cone);
-    const high = spaceBeams(model, "high", 1000),
-      sub = spaceBeams(model, "sub", 1000);
-    expect(high.length).toBeGreaterThan(0);
-    expect(sub.length).toBeGreaterThan(0);
-    for (const b of high) expect(hf.has(spot(b.at))).toBe(true);
-    for (const b of sub) expect(cone.has(spot(b.at))).toBe(true);
-    // the mid band, as the map sums it, has both the cones and the horns in it
-    const mid = spaceBeams(model, "mid", 1000).map((b) => spot(b.at));
-    expect(mid.some((at) => hf.has(at))).toBe(true);
-    expect(mid.some((at) => cone.has(at))).toBe(true);
-    // the one frequency picks the band at that frequency, not the band picker's
-    expect(spaceBeams(model, "one", 40).map((b) => spot(b.at))).toEqual(sub.map((b) => spot(b.at)));
+    // a target any band reaches: every band that plays the high band beams, the cones as well as the horns
+    const all = spaceBeams(model, "high", 1000, 0).map((b) => spot(b.at));
+    expect(all.some((at) => hf.has(at))).toBe(true);
+    expect(all.some((at) => cone.has(at))).toBe(true);
+    for (const at of all) expect(hf.has(at) || cone.has(at)).toBe(true);
+    // the bass bands spread every way: no beams
+    expect(spaceBeams(model, "sub", 1000, 0)).toEqual([]);
+    expect(spaceBeams(model, "kick", 1000, 0)).toEqual([]);
+  });
+
+  test("a beam reaches where its level falls to the target, 6 dB each time the distance doubles", () => {
+    const [far] = spaceBeams(model, "high", 1000, 0);
+    /** its level on its axis at 1 m, on the grid's scale */
+    const at1m = 20 * Math.log10(far.reachFt * METERS_PER_FOOT);
+    const reach = (targetDb: number) =>
+      spaceBeams(model, "high", 1000, targetDb).find((b) => spot(b.at) === spot(far.at))?.reachFt;
+    expect(reach(at1m - 6)).toBeCloseTo(2 / METERS_PER_FOOT, 1);
+    expect(reach(at1m - 20)).toBeCloseTo(10 / METERS_PER_FOOT, 6);
+    // a target it never reaches: no beam
+    expect(reach(at1m + 0.1)).toBeUndefined();
   });
 
   test("the floor shows the map only while its grid is for the room on show", () => {

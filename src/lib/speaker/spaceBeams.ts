@@ -1,16 +1,14 @@
 // Each box's beams in the map's band, for the Space page's 3D view: from the drivers that play that band as the map
-// sums it, where they sit, where they point, and the angles where they fall 6 dB, wide and high, by the coverage
-// model's driver pattern (spaceCoverage). Pure.
+// sums it, where they sit, where they point, the angles where they fall 6 dB, wide and high, by the coverage model's
+// driver pattern (spaceCoverage), and how far they stay as loud as the map's target. Pure.
 import type { CoverageBand } from "../../types";
 import { bandCenterHz, coverageFrequencies, type CoveragePattern } from "../acoustics/coverage";
 import { pistonPattern, waveguideHalfAngles } from "../acoustics/directivity";
 import { abs } from "../acoustics/complex";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
+import { METERS_PER_FOOT } from "../../constants/units";
 import { driverPattern, spaceOutputs, type SpaceModel } from "./spaceCoverage";
 import type { PlacedDriver, RoomPoint } from "./spaceLayout";
-
-/** A box's band quieter than this under the loudest in the map's band draws no beam, dB. */
-const BEAM_QUIET_DB = 20;
 
 /** Where a piston's pattern, 2·J1(x)/x, falls 6 dB (to one half): x ≈ 2.215, by bisection on its first lobe. */
 const PISTON_X6 = (() => {
@@ -40,30 +38,37 @@ export function beamHalfAngles(pattern: CoveragePattern, f: number): [h: number,
   return [half, half];
 }
 
-/** One box's beam: where it starts (its drivers' middle, ft), its axis (radians), and its half angles (radians). */
+/**
+ * One box's beam: where it starts (its drivers' middle, ft), its axis (radians), its half angles (radians), and how far
+ * along its axis it stays as loud as the map's target, ft.
+ */
 export interface SpaceBeam {
   at: RoomPoint;
   yaw: number;
   pitch: number;
   half: [h: number, v: number];
+  reachFt: number;
 }
 
 /**
- * Each box's beam in the band on show: one from each band of each member that plays it, as loud as the map sums it
- * (`spaceOutputs` at the map's frequencies, each with its share of the band's weight). A band more than
- * `BEAM_QUIET_DB` under the loudest has none. Its angles are at the band's center (or the one frequency).
+ * Each box's beams in the band on show: one from each band of each member that plays it, as loud on its axis as the
+ * map sums it (`spaceOutputs` at the map's frequencies, each with its share of the band's weight). Each reaches where
+ * that level, falling 6 dB each time the distance doubles, meets `targetDb` (the map's target, on the grid's scale). A
+ * band that never reaches the target has none, and so does one that spreads every way (it never falls 6 dB in front).
+ * Its angles are at the band's center (or the one frequency).
  */
 export function spaceBeams(
   model: Pick<SpaceModel, "placements" | "feeds" | "headroomDb" | "scene">,
   band: CoverageBand,
   freqHz: number,
+  targetDb: number,
 ): SpaceBeam[] {
   const { freqs, shares } = coverageFrequencies(
     band,
     freqHz,
     model.scene.modal?.crossoverHz ?? null,
   );
-  /** each box's member's band (by `box/member/band`): its power over the map's band */
+  /** each box's member's band (by `box/member/band`): its power at 1 m on its axis, summed by each frequency's share */
   const power = new Map<string, number>();
   freqs.forEach((f, i) => {
     const out = spaceOutputs(model, f);
@@ -77,27 +82,38 @@ export function spaceBeams(
     }
     for (const [key, a] of level) power.set(key, (power.get(key) ?? 0) + shares[i] * a * a);
   });
-  const top = Math.max(0, ...power.values());
+  // the band average, as the map takes it: the mean square by the shares
+  const totalShare = Math.max(
+    1,
+    shares.reduce((sum, share) => sum + share, 0),
+  );
   const f = bandCenterHz(band, freqHz);
   return model.placements.flatMap(({ item }, box) => {
-    /** the drivers of each loud band, in the order the box lists them */
+    /** the drivers of each band, in the order the box lists them */
     const groups = new Map<string, PlacedDriver[]>();
     for (const d of item.drivers) {
       const key = `${box}/${d.member}/${d.band}`;
-      const p = power.get(key) ?? 0;
-      if (p <= 0 || p < top * Math.pow(10, -BEAM_QUIET_DB / 10)) continue;
       groups.set(key, [...(groups.get(key) ?? []), d]);
     }
-    return [...groups.values()].map((drivers): SpaceBeam => {
+    return [...groups].flatMap(([key, drivers]): SpaceBeam[] => {
+      const p = (power.get(key) ?? 0) / totalShare;
+      if (p <= 0) return [];
+      /** where the level on the axis falls to the target, m: 1 m at the target, twice as far each 6 dB louder */
+      const reachM = Math.pow(10, (10 * Math.log10(p) - targetDb) / 20);
       const [first] = drivers;
+      const half = beamHalfAngles(driverPattern(first), f);
+      if (reachM < 1 || half.every((a) => a >= Math.PI / 2)) return [];
       const mean = (pick: (p: RoomPoint) => number) =>
         drivers.reduce((s, d) => s + pick(d.at), 0) / drivers.length;
-      return {
-        at: { x: mean((p) => p.x), y: mean((p) => p.y), z: mean((p) => p.z) },
-        yaw: first.yaw,
-        pitch: first.pitch,
-        half: beamHalfAngles(driverPattern(first), f),
-      };
+      return [
+        {
+          at: { x: mean((p) => p.x), y: mean((p) => p.y), z: mean((p) => p.z) },
+          yaw: first.yaw,
+          pitch: first.pitch,
+          half,
+          reachFt: reachM / METERS_PER_FOOT,
+        },
+      ];
     });
   });
 }

@@ -120,10 +120,11 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const maxHeight = useMapMaxHeight();
   // a wide results pane shows the map and the 3D view side by side; a narrow one, the 3D view under the map
   const [coverageGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
-  /** each box's beam in the band on show */
+  /** each box's beams in the band on show, each as far as it stays as loud as the map's target (none without a map) */
+  const target = view?.target ?? null;
   const beams = useMemo(
-    () => spaceBeams(model, space.band, space.freqHz),
-    [model, space.band, space.freqHz],
+    () => (target === null ? [] : spaceBeams(model, space.band, space.freqHz, target)),
+    [model, space.band, space.freqHz, target],
   );
   /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
