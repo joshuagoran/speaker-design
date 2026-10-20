@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "vp dev",
+    "start": "vp install && vp dev",
     "build": "sh build/build.sh pages",
     "test": "vp test",
     "speaker-optimizer-snapshot": "vp test --run --config tests/speaker-optimizer-snapshot.config.ts",

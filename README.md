@@ -13,10 +13,9 @@ To date, all results are based on textbook models, not yet validated with live m
 
 ## Run it
 
-Use Node `^22.18.0 || ^24.11.0 || >=26`.
+Use Node `^22.18.0 || ^24.11.0 || >=26`. `pnpm start` installs the packages, then starts the dev server. It needs the [Vite+](https://viteplus.dev) CLI (`vp`). If you do not have `vp`, run `pnpm install` one time first.
 
 ```sh
-pnpm install
 pnpm start            # dev server at http://localhost:5173/
 pnpm exec vp check    # format, lint, and type check
 pnpm test             # tests

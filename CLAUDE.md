@@ -3,7 +3,7 @@
 DIY speaker planner: the Speaker, Stack, and Space pages, their cutlists, and Notes, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `build/build.sh` (`vp build` + `build/inline.mjs`); sources in `src/`, strict TypeScript (`tsconfig.json`), shared types in `src/types.ts`; model code in `src/lib` by what it does (`acoustics`: the models; `build`: cutlists,
 bracing, hardware, and horn mounts; `speaker`: the speaker, stack, and space model);
 checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without the global CLI); phone layout check in `tests/mobile-check.mjs` (CI).
-`vp <name>` runs a Vite+ built-in; `vp run <name>` runs a `package.json` script or a `vite.config.ts` task (check those first). `pnpm start` runs the dev server (`vp dev`). Run `vp install` after a pull; `vp env doctor` when setup looks wrong. Vite+ docs: `node_modules/vite-plus/docs`.
+`vp <name>` runs a Vite+ built-in; `vp run <name>` runs a `package.json` script or a `vite.config.ts` task (check those first). `pnpm start` installs, then runs the dev server (`vp install && vp dev`). Run `vp install` after a pull; `vp env doctor` when setup looks wrong. Vite+ docs: `node_modules/vite-plus/docs`.
 The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`, `src/lib/pageRoute.ts`; the Pages build also writes `notes/index.html`).
 
 ## UI rules
