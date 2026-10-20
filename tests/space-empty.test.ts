@@ -40,7 +40,7 @@ function render(stored?: unknown): string {
     const space = useSpace();
     const stack = useStack();
     const speakerPage = useSpeakerPage();
-    return createElement(SpacePage, { space, stack, speakerPage });
+    return createElement(SpacePage, { space, stack, speakerPage, sharedNotice: null });
   }
   return renderToString(createElement(Probe));
 }

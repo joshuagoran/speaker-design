@@ -9,6 +9,7 @@ import { useSettingsSheet } from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Notice } from "../../components/ui/Notice";
+import { SharedNotice, type SharedNoticeProps } from "../../components/ui/SharedNotice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
@@ -98,6 +99,8 @@ import type { SpeakerPageState } from "./useSpeakerPage";
 
 interface Props {
   speakerPage: SpeakerPageState;
+  /** the shared view's notice, while a link's speaker shows in place of the page's own */
+  sharedNotice: SharedNoticeProps | null;
 }
 
 /** The sum's key on the charts: no band id takes it (the adapters' are band words, the Speaker page's "band1"…). */
@@ -128,7 +131,7 @@ export function SpeakerPage(props: Props) {
 }
 
 /** The page inside its position focus (`SpeakerPage`). */
-function SpeakerPageBody({ speakerPage }: Props) {
+function SpeakerPageBody({ speakerPage, sharedNotice }: Props) {
   const pal = usePalette();
   const { spec, response, limits, build, price, optimizer, store, snapshot, restore } = speakerPage;
   const folds = useFolds(
@@ -414,17 +417,21 @@ function SpeakerPageBody({ speakerPage }: Props) {
       sheet={sheet}
       results={
         <div className="flex flex-col gap-5">
-          <SaveRow
-            store={store}
-            snapshot={snapshot}
-            restore={restore}
-            name={spec.name}
-            onName={speakerPage.setName}
-            words={SPEAKER_SAVE_WORDS}
-            starts={startOptions}
-            group={(o) => o.group}
-            onStart={(o) => startWith(o.id)}
-          />
+          {sharedNotice ? (
+            <SharedNotice {...sharedNotice} />
+          ) : (
+            <SaveRow
+              store={store}
+              snapshot={snapshot}
+              restore={restore}
+              name={spec.name}
+              onName={speakerPage.setName}
+              words={SPEAKER_SAVE_WORDS}
+              starts={startOptions}
+              group={(o) => o.group}
+              onStart={(o) => startWith(o.id)}
+            />
+          )}
           <SpeakerOptimizerResults optimizer={optimizer} />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">

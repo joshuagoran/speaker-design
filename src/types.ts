@@ -3495,14 +3495,47 @@ export interface SpaceDesign extends Pick<DesignLayers, "space" | "speakers"> {
   stacks: readonly StackSpec[];
 }
 
-/** A space as a link carries it: the envelope's marks, the space, and every stack and speaker it places. */
-export interface SpaceShare extends Pick<SpaceDesign, "speakers" | "stacks"> {
+/** What every shared envelope has: its marks, and the sender's note (plain text, `SHARE_MAX_NOTE_CHARS` at most). */
+interface ShareMarks {
   format: typeof SHARE_FORMAT;
   version: typeof SHARE_VERSION;
+  note?: string;
+}
+
+/** A speaker as a link carries it: exactly one speaker. */
+export interface SpeakerShare extends ShareMarks {
+  kind: typeof SHARE_KIND.speaker;
+  speakers: readonly [SpeakerSpec];
+  stacks: readonly [];
+  spaces: readonly [];
+}
+
+/** A stack as a link carries it: exactly one stack, and the speakers its members name. */
+export interface StackShare extends ShareMarks {
+  kind: typeof SHARE_KIND.stack;
+  speakers: readonly SpeakerSpec[];
+  stacks: readonly [StackSpec];
+  spaces: readonly [];
+}
+
+/** A space as a link carries it: exactly one space, and every stack and speaker it places. */
+export interface SpaceShare extends ShareMarks, Pick<SpaceDesign, "speakers" | "stacks"> {
   kind: typeof SHARE_KIND.space;
-  /** exactly one space */
   spaces: readonly [SpaceSpec];
 }
+
+/** What a link carries: a speaker, a stack or a space, by its `kind`. */
+export type ShareEnvelope = SpeakerShare | StackShare | SpaceShare;
+
+/** What a share kind opens as: the design its page holds. */
+export interface ShareDesigns {
+  speaker: SpeakerSpec;
+  stack: StackDesign;
+  space: SpaceDesign;
+}
+
+/** Which kind a link carries (`SHARE_KIND`). */
+export type ShareKind = (typeof SHARE_KIND)[keyof typeof SHARE_KIND];
 
 /** Why a link did not open (`SHARE_ERROR`). */
 export type ShareError = (typeof SHARE_ERROR)[keyof typeof SHARE_ERROR];
