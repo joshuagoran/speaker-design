@@ -14,10 +14,8 @@ import {
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { TextField } from "../../components/ui/TextField";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField } from "../../components/ui/SelectField";
-import { StartPicker } from "../../components/ui/StartPicker";
 import { Slider } from "../../components/ui/Slider";
 import { Notice } from "../../components/ui/Notice";
 import { CoverageBandPicker } from "../../components/ui/CoverageBandPicker";
@@ -25,7 +23,7 @@ import { RoomFields } from "../../components/ui/RoomFields";
 import { CoverageMap, type MapBox } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
-import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
+import { SaveRow } from "../../components/saved-configs/SaveRow";
 import { SpaceSide } from "../../components/drawings/SpaceSide";
 import { COVERAGE_BANDS } from "../../lib/acoustics/coverage";
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
@@ -57,6 +55,7 @@ import {
   SPACE_LEVEL_REF_PLACE,
   SPACE_LEFT_WALL_TIP,
   SPACE_LEVEL_REFS,
+  SPACE_SAVE_WORDS,
   SPACE_SURFACE_NAMES,
   SPACE_TEXT,
 } from "../../constants/space";
@@ -68,16 +67,10 @@ import { PlacementSettings } from "./PlacementSettings";
 import { ArrivalList } from "./ArrivalList";
 import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
-import { emptySpace, itemName } from "./spaceSaves";
+import { itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
 import { placeOptions } from "./placeOptions";
-import { STACK_PRESETS } from "../stack/stackPresets";
-import {
-  STACK_PRESET,
-  STACK_START_GROUPS,
-  STACK_START_NAMES,
-  type StackPreset,
-} from "../../constants/stackPresets";
+import { designStartOptions } from "../stack/stackPresets";
 import { byId } from "../../lib/tables";
 import { spaceAlignment } from "../../lib/speaker/spaceAlignment";
 import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
@@ -89,6 +82,9 @@ interface Props {
   /** the speaker library: the Speaker page's store */
   speakerPage: Pick<SpeakerPageState, "store" | "spec">;
 }
+
+/** The starts "New from…" lists: the empty space, then the presets. */
+const START_OPTIONS = designStartOptions(SPACE_TEXT.empty);
 
 /** A share as a whole percentage. */
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -107,7 +103,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
   const folds = useFolds("space.settingsFolds", keysOf(SPACE_SETTINGS_SECTIONS));
-  const sheet = useSettingsSheet<SpaceSettingsSection>("space", "space");
+  const sheet = useSettingsSheet<SpaceSettingsSection>("space", "room");
   const maxHeight = useMapMaxHeight();
   /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
@@ -121,8 +117,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   });
   /** signed in: the libraries are the person's (the stores hold a database) */
   const signedIn = Boolean(stack.store.db || speakerPage.store.db);
-  const startOptions = STACK_PRESETS.map((id) => ({ id, name: STACK_START_NAMES[id] }));
-  const [start, setStart] = useState<StackPreset>(STACK_PRESET.paStack);
   const placeList = placeOptions({
     openStack: stack.design,
     openSpeaker: speakerPage.spec,
@@ -133,9 +127,9 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   /** the placement picked on the map (an index), and which placements show their controls: none at first */
   const [selected, setSelected] = useState<number | null>(null);
   const [openItems, setOpenItems] = useState<readonly number[]>([]);
-  // the design replaced whole (a start, a clear, an opened save, another space): the numbers no longer mean the same
-  // placements, so none is picked or open (reset while rendering, so no render holds a stale number)
-  const designKey = `${space.replaced}:${design.space.id}`;
+  // the design replaced whole (a start or an opened save): the numbers no longer mean the same placements, so none is
+  // picked or open (reset while rendering, so no render holds a stale number). A save keeps them.
+  const designKey = space.replaced;
   const [seenKey, setSeenKey] = useState(designKey);
   if (seenKey !== designKey) {
     setSeenKey(designKey);
@@ -218,7 +212,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   const powers = ampPowerGroups(design).reduce((n, s) => n + s.groups.length, 0);
   const delays = alignment.filter((r) => r.delayMs >= NO_DELAY_MS).length;
   const summaries: Record<SpaceSettingsSection, string> = {
-    space: `${name} · ${placements.length} placement${placements.length === 1 ? "" : "s"}`,
     room: `${venue.room.outdoors ? SPACE_TEXT.outdoors : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`} · ${venue.targetDb} dB target`,
     placements: names.join(" · ") || SPACE_TEXT.noPlacements,
     hardware:
@@ -244,13 +237,18 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
       sheet={sheet}
       results={
         <>
-          <SavedConfigs
-            bare
+          <SaveRow
             store={space.store}
             snapshot={space.snapshot}
             restore={space.restore}
-            saveName={name}
-            manage
+            name={name}
+            onName={space.setName}
+            openId={design.space.id}
+            onOpenId={space.setOpenId}
+            words={SPACE_SAVE_WORDS}
+            starts={START_OPTIONS}
+            group={(o) => o.group}
+            onStart={(o) => space.replaceDesign(spaceFromStart(o.id))}
           />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <div className={HEADING_GROUP}>
@@ -405,24 +403,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             />
           }
         >
-          {section(
-            "space",
-            <>
-              <TextField label="Name" value={name} maxLength={60} onChange={space.setName} />
-              <StartPicker
-                options={startOptions}
-                value={byId(startOptions, start)}
-                onChange={(o) => setStart(o.id)}
-                group={() => STACK_START_GROUPS.presets}
-                onStart={() => space.replaceDesign(spaceFromStart(start))}
-                secondary={{
-                  label: SPACE_TEXT.clear,
-                  onClick: () => space.replaceDesign(emptySpace()),
-                }}
-                hint={<Tooltip tip={SPACE_TEXT.startTip}>{SPACE_TEXT.startHint}</Tooltip>}
-              />
-            </>,
-          )}
           {section(
             "room",
             <>

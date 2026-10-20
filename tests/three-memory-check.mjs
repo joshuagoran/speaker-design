@@ -9,7 +9,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
-import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
+import { STACK_START_NAMES } from "../src/constants/stackPresets.ts";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 
 const REBUILDS = 30;
@@ -37,13 +37,15 @@ const VIEWS = [
       await builtTwice(page);
     },
   },
-  // the Stack page started from its default start (the PA stack), its first member's across offset stepped
+  // the Stack page started from the PA stack preset ("New from…"), its first member's across offset stepped
   {
     name: "Stack",
     hash: "#stack",
     ...NUMBER,
     prepare: async (page) => {
-      await page.getByRole("button", { name: START_PICKER_TEXT.startOver }).first().click();
+      await page
+        .getByLabel(SAVE_ROW_TEXT.newFrom)
+        .selectOption({ label: STACK_START_NAMES.paStack });
       await builtTwice(page);
     },
   },

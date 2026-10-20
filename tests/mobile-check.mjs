@@ -9,7 +9,6 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { GOAL_SHORT_NAMES } from "../src/constants/optimizerText.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
-import { START_PICKER_TEXT } from "../src/constants/startPicker.ts";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 import { SPEAKER_OPTIMIZER_TEXT } from "../src/constants/speakerOptimizerText.ts";
 
@@ -190,17 +189,12 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
       await openFolds();
     }
   else await openFolds();
-  // a page with a saving row starts from its "New from…" list (picking one replaces the design); else from its picker
-  const newFrom = p.getByLabel(SAVE_ROW_TEXT.newFrom);
-  const fromRow = (await newFrom.count()) > 0;
-  const start = fromRow ? newFrom : p.getByLabel(START_PICKER_TEXT.startFrom);
+  // the page starts from its saving row's "New from…" list (picking one replaces the design)
+  const start = p.getByLabel(SAVE_ROW_TEXT.newFrom);
   await reveal(start);
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => fallbackStart.test(o));
-  if (many) {
-    await start.selectOption({ label: many });
-    if (!fromRow) await p.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
-  }
+  if (many) await start.selectOption({ label: many });
   // the Keep list (a closed fold inside the Optimizer fold) open too: its long lines must wrap inside the pane
   const goal = p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper });
   await reveal(goal);

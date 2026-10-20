@@ -33,7 +33,6 @@ export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;
 
 /** The Space settings column's fold sections, by id, and the name each shows (also the phone sheet's heading). */
 export const SPACE_SETTINGS_SECTIONS = {
-  space: "Space",
   room: "Room and listeners",
   placements: "Placements",
   hardware: "Amp power and alignment",

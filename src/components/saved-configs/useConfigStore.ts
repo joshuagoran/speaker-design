@@ -170,8 +170,6 @@ export function useConfigStore(collection: string) {
       return false;
     }
   };
-  /** a new saved configuration */
-  const save = (name: string, data: SavedConfigData) => write(undefined, name, data, "Saved");
   /** a new saved configuration under an id made here, so the caller can pick it: that id, or null when it fails */
   const create = async (name: string, data: SavedConfigData) => {
     const id = newDocId();
@@ -186,12 +184,15 @@ export function useConfigStore(collection: string) {
   /** a copy of a saved configuration under `name` */
   const duplicate = ({ id: _id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
     write(undefined, name, data, "Duplicated");
-  const remove = async (id: string) => {
-    if (!db) return;
+  /** deletes a saved configuration; false (and a message) when it fails */
+  const remove = async (id: string): Promise<boolean> => {
+    if (!db) return false;
     try {
       await db.collection(collection).doc(id).delete();
+      return true;
     } catch {
       flash("Couldn't delete");
+      return false;
     }
   };
   return {
@@ -204,7 +205,6 @@ export function useConfigStore(collection: string) {
     flash,
     signIn,
     signOut,
-    save,
     create,
     overwrite,
     rename,

@@ -16,7 +16,6 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
 import { SelectField } from "../../components/ui/SelectField";
-import { StartPicker } from "../../components/ui/StartPicker";
 import { Notice } from "../../components/ui/Notice";
 import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
@@ -33,11 +32,10 @@ import { STATS } from "../../components/stats/StatLabel";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
-import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
+import { SaveRow } from "../../components/saved-configs/SaveRow";
 import { StackFront } from "../../components/drawings/StackFront";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { MembersView3D } from "../../components/stack-view/MembersView3D";
-import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { formatHz } from "../../lib/format";
 import { DEFAULT_PA } from "../../lib/defaults";
@@ -55,7 +53,7 @@ import {
   STACK_SETTINGS_SECTIONS,
   type StackSettingsSection,
 } from "../../constants/settingsSections";
-import { STACK_TEXT } from "../../constants/stack";
+import { STACK_SAVE_WORDS, STACK_TEXT } from "../../constants/stack";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
@@ -68,15 +66,7 @@ import { StackOptimizerResults } from "./StackOptimizerResults";
 import { StackOptimizerSettings, stackOptimizerSummary } from "./StackOptimizerSettings";
 import { SummaryStrip } from "../../components/ui/SummaryStrip";
 import { WarningChips } from "../../components/chips/WarningChips";
-import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
-import { STACK_PRESETS, presetLayers } from "./stackPresets";
-import {
-  STACK_PRESET,
-  STACK_START_DESIGN_NAMES,
-  STACK_START_GROUPS,
-  STACK_START_NAMES,
-  type StackPreset,
-} from "../../constants/stackPresets";
+import { designStartOptions, stackFromStart } from "./stackPresets";
 import type { StackPlanner } from "./useStack";
 
 interface Props {
@@ -90,6 +80,9 @@ const SUM_SERIES_ID = "sum";
 
 /** The sum's line width on the charts, px: it reads over its members' (2 px). */
 const SUM_LINE_PX = 4;
+
+/** The starts "New from…" lists: the empty stack, then the presets. */
+const START_OPTIONS = designStartOptions(STACK_TEXT.empty);
 
 /** The front drawing's height. */
 const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
@@ -118,20 +111,6 @@ export function StackPage({ stack, speakerPage }: Props) {
     (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
   );
   const lineOf = (k: number) => bandLine(pal, k, members.length);
-  const startOptions = STACK_PRESETS.map((id) => ({
-    id,
-    name: STACK_START_NAMES[id],
-    group: STACK_START_GROUPS.presets,
-  }));
-  const [start, setStart] = useState<StackPreset>(STACK_PRESET.paStack);
-  /** replaces the stack with the preset's */
-  const startFrom = () => {
-    const { stack: started, speakers } = presetLayers(start, {
-      id: DRAFT_STACK_ID,
-      name: STACK_START_DESIGN_NAMES[start],
-    });
-    stack.setDesign({ stack: started, speakers });
-  };
   const summaries: Record<StackSettingsSection, string> = {
     stack: `${name} · ${members.length} box${members.length === 1 ? "" : "es"}`,
     members: names.join(" · ") || STACK_TEXT.noMembers,
@@ -195,13 +174,18 @@ export function StackPage({ stack, speakerPage }: Props) {
       sheet={sheet}
       results={
         <>
-          <SavedConfigs
-            bare
+          <SaveRow
             store={store}
             snapshot={snapshot}
             restore={restore}
-            saveName={name}
-            manage
+            name={name}
+            onName={stack.setName}
+            openId={design.stack.id}
+            onOpenId={stack.setOpenId}
+            words={STACK_SAVE_WORDS}
+            starts={START_OPTIONS}
+            group={(o) => o.group}
+            onStart={(o) => stack.setDesign(stackFromStart(o.id))}
           />
           {summary && <SummaryStrip items={summary} />}
           <StackOptimizerResults optimizer={optimizer} />
@@ -353,27 +337,12 @@ export function StackPage({ stack, speakerPage }: Props) {
         >
           {section(
             "stack",
-            <>
-              <TextField label="Name" value={name} maxLength={60} onChange={stack.setName} />
-              <TextField
-                label={STACK_TEXT.notes}
-                value={notes}
-                maxLength={200}
-                onChange={stack.setNotes}
-              />
-              <StartPicker
-                options={startOptions}
-                value={byId(startOptions, start)}
-                onChange={(o) => setStart(o.id)}
-                group={(o) => o.group}
-                onStart={startFrom}
-                secondary={{
-                  label: STACK_TEXT.clear,
-                  onClick: () => stack.setDesign(emptyStack()),
-                }}
-                hint={STACK_TEXT.startHint}
-              />
-            </>,
+            <TextField
+              label={STACK_TEXT.notes}
+              value={notes}
+              maxLength={200}
+              onChange={stack.setNotes}
+            />,
           )}
           {section(
             "members",

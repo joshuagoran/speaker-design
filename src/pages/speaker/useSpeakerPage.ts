@@ -249,6 +249,8 @@ export function useSpeakerPage() {
     snapshot,
     restore,
     setName: (name: string) => setSpec((s) => ({ ...s, name })),
+    /** sets the save the speaker is open in, as its id; null: none (a new speaker's draft id) */
+    setOpenId: (id: string | null) => setSpec((s) => ({ ...s, id: id ?? DRAFT_SPEAKER_ID })),
     editInput: (edit: (input: SpeakerSpec["input"]) => SpeakerSpec["input"]) =>
       setSpec((s) => ({ ...s, input: edit(s.input) })),
     /** sets part of the look (the cabinet finish, the baffle and horn colors) */

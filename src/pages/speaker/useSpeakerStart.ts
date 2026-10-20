@@ -1,6 +1,9 @@
 import { SPEAKER_TEMPLATES, templateSpeaker } from "./speakerTemplates";
-import { SPEAKER_START_NAMES, type SpeakerTemplate } from "../../constants/speakerStarts";
-import { START_PICKER_GROUPS } from "../../constants/startPicker";
+import {
+  SPEAKER_START_GROUPS,
+  SPEAKER_START_NAMES,
+  type SpeakerTemplate,
+} from "../../constants/speakerStarts";
 import type { SpeakerPageState } from "./useSpeakerPage";
 
 /** A start as the lists show it: its id, its name and its group (the templates). */
@@ -14,7 +17,7 @@ export interface SpeakerStartOption {
 const START_OPTIONS: readonly SpeakerStartOption[] = SPEAKER_TEMPLATES.map((id) => ({
   id,
   name: SPEAKER_START_NAMES[id],
-  group: START_PICKER_GROUPS.templates,
+  group: SPEAKER_START_GROUPS.templates,
 }));
 
 /**

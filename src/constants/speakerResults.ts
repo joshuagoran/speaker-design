@@ -35,8 +35,7 @@ export const SPEAKER_SAVE_WORDS = {
   savedList: "Saved speakers",
   pick: (n: number) => `Saved speakers (${n})`,
   noSaved: "No saved speakers yet",
-  newFromTip:
-    "Starts a new speaker from a template or a current design. It replaces the current design.",
+  newFromTip: "Starts a new speaker from a template. It replaces the current design.",
 } as const;
 
 /** The checks' row labels: a band's, by its name, and a chamber's, by its place. */
