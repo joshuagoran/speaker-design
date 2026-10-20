@@ -3,15 +3,16 @@
 Owner request, Oct 2026. Share a speaker, a stack, or a space with another person. Two ways:
 
 - **A link.** Send it in a message. It opens the design on the right page. The main case is a space: a user sends
-  their real room and setup, and the owner opens it to find the problem.
+  their real room and setup to another user, and that user opens it to find the problem.
 - **A file.** Export to a `.speaknow.json` file, and import it. See [import-export-spec.md](import-export-spec.md).
 
 Both use one format. A link is the same envelope as a file, compressed and put in the URL. Nothing here is built yet.
 
 ## Goals
 
-- A user sends a link to their space. The owner opens it and sees the same room, boxes, aims, and listener.
-- The owner changes the space and sends a link back. The user opens the fixed version.
+- Any user sends a link to any other user. The owner is a user like any other: no owner-only features.
+- The recipient opens the link and sees the same room, boxes, aims, and listener.
+- The recipient changes the space and sends a link back. The sender opens the fixed version.
 - A link works signed out, on a phone, with no server.
 - Opening a link never loses the recipient's own work.
 - Files back up designs and move them between accounts or browsers (the existing spec).
@@ -21,20 +22,25 @@ Both use one format. A link is the same envelope as a file, compressed and put i
 - Live shared editing (two people on one design at once).
 - Links that update when the sender changes the design. A link is a snapshot.
 - Cutlist, chart, and 3D exports (see [import-export-spec.md](import-export-spec.md#later)).
+- Stored short links (a link with only an id, the design kept in Firestore). Reconsider only if real links get cut
+  short in the apps users send them with.
+- Links in the claude.ai artifact build. Links target the GitHub Pages site. The artifact build keeps files only.
 
-## Owner tasks (acceptance tests)
+## User tasks (acceptance tests)
 
 Run each in the browser before every hand-over.
 
 1. Build a space with two stacks and a fill. Tap Share. Paste the link in a message. Open it on a phone, signed out.
    The room, the placements, the listener, and the map are the same.
-2. A user sends a link of their living room. Open it. Move the listener and change a delay. Find the problem.
-   Tap Share and send the fixed link back. The user opens the fixed space.
+2. Another user sends a link of their living room. Open it. Move the listener and change a delay. Find the problem.
+   Tap Share and send the fixed link back. The sender opens the fixed space.
 3. Open a link while the Space page holds an unsaved design. Close the shared design. The unsaved design comes back.
-4. Open a shared space and tap "Save a copy" (signed in). The space and its stacks and speakers are in the libraries.
-5. Open a link that a chat app cut short. A clear message shows. Nothing changes.
-6. Share a speaker and a stack. Each link opens on its own page with the same design.
-7. Export a space to a file. Import it in another browser. The space is the same.
+4. Open a shared space, change it, and tap "Save a copy" (signed in). The space and its stacks and speakers are in
+   the libraries as new items. The sender's items do not change.
+5. Open your own shared link and change it. The only save is "Save a copy". The saved original does not change.
+6. Open a link that a chat app cut short. A clear message shows. Nothing changes.
+7. Share a speaker and a stack. Each link opens on its own page with the same design.
+8. Export a space to a file. Import it in another browser. The space is the same.
 
 ## Size (measured, Oct 2026)
 
@@ -47,7 +53,7 @@ Run each in the browser before every hand-over.
 - Compression is deflate, then base64url.
 - A space with three different stacks and fills should stay under about 5,000 characters. A test measures it.
 - Email, Slack, iMessage, and WhatsApp keep links of this length. Some SMS apps cut long links.
-- So the first version needs no server. Stored short links are a later option (see [Phase 4](#phase-4-short-links-optional)).
+- So links need no server, and no stored short links (see [Not in scope](#not-in-scope)).
 
 ## Link format
 
@@ -84,12 +90,16 @@ Run each in the browser before every hand-over.
 3. It opens the design on its page in a **shared view**:
    - A notice at the top: "Shared design: <name>", and the note, if any.
    - The design works as usual: every setting, chart, and the 3D view. The recipient can change it.
+   - The only save is "Save a copy" (signed in): new items in the recipient's libraries, with new ids, as the file
+     import does. The shared view never overwrites a saved item, the sender's or the recipient's.
+   - Signed out, the recipient can change and share the design, but not save it. A line says "Sign in to save a copy."
    - The shared view does not write the page's draft. The recipient's own draft stays in the browser.
-   - Actions: "Save a copy" (signed in: to the libraries, with new ids, as the file import does), "Share" (send the
-     changed design back), and "Close" (back to the recipient's own draft).
+   - Other actions: "Share" (send the changed design back) and "Close" (back to the recipient's own draft).
+   - "Close" with unsaved changes asks first: "Close without saving a copy?"
 4. The app then removes `&s=…` from the address bar (`history.replaceState`). A reload keeps the shared view
    from session storage, so a change is not lost on reload.
 5. A bad link shows one message and opens the page's own draft.
+6. The link carries no account data. Library ids in it are not used as save targets. A copy always gets new ids.
 
 ## Checks
 
@@ -109,7 +119,7 @@ A link is untrusted data, the same as a file.
 - `src/components/ui`: one `SharePanel` and one `SharedNotice`, used on all three pages.
 - `usePageDraft` gets a shared mode: it holds a design that it does not write to the draft key.
 - The ids (`s`, the share version, the kinds) are constants in `src/constants/`, defined once.
-- No new Firestore collections or rules (until Phase 4).
+- No new Firestore collections or rules.
 
 ## Tests
 
@@ -129,36 +139,29 @@ One feature per PR. Each phase starts after the one before it merges.
 
 - A Share button on the Space page only. It copies a fragment link. Opening it replaces the open space (no shared
   view yet).
-- The owner tests tasks 1 and 2 with a real room and a real user.
+- The owner tests tasks 1 and 2 with a real room and another user.
 - Exit: the owner says the flow helps to find real problems, and the link lengths are fine.
 
 ### Phase 2: share links
 
 - `src/lib/io` (encode, decode, and the checks), the Share panel, and the shared view on all three pages.
-- Tasks 1 to 6 pass.
+- Tasks 1 to 7 pass.
 
 ### Phase 3: files
 
 - Import and export as in [import-export-spec.md](import-export-spec.md). It reuses `src/lib/io` and the Share panel's
   "Export file".
-- Task 7 passes.
+- Task 8 passes.
 
-### Phase 4: short links (optional)
+## Owner decisions (Oct 2026)
 
-Only if real links get cut, or the owner wants to take back a link.
+1. Users send links to one another. The owner uses links as a user, with no owner-only features.
+2. A link or file can carry a note, 280 characters at most.
+3. The recipient can change a shared design. Changes save only as a copy in the recipient's account.
+4. No stored short links. Reconsider only if real links get cut short.
+5. The claude.ai artifact build is out of scope for links for now.
 
-- A signed-in user stores a snapshot in Firestore, `shares/{id}`, with a random id (22 characters).
-- The link is `#space&id=<id>`. Anyone with the link can read that one document. Nobody can list the collection.
-- The owner of a share can delete it. A deleted share shows "This link no longer works."
-- New rules: `get` for everyone, `create` and `delete` for the signed-in owner only, and a size limit.
+## Open questions
 
-## Open questions for the owner
-
-1. Who sends links: users to you, you to users, or both? The plan works both ways.
-2. Is the note useful, and is 280 characters enough?
-3. Shared view: the recipient can edit at once (the plan), or the view is read-only until "Save a copy"?
-4. Phase 4 (stored short links): later, only if needed, or now?
-5. Should a shared space later carry measured curves from the
-   [prototype measurement plan](prototype-measurement-plan.md)?
-6. The claude.ai artifact build: its address bar is the host's, so a fragment link cannot reach it. Hide Share links
-   there and keep files only?
+1. Later, a shared space could carry a room measurement: a mic sweep at the listener, from REW or a similar tool.
+   The recipient then sees the real room's curve beside the model's. Not in this plan.
