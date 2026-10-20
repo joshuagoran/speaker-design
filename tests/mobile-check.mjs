@@ -4,6 +4,7 @@
 // Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors, and any
 // request outside the page: everything is bundled in, so the page must work with the network blocked.
 // On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
+// On a phone, every page's settings sheet is checked closed and open on each tab (with its heading), and closes again.
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { GOAL_SHORT_NAMES } from "../src/constants/optimizerText.ts";
@@ -113,6 +114,23 @@ for (const size of sizes) {
     }, v);
     await p.waitForTimeout(600);
     await check(v || "(no hash)");
+    // on a phone the settings are a sheet: each tab opens it on its section, with the section's name on top; a second
+    // tap on the open tab closes it
+    const tabs = p.locator("aside [role=tab]:visible");
+    const names = await tabs.allTextContents();
+    for (const [i, name] of names.entries()) {
+      await tabs.nth(i).click();
+      await p.waitForTimeout(250);
+      await check(`${v || "(no hash)"} sheet ${name}`);
+      if (!(await p.locator("aside h2:visible").count()))
+        failures.push(`${size.name} ${v}: the sheet's ${name} tab shows no heading`);
+    }
+    if (names.length) {
+      await tabs.nth(names.length - 1).click();
+      await p.waitForTimeout(250);
+      if (await p.locator("aside [role=tab][aria-selected=true]").count())
+        failures.push(`${size.name} ${v}: a tap on the open tab leaves the sheet open`);
+    }
   }
   for (const e of errs) failures.push(`${size.name}: page error: ${e}`);
   await ctx.close();
@@ -176,12 +194,32 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
   p.on("pageerror", (e) => errs.push(e.message));
   await p.goto(page + hash);
   await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
-  const closed = p.locator("aside button[aria-expanded=false]");
-  for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
+  // on a phone the settings are a sheet, one section per tab: open each tab in turn (a tap on the open tab closes it)
+  const tabs = p.locator("aside [role=tab]:visible");
+  const openTab = async (i) => {
+    if ((await tabs.nth(i).getAttribute("aria-selected")) !== "true") await tabs.nth(i).click();
+  };
+  /** opens the sheet on the tab that shows `target` (from md up the column shows every section) */
+  const reveal = async (target) => {
+    const n = await tabs.count();
+    for (let i = 0; i < n && !(await target.first().isVisible()); i++) await openTab(i);
+  };
+  const closed = p.locator("aside button[aria-expanded=false]:visible");
+  const openFolds = async () => {
+    for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
+  };
+  const tabCount = await tabs.count();
+  if (tabCount)
+    for (let i = 0; i < tabCount; i++) {
+      await openTab(i);
+      await openFolds();
+    }
+  else await openFolds();
   // a page with a saving row starts from its "New from…" list (picking one replaces the design); else from its picker
   const newFrom = p.getByLabel(SAVE_ROW_TEXT.newFrom);
   const fromRow = (await newFrom.count()) > 0;
   const start = fromRow ? newFrom : p.getByLabel(START_PICKER_TEXT.startFrom);
+  await reveal(start);
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => fallbackStart.test(o));
   if (many) {
@@ -189,12 +227,14 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
     if (!fromRow) await p.getByRole("button", { name: START_PICKER_TEXT.startOver }).click();
   }
   // the Keep list (a closed fold inside the Optimizer fold) open too: its long lines must wrap inside the pane
+  const goal = p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper });
+  await reveal(goal);
   const keep = p.locator("aside details:not([open]) > summary", {
     hasText: SPEAKER_OPTIMIZER_TEXT.keep,
   });
   if (await keep.count()) await keep.first().click();
   // the Optimizer fold: pick a goal, find designs, and wait for the cards
-  await p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper }).click();
+  await goal.click();
   await p.getByRole("button", { name: SPEAKER_OPTIMIZER_TEXT.run }).click();
   try {
     await p

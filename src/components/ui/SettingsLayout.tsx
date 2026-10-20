@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PAGE_WIDTH } from "../../styles/layout";
 import { FONT } from "../../styles/fonts";
 import { useStoredState } from "../../hooks/useStoredState";
+import { settingsSheetRoomClass, sheetHeightStyle, type SettingsSheet } from "./SettingsSheetTabs";
 
 /** The narrowest the settings column goes, px: below this its controls get cramped. */
 const SETTINGS_MIN_PX = 300;
@@ -23,17 +24,17 @@ interface Props {
   results: React.ReactNode;
   /** the settings column (a `SettingsColumn`) */
   settings: React.ReactNode;
-  /** extra classes on the page (the room a phone settings sheet needs at the bottom) */
-  className?: string;
+  /** the phone settings sheet: the page leaves room for it at its bottom, and carries the height the viewer set */
+  sheet: Pick<SettingsSheet<string>, "open" | "heightPx">;
 }
 
 /**
  * A page with a settings column. From md up the page itself doesn't scroll: the results and the settings are two panes
  * below the header, each with its own scrollbar at its own right edge. The divider between them drags (or takes the
  * arrow keys) to set the settings column's width, remembered per browser for every page; a double-click resets it. On
- * phones, one column that scrolls as a page.
+ * phones, the results scroll as a page and the settings are a sheet pinned to the bottom of the screen.
  */
-export function SettingsLayout({ results, settings, className = "" }: Props) {
+export function SettingsLayout({ results, settings, sheet }: Props) {
   const [widthPx, setWidthPx] = useStoredState<number | null>("layout.settingsWidth", null);
   const page = useRef<HTMLElement>(null);
   /** the pointer dragging the divider, and whether it has moved (a click alone stores nothing) */
@@ -69,8 +70,12 @@ export function SettingsLayout({ results, settings, className = "" }: Props) {
   return (
     <main
       ref={page}
-      className={`${PAGE_WIDTH} pb-16 grid grid-cols-1 gap-8 md:h-full md:pb-0 md:gap-0 md:grid-rows-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_1.5rem_var(--settings-w)] md:[--settings-default:40%] xl:[--settings-default:26rem] ${className}`}
-      style={{ fontFamily: FONT, ["--settings-w" as string]: settingsWidth(widthPx) }} // boundary cast: React's style type has no custom properties
+      className={`${PAGE_WIDTH} pb-16 grid grid-cols-1 gap-8 md:h-full md:pb-0 md:gap-0 md:grid-rows-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_1.5rem_var(--settings-w)] md:[--settings-default:40%] xl:[--settings-default:26rem] ${settingsSheetRoomClass(sheet.open)}`}
+      style={{
+        fontFamily: FONT,
+        ["--settings-w" as string]: settingsWidth(widthPx), // boundary cast: React's style type has no custom properties
+        ...sheetHeightStyle(sheet.heightPx),
+      }}
     >
       {/* the pane scrolls, so it clips whatever is drawn past its edges: 4 px of room on the left (taken back from the
           page's gutter, so the content stays put) keep a focus ring there whole */}

@@ -5,6 +5,12 @@ import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
+import {
+  SETTINGS_SHEET_CLASS,
+  SettingsSheetTabs,
+  settingsSheetBodyClass,
+  useSettingsSheet,
+} from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -98,6 +104,7 @@ export function StackPage({ stack, speakerPage }: Props) {
   const { design, response, limits, totals, optimizer, store, snapshot, restore } = stack;
   const { members, name, notes } = design.stack;
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
+  const sheet = useSettingsSheet<StackSettingsSection>("stack", "stack");
   /** the library's speakers, as the picker lists them */
   const library = (speakerPage.store.saved ?? []).flatMap((c) => {
     const saved: unknown = Reflect.get(c, "speaker");
@@ -139,7 +146,9 @@ export function StackPage({ stack, speakerPage }: Props) {
       id={id}
       title={STACK_SETTINGS_SECTIONS[id]}
       folds={folds}
+      foldsAt="desktop"
       summary={summaries[id]}
+      className={sheet.tabClass(id)}
     >
       {children}
     </SettingsSection>
@@ -183,6 +192,7 @@ export function StackPage({ stack, speakerPage }: Props) {
   ];
   return (
     <SettingsLayout
+      sheet={sheet}
       results={
         <>
           <SavedConfigs
@@ -334,7 +344,13 @@ export function StackPage({ stack, speakerPage }: Props) {
         </>
       }
       settings={
-        <SettingsColumn folds={folds}>
+        <SettingsColumn
+          folds={folds}
+          foldsAt="desktop"
+          className={SETTINGS_SHEET_CLASS}
+          bodyClassName={settingsSheetBodyClass(sheet.open)}
+          top={<SettingsSheetTabs sections={STACK_SETTINGS_SECTIONS} sheet={sheet} />}
+        >
           {section(
             "stack",
             <>

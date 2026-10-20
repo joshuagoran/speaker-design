@@ -25,7 +25,7 @@ import {
   SETTINGS_SHEET_CLASS,
   SettingsSheetTabs,
   settingsSheetBodyClass,
-  settingsSheetRoomClass,
+  useSettingsSheet,
 } from "../../components/ui/SettingsSheetTabs";
 import { StatTileGrid } from "../../components/stats/StatTileGrid";
 import { SheetDrawing } from "../../components/drawings/SheetDrawing";
@@ -197,9 +197,7 @@ export function CutlistPage({
   // MDF has no grain: its panels turn freely and the grain settings step aside
   const grainless = material === "mdf";
   const folds = useFolds("cutlist.settingsFolds", keysOf(CUTLIST_SETTINGS_SECTIONS));
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [tab, setTab] = useState<CutlistSettingsSection>("boxes");
-  const tabClass = (t: CutlistSettingsSection) => (tab === t ? "" : "max-md:hidden");
+  const sheet = useSettingsSheet<CutlistSettingsSection>("cutlist", "boxes");
   // the parts list beside the sheet layout once the results pane is wide enough (the pane, not the viewport: the divider drags)
   const [twoColumnBox, twoColumns] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   /** the row (by `cutRowKey`) highlighted with its pieces on the sheets */
@@ -278,8 +276,9 @@ export function CutlistPage({
       folds={folds}
       foldsAt="desktop"
       summary={summaries[id]}
+      className={sheet.tabClass(id)}
     >
-      <div className={`${FLEX_GAP_Y} pb-2 ${tabClass(id)}`}>{children}</div>
+      <div className={`${FLEX_GAP_Y} pb-2`}>{children}</div>
     </SettingsSection>
   );
   const th = "py-1 font-normal text-stone-500";
@@ -553,7 +552,7 @@ export function CutlistPage({
 
   return (
     <SettingsLayout
-      className={settingsSheetRoomClass(sheetOpen)}
+      sheet={sheet}
       results={
         <div className="min-w-0 flex flex-col gap-5">
           <div>
@@ -601,19 +600,8 @@ export function CutlistPage({
           folds={folds}
           foldsAt="desktop"
           className={SETTINGS_SHEET_CLASS}
-          bodyClassName={`md:pb-4 ${settingsSheetBodyClass(sheetOpen)}`}
-          top={
-            <SettingsSheetTabs
-              tabs={entriesOf(CUTLIST_SETTINGS_SECTIONS)}
-              open={sheetOpen}
-              active={tab}
-              onOpen={(t) => {
-                setTab(t);
-                setSheetOpen(true);
-              }}
-              onClose={() => setSheetOpen(false)}
-            />
-          }
+          bodyClassName={`md:pb-4 ${settingsSheetBodyClass(sheet.open)}`}
+          top={<SettingsSheetTabs sections={CUTLIST_SETTINGS_SECTIONS} sheet={sheet} />}
         >
           {section(
             "boxes",

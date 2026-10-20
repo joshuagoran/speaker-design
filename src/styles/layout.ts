@@ -80,6 +80,3 @@ export const HEADING_GROUP = "space-y-1";
 
 /** Blocks of a settings section that each have their own heading (a list of cards, then the next list): 1.25 rem apart. */
 export const BLOCK_GAP_Y = "space-y-5";
-
-/** `GAP_Y` from md up only: a fold body whose children are tab groups, which phones show one at a time. */
-export const GAP_Y_MD_UP = "md:space-y-3";

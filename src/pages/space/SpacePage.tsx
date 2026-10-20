@@ -5,6 +5,12 @@ import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
+import {
+  SETTINGS_SHEET_CLASS,
+  SettingsSheetTabs,
+  settingsSheetBodyClass,
+  useSettingsSheet,
+} from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -42,6 +48,7 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import {
   SPACE_SETTINGS_SECTIONS,
+  SPACE_SETTINGS_TABS,
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
 import {
@@ -100,6 +107,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
   const folds = useFolds("space.settingsFolds", keysOf(SPACE_SETTINGS_SECTIONS));
+  const sheet = useSettingsSheet<SpaceSettingsSection>("space", "space");
   const maxHeight = useMapMaxHeight();
   /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
@@ -136,11 +144,15 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   }
   /** the placement to bring into view after the next render, and whether to scroll (a count tells repeats apart) */
   const [reveal, setReveal] = useState<{ k: number; scroll: boolean; n: number } | null>(null);
-  /** picks placement `k`: opens its item (and the Placements section), and scrolls it into view when `scroll` */
+  /**
+   * picks placement `k`: opens its item (and the Placements section; on a phone with the sheet open, its tab), and
+   * scrolls it into view when `scroll`
+   */
   const pick = (k: number, scroll: boolean) => {
     setSelected(k);
     setOpenItems((o) => (o.includes(k) ? o : [...o, k]));
     if (!folds.open.placements) folds.toggle("placements");
+    if (sheet.open) sheet.show("placements");
     setReveal((r) => ({ k, scroll, n: (r?.n ?? 0) + 1 }));
   };
   // a pick on the map scrolls only where the settings are their own pane (md up): on a phone the page would jump away
@@ -218,7 +230,9 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
       id={id}
       title={SPACE_SETTINGS_SECTIONS[id]}
       folds={folds}
+      foldsAt="desktop"
       summary={summaries[id]}
+      className={sheet.tabClass(id)}
     >
       {children}
     </SettingsSection>
@@ -227,6 +241,7 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
   const refPlace = SPACE_LEVEL_REF_PLACE[space.levelRef];
   return (
     <SettingsLayout
+      sheet={sheet}
       results={
         <>
           <SavedConfigs
@@ -377,7 +392,19 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
         </>
       }
       settings={
-        <SettingsColumn folds={folds}>
+        <SettingsColumn
+          folds={folds}
+          foldsAt="desktop"
+          className={SETTINGS_SHEET_CLASS}
+          bodyClassName={settingsSheetBodyClass(sheet.open)}
+          top={
+            <SettingsSheetTabs
+              sections={SPACE_SETTINGS_SECTIONS}
+              labels={SPACE_SETTINGS_TABS}
+              sheet={sheet}
+            />
+          }
+        >
           {section(
             "space",
             <>
