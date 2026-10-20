@@ -91,7 +91,9 @@ Run each in the browser before every hand-over.
    - A notice at the top: "Shared design: <name>", and the note, if any.
    - The design works as usual: every setting, chart, and the 3D view. The recipient can change it.
    - The only save is "Save a copy" (signed in): new items in the recipient's libraries, with new ids, as the file
-     import does. The shared view never overwrites a saved item, the sender's or the recipient's.
+     import does. A space saves to Spaces, each stack it places to Stacks, and each speaker to Speakers. The new
+     space and stacks point to the new ids. The saved space also keeps its own copy of them, as a space save does
+     today. The shared view never overwrites a saved item, the sender's or the recipient's.
    - Signed out, the recipient can change and share the design, but not save it. A line says "Sign in to save a copy."
    - The shared view does not write the page's draft. The recipient's own draft stays in the browser.
    - Other actions: "Share" (send the changed design back) and "Close" (back to the recipient's own draft).
