@@ -65,7 +65,7 @@ test("a first visit shows the empty room: the map and 3D view drawn, one line as
   );
   assert.ok(html.includes(SPACE_TEXT.quietRoom), "the quiet line");
   assert.ok(html.includes(`fill="${PALETTES.light.edge}"`), "the floor in the neutral fill");
-  assert.ok(html.includes(`aria-label="${UI_TEXT.hideBeams}"`), "the 3D view");
+  assert.ok(html.includes(`aria-label="${UI_TEXT.hideAimCoverage}"`), "the 3D view");
   assert.ok(!html.includes(SPACE_TEXT.noPlacements.slice(0, 20)), "no notice instead of the map");
   assert.ok(!html.includes(SPACE_TEXT.listenerVs), "no level lines");
   assert.ok(html.includes("Front wall") && !html.includes("Behind the stacks"), "wall names");

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { DRIVER_ICON_PATH, Icon, IconButton, STRIKE_ICON_PATH } from "../ui/IconButton";
 import { UI_TEXT } from "../../constants/uiText";
 
-/** A wedge opening from a point on the left to an edge on the right: a beam (a 16 px icon's path). */
+/** A wedge opening from a point on the left to an edge on the right: a driver's aim and coverage (a 16 px icon's path). */
 const BEAM_ICON_PATH = "M2.5 8L13.5 3.5M2.5 8l11 4.5M13.5 3.5v9";
 
 /** What the card's buttons set: how the view draws the design. */
@@ -11,7 +11,7 @@ export interface ViewerLook {
   cutaway: boolean;
   /** the drivers drawn; false leaves their cutouts open (always true where the card has no drivers button) */
   drivers: boolean;
-  /** each driver's coverage wedge drawn (always true where the card has no beams button) */
+  /** each driver's aim and coverage edge lines drawn (always true where the card has no beams button) */
   beams: boolean;
 }
 
@@ -82,7 +82,7 @@ export function Viewer3DCard({
         )}
         {beamsButton && (
           <IconButton
-            label={beams ? UI_TEXT.hideBeams : UI_TEXT.showBeams}
+            label={beams ? UI_TEXT.hideAimCoverage : UI_TEXT.showAimCoverage}
             onClick={() => setBeams((v) => !v)}
           >
             {/* a wedge opening from a point, struck through while the beams are hidden */}

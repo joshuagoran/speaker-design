@@ -1,7 +1,7 @@
 // A Space in the 3D view: the room (its floor in the coverage map's colors, its walls and ceiling), each box as the
 // Stack page draws it (buildMembersScene) at its spot, lift, aim, side, and roll as the space model places it
 // (lib/speaker/spaceLayout `placementFrame`), the listener, the alignment point, and each driver's beam (lib/speaker/
-// spaceBeams), clipped at the walls, floor and ceiling.
+// spaceBeams) as its aim line and its dashed −6 dB edge lines, clipped at the walls, floor and ceiling.
 //
 // Scene coordinates are inches, three's: x across (the room's x), y up (the room's z), z down the room (the room's y),
 // the front wall at z = 0 and the room's center line at x = 0.
@@ -46,11 +46,9 @@ export interface SpaceSceneProps {
 
 /** A see-through wall's opacity: one between the camera and the room. */
 const WALL_SEE_THROUGH = 0.15;
-/** A beam's opacity, and its outline's. */
-const BEAM_OPACITY = 0.1;
-const BEAM_EDGE_OPACITY = 0.4;
-/** Segments along each edge of a beam's far end, so a wide beam's end stays round. */
-const BEAM_SEGMENTS = 8;
+/** A beam's edge lines' dashes and the gaps between them, in. */
+const BEAM_DASH_IN = 8;
+const BEAM_GAP_IN = 6;
 /** The listener figure, in: its head's radius, its body's radius, and the gap between them. */
 const HEAD_IN = 4.5;
 const BODY_IN = 6;
@@ -159,88 +157,31 @@ function roomSurfaces(room: SpaceSceneProps["room"], color: string): THREE.Mesh[
 }
 
 /**
- * A beam's surface: a wedge from its apex at the origin along +z, `half` radians to each side and up and down, `length`
- * in long, its far end curved (every point on it that far from the apex).
+ * A beam's lines, from the driver at the origin along +z, each `length` in long: its aim along its axis, its two
+ * horizontal edges `half[0]` radians to each side (in its x–z plane), and its two vertical edges `half[1]` radians up
+ * and down (in its y–z plane). Each line as its far end; every line starts at the origin.
  */
-export function beamGeometry(half: SpaceBeam["half"], length: number): THREE.BufferGeometry {
-  const n = BEAM_SEGMENTS;
-  const dir = (i: number, j: number) => {
-    const az = (2 * i) / n - 1,
-      el = (2 * j) / n - 1;
-    const a = az * half[0],
-      e = el * half[1];
-    return [
-      Math.sin(a) * Math.cos(e) * length,
-      Math.sin(e) * length,
-      Math.cos(a) * Math.cos(e) * length,
-    ];
+export function beamLineEnds(
+  half: SpaceBeam["half"],
+  length: number,
+): { aim: THREE.Vector3; edges: THREE.Vector3[] } {
+  const [h, v] = half;
+  return {
+    aim: new THREE.Vector3(0, 0, length),
+    edges: [
+      new THREE.Vector3(-Math.sin(h) * length, 0, Math.cos(h) * length),
+      new THREE.Vector3(Math.sin(h) * length, 0, Math.cos(h) * length),
+      new THREE.Vector3(0, -Math.sin(v) * length, Math.cos(v) * length),
+      new THREE.Vector3(0, Math.sin(v) * length, Math.cos(v) * length),
+    ],
   };
-  // the far end's grid, then the apex
-  const positions: number[] = [];
-  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) positions.push(...dir(i, j));
-  const apex = positions.length / 3;
-  positions.push(0, 0, 0);
-  const at = (i: number, j: number) => j * (n + 1) + i;
-  const index: number[] = [];
-  for (let j = 0; j < n; j++)
-    for (let i = 0; i < n; i++)
-      index.push(
-        at(i, j),
-        at(i + 1, j),
-        at(i + 1, j + 1),
-        at(i, j),
-        at(i + 1, j + 1),
-        at(i, j + 1),
-      );
-  // the four sides: fans from the apex to the far end's edges
-  for (let k = 0; k < n; k++)
-    index.push(
-      apex,
-      at(k, 0),
-      at(k + 1, 0),
-      apex,
-      at(n, k),
-      at(n, k + 1),
-      apex,
-      at(k + 1, n),
-      at(k, n),
-      apex,
-      at(0, k + 1),
-      at(0, k),
-    );
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setIndex(index);
-  return geometry;
 }
 
-/** A beam's outline: its four edges from the apex and the rim of its far end. */
-function beamOutline(half: SpaceBeam["half"], length: number): THREE.BufferGeometry {
-  const surface = beamGeometry(half, length);
-  const p = surface.getAttribute("position");
-  surface.dispose();
-  const n = BEAM_SEGMENTS;
-  const point = (i: number, j: number) => {
-    const k = j * (n + 1) + i;
-    return [p.getX(k), p.getY(k), p.getZ(k)];
-  };
-  const rim: [number, number][] = [];
-  for (let k = 0; k < n; k++) rim.push([k, 0], [n, k], [n - k, n], [0, n - k]);
-  const lines: number[] = [];
-  rim.forEach(([i, j], k) => {
-    const [ni, nj] = rim[(k + 1) % rim.length];
-    lines.push(...point(i, j), ...point(ni, nj));
-  });
-  for (const [i, j] of [
-    [0, 0],
-    [n, 0],
-    [n, n],
-    [0, n],
-  ])
-    lines.push(0, 0, 0, ...point(i, j));
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(lines, 3));
-  return geometry;
+/** Line segments from the origin to each end. */
+function raysFromOrigin(ends: readonly THREE.Vector3[]): THREE.BufferGeometry {
+  return new THREE.BufferGeometry().setFromPoints(
+    ends.flatMap((end) => [new THREE.Vector3(), end]),
+  );
 }
 
 /** The floor in the coverage map's colors and contour lines, over the room the grid was worked out for. */
@@ -413,35 +354,30 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
     boxes.add(holder);
   }
   root.add(boxes);
-  root.add(listenerFigure(props.listener, props.earFt, pal.muted));
+  root.add(listenerFigure(props.listener, props.earFt, ON_DATA.cyan));
   root.add(alignMark(props.alignAt, props.earFt, pal.muted));
   // each beam runs as far as its driver falls BEAM_FALL_DB from 1 m, cut off where it meets a surface
   const planes = roomClipPlanes(room);
   for (const beam of props.beams) {
     const length = beam.reachFt * INCHES_PER_FOOT;
+    const { aim, edges } = beamLineEnds(beam.half, length);
+    const edgeLines = new THREE.LineSegments(
+      raysFromOrigin(edges),
+      new THREE.LineDashedMaterial({
+        color: ON_DATA.cyan,
+        dashSize: BEAM_DASH_IN,
+        gapSize: BEAM_GAP_IN,
+        clippingPlanes: planes,
+      }),
+    );
+    edgeLines.computeLineDistances();
     const holder = new THREE.Group();
     holder.add(
-      new THREE.Mesh(
-        beamGeometry(beam.half, length),
-        new THREE.MeshBasicMaterial({
-          color: ON_DATA.cyan,
-          transparent: true,
-          opacity: BEAM_OPACITY,
-          side: THREE.DoubleSide,
-          depthWrite: false,
-          clippingPlanes: planes,
-        }),
-      ),
       new THREE.LineSegments(
-        beamOutline(beam.half, length),
-        new THREE.LineBasicMaterial({
-          color: ON_DATA.cyan,
-          transparent: true,
-          opacity: BEAM_EDGE_OPACITY,
-          depthWrite: false,
-          clippingPlanes: planes,
-        }),
+        raysFromOrigin([aim]),
+        new THREE.LineBasicMaterial({ color: ON_DATA.cyan, clippingPlanes: planes }),
       ),
+      edgeLines,
     );
     holder.position.copy(roomPointIn(beam.at));
     holder.rotation.set(-beam.pitch, beam.yaw, 0, "YXZ");

@@ -4,7 +4,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import * as THREE from "three";
 import {
-  beamGeometry,
+  beamLineEnds,
   buildSpaceScene,
   posePlacement,
   roomClipPlanes,
@@ -144,14 +144,31 @@ test("a beam's angles: where the pattern falls 6 dB", () => {
   for (const half of beamHalfAngles({ horn }, 40)) expect(half).toBeLessThanOrEqual(Math.PI / 2);
 });
 
-// float32 positions: to 4 places
-test("a beam's surface runs from its apex out to its length", () => {
-  const g = beamGeometry([0.5, 0.3], 100);
-  const box = new THREE.Box3().setFromObject(new THREE.Mesh(g));
-  expect(box.min.z).toBeCloseTo(0, 4);
-  expect(box.max.z).toBeCloseTo(100, 4);
-  expect(box.max.x).toBeCloseTo(100 * Math.sin(0.5), 4);
-  expect(box.max.y).toBeCloseTo(100 * Math.sin(0.3), 4);
+test("a beam's lines: its aim, and its edges at its half angles, each as long as its reach", () => {
+  const [h, v] = [0.5, 0.3];
+  const { aim, edges } = beamLineEnds([h, v], 100);
+  expect(aim.toArray()).toEqual([0, 0, 100]);
+  expect(edges).toHaveLength(4);
+  for (const end of edges) expect(end.length()).toBeCloseTo(100, 9);
+  // the horizontal edges: to each side in the x–z plane, at the horizontal half angle off the aim
+  const [left, right, down, up] = edges;
+  for (const [end, side] of [
+    [left, -1],
+    [right, 1],
+  ] as const) {
+    expect(end.y).toBe(0);
+    expect(Math.sign(end.x)).toBe(side);
+    expect(end.angleTo(aim)).toBeCloseTo(h, 9);
+  }
+  // the vertical edges: up and down in the y–z plane, at the vertical half angle off the aim
+  for (const [end, side] of [
+    [down, -1],
+    [up, 1],
+  ] as const) {
+    expect(end.x).toBe(0);
+    expect(Math.sign(end.y)).toBe(side);
+    expect(end.angleTo(aim)).toBeCloseTo(v, 9);
+  }
 });
 
 describe("Space 3D view: the PA stack preset", () => {
@@ -264,6 +281,24 @@ describe("Space 3D view: the PA stack preset", () => {
       expect(b.reachFt * METERS_PER_FOOT).toBeLessThan(10 ** (BEAM_FALL_DB / 20));
       expect(b.reachFt * METERS_PER_FOOT).toBeGreaterThan(1);
     }
+  });
+
+  test("each beam draws as clipped lines, its aim solid and its edges dashed, with no surface", () => {
+    const clipped: THREE.Object3D[] = [];
+    buildSpaceScene(props()).traverse((o) => {
+      if (
+        (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) &&
+        o.material instanceof THREE.Material &&
+        o.material.clippingPlanes?.length
+      )
+        clipped.push(o);
+    });
+    expect(clipped).toHaveLength(2 * spaceBeams(model, "high", 1000).length);
+    const dashed = clipped.filter(
+      (o) => o instanceof THREE.LineSegments && o.material instanceof THREE.LineDashedMaterial,
+    );
+    expect(dashed).toHaveLength(clipped.length / 2);
+    expect(clipped.every((o) => o instanceof THREE.LineSegments)).toBe(true);
   });
 
   test("the floor shows the map only while its grid is for the room on show", () => {
