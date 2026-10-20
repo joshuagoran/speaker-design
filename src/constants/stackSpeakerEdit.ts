@@ -13,5 +13,5 @@ export const STACK_EDIT_TEXT = {
   returnOnly: "Return to Stack",
   cancel: "Cancel",
   /** what the Stack page says when the Stack no longer has the speaker the edit was for */
-  notInStack: "The Stack no longer has this speaker, so it did not change.",
+  notInStack: "The Stack no longer has this Speaker, so it did not change.",
 } as const;
