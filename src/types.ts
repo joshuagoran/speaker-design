@@ -3186,15 +3186,15 @@ export interface FloorPlacement extends FloorPoint {
   aim: number;
 }
 
-/** What the map averages: a named band, or one frequency (`freqHz`) summed with phase. */
+/** What the map averages: a named band, or one frequency (`freqHz`), summed with phase below `COHERENT_BELOW_HZ`. */
 export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 
 /** The coverage map's view of a space: the band on show and, for one frequency, its frequency (Hz). */
 export type SpaceView = Pick<CoverageLayout, "band" | "freqHz">;
 
 /**
- * Where the coverage map's target level is measured: at the listener, as the audience's average (the floor the stats
- * count), or 1 m in front of the stacks.
+ * Where the coverage map's target level is measured: at the alignment point ("listener": saves and share links carry
+ * that spelling), as the audience's average (the floor the stats count), or 1 m in front of the stacks.
  */
 export type CoverageLevelRef = "listener" | "audience" | "stacks";
 

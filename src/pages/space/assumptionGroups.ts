@@ -16,9 +16,10 @@ import {
   roomAbsorption,
 } from "../../lib/acoustics/roomAcoustics";
 import type { CoverageRoom } from "../../types";
+import type { AssumptionLine } from "../../components/ui/AssumptionsList";
 
-/** One group of assumptions: a heading and its lines. */
-export type AssumptionGroup = [heading: string, lines: string[]];
+/** One group of assumptions: a heading and its lines (a line may hold lines of its own). */
+export type AssumptionGroup = [heading: string, lines: AssumptionLine[]];
 
 /** A frequency in the list's short form: 2k for 2000 Hz. */
 const hz = (f: number) => (f >= 1000 ? `${f / 1000}k` : `${f}`);
@@ -50,7 +51,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
     [
       "Summing and readouts",
       [
-        `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase (the stacks interfere); above, band averages add by power.`,
+        `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase (the stacks interfere); above, band averages (and one frequency) add by power.`,
         `Bands, Hz: ${bands}; each averaged over ${BAND_POINTS} frequencies, with more where the room modes sum.`,
         `The floor stats leave out ${STATS_CLEARANCE_FT} ft around every box.`,
       ],

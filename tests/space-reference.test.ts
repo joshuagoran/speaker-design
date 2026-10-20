@@ -40,21 +40,21 @@ const meterSpots: MeterSpot[] = [
 const BAND = COVERAGE_BANDS.mid;
 const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
 
-test("reference at the limit: the listener reads the listener's spot, and nothing without one", () => {
-  const spots = { listener: venue.listener, meterSpots, boxes };
+test("reference at the limit: the alignment point reads its own spot, and nothing without one", () => {
+  const spots = { alignAt: venue.alignAt, meterSpots, boxes };
   assert.equal(
     referenceAtLimit(COVERAGE_LEVEL_REF.listener, req, spots, null, BAND),
-    spaceLevelAt(req, venue.listener),
+    spaceLevelAt(req, venue.alignAt),
   );
-  // the other references leave the listener out (null), so moving it moves nothing else
+  // the other references leave the alignment point out (null), so moving it moves no other reference
   assert.equal(
-    referenceAtLimit(COVERAGE_LEVEL_REF.listener, req, { ...spots, listener: null }, null, BAND),
+    referenceAtLimit(COVERAGE_LEVEL_REF.listener, req, { ...spots, alignAt: null }, null, BAND),
     null,
   );
 });
 
 test("reference at the limit: 1 m from the stacks is the mean of the spots' levels, null with no spots", () => {
-  const spots = { listener: null, meterSpots, boxes };
+  const spots = { alignAt: null, meterSpots, boxes };
   assert.equal(
     referenceAtLimit(COVERAGE_LEVEL_REF.stacks, req, spots, null, BAND),
     mean(meterSpots.map((p) => spaceLevelAt(req, p.at))),
@@ -66,7 +66,7 @@ test("reference at the limit: 1 m from the stacks is the mean of the spots' leve
 });
 
 test("reference at the limit: the audience average needs the grid, and leaves the floor by the boxes out", () => {
-  const spots = { listener: null, meterSpots, boxes };
+  const spots = { alignAt: null, meterSpots, boxes };
   assert.equal(referenceAtLimit(COVERAGE_LEVEL_REF.audience, req, spots, null, BAND), null);
   assert.equal(
     referenceAtLimit(COVERAGE_LEVEL_REF.audience, req, spots, grid, BAND),
@@ -140,7 +140,7 @@ test("reference at the limit: 1 m from the speakers counts only the boxes that p
       referenceAtLimit(
         COVERAGE_LEVEL_REF.stacks,
         request,
-        { listener: null, meterSpots: meters, boxes: [] },
+        { alignAt: null, meterSpots: meters, boxes: [] },
         null,
         COVERAGE_BANDS[band],
       );

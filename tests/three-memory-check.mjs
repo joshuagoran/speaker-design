@@ -1,16 +1,19 @@
-// GPU memory check for the 3D views (the Speaker page's and the Stack page's), run in CI after the build (not part of
+// GPU memory check for the 3D views (the Speaker, Stack, and Space pages'), run in CI after the build (not part of
 // `vp test`).
 //   node tests/three-memory-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE, PW_CHROMIUM as for tests/mobile-check.mjs.
 // On each page, rebuilds its 3D view many times (its first number field, stepped up and back) and fails if the live
 // geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
-// canvas (one WebGL renderer for the component's life).
+// canvas (one WebGL renderer for the component's life). The counts are read once the view has settled: the Space's
+// view also rebuilds when a new coverage grid arrives. Then it turns the view with a drag and presses "Reset 3D view":
+// the view must draw as it did before the drag.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { STACK_START_NAMES } from "../src/constants/stackPresets.ts";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
+import { UI_TEXT } from "../src/constants/uiText.ts";
 
 const REBUILDS = 30;
 /** The control each page steps: the first number field shown (a closed settings fold keeps its fields in the page, hidden). */
@@ -49,7 +52,22 @@ const VIEWS = [
       await builtTwice(page);
     },
   },
+  // the Space page started from the PA stack preset ("New from…"), its room's first size stepped: the room, the boxes,
+  // the beams, and the coverage floor rebuilt
+  {
+    name: "Space",
+    hash: "#space",
+    ...NUMBER,
+    prepare: async (page) => {
+      await page
+        .getByLabel(SAVE_ROW_TEXT.newFrom)
+        .selectOption({ label: STACK_START_NAMES.paStack });
+      await builtTwice(page);
+    },
+  },
 ];
+/** How long the view must go without a rebuild to count as settled, ms. */
+const SETTLED_MS = 1500;
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const url = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
 const browser = await chromium.launch({
@@ -83,13 +101,46 @@ for (const { name, hash, control, up, down, prepare } of VIEWS) {
       { timeout: 30_000 },
     );
   };
+  /** Waits until the view goes `SETTLED_MS` without a rebuild (a coverage grid on its way rebuilds it once more). */
+  const settle = async () => {
+    for (let seen = -1; ;) {
+      const now = await view.evaluate((el) => Number(el.dataset.rebuilds));
+      if (now === seen) return;
+      seen = now;
+      await page.waitForTimeout(SETTLED_MS);
+    }
+  };
   await slider.focus();
+  await settle();
   const first = await read();
   const counts = [];
   for (let i = 0; i < REBUILDS; i++) {
     await step(i % 2 ? down : up);
     counts.push(await read());
   }
+  await settle();
+  counts.push(await read());
+  // the reset button: a drag turns the view; the reset draws it as it was before the drag
+  const shot = async () => {
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(300);
+    // the buttons over the view masked: a pressed or hovered one draws differently
+    return view.screenshot({ mask: [page.locator("section button")] });
+  };
+  const before = await shot();
+  const box = await view.boundingBox();
+  if (box) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 40, { steps: 6 });
+    await page.mouse.up();
+  }
+  const turned = await shot();
+  await page.getByRole("button", { name: UI_TEXT.resetView }).click();
+  const reset = await shot();
+  if (turned.equals(before)) failures.push(`${name}: a drag did not turn the view`);
+  if (!reset.equals(before))
+    failures.push(`${name}: "${UI_TEXT.resetView}" did not put the view back`);
   await page.close();
 
   const last = counts[counts.length - 1];
@@ -114,4 +165,6 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log(`three memory check: ok (${REBUILDS} rebuilds each; ${results.join("; ")}; 1 canvas)`);
+console.log(
+  `three memory check: ok (${REBUILDS} rebuilds each; ${results.join("; ")}; 1 canvas; reset puts the view back)`,
+);

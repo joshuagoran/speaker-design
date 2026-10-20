@@ -10,7 +10,12 @@ import type {
 } from "../types";
 import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
-import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
+import {
+  ALIGNMENT_POINT,
+  COVERAGE_LEVEL_REF,
+  COVERAGE_LEVEL_REF_PLACE,
+  COVERAGE_LEVEL_REFS,
+} from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
 import type { SaveRowWords } from "./saveRow";
 
@@ -22,6 +27,12 @@ export const COVERAGE_BAND_IDS = [
   "high",
   "one",
 ] as const satisfies readonly CoverageBand[];
+
+/** How far a driver's direct level on its axis falls below its level at 1 m where its beam in the 3D view ends, dB. */
+export const BEAM_FALL_DB = 20;
+/** A beam's edge lines: where its driver falls this far off its axis, dB (dashed), and this far (dotted, fainter). */
+export const BEAM_EDGE_DB = 6;
+export const BEAM_INNER_EDGE_DB = 3;
 
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 20 × 30 ft, a 12 ft ceiling, drywall all
@@ -191,15 +202,13 @@ const ADD_PLACEMENT = "Add speaker or stack";
 /** The DOM id of placement `k`'s item in the Placements list, so a pick on the map can scroll it into view. */
 export const placementDomId = (k: number) => `space-placement-${k}`;
 
+/** The coverage map's key for its two marks: the listener (the blue circle) and the alignment point (the yellow diamond). */
+export const MAP_MARK_NAMES = { listener: "Listener", alignAt: ALIGNMENT_POINT } as const;
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New Space",
   coverage: "Coverage",
-  side: "Side view",
-  /** the Side view heading's tooltip, and the one line under the drawing */
-  sideTip:
-    "The speakers seen from the side, to scale, at their height and tilt. Each dashed line shows where a speaker points: the axis of its highest band.",
-  sideNote: "The cyan dot is the listener's ear.",
   response: "Response at the listener",
   levels: "Levels",
   /** the line on the map of a room with nothing placed */
@@ -297,14 +306,14 @@ export const SPACE_TEXT = {
   /** one band's level and target there, dB (already formatted) */
   bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
   targetCurve: "Target, band balance",
-  listenerHint: "Tap the map, or drag the cyan dot, to move the listener.",
-  alignAtHint: "Drag the magenta diamond to move the alignment point.",
   arrivals: "Arrival at the listener",
   arrivalsTip: `Each box against the last main. Mains want 0 ms. A fill wants ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms.`,
   /** one arrival row: the placement's name, then its time (ms) and distance (ft) after the last main, already formatted */
   arrivalIs: (name: string, ms: string, ft: string) => `${name}: ${ms} ms (${ft} ft)`,
   /** under the one-frequency slider */
-  oneNote: "One frequency adds all sources with phase.",
+  /** under the single-frequency slider: where it still adds with phase */
+  oneNote: (coherentHz: number) =>
+    `One frequency adds all sources (including phase below ${coherentHz} Hz).`,
   audienceAverage: "Audience average",
   audienceMax: "Audience at the limit",
   listener: "Listener",
@@ -322,14 +331,35 @@ export const SPACE_TEXT = {
 
 /** The Space page's Details fold: its own groups and lines (the room's groups come from pages/space/assumptionGroups). */
 export const SPACE_DETAILS = {
+  /** the first group: what the alignment point and the listener do, each with its own lines */
+  marks: "Listener and alignment point",
+  markLines: [
+    [
+      MAP_MARK_NAMES.alignAt,
+      [
+        "The main boxes with Auto delay get delays so their sound arrives here at the same time.",
+        "Fills align at their own aim points, not here.",
+        "Moving it changes those delays, so the level can change at every location.",
+        `It can set the target level: choose ${ALIGNMENT_POINT} under ${SPACE_TEXT.measuredAt}.`,
+        "Drag the yellow diamond to move it.",
+      ],
+    ],
+    [
+      MAP_MARK_NAMES.listener,
+      [
+        "It shows the level, the response, and the arrivals at its location. It changes nothing else.",
+        "Tap the map, or drag the cyan dot, to move it.",
+      ],
+    ],
+  ],
   map: "The map",
-  mapLines: (limitHz: number) => [
+  mapLines: (limitHz: number, coherentHz: number) => [
     "Drag a placement to move it.",
     "Drag its dot to turn it.",
     "Drag the listener, or tap the floor to put the listener there.",
     "Drag the alignment point. The mains arrive together there.",
-    "One frequency shows the interference between the placements.",
-    `One frequency goes up to ${limitHz} Hz. Above it, the pattern is finer than the map.`,
+    `One frequency shows the interference between the placements (below ${coherentHz} Hz).`,
+    `One frequency goes up to ${limitHz / 1000} kHz. Above ${coherentHz} Hz, it adds the placements by power.`,
   ],
   levels: "Levels",
   /** the target in the band on show, where it is measured (`SPACE_LEVEL_REF_PLACE`), dB */
@@ -366,3 +396,6 @@ export const SPACE_SAVE_WORDS = {
   newFromTip:
     "Starts a new Space, empty or from a preset. It replaces the current design. A preset brings its own room. A PA preset also sets the band balance to More bass.",
 } as const satisfies SaveRowWords;
+
+/** The name of each wall's and the ceiling's mesh in the 3D view (stack-view/buildSpaceScene), so a check can find them. */
+export const ROOM_SURFACE_NAME = "roomSurface";

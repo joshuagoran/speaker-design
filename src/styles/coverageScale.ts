@@ -2,6 +2,7 @@
 // same in both themes. The map and its key both read these, so they stay in step.
 import { ON_DATA } from "./palette";
 import type { Rgb } from "./palette";
+import type { CoverageGridView } from "../types";
 import { CONTOUR_STEP_DB, COVERAGE_MAP_DB } from "../constants/chartScales";
 import { COVERAGE_EDGE_DB } from "../constants/coverageLevel";
 
@@ -87,3 +88,13 @@ export const COVERAGE_CONTOURS: readonly (readonly [db: number, line: CoverageLi
   lines.push([COVERAGE_EDGE_DB, COVERAGE_LINES.edge], [0, COVERAGE_LINES.target]);
   return lines;
 })();
+
+/** A grid's cells as RGBA pixels, one a cell in the grid's order, each colored by its level against `target`. */
+export function coverageRgba({
+  grid,
+  target,
+}: Pick<CoverageGridView, "grid" | "target">): Uint8Array<ArrayBuffer> {
+  const rgba = new Uint8Array(grid.db.length * 4);
+  grid.db.forEach((db, i) => rgba.set([...coverageColor(db - target), 255], i * 4));
+  return rgba;
+}

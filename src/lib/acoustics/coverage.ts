@@ -8,8 +8,8 @@
 // - Above it, the image sources: the floor mirror, one mirrored copy of every box in each reflecting side (each with
 //   its own floor bounce) and in the ceiling, each less what its surface absorbs at that frequency; plus a diffuse
 //   reverberant field from everything the boxes radiate, the same everywhere. The two hand over in a crossfade.
-// Below COHERENT_BELOW_HZ the image paths sum with phase, so the two stacks interfere; above it a band average adds
-// the separate paths (each box, each reflection) by power, as their comb filtering averages out across a band.
+// Below COHERENT_BELOW_HZ the image paths sum with phase, so the two stacks interfere; above it a band average, or one
+// frequency, adds the separate paths (each box, each reflection) by power: their comb filtering is finer than the map.
 import {
   MODAL_SUBPOINTS,
   MODAL_SUBPOINTS_WHOLE_BAND,
@@ -72,10 +72,10 @@ export const COVERAGE_BANDS: Record<
 export const COVERAGE_GRID_COLS = 40;
 /** frequencies averaged per band */
 export const BAND_POINTS = 10;
-/** Below this the paths sum with phase in a band average; a single frequency always does. */
+/** Below this the paths sum with phase, in a band average or at one frequency; above it they add by power. */
 export const COHERENT_BELOW_HZ = 500;
-/** the single-frequency view's range, Hz: above it the interference is finer than the grid */
-export const SINGLE_FREQ_RANGE: [number, number] = [20, 500];
+/** the single-frequency view's range, Hz: above `COHERENT_BELOW_HZ` it adds by power, as the bands do */
+export const SINGLE_FREQ_RANGE: [number, number] = [20, 16000];
 /** A box shadows what's behind its cone: rule of thumb, −3 dB here and 6 dB/oct above. */
 export const BOX_SHADOW_HZ = 150;
 /**
@@ -455,7 +455,7 @@ export function sceneSlots(
  * is clamped to the band's range (the sub-points then space evenly across the clamped share, still weighing 1/M each,
  * and the point's total weight stays 1): no frequency falls below the band's bottom or above its top. M is `subpoints`,
  * else `MODAL_SUBPOINTS`, or `MODAL_SUBPOINTS_WHOLE_BAND` for a band that lies wholly below the top of the crossfade.
- * The one-frequency view never splits.
+ * The one-frequency view never splits, and sums with phase only below `COHERENT_BELOW_HZ`.
  */
 export function coverageFrequencies(
   band: CoverageBand,
@@ -463,7 +463,7 @@ export function coverageFrequencies(
   modalCrossoverHz: number | null = null,
   subpoints?: number,
 ): { freqs: number[]; shares: number[]; coherent: boolean } {
-  if (band === "one") return { freqs: [freqHz], shares: [1], coherent: true };
+  if (band === "one") return { freqs: [freqHz], shares: [1], coherent: freqHz < COHERENT_BELOW_HZ };
   const b = COVERAGE_BANDS[band];
   const modalTop = modalCrossoverHz === null ? 0 : modalTopHz(modalCrossoverHz);
   /** M, how many frequencies a point in the modal range splits into */

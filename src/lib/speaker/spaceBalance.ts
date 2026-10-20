@@ -5,7 +5,7 @@
 // sub crossover, the horn below the mid above it), so the PA presets' targets follow the PA music balance. A band's target is the
 // target at its center (or at the one frequency). The reference the space is turned down to: the audience's
 // average (the floor but the space in front of each box), the listener, or the mean of the levels 1 m in front of each placement, on its aim.
-import type { FloorPoint, SpaceDesign, SpaceVenue, SpeakerBand } from "../../types";
+import type { FloorPoint, SpaceDesign, SpaceVenue, SpeakerBand, SpeakerSpec } from "../../types";
 import { oneMeterSpot, type COVERAGE_BANDS } from "../acoustics/coverage";
 import { AUTO_BALANCE_TILT, tiltAt } from "./autoBalance";
 import { expandPlacements, placementStack } from "./spaceLayout";
@@ -69,23 +69,32 @@ export interface MeterSpot {
 }
 
 /**
- * The passband of each band of each box of a placement: the band's own filters and the box's crossover (a speaker
- * alone: its input range), the higher highpass and the lower lowpass of each pair. Empty where the design lacks what
- * the placement places.
+ * One band's passband: its own filters and its box's crossover in the stack (a speaker alone: its input range), the
+ * higher highpass and the lower lowpass of each pair.
  */
-export function placementPassbands(stack: ReturnType<typeof placementStack>): PassbandCorners[] {
-  if (!stack) return [];
+export function bandPassband(
+  band: Pick<SpeakerBand, "highpass" | "lowpass">,
+  crossover: SpeakerSpec["input"],
+): PassbandCorners {
   const highest = (a: number | undefined, b: number | undefined) =>
     a === undefined || b === undefined ? (a ?? b ?? null) : Math.max(a, b);
   const lowest = (a: number | undefined, b: number | undefined) =>
     a === undefined || b === undefined ? (a ?? b ?? null) : Math.min(a, b);
-  const hz = (f: Pick<SpeakerBand, "highpass">["highpass"]) => f?.hz;
+  return {
+    highpassHz: highest(band.highpass?.hz, crossover.highpass?.hz),
+    lowpassHz: lowest(band.lowpass?.hz, crossover.lowpass?.hz),
+  };
+}
+
+/**
+ * The passband of each band of each box of a placement (`bandPassband`). Empty where the design lacks what the
+ * placement places.
+ */
+export function placementPassbands(stack: ReturnType<typeof placementStack>): PassbandCorners[] {
+  if (!stack) return [];
   return stack.stack.members.flatMap((member) => {
     const speaker = stack.speakers.find((s) => s.id === member.speakerId);
-    return (speaker?.bands ?? []).map((band) => ({
-      highpassHz: highest(hz(band.highpass), hz(member.crossover.highpass)),
-      lowpassHz: lowest(hz(band.lowpass), hz(member.crossover.lowpass)),
-    }));
+    return (speaker?.bands ?? []).map((band) => bandPassband(band, member.crossover));
   });
 }
 

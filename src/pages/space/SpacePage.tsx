@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useWidthAtLeast } from "../../hooks/useElementWidth";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { SpaceView3D } from "../../components/stack-view/SpaceView3D";
+import { spaceBeams } from "../../lib/speaker/spaceBeams";
 import { alpha, TARGET_DASH } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
@@ -13,7 +17,6 @@ import {
 } from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField } from "../../components/ui/SelectField";
 import { Slider } from "../../components/ui/Slider";
@@ -25,8 +28,7 @@ import { CoverageMap, type MapBox } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SaveRow } from "../../components/saved-configs/SaveRow";
-import { SpaceSide } from "../../components/drawings/SpaceSide";
-import { COVERAGE_BANDS } from "../../lib/acoustics/coverage";
+import { COHERENT_BELOW_HZ, COVERAGE_BANDS } from "../../lib/acoustics/coverage";
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -37,7 +39,10 @@ import {
   MD_UP,
   READING_WIDTH,
   RESULT_MAX_WIDTH,
+  RESULTS_TWO_COLUMN_PX,
   GAP_Y,
+  resultsCellClass,
+  resultsGridClass,
 } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
@@ -91,6 +96,14 @@ interface Props {
 /** The starts "New from…" lists: the empty space, then the presets. */
 const START_OPTIONS = designStartOptions(SPACE_TEXT.empty);
 
+/** The 3D view's height under the map: on a phone, and in a narrow results pane. */
+const VIEW_HEIGHT = "h-[320px] md:h-[clamp(340px,55vh,620px)]";
+/**
+ * Beside the map: its cell stretches to the map's row (never shorter than this) and the view fills it, out of the flow
+ * so its canvas never makes the row taller than the map.
+ */
+const VIEW_CELL_BESIDE = "relative self-stretch min-h-[340px]";
+
 /** A share as a whole percentage. */
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -101,7 +114,7 @@ const relClass = (rel: number) =>
 /**
  * The Space page: stacks and speakers placed in a room, each at its spot, lift and
  * aim, a mirrored pair as one placement; their amp power and alignment; the coverage across the floor on the fixed
- * scale, the levels at the reference, a side view of the heights and tilts, and the response at the listener.
+ * scale beside a 3D view of the room, the levels at the reference, and the response at the listener.
  */
 export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const pal = usePalette();
@@ -110,6 +123,14 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const folds = useFolds("space.settingsFolds", keysOf(SPACE_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<SpaceSettingsSection>("space", "room");
   const maxHeight = useMapMaxHeight();
+  // a wide results pane shows the map and the 3D view side by side; a narrow one, the 3D view under the map
+  const [coverageGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
+  /** each driver's beam in the band on show, each as far as its level falls BEAM_FALL_DB from 1 m (none without a map) */
+  const hasMap = view !== null;
+  const beams = useMemo(
+    () => (hasMap ? spaceBeams(model, space.band, space.freqHz) : []),
+    [model, space.band, space.freqHz, hasMap],
+  );
   /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
     const saved = stackFromSaved(c);
@@ -284,39 +305,69 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
               </p>
             </div>
-            <CoverageMap
-              view={view}
-              room={venue.room}
-              listener={venue.listener}
-              alignAt={venue.alignAt}
-              boxes={boxes}
-              coupling={space.coupling.marks}
-              selected={model.placements.flatMap((p, i) =>
-                p.item.placement.source === selected ? [i] : [],
-              )}
-              onSelect={(i) => {
-                const box = model.placements[i];
-                if (box) pickOnMap(box.item.placement.source);
-              }}
-              actions={{
-                moveBox: space.moveBox,
-                aimBox: space.aimBox,
-                moveListener: space.moveListener,
-                moveAlignAt: space.moveAlignAt,
-              }}
-              busy={space.isPending}
-              maxHeight={maxHeight}
-              quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
-            />
-            {space.error && <Notice>Map failed: {space.error}</Notice>}
-            {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
-            <CoverageBandPicker
-              band={space.band}
-              freqHz={space.freqHz}
-              onBand={space.setBand}
-              onFreqHz={space.setFreqHz}
-              oneNote={SPACE_TEXT.oneNote}
-            />
+            <div ref={coverageGrid} className={resultsGridClass(wide)}>
+              {/* two columns: the map's cell sets the first row's height, and the 3D view fills it */}
+              <div className={wide ? "contents" : `min-w-0 ${GAP_Y}`}>
+                <div className={resultsCellClass(wide, "col-start-1 row-start-1")}>
+                  <CoverageMap
+                    view={view}
+                    room={venue.room}
+                    listener={venue.listener}
+                    alignAt={venue.alignAt}
+                    boxes={boxes}
+                    coupling={space.coupling.marks}
+                    selected={model.placements.flatMap((p, i) =>
+                      p.item.placement.source === selected ? [i] : [],
+                    )}
+                    onSelect={(i) => {
+                      const box = model.placements[i];
+                      if (box) pickOnMap(box.item.placement.source);
+                    }}
+                    actions={{
+                      moveBox: space.moveBox,
+                      aimBox: space.aimBox,
+                      moveListener: space.moveListener,
+                      moveAlignAt: space.moveAlignAt,
+                    }}
+                    busy={space.isPending}
+                    maxHeight={maxHeight}
+                    quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
+                  />
+                </div>
+                <div className={`${resultsCellClass(wide, "col-start-1 row-start-2")} ${GAP_Y}`}>
+                  {space.error && <Notice>Map failed: {space.error}</Notice>}
+                  {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
+                  <CoverageBandPicker
+                    band={space.band}
+                    freqHz={space.freqHz}
+                    onBand={space.setBand}
+                    onFreqHz={space.setFreqHz}
+                    oneNote={SPACE_TEXT.oneNote(COHERENT_BELOW_HZ)}
+                  />
+                </div>
+              </div>
+              <div
+                className={resultsCellClass(wide, `col-start-2 row-start-1 ${VIEW_CELL_BESIDE}`)}
+              >
+                <Viewer3DCard
+                  boxClassName={wide ? "absolute inset-0" : `relative ${VIEW_HEIGHT}`}
+                  beamsButton
+                >
+                  {(cutaway, look) => (
+                    <SpaceView3D
+                      room={venue.room}
+                      items={model.placements.map((p) => p.item)}
+                      listener={venue.listener}
+                      alignAt={venue.alignAt}
+                      earFt={venue.earFt}
+                      view={placements.length > 0 ? view : null}
+                      beams={look.beams ? beams : []}
+                      cutaway={cutaway}
+                    />
+                  )}
+                </Viewer3DCard>
+              </div>
+            </div>
           </section>
           {placements.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
@@ -360,20 +411,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               <ArrivalList arrivals={space.arrivals} names={names} />
             </section>
           )}
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
-            <SectionHeading>
-              <Tooltip tip={SPACE_TEXT.sideTip}>{SPACE_TEXT.side}</Tooltip>
-            </SectionHeading>
-            <Card>
-              <SpaceSide
-                items={model.placements.map((p) => p.item)}
-                room={venue.room}
-                listener={venue.listener}
-                earFt={venue.earFt}
-              />
-              <p className="text-xs text-stone-500">{SPACE_TEXT.sideNote}</p>
-            </Card>
-          </section>
           {space.response.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
               <SectionHeading>{SPACE_TEXT.response}</SectionHeading>
@@ -481,8 +518,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
                 />
               </div>
-              <p className="text-xs text-stone-500">{SPACE_TEXT.listenerHint}</p>
-              <p className="text-xs text-stone-500">{SPACE_TEXT.alignAtHint}</p>
             </>,
           )}
           {section(

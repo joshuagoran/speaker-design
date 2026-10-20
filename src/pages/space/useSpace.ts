@@ -247,10 +247,10 @@ function oneMeterAverage(
   return levels.length ? levels.reduce((a, b) => a + b, 0) / levels.length : null;
 }
 
-/** Where a level reference reads: the listener, the spots 1 m in front of the placements, and the boxes' spots. */
+/** Where a level reference reads: the alignment point, the spots 1 m in front of the placements, and the boxes' spots. */
 interface ReferenceSpots {
-  /** the listener's spot; null when the reference is not the listener (so moving the listener moves nothing else) */
-  listener: FloorPoint | null;
+  /** the alignment point; null when the reference is not the alignment point (so moving it moves no other reference) */
+  alignAt: FloorPoint | null;
   meterSpots: readonly MeterSpot[];
   /** the boxes' spots: the audience average leaves the floor right in front of them out */
   boxes: readonly FloorPoint[];
@@ -258,8 +258,9 @@ interface ReferenceSpots {
 
 /**
  * A request's level at the limit at the reference, dB: the audience average over the
- * grid's floor (needs `grid`; null without it), the level at the listener, or the mean of the 1 m spots of the
- * placements that play in `band`. Null when nothing reaches it. Only the listener's own reference reads the listener.
+ * grid's floor (needs `grid`; null without it), the level at the alignment point, or the mean of the 1 m spots of the
+ * placements that play in `band`. Null when nothing reaches it. Only the alignment point's own reference reads it; the
+ * listener drives only the readouts.
  */
 export function referenceAtLimit(
   levelRef: CoverageLevelRef,
@@ -269,7 +270,7 @@ export function referenceAtLimit(
   band: BandRange,
 ): number | null {
   if (levelRef === COVERAGE_LEVEL_REF.listener)
-    return spots.listener && spaceLevelAt(req, spots.listener);
+    return spots.alignAt && spaceLevelAt(req, spots.alignAt);
   if (levelRef === COVERAGE_LEVEL_REF.stacks) return oneMeterAverage(req, spots.meterSpots, band);
   return grid ? audienceAverage(grid, req.room, spots.boxes) : null;
 }
@@ -467,14 +468,14 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     // the spots read the placements, the room and which placements the model holds
     [placements, room, model],
   );
-  /** the listener's spot when it is the reference; null otherwise, so the other references ignore the listener */
-  const refListener = levelRef === COVERAGE_LEVEL_REF.listener ? venue.listener : null;
+  /** the alignment point when it is the reference; null otherwise, so the other references ignore it */
+  const refAlignAt = levelRef === COVERAGE_LEVEL_REF.listener ? venue.alignAt : null;
   /** a request's level at the limit at the reference, when points alone give it (not the audience average) */
   const pointRefAtLimit = (r: Omit<SpaceGridRequest, "cols">) =>
     referenceAtLimit(
       levelRef,
       r,
-      { listener: refListener, meterSpots, boxes: spots },
+      { alignAt: refAlignAt, meterSpots, boxes: spots },
       null,
       bandRangeHz(TURN_DOWN_BAND, SINGLE_FREQ_RANGE[0]),
     );
@@ -482,7 +483,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   const anchorAtLimit = useMemo(
     () => (placed ? pointRefAtLimit(anchorReq) : null),
     // the reference reads these
-    [placed, anchorReq, levelRef, refListener, meterSpots],
+    [placed, anchorReq, levelRef, refAlignAt, meterSpots],
   );
   // the grid on show: the audience's average at the limit in its band (over the spots it was computed with)
   const audienceAtLimit = useMemo(
@@ -495,8 +496,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     if (!fromGrid)
       return shown.anchor === anchorReq ? anchorAtLimit : pointRefAtLimit(shown.anchor);
     return shown.anchorOf ? audienceAverage(shown.anchorOf, shown.req.room, shown.spots) : null;
-    // the reference reads these (an older space's, the listener or the 1 m spots too)
-  }, [shown, placed, fromGrid, anchorReq, anchorAtLimit, refListener, meterSpots]);
+    // the reference reads these (an older space's, the alignment point or the 1 m spots too)
+  }, [shown, placed, fromGrid, anchorReq, anchorAtLimit, refAlignAt, meterSpots]);
   // the grid on show with the target of its band and the one turn-down (an older space's while the next computes); the
   // audience average needs the turn-down band's grid, so the view waits for it rather than mix two spaces
   const view = useMemo<CoverageGridView | null>(() => {

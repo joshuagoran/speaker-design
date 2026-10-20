@@ -32,9 +32,14 @@ export const UI_TEXT = {
   fullScreen: "Full screen",
   closeFullScreen: "Close full screen",
   cutaway: "Cutaway",
+  /** the 3D view's button that puts the camera back where it started */
+  resetView: "Reset 3D view",
   /** the Speaker page's 3D view: its button that shows or hides the drivers (their cutouts stay open) */
   showDrivers: "Show the drivers",
   hideDrivers: "Hide the drivers",
+  /** the Space's 3D view: its button that shows or hides each driver's aim line and its coverage edge lines */
+  showAimCoverage: "Show aim/coverage",
+  hideAimCoverage: "Hide aim/coverage",
   /** the side ducts' dividers' size, on the Speaker page's side ducts, and its tip */
   ductDividers: "Dividers",
   ductDividersTip: "Two per duct. Thicker dividers make the vent smaller, so it tunes lower.",

@@ -34,3 +34,9 @@ export const fitSphere: SceneFit = (bbox) => {
     return (r / Math.sin(half)) * SPHERE_MARGIN;
   };
 };
+
+/**
+ * The key of a scene's box that frames the camera (in the built group's `userData`), where the scene holds parts that
+ * reach past what the view should fit (the Space's beams, clipped at the walls).
+ */
+export const FRAME_BOX_KEY = "frameBox";

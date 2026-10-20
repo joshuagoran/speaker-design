@@ -135,11 +135,11 @@ test("space model: with Measured at the audience average, moving only the listen
     y: p.item.placement.y,
   }));
   const meterSpots = oneMeterSpots(design, venue.room).map((spot) => ({ at: spot, passbands: [] }));
-  const at = (listener: { x: number; y: number } | null) =>
+  const at = (alignAt: { x: number; y: number } | null) =>
     referenceAtLimit(
       COVERAGE_LEVEL_REF.audience,
       req,
-      { listener, meterSpots, boxes },
+      { alignAt, meterSpots, boxes },
       grid,
       COVERAGE_BANDS.mid,
     );
@@ -150,14 +150,14 @@ test("space model: with Measured at the audience average, moving only the listen
   assert.equal(at({ x: 0, y: 5 }), average);
   assert.equal(at({ x: -6, y: 18 }), average);
   assert.equal(at(null), average);
-  // only the listener's own reference follows the listener
-  const atListener = (listener: { x: number; y: number }) =>
+  // only the alignment point's own reference follows the alignment point
+  const atAlignAt = (alignAt: { x: number; y: number }) =>
     referenceAtLimit(
       COVERAGE_LEVEL_REF.listener,
       req,
-      { listener, meterSpots, boxes },
+      { alignAt, meterSpots, boxes },
       grid,
       COVERAGE_BANDS.mid,
     );
-  assert.notEqual(atListener({ x: 0, y: 5 }), atListener({ x: -6, y: 18 }));
+  assert.notEqual(atAlignAt({ x: 0, y: 5 }), atAlignAt({ x: -6, y: 18 }));
 });

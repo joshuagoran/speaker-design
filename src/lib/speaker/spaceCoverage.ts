@@ -121,6 +121,9 @@ export interface SpacePlacementModel {
 interface VoiceFeed extends CoverageVoice {
   /** the placement it belongs to (its index in the space, shared by a mirrored pair's boxes), and the band it plays */
   placement: number;
+  /** the box it plays from (its index in `placements`) and the stack member it belongs to */
+  box: number;
+  member: number;
   band: BandId;
   pressure: readonly Complex[];
   /** the member's level and the placement's, dB */
@@ -233,6 +236,12 @@ export function withSolved(model: SpaceModel, solved: SolvedFeed[]): SpaceModel 
   };
 }
 
+/** The voice a box's driver plays (a feed's id): its box, member, band, and pattern. */
+export const voiceId = (
+  box: number,
+  d: Pick<PlacedDriver, "member" | "band" | "driver" | "part" | "mouth">,
+) => `${box}/${d.member}/${d.band}/${JSON.stringify(driverPattern(d))}`;
+
 /**
  * The space worked out with each placement's typed delay and level, Auto ones at 0 (what the solver reads; `withSolved`
  * sets the solved ones). Moving the listener or the alignment point doesn't change it.
@@ -258,10 +267,12 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
       const band = member?.response.bands.find((b) => b.id === d.band);
       if (!member || !band) return [];
       const pattern = driverPattern(d);
-      const id = `${k}/${d.member}/${d.band}/${JSON.stringify(pattern)}`;
+      const id = voiceId(k, d);
       if (!feeds.has(id))
         feeds.set(id, {
           placement: placement.source,
+          box: k,
+          member: d.member,
           band: d.band,
           id,
           pattern,
@@ -315,7 +326,10 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
  * Each voice's output at 1 m at `f`, the space at its music limit: its band's share, level, polarity, delay and baffle
  * step.
  */
-export function spaceOutputs(model: SpaceModel, f: number): CoverageSlot["out"] {
+export function spaceOutputs(
+  model: Pick<SpaceModel, "feeds" | "headroomDb">,
+  f: number,
+): CoverageSlot["out"] {
   const out: CoverageSlot["out"] = {};
   for (const v of model.feeds) {
     const p = pressureAt(v.pressure, f);
