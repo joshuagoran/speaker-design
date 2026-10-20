@@ -1,5 +1,5 @@
 // A Space in the 3D view: the room (its floor in the coverage map's colors, its walls and ceiling), each box as the
-// Stack page draws it (buildMembersScene) at its spot, lift, aim and mirror as the space model places it
+// Stack page draws it (buildMembersScene) at its spot, lift, aim, side, and roll as the space model places it
 // (lib/speaker/spaceLayout `placementFrame`), the listener, the alignment point, and each box's beam (lib/speaker/
 // spaceBeams), clipped at the walls, floor and ceiling.
 //
@@ -13,14 +13,13 @@ import { COVERAGE_CONTOURS, coverageRgba } from "../../styles/coverageScale";
 import { ON_DATA, PALETTES, STAGE } from "../../styles/palette";
 import { INCHES_PER_FOOT } from "../../constants/units";
 import { ROOM_SURFACE_NAME } from "../../constants/space";
-import type { PlacedItem, RoomPoint } from "../../lib/speaker/spaceLayout";
+import type { PlacedItem, RoomPoint, placementFrame } from "../../lib/speaker/spaceLayout";
 import type { SpaceBeam } from "../../lib/speaker/spaceBeams";
 import type {
   CoverageGrid,
   CoverageGridView,
   CoverageRoom,
   FloorPoint,
-  SpacePlacement,
   SpaceVenue,
   ThemeName,
 } from "../../types";
@@ -29,7 +28,7 @@ import type {
 export interface SpaceSceneProps {
   room: Pick<CoverageRoom, "widthFt" | "lengthFt" | "ceilingFt" | "outdoors">;
   /** each box as the model stands it (a mirrored pair is two), with what it places (null: missing) */
-  items: readonly Pick<PlacedItem, "placement" | "stack">[];
+  items: readonly Pick<PlacedItem, "placement" | "stack" | "rollAxisIn">[];
   listener: FloorPoint;
   alignAt: FloorPoint;
   earFt: SpaceVenue["earFt"];
@@ -70,17 +69,28 @@ export const roomPointIn = (p: RoomPoint) =>
 
 /**
  * Sets an object holding a stack (in its own frame: its base's front center at the origin, its front toward +z) where a
- * placement stands it, as `placementFrame` does: mirrored, tilted by its pitch about that point, lifted, turned by its
- * yaw and set on its spot.
+ * placement stands it, as `placementFrame` does: flipped left and right as an image, upside down turned over about its
+ * front center line at `rollAxisIn` up, tilted by its pitch about its base's front center, lifted, turned by its yaw
+ * and set on its spot.
  */
 export function posePlacement(
   object: THREE.Object3D,
-  p: Pick<SpacePlacement, "x" | "y" | "liftIn" | "aim" | "mirror">,
+  p: Parameters<typeof placementFrame>[0],
+  rollAxisIn: number,
 ) {
-  object.scale.set(p.mirror ? -1 : 1, 1, 1);
-  // the tilt first, then the turn: + pitch raises the front (a turn about x by −pitch), + yaw turns toward +x
-  object.rotation.set((-p.aim.pitchDeg * Math.PI) / 180, (p.aim.yawDeg * Math.PI) / 180, 0, "YXZ");
-  object.position.set(p.x * INCHES_PER_FOOT, p.liftIn, p.y * INCHES_PER_FOOT);
+  object.scale.set(p.image ? -1 : 1, 1, 1);
+  // the roll first, then the tilt, then the turn: + pitch raises the front (a turn about x by −pitch), + yaw turns
+  // toward +x; upside down is a half turn about the front center line (z)
+  const aim = new THREE.Euler(
+    (-p.aim.pitchDeg * Math.PI) / 180,
+    (p.aim.yawDeg * Math.PI) / 180,
+    0,
+    "YXZ",
+  );
+  object.rotation.set(aim.x, aim.y, p.upsideDown ? Math.PI : 0, "YXZ");
+  // the half turn about the line at rollAxisIn up, not the base: the stack lifts by twice that, along its tilt and turn
+  const rollLift = new THREE.Vector3(0, p.upsideDown ? 2 * rollAxisIn : 0, 0).applyEuler(aim);
+  object.position.set(p.x * INCHES_PER_FOOT, p.liftIn, p.y * INCHES_PER_FOOT).add(rollLift);
 }
 
 /** The room's surfaces as clipping planes facing in: what lies outside one is cut away. Outdoors: the ground only. */
@@ -349,7 +359,7 @@ export function spaceSceneKey(props: SpaceSceneProps): string {
   return JSON.stringify({
     room: [room.widthFt, room.lengthFt, room.ceilingFt, room.outdoors],
     items: items.map(({ placement: p, stack }) => ({
-      pose: [p.x, p.y, p.liftIn, p.aim, p.mirror],
+      pose: [p.x, p.y, p.liftIn, p.aim, p.image, p.upsideDown],
       stack: stack ? membersSceneKey({ ...stack, cutaway: false }) : null,
     })),
     marks: [props.listener, props.alignAt, props.earFt],
@@ -395,11 +405,11 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
     root.add(edges);
   }
   const boxes = new THREE.Group();
-  for (const { placement, stack } of props.items) {
+  for (const { placement, stack, rollAxisIn } of props.items) {
     if (!stack) continue;
     const holder = new THREE.Group();
     holder.add(buildMembersScene({ stack: stack.stack, speakers: stack.speakers, cutaway: false }));
-    posePlacement(holder, placement);
+    posePlacement(holder, placement, rollAxisIn);
     boxes.add(holder);
   }
   root.add(boxes);

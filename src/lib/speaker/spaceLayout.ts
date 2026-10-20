@@ -194,6 +194,8 @@ export interface PlacedItem {
   stack: ReturnType<typeof placementStack>;
   boxes: PlacedBox[];
   drivers: PlacedDriver[];
+  /** the height its stack turns over about when upside down, in (`placementFrame`) */
+  rollAxisIn: number;
 }
 
 /** The band a driver part feeds: a cone its chamber's first cone's first band, an HF section its own (`hfBandOf`). */
@@ -213,7 +215,7 @@ export function spaceLayout(
 ): PlacedItem[] {
   return expandPlacements(design.space.placements).map((placement) => {
     const stack = placementStack(design, placement.item);
-    if (!stack) return { placement, stack, boxes: [], drivers: [] };
+    if (!stack) return { placement, stack, boxes: [], drivers: [], rollAxisIn: 0 };
     return { placement, stack, ...layStack(stack, placement, bandOf) };
   });
 }
@@ -226,7 +228,7 @@ export function layStack(
   stack: NonNullable<ReturnType<typeof placementStack>>,
   pose: Parameters<typeof placementFrame>[0],
   bandOf: BandOfPart,
-): Pick<PlacedItem, "boxes" | "drivers"> {
+): Pick<PlacedItem, "boxes" | "drivers" | "rollAxisIn"> {
   const members = stackLayout(stack.stack, stack.speakers).flatMap((m, k2) => {
     const { speaker } = m;
     if (!speaker) return [];
@@ -238,10 +240,8 @@ export function layStack(
   });
   // the stack turns over about the middle of its height, so it keeps its height span
   const heights = members.flatMap((m) => m.corners.map((c) => c.y));
-  const frame = placementFrame(
-    pose,
-    heights.length ? (Math.min(...heights) + Math.max(...heights)) / 2 : 0,
-  );
+  const rollAxisIn = heights.length ? (Math.min(...heights) + Math.max(...heights)) / 2 : 0;
+  const frame = placementFrame(pose, rollAxisIn);
   const boxes: PlacedBox[] = [];
   const drivers: PlacedDriver[] = [];
   for (const { k2, speaker, memberTilt, inStack, corners } of members) {
@@ -266,5 +266,5 @@ export function layStack(
           });
       }
   }
-  return { boxes, drivers };
+  return { boxes, drivers, rollAxisIn };
 }

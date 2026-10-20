@@ -14,6 +14,7 @@ import {
   type SpaceSceneProps,
 } from "../src/components/stack-view/buildSpaceScene";
 import { FRAME_BOX_KEY } from "../src/components/stack-view/sceneFraming";
+import { buildMembersScene } from "../src/components/stack-view/buildMembersScene";
 import { beamHalfAngles, spaceBeams } from "../src/lib/speaker/spaceBeams";
 import { placementFrame } from "../src/lib/speaker/spaceLayout";
 import { pistonDirectivity, waveguideHalfAngles } from "../src/lib/acoustics/directivity";
@@ -22,14 +23,19 @@ import { STACK_PRESET } from "../src/constants/stackPresets";
 import { INCHES_PER_FOOT, METERS_PER_FOOT } from "../src/constants/units";
 import { DRIVER_PART, ROOM_SURFACE_NAME } from "../src/constants/space";
 import { spaceModel } from "./helpers";
-import type { DriverPart, SpacePlacement } from "../src/types";
+import type { DriverPart } from "../src/types";
 import type { RoomPoint } from "../src/lib/speaker/spaceLayout";
 
-const POSES: Pick<SpacePlacement, "x" | "y" | "liftIn" | "aim" | "mirror">[] = [
-  { x: 0, y: 0, liftIn: 0, aim: { yawDeg: 0, pitchDeg: 0 }, mirror: false },
-  { x: -9, y: 3, liftIn: 72, aim: { yawDeg: 30, pitchDeg: -10 }, mirror: false },
-  { x: 6, y: 12, liftIn: 12, aim: { yawDeg: -135, pitchDeg: 8 }, mirror: true },
+const POSES: Parameters<typeof placementFrame>[0][] = [
+  { x: 0, y: 0, liftIn: 0, aim: { yawDeg: 0, pitchDeg: 0 }, image: false, upsideDown: false },
+  { x: -9, y: 3, liftIn: 72, aim: { yawDeg: 30, pitchDeg: -10 }, image: false, upsideDown: false },
+  { x: 6, y: 12, liftIn: 12, aim: { yawDeg: -135, pitchDeg: 8 }, image: true, upsideDown: false },
+  // upside down at the ceiling, an image, tilted down
+  { x: -4, y: 2, liftIn: 100, aim: { yawDeg: 20, pitchDeg: -15 }, image: true, upsideDown: true },
+  { x: 3, y: 8, liftIn: 90, aim: { yawDeg: -60, pitchDeg: 5 }, image: false, upsideDown: true },
 ];
+/** The height a stack turns over about upside down, in. */
+const ROLL_AXIS_IN = 22;
 /** Points of a stack, in: across its center line, up from its base, back from its front. */
 const STACK_POINTS = [
   { x: 0, y: 0, z: 0 },
@@ -41,9 +47,9 @@ describe("Space 3D view: each box stands where the model places it", () => {
   for (const [k, pose] of POSES.entries())
     test(`pose ${k}`, () => {
       const holder = new THREE.Group();
-      posePlacement(holder, pose);
+      posePlacement(holder, pose, ROLL_AXIS_IN);
       holder.updateMatrixWorld();
-      const frame = placementFrame(pose);
+      const frame = placementFrame(pose, ROLL_AXIS_IN);
       for (const q of STACK_POINTS) {
         // the stack's own scene: its front toward three's +z
         const drawn = new THREE.Vector3(q.x, q.y, -q.z).applyMatrix4(holder.matrixWorld);
@@ -51,6 +57,41 @@ describe("Space 3D view: each box stands where the model places it", () => {
         expect(drawn.distanceTo(placed)).toBeLessThan(1e-9);
       }
     });
+});
+
+test("a box upside down at the ceiling draws where the model places it", () => {
+  const start = spaceFromStart(STACK_PRESET.paStack);
+  const ceilingIn = start.space.venue.room.ceilingFt * INCHES_PER_FOOT;
+  const design = {
+    ...start,
+    space: {
+      ...start.space,
+      placements: start.space.placements.map((p) => ({
+        ...p,
+        upsideDown: true,
+        liftIn: ceilingIn - 60,
+      })),
+    },
+  };
+  for (const { item } of spaceModel(design).placements) {
+    if (!item.stack) continue;
+    const holder = new THREE.Group();
+    holder.add(buildMembersScene({ ...item.stack, cutaway: false }));
+    posePlacement(holder, item.placement, item.rollAxisIn);
+    const drawn = new THREE.Box3().setFromObject(holder);
+    const placed = new THREE.Box3().setFromPoints(
+      item.boxes.flatMap((b) => b.corners.map(roomPointIn)),
+    );
+    expect(placed.max.y).toBeGreaterThan(ceilingIn - 20);
+    // across and down the room the drawing spans the boxes; up, it reaches their top, a part of it standing out of a
+    // box (a horn on top, upright) now hangs below
+    for (const axis of ["x", "z"] as const) {
+      expect(Math.abs(drawn.min[axis] - placed.min[axis])).toBeLessThan(1);
+      expect(Math.abs(drawn.max[axis] - placed.max[axis])).toBeLessThan(1);
+    }
+    expect(Math.abs(drawn.max.y - placed.max.y)).toBeLessThan(1);
+    expect(drawn.min.y).toBeLessThan(placed.min.y + 1);
+  }
 });
 
 const ROOM = { widthFt: 30, lengthFt: 40, ceilingFt: 12, outdoors: false };
