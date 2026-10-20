@@ -41,7 +41,7 @@ import type {
 import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { POSITION_AXIS } from "./constants/speakerResults";
 import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
-import type { COUPLED_FLOOR, DRIVER_PART, PAIR_SIDE } from "./constants/space";
+import type { COUPLED_CEILING, COUPLED_FLOOR, DRIVER_PART, PAIR_SIDE } from "./constants/space";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
@@ -1109,6 +1109,9 @@ export interface HornDesign {
   portOffset: number;
 }
 
+/** Where a box's horn mouth and its vent exit radiate: the solid angle, and the identical boxes coupled with it. */
+export type BoxLoading = Pick<HornDesign, "count" | "angle">;
+
 /** One point of a horn model's response, before any crossover. */
 export interface HornPoint {
   /** frequency, Hz */
@@ -2107,7 +2110,7 @@ export interface SpaceAim {
 
 /**
  * A stack or a speaker placed in a space: its spot on the floor (its base's front center, ft), the lift under it (a
- * plinth, a stand), its aim, a mirror image, and what is done to its feed (a level and a delay).
+ * plinth, a stand), its aim, and what is done to its feed (a level and a delay).
  */
 export interface SpacePlacement extends FloorPoint {
   item:
@@ -2116,10 +2119,10 @@ export interface SpacePlacement extends FloorPoint {
   /** the gap under it, in: a plinth, a stand, or 0 */
   liftIn: number;
   aim: SpaceAim;
-  mirror: boolean;
   /**
    * a left and right pair: the placement stands twice, as set and as its mirror image across the room's center line
-   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level and delay
+   * (x and rotation turned over, the box flipped left and right); both share its item, lift, level, delay, and
+   * `upsideDown`
    * (`expandPlacements`)
    */
   mirrored: boolean;
@@ -2135,6 +2138,11 @@ export interface SpacePlacement extends FloorPoint {
   delayMs: number | typeof AUTO_DELAY;
   /** a fill: its Auto delay lines it up with the nearest main at its own aim point, not with the mains */
   fill: boolean;
+  /**
+   * turned over about its front-to-back axis (flown near a ceiling): its spot, aim and lift stay as set, and the lift is
+   * still the gap under its lowest point (lib/speaker/spaceLayout `placementFrame`)
+   */
+  upsideDown: boolean;
 }
 
 /** Which side of the center line a box of a mirrored pair stands on, seen from the listener, by id (`PAIR_SIDE`). */
@@ -3134,8 +3142,11 @@ export interface PaStackGeometry {
 /** A side of the room. front: the wall behind the stacks. */
 export type RoomSide = "front" | "back" | "left" | "right";
 
-/** What a box can be coupled with besides another box: the floor, or a side of the room (lib/speaker/spaceCoupling). */
-export type CoupledSurface = typeof COUPLED_FLOOR | RoomSide;
+/**
+ * What a box can be coupled with besides another box: the floor, the ceiling, or a side of the room
+ * (lib/speaker/spaceCoupling).
+ */
+export type CoupledSurface = typeof COUPLED_FLOOR | typeof COUPLED_CEILING | RoomSide;
 
 /** A surface the room's material is set for: the four sides and the ceiling (the floor is hard, or the crowd). */
 export type RoomSurface = RoomSide | "ceiling";

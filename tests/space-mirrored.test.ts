@@ -24,9 +24,9 @@ import type { SavedConfig, SpaceDesign, SpacePlacement } from "../src/types";
 
 const ITEM = { kind: SPACE_ITEM.stack, id: "s" } as const;
 
-/** A mirrored placement at (-6, 10) toed in 20 degrees, tilted, flipped, lifted, at -3 dB and 2 ms. */
+/** A mirrored placement at (-6, 10) toed in 20 degrees, tilted, lifted, at -3 dB and 2 ms. */
 const PAIR: SpacePlacement = {
-  ...spacePlacement({ x: -6, y: 10 }, ITEM, 24, { yawDeg: 20, mirror: false, mirrored: true }),
+  ...spacePlacement({ x: -6, y: 10 }, ITEM, 24, { yawDeg: 20, mirrored: true }),
   aim: { yawDeg: 20, pitchDeg: 7 },
   levelDb: -3,
   delayMs: 2,
@@ -46,17 +46,14 @@ test("expansion: a placement on its own stands once; a mirrored one stands twice
   );
   const [, asSet, image] = boxes;
   // as set: untouched
-  assert.deepEqual([asSet.x, asSet.y, asSet.aim, asSet.mirror], [-6, 10, PAIR.aim, false]);
+  assert.deepEqual([asSet.x, asSet.y, asSet.aim, asSet.image], [-6, 10, PAIR.aim, false]);
   // the image: x and rotation turned over, flipped left and right, the same height and tilt
   assert.deepEqual(
-    [image.x, image.y, image.aim, image.mirror, image.liftIn],
+    [image.x, image.y, image.aim, image.image, image.liftIn],
     [6, 10, { yawDeg: -20, pitchDeg: 7 }, true, 24],
   );
   // level, delay and item are shared
   for (const b of [asSet, image]) assert.deepEqual([b.levelDb, b.delayMs, b.item], [-3, 2, ITEM]);
-  // a box already flipped has an image that is not
-  const [, flipped] = expandPlacements([{ ...PAIR, mirror: true }]);
-  assert.equal(flipped.mirror, false);
 });
 
 test("expansion: the left box is the one at negative x, whichever the placement is set as", () => {
@@ -208,7 +205,7 @@ test("presets: the PA, satellite and Hi-fi presets set `mirrored` on one placeme
   assert.equal(pa.length, 1);
   assert.equal(pa[0].mirrored, true);
   assert.deepEqual(
-    expandPlacements(pa).map((b) => [b.x, b.aim.yawDeg, b.mirror, b.side]),
+    expandPlacements(pa).map((b) => [b.x, b.aim.yawDeg, b.image, b.side]),
     [
       [
         DEFAULT_COVERAGE_LAYOUT.stacks[0].x,
@@ -228,16 +225,6 @@ test("presets: the PA, satellite and Hi-fi presets set `mirrored` on one placeme
   const hifi = layersFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, ids).space.placements;
   assert.equal(hifi.length, 1);
   assert.equal(hifi[0].mirrored, true);
-  // a floor that does not mirror its stacks gives two placements on their own, the right one flipped
-  const unmirrored = layersFromPa(paDesign(configs[0]), ids, { ...PA_FLOOR, mirror: false }).space
-    .placements;
-  assert.deepEqual(
-    unmirrored.map((p) => [p.mirrored, p.mirror]),
-    [
-      [false, false],
-      [false, true],
-    ],
-  );
   // an empty space round-trips too
   const empty = emptySpace();
   assert.deepStrictEqual(roundTrip(empty)?.space.placements, []);

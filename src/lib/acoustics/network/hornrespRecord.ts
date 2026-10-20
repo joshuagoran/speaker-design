@@ -44,7 +44,7 @@ import {
   MISSING_VALUE,
   NOT_SUPPORTED_YET,
 } from "../../../constants/acousticNetwork";
-import { HORN_PROFILE } from "../../../constants/hornEngine";
+import { HORN_PROFILE, RADIATION_ANGLES } from "../../../constants/hornEngine";
 import { CM3_PER_LITER, GRAMS_PER_KG } from "../../../constants/units";
 import { oneSideAirMass } from "../hornModel";
 import { hornLayoutNetwork } from "./presets";
@@ -57,8 +57,6 @@ const PROFILE_KEYS: Record<string, HornProfile> = {
 };
 /** The keys a row's length takes when the row is unused, as plain strings to look a record's key up in. */
 const UNUSED_LENGTH_KEYS: readonly string[] = HORNRESP_UNUSED_LENGTH_KEYS;
-/** The solid angles the radiation impedance models, in units of π (free air, 4π, is not modeled). */
-const RADIATION_ANGLES: readonly RadiationAngle[] = [2, 1, 0.5];
 
 /**
  * Values that must be zero (or absent) for the reader to model a record, and what each one is. A nonzero value gives

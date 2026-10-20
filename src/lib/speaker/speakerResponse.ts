@@ -8,6 +8,7 @@
 // not read either.
 import type {
   BandId,
+  BoxLoading,
   ChamberDrivePoint,
   Complex,
   FrequencyPoint,
@@ -141,6 +142,7 @@ function modelChamber(
   chamber: SpeakerChamber,
   volts: number,
   grid: ResponseGrid,
+  loading: BoxLoading,
 ): ChamberCones {
   const GRID = grid.box;
   const cones = chamberCones(chamber);
@@ -173,7 +175,7 @@ function modelChamber(
     },
   });
   if (chamber.load.kind === CHAMBER_LOAD.horn) {
-    const read = hornDesignOf(chamber, ONE_BOX_HALF_SPACE, {
+    const read = hornDesignOf(chamber, loading, {
       netLiters,
       face: chamberClearFace(cabinet, chamber),
       wallIn: cabinet.panel.thicknessIn,
@@ -186,8 +188,13 @@ function modelChamber(
     const { design } = read;
     /** whether the design has a vent: a front-loaded or offset horn's rear chamber port */
     const vented = design.layout !== HORN_LAYOUT.tapped && design.rear.port !== null;
+    /**
+     * the engine's level is all `count` boxes in `angle`; this box alone in half space hears only its own flow, dB (0
+     * for one box in half space). The room's images and the other boxes add their own sound where they stand.
+     */
+    const ownDb = 20 * Math.log10(loading.angle / (ONE_BOX_HALF_SPACE.angle * loading.count));
     return {
-      pressure: model.curve.map((o) => pressureOf(o.spl, o.phase)),
+      pressure: model.curve.map((o) => pressureOf(o.spl + ownDb, o.phase)),
       // the chamber's own net air, as a direct chamber reports it (the engine's rear chamber adds the stuffing)
       result: {
         netLiters,
@@ -323,6 +330,15 @@ export interface SpeakerResponseOptions {
 }
 
 /**
+ * Where a horn-loaded chamber's mouth and vent exit radiate: the Space page's, from where the box stands
+ * (lib/speaker/spaceLoading); one box in half space by default. A sealed or vented chamber without a horn keeps half
+ * space.
+ */
+export interface SpeakerLoadingOptions {
+  loading?: BoxLoading;
+}
+
+/**
  * How many points the response works out over the charts' axis: the page's `POINTS` by default; fewer only for the
  * Speaker optimizer's screen (lib/speaker/optimize), which ranks with a coarse grid and checks its finalists on the
  * full one.
@@ -334,18 +350,23 @@ export interface SpeakerGridOptions {
 /**
  * The speaker's response on axis at 1 m in half space at `SPEAKER_RESPONSE_VOLTS` on every band: each chamber's cones
  * through its box model, each datasheet driver's level, each band through its filters (and the feed's) and level, and
- * the bands summed with their phase. A coaxial's cone feeds its first band and its HF section its second.
+ * the bands summed with their phase. A coaxial's cone feeds its first band and its HF section its second. With
+ * `loading`, a horn's mouth and vent exit take that load, and the box still reads as its own sound in half space.
  */
 export function speakerResponse(
   spec: Pick<SpeakerSpec, "cabinet" | "bands">,
-  { feed = NO_FILTERS, points = POINTS }: SpeakerResponseOptions & SpeakerGridOptions = {},
+  {
+    feed = NO_FILTERS,
+    points = POINTS,
+    loading = ONE_BOX_HALF_SPACE,
+  }: SpeakerResponseOptions & SpeakerGridOptions & SpeakerLoadingOptions = {},
 ): SpeakerResponse {
   const volts = SPEAKER_RESPONSE_VOLTS;
   const grid = gridOf(points);
   const { freqs } = grid;
   const sums = new Map<BandId, Complex[]>();
   const chambers = spec.cabinet.chambers.map((chamber) => {
-    const { pressure, result } = modelChamber(spec.cabinet, chamber, volts, grid);
+    const { pressure, result } = modelChamber(spec.cabinet, chamber, volts, grid, loading);
     const cones = chamberCones(chamber);
     if (pressure && cones) addTo(sums, cones.first.bands[0], pressure);
     const gaps = [...result.gaps];

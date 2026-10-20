@@ -31,7 +31,6 @@ import { aimedPlacement, movedPlacement } from "../../lib/speaker/spaceLayout";
 import {
   roomWalls,
   snapFlush,
-  spaceCoupling,
   type RoomWall,
   type StandingItem,
 } from "../../lib/speaker/spaceCoupling";
@@ -374,14 +373,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     [model, room, venue.earFt],
   );
   /** what each box stands right against: the floor, the walls and the other boxes, with the map's marks */
-  const coupling = useMemo(
-    () =>
-      spaceCoupling(
-        model.placements.map((p) => p.item),
-        roomWalls(room),
-      ),
-    [model, room],
-  );
+  const { coupling } = model;
   /** the boxes' spots: the stats leave the floor right in front of them out */
   const spots = useMemo(
     () => model.placements.map((p) => ({ x: p.item.placement.x, y: p.item.placement.y })),

@@ -82,7 +82,7 @@ test("space edits: a mirrored pair is one placement that stands twice, the image
   assert.equal(placements[0].mirrored, true);
   const [asSet, right] = expandPlacements(placements);
   assert.deepEqual(
-    [right.x, right.y, right.liftIn, right.aim, right.mirror],
+    [right.x, right.y, right.liftIn, right.aim, right.image],
     [-placements[0].x, placements[0].y, 12, { yawDeg: -15, pitchDeg: -5 }, true],
   );
   // it plays at the placement's level and delay

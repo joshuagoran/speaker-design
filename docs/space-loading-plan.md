@@ -31,8 +31,8 @@ Its results serve only as a check (see Validation).
 | Sound of each box | Its Speaker model through its crossover, with phase; each driver spot has its coverage |
 | Room              | Floor, walls, and ceiling as image sources; materials; diffuse field; room modes       |
 | Between boxes     | Their sound adds, with phase, below 500 Hz (`COHERENT_BELOW_HZ`)                       |
-| Loading           | None. Each box plays as it does alone in half space                                    |
-| Limits            | One figure per design. A box's place never changes it (`spaceCoverage.ts`, cache key)  |
+| Loading           | Stage A: a horn box takes the load of what it is coupled with. Other boxes play alone  |
+| Limits            | A horn box's limits follow its load. Other boxes: one figure per design                |
 
 The horn engine already has a load rule: `mouthImpedance(area, f, angle, count)` (`src/lib/acoustics/radiation.ts`).
 It models a mouth in a half, quarter, or eighth space, beside identical touching mouths.
@@ -66,18 +66,30 @@ These stay in Boundary Lab and Deploy:
 
 ### Model
 
-**Stage A: boundaries and touching mouths.** This reuses the existing rule.
+**Stage A: boundaries and identical boxes.** This reuses the existing rule.
+It uses the box's coupling, not the mouth's edge.
 
-1. Lay out every opening in Space: horn mouths, vents, slots, and passive radiators.
-   Their positions exist in `speakerLayout.ts` (`slotOpeningsAt`, `roundPortsAt`, `radiatorsAt`).
-   `layStack` in `spaceLayout.ts` does not place them yet.
-2. For each opening, find the boundaries it touches: the floor and each wall.
-   "Touches" means a gap of 10 mm (0.4 in) or less, as Deploy's minimum clearance (decision 1).
-3. Set `angle`: 2 for none, 1 for one boundary, 0.5 for two.
-4. Set `count`: identical openings of identical boxes whose edges touch.
-5. Pass `{ count, angle }` per placement into `hornDesignOf` and the vent exit, instead of the fixed values.
+At bass wavelengths, a few cm (a box's wall) acts as touching. So the box's coupling stands in for its mouth's.
 
-**Stage B: mutual load at any distance.** This replaces Stage A's steps 3–4.
+1. Find what each box is coupled with: the floor, the ceiling, the walls, and other boxes (`spaceCoupling`).
+   "Coupled" means a gap of 10 mm (0.4 in) or less, as Deploy's minimum clearance (decision 1).
+   In a Stack, use the member box that holds the chamber. A member on top of another is not on the floor.
+2. Set `angle`. Start at 2: the front baffle gives a half space.
+   Each coupled surface at right angles to the box's front halves it: the floor, the ceiling, or a side wall.
+   Stop at 0.5.
+   A wall behind the box or in front of it does not change it.
+3. Set `count`: the identical boxes (same Speaker) in a coupled chain.
+   Members of one Stack count too: two TH18s, one on the other, give 2.
+   They face the same way, and their fronts are in one plane. Otherwise 1.
+   A coupled box of another design adds nothing.
+4. Pass `{ count, angle }` per member into `hornDesignOf`. The horn's vent exit takes the same load.
+5. Scale the box's sound back to one box in half space. The room's images and the other boxes add theirs, as now.
+   So only the change in the mouth's flow is new.
+
+Stage A does not load the port exits of plain vented boxes. Their exit mass falls off fast with distance, so Stage B handles them.
+A box whose top is at the ceiling is coupled with it. Outdoors, or with an open ceiling, there is none.
+
+**Stage B: mutual load at any distance.** This replaces Stage A's steps 2–3.
 
 1. Treat each opening i as a small source with flow Uᵢ (volume velocity, m³/s).
 2. Add the floor and the two nearest walls as mirrors. Use the floor, each wall, and their combinations: seven images.
@@ -123,9 +135,8 @@ If we add it, `roomModes.ts` gives the load: the modal pressure at each opening 
 ### UI
 
 - No new settings. The page applies loading by itself.
-- The selected placement shows one line: how much louder or quieter it plays at 40 Hz, and its cone travel change, against the same box alone (decision 2).
-- Its tooltip explains: "Walls, the floor, and other boxes near a horn mouth or port change how much air it moves."
-- A chart of the selected box's maximum output, in place and alone, on the shared axes (80–140 dB, 15 Hz–20 kHz).
+- The selected placement shows "Coupled with:" (already built). Its tooltip says each surface or box in contact adds low end.
+- Stage A adds no new UI for loading.
 - UI text names no model or code.
 
 ### Owner tasks (acceptance)
@@ -158,7 +169,7 @@ The Deploy check needs a CUDA machine. The owner runs it and saves the numbers a
 | ---- | -------------------------------------------------------------------------------------------- |
 | 1    | Mock: `docs/space-loading-mock.html` with shaped numbers, to agree on the line and the chart |
 | 2    | Lay out every opening in Space. No result changes yet. Tests for positions                   |
-| 3    | Stage A, with the line in the placement settings. Owner tasks 1, 2, and 5                    |
+| 3    | Stage A, model only. Owner tasks 1, 2, and 5                                                 |
 | 4    | Stage B. Owner tasks 1–5. Snapshots that move are rewritten in the same PR, with the reason  |
 | 5    | Validation data from Hornresp and Deploy, as tests                                           |
 
@@ -253,7 +264,7 @@ Reconsider CLF import if one of these happens:
 | #   | Question                                               | Answer                                                    | Status   |
 | --- | ------------------------------------------------------ | --------------------------------------------------------- | -------- |
 | 1   | Stage A: how close is "touching"?                      | 10 mm (0.4 in), as Deploy's clearance; Stage B is smooth  | Proposed |
-| 2   | Show the "in place and alone" chart, or only the line? | Both: the line and the chart                              | Decided  |
+| 2   | Show the "in place and alone" chart, or only the line? | Replaced: "Coupled with:" shows it; no new UI for loading | Replaced |
 | 3   | Stage C (room modes as load): now or later?            | Skip; reconsider on the triggers under Stage C            | Decided  |
 | 4   | First reference speakers                               | QSC, EV, JBL, Mackie, and RCF (the table above)           | Decided  |
 | 5   | CLF import: go or no-go                                | No-go: no public layout; reconsider on the triggers above | Decided  |

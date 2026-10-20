@@ -77,11 +77,16 @@ const isStack = (value: unknown): value is StackSpec =>
   hasFields(value, { id: "string", name: "string", notes: "string" }) &&
   Array.isArray(Reflect.get(value, "members"));
 
+/** A placement as a save holds it: one from before a placement could stand upside down has no `upsideDown`. */
+type SavedPlacement = Omit<SpacePlacement, "upsideDown"> &
+  Partial<Pick<SpacePlacement, "upsideDown">>;
+
 /**
  * Whether a value reads as a list of placements: each names an item and has a spot, an aim, whether it is a mirrored
- * pair and whether it is a fill. (A draft or save from the time a placement could follow another has `follows` and no `mirrored`: not read.)
+ * pair and whether it is a fill, and maybe whether it is upside down. (A draft or save from the time a placement could
+ * follow another has `follows` and no `mirrored`: not read.)
  */
-const isPlacements = (value: unknown): value is SpacePlacement[] =>
+const isPlacements = (value: unknown): value is SavedPlacement[] =>
   Array.isArray(value) &&
   value.every(
     (p: unknown) =>
@@ -93,7 +98,9 @@ const isPlacements = (value: unknown): value is SpacePlacement[] =>
         aim: "object",
         mirrored: "boolean",
         fill: "boolean",
-      }) && !("follows" in p),
+      }) &&
+      !("follows" in p) &&
+      ["undefined", "boolean"].includes(typeof Reflect.get(p, "upsideDown")),
   );
 
 /** Whether a value is one of a const record's values (a saved string that names an id the app has). */
@@ -139,7 +146,12 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
   )
     return null;
   return {
-    space: { id: c.id, name: c.name, placements, venue },
+    space: {
+      id: c.id,
+      name: c.name,
+      placements: placements.map((p) => ({ ...p, upsideDown: p.upsideDown ?? false })),
+      venue,
+    },
     stacks,
     speakers: speakers.map(readSpeakerCopy),
   };

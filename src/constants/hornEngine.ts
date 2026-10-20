@@ -1,4 +1,4 @@
-import type { HornDesign, HornProfile } from "../types";
+import type { HornDesign, HornProfile, RadiationAngle } from "../types";
 
 /**
  * A horn segment's flare law, by id (Hornresp's CON, EXP and PAR). A segment whose two areas are equal is a straight
@@ -26,3 +26,9 @@ export const ONE_BOX_HALF_SPACE = { angle: 2, count: 1 } as const satisfies Pick
   HornDesign,
   "angle" | "count"
 >;
+
+/**
+ * The solid angles the radiation impedance models, in units of π, each half the one before: half space, and a
+ * boundary or two at right angles to the mouth (free air, 4π, is not modeled).
+ */
+export const RADIATION_ANGLES: readonly RadiationAngle[] = [2, 1, 0.5];
