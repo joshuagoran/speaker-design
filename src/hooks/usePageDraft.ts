@@ -76,9 +76,8 @@ export const withoutShared = <T>(state: DraftState<T>): DraftState<T> => ({
   shared: null,
 });
 
-/** The state with the shared design counted as saved: a later change is measured from it. */
-export const withSharedSaved = <T>(state: DraftState<T>): DraftState<T> =>
-  state.shared ? { ...state, shared: { ...state.shared, original: state.shared.design } } : state;
+/** The state after a shared design was saved as a copy: the shared view closes, and `copy` is the page's own design. */
+export const withCopyKept = <T>(copy: T): DraftState<T> => ({ own: copy, shared: null });
 
 /** Whether a shared design differs from the one it opened as (or was last saved as): its stored documents are compared. */
 export const sharedChanged = <T>(draft: PageDraft<T>, shared: SharedDesign<T>): boolean =>
@@ -143,8 +142,8 @@ export interface SharedMode<T> {
   close: () => void;
   /** whether the shared design was changed since it opened (or was last saved as a copy) */
   changed: () => boolean;
-  /** counts the shared design as saved */
-  markSaved: () => void;
+  /** closes the shared view after a copy saved: `copy` (the saved copy, with its new ids) becomes the page's own design */
+  keep: (copy: T) => void;
 }
 
 /**
@@ -174,7 +173,7 @@ export function usePageDraft<T>(
     open: (design, note) => setState((s) => withShared(s, design, note)),
     close: () => setState(withoutShared),
     changed: () => (state.shared ? sharedChanged(draft, state.shared) : false),
-    markSaved: () => setState(withSharedSaved),
+    keep: (copy) => setState(withCopyKept(copy)),
   };
   // stable, as `useState`'s setter is: pages hand it on to the optimizer
   const setDesign = useCallback<Dispatch<SetStateAction<T>>>(

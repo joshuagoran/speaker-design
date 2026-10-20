@@ -30,23 +30,41 @@ async function inOrder(saves: readonly (() => Promise<boolean>)[]): Promise<bool
 const putSpeaker = (speaker: SpeakerSpec, stores: CopyStores) =>
   stores.speakers.overwrite(speaker.id, speaker.name, speakerSnapshot(speaker));
 
-/** Saves a speaker as a new Speaker. `makeId` gives each new id. */
-export const saveSpeakerCopy = (speaker: SpeakerSpec, stores: CopyStores, makeId: () => string) =>
-  putSpeaker(remapSpeaker(speaker, makeId), stores);
+/** Saves a speaker as a new Speaker. `makeId` gives each new id. The copy when it saved; else null. */
+export async function saveSpeakerCopy(
+  speaker: SpeakerSpec,
+  stores: CopyStores,
+  makeId: () => string,
+): Promise<SpeakerSpec | null> {
+  const copy = remapSpeaker(speaker, makeId);
+  return (await putSpeaker(copy, stores)) ? copy : null;
+}
 
-/** Saves a stack as a new Stack, and its speakers as new Speakers. */
-export function saveStackCopy(design: StackDesign, stores: CopyStores, makeId: () => string) {
+/** Saves a stack as a new Stack, and its speakers as new Speakers. The copy when every part saved; else null. */
+export async function saveStackCopy(
+  design: StackDesign,
+  stores: CopyStores,
+  makeId: () => string,
+): Promise<StackDesign | null> {
   const copy = remapStack(design, makeId);
-  return inOrder([
+  const saved = await inOrder([
     ...copy.speakers.map((s) => () => putSpeaker(s, stores)),
     () => stores.stacks.overwrite(copy.stack.id, copy.stack.name, stackSnapshot(copy)),
   ]);
+  return saved ? copy : null;
 }
 
-/** Saves a space as a new Space, each stack it places as a new Stack, and each speaker as a new Speaker. */
-export function saveSpaceCopy(design: SpaceDesign, stores: CopyStores, makeId: () => string) {
+/**
+ * Saves a space as a new Space, each stack it places as a new Stack, and each speaker as a new Speaker. The copy when
+ * every part saved; else null.
+ */
+export async function saveSpaceCopy(
+  design: SpaceDesign,
+  stores: CopyStores,
+  makeId: () => string,
+): Promise<SpaceDesign | null> {
   const copy = remapSpace(design, makeId);
-  return inOrder([
+  const saved = await inOrder([
     ...copy.speakers.map((s) => () => putSpeaker(s, stores)),
     ...copy.stacks.map(
       (stack) => () =>
@@ -58,4 +76,5 @@ export function saveSpaceCopy(design: SpaceDesign, stores: CopyStores, makeId: (
     ),
     () => stores.spaces.overwrite(copy.space.id, copy.space.name, spaceSnapshot(copy)),
   ]);
+  return saved ? copy : null;
 }

@@ -82,7 +82,7 @@ export const SHARE_TEXT = {
   saveCopy: "Save a copy",
   signInToSave: "Sign in to save a copy.",
   saving: "Saving a copy…",
-  copySaved: "Copy saved.",
+  copySaved: "Copy saved!",
   copyNotSaved: "The copy did not save.",
   close: "Close",
   closeAsk: "Close without saving a copy?",

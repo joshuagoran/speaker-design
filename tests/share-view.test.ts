@@ -9,7 +9,7 @@ import {
   sharedChanged,
   withEdit,
   withShared,
-  withSharedSaved,
+  withCopyKept,
   withoutShared,
   type DraftState,
 } from "../src/hooks/usePageDraft";
@@ -99,10 +99,10 @@ test("the shared view tells a change, and a copy saved counts as the new start",
   const edited = withEdit(opened, (d) => ({ ...d, space: { ...d.space, name: "Fixed" } }));
   assert.ok(edited.shared);
   assert.equal(sharedChanged(draft, edited.shared), true);
-  const saved = withSharedSaved(edited);
-  assert.ok(saved.shared);
-  assert.equal(sharedChanged(draft, saved.shared), false);
-  assert.equal(saved.shared.design, edited.shared.design);
+  // a saved copy closes the shared view and becomes the page's own design
+  const kept = withCopyKept(edited.shared.design);
+  assert.equal(kept.shared, null);
+  assert.equal(kept.own, edited.shared.design);
   // a change back is no change
   const back = withEdit(edited, SPACE);
   assert.ok(back.shared);
@@ -358,9 +358,9 @@ test("save a copy of a stack and of a speaker", async () => {
   assert.equal(one.written[0]?.name, speaker.name);
 });
 
-test("a copy that fails stops there: nothing later is written, and the answer is no", async () => {
+test("a copy that fails stops there: nothing later is written, and no copy comes back", async () => {
   const [speakers, stacks, spaces] = [fakeLibrary(1), fakeLibrary(), fakeLibrary()];
-  assert.equal(await saveSpaceCopy(SPACE, { speakers, stacks, spaces }, counter()), false);
+  assert.equal(await saveSpaceCopy(SPACE, { speakers, stacks, spaces }, counter()), null);
   assert.equal(speakers.written.length, 1);
   assert.equal(stacks.written.length, 0);
   assert.equal(

@@ -141,7 +141,7 @@ export const placementDomId = (k: number) => `space-placement-${k}`;
 
 export const SPACE_TEXT = {
   /** the name a new space starts with */
-  newName: "New space",
+  newName: "New Space",
   coverage: "Coverage",
   side: "Side view",
   /** the Side view heading's tooltip, and the one line under the drawing */

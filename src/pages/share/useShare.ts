@@ -58,7 +58,7 @@ interface KindOps<T> {
   name: (design: T) => string;
   envelope: (design: T, note: string) => ShareEnvelope;
   /** saves a copy; every library it writes to must be signed in (`stores`) */
-  saveCopy: (design: T, makeId: () => string) => Promise<boolean>;
+  saveCopy: (design: T, makeId: () => string) => Promise<T | null>;
   needs: readonly ShareKind[];
 }
 
@@ -249,9 +249,15 @@ export function useShare(
       status: saved?.kind === forKind ? saved.text : "",
       onSave: () => {
         setSaved({ kind: forKind, text: SHARE_TEXT.saving });
-        void o.saveCopy(design, newDocId).then((ok) => {
-          if (ok) shared.markSaved();
-          setSaved({ kind: forKind, text: ok ? SHARE_TEXT.copySaved : SHARE_TEXT.copyNotSaved });
+        void o.saveCopy(design, newDocId).then((copy) => {
+          if (!copy) {
+            setSaved({ kind: forKind, text: SHARE_TEXT.copyNotSaved });
+            return;
+          }
+          // the copy opens as the page's own design; the line beside Share says it saved
+          shared.keep(copy);
+          setSaved(null);
+          setNotice({ text: SHARE_TEXT.copySaved, shownAt: Date.now() });
         });
       },
       onShare: () => {
