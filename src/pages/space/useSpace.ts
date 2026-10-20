@@ -563,8 +563,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   /** the shared view: a link's space shows in place of the page's own, and the page's picks end with each switch */
   const sharedView: SharedMode<SpaceDesign> = {
     ...sharedDraft,
-    open: (d, note) => {
-      sharedDraft.open(d, note);
+    open: (d) => {
+      sharedDraft.open(d);
       setReplaced((n) => n + 1);
     },
     close: () => {

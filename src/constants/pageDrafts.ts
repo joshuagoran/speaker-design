@@ -10,7 +10,7 @@ export const PAGE_DRAFT_KEYS = {
 
 /**
  * The session storage key each page keeps its shared view under (`usePageDraft`): the design a link opened, with the one
- * as it was opened and the sender's note, so a reload keeps it. It is never the draft's key.
+ * as it was opened, so a reload keeps it. It is never the draft's key.
  */
 export const PAGE_SHARED_KEYS = {
   speaker: "speaker.shared",

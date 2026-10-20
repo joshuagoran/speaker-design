@@ -30,16 +30,15 @@ export type DecodedLink = ReadEnvelope;
 
 const failure = (error: ShareError): DecodedLink => ({ ok: false, error });
 
-/** The marks every envelope has, and the sender's note when there is one (plain text; an empty one is left out). */
-const marks = (note: string): Pick<SpaceShare, "format" | "version" | "note"> => ({
+/** The marks every envelope has. */
+const marks = (): Pick<SpaceShare, "format" | "version"> => ({
   format: SHARE_FORMAT,
   version: SHARE_VERSION,
-  ...(note.trim() ? { note: note.trim() } : {}),
 });
 
 /** The envelope of a speaker. */
-export const speakerEnvelope = (speaker: SpeakerSpec, note = ""): SpeakerShare => ({
-  ...marks(note),
+export const speakerEnvelope = (speaker: SpeakerSpec): SpeakerShare => ({
+  ...marks(),
   kind: SHARE_KIND.speaker,
   speakers: [speaker],
   stacks: [],
@@ -47,8 +46,8 @@ export const speakerEnvelope = (speaker: SpeakerSpec, note = ""): SpeakerShare =
 });
 
 /** The envelope of a stack: the stack, with the speakers its members name. */
-export const stackEnvelope = (design: StackDesign, note = ""): StackShare => ({
-  ...marks(note),
+export const stackEnvelope = (design: StackDesign): StackShare => ({
+  ...marks(),
   kind: SHARE_KIND.stack,
   speakers: stackSpeakers(design),
   stacks: [design.stack],
@@ -56,8 +55,8 @@ export const stackEnvelope = (design: StackDesign, note = ""): StackShare => ({
 });
 
 /** The envelope of a space: the space, with the stacks and speakers it places. */
-export const spaceEnvelope = (design: SpaceDesign, note = ""): SpaceShare => ({
-  ...marks(note),
+export const spaceEnvelope = (design: SpaceDesign): SpaceShare => ({
+  ...marks(),
   kind: SHARE_KIND.space,
   ...usedParts(design),
   spaces: [design.space],

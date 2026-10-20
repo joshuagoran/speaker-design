@@ -9,14 +9,12 @@ export interface SharedNoticeProps {
   /** what the design is, with a capital: "Speaker", "Stack" or "Space" */
   item: string;
   name: string;
-  /** the sender's note, plain text; empty for none */
-  note: string;
   /** signed in: the design can be saved as a copy */
   canSave: boolean;
   /** what saving a copy says now; empty before any */
   status: string;
   onSave: () => void;
-  /** sends the design, changed or not, to someone (opens the Share panel) */
+  /** sends the design, changed or not, to someone (copies a link to it) */
   onShare: () => void;
   /** whether the design changed since it opened or was last saved as a copy */
   changed: () => boolean;
@@ -25,14 +23,13 @@ export interface SharedNoticeProps {
 }
 
 /**
- * The notice at the top of the results while a link's design shows in place of the page's own: what it is, the sender's
- * note, and what to do with it: save a copy (signed in), share it on, or close it. Close asks first when the design
+ * The notice at the top of the results while a link's design shows in place of the page's own: what it is, and what to
+ * do with it: save a copy (signed in), share it on, or close it. Close asks first when the design
  * changed and no copy was saved.
  */
 export function SharedNotice({
   item,
   name,
-  note,
   canSave,
   status,
   onSave,
@@ -46,7 +43,6 @@ export function SharedNotice({
       <Notice>
         <div className="flex flex-col gap-1">
           <p className="font-semibold break-words">{SHARE_TEXT.shared(item, name)}</p>
-          {note && <p className="whitespace-pre-wrap break-words">{note}</p>}
           <div className="flex flex-wrap items-center gap-2">
             {canSave ? (
               <Button

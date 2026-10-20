@@ -18,7 +18,7 @@ import type {
 
 /** A shared design opened: its kind, and the design its page holds. */
 export type OpenedShare = {
-  [K in ShareKind]: { kind: K; design: ShareDesigns[K]; note: string };
+  [K in ShareKind]: { kind: K; design: ShareDesigns[K] };
 }[ShareKind];
 
 /** Runs the speaker's model once: it throws where the speaker is not one the model can read. */
@@ -44,13 +44,12 @@ export function openEnvelope(envelope: ShareEnvelope): OpenedShare | null {
 
 /** The design an envelope holds; throws where a part breaks a model. */
 function read(envelope: ShareEnvelope): OpenedShare | null {
-  const note = envelope.note ?? "";
   switch (envelope.kind) {
     case SHARE_KIND.speaker: {
       const [speaker] = envelope.speakers;
       const design = readSpeakerCopy(speaker);
       tryModel(design);
-      return { kind: SHARE_KIND.speaker, design, note };
+      return { kind: SHARE_KIND.speaker, design };
     }
     case SHARE_KIND.stack: {
       const [stack] = envelope.stacks;
@@ -62,7 +61,7 @@ function read(envelope: ShareEnvelope): OpenedShare | null {
       });
       if (!design) return null;
       tryStack(design);
-      return { kind: SHARE_KIND.stack, design, note };
+      return { kind: SHARE_KIND.stack, design };
     }
     case SHARE_KIND.space: {
       const [space] = envelope.spaces;
@@ -78,7 +77,7 @@ function read(envelope: ShareEnvelope): OpenedShare | null {
       // a speaker that stands alone is not run by a stack's model
       const inStacks = new Set(design.stacks.flatMap((s) => s.members.map((m) => m.speakerId)));
       design.speakers.filter((s) => !inStacks.has(s.id)).forEach(tryModel);
-      return { kind: SHARE_KIND.space, design, note };
+      return { kind: SHARE_KIND.space, design };
     }
   }
 }

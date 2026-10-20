@@ -129,8 +129,8 @@ export function useSpeakerPage() {
   /** the shared view: a link's speaker shows in place of the page's own, and the page starts over with each switch */
   const sharedView: SharedMode<SpeakerSpec> = {
     ...sharedDraft,
-    open: (next, note) => {
-      sharedDraft.open(settledSpec(next), note);
+    open: (next) => {
+      sharedDraft.open(settledSpec(next));
       restart();
     },
     close: () => {

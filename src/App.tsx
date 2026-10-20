@@ -18,7 +18,6 @@ import { PageTabs } from "./components/ui/PageTabs";
 import { ShareIcon } from "./components/ui/IconButton";
 import { Button } from "./components/ui/Button";
 import { useShare } from "./pages/share/useShare";
-import { SharePanel } from "./components/ui/SharePanel";
 import { SHARE_COPIED_SHOW_MS, SHARE_KIND, SHARE_TEXT } from "./constants/share";
 import { entriesOf } from "./lib/records";
 import { pageAt } from "./lib/pageRoute";
@@ -143,8 +142,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
                     <Button
                       title={SHARE_TEXT.tooltip(PROJECT_NAMES[shareKind])}
                       className="inline-flex items-center gap-2"
-                      aria-expanded={sharing.panelOpen}
-                      onClick={sharing.togglePanel}
+                      onClick={sharing.copyLink}
                     >
                       {SHARE_TEXT.button}
                       <ShareIcon />
@@ -154,11 +152,6 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
               )
             }
           />
-          {shareKind && sharing.panelOpen && (
-            <div className="flex justify-end mt-2">
-              <SharePanel note={sharing.note} onNote={sharing.setNote} onCopy={sharing.copyLink} />
-            </div>
-          )}
         </header>
       </div>
       <div

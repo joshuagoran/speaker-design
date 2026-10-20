@@ -42,12 +42,11 @@ export function readDraft<T>(draft: PageDraft<T>): T {
 
 /**
  * A design that came from a link and is shown in place of the page's own: the design as it is now, as it was when it
- * opened (or last saved as a copy, to tell a change), and the sender's note.
+ * opened (or last saved as a copy, to tell a change).
  */
 export interface SharedDesign<T> {
   design: T;
   original: T;
-  note: string;
 }
 
 /** What a page holds: its own design (the draft), and the shared view that shows instead of it, when there is one. */
@@ -65,9 +64,9 @@ export function withEdit<T>(state: DraftState<T>, next: SetStateAction<T>): Draf
 }
 
 /** The state with a link's design shown in place of the page's own, which stays as it is. */
-export const withShared = <T>(state: DraftState<T>, design: T, note: string): DraftState<T> => ({
+export const withShared = <T>(state: DraftState<T>, design: T): DraftState<T> => ({
   ...state,
-  shared: { design, original: design, note },
+  shared: { design, original: design },
 });
 
 /** The state back on the page's own design. */
@@ -88,10 +87,9 @@ export function readShared<T>(draft: PageDraft<T>): SharedDesign<T> | null {
   const raw = readSessionJson<unknown>(draft.sharedKey, null);
   if (typeof raw !== "object" || raw === null) return null;
   try {
-    const note: unknown = Reflect.get(raw, "note");
     const design = draft.fromDraft(Reflect.get(raw, "design"));
     const original = draft.fromDraft(Reflect.get(raw, "original"));
-    return typeof note === "string" && design && original ? { design, original, note } : null;
+    return design && original ? { design, original } : null;
   } catch {
     return null;
   }
@@ -99,7 +97,6 @@ export function readShared<T>(draft: PageDraft<T>): SharedDesign<T> | null {
 
 /** The shared view as session storage keeps it. */
 const sharedDocument = <T>(draft: PageDraft<T>, shared: SharedDesign<T>) => ({
-  note: shared.note,
   design: draft.toDraft(shared.design),
   original: draft.toDraft(shared.original),
 });
@@ -134,10 +131,10 @@ function useDelayedWrite<V>(value: V, write: (value: V) => void) {
 
 /** What a page does with a shared view: show a link's design in place of its own, and go back. */
 export interface SharedMode<T> {
-  /** the sender's note while a shared design shows; null while the page's own design does */
-  note: string | null;
+  /** whether a shared design shows (true), or the page's own design does (false) */
+  active: boolean;
   /** shows `design` in place of the page's own (which stays, and stays in the draft) */
-  open: (design: T, note: string) => void;
+  open: (design: T) => void;
   /** back to the page's own design */
   close: () => void;
   /** whether the shared design was changed since it opened (or was last saved as a copy) */
@@ -169,8 +166,8 @@ export function usePageDraft<T>(
   });
   const shown = state.shared ? state.shared.design : state.own;
   const shared: SharedMode<T> = {
-    note: state.shared ? state.shared.note : null,
-    open: (design, note) => setState((s) => withShared(s, design, note)),
+    active: state.shared !== null,
+    open: (design) => setState((s) => withShared(s, design)),
     close: () => setState(withoutShared),
     changed: () => (state.shared ? sharedChanged(draft, state.shared) : false),
     keep: (copy) => setState(withCopyKept(copy)),

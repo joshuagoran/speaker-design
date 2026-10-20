@@ -35,7 +35,7 @@ On GitHub Pages, users sign in with Google. Then they can save speakers, stacks,
 
 ## Sharing
 
-The Speaker, Stack, and Space pages have a Share button. It copies a link to the open design, with an optional note. The link holds the whole design, so it needs no account and no server. Whoever opens it sees the design in a shared view. Their own work stays as it was. Signed-in users can save a copy of a shared design as new items in their libraries.
+The Speaker, Stack, and Space pages have a Share button. It copies a link to the open design. The link holds the whole design, so it needs no account and no server. Whoever opens it sees the design in a shared view. Their own work stays as it was. Signed-in users can save a copy of a shared design as new items in their libraries.
 
 ## Tests
 

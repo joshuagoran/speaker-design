@@ -70,9 +70,9 @@ const throughJson = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 test("a shared view holds a design and leaves the page's own, and so its draft, as it was", () => {
   const own = spaceFromStart(PRESET);
   const start: DraftState<SpaceDesign> = { own, shared: null };
-  const opened = withShared(start, SPACE, "Bass is boomy");
+  const opened = withShared(start, SPACE);
   assert.equal(opened.own, own, "the own design is the same value, so no draft is written");
-  assert.equal(opened.shared?.note, "Bass is boomy");
+  assert.equal(opened.shared?.design, SPACE);
   // every change goes to the shared design
   const edited = withEdit(opened, (d) => ({ ...d, space: { ...d.space, name: "Fixed" } }));
   assert.equal(edited.own, own);
@@ -93,7 +93,7 @@ test("a shared view holds a design and leaves the page's own, and so its draft, 
 
 test("the shared view tells a change, and a copy saved counts as the new start", () => {
   const draft = spaceDraft;
-  const opened = withShared<SpaceDesign>({ own: spaceFromStart(PRESET), shared: null }, SPACE, "");
+  const opened = withShared<SpaceDesign>({ own: spaceFromStart(PRESET), shared: null }, SPACE);
   assert.ok(opened.shared);
   assert.equal(sharedChanged(draft, opened.shared), false);
   const edited = withEdit(opened, (d) => ({ ...d, space: { ...d.space, name: "Fixed" } }));
@@ -118,7 +118,6 @@ test("a reload keeps the shared view, and the page's own draft stays", () => {
   const local = { [PAGE_DRAFT_KEYS.space]: JSON.stringify(spaceDraft.toDraft(own)) };
   const session = {
     [PAGE_SHARED_KEYS.space]: JSON.stringify({
-      note: "Bass is boomy",
       design: spaceDraft.toDraft(shared),
       original: spaceDraft.toDraft(SPACE),
     }),
@@ -126,17 +125,17 @@ test("a reload keeps the shared view, and the page's own draft stays", () => {
   const before = { ...local };
   const writes = useStorages(local, session);
   let name = "";
-  let note: string | null = "";
+  let active = false;
   let changed = false;
   runSteps(useSpace, [
     (page) => {
       name = page.design.space.name;
-      note = page.sharedView.note;
+      active = page.sharedView.active;
       changed = page.sharedView.changed();
     },
   ]);
   assert.equal(name, "Their room");
-  assert.equal(note, "Bass is boomy");
+  assert.equal(active, true);
   assert.equal(changed, true, "the change made before the reload is still a change");
   assert.deepEqual(local, before, "the draft is as it was");
   assert.ok(!writes.some((w) => w.startsWith("local:")), writes.join());
@@ -147,20 +146,20 @@ test("with no shared view stored, a page shows its own design; a broken one is d
   const sessions: Record<string, string>[] = [
     {},
     { [PAGE_SHARED_KEYS.space]: "{not json" },
-    { [PAGE_SHARED_KEYS.space]: JSON.stringify({ note: 5, design: {}, original: {} }) },
-    { [PAGE_SHARED_KEYS.space]: JSON.stringify({ note: "", design: null, original: null }) },
+    { [PAGE_SHARED_KEYS.space]: JSON.stringify({ design: {}, original: {} }) },
+    { [PAGE_SHARED_KEYS.space]: JSON.stringify({ design: null, original: null }) },
     { [PAGE_SHARED_KEYS.space]: JSON.stringify(null) },
   ];
   for (const session of sessions) {
     useStorages({ ...local }, { ...session });
     assert.equal(readShared(spaceDraft), null);
-    let note: string | null = "x";
+    let active = true;
     runSteps(useSpace, [
       (page) => {
-        note = page.sharedView.note;
+        active = page.sharedView.active;
       },
     ]);
-    assert.equal(note, null);
+    assert.equal(active, false);
   }
   // storage that is missing is no matter
   Reflect.deleteProperty(globalThis, "sessionStorage");

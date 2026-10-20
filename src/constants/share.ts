@@ -31,9 +31,6 @@ export const SHARE_MAX_TEXT_CHARS = 200;
 /** The longest stack notes a link may carry, in characters. */
 export const SHARE_MAX_STACK_NOTES_CHARS = 5000;
 
-/** The longest note a sender may add to a link, in characters. */
-export const SHARE_MAX_NOTE_CHARS = 280;
-
 /**
  * The bounds on every value inside a shared speaker (its parts are read by the model, so a link must not hold a huge or
  * deep one): the longest list, the most keys in an object, and how deep values nest.
@@ -71,8 +68,6 @@ export const SHARE_TEXT = {
   button: "Share",
   /** the Share button's tooltip, by the item's name (a Speaker, a Stack or a Space) */
   tooltip: (item: string) => `Copy a link to this ${item}`,
-  noteLabel: "Note (optional)",
-  copyLink: "Copy link",
   copied: "Link copied!",
   long: "This link is long. Some apps cut it.",
   copyFailed: "The link did not copy.",

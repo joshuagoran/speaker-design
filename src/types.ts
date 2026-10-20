@@ -3495,11 +3495,10 @@ export interface SpaceDesign extends Pick<DesignLayers, "space" | "speakers"> {
   stacks: readonly StackSpec[];
 }
 
-/** What every shared envelope has: its marks, and the sender's note (plain text, `SHARE_MAX_NOTE_CHARS` at most). */
+/** What every shared envelope has: its marks. */
 interface ShareMarks {
   format: typeof SHARE_FORMAT;
   version: typeof SHARE_VERSION;
-  note?: string;
 }
 
 /** A speaker as a link carries it: exactly one speaker. */

@@ -21,7 +21,6 @@ import {
   SHARE_FORMAT,
   SHARE_KIND,
   SHARE_MAX_JSON_BYTES,
-  SHARE_MAX_NOTE_CHARS,
   SHARE_MAX_PAYLOAD_CHARS,
   SHARE_VERSION,
 } from "../src/constants/share";
@@ -94,31 +93,6 @@ for (const template of Object.values(SPEAKER_TEMPLATE)) {
     assert.deepStrictEqual(opened.design, asJson(speaker));
   });
 }
-
-test("the note rides in the link, trimmed, and an empty one is left out", async () => {
-  const speaker = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
-  const noted = speakerEnvelope(speaker, "  Bass is boomy at the back wall  ");
-  assert.equal(noted.note, "Bass is boomy at the back wall");
-  assert.ok(!("note" in speakerEnvelope(speaker, "   ")));
-  const decoded = await decodeLink(linkFragment(SHARE_KIND.speaker, await encodeLink(noted)));
-  assert.ok(decoded.ok);
-  const opened = openEnvelope(decoded.envelope);
-  assert.equal(opened?.note, "Bass is boomy at the back wall");
-  // a note over the limit, or not text, is not a link we made
-  for (const note of ["x".repeat(SHARE_MAX_NOTE_CHARS + 1), 7, null, ["a"]]) {
-    const wrong = await decodeLink(
-      fragmentOf(await packed(JSON.stringify({ ...speakerEnvelope(speaker), note }))),
-    );
-    assert.ok(!wrong.ok, JSON.stringify(note).slice(0, 20));
-    assert.equal(wrong.error, SHARE_ERROR.wrongFormat);
-  }
-  const edge = await decodeLink(
-    fragmentOf(
-      await packed(JSON.stringify(speakerEnvelope(speaker, "x".repeat(SHARE_MAX_NOTE_CHARS)))),
-    ),
-  );
-  assert.ok(edge.ok);
-});
 
 test("the fragment: its value, and the address without it", () => {
   assert.equal(shareValue("#space&s=1.abc"), "1.abc");

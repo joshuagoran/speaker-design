@@ -19,7 +19,6 @@ import {
   SHARE_ERROR,
   SHARE_KIND,
   SHARE_LONG_LINK_CHARS,
-  SHARE_MAX_NOTE_CHARS,
   SHARE_TEXT,
 } from "../../constants/share";
 import { PAGE_HASHES, PROJECT_NAMES } from "../../constants/pages";
@@ -56,7 +55,7 @@ export type SharePages = { [K in ShareKind]: SharePage<ShareDesigns[K]> };
 interface KindOps<T> {
   page: SharePage<T>;
   name: (design: T) => string;
-  envelope: (design: T, note: string) => ShareEnvelope;
+  envelope: (design: T) => ShareEnvelope;
   /** saves a copy; every library it writes to must be signed in (`stores`) */
   saveCopy: (design: T, makeId: () => string) => Promise<T | null>;
   needs: readonly ShareKind[];
@@ -65,7 +64,7 @@ interface KindOps<T> {
 /** Whether a link is long enough that some apps cut it. */
 const isLong = (link: string) => link.length > SHARE_LONG_LINK_CHARS;
 
-/** Whether this device offers its share sheet and is a phone or a tablet (a touch screen): then Copy link opens it. */
+/** Whether this device offers its share sheet and is a phone or a tablet (a touch screen): then Share opens it. */
 const takesShareSheet = () =>
   typeof navigator.share === "function" &&
   typeof matchMedia === "function" &&
@@ -73,7 +72,7 @@ const takesShareSheet = () =>
 
 /**
  * Sharing across the Speaker, Stack and Space pages. `copyLink` copies a link to the open design of the page showing
- * (`kind`), with the note typed in the panel. A link in the address (at load, or after it changes) opens as a shared
+ * (`kind`). A link in the address (at load, or after it changes) opens as a shared
  * view on its page (the page's own design is not written over), and then leaves the address on the page's own hash; a
  * link that does not open changes nothing and says why. `sharedNotice` is what a page's results show while one is open.
  */
@@ -83,8 +82,6 @@ export function useShare(
   onOpened: (kind: ShareKind) => void,
 ) {
   const [notice, setNotice] = useState<ShareNotice | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [note, setNote] = useState("");
   /** what saving a copy says, and for which kind */
   const [saved, setSaved] = useState<{ kind: ShareKind; text: string } | null>(null);
   // "Link copied!" clears after a few seconds; a problem or a warning stays until the next share or link
@@ -93,8 +90,6 @@ export function useShare(
     const timer = window.setTimeout(() => setNotice(null), SHARE_COPIED_SHOW_MS);
     return () => window.clearTimeout(timer);
   }, [notice]);
-  // the panel belongs to the page it opened on
-  useEffect(() => setPanelOpen(false), [kind]);
   /** the pages and the call that follows a link, kept current: the address effect below runs once */
   const latestPages = useRef(pages);
   const latestOpened = useRef(onOpened);
@@ -110,9 +105,9 @@ export function useShare(
   /** shows an opened design as its page's shared view */
   const show = (opened: OpenedShare) => {
     const p = latestPages.current;
-    if (opened.kind === SHARE_KIND.speaker) p.speaker.shared.open(opened.design, opened.note);
-    else if (opened.kind === SHARE_KIND.stack) p.stack.shared.open(opened.design, opened.note);
-    else p.space.shared.open(opened.design, opened.note);
+    if (opened.kind === SHARE_KIND.speaker) p.speaker.shared.open(opened.design);
+    else if (opened.kind === SHARE_KIND.stack) p.stack.shared.open(opened.design);
+    else p.space.shared.open(opened.design);
   };
 
   useEffect(() => {
@@ -134,8 +129,6 @@ export function useShare(
           if (opened) {
             show(opened);
             page = opened.kind;
-            setNote("");
-            setPanelOpen(false);
             setSaved(null);
             latestOpened.current(opened.kind);
           } else error = SHARE_ERROR.wrongFormat;
@@ -199,7 +192,7 @@ export function useShare(
   /** the link to a kind's open design, as a promise: the clipboard takes it so the copy still counts as the click's */
   const linkOf = <T>(forKind: ShareKind, o: KindOps<T>) => {
     const { origin, pathname, search } = window.location;
-    const link = encodeLink(o.envelope(o.page.design, note.slice(0, SHARE_MAX_NOTE_CHARS))).then(
+    const link = encodeLink(o.envelope(o.page.design)).then(
       (payload) => origin + pathname + search + linkFragment(forKind, payload),
     );
     // read by the caller; this keeps a failed copy from leaving the promise unhandled
@@ -224,7 +217,6 @@ export function useShare(
         const blob = link.then((text) => new Blob([text], { type: "text/plain" }));
         await navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]);
       }
-      setPanelOpen(false);
       setNotice(
         isLong(await link)
           ? { text: SHARE_TEXT.long, problem: true }
@@ -240,11 +232,10 @@ export function useShare(
   /** the shared view's notice for a kind: its words and actions; null while the page shows its own design */
   const noticeOf = <T>(forKind: ShareKind, o: KindOps<T>): SharedNoticeProps | null => {
     const { shared, design } = o.page;
-    if (shared.note === null) return null;
+    if (!shared.active) return null;
     return {
       item: PROJECT_NAMES[forKind],
       name: o.name(design),
-      note: shared.note,
       canSave: o.needs.every((k) => Boolean(pages[k].store.db)),
       status: saved?.kind === forKind ? saved.text : "",
       onSave: () => {
@@ -261,7 +252,7 @@ export function useShare(
         });
       },
       onShare: () => {
-        setPanelOpen(true);
+        void copyOf(forKind, o);
         window.scrollTo(0, 0);
       },
       changed: shared.changed,
@@ -274,10 +265,6 @@ export function useShare(
 
   return {
     notice,
-    panelOpen,
-    togglePanel: () => setPanelOpen((open) => !open),
-    note,
-    setNote,
     /** copies a link to the open design of the page showing */
     copyLink: () => {
       if (kind === SHARE_KIND.speaker) void copyOf(kind, ops.speaker);

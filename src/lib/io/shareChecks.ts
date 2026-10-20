@@ -8,7 +8,6 @@ import {
   SHARE_MAX_DEPTH,
   SHARE_MAX_KEYS,
   SHARE_MAX_LIST_ITEMS,
-  SHARE_MAX_NOTE_CHARS,
   SHARE_MAX_PARTS,
   SHARE_MAX_PLACEMENTS,
   SHARE_MAX_SPEAKERS,
@@ -268,12 +267,11 @@ const hasUniqueIds = (list: unknown) =>
   new Set(list.map((item: unknown) => (isRecord(item) ? item.id : null))).size === list.length;
 
 /**
- * Whether a parsed value is an envelope of this version: a note that fits, and three lists that hold what its kind says
+ * Whether a parsed value is an envelope of this version: three lists that hold what its kind says
  * (one item of the kind, and the items it names), each item checked inside.
  */
 function isEnvelope(json: unknown): json is ShareEnvelope {
   if (!isRecord(json)) return false;
-  if (json.note !== undefined && !isText(json.note, SHARE_MAX_NOTE_CHARS)) return false;
   const { speakers, stacks, spaces } = json;
   if (!hasUniqueIds(speakers) || !hasUniqueIds(stacks) || !hasUniqueIds(spaces)) return false;
   if (!isListOf(speakers, SHARE_MAX_SPEAKERS, isSpeaker)) return false;

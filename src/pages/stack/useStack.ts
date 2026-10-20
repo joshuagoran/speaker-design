@@ -84,8 +84,8 @@ export function useStack() {
   /** the shared view: a link's stack shows in place of the page's own, and the page starts over with each switch */
   const sharedView: SharedMode<StackDesign> = {
     ...sharedDraft,
-    open: (next, note) => {
-      sharedDraft.open(next, note);
+    open: (next) => {
+      sharedDraft.open(next);
       restart();
     },
     close: () => {
