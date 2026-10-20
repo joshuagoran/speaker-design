@@ -11,6 +11,7 @@ import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 import { PAGE_DRAFT_KEYS, DRAFT_WRITE_MS } from "../src/constants/pageDrafts.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { STACK_START_NAMES } from "../src/constants/stackPresets.ts";
+import { DB_KEY, installDb } from "./stand-in-db.mjs";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const url = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -18,58 +19,6 @@ const browser = await chromium.launch({
   executablePath: process.env.PW_CHROMIUM || undefined,
   args: ["--use-gl=swiftshader"],
 });
-
-/** The storage key the stand-in database keeps its documents under. */
-const DB_KEY = "saveRowCheck.db";
-
-/**
- * The artifact host's stand-in, run in the page before its own code: `window.claude.use("db")` resolves to a database
- * with the calls the config store makes, its documents kept in local storage so a reload keeps them.
- */
-function installDb(key) {
-  const read = () => JSON.parse(localStorage.getItem(key) || "{}");
-  const listeners = new Set();
-  const changed = () => listeners.forEach((l) => l());
-  let made = 0;
-  const collection = (name) => {
-    const docsOf = () =>
-      Object.entries(read()[name] || {})
-        .map(([id, data]) => ({ id, data: () => data }))
-        .sort((a, b) => b.data().savedAt - a.data().savedAt);
-    const query = {
-      orderBy: () => query,
-      limit: () => query,
-      onSnapshot: (next) => {
-        const l = () => next({ docs: docsOf() });
-        listeners.add(l);
-        l();
-        return () => listeners.delete(l);
-      },
-    };
-    const write = (edit) => {
-      const all = read();
-      all[name] = all[name] || {};
-      edit(all[name]);
-      localStorage.setItem(key, JSON.stringify(all));
-      changed();
-      return Promise.resolve();
-    };
-    return {
-      ...query,
-      doc: (id = `auto${Date.now()}${made++}`) => ({
-        get: () => Promise.resolve({ exists: id in (read()[name] || {}) }),
-        // a write takes a moment, as the real stores' do, so a double click lands while one runs
-        set: (data) =>
-          new Promise((done) => setTimeout(done, 150)).then(() =>
-            write((docs) => (docs[id] = data)),
-          ),
-        delete: () => write((docs) => delete docs[id]),
-      }),
-    };
-  };
-  const db = { collection };
-  window.claude = { use: async (capability) => (capability === "db" ? db : null) };
-}
 
 /** Each page: its hash, its draft's key, and two starts "New from…" lists. */
 const PAGES = [
