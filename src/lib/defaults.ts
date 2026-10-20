@@ -468,11 +468,11 @@ export const GENERIC_SUB = {
   subsonic: { hz: 33, type: "BW24" },
   single: {
     count: 1,
-    dims: { w: 22, h: 27, d: 24 },
+    dims: { w: 22, h: 27, d: 23 },
     slot: { h: 4.5, len: 14, fins: 2 },
     ampW: 1600,
   },
-  dual: { count: 2, dims: { w: 22, h: 48, d: 26 }, slot: { h: 8, len: 13, fins: 2 }, ampW: 2400 },
+  dual: { count: 2, dims: { w: 22, h: 48, d: 24.5 }, slot: { h: 8, len: 13, fins: 2 }, ampW: 2400 },
 } satisfies {
   sub: SubDriver;
   subsonic: BandFilter;
@@ -500,7 +500,7 @@ export const GENERIC_TOPS = {
   fifteen: {
     mid: byIdOrThrow(MID_OPTIONS, "by15g40", CATALOG_TABLE_NAMES.mids),
     horn: byIdOrThrow(HORN_OPTIONS, "hd1403", CATALOG_TABLE_NAMES.horns),
-    box: { dims: { w: 18, h: 31, d: 14.5 }, slot: { h: 2.5, len: 9, fins: 1 } },
+    box: { dims: { w: 18, h: 31, d: 13.5 }, slot: { h: 2.5, len: 9, fins: 1 } },
     crossoverHz: 1200,
     highpass: { hz: 42, type: "BW24" },
     ampW: 1000,

@@ -44,7 +44,7 @@ import {
 import { takesHornMountAt } from "../../lib/build/hornMount";
 import { PA_PANEL_TARGET_HZ } from "../../lib/build/boxBracing";
 import { defaultBraceStyleNear } from "../../lib/build/bracing";
-import { HIFI_COAXES, HORN_OPTIONS } from "../../lib/data";
+import { HIFI_COAXES, HORN_OPTIONS, NEAR_BLACK_PAINT } from "../../lib/data";
 import { driverLayout, tweeterOnGuide, waveguideFor } from "../../lib/speaker/twoWay";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import {
@@ -510,7 +510,7 @@ function th18(identity: SpecIdentity): SpeakerSpec {
 }
 
 /**
- * A generic PA box's plywood shell: the PA's frame, panels and inset, its handles and input dish (`hardware`), a flat
+ * A generic PA box's plywood shell: a flush box of the PA's panels, its handles and input dish (`hardware`), a flat
  * top.
  */
 const genericCabinet = (
@@ -519,18 +519,19 @@ const genericCabinet = (
 ): SpeakerCabinet => ({
   chambers,
   panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
-  construction: CABINET_CONSTRUCTION.frameInset,
-  top: CABINET_TOP.flat,
-  insetIn: DEFAULT_PA.inset,
+  ...FLUSH_BOX,
   roundoverIn: 0,
   tiltDeg: 0,
   ...hardware,
 });
 
-/** A generic box's look: the PA's finish and baffle paint. */
-const PA_LOOK: SpeakerSpec["look"] = {
-  cabFinish: DEFAULT_PA.cabFinish,
-  baffleColor: DEFAULT_PA.baffleColor,
+/** A generic box's bracing: a flush box's at the PA's walls. */
+const GENERIC_BRACING = flushBracing(DEFAULT_PA.wall);
+
+/** A generic box's look: black, the cabinet and the baffle painted alike. */
+const GENERIC_LOOK: SpeakerSpec["look"] = {
+  cabFinish: NEAR_BLACK_PAINT,
+  baffleColor: NEAR_BLACK_PAINT,
 };
 
 /** A generic sub's handles and input dish: the PA sub's. */
@@ -552,7 +553,7 @@ const genericVentedChamber = (box: GenericVentedBox, drivers: SpeakerDriver[]): 
   },
   load: DIRECT_LOAD,
   drivers,
-  bracing: PA_V2_BRACING,
+  bracing: GENERIC_BRACING,
 });
 
 /** One generic sub's driver entry, on the low band, its group's center `yIn` up from the chamber's bottom. */
@@ -575,7 +576,7 @@ const subBands = (
 ): Pick<SpeakerSpec, "bands" | "input" | "look"> => ({
   bands: [paV2Band(SPEAKER_BAND.low, { highpass: subsonic, lowpass: null }, ampW)],
   input: { highpass: null, lowpass: lrFilter(DEFAULT_PA.xoLo, DEFAULT_PA.xoLoOrder) },
-  look: PA_LOOK,
+  look: GENERIC_LOOK,
 });
 
 /** A generic vented sub (`GENERIC_SUB`): one or two 18″ in one chamber, stacked up the baffle above the slot. */
@@ -651,7 +652,7 @@ function genericTop(top: GenericTop, identity: SpecIdentity): SpeakerSpec {
     cabinet: genericCabinet([genericVentedChamber(top.box, [mid, hf])], top.hardware),
     bands: topBands(top),
     input: NO_FILTERS,
-    look: PA_LOOK,
+    look: GENERIC_LOOK,
   };
 }
 
@@ -669,7 +670,7 @@ function genericHornSub(identity: SpecIdentity): SpeakerSpec {
     vent: DEFAULT_VENTS.sealed,
     load: DIRECT_LOAD,
     drivers: [genericSubDriver(bin.sub.id, bin.dims.h / 2)],
-    bracing: PA_V2_BRACING,
+    bracing: GENERIC_BRACING,
   };
   const cabinet = genericCabinet([chamber], SUB_HARDWARE);
   const [placed] = speakerLayout(cabinet).chambers;

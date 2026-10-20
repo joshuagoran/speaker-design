@@ -50,11 +50,11 @@ interface Targets {
 
 /**
  * The targets, from the published specs such boxes share. Measured when the templates were set (Oct 2026):
- * - 18″ sub: 148 L, −3/−6/−10 dB at 37.5/35.0/32.4 Hz, music 127.4 dB (133.4 peak);
- * - dual 18″ sub: 301 L, −3 dB at 34.0 Hz, music 131.5 dB (137.5 peak);
- * - 12″ top: 63 L, −6 dB at 49.3 Hz to 20 kHz, music 124.8 dB (130.8 peak), 80° × 50°;
- * - 15″ top: 84 L, −6 dB at 45.1 Hz to 20 kHz, music 125.8 dB (131.8 peak), 80° × 60°;
- * - 18″ horn sub: 382 L outside, −6 dB from 45.5 to 104 Hz, music 131.5 dB (137.5 peak).
+ * - 18″ sub: 147 L, −3/−6/−10 dB at 37.5/35.0/32.4 Hz, music 127.4 dB (133.4 peak);
+ * - dual 18″ sub: 295 L, −3 dB at 34.1 Hz, music 131.5 dB (137.5 peak);
+ * - 12″ top: 68 L, −6 dB at 55.0 Hz to 20 kHz, music 124.8 dB (130.8 peak), 80° × 50°;
+ * - 15″ top: 83 L, −6 dB at 45.2 Hz to 20 kHz, music 125.8 dB (131.8 peak), 80° × 60°;
+ * - 18″ horn sub: 382 L outside, −6 dB from 44.3 to 104 Hz, music 131.5 dB (137.5 peak).
  */
 const TARGETS = {
   [SPEAKER_TEMPLATE.genericSub18]: {

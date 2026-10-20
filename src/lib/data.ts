@@ -44,7 +44,7 @@ import { byId } from "./tables";
 // Tables the app reads as written.
 export { CABINETS } from "../data/catalog/cabinets";
 export { N314T } from "../data/catalog/compression-drivers";
-export { CABINET_FINISHES, PAINT_SWATCHES } from "../data/catalog/finishes";
+export { CABINET_FINISHES, NEAR_BLACK_PAINT, PAINT_SWATCHES } from "../data/catalog/finishes";
 export { FORMATS } from "../data/catalog/formats";
 export { A460G2_14, ST260 } from "../data/catalog/horns";
 export { B15 } from "../data/catalog/mid-boxes";
