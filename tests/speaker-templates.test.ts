@@ -91,6 +91,25 @@ const EXPECTED: Record<SpeakerTemplate, { chambers: DriverKind[][]; bands: strin
   paV2SubBinTwo: { chambers: [[DRIVER_KIND.sub, DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
   paV2MidBox: { chambers: [[DRIVER_KIND.mid, DRIVER_KIND.mid]], bands: [SPEAKER_BAND.mid] },
   th18: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
+  genericSub18: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
+  genericDualSub18: { chambers: [[DRIVER_KIND.sub, DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
+  genericTop12: {
+    chambers: [[DRIVER_KIND.mid, DRIVER_KIND.compression]],
+    bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
+  },
+  genericTop15: {
+    chambers: [[DRIVER_KIND.mid, DRIVER_KIND.compression]],
+    bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
+  },
+  genericWedge12: {
+    chambers: [[DRIVER_KIND.mid, DRIVER_KIND.compression]],
+    bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
+  },
+  genericHornSub18: { chambers: [[DRIVER_KIND.sub]], bands: [SPEAKER_BAND.low] },
+  genericHornTop12: {
+    chambers: [[DRIVER_KIND.mid], [DRIVER_KIND.compression]],
+    bands: [SPEAKER_BAND.low, SPEAKER_BAND.high],
+  },
 };
 
 /** The spec as a save stores it and the library opens it again: JSON, undefined fields dropped. */

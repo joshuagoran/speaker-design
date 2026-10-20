@@ -19,6 +19,13 @@ export const SPEAKER_TEMPLATE = {
   paV2SubBinTwo: "paV2SubBinTwo",
   paV2MidBox: "paV2MidBox",
   th18: "th18",
+  genericSub18: "genericSub18",
+  genericDualSub18: "genericDualSub18",
+  genericTop12: "genericTop12",
+  genericTop15: "genericTop15",
+  genericWedge12: "genericWedge12",
+  genericHornSub18: "genericHornSub18",
+  genericHornTop12: "genericHornTop12",
 } as const;
 export type SpeakerTemplate = (typeof SPEAKER_TEMPLATE)[keyof typeof SPEAKER_TEMPLATE];
 
@@ -37,6 +44,13 @@ export const SPEAKER_START_NAMES = {
   paV2SubBinTwo: "PA v2 sub bin, two drivers",
   paV2MidBox: "PA v2 mid box",
   th18: "TH18 tapped horn (Xoc1)",
+  genericSub18: 'Generic 18" Sub',
+  genericDualSub18: 'Generic Dual 18" Sub',
+  genericTop12: 'Generic 12" Top',
+  genericTop15: 'Generic 15" Top',
+  genericWedge12: 'Generic 12" Wedge',
+  genericHornSub18: 'Generic 18" Horn Sub',
+  genericHornTop12: 'Generic 12" Horn Top',
 } as const satisfies Record<SpeakerTemplate, string>;
 
 /** The name a new design takes, by start (a saved speaker keeps its own). */
@@ -54,6 +68,13 @@ export const SPEAKER_START_SPEAKER_NAMES = {
   paV2SubBinTwo: "Sub bin",
   paV2MidBox: "Mid box",
   th18: "TH18",
+  genericSub18: SPEAKER_START_NAMES.genericSub18,
+  genericDualSub18: SPEAKER_START_NAMES.genericDualSub18,
+  genericTop12: SPEAKER_START_NAMES.genericTop12,
+  genericTop15: SPEAKER_START_NAMES.genericTop15,
+  genericWedge12: SPEAKER_START_NAMES.genericWedge12,
+  genericHornSub18: SPEAKER_START_NAMES.genericHornSub18,
+  genericHornTop12: SPEAKER_START_NAMES.genericHornTop12,
 } as const satisfies Record<SpeakerTemplate, string>;
 
 /** The groups "New from…" lists the starts under: the templates. */

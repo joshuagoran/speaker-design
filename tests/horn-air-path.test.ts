@@ -151,9 +151,12 @@ describe("the horn's air path in the 3D view", () => {
     // the cutaway's drivers of a folded path are not yet kept clear of its other legs (the bay is as tall as the cones)
     for (const cutaway of [false, true])
       test(`${name}${cutaway ? " (cutaway)" : ""}: no solid part in the air, over the mouth or over a slot`, () => {
-        const layout = speakerLayout(spec.cabinet);
-        expect(layout.chambers.length).toBe(1);
-        const [placed] = layout.chambers;
+        // the horn's chamber: a speaker's other chambers (an HF section) sit apart from its air
+        const placed = speakerLayout(spec.cabinet).chambers.find(
+          (c) => c.chamber.load.kind === CHAMBER_LOAD.horn,
+        );
+        expect(placed, "the horn has a chamber").toBeTruthy();
+        if (!placed) return;
         const flare = hornFlare(spec.cabinet, placed);
         expect(flare, "the horn has a path").toBeTruthy();
         if (!flare) return;

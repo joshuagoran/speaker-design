@@ -16,6 +16,7 @@ import {
   N314T,
   PD1850,
   SB17NRX,
+  SUB_OPTIONS,
   SB26STCN,
   ST260,
 } from "./data";
@@ -50,6 +51,8 @@ import type {
   SpeakerSubDriver,
   SubDriver,
   FoldBoard,
+  GenericTop,
+  GenericTopBands,
   HornDrive,
   HornFold,
   HornGoals,
@@ -454,4 +457,123 @@ export const PA_V2_MID_BOX = {
   mid: MidDriver;
   hfHorn: Horn;
   [figure: string]: number | MidDriver | Horn;
+};
+
+/**
+ * The generic vented subs: an approximation of the common commercial 18″ subs (QSC, EV, JBL, Mackie, RCF), not one
+ * product. One or two B&C 18SW115 in one vented chamber with a letterbox slot, on the PA's subsonic, below the PA's
+ * crossover to the tops.
+ */
+export const GENERIC_SUB = {
+  sub: byIdOrThrow(SUB_OPTIONS, "bc18sw", CATALOG_TABLE_NAMES.subs),
+  subsonic: { hz: 33, type: "BW24" },
+  single: {
+    count: 1,
+    dims: { w: 22, h: 27, d: 24 },
+    slot: { h: 4.5, len: 14, fins: 2 },
+    ampW: 1600,
+  },
+  dual: { count: 2, dims: { w: 22, h: 48, d: 26 }, slot: { h: 8, len: 13, fins: 2 }, ampW: 2400 },
+} satisfies {
+  sub: SubDriver;
+  subsonic: BandFilter;
+  [box: string]: unknown;
+};
+
+/**
+ * The generic tops: an approximation of the common commercial 12″ and 15″ powered tops and floor wedges (QSC, EV, JBL,
+ * Mackie, RCF), not one product. A cone and the Eminence N314T (1.4″) on a cast constant-directivity horn in the
+ * baffle, in a vented box with a letterbox slot.
+ */
+export const GENERIC_TOPS = {
+  cd: N314T,
+  twelve: {
+    mid: byIdOrThrow(MID_OPTIONS, "by12lex1300nd", CATALOG_TABLE_NAMES.mids),
+    horn: byIdOrThrow(HORN_OPTIONS, "td385", CATALOG_TABLE_NAMES.horns),
+    box: { dims: { w: 15, h: 27, d: 16 }, slot: { h: 2.5, len: 12.5, fins: 1 } },
+    crossoverHz: 1200,
+    highpass: { hz: 48, type: "BW24" },
+    ampW: 800,
+    hfAmpW: 100,
+    hfLevelDb: -15,
+    hardware: { handles: DEFAULT_PA.hardware.mid, inputDish: true },
+    tiltDeg: 0,
+    sideBySide: false,
+  },
+  fifteen: {
+    mid: byIdOrThrow(MID_OPTIONS, "by15g40", CATALOG_TABLE_NAMES.mids),
+    horn: byIdOrThrow(HORN_OPTIONS, "hd1403", CATALOG_TABLE_NAMES.horns),
+    box: { dims: { w: 18, h: 31, d: 14.5 }, slot: { h: 2.5, len: 9, fins: 1 } },
+    crossoverHz: 1200,
+    highpass: { hz: 42, type: "BW24" },
+    ampW: 1000,
+    hfAmpW: 100,
+    hfLevelDb: -13,
+    hardware: { handles: DEFAULT_PA.hardware.mid, inputDish: true },
+    tiltDeg: 0,
+    sideBySide: false,
+  },
+  wedge: {
+    mid: byIdOrThrow(MID_OPTIONS, "by12lex1300nd", CATALOG_TABLE_NAMES.mids),
+    horn: byIdOrThrow(HORN_OPTIONS, "td385", CATALOG_TABLE_NAMES.horns),
+    box: { dims: { w: 26, h: 17, d: 12 }, slot: { h: 1, len: 9.5, fins: 1 } },
+    crossoverHz: 1200,
+    highpass: { hz: 55, type: "BW24" },
+    ampW: 800,
+    hfAmpW: 100,
+    hfLevelDb: -14.5,
+    // the cone and the horn run to the side walls: no room for the side handles
+    hardware: { handles: null, inputDish: true },
+    tiltDeg: 40,
+    sideBySide: true,
+  },
+} satisfies { cd: CompressionDriver; [top: string]: CompressionDriver | GenericTop };
+
+/**
+ * The generic 18″ horn sub: an approximation of the common commercial folded front-loaded 18″ bins, not one product.
+ * One B&C 18SW115 in a sealed rear chamber, its horn laid out from its goals (Start from goals: the horn engine's
+ * folded front-loaded design).
+ */
+export const GENERIC_HORN_SUB = {
+  sub: byIdOrThrow(SUB_OPTIONS, "bc18sw", CATALOG_TABLE_NAMES.subs),
+  dims: { w: 24, h: 36, d: 27 },
+  goals: { lowHz: 45, highHz: 130, targetDb: 131 },
+  subsonic: { hz: 35, type: "BW24" },
+  ampW: 1200,
+} satisfies {
+  sub: SubDriver;
+  dims: SpeakerChamber["dims"];
+  goals: HornGoals;
+  subsonic: BandFilter;
+  ampW: number;
+};
+
+/**
+ * The generic 12″ horn top: an approximation of the common commercial horn-loaded 12″ tops, not one product. A 12″ on
+ * a straight front-loaded mid horn (sealed rear chamber) and, in its own section above, the tops' compression driver
+ * (`GENERIC_TOPS.cd`) on a 60° × 40° horn.
+ */
+export const GENERIC_HORN_TOP = {
+  mid: byIdOrThrow(MID_OPTIONS, "bc12ndl76", CATALOG_TABLE_NAMES.mids),
+  horn: byIdOrThrow(HORN_OPTIONS, "xr1464c", CATALOG_TABLE_NAMES.horns),
+  /** the mid horn's box, in: its width and depth, and its height (the HF section's above it) */
+  dims: { w: 22, h: 20, d: 29 },
+  hfHeightIn: 13,
+  /** the mid horn: the compression ratio, its length, cm, and the rear chamber's net air, L */
+  compression: 2,
+  flareCm: 50,
+  rearLiters: 15,
+  highpass: { hz: 120, type: "LR24" },
+  crossoverHz: 1200,
+  ampW: 200,
+  hfAmpW: 150,
+  hfLevelDb: -6,
+  // the mid horn's driver fills the lowest chamber's back: no place for the input dish
+  hardware: { handles: DEFAULT_PA.hardware.mid, inputDish: false },
+} satisfies GenericTopBands & {
+  mid: MidDriver;
+  horn: Horn;
+  dims: SpeakerChamber["dims"];
+  hardware: GenericTop["hardware"];
+  [figure: string]: unknown;
 };
