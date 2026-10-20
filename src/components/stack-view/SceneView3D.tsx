@@ -13,21 +13,26 @@ interface Props {
   fit?: SceneFit;
   /** where the camera starts: its turn and tilt, radians, and zoom (default: the view's own; the render tool sets it) */
   start?: Partial<SceneStart>;
-  /** how the camera moves (default: turn, tilt and zoom as every design view does, no pan) */
+  /** how far the camera zooms and tilts (default: every design view's) */
   controls?: Partial<SceneControls>;
   /** the stage's floor and grid drawn under the scene (default); false: the scene draws its own floor */
   stage?: boolean;
 }
 
-/** How the camera moves: whether a drag can pan it, its zoom range, and its highest tilt, radians. */
+/**
+ * How far the camera moves: its zoom range and its highest tilt, radians. Every view moves as three's OrbitControls do
+ * by default: a left drag or one finger turns it; a right drag, a left drag with Shift, Ctrl or ⌘ held, or two fingers
+ * pan it; a middle drag, the wheel or a pinch zooms it.
+ */
 export interface SceneControls {
-  /** a right drag, a drag with Shift, Ctrl or ⌘ held, or a two-finger drag moves the view sideways and up */
-  pan: boolean;
   zoom: [min: number, max: number];
   tiltMax: number;
 }
 /** Every design view's camera moves. */
-const CONTROLS: SceneControls = { pan: false, zoom: [0.45, 2.2], tiltMax: 1.2 };
+const CONTROLS: SceneControls = { zoom: [0.45, 2.2], tiltMax: 1.2 };
+/** The mouse buttons, as a pointer event numbers them. */
+const MIDDLE_BUTTON = 1,
+  RIGHT_BUTTON = 2;
 
 /** The camera's turn round the scene and tilt over it, radians, and its zoom (distance over the fit's). */
 export interface SceneStart {
@@ -56,8 +61,9 @@ export function SceneView3D({
     rotY: number;
     rotX: number;
     drag: boolean;
-    /** the drag pans the view rather than turning it */
+    /** the drag pans the view, or zooms it, rather than turning it */
     panning: boolean;
+    zooming: boolean;
     lx: number;
     ly: number;
     zoom: number;
@@ -68,6 +74,7 @@ export function SceneView3D({
     ...start,
     drag: false,
     panning: false,
+    zooming: false,
     lx: 0,
     ly: 0,
     pan: new THREE.Vector3(),
@@ -166,7 +173,11 @@ export function SceneView3D({
         mid0 = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       }
       st.drag = true;
-      st.panning = moves.current.pan && (e.button === 2 || e.shiftKey || e.ctrlKey || e.metaKey);
+      st.zooming = e.button === MIDDLE_BUTTON;
+      st.panning =
+        !st.zooming && (e.button === RIGHT_BUTTON || e.shiftKey || e.ctrlKey || e.metaKey);
+      // a middle drag zooms: no page autoscroll
+      if (e.button === MIDDLE_BUTTON) e.preventDefault();
       st.lx = e.clientX;
       st.ly = e.clientY;
     };
@@ -178,14 +189,16 @@ export function SceneView3D({
         const [a, b] = [...pts.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
         if (pinch0 > 0) zoomTo(zoom0 * (pinch0 / d));
-        // the fingers' middle moving pans the view, where it can pan
+        // the fingers' middle moving pans the view
         const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-        if (moves.current.pan) panBy(mid.x - mid0.x, mid.y - mid0.y);
+        panBy(mid.x - mid0.x, mid.y - mid0.y);
         mid0 = mid;
         return; // pinching, not rotating
       }
       if (!st.drag) return;
       if (st.panning) panBy(e.clientX - st.lx, e.clientY - st.ly);
+      // dragging down zooms out, up zooms in
+      else if (st.zooming) zoomTo(st.zoom * (1 + (e.clientY - st.ly) * 0.005));
       else {
         // the model turns the way the pointer moves: dragging right turns its front to the right (the camera goes left)
         st.rotY -= (e.clientX - st.lx) * 0.01;
@@ -197,10 +210,8 @@ export function SceneView3D({
       st.lx = e.clientX;
       st.ly = e.clientY;
     };
-    // a right drag pans, where the view can pan: no menu
-    const onMenu = (e: MouseEvent) => {
-      if (moves.current.pan) e.preventDefault();
-    };
+    // a right drag pans: no menu
+    const onMenu = (e: MouseEvent) => e.preventDefault();
 
     const onUp = (e: PointerEvent) => {
       pts.delete(e.pointerId);

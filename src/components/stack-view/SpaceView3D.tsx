@@ -2,8 +2,8 @@ import { useThemeName } from "../../hooks/useTheme";
 import { buildSpaceScene, spaceSceneKey, type SpaceSceneProps } from "./buildSpaceScene";
 import { SceneView3D, type SceneControls, type SceneStart } from "./SceneView3D";
 
-/** The Space's camera: it pans, zooms in close to a box and out past the room, and tilts to look down on it. */
-const SPACE_CONTROLS: SceneControls = { pan: true, zoom: [0.15, 2], tiltMax: 1.45 };
+/** The Space's camera: it zooms in close to a box and out past the room, and tilts to look down on it. */
+const SPACE_CONTROLS: SceneControls = { zoom: [0.15, 2], tiltMax: 1.45 };
 /** Where it starts: from behind the audience, looking over the room toward the front wall. */
 const SPACE_START: Partial<SceneStart> = { rotY: 0.5, rotX: 0.6 };
 
