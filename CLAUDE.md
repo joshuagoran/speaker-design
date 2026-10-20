@@ -61,6 +61,8 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
   rewrite them with `vp run speaker-optimizer-snapshot` or `vp run stack-optimizer-snapshot`.
 - Dead code: `vp run dead-exports` (`tools/dead-exports.mjs`) lists the files and declarations in `src/` that no live
   code uses (tests don't count). Delete what it lists.
+- When a change makes code obsolete, delete it in the same PR. Run `vp run dead-exports` before each push; it must list
+  nothing.
 - Docs (`docs/`) use ASD-STE100 style: short sentences (20 words max), one idea each, active voice, plain verbs, no filler. Prefer tables and lists to prose.
 - Never push straight to `main` (it deploys via GitHub Actions). Every change goes through a PR; don't ask.
 - Feature branches: merge `main` into a feature branch with a merge commit pushed straight to that branch, with no
