@@ -4,14 +4,8 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { ohmsOf } from "../src/lib/power";
 import { configs } from "./pa-configs";
-import {
-  PA_FLOOR,
-  bandCurve,
-  levelAt,
-  paDesign,
-  paSubGeometry,
-  speakerAndFeed,
-} from "./speaker-cases";
+import { PA_FLOOR, bandCurve, levelAt, paDesign, speakerAndFeed } from "./speaker-cases";
+import { paSubNetAir } from "./pa-build";
 import { speakerResponse, SPEAKER_RESPONSE_FREQUENCIES } from "../src/lib/speaker/speakerResponse";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
@@ -84,7 +78,8 @@ test("speaker model: a band filter's magnitude is the highpass gain and the Link
 
 /**
  * Tolerance for the PA sub's net air: worked out from the size (lib/speaker speakerBuild: the braces, vent walls,
- * cleats, and hardware recesses counted as the PA rules count them), it is the PA rules' to rounding.
+ * cleats, and hardware recesses counted as the PA rules count them), it is the PA sub box's sum (`paSubNetAir`) to
+ * rounding.
  */
 const PA_NET_PCT = 1e-9;
 
@@ -93,7 +88,7 @@ test("speaker model: the PA designs' subs keep the PA rules' net air", () => {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
     const read = layersFromPa(cfg, { id: "pa", name: c.name }, PA_FLOOR);
-    const { netL } = paSubGeometry(cfg);
+    const netL = paSubNetAir(cfg);
     const subSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.sub);
     const response = speakerResponse(subSide.spec, { feed: subSide.feed });
     const netPct = (100 * (response.chambers[0].netLiters - netL)) / netL;
@@ -248,7 +243,7 @@ test("speaker model: the PA top and tower sum their chambers' cones and the horn
     const tower = cfg.layout === "tower";
     const read = layersFromPa(cfg, { id: "pa", name: seed.name }, PA_FLOOR);
     const { spec, feed } = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
-    const { netL: subNetL } = paSubGeometry(cfg);
+    const subNetL = paSubNetAir(cfg);
     const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
     const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
     const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);

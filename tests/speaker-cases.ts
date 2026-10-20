@@ -1,6 +1,6 @@
 // The designs and readers the speaker model's tests share (tests/speaker-response.test.ts,
-// tests/speaker-limits.test.ts, and others): the Hi-fi and PA designs through the L1 adapters, the PA sub box's net air
-// by the PA rules, and curve comparisons on a log-frequency axis.
+// tests/speaker-limits.test.ts, and others): the Hi-fi and PA designs through the L1 adapters, and curve comparisons on
+// a log-frequency axis.
 import assert from "node:assert";
 import { midBoxOf, type PaConfig } from "./pa-configs";
 import type { speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -8,17 +8,9 @@ import { speakerIdentity } from "../src/lib/speaker/specParts";
 import type { PaFloor } from "../src/lib/speaker/paSpec";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import { needsWaveguide } from "../src/lib/speaker/twoWay";
-import { subGeometry } from "../src/lib/acoustics/boxModels";
-import { towerMidDims } from "../src/lib/speaker/tower";
 import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
 import { panelNominalNear } from "../src/lib/build/panel";
-import {
-  HIFI_COAXES,
-  HIFI_TWEETERS,
-  HIFI_WAVEGUIDES,
-  MID_OPTIONS,
-  SUB_OPTIONS,
-} from "../src/lib/data";
+import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
 import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
 import {
@@ -174,21 +166,3 @@ export const withNet = (
     chambers: spec.cabinet.chambers.map((c) => (c === chamber ? { ...c, netLiters } : c)),
   },
 });
-
-/** The PA sub box of a design by the PA rules: its vent and its net air. */
-export function paSubGeometry(cfg: PaDesign) {
-  const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
-  const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
-  assert.ok(sub && mid);
-  return subGeometry(sub, mid, {
-    subBox: cfg.cDim,
-    midDims: cfg.layout === "tower" ? towerMidDims(cfg.cDim) : cfg.mDim,
-    wall: cfg.wall,
-    inset: cfg.inset,
-    portStyle: cfg.portStyle,
-    cVent: cfg.cVent,
-    layout: cfg.layout,
-    braceStyle: cfg.braceStyle,
-    hardware: cfg.hardware,
-  });
-}

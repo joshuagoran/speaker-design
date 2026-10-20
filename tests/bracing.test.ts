@@ -19,18 +19,15 @@ import {
 } from "../src/lib/build/bracing";
 import { NO_SUPPORTS, paBoxPanels, PA_PANEL_TARGET_HZ } from "../src/lib/build/boxBracing";
 import {
-  cutParts,
   subVentLines,
-  midBoxBracing,
-  midKeepOut,
-  paInner,
   paPanelStock,
   subBoxBracing,
   subKeepOut,
-  braceWoodEstimate,
+  driverKeepOut,
   braceWoodIn3,
   braceParts,
 } from "../src/lib/acoustics/boxModels";
+import { MID_DEPTH_FALLBACK_IN } from "../src/data/catalog/driver-cutouts";
 import {
   RIB_HALF_LAP_NOTE,
   braceUnderNote,
@@ -46,8 +43,11 @@ import { formatHz } from "../src/lib/format";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent } from "./helpers";
-import { configs, midBoxOf } from "./pa-configs";
+import { configs } from "./pa-configs";
+import { paDesign } from "./speaker-cases";
+import { paDesignWith, paMidBuild, paSubBox, paSubBuild } from "./pa-build";
 import type {
+  BoxAxis,
   BoxBracing,
   BracePanelId,
   BoxKeepOut,
@@ -57,7 +57,13 @@ import type {
   PortStyle,
 } from "../src/types";
 
-const IN3_L = 16.387 / 1000;
+/** A PA box's inside spans on the bracing's axes, by hand: two walls off the width and height, and the inset, the 3/4″
+ * baffle and the back off the depth. */
+const insideOf = (box: Dims3, t: number, inset: number): Record<BoxAxis, number> => ({
+  x: box.w - 2 * t,
+  y: box.h - 2 * t,
+  z: box.d - inset - 0.75 - t,
+});
 const STYLES: BraceStyleId[] = ["window", "ribs", "both"];
 test("default style, by nominal size: ribs for ⅝″ / 15 mm and ½″ / 12 mm, window braces for ¾″ / 18 mm", () => {
   assert.strictEqual(defaultBraceStyle("5/8"), "ribs");
@@ -74,35 +80,42 @@ test("default style, by nominal size: ribs for ⅝″ / 15 mm and ½″ / 12 mm,
   assert.strictEqual(savedBraceStyle(undefined), undefined);
 });
 
-/** Each saved and synthetic PA design's two boxes, as the box models brace them: the inside, the keep-out and the
- * bracing. */
+/**
+ * Each saved and synthetic PA design's sub box, as its rule braces it, and its mid's chamber (its own box, or the tower's
+ * middle chamber) as the Speaker page builds it: the inside, the keep-out and the bracing.
+ */
 function paBoxes(style: BraceStyleId | undefined) {
   return configs.flatMap((c) => {
     const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
     const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
-    const mDim = midBoxOf(c);
     const wall = c.wall ?? 0.75,
-      inset = c.inset ?? 0.75,
-      layout = c.layout ?? "stack";
-    const out: { name: string; box: Dims3; wall: number; keep: BoxKeepOut; b: BoxBracing }[] = [
-      {
-        name: `${c.name} sub`,
-        box: c.cDim,
-        wall,
-        keep: subKeepOut(c.cDim, wall, inset, c.portStyle, c.cVent, sub),
-        b: subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style),
-      },
-    ];
-    const mb = midBoxBracing(mDim, wall, inset, mid, layout, style);
-    if (mb)
-      out.push({
-        name: `${c.name} mid`,
-        box: mDim,
-        wall,
-        keep: midKeepOut(mDim, wall, mid),
-        b: mb,
-      });
-    return out.map((o) => ({ ...o, inner: paInner(o.box, wall, inset) }));
+      inset = c.inset ?? 0.75;
+    const midBuild = paMidBuild({ ...paDesign(c), braceStyle: style }, "none").build;
+    const { iw, ih, inD } = midBuild.inside;
+    const out: { name: string; inner: Record<BoxAxis, number>; keep: BoxKeepOut; b: BoxBracing }[] =
+      [
+        {
+          name: `${c.name} sub`,
+          inner: insideOf(c.cDim, wall, inset),
+          keep: subKeepOut(c.cDim, wall, inset, c.portStyle, c.cVent, sub),
+          b: subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style),
+        },
+        {
+          name: `${c.name} mid`,
+          inner: { x: iw, y: ih, z: inD },
+          // its driver in the middle of its baffle
+          keep: {
+            driver: driverKeepOut(
+              { x: iw / 2, y: ih / 2 },
+              mid.size,
+              mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size],
+            ),
+            vent: [],
+          },
+          b: midBuild.bracing,
+        },
+      ];
+    return out;
   });
 }
 
@@ -181,14 +194,18 @@ test("a cutout never lifts a bay over the same bay without it; the driver's weig
 
 test("a box whose panels already clear the target takes nothing", () => {
   // a 13″ face: the 10″ mid's weight on its cutout still leaves the baffle over the target (at 15″ it falls under)
-  const b = midBoxBracing({ w: 13, h: 13, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined);
-  assert.ok(b);
+  const { bracing: b } = paMidBuild(
+    paDesignWith({
+      layout: "stack",
+      mid: MID_OPTIONS[0].id,
+      mDim: { w: 13, h: 13, d: 15 },
+      wall: 0.75,
+      inset: 0.75,
+    }),
+    "none",
+  ).build;
   assert.strictEqual(b.windowIn3 + b.ribIn3, 0);
   assert.ok(b.panels.every((p) => p.hz === p.bareHz && p.hz >= PA_PANEL_TARGET_HZ));
-  assert.strictEqual(
-    midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "tower", undefined),
-    null,
-  );
 });
 
 test("the vent's parts count as supports: a slot's shelf lifts the sides, its fins the bottom", () => {
@@ -239,9 +256,8 @@ test("the notes under the Bracing setting name the cabinet and each panel left u
     ),
   );
   // a box that needs nothing has no note
-  const d = DEFAULT_PA;
-  const mid = midBoxBracing(d.mDim, 0.75, d.inset, d.mid, "stack", "ribs");
-  assert.ok(mid);
+  const mid = paMidBuild(paDesignWith({ layout: "stack", wall: 0.75, braceStyle: "ribs" }), "none")
+    .build.bracing;
   assert.deepStrictEqual(braceNoteLines(PA_SETTINGS_TABS.mid, mid), []);
 });
 
@@ -284,20 +300,9 @@ test("the strict styles keep a ½″ sub to their own kind, and Both takes eithe
   }
   // the cutlist's rib rows say to half-lap a rib only where it crosses a window brace
   const lapped = (style: BraceStyleId) =>
-    cutParts({
-      sub: d.sub,
-      mid: d.mid,
-      subBox: d.cDim,
-      midDims: d.mDim,
-      wall: d.wall,
-      inset: d.inset,
-      joint: "butt",
-      portStyle: d.portStyle,
-      cVent: d.cVent,
-      layout: "stack",
-      braceStyle: style,
-    })
-      .parts.filter((p) => p.box === "sub" && p.part === "rib")
+    paSubBuild(paDesignWith({ layout: "stack", braceStyle: style }), "none")
+      .parts()
+      .filter((p) => p.part === "rib")
       .map((p) => (p.note ?? "").endsWith(RIB_HALF_LAP_NOTE));
   // Ribs has no window brace, and under Both the starting sub takes ribs alone, so no rib crosses one
   for (const style of ["ribs", "both"] as const) {
@@ -348,59 +353,6 @@ test("the starting sub under Ribs takes ribs: on the back at ¾″, and on the s
     assert.ok(on(thin, id) >= 1, `${id}: ribbed`);
     assert.ok(hz(thin, id) >= thin.targetHz, `${id}: over the target`);
   }
-});
-
-test("the optimizers' brace estimate stays near the rule over the PA designs' boxes, in the optimizers' ¾″ ply", () => {
-  // for each back joint, as the rule braces it
-  for (const back of [DEFAULT_BACK_JOINT, GLUED_BACK] as const)
-    for (const style of STYLES) {
-      const err: number[] = [];
-      for (const c of configs) {
-        const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
-        const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
-        const mDim = midBoxOf(c);
-        const inset = c.inset ?? 0.75;
-        const ruled = subBoxBracing(
-          c.cDim,
-          0.75,
-          inset,
-          c.portStyle,
-          c.cVent,
-          sub,
-          style,
-          undefined,
-          back,
-        );
-        const est = (box: Dims3) => braceWoodIn3(braceWoodEstimate(box, 0.75, inset, style, back));
-        err.push((est(c.cDim) - braceWoodIn3(ruled)) * IN3_L);
-        const mb = midBoxBracing(
-          mDim,
-          0.75,
-          inset,
-          mid,
-          c.layout ?? "stack",
-          style,
-          undefined,
-          back,
-        );
-        if (mb) err.push((est(mDim) - braceWoodIn3(mb)) * IN3_L);
-      }
-      // liters of wood: under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200); the
-      // strict styles fit worst, since a frame-only or rib-only plan stops where its kind can do no more. Window braces
-      // on a screwed back fit worst of all: its rails, screwed on, are jointed T beams that hold little of it (γ about
-      // 0.05), so light block's wide back takes five frames (8.4 L) to clear the target, two glued, which no linear
-      // estimate follows (1.25 L rms, 6.4 L at worst)
-      const bound =
-        back === DEFAULT_BACK_JOINT && style === "window"
-          ? { rms: 1.3, max: 6.5 }
-          : { rms: 0.8, max: 2.4 };
-      const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
-      assert.ok(rms < bound.rms, `${back} ${style}: ${rms.toFixed(3)} L rms`);
-      assert.ok(
-        Math.max(...err.map(Math.abs)) < bound.max,
-        `${back} ${style}: ${err.map((e) => e.toFixed(2)).join(" ")}`,
-      );
-    }
 });
 
 test("ribs: a first pick one way doesn't lock a panel out of the other way when that lifts it more", () => {
@@ -519,7 +471,7 @@ test("short ribs and a short slot: the basket no longer keeps ribs off the sides
   for (const p of b.panels) if (p.id !== "baffle") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
   // the slot's room ends two slot heights behind the duct, not at the back
   const slot = keep.vent[0];
-  assert.ok(slot.z[1] < paInner(box, 0.5, DEFAULT_PA.inset).z - 1);
+  assert.ok(slot.z[1] < insideOf(box, 0.5, DEFAULT_PA.inset).z - 1);
 });
 
 test("the back panel setting: a saved choice reads back, anything else is screwed; glued never takes more", () => {
@@ -626,7 +578,7 @@ test("a rib counts only where it runs most of the panel: none shorter than RIB_M
         sub,
         "ribs",
       );
-      const inner = paInner(box, t, DEFAULT_PA.inset);
+      const inner = insideOf(box, t, DEFAULT_PA.inset);
       for (const r of b.ribs) {
         const run = ribRunAxis(r.panel, r.across);
         // a rib butting into another in a corner gives up that one's depth there
@@ -663,17 +615,11 @@ test("a straight slot's fins run to the back, and the back's and top's ribs line
   assert.ok(top.length === 1 && top[0].across === "x", JSON.stringify(top));
   assert.ok(near(top[0].at, fins(tall)), JSON.stringify(top[0].at));
   // and the cutlist's fins run from the front to the back panel
-  const fin = cutParts({
-    sub,
-    mid: DEFAULT_PA.mid,
-    subBox: wide,
-    midDims: DEFAULT_PA.mDim,
-    wall: t,
-    inset: DEFAULT_PA.inset,
-    joint: "butt",
-    portStyle: "slots",
-    cVent,
-    layout: DEFAULT_PA.layout,
-  }).parts.find((p) => p.part === "ductFin");
+  const fin = paSubBuild(
+    paSubBox(wide, "slots", cVent, { sub: sub.id, wall: t, inset: DEFAULT_PA.inset }),
+    "none",
+  )
+    .parts()
+    .find((p) => p.part === "ductFin");
   assert.equal(fin?.b, wide.d - t);
 });

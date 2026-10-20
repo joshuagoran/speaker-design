@@ -1,6 +1,6 @@
 import { describe, test } from "vite-plus/test";
 import assert from "node:assert";
-import { PLYWOOD_SHEETS, cutParts } from "../src/lib/acoustics/boxModels";
+import { PLYWOOD_SHEETS } from "../src/lib/acoustics/boxModels";
 import {
   FROM_OFFCUT,
   cutRowKey,
@@ -15,29 +15,22 @@ import {
   waterfallStrips,
 } from "../src/lib/build/cutlist";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { CUT_BOX_NAMES } from "../src/constants/cutParts";
+import { cutBoxName } from "../src/constants/cutParts";
 import type { CutPart, CutlistSettings, PortStyle } from "../src/types";
 import { close } from "./helpers";
 import { checkSheet } from "./guillotine";
+import { paDesignWith, paStackParts } from "./pa-build";
 
 const EPS = 1e-6;
-/** One stack of the starting design's parts. */
+/** One stack of the starting design's parts, as the Stack page cuts them (no handles or input dish). */
 const parts = (
   joint: CutlistSettings["joint"] = "butt",
   portStyle: PortStyle = DEFAULT_PA.portStyle,
-) =>
-  cutParts({
-    sub: DEFAULT_PA.sub,
-    mid: DEFAULT_PA.mid,
-    subBox: DEFAULT_PA.cDim,
-    midDims: DEFAULT_PA.mDim,
-    wall: DEFAULT_PA.wall,
-    inset: DEFAULT_PA.inset,
-    joint,
-    portStyle,
-    cVent: DEFAULT_PA.cVent,
-    layout: DEFAULT_PA.layout,
-  }).parts;
+) => paStackParts(paDesignWith({ portStyle }), joint);
+/** The boxes of a cutlist with a shell of their own (a side panel each): the sub's, then the mid's. */
+const shellBoxes = (P: CutPart[]) => [
+  ...new Set(P.filter((p) => p.part === "side").map((p) => p.box)),
+];
 const settings = (o: Partial<CutlistSettings> = {}): CutlistSettings => ({
   sheet: "4x8",
   stacks: 2,
@@ -197,7 +190,9 @@ describe("waterfall", () => {
       { w: 48, h: 96 },
     );
     assert.deepEqual(notes, []);
-    for (const box of ["sub", "mid"]) {
+    const boxes = shellBoxes(P);
+    assert.equal(boxes.length, 2, "the sub's box and the mid's");
+    for (const box of boxes) {
       const side = P.find((p) => p.box === box && p.part === "side"),
         top = P.find((p) => p.box === box && p.part === "topBottom"),
         strip = out.find((p) => p.box === box && p.part === "sideTopSideStrip"),
@@ -212,16 +207,18 @@ describe("waterfall", () => {
   });
 
   test("a strip longer than the sheet falls back to separate panels, with a note", () => {
+    const P = parts("miter");
+    const [sub] = shellBoxes(P);
     const { parts: out, notes } = waterfallStrips(
-      parts("miter"),
+      P,
       { kerf: 0.125, joint: "miter" },
       {
         w: 60,
         h: 60,
       },
     );
-    assert.ok(notes.some((n) => n.startsWith(`${CUT_BOX_NAMES.sub}:`)));
-    assert.ok(out.some((p) => p.box === "sub" && p.part === "side"));
+    assert.ok(notes.some((n) => n.startsWith(`${cutBoxName(sub)}:`)));
+    assert.ok(out.some((p) => p.box === sub && p.part === "side"));
   });
 
   test("the laid-out strip is grain-locked along the sheet and drawn with its pieces", () => {

@@ -2,11 +2,14 @@
 // with a handle still takes its ribs beside it), and each bracing style giving its own braces, as the 3D view draws them.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { midBoxBracing, subBoxBracing } from "../src/lib/acoustics/boxModels";
+import { subBoxBracing } from "../src/lib/acoustics/boxModels";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
-import { configs, midBoxOf } from "./pa-configs";
-import type { BoxBracing, BraceStyleId } from "../src/types";
+import { SUB_OPTIONS } from "../src/lib/data";
+import { configs } from "./pa-configs";
+import { paDesign } from "./speaker-cases";
+import { paMidBuild } from "./pa-build";
+import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
+import type { BoxBracing, BraceStyleId, PaDesign } from "../src/types";
 
 const STYLES: readonly BraceStyleId[] = ["window", "ribs", "both"];
 /** Every default design: the saved seeds, the synthetic designs, and the default PA design. */
@@ -29,23 +32,31 @@ const designs = [
 ];
 const partsOf = (c: (typeof designs)[number]) => ({
   sub: SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0],
-  mid: MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0],
-  mDim: midBoxOf(c),
   wall: c.wall ?? 0.75,
   inset: c.inset ?? 0.75,
-  layout: c.layout ?? "stack",
 });
+/** Each design as a full PA design: the saved and synthetic ones read as the app reads them, and the default one. */
+const fullDesign = (c: (typeof designs)[number]): PaDesign =>
+  c.name === "default PA"
+    ? defaultPaDesign()
+    : paDesign(configs.find((x) => x.name === c.name) ?? configs[0]);
 
 /** The window braces and the ribs of a plan, counted. */
 const windowsOf = (b: BoxBracing) => b.windows.x.length + b.windows.y.length + b.windows.z.length;
 
 test("each bracing style gives only its own braces: ribs under Ribs, frames under Window braces", () => {
   for (const c of designs) {
-    const { sub, mid, mDim, wall, inset, layout } = partsOf(c);
+    const { sub, wall, inset } = partsOf(c);
+    const cfg = fullDesign(c);
     for (const hw of [undefined, DEFAULT_PA.hardware]) {
+      // the sub box by its rule; the mid's chamber (its own box, or the tower's middle chamber) as the Speaker page
+      // builds it
       const plans = (style: BraceStyleId) => [
         subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style, hw?.sub),
-        midBoxBracing(mDim, wall, inset, mid, layout, style, hw?.mid),
+        paMidBuild(
+          { ...cfg, braceStyle: style, hardware: hw ?? cfg.hardware },
+          hw ? "design" : "none",
+        ).build.bracing,
       ];
       const byStyle = Object.fromEntries(STYLES.map((s) => [s, plans(s)]));
       STYLES.forEach((style) =>
