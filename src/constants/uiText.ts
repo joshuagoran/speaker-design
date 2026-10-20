@@ -2,6 +2,8 @@
 export const UI_TEXT = {
   /** the toast when a save to the saved-designs store fails */
   saveFailed: "Couldn't save — try again",
+  /** a Stack member's or a Space placement's toggle: its feed turned over (its pressure times −1) */
+  invertPolarity: "Invert polarity",
   /** the settings column's title, and its name (and the phone sheet's bar's) for screen readers */
   settings: "Settings",
   /** the settings column's buttons that fold or open every section */
