@@ -296,7 +296,7 @@ export const SPACE_TEXT = {
   bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
   targetCurve: "Target, band balance",
   listenerHint: "Tap the map, or drag the cyan dot, to move the listener.",
-  alignAtHint: "Drag the magenta diamond to move the alignment point.",
+  alignAtHint: "Drag the yellow diamond to move the alignment point.",
   arrivals: "Arrival at the listener",
   arrivalsTip: `Each box against the last main. Mains want 0 ms. A fill wants ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms.`,
   /** one arrival row: the placement's name, then its time (ms) and distance (ft) after the last main, already formatted */
@@ -367,3 +367,6 @@ export const SPACE_SAVE_WORDS = {
 
 /** The name of each wall's and the ceiling's mesh in the 3D view (stack-view/buildSpaceScene), so a check can find them. */
 export const ROOM_SURFACE_NAME = "roomSurface";
+
+/** The coverage map's key for its two marks: the listener (the blue circle) and the alignment point (the yellow diamond). */
+export const MAP_MARK_NAMES = { listener: "Listener", alignAt: "Alignment point" } as const;

@@ -331,7 +331,7 @@ function alignMark(at: FloorPoint, earFt: number, lineColor: string): THREE.Grou
   const earIn = earFt * INCHES_PER_FOOT;
   const diamond = new THREE.Mesh(
     new THREE.OctahedronGeometry(ALIGN_MARK_IN),
-    new THREE.MeshStandardMaterial({ color: ON_DATA.magenta, roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ color: ON_DATA.yellow, roughness: 0.6 }),
   );
   diamond.position.y = earIn;
   const stem = new THREE.BufferGeometry();

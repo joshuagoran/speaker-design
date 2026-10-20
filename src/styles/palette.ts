@@ -112,8 +112,10 @@ export function bandLine(
 
 /** Colors drawn on data colors that stay the same in both themes (the dispersion and coverage maps' scales, the
  * cabinet finishes): the light palette's, so lines, marks and labels on them read the same in either theme. */
-export const ON_DATA: Pick<Palette, "ink" | "white" | "muted" | "edge" | "magenta" | "cyan"> =
-  LIGHT;
+export const ON_DATA: Pick<
+  Palette,
+  "ink" | "white" | "muted" | "edge" | "magenta" | "cyan" | "yellow"
+> = LIGHT;
 
 /** The 3D view's stage in each theme: floor, grid and lights (three.js hex numbers). The cabinet finishes and the driver
  * parts (PARTS_3D) keep their true colors in both. */

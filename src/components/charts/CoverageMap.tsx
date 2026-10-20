@@ -20,7 +20,7 @@ import { UI_TEXT } from "../../constants/uiText";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
 import { CONTOUR_STEP_DB, COVERAGE_MAP_DB } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
-import { OPEN_SIDE } from "../../constants/space";
+import { MAP_MARK_NAMES, OPEN_SIDE } from "../../constants/space";
 import { INCHES_PER_FOOT, RAD } from "../../constants/units";
 import {
   COVERAGE_CONTOURS,
@@ -532,7 +532,7 @@ export function CoverageMap({
               y="-6"
               width="12"
               height="12"
-              fill={ON_DATA.magenta}
+              fill={ON_DATA.yellow}
               stroke={ON_DATA.white}
               strokeWidth="2"
             />
@@ -575,6 +575,35 @@ export function CoverageMap({
           {view ? ` (${(view.target + view.gain).toFixed(0)} dB)` : ""}. Medium line:{" "}
           {formatSigned(COVERAGE_EDGE_DB, 0)} dB. Thin lines: every {CONTOUR_STEP_DB} dB.
         </span>
+      </div>
+      {/* the key for the map's two marks, drawn as the map draws them */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 mt-1">
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="14" height="14" viewBox="-9 -9 18 18" aria-hidden="true">
+            <circle r="8" fill={ON_DATA.ink} />
+            <circle r="6" fill={ON_DATA.cyan} stroke={ON_DATA.white} strokeWidth="2" />
+          </svg>
+          {MAP_MARK_NAMES.listener}
+        </span>
+        {alignAt && (
+          <span className="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="-9 -9 18 18" aria-hidden="true">
+              <g transform="rotate(45)">
+                <rect x="-6" y="-6" width="12" height="12" fill={ON_DATA.ink} />
+                <rect
+                  x="-4.5"
+                  y="-4.5"
+                  width="9"
+                  height="9"
+                  fill={ON_DATA.yellow}
+                  stroke={ON_DATA.white}
+                  strokeWidth="1.5"
+                />
+              </g>
+            </svg>
+            {MAP_MARK_NAMES.alignAt}
+          </span>
+        )}
       </div>
     </div>
   );
