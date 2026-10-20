@@ -41,7 +41,7 @@ export const SPEAKER_START_NAMES = {
 
 /** The name a new design takes, by start (a saved speaker keeps its own). */
 export const SPEAKER_START_SPEAKER_NAMES = {
-  empty: "New speaker",
+  empty: "New Speaker",
   paSubBox: "PA sub",
   paMidHighBox: "PA mid/high box",
   paTowerBaffleHorn: "PA tower",

@@ -12,11 +12,12 @@ import type {
 import { isSavedSpeakerShape } from "../../lib/speaker/speakerSaves";
 import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
 import { homeVenue } from "../../lib/speaker/specParts";
+import { usedParts } from "../../lib/speaker/usedParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
-import { PAGE_DRAFT_KEYS } from "../../constants/pageDrafts";
+import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
 import { asDraftDocument, draftDocument } from "../../lib/savedDraft";
 import type { PageDraft } from "../../hooks/usePageDraft";
 
@@ -50,19 +51,6 @@ export const itemName = (
 export const spaceSummary = (design: SpaceDesign) =>
   design.space.placements.map((p) => itemName(design, p.item)).join(" + ") ||
   SPACE_TEXT.noPlacements;
-
-/** The stacks and speakers a space places: the stacks its placements name, and the speakers those or they name. */
-export function usedParts(design: SpaceDesign): Pick<SpaceDesign, "stacks" | "speakers"> {
-  const items = design.space.placements.map((p) => p.item);
-  const stacks = design.stacks.filter((s) =>
-    items.some((i) => i.kind === SPACE_ITEM.stack && i.id === s.id),
-  );
-  const ids = new Set([
-    ...stacks.flatMap((s) => s.members.map((m) => m.speakerId)),
-    ...items.flatMap((i) => (i.kind === SPACE_ITEM.speaker ? [i.id] : [])),
-  ]);
-  return { stacks, speakers: design.speakers.filter((s) => ids.has(s.id)) };
-}
 
 /**
  * What a save stores: the space without its id and name, and the stacks and speakers it places; undefined fields
@@ -159,6 +147,7 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
 /** The Space page's working design in the browser: the save document, with the space's id and name. */
 export const spaceDraft: PageDraft<SpaceDesign> = {
   key: PAGE_DRAFT_KEYS.space,
+  sharedKey: PAGE_SHARED_KEYS.space,
   empty: emptySpace,
   toDraft: (design) => draftDocument(spaceSnapshot(design), design.space),
   fromDraft: (raw) => {

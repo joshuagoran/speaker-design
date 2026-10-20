@@ -20,6 +20,7 @@ import { SelectField } from "../../components/ui/SelectField";
 import { StartPicker } from "../../components/ui/StartPicker";
 import { Slider } from "../../components/ui/Slider";
 import { Notice } from "../../components/ui/Notice";
+import { SharedNotice, type SharedNoticeProps } from "../../components/ui/SharedNotice";
 import { CoverageBandPicker } from "../../components/ui/CoverageBandPicker";
 import { RoomFields } from "../../components/ui/RoomFields";
 import { CoverageMap, type MapBox } from "../../components/charts/CoverageMap";
@@ -88,6 +89,8 @@ interface Props {
   stack: Pick<StackPlanner, "store" | "design">;
   /** the speaker library: the Speaker page's store */
   speakerPage: Pick<SpeakerPageState, "store" | "spec">;
+  /** the shared view's notice, while a link's space shows in place of the page's own */
+  sharedNotice: SharedNoticeProps | null;
 }
 
 /** A share as a whole percentage. */
@@ -102,7 +105,7 @@ const relClass = (rel: number) =>
  * aim, a mirrored pair as one placement; their amp power and alignment; the coverage across the floor on the fixed
  * scale, the levels at the reference, a side view of the heights and tilts, and the response at the listener.
  */
-export function SpacePage({ space, stack, speakerPage }: Props) {
+export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const pal = usePalette();
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
@@ -244,14 +247,18 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
       sheet={sheet}
       results={
         <>
-          <SavedConfigs
-            bare
-            store={space.store}
-            snapshot={space.snapshot}
-            restore={space.restore}
-            saveName={name}
-            manage
-          />
+          {sharedNotice ? (
+            <SharedNotice {...sharedNotice} />
+          ) : (
+            <SavedConfigs
+              bare
+              store={space.store}
+              snapshot={space.snapshot}
+              restore={space.restore}
+              saveName={name}
+              manage
+            />
+          )}
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <div className={HEADING_GROUP}>
               <SectionHeading>{SPACE_TEXT.coverage}</SectionHeading>

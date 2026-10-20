@@ -29,7 +29,7 @@ function render(spec: SpeakerSpec): string {
   });
   function Probe() {
     const speakerPage = useSpeakerPage();
-    return createElement(SpeakerPage, { speakerPage });
+    return createElement(SpeakerPage, { speakerPage, sharedNotice: null });
   }
   return renderToString(createElement(Probe));
 }

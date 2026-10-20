@@ -14,8 +14,13 @@ import { Notice } from "./components/ui/Notice";
 import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
 import { ThemeSwitch } from "./components/ui/ThemeSwitch";
 import { PageTabs } from "./components/ui/PageTabs";
+import { ShareIcon } from "./components/ui/IconButton";
+import { Button } from "./components/ui/Button";
+import { useShare } from "./pages/share/useShare";
+import { SHARE_COPIED_SHOW_MS, SHARE_KIND, SHARE_TEXT } from "./constants/share";
 import { entriesOf } from "./lib/records";
 import { pageAt } from "./lib/pageRoute";
+import type { ShareKind } from "./types";
 import {
   PAGE_HASHES,
   PROJECT_NAMES,
@@ -27,6 +32,10 @@ import {
 
 /** The page at the address (`pageAt`). */
 const viewOf = (): AppPage => pageAt(window.location.hash);
+
+/** What a page shares: its own kind of design (the cutlist and Notes pages share none). */
+const shareKindOf = (v: AppPage): ShareKind | null =>
+  v === SHARE_KIND.speaker || v === SHARE_KIND.stack || v === SHARE_KIND.space ? v : null;
 
 /** The project a page belongs to. */
 const projectOf = (v: AppPage): ProjectId =>
@@ -43,6 +52,30 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   const speakerPage = useSpeakerPage();
   const stack = useStack();
   const space = useSpace();
+  // a link opens as a shared view on the page of its kind; the header shares the open design of the page showing
+  const shareKind = shareKindOf(view);
+  const sharing = useShare(
+    {
+      speaker: {
+        design: speakerPage.spec,
+        shared: speakerPage.sharedView,
+        store: speakerPage.store,
+      },
+      stack: { design: stack.design, shared: stack.sharedView, store: stack.store },
+      space: {
+        design: space.design,
+        shared: space.sharedView,
+        store: space.store,
+        view: { band: space.band, freqHz: space.freqHz },
+        setView: (view) => {
+          space.setBand(view.band);
+          space.setFreqHz(view.freqHz);
+        },
+      },
+    },
+    shareKind,
+    setView,
+  );
   const project = projectOf(view);
   // two levels: the project (Speaker, Stack, or Space), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
@@ -97,6 +130,34 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
             current={view}
             label={PROJECT_NAV_LABELS[project]}
             onNavigate={navigateTo}
+            end={
+              (sharing.notice || shareKind) && (
+                <>
+                  {sharing.notice &&
+                    (sharing.notice.problem ? (
+                      <Notice>{sharing.notice.text}</Notice>
+                    ) : (
+                      <span
+                        key={sharing.notice.shownAt}
+                        className="fade-out-late text-xs text-green-700"
+                        style={{ animationDuration: `${SHARE_COPIED_SHOW_MS}ms` }}
+                      >
+                        {sharing.notice.text}
+                      </span>
+                    ))}
+                  {shareKind && (
+                    <Button
+                      title={SHARE_TEXT.tooltip(PROJECT_NAMES[shareKind])}
+                      className="inline-flex items-center gap-2"
+                      onClick={sharing.copyLink}
+                    >
+                      {SHARE_TEXT.button}
+                      <ShareIcon />
+                    </Button>
+                  )}
+                </>
+              )
+            }
           />
         </header>
       </div>
@@ -112,13 +173,25 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
         {view === "speakerCutlist" ? (
           <SpeakerCutlistPage speakerPage={speakerPage} />
         ) : view === "stack" ? (
-          <StackPage stack={stack} speakerPage={speakerPage} />
+          <StackPage
+            stack={stack}
+            speakerPage={speakerPage}
+            sharedNotice={sharing.sharedNotice(SHARE_KIND.stack)}
+          />
         ) : view === "stackCutlist" ? (
           <StackCutlistPage stack={stack} />
         ) : view === "space" ? (
-          <SpacePage space={space} stack={stack} speakerPage={speakerPage} />
+          <SpacePage
+            space={space}
+            stack={stack}
+            speakerPage={speakerPage}
+            sharedNotice={sharing.sharedNotice(SHARE_KIND.space)}
+          />
         ) : (
-          <SpeakerPage speakerPage={speakerPage} />
+          <SpeakerPage
+            speakerPage={speakerPage}
+            sharedNotice={sharing.sharedNotice(SHARE_KIND.speaker)}
+          />
         )}
       </div>
     </div>

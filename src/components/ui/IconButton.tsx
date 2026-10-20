@@ -37,6 +37,15 @@ export function TrashIcon() {
   );
 }
 
+/** The share icon: an arrow up out of a box (send a link to what is open). */
+export function ShareIcon() {
+  return (
+    <Icon>
+      <path d="M8 10V1.5M5 4.5l3-3 3 3M4.5 7H3v7.5h10V7h-1.5" />
+    </Icon>
+  );
+}
+
 /** A driver seen from the side, the magnet behind and the cone opening to the front (a 16 px icon's path). */
 export const DRIVER_ICON_PATH = "M2 6h3v4H2zM5 6l8-4v12l-8-4";
 
