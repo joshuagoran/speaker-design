@@ -1,5 +1,4 @@
-// Auto balance: band Levels for any speaker or stack, flat or with the PA music tilt (docs/speaker-designer-plan.md, L3f
-// "Auto balance").
+// Auto balance: band Levels for any speaker or stack, flat or with the PA music tilt.
 // By default the bands meet flat; the PA music tilt option is the PA music balance (lib/speaker/paBalance), made general for any
 // number and order of bands:
 //

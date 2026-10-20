@@ -1,5 +1,4 @@
-// The Speaker optimizer's ids and words (lib/speaker/optimize; docs/speaker-designer-plan.md, "Design: the Speaker
-// optimizer"). The goals the page offers, the cards' headings and sentences, the problems a design can fail and the near
+// The Speaker optimizer's ids and words (lib/speaker/optimize). The goals the page offers, the cards' headings and sentences, the problems a design can fail and the near
 // miss's options. Code compares the ids, never the words.
 import { GOAL_SHORT_NAMES, SHARED_GOAL_NAMES } from "./optimizerText";
 
