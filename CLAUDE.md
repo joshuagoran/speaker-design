@@ -85,6 +85,9 @@ The Notes page has no tab or hash: it opens only at the path `/notes` (`pageAt`,
 ## New features
 
 - Before code, build a working mock of the core task. The owner tests it with real tasks.
+- Mock it before you build it, in every phase, not only the first: a new control, step, or field that the owner has
+  not used yet gets a quick mock (or a minimal version) and the owner's OK before it is built in full. One new
+  interaction per step; never build a whole phase from the plan untried.
 - The plan lists the owner's tasks as acceptance tests. Run each in the browser before every hand-over.
 - Hand editing first, automation second.
 - Three reported bugs in one area: stop, check the model, tell the owner before the next fix.
