@@ -34,15 +34,6 @@ A push to `main` deploys the site to GitHub Pages. `build/serve.sh` builds the p
 
 On GitHub Pages, users sign in with Google. Then they can save speakers, stacks, and spaces in Firestore. The dev server and local builds cannot save. The page tells the user.
 
-One-time Firebase setup:
-
-1. In the [Firebase console](https://console.firebase.google.com), create a project on the free plan.
-2. Add a web app. Copy its config into `src/components/saved-configs/firebaseConfig.ts`. These values are public.
-3. Create a Firestore database in production mode.
-4. Turn on Google sign-in. Add `<user>.github.io` to the authorized domains.
-5. Paste `firestore.rules` into the Firestore rules, and publish them. Each user can read and write only their own designs.
-6. In the GitHub repo, set **Settings → Pages → Source** to GitHub Actions.
-
 ## Tests
 
 CI runs the unit tests, the phone layout check, and the 3D checks.
