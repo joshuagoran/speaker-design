@@ -25,7 +25,7 @@ import { INCHES_PER_FOOT, RAD } from "../../constants/units";
 import {
   COVERAGE_CONTOURS,
   COVERAGE_GRADIENT,
-  coverageColor,
+  coverageRgba,
   coverageScalePos,
 } from "../../styles/coverageScale";
 
@@ -156,17 +156,14 @@ export function CoverageMap({
   // the heat map as a small image, one pixel a cell, scaled up smoothly
   const image = useMemo(() => {
     if (!view || typeof document === "undefined") return null;
-    const { grid, target } = view;
+    const { grid } = view;
     const c = document.createElement("canvas");
     c.width = grid.cols;
     c.height = grid.rows;
     const ctx = c.getContext("2d");
     if (!ctx) return null;
     const img = ctx.createImageData(grid.cols, grid.rows);
-    grid.db.forEach((db, i) => {
-      const [r, g, b] = coverageColor(db - target);
-      img.data.set([r, g, b, 255], i * 4);
-    });
+    img.data.set(coverageRgba(view));
     ctx.putImageData(img, 0, 0);
     return c.toDataURL();
   }, [view]);

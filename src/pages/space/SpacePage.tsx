@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useWidthAtLeast } from "../../hooks/useElementWidth";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { SpaceView3D } from "../../components/stack-view/SpaceView3D";
+import { spaceBeams } from "../../lib/speaker/spaceBeams";
 import { alpha, TARGET_DASH } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useMapMaxHeight } from "../../hooks/useMapMaxHeight";
@@ -35,7 +39,10 @@ import {
   MD_UP,
   READING_WIDTH,
   RESULT_MAX_WIDTH,
+  RESULTS_TWO_COLUMN_PX,
   GAP_Y,
+  resultsCellClass,
+  resultsGridClass,
 } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
@@ -89,6 +96,9 @@ interface Props {
 /** The starts "New from…" lists: the empty space, then the presets. */
 const START_OPTIONS = designStartOptions(SPACE_TEXT.empty);
 
+/** The 3D view's height: on a phone, under the map; from md up, about as tall as the map beside it. */
+const VIEW_HEIGHT = "h-[320px] md:h-[clamp(340px,55vh,620px)]";
+
 /** A share as a whole percentage. */
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -108,6 +118,13 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const folds = useFolds("space.settingsFolds", keysOf(SPACE_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<SpaceSettingsSection>("space", "room");
   const maxHeight = useMapMaxHeight();
+  // a wide results pane shows the map and the 3D view side by side; a narrow one, the 3D view under the map
+  const [coverageGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
+  /** each box's beam in the band on show */
+  const beams = useMemo(
+    () => spaceBeams(model, space.band, space.freqHz),
+    [model, space.band, space.freqHz],
+  );
   /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
     const saved = stackFromSaved(c);
@@ -282,39 +299,59 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
               </p>
             </div>
-            <CoverageMap
-              view={view}
-              room={venue.room}
-              listener={venue.listener}
-              alignAt={venue.alignAt}
-              boxes={boxes}
-              coupling={space.coupling.marks}
-              selected={model.placements.flatMap((p, i) =>
-                p.item.placement.source === selected ? [i] : [],
-              )}
-              onSelect={(i) => {
-                const box = model.placements[i];
-                if (box) pickOnMap(box.item.placement.source);
-              }}
-              actions={{
-                moveBox: space.moveBox,
-                aimBox: space.aimBox,
-                moveListener: space.moveListener,
-                moveAlignAt: space.moveAlignAt,
-              }}
-              busy={space.isPending}
-              maxHeight={maxHeight}
-              quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
-            />
-            {space.error && <Notice>Map failed: {space.error}</Notice>}
-            {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
-            <CoverageBandPicker
-              band={space.band}
-              freqHz={space.freqHz}
-              onBand={space.setBand}
-              onFreqHz={space.setFreqHz}
-              oneNote={SPACE_TEXT.oneNote}
-            />
+            <div ref={coverageGrid} className={resultsGridClass(wide)}>
+              <div className={`${resultsCellClass(wide, "col-start-1 row-start-1")} ${GAP_Y}`}>
+                <CoverageMap
+                  view={view}
+                  room={venue.room}
+                  listener={venue.listener}
+                  alignAt={venue.alignAt}
+                  boxes={boxes}
+                  coupling={space.coupling.marks}
+                  selected={model.placements.flatMap((p, i) =>
+                    p.item.placement.source === selected ? [i] : [],
+                  )}
+                  onSelect={(i) => {
+                    const box = model.placements[i];
+                    if (box) pickOnMap(box.item.placement.source);
+                  }}
+                  actions={{
+                    moveBox: space.moveBox,
+                    aimBox: space.aimBox,
+                    moveListener: space.moveListener,
+                    moveAlignAt: space.moveAlignAt,
+                  }}
+                  busy={space.isPending}
+                  maxHeight={maxHeight}
+                  quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
+                />
+                {space.error && <Notice>Map failed: {space.error}</Notice>}
+                {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
+                <CoverageBandPicker
+                  band={space.band}
+                  freqHz={space.freqHz}
+                  onBand={space.setBand}
+                  onFreqHz={space.setFreqHz}
+                  oneNote={SPACE_TEXT.oneNote}
+                />
+              </div>
+              <div className={resultsCellClass(wide, "col-start-2 row-start-1")}>
+                <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`} beamsButton>
+                  {(cutaway, look) => (
+                    <SpaceView3D
+                      room={venue.room}
+                      items={model.placements.map((p) => p.item)}
+                      listener={venue.listener}
+                      alignAt={venue.alignAt}
+                      earFt={venue.earFt}
+                      view={placements.length > 0 ? view : null}
+                      beams={look.beams ? beams : []}
+                      cutaway={cutaway}
+                    />
+                  )}
+                </Viewer3DCard>
+              </div>
+            </div>
           </section>
           {placements.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>

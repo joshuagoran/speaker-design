@@ -33,6 +33,9 @@ export const UI_TEXT = {
   /** the Speaker page's 3D view: its button that shows or hides the drivers (their cutouts stay open) */
   showDrivers: "Show the drivers",
   hideDrivers: "Hide the drivers",
+  /** the Space's 3D view: its button that shows or hides each box's coverage wedge */
+  showBeams: "Show the beams",
+  hideBeams: "Hide the beams",
   /** the side ducts' dividers' size, on the Speaker page's side ducts, and its tip */
   ductDividers: "Dividers",
   ductDividersTip: "Two per duct. Thicker dividers make the vent smaller, so it tunes lower.",

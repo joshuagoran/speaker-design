@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { useEffect, useRef, useState } from "react";
 import { useThemeName } from "../../hooks/useTheme";
 import { STAGE } from "../../styles/palette";
-import { VIEW_FOV_DEG, fitFootprint, type SceneFit } from "./sceneFraming";
+import { FRAME_BOX_KEY, VIEW_FOV_DEG, fitFootprint, type SceneFit } from "./sceneFraming";
 
 interface Props {
   /** changes exactly when the scene does (the JSON of the builder's inputs) */
@@ -13,7 +13,21 @@ interface Props {
   fit?: SceneFit;
   /** where the camera starts: its turn and tilt, radians, and zoom (default: the view's own; the render tool sets it) */
   start?: Partial<SceneStart>;
+  /** how the camera moves (default: turn, tilt and zoom as every design view does, no pan) */
+  controls?: Partial<SceneControls>;
+  /** the stage's floor and grid drawn under the scene (default); false: the scene draws its own floor */
+  stage?: boolean;
 }
+
+/** How the camera moves: whether a drag can pan it, its zoom range, and its highest tilt, radians. */
+export interface SceneControls {
+  /** a right drag, a drag with Shift, Ctrl or ⌘ held, or a two-finger drag moves the view sideways and up */
+  pan: boolean;
+  zoom: [min: number, max: number];
+  tiltMax: number;
+}
+/** Every design view's camera moves. */
+const CONTROLS: SceneControls = { pan: false, zoom: [0.45, 2.2], tiltMax: 1.2 };
 
 /** The camera's turn round the scene and tilt over it, radians, and its zoom (distance over the fit's). */
 export interface SceneStart {
@@ -25,7 +39,16 @@ export interface SceneStart {
 const START: SceneStart = { rotY: 0.6, rotX: 0.35, zoom: 1 };
 
 /** A rotatable 3D view of whatever `build` returns, on the themed stage (floor, grid, lights). */
-export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Props) {
+export function SceneView3D({
+  buildKey,
+  build,
+  fit = fitFootprint,
+  start,
+  controls,
+  stage: withStage = true,
+}: Props) {
+  const moves = useRef<SceneControls>({ ...CONTROLS, ...controls });
+  moves.current = { ...CONTROLS, ...controls };
   const mount = useRef<HTMLDivElement>(null);
   // the stage (floor, grid, lights) follows the theme; the scene is rebuilt when it changes
   const theme = useThemeName();
@@ -33,13 +56,25 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     rotY: number;
     rotX: number;
     drag: boolean;
+    /** the drag pans the view rather than turning it */
+    panning: boolean;
     lx: number;
     ly: number;
     zoom: number;
-  }>({ ...START, ...start, drag: false, lx: 0, ly: 0 });
+    /** how far the view is panned off the scene's center, in */
+    pan: THREE.Vector3;
+  }>({
+    ...START,
+    ...start,
+    drag: false,
+    panning: false,
+    lx: 0,
+    ly: 0,
+    pan: new THREE.Vector3(),
+  });
   // the latest builder and fit, read when the key says the scene changed
-  const latest = useRef({ build, fit });
-  latest.current = { build, fit };
+  const latest = useRef({ build, fit, withStage });
+  latest.current = { build, fit, withStage };
   // Rebuild the scene only when the caller's key changes (the parent recreates the builder's inputs every render), and
   // at most every 120 ms while a slider is dragged, so the controls stay responsive.
   const [builtKey, setBuiltKey] = useState(buildKey);
@@ -66,10 +101,13 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W, H);
+    // a scene's clipping planes (the Space's beams stop at the walls)
+    renderer.localClippingEnabled = true;
     el.appendChild(renderer.domElement);
     const st = state.current;
     const v: ViewState = {
       renderer,
+      cam,
       scene: null,
       frame: null,
       figure: null,
@@ -78,8 +116,8 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
       draw: () => {
         const { scene, frame } = v;
         if (!scene || !frame) return;
-        const { target, baseDist } = frame;
-        const dist = baseDist * st.zoom;
+        const target = frame.target.clone().add(st.pan);
+        const dist = frame.baseDist * st.zoom;
         cam.position.set(
           target.x + dist * Math.sin(st.rotY) * Math.cos(st.rotX),
           target.y + dist * Math.sin(st.rotX),
@@ -97,6 +135,22 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     const pts = new Map<number, { x: number; y: number }>();
     let pinch0 = 0,
       zoom0 = 1;
+    /** the two fingers' middle, px, as a pinch last read it */
+    let mid0 = { x: 0, y: 0 };
+    const zoomTo = (zoom: number) => {
+      const [lo, hi] = moves.current.zoom;
+      st.zoom = Math.max(lo, Math.min(hi, zoom));
+    };
+    /** moves the view by a drag of dx, dy px: the scene follows the pointer, across the screen and up it */
+    const panBy = (dx: number, dy: number) => {
+      if (!v.frame) return;
+      const perPx =
+        (2 * v.frame.baseDist * st.zoom * Math.tan((VIEW_FOV_DEG * Math.PI) / 360)) /
+        (el.clientHeight || H);
+      const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
+      st.pan.addScaledVector(right, -dx * perPx).addScaledVector(up, dy * perPx);
+    };
 
     const onDown = (e: PointerEvent) => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -109,8 +163,10 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
         const [a, b] = [...pts.values()];
         pinch0 = Math.hypot(a.x - b.x, a.y - b.y);
         zoom0 = st.zoom;
+        mid0 = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       }
       st.drag = true;
+      st.panning = moves.current.pan && (e.button === 2 || e.shiftKey || e.ctrlKey || e.metaKey);
       st.lx = e.clientX;
       st.ly = e.clientY;
     };
@@ -121,15 +177,29 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
       if (pts.size >= 2) {
         const [a, b] = [...pts.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (pinch0 > 0) st.zoom = Math.max(0.45, Math.min(2.2, zoom0 * (pinch0 / d)));
+        if (pinch0 > 0) zoomTo(zoom0 * (pinch0 / d));
+        // the fingers' middle moving pans the view, where it can pan
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        if (moves.current.pan) panBy(mid.x - mid0.x, mid.y - mid0.y);
+        mid0 = mid;
         return; // pinching, not rotating
       }
       if (!st.drag) return;
-      // the model turns the way the pointer moves: dragging right turns its front to the right (the camera goes left)
-      st.rotY -= (e.clientX - st.lx) * 0.01;
-      st.rotX = Math.max(0.05, Math.min(1.2, st.rotX + (e.clientY - st.ly) * 0.006));
+      if (st.panning) panBy(e.clientX - st.lx, e.clientY - st.ly);
+      else {
+        // the model turns the way the pointer moves: dragging right turns its front to the right (the camera goes left)
+        st.rotY -= (e.clientX - st.lx) * 0.01;
+        st.rotX = Math.max(
+          0.05,
+          Math.min(moves.current.tiltMax, st.rotX + (e.clientY - st.ly) * 0.006),
+        );
+      }
       st.lx = e.clientX;
       st.ly = e.clientY;
+    };
+    // a right drag pans, where the view can pan: no menu
+    const onMenu = (e: MouseEvent) => {
+      if (moves.current.pan) e.preventDefault();
     };
 
     const onUp = (e: PointerEvent) => {
@@ -150,7 +220,7 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      st.zoom = Math.max(0.45, Math.min(2.2, st.zoom * (1 + e.deltaY * 0.0012)));
+      zoomTo(st.zoom * (1 + e.deltaY * 0.0012));
     };
 
     el.addEventListener("pointerdown", onDown);
@@ -158,6 +228,7 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
     el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("contextmenu", onMenu);
 
     // Keep the canvas and the framing correct through rotation and resize.
     const resize = () => {
@@ -189,6 +260,7 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
       el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("contextmenu", onMenu);
       if (v.scene) disposeScene(v.scene);
       v.scene = v.frame = v.figure = null;
       view.current = null;
@@ -214,23 +286,30 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
     const group = latest.current.build();
     scene.add(group);
 
-    // floor
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 200),
-      new THREE.MeshStandardMaterial({ color: stage.floor, roughness: 1 }),
-    );
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
-    scene.add(new THREE.GridHelper(120, 10, stage.gridMajor, stage.gridMinor));
+    if (latest.current.withStage) {
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(200, 200),
+        new THREE.MeshStandardMaterial({ color: stage.floor, roughness: 1 }),
+      );
+      floor.rotation.x = -Math.PI / 2;
+      scene.add(floor);
+      scene.add(new THREE.GridHelper(120, 10, stage.gridMajor, stage.gridMinor));
+    }
 
     group.position.y = 0;
 
-    // Frame from the real bounding box, so nothing is cropped at any aspect ratio.
-    const bbox = new THREE.Box3().setFromObject(group);
+    // Frame from the real bounding box (or the box the scene names), so nothing is cropped at any aspect ratio.
+    const named: unknown = group.userData[FRAME_BOX_KEY];
+    const bbox = named instanceof THREE.Box3 ? named : new THREE.Box3().setFromObject(group);
     const distAt = latest.current.fit(bbox);
     const frame: SceneFrame = { target: bbox.getCenter(new THREE.Vector3()), baseDist: 0 };
+    // the camera's near and far planes fit the scene's size at every zoom
+    const radius = bbox.getSize(new THREE.Vector3()).length() / 2;
     v.fit = (aspect: number) => {
       frame.baseDist = distAt(aspect);
+      v.cam.near = Math.max(0.1, radius / 500);
+      v.cam.far = Math.max(1000, 2 * (frame.baseDist * moves.current.zoom[1] + radius));
+      v.cam.updateProjectionMatrix();
     };
     v.fit((el.clientWidth || 640) / (el.clientHeight || 560));
     v.scene = scene;
@@ -251,6 +330,7 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Prop
 /** The view's renderer and camera, kept for the component's life, and the scene it shows now. */
 interface ViewState {
   renderer: THREE.WebGLRenderer;
+  cam: THREE.PerspectiveCamera;
   scene: THREE.Scene | null;
   frame: SceneFrame | null;
   /** the scale figure, turned to face the camera every frame */
