@@ -1,14 +1,15 @@
-// Each box's beam in a band, for the Space page's 3D view: where the box's drivers in the band sit, where they point,
-// and the angles where they fall 6 dB, wide and high, by the coverage model's driver pattern (spaceCoverage). Pure.
+// Each box's beams in the map's band, for the Space page's 3D view: from the drivers that play that band as the map
+// sums it, where they sit, where they point, and the angles where they fall 6 dB, wide and high, by the coverage
+// model's driver pattern (spaceCoverage). Pure.
 import type { CoverageBand } from "../../types";
-import { bandCenterHz, type CoveragePattern } from "../acoustics/coverage";
+import { bandCenterHz, coverageFrequencies, type CoveragePattern } from "../acoustics/coverage";
 import { pistonPattern, waveguideHalfAngles } from "../acoustics/directivity";
 import { abs } from "../acoustics/complex";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
-import { driverPattern, pressureAt, type SpaceModel } from "./spaceCoverage";
+import { driverPattern, spaceOutputs, type SpaceModel } from "./spaceCoverage";
 import type { PlacedDriver, RoomPoint } from "./spaceLayout";
 
-/** A box quieter than this under the loudest box in the band draws no beam, dB. */
+/** A box's band quieter than this under the loudest in the map's band draws no beam, dB. */
 const BEAM_QUIET_DB = 20;
 
 /** Where a piston's pattern, 2·J1(x)/x, falls 6 dB (to one half): x ≈ 2.215, by bisection on its first lobe. */
@@ -48,38 +49,46 @@ export interface SpaceBeam {
 }
 
 /**
- * Each box's beam in the band on show (at its center, or at the one frequency): each member of each placement beams
- * with its band loudest there, from that band's drivers. A box more than `BEAM_QUIET_DB` under the loudest has none.
+ * Each box's beam in the band on show: one from each band of each member that plays it, as loud as the map sums it
+ * (`spaceOutputs` at the map's frequencies, each with its share of the band's weight). A band more than
+ * `BEAM_QUIET_DB` under the loudest has none. Its angles are at the band's center (or the one frequency).
  */
 export function spaceBeams(
-  model: Pick<SpaceModel, "placements" | "solved">,
+  model: Pick<SpaceModel, "placements" | "feeds" | "headroomDb" | "scene">,
   band: CoverageBand,
   freqHz: number,
 ): SpaceBeam[] {
-  const f = bandCenterHz(band, freqHz);
-  const found = model.placements.flatMap(({ item, response }) => {
-    if (!response || !item.stack) return [];
-    const placementDb = model.solved[item.placement.source]?.levelDb ?? 0;
-    return response.members.flatMap((member, m) => {
-      if (!member) return [];
-      const levelDb = (item.stack?.stack.members[m]?.levelDb ?? 0) + placementDb;
-      const loudest = member.response.bands
-        .map((b) => ({
-          drivers: item.drivers.filter((d) => d.member === m && d.band === b.id),
-          level: abs(pressureAt(b.pressure, f)) * Math.pow(10, levelDb / 20),
-        }))
-        .filter((b) => b.drivers.length > 0)
-        .reduce<{ drivers: PlacedDriver[]; level: number } | null>(
-          (a, b) => (a && a.level >= b.level ? a : b),
-          null,
-        );
-      return loudest ? [loudest] : [];
-    });
+  const { freqs, shares } = coverageFrequencies(
+    band,
+    freqHz,
+    model.scene.modal?.crossoverHz ?? null,
+  );
+  /** each box's member's band (by `box/member/band`): its power over the map's band */
+  const power = new Map<string, number>();
+  freqs.forEach((f, i) => {
+    const out = spaceOutputs(model, f);
+    /** each band's level at `f`: a spot's output over its share of the band */
+    const level = new Map<string, number>();
+    for (const v of model.feeds) {
+      const p = out[v.id];
+      if (!p) continue;
+      const key = `${v.box}/${v.member}/${v.band}`;
+      level.set(key, Math.max(level.get(key) ?? 0, abs(p) / v.share));
+    }
+    for (const [key, a] of level) power.set(key, (power.get(key) ?? 0) + shares[i] * a * a);
   });
-  const top = Math.max(0, ...found.map((b) => b.level));
-  return found
-    .filter((b) => b.level > 0 && b.level >= top * Math.pow(10, -BEAM_QUIET_DB / 20))
-    .map(({ drivers }) => {
+  const top = Math.max(0, ...power.values());
+  const f = bandCenterHz(band, freqHz);
+  return model.placements.flatMap(({ item }, box) => {
+    /** the drivers of each loud band, in the order the box lists them */
+    const groups = new Map<string, PlacedDriver[]>();
+    for (const d of item.drivers) {
+      const key = `${box}/${d.member}/${d.band}`;
+      const p = power.get(key) ?? 0;
+      if (p <= 0 || p < top * Math.pow(10, -BEAM_QUIET_DB / 10)) continue;
+      groups.set(key, [...(groups.get(key) ?? []), d]);
+    }
+    return [...groups.values()].map((drivers): SpaceBeam => {
       const [first] = drivers;
       const mean = (pick: (p: RoomPoint) => number) =>
         drivers.reduce((s, d) => s + pick(d.at), 0) / drivers.length;
@@ -90,4 +99,5 @@ export function spaceBeams(
         half: beamHalfAngles(driverPattern(first), f),
       };
     });
+  });
 }

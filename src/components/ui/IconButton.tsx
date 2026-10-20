@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HOVER_TRANSITION, PRESSED_CLASSES } from "./buttonStyles";
 import { TIP_CLASS, TIP_EDGE_PX } from "./Tooltip";
@@ -17,7 +17,7 @@ interface Props {
 
 /**
  * A square icon-only button, for the controls laid over a view (the 3D view's full screen and cutaway). Its name shows
- * in a tip under it while a mouse is over it or the keyboard puts focus on it.
+ * in a tip under it while a mouse is over it or the keyboard puts focus on it, until Escape closes it.
  */
 export function IconButton({ label, onClick, pressed, size = "md", children }: Props) {
   const [tip, setTip] = useState(false);
@@ -37,6 +37,15 @@ export function IconButton({ label, onClick, pressed, size = "md", children }: P
     t.style.top = `${b.bottom + 4}px`;
     t.style.visibility = "visible";
   }, [tip, label]);
+  // Escape closes the tip, whether a mouse or the keyboard opened it; the button keeps focus
+  useEffect(() => {
+    if (!tip) return;
+    const close = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTip(false);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [tip]);
   return (
     <button
       ref={button}

@@ -9,7 +9,6 @@ import {
   posePlacement,
   roomClipPlanes,
   roomPointIn,
-  ROOM_SURFACE_NAME,
   spaceSceneKey,
   wallIsNear,
   type SpaceSceneProps,
@@ -21,8 +20,10 @@ import { pistonDirectivity, waveguideHalfAngles } from "../src/lib/acoustics/dir
 import { spaceFromStart } from "../src/pages/space/useSpace";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { INCHES_PER_FOOT } from "../src/constants/units";
+import { DRIVER_PART, ROOM_SURFACE_NAME } from "../src/constants/space";
 import { spaceModel } from "./helpers";
-import type { SpacePlacement } from "../src/types";
+import type { DriverPart, SpacePlacement } from "../src/types";
+import type { RoomPoint } from "../src/lib/speaker/spaceLayout";
 
 const POSES: Pick<SpacePlacement, "x" | "y" | "liftIn" | "aim" | "mirror">[] = [
   { x: 0, y: 0, liftIn: 0, aim: { yawDeg: 0, pitchDeg: 0 }, mirror: false },
@@ -137,6 +138,64 @@ describe("Space 3D view: the PA stack preset", () => {
       expect(Math.abs(b.at.x)).toBeLessThanOrEqual(venue.room.widthFt / 2);
       expect(b.at.z).toBeGreaterThan(0);
     }
+  });
+
+  /** Each beam's origin, rounded to 0.01 ft, as a key. */
+  const spot = (p: RoomPoint) => [p.x, p.y, p.z].map((v) => v.toFixed(2)).join();
+  /** The middle of each box's drivers of each part, by its spot. */
+  const partSpots = (part: DriverPart) =>
+    new Set(
+      model.placements.flatMap(({ item }) => {
+        const groups = new Map<string, RoomPoint[]>();
+        for (const d of item.drivers)
+          if (d.part === part)
+            groups.set(`${d.member}/${d.band}`, [
+              ...(groups.get(`${d.member}/${d.band}`) ?? []),
+              d.at,
+            ]);
+        return [...groups.values()].map((at) => {
+          const mean = (pick: (p: RoomPoint) => number) =>
+            at.reduce((s, p) => s + pick(p), 0) / at.length;
+          return spot({ x: mean((p) => p.x), y: mean((p) => p.y), z: mean((p) => p.z) });
+        });
+      }),
+    );
+
+  test("the beams come from the drivers that play the map's band", () => {
+    const hf = partSpots(DRIVER_PART.hf),
+      cone = partSpots(DRIVER_PART.cone);
+    const high = spaceBeams(model, "high", 1000),
+      sub = spaceBeams(model, "sub", 1000);
+    expect(high.length).toBeGreaterThan(0);
+    expect(sub.length).toBeGreaterThan(0);
+    for (const b of high) expect(hf.has(spot(b.at))).toBe(true);
+    for (const b of sub) expect(cone.has(spot(b.at))).toBe(true);
+    // the mid band, as the map sums it, has both the cones and the horns in it
+    const mid = spaceBeams(model, "mid", 1000).map((b) => spot(b.at));
+    expect(mid.some((at) => hf.has(at))).toBe(true);
+    expect(mid.some((at) => cone.has(at))).toBe(true);
+    // the one frequency picks the band at that frequency, not the band picker's
+    expect(spaceBeams(model, "one", 40).map((b) => spot(b.at))).toEqual(sub.map((b) => spot(b.at)));
+  });
+
+  test("the floor shows the map only while its grid is for the room on show", () => {
+    const grid = { cols: 2, rows: 2, db: new Float32Array(4) };
+    const textured = (root: THREE.Object3D) => {
+      let n = 0;
+      root.traverse((o) => {
+        if (
+          o instanceof THREE.Mesh &&
+          o.material instanceof THREE.MeshBasicMaterial &&
+          o.material.map
+        )
+          n++;
+      });
+      return n;
+    };
+    const view = { grid, room: venue.room, target: 0 };
+    expect(textured(buildSpaceScene(props({ view })))).toBe(1);
+    const resized = { ...venue.room, widthFt: venue.room.widthFt + 4 };
+    expect(textured(buildSpaceScene(props({ view, room: resized })))).toBe(0);
   });
 
   test("the scene frames the room, with its walls and ceiling unless cut away", () => {

@@ -115,6 +115,9 @@ export interface SpacePlacementModel {
 interface VoiceFeed extends CoverageVoice {
   /** the placement it belongs to (its index in the space, shared by a mirrored pair's boxes), and the band it plays */
   placement: number;
+  /** the box it plays from (its index in `placements`) and the stack member it belongs to */
+  box: number;
+  member: number;
   band: BandId;
   pressure: readonly Complex[];
   /** the member's level and the placement's, dB */
@@ -247,6 +250,8 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
       if (!feeds.has(id))
         feeds.set(id, {
           placement: placement.source,
+          box: k,
+          member: d.member,
           band: d.band,
           id,
           pattern,
@@ -293,7 +298,10 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
 }
 
 /** Each voice's output at 1 m at `f`, the space at its music limit: its band's share, level, delay and baffle step. */
-export function spaceOutputs(model: SpaceModel, f: number): CoverageSlot["out"] {
+export function spaceOutputs(
+  model: Pick<SpaceModel, "feeds" | "headroomDb">,
+  f: number,
+): CoverageSlot["out"] {
   const out: CoverageSlot["out"] = {};
   for (const v of model.feeds) {
     const p = pressureAt(v.pressure, f);

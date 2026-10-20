@@ -12,6 +12,7 @@ import { contourSegments } from "../../lib/acoustics/coverage";
 import { COVERAGE_CONTOURS, coverageRgba } from "../../styles/coverageScale";
 import { ON_DATA, PALETTES, STAGE } from "../../styles/palette";
 import { INCHES_PER_FOOT } from "../../constants/units";
+import { ROOM_SURFACE_NAME } from "../../constants/space";
 import type { PlacedItem, RoomPoint } from "../../lib/speaker/spaceLayout";
 import type { SpaceBeam } from "../../lib/speaker/spaceBeams";
 import type {
@@ -32,7 +33,10 @@ export interface SpaceSceneProps {
   listener: FloorPoint;
   alignAt: FloorPoint;
   earFt: SpaceVenue["earFt"];
-  /** the grid the map shows (null: none yet, or a quiet room; the floor is then a plain gray) */
+  /**
+   * the grid the map shows (null: none yet, or a quiet room; the floor is then a plain gray, as it is while a grid for
+   * another room size is on show)
+   */
   view: Pick<CoverageGridView, "grid" | "room" | "target"> | null;
   /** the beams to draw (empty while they are hidden) */
   beams: readonly SpaceBeam[];
@@ -41,8 +45,6 @@ export interface SpaceSceneProps {
   theme: ThemeName;
 }
 
-/** The name of each wall's and the ceiling's mesh, so a check can find them. */
-export const ROOM_SURFACE_NAME = "roomSurface";
 /** A see-through wall's opacity: one between the camera and the room. */
 const WALL_SEE_THROUGH = 0.15;
 /** A beam's opacity, and its outline's. */
@@ -238,6 +240,7 @@ function coverageFloor(view: NonNullable<SpaceSceneProps["view"]>): THREE.Group 
     l = room.lengthFt * INCHES_PER_FOOT;
   const floor = new THREE.Group();
   const texture = new THREE.DataTexture(coverageRgba(view), grid.cols, grid.rows);
+  // the map's sRGB pixels drawn as they are: three r140 converts neither this texture, the lines' colors nor the output
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
@@ -365,8 +368,10 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
   const w = room.widthFt * INCHES_PER_FOOT,
     l = room.lengthFt * INCHES_PER_FOOT,
     h = room.ceilingFt * INCHES_PER_FOOT;
-  // the floor: the map's colors, or a plain gray; outdoors, the ground round it
-  root.add(view ? coverageFloor(view) : plainFloor(w, l, 0, 0, ON_DATA.edge));
+  // the floor: the map's colors, or a plain gray (while the grid is worked out again for a new room size, too); outdoors,
+  // the ground round it
+  const fits = view && view.room.widthFt === room.widthFt && view.room.lengthFt === room.lengthFt;
+  root.add(fits ? coverageFloor(view) : plainFloor(w, l, 0, 0, ON_DATA.edge));
   if (room.outdoors)
     root.add(
       plainFloor(

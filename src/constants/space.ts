@@ -358,3 +358,6 @@ export const SPACE_SAVE_WORDS = {
   newFromTip:
     "Starts a new Space, empty or from a preset. It replaces the current design. A preset brings its own room. A PA preset also sets the band balance to More bass.",
 } as const satisfies SaveRowWords;
+
+/** The name of each wall's and the ceiling's mesh in the 3D view (stack-view/buildSpaceScene), so a check can find them. */
+export const ROOM_SURFACE_NAME = "roomSurface";
