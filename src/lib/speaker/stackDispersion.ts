@@ -39,7 +39,7 @@ const OWN_FRAME = placementFrame({
   y: 0,
   liftIn: 0,
   aim: { yawDeg: 0, pitchDeg: 0 },
-  mirror: false,
+  image: false,
 });
 
 /** What the map reads of the stack model: each member's response and delay, and the listening height. */

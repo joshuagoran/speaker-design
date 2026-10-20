@@ -94,16 +94,14 @@ export const spacePlacement = (
   liftIn: SpacePlacement["liftIn"],
   {
     yawDeg = 0,
-    mirror = false,
     mirrored = false,
-  }: Partial<Pick<SpaceAim, "yawDeg">> & Partial<Pick<SpacePlacement, "mirror" | "mirrored">> = {},
+  }: Partial<Pick<SpaceAim, "yawDeg">> & Partial<Pick<SpacePlacement, "mirrored">> = {},
 ): SpacePlacement => ({
   x: spot.x,
   y: spot.y,
   item,
   liftIn,
   aim: { yawDeg, pitchDeg: 0 },
-  mirror,
   mirrored,
   levelDb: 0,
   delayMs: AUTO_DELAY,

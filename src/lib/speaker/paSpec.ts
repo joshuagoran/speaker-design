@@ -467,7 +467,7 @@ export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor
       ? [spacePlacement(left, item, liftIn, { yawDeg: left.aim, mirrored: true })]
       : [
           spacePlacement(left, item, liftIn, { yawDeg: left.aim }),
-          spacePlacement(right, item, liftIn, { yawDeg: right.aim, mirror: true }),
+          spacePlacement(right, item, liftIn, { yawDeg: right.aim }),
         ];
   const placements: SpacePlacement[] =
     cfg.layout === "satellite"

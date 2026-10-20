@@ -2110,7 +2110,7 @@ export interface SpaceAim {
 
 /**
  * A stack or a speaker placed in a space: its spot on the floor (its base's front center, ft), the lift under it (a
- * plinth, a stand), its aim, a mirror image, and what is done to its feed (a level and a delay).
+ * plinth, a stand), its aim, and what is done to its feed (a level and a delay).
  */
 export interface SpacePlacement extends FloorPoint {
   item:
@@ -2119,7 +2119,6 @@ export interface SpacePlacement extends FloorPoint {
   /** the gap under it, in: a plinth, a stand, or 0 */
   liftIn: number;
   aim: SpaceAim;
-  mirror: boolean;
   /**
    * a left and right pair: the placement stands twice, as set and as its mirror image across the room's center line
    * (x and rotation turned over, the box flipped left and right); both share its item, lift, level and delay

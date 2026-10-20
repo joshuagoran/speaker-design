@@ -237,9 +237,6 @@ export const SPACE_TEXT = {
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
   pitch: "Tilt, °",
   pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
-  mirror: "Flip left and right",
-  mirrorTip:
-    "Turns the box over, so its left and right sides swap. Use it for a speaker made as a left or right model.",
   level: "Level, dB",
   delay: "Delay, ms",
   delayTip: `Auto delays the early boxes so they arrive with the last one at the alignment point. A fill arrives ${FILL_PRECEDENCE_MS} ms after the mains in its area.`,

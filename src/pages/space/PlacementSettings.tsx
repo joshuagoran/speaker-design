@@ -153,13 +153,6 @@ export function PlacementSettings({
       </div>
       <div className="flex flex-wrap gap-2">
         <ToggleButton
-          on={placement.mirror}
-          title={SPACE_TEXT.mirrorTip}
-          onClick={() => onEdit((p) => ({ ...p, mirror: !p.mirror }))}
-        >
-          {SPACE_TEXT.mirror}
-        </ToggleButton>
-        <ToggleButton
           on={placement.mirrored}
           title={SPACE_TEXT.mirroredTip}
           onClick={() => onEdit((p) => ({ ...p, mirrored: !p.mirrored }))}

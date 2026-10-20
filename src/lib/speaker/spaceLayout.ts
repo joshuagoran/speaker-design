@@ -71,7 +71,6 @@ export function expandPlacements(placements: readonly SpacePlacement[]): PlacedS
         // 0 - x, not -x: a box on the center line keeps x = 0, not -0
         x: 0 - p.x,
         aim: { yawDeg: wrapYawDeg(-p.aim.yawDeg), pitchDeg: p.aim.pitchDeg },
-        mirror: !p.mirror,
         source,
         image: true,
         side: asSetIsLeft ? PAIR_SIDE.right : PAIR_SIDE.left,
@@ -121,13 +120,16 @@ export function placementStack(
     : null;
 }
 
-/** A placement's frame: a point in its stack (in) to the room (ft), and its yaw and pitch, radians. */
-export function placementFrame(p: Pick<SpacePlacement, "x" | "y" | "liftIn" | "aim" | "mirror">) {
+/**
+ * A box's frame (`expandPlacements`): a point in its stack (in) to the room (ft), and its yaw and pitch, radians. A
+ * pair's image is flipped left and right; the box as set stands as designed.
+ */
+export function placementFrame(p: Pick<PlacedSource, "x" | "y" | "liftIn" | "aim" | "image">) {
   const yaw = p.aim.yawDeg * RAD,
     pitch = p.aim.pitchDeg * RAD;
   const cy = Math.cos(yaw),
     sy = Math.sin(yaw);
-  const side = p.mirror ? -1 : 1;
+  const side = p.image ? -1 : 1;
   return {
     yaw,
     pitch,

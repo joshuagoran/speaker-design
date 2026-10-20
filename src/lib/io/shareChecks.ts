@@ -100,7 +100,6 @@ const isPlacement = (value: unknown) =>
   isRecord(value.aim) &&
   isNum(value.aim.yawDeg) &&
   isNum(value.aim.pitchDeg) &&
-  typeof value.mirror === "boolean" &&
   typeof value.mirrored === "boolean" &&
   typeof value.fill === "boolean" &&
   isFeed(value.levelDb, AUTO_LEVEL) &&
