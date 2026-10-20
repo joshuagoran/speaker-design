@@ -1,6 +1,6 @@
 // Where a space's placements put their boxes and drivers in the room: each placement's stack laid out (lib/speaker/
 // stackLayout), then turned by the one aim model and set on the floor. The coverage model (lib/speaker/spaceCoverage)
-// reads the drivers; the Space page's plan and side views read the boxes. Pure.
+// reads the drivers; the Space page's plan and 3D views read the boxes. Pure.
 //
 // The aim model: a member tilts about its bottom front edge by its cabinet's kick-back (`SpeakerCabinet.tiltDeg`) and
 // its tilt in the stack (`StackPose.pitchDeg`); the placement tilts the whole stack about its base's front center by its

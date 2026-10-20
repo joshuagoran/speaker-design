@@ -190,11 +190,6 @@ export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New Space",
   coverage: "Coverage",
-  side: "Side view",
-  /** the Side view heading's tooltip, and the one line under the drawing */
-  sideTip:
-    "The speakers seen from the side, to scale, at their height and tilt. Each dashed line shows where a speaker points: the axis of its highest band.",
-  sideNote: "The cyan dot is the listener's ear.",
   response: "Response at the listener",
   levels: "Levels",
   /** the line on the map of a room with nothing placed */

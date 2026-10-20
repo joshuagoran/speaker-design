@@ -13,7 +13,6 @@ import {
 } from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
-import { Card } from "../../components/ui/Card";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField } from "../../components/ui/SelectField";
 import { Slider } from "../../components/ui/Slider";
@@ -25,7 +24,6 @@ import { CoverageMap, type MapBox } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SaveRow } from "../../components/saved-configs/SaveRow";
-import { SpaceSide } from "../../components/drawings/SpaceSide";
 import { COVERAGE_BANDS } from "../../lib/acoustics/coverage";
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
@@ -101,7 +99,7 @@ const relClass = (rel: number) =>
 /**
  * The Space page: stacks and speakers placed in a room, each at its spot, lift and
  * aim, a mirrored pair as one placement; their amp power and alignment; the coverage across the floor on the fixed
- * scale, the levels at the reference, a side view of the heights and tilts, and the response at the listener.
+ * scale beside a 3D view of the room, the levels at the reference, and the response at the listener.
  */
 export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const pal = usePalette();
@@ -360,20 +358,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               <ArrivalList arrivals={space.arrivals} names={names} />
             </section>
           )}
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
-            <SectionHeading>
-              <Tooltip tip={SPACE_TEXT.sideTip}>{SPACE_TEXT.side}</Tooltip>
-            </SectionHeading>
-            <Card>
-              <SpaceSide
-                items={model.placements.map((p) => p.item)}
-                room={venue.room}
-                listener={venue.listener}
-                earFt={venue.earFt}
-              />
-              <p className="text-xs text-stone-500">{SPACE_TEXT.sideNote}</p>
-            </Card>
-          </section>
           {space.response.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
               <SectionHeading>{SPACE_TEXT.response}</SectionHeading>
