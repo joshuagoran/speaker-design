@@ -262,8 +262,14 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
                 {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
               </p>
             </div>
-            <div>
+            <div className="flex flex-wrap items-center gap-2">
               <Button onClick={() => void sharing.share()}>{SHARE_TEXT.button}</Button>
+              {sharing.notice &&
+                (sharing.notice.problem ? (
+                  <Notice>{sharing.notice.text}</Notice>
+                ) : (
+                  <span className="text-xs text-stone-500">{sharing.notice.text}</span>
+                ))}
             </div>
             <CoverageMap
               view={view}
@@ -290,7 +296,6 @@ export function SpacePage({ space, stack, speakerPage }: Props) {
             />
             {space.error && <Notice>Map failed: {space.error}</Notice>}
             {model.missing && <Notice>{SPACE_TEXT.missing}</Notice>}
-            {sharing.notice && <Notice>{sharing.notice.text}</Notice>}
             <CoverageBandPicker
               band={space.band}
               freqHz={space.freqHz}

@@ -15,6 +15,8 @@ import type { ShareError, SpaceDesign, SpaceShare } from "../../types";
 /** The one line the page shows about sharing. */
 export interface ShareNotice {
   text: string;
+  /** a problem (a link that did not open or copy), shown as a notice; absent: a plain status line */
+  problem?: true;
 }
 
 /**
@@ -63,9 +65,9 @@ export function useShareLink(design: SpaceDesign, replaceDesign: (d: SpaceDesign
             error = SHARE_ERROR.wrongFormat;
           }
         }
-        setNotice(error ? { text: SHARE_TEXT.errors[error] } : null);
+        setNotice(error ? { text: SHARE_TEXT.errors[error], problem: true } : null);
       } catch {
-        if (latest.current === mine) setNotice({ text: SHARE_TEXT.openFailed });
+        if (latest.current === mine) setNotice({ text: SHARE_TEXT.openFailed, problem: true });
       } finally {
         if (latest.current === mine) {
           opening.current = null;
@@ -106,7 +108,7 @@ export function useShareLink(design: SpaceDesign, replaceDesign: (d: SpaceDesign
         text: (await link).length > SHARE_LONG_LINK_CHARS ? SHARE_TEXT.long : SHARE_TEXT.copied,
       });
     } catch {
-      setNotice({ text: SHARE_TEXT.copyFailed });
+      setNotice({ text: SHARE_TEXT.copyFailed, problem: true });
     }
   };
   return { notice, share };
