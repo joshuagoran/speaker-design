@@ -22,32 +22,30 @@ test("cardioid: the rear sub inverted and delayed cuts the sound behind the pair
   const room = { ...DEFAULT_COVERAGE_LAYOUT.room, outdoors: true, widthFt: 40, lengthFt: 60 };
   const D_FT = 5,
     FRONT_Y = 25;
-  const place = (y: number, over: Partial<SpacePlacement> = {}): SpacePlacement =>
-    ({
-      item: { kind: SPACE_ITEM.speaker, id: sub.id },
-      x: 0,
-      y,
-      liftIn: 0,
-      aim: { yawDeg: 0, pitchDeg: 0 },
-      mirrored: false,
-      levelDb: 0,
-      delayMs: 0,
-      fill: false,
-      upsideDown: false,
-      invertPolarity: false,
-      ...over,
-    }) as SpacePlacement;
-  const design = (placements: SpacePlacement[]): SpaceDesign =>
-    ({
-      ...base,
-      speakers: [sub],
-      stacks: [],
-      space: {
-        ...base.space,
-        placements,
-        venue: { ...base.space.venue, room, listener: { x: 0, y: 50 } },
-      },
-    }) as SpaceDesign;
+  const place = (y: number, over: Partial<SpacePlacement> = {}): SpacePlacement => ({
+    item: { kind: SPACE_ITEM.speaker, id: sub.id },
+    x: 0,
+    y,
+    liftIn: 0,
+    aim: { yawDeg: 0, pitchDeg: 0 },
+    mirrored: false,
+    levelDb: 0,
+    delayMs: 0,
+    fill: false,
+    upsideDown: false,
+    invertPolarity: false,
+    ...over,
+  });
+  const design = (placements: SpacePlacement[]): SpaceDesign => ({
+    ...base,
+    speakers: [sub],
+    stacks: [],
+    space: {
+      ...base.space,
+      placements,
+      venue: { ...base.space.venue, room, listener: { x: 0, y: 50 } },
+    },
+  });
   const delayMs = ((D_FT * FT) / C) * 1000;
   const cardioid = design([
     place(FRONT_Y),
