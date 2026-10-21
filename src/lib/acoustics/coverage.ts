@@ -10,6 +10,9 @@
 //   reverberant field from everything the boxes radiate, the same everywhere. The two hand over in a crossfade.
 // Below COHERENT_BELOW_HZ the image paths sum with phase, so the two stacks interfere; above it a band average, or one
 // frequency, adds the separate paths (each box, each reflection) by power: their comb filtering is finer than the map.
+// Stages and risers (stageAcoustics.ts): each face and top a driver sees adds its image (a face with its floor bounce
+// too), kept at a point only where its reflection lands on that face; and a stage in the way of a path takes off its
+// barrier loss. They are image paths: indoors, below the crossover, the modal sum and the diffuse field don't see them.
 import {
   MODAL_SUBPOINTS,
   MODAL_SUBPOINTS_WHOLE_BAND,
@@ -22,6 +25,19 @@ import {
   waveguideHalfAngles,
 } from "./directivity";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
+import {
+  barrierLossDb,
+  BARRIER_BRIGHT_N,
+  faceSide,
+  insideBlock,
+  lineDetour,
+  sizeFade,
+  stageGeometry,
+  type Detour,
+  type SceneStage,
+  type StageBlock,
+  type StageReflector,
+} from "./stageAcoustics";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
 import {
   airDbPerM,
@@ -32,6 +48,7 @@ import {
   roomAbsorption,
   roomSizeM,
   ROOM_SURFACES,
+  STAGE_MATERIAL,
   surfaceReflection,
 } from "./roomAcoustics";
 import {
@@ -94,10 +111,13 @@ const NEPER_PER_DB = Math.LN10 / 20;
 
 /**
  * The reflections a path has taken, as an index into a slot's `refl`: 2 × the surface (0 none, then 1 + its place in
- * ROOM_SURFACES) + 1 when it also bounces off the floor.
+ * ROOM_SURFACES, then the stages' faces and tops after the room's: REFL_ROOM / 2 + the scene's reflector) + 1 when it
+ * also bounces off the floor.
  */
 const reflIndex = (surface: number, floor: boolean) => 2 * surface + (floor ? 1 : 0);
-const REFL_KINDS = 2 * (ROOM_SURFACES.length + 1);
+const REFL_ROOM = 2 * (ROOM_SURFACES.length + 1);
+const stageReflIndex = (reflector: number, floor: boolean) =>
+  REFL_ROOM + reflIndex(reflector, floor);
 
 /** A horn's coverage, as the map radiates it: its −6 dB angles, degrees, and its mouth, inches. */
 export type HornCoverage = Omit<PaStackGeometry["horn"], "zIn">;
@@ -145,6 +165,14 @@ interface SceneSource extends Pick<SceneDriver, "voice" | "x" | "y" | "z" | "ali
   horn: boolean;
   /** the reflections along this path (see reflIndex): the slot has what they keep at its frequency */
   refl: number;
+  /** it bounces off the room's floor */
+  floor: boolean;
+  /** the stage face or top it is an image in (its index in the scene's `reflectors`), or −1 */
+  reflector: number;
+  /** the driver it images, m: a stage image's legs run from there */
+  ox: number;
+  oy: number;
+  oz: number;
 }
 
 /** Everything that radiates, ready to sum at any point. */
@@ -155,6 +183,9 @@ export interface CoverageScene {
   paths: number;
   /** indoors: the room's modes, the drivers as the modal sum sees them, and where it hands over to the images, Hz */
   modal: { modes: RoomModes; sources: ModalSource[]; crossoverHz: number } | null;
+  /** the stages, as the barrier reads them, and their faces and tops that reflect */
+  blocks: StageBlock[];
+  reflectors: StageReflector[];
 }
 
 /**
@@ -174,6 +205,8 @@ export interface CoverageSlot {
   shadow: number;
   /** pressure each kind of path keeps after its reflections, by SceneSource.refl */
   refl: Float64Array;
+  /** how much of each stage's barrier loss (dB) holds here: none where the stage is small against the wavelength */
+  stageFade: Float64Array;
   /** air absorption, nepers per meter (pressure) */
   air: number;
   /** the reverberant field's mean square, the same everywhere: 0 outdoors */
@@ -182,15 +215,42 @@ export interface CoverageSlot {
   modal: ModalSlot | null;
 }
 
+/** Where a driver's image in a stage's face or top is, and its aim. */
+function stageImage(
+  d: SceneDriver,
+  r: StageReflector,
+): Pick<SceneDriver, "x" | "y" | "z" | "yaw" | "pitch"> {
+  if (!r.face) return { ...d, z: 2 * r.top - d.z, pitch: -d.pitch };
+  const { nx, ny } = r.face,
+    side = faceSide(r.face, d.x, d.y),
+    // its aim on the plan, mirrored in the face
+    hx = Math.sin(d.yaw),
+    hy = Math.cos(d.yaw),
+    along = hx * nx + hy * ny;
+  return {
+    ...d,
+    x: d.x - 2 * side * nx,
+    y: d.y - 2 * side * ny,
+    yaw: Math.atan2(hx - 2 * along * nx, hy - 2 * along * ny),
+  };
+}
+
+/** Whether a driver sees a stage's face (it stands on the face's outer side) or its top (it is above it). */
+const seesReflector = (r: StageReflector, d: SceneDriver) =>
+  r.face ? faceSide(r.face, d.x, d.y) > 1e-6 : d.z > r.top + 1e-6;
+
 /**
  * The sources to sum from boxes of drivers: each box's drivers, plus their images in the floor and in every reflecting
- * side and the ceiling (a path each); indoors, also the room's modes and the drivers as the modal sum sees them.
+ * side and the ceiling, and in each stage face (with its floor bounce, on a floor stage) and top they see (a path
+ * each); indoors, also the room's modes and the drivers as the modal sum sees them.
  */
 export function sceneOf(
   room: CoverageRoom,
   voices: CoverageVoice[],
   boxes: readonly (readonly SceneDriver[])[],
+  stages: readonly SceneStage[] = [],
 ): CoverageScene {
+  const { blocks, reflectors } = stageGeometry(stages);
   const all = boxes.flat();
   const [W, L, ceiling] = roomSizeM(room);
   // a ceiling lower than the tallest driver can't be: it sits just over it
@@ -209,6 +269,8 @@ export function sceneOf(
     path: number,
     at: Pick<SceneDriver, "x" | "y" | "z" | "yaw" | "pitch">,
     refl: number,
+    floor: boolean,
+    reflector = -1,
   ): SceneSource => ({
     voice: d.voice,
     x: at.x,
@@ -222,6 +284,11 @@ export function sceneOf(
     sp: Math.sin(at.pitch),
     horn: horns.has(d.voice),
     refl,
+    floor,
+    reflector,
+    ox: d.x,
+    oy: d.y,
+    oz: d.z,
   });
   let paths = 0;
   for (const drivers of boxes) {
@@ -246,6 +313,7 @@ export function sceneOf(
               paths,
               floor ? { ...at, z: -at.z, pitch: -at.pitch } : at,
               reflIndex(im.surface, floor),
+              floor,
             ),
           );
         }
@@ -255,9 +323,31 @@ export function sceneOf(
     if (reflects(4)) {
       for (const d of drivers)
         sources.push(
-          source(d, paths, { ...d, z: 2 * H - d.z, pitch: -d.pitch }, reflIndex(5, false)),
+          source(d, paths, { ...d, z: 2 * H - d.z, pitch: -d.pitch }, reflIndex(5, false), false),
         );
       paths++;
+    }
+    // each stage face or top the box's drivers see; a floor stage's face also with the floor bounce (a riser's face
+    // meets its stage's top, not the floor: once only)
+    for (const [r, reflector] of reflectors.entries()) {
+      const seen = drivers.filter((d) => seesReflector(reflector, d));
+      if (!seen.length) continue;
+      for (const floor of reflector.face && !reflector.base ? [false, true] : [false]) {
+        for (const d of seen) {
+          const at = stageImage(d, reflector);
+          sources.push(
+            source(
+              d,
+              paths,
+              floor ? { ...at, z: -at.z, pitch: -at.pitch } : at,
+              stageReflIndex(r, floor),
+              floor,
+              r,
+            ),
+          );
+        }
+        paths++;
+      }
     }
     if (modes)
       for (const d of drivers)
@@ -269,6 +359,8 @@ export function sceneOf(
     sources,
     paths,
     modal: modes ? { modes, sources: modalSources, crossoverHz } : null,
+    blocks,
+    reflectors,
   };
 }
 
@@ -382,7 +474,7 @@ export function sceneSlots(
     const shadow = 1 / Math.hypot(1, f / BOX_SHADOW_HZ);
     // what each kind of path keeps: its side or ceiling's reflection, times the floor's when it bounces off it too
     const floor = floorReflection(room, f),
-      refl = new Float64Array(REFL_KINDS);
+      refl = new Float64Array(REFL_ROOM + 2 * scene.reflectors.length);
     for (let s = 0; s <= ROOM_SURFACES.length; s++) {
       const g = !s
         ? 1
@@ -392,6 +484,16 @@ export function sceneSlots(
       refl[reflIndex(s, false)] = g;
       refl[reflIndex(s, true)] = g * floor;
     }
+    // a stage's face or top, outdoors too: its material, less where it is small against the wavelength
+    const stageMaterial = surfaceReflection(STAGE_MATERIAL, f);
+    for (const [r, { size }] of scene.reflectors.entries()) {
+      const g = stageMaterial * sizeFade(f, size);
+      refl[stageReflIndex(r, false)] = g;
+      refl[stageReflIndex(r, true)] = g * floor;
+    }
+    // a stage's barrier loss fades by the same high-pass, squared, on its height above the floor
+    const stageFade = new Float64Array(scene.blocks.length);
+    for (const [b, { top }] of scene.blocks.entries()) stageFade[b] = sizeFade(f, top) ** 2;
     let diffuse = 0,
       ms: ModalSlot | null = null;
     if (modal) {
@@ -438,6 +540,7 @@ export function sceneSlots(
       hornHalf,
       shadow,
       refl,
+      stageFade,
       air: airDbPerM(f) * NEPER_PER_DB,
       diffuse,
       modal: ms,
@@ -489,11 +592,71 @@ export function coverageFrequencies(
   return { freqs, shares, coherent: false };
 }
 
-// scratch space for the sum: per source geometry (GEO values each), per path pressure
-const GEO = 5;
+// scratch space for the sum: per source geometry (GEO values each), per path pressure, the detour over the stages
+const GEO = 8;
 let geo = new Float64Array(0),
   pre = new Float64Array(0),
   pim = new Float64Array(0);
+const detour: Detour = { delta: -Infinity, stage: -1 };
+
+/**
+ * Where a stage image's path reflects on its face or top on the way to a point (m), or null where that point lies off
+ * the face (past its ends, under its base or over its top) or off the top's outline. A face's floor-bounce image hits
+ * the face as high as its line crosses the face's plane below the floor or above it.
+ */
+function stageReflection(
+  s: SceneSource,
+  r: StageReflector,
+  block: StageBlock,
+  px: number,
+  py: number,
+  pz: number,
+): [x: number, y: number, z: number] | null {
+  if (!r.face) {
+    if (pz <= r.top) return null;
+    const t = (r.top - s.z) / (pz - s.z),
+      x = s.x + (px - s.x) * t,
+      y = s.y + (py - s.y) * t;
+    return insideBlock(block, x, y) ? [x, y, r.top] : null;
+  }
+  const from = faceSide(r.face, s.x, s.y),
+    to = faceSide(r.face, px, py);
+  if (to <= 0) return null;
+  const t = from / (from - to),
+    x = s.x + (px - s.x) * t,
+    y = s.y + (py - s.y) * t,
+    z = Math.abs(s.z + (pz - s.z) * t),
+    along = (x - r.face.ax) * r.face.ux + (y - r.face.ay) * r.face.uy;
+  return along >= 0 && along <= r.face.len && z >= r.base && z <= r.top ? [x, y, z] : null;
+}
+
+/**
+ * The longest detour a source's path to a point takes over the stages (`detour`): the straight line from a box's
+ * driver, or from a room image (its last leg, above the floor) and, with a floor bounce, that line mirrored in the
+ * floor (the leg before the bounce); a stage image's legs from its driver to the face and from the face on, past its
+ * own stage. A wall's leg before it reflects isn't checked, nor a stage face's floor leg.
+ */
+function sourceDetour(
+  scene: CoverageScene,
+  s: SceneSource,
+  hit: readonly number[] | null,
+  px: number,
+  py: number,
+  pz: number,
+) {
+  const { blocks } = scene;
+  detour.delta = -Infinity;
+  detour.stage = -1;
+  if (s.reflector < 0) {
+    lineDetour(blocks, s.x, s.y, s.z, px, py, pz, -1, detour);
+    if (s.floor) lineDetour(blocks, s.x, s.y, -s.z, px, py, -pz, -1, detour);
+  } else if (hit) {
+    const own = scene.reflectors[s.reflector].stage,
+      [qx, qy, qz] = hit;
+    lineDetour(blocks, s.ox, s.oy, s.oz, qx, qy, qz, own, detour);
+    lineDetour(blocks, qx, qy, qz, px, py, pz, own, detour);
+  }
+}
 
 /**
  * Mean-square level at a point (meters, z above the floor) over the slots, dB SPL: at each slot the modal sum, or the
@@ -506,8 +669,9 @@ export function levelAtPoint(
   py: number,
   pz: number,
 ): number {
-  const { sources, paths, modal } = scene,
-    n = sources.length;
+  const { sources, paths, modal, blocks, reflectors } = scene,
+    n = sources.length,
+    staged = blocks.length > 0;
   if (geo.length < GEO * n) geo = new Float64Array(GEO * n);
   if (pre.length < paths) {
     pre = new Float64Array(paths);
@@ -528,11 +692,26 @@ export function levelAtPoint(
     if (w >= 1) continue;
     if (!geoReady) {
       // distance, angles off the source's axis (horizontal, vertical), sine of the total angle (a piston's pattern
-      // stops at 90°), and whether the point is behind the box. The point in the source's own frame: forward along its
+      // stops at 90°), whether the point is behind the box, whether the path is there (a stage image's reflection on
+      // its face), and its detour over the stages (and which). The point in the source's own frame: forward along its
       // axis (its yaw, then its pitch), right, and up.
       for (let i = 0; i < n; i++) {
         const s = sources[i],
-          dx = px - s.x,
+          g = GEO * i;
+        geo[g + 5] = 1;
+        geo[g + 6] = -Infinity;
+        if (staged) {
+          const r = s.reflector < 0 ? null : reflectors[s.reflector],
+            hit = r && stageReflection(s, r, blocks[r.stage], px, py, pz);
+          if (r && !hit) {
+            geo[g + 5] = 0;
+            continue;
+          }
+          sourceDetour(scene, s, hit, px, py, pz);
+          geo[g + 6] = detour.delta;
+          geo[g + 7] = detour.stage;
+        }
+        const dx = px - s.x,
           dy = py - s.y,
           dz = pz - s.z,
           ahead = dx * s.sy + dy * s.cy,
@@ -542,8 +721,7 @@ export function levelAtPoint(
           r = Math.hypot(dx, dy, dz),
           th = Math.atan2(right, fwd),
           tv = Math.atan2(up, Math.hypot(fwd, right)),
-          c = r > 0 ? fwd / r : 1,
-          g = GEO * i;
+          c = r > 0 ? fwd / r : 1;
         geo[g] = Math.max(0.3, r);
         geo[g + 1] = th;
         geo[g + 2] = tv;
@@ -557,10 +735,14 @@ export function levelAtPoint(
     for (let i = 0; i < n; i++) {
       const s = sources[i],
         v = sl.out[s.voice],
-        gain = sl.refl[s.refl];
-      if (!v || !gain) continue;
-      const g = GEO * i,
-        r = geo[g],
+        g = GEO * i;
+      let gain = sl.refl[s.refl];
+      if (!v || !gain || !geo[g + 5]) continue;
+      // a stage in the way: its barrier loss at this path's Fresnel number, N = 2δ/λ = δk/π
+      const fresnel = (geo[g + 6] * sl.k) / Math.PI;
+      if (fresnel > BARRIER_BRIGHT_N)
+        gain *= Math.pow(10, (-barrierLossDb(fresnel) * sl.stageFade[geo[g + 7]]) / 20);
+      const r = geo[g],
         half = s.horn ? sl.hornHalf[s.voice] : undefined;
       let d: number;
       if (half) d = waveguideGain(geo[g + 1], geo[g + 2], half);

@@ -1,5 +1,6 @@
 // The space model: every placement's stack in the room, summed across the floor on the coverage engine
-// (lib/acoustics/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes).
+// (lib/acoustics/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes,
+// and the stages' faces and tops, and their shadows).
 // Each placement plays its stack's response (lib/speaker/stackResponse: each member's speaker through its crossover,
 // level, polarity and delay), with each band's amp power from its speaker; each driver spot radiates its band's share
 // with its own coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step
@@ -56,6 +57,7 @@ import { driverHorn, speakerLayout } from "./speakerLayout";
 import { spaceLayout, type BandOfPart, type PlacedDriver, type PlacedItem } from "./spaceLayout";
 import { spaceCoupling } from "./spaceCoupling";
 import { boxLoadings } from "./spaceLoading";
+import { stageSolids } from "./spaceStages";
 import { typedFeed, type SolvedFeed } from "./solveFeeds";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
@@ -311,6 +313,11 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
         design.space.venue.room,
         list.map(({ id, pattern }) => ({ id, pattern })),
         boxes,
+        stageSolids(design.space.venue.stages).map((s) => ({
+          corners: s.corners.map((p) => ({ x: p.x * METERS_PER_FOOT, y: p.y * METERS_PER_FOOT })),
+          base: s.baseFt * METERS_PER_FOOT,
+          top: s.topFt * METERS_PER_FOOT,
+        })),
       ),
       feeds: list,
       solved: [],
