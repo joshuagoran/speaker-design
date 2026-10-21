@@ -8,9 +8,9 @@ import { FIELD_ROW } from "../../styles/layout";
 import type { CoverageRoom, FloorCrowd, RoomMaterial, RoomSurface } from "../../types";
 
 /** Room size limits, ft. */
-export const ROOM_WIDTH_FT: [number, number] = [16, 80];
-export const ROOM_LENGTH_FT: [number, number] = [16, 100];
-export const ROOM_CEILING_FT: [number, number] = [8, 40];
+export const ROOM_WIDTH_FT: [number, number] = [6, 100];
+export const ROOM_LENGTH_FT: [number, number] = [6, 100];
+export const ROOM_CEILING_FT: [number, number] = [6, 40];
 
 /** A surface whose material is set, and the name its field shows. */
 export type SurfaceName = readonly [RoomSurface, string];

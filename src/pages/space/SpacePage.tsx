@@ -549,7 +549,8 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   label={SPACE_TEXT.ear}
                   value={venue.earFt}
                   min={1}
-                  max={8}
+                  // the ear stays under a low ceiling
+                  max={venue.room.outdoors ? 8 : Math.min(8, venue.room.ceilingFt)}
                   step={0.1}
                   onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
                 />
