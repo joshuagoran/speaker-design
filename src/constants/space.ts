@@ -142,6 +142,9 @@ export const NEW_RISER_SMALL = { widthFt: 4, depthFt: 4, heightFt: NEW_RISER.hei
 /** The steps a new stage's spot is searched in, ft. */
 export const STAGE_SPOT_STEP_FT = 0.5;
 
+/** The steps a new placement's free spot is searched in, ft. */
+export const PLACE_SPOT_STEP_FT = 0.25;
+
 /** The smallest stage, sq ft. */
 export const STAGE_MIN_AREA_SQFT = 4;
 

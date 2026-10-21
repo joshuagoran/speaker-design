@@ -27,7 +27,7 @@ import {
   withSolved,
   type SpaceGridRequest,
 } from "../../lib/speaker/spaceCoverage";
-import { aimedPlacement, movedPlacement } from "../../lib/speaker/spaceLayout";
+import { aimedPlacement, movedPlacement, spaceLayout } from "../../lib/speaker/spaceLayout";
 import {
   roomWalls,
   snapFlush,
@@ -43,6 +43,7 @@ import {
   straightEdges,
 } from "../../lib/speaker/spaceStages";
 import {
+  freeSpot,
   keepsRules,
   spotPlans,
   withStageAdded,
@@ -307,14 +308,18 @@ export function referenceAtLimit(
 const systemGain = (target: number, atLimit: number | null) =>
   atLimit !== null ? Math.min(0, target - atLimit) : 0;
 
-/** The space with an item placed at the new spot. */
-const withPlaced = (d: SpaceDesign, item: SpacePlacement["item"]): SpaceDesign => ({
-  ...d,
-  space: {
-    ...d.space,
-    placements: [...d.space.placements, spacePlacement(NEW_SPOT, item, 0)],
-  },
-});
+/** The space with an item placed at the first free spot from the new spot (`freeSpot`). */
+function withPlaced(d: SpaceDesign, item: SpacePlacement["item"]): SpaceDesign {
+  const added = spacePlacement(NEW_SPOT, item, 0);
+  const at = (spot: FloorPoint): SpaceDesign => ({
+    ...d,
+    space: { ...d.space, placements: [...d.space.placements, { ...added, ...spot }] },
+  });
+  const placed = at(NEW_SPOT);
+  // only the boxes' plans are read: no driver feeds a band
+  const plans = spotPlans(spaceLayout(placed, () => null));
+  return at(freeSpot(placed.space, d.space.placements.length, plans, NEW_SPOT));
+}
 
 /** The space with a stack placed: its copy in the space (`withStack`), at the new spot. */
 export function withStackPlaced(d: SpaceDesign, saved: StackDesign): SpaceDesign {

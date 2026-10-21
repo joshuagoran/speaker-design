@@ -11,6 +11,8 @@ import {
   planCenter,
   planOf,
   rectCorners,
+  roomOutline,
+  shapesOverlap,
   stageAt,
   stageById,
   stageKeepsRules,
@@ -23,6 +25,7 @@ import {
   NEW_RISER,
   NEW_RISER_SMALL,
   NEW_STAGE,
+  PLACE_SPOT_STEP_FT,
   SNAP_FLUSH_IN,
   STAGE_HEIGHT_FT,
   STAGE_MIN_SIDE_FT,
@@ -51,6 +54,55 @@ export const placedPlans = (placements: readonly SpacePlacement[], plans: SpotPl
     const plan = plans[i];
     return plan ? movedPlan(plan, p) : [];
   });
+
+/**
+ * The first free spot for placement `k`, ft: `from` when free, else the spot nearest the center line in the first free
+ * row down the room from `from` (then in the rows in front of it), in `PLACE_SPOT_STEP_FT` steps. Free: each of its
+ * boxes (a mirrored pair's both) stands on the floor within the room, clear of every stage and every other box. `from`
+ * when no spot is free or its boxes are not laid out.
+ */
+export function freeSpot(
+  layout: Layout,
+  k: number,
+  plans: SpotPlans,
+  from: FloorPoint,
+): FloorPoint {
+  const { stages, room } = layout.venue;
+  const floor = roomOutline(room);
+  const placedAt = (to: FloorPoint) =>
+    layout.placements.map((p, i) => (i === k ? { ...p, x: to.x, y: to.y } : p));
+  const sources = expandPlacements(layout.placements).map((p) => p.source);
+  if (!sources.some((source, i) => source === k && plans[i]?.length)) return from;
+  const isFree = (to: FloorPoint) => {
+    const all = placedPlans(placedAt(to), plans);
+    const own = all.filter((_, i) => sources[i] === k);
+    const others = all.filter((_, i) => sources[i] !== k).flat();
+    return own.every((plan, j) =>
+      plan.every(
+        (m) =>
+          within(m, floor) &&
+          !stages.some((s) => shapesOverlap(m, s.corners)) &&
+          !others.some((o) => shapesOverlap(m, o)) &&
+          // a mirrored pair's two boxes stay clear of each other
+          !own.some((twin, t) => t !== j && twin.some((o) => shapesOverlap(m, o))),
+      ),
+    );
+  };
+  if (isFree(from)) return from;
+  const half = Math.floor(room.widthFt / 2 / PLACE_SPOT_STEP_FT);
+  const xs = Array.from({ length: 2 * half + 1 }, (_, i) => (i - half) * PLACE_SPOT_STEP_FT).sort(
+    (a, b) => Math.abs(a) - Math.abs(b) || a - b,
+  );
+  const rows = Math.floor(room.lengthFt / PLACE_SPOT_STEP_FT);
+  const ys = Array.from({ length: rows + 1 }, (_, i) => i * PLACE_SPOT_STEP_FT);
+  const order = [...ys.filter((y) => y >= from.y), ...ys.filter((y) => y < from.y).reverse()];
+  for (const y of order)
+    for (const x of xs) {
+      const to = { x, y };
+      if (isFree(to)) return to;
+    }
+  return from;
+}
 
 /** The rules a layout breaks: the stages (by id) and the boxes (by index) that break one. */
 function broken(layout: Layout, plans: SpotPlans) {

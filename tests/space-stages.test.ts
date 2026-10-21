@@ -26,7 +26,7 @@ import {
   withStageShape,
 } from "../src/pages/space/stageEdits";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
-import { withBoxMoved } from "../src/pages/space/useSpace";
+import { withBoxMoved, withSpeakerPlaced } from "../src/pages/space/useSpace";
 import { spaceModelLaidOut } from "../src/lib/speaker/spaceCoverage";
 import { roomWalls } from "../src/lib/speaker/spaceCoupling";
 import { spacePlacement } from "../src/lib/speaker/specParts";
@@ -341,4 +341,32 @@ test("share link: stages round trip", async () => {
   const opened = openEnvelope(decoded.envelope);
   assert.ok(opened && opened.kind === SHARE_KIND.space);
   assert.deepEqual(opened.design.space.venue.stages, space.venue.stages);
+});
+
+test("stages: a new placement lands at the first free spot on the floor, off the stages and the other boxes", () => {
+  const top = { ...templateSpeaker(SPEAKER_TEMPLATE.genericTop12), id: "top" };
+  const empty: SpaceDesign = { space: spaceWith([]), stacks: [], speakers: [] };
+  const first = withSpeakerPlaced(empty, top);
+  // a free new spot is kept
+  assert.deepEqual(
+    first.space.placements.map((p) => [p.x, p.y]),
+    [[0, 3]],
+  );
+  // a box at the new spot, then a stage over it
+  for (const stages of [[], [stage("main", [-8, 0, 8, 8])]]) {
+    const from = { ...first, space: { ...first.space, venue: { ...first.space.venue, stages } } };
+    const next = withSpeakerPlaced(from, top);
+    const { space } = next;
+    const model = spaceModelLaidOut(next);
+    const plans = placedPlans(space.placements, spotPlans(model.placements.map((p) => p.item)));
+    const [old, added] = plans;
+    assert.equal(space.placements.length, 2);
+    assert.notDeepEqual([space.placements[1].x, space.placements[1].y], [0, 3]);
+    for (const m of added) {
+      assert.ok(within(m, rectCorners(-ROOM.widthFt / 2, 0, ROOM.widthFt / 2, ROOM.lengthFt)));
+      assert.ok(!stages.some((s) => shapesOverlap(m, s.corners)));
+      assert.ok(!old.some((o) => shapesOverlap(m, o)));
+    }
+    assert.equal(model.placements[1].item.standsOn, null);
+  }
 });
