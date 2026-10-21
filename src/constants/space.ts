@@ -229,9 +229,9 @@ export const BAND_NEAR_DB = 6;
 export const ARRIVAL_STATUS = { onTime: "onTime", close: "close", off: "off" } as const;
 
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
-const SPACE_ONE_METER = "1 m from the speakers";
+const SPACE_ONE_METER = "1 m from the Sources";
 const SPACE_ONE_METER_TIP =
-  "The mean level at ear height, 1 m in front of each placed stack or speaker that plays in the band, on its aim.";
+  "The mean level at ear height, 1 m in front of each Source that plays in the band, on its aim.";
 
 /** The Space page's "Measured at" choices' names: the PA's, with its own 1 m reference. */
 export const SPACE_LEVEL_REF_NAMES: Record<CoverageLevelRef, string> = {
@@ -257,8 +257,8 @@ export const SPACE_LEVEL_REF_PLACE: Record<CoverageLevelRef, string> = {
 /** A delay under this is no delay, ms. */
 export const NO_DELAY_MS = 0.05;
 
-/** The control that puts a stack or speaker in the space (the Placements section's first control). */
-const ADD_PLACEMENT = "Add speaker or stack";
+/** The control that puts a Source (a Stack or Speaker) in the space (the Sources section's first control). */
+const ADD_PLACEMENT = "Add Source";
 
 /** The DOM id of placement `k`'s item in the Placements list, so a pick on the map can scroll it into view. */
 export const placementDomId = (k: number) => `space-placement-${k}`;
@@ -289,9 +289,9 @@ export const SPACE_TEXT = {
   response: "Response at the listener",
   levels: "Levels",
   /** the line on the map of a room with nothing placed */
-  quietRoom: "Add a speaker or stack to hear the room.",
+  quietRoom: "Add a Source to hear the room.",
   noPlacements: `Nothing is placed yet. Pick a Stack or Speaker and press **${ADD_PLACEMENT}**.`,
-  missing: "A placement names a stack or speaker that is not in this space, so it is left out.",
+  missing: "A Source names a Stack or Speaker that is not in this Space, so it is left out.",
   /** the empty start in "New from…" */
   empty: "Empty Space",
   addPlacement: ADD_PLACEMENT,
@@ -335,7 +335,7 @@ export const SPACE_TEXT = {
   upsideDown: "Upside down",
   gain: `${GAIN}, dB`,
   delay: `${DELAY}, ms`,
-  delayTip: `The delay on this placement's feed. **${CALCULATE_DELAYS}** sets it.`,
+  delayTip: `The delay on this Source's signal. **${CALCULATE_DELAYS}** sets it.`,
   /** the Main / Fill choice's label and tooltip */
   role: "Main / Fill",
   roleTip: `**${CALCULATE_DELAYS}** and **${CALCULATE_GAINS}** treat a fill differently. A fill arrives after the nearest main, at that main's level.`,
@@ -344,8 +344,8 @@ export const SPACE_TEXT = {
   /** a note from Calculate delays on one placement: its name, then the note */
   delayNoteFor: (name: string, note: string) => `${name}: ${note}`,
   delayClamped: "This fill arrives late even with no delay. Move it nearer to its area.",
-  delayNoMain: "No main to line up with. Add a placement that is not a fill.",
-  feedTip: "A gain and a delay on this placement's feed (a fill under, and after, the mains).",
+  delayNoMain: "No main to line up with. Add a Source that is not a fill.",
+  feedTip: "A gain and a delay on this Source's signal (a fill under, and after, the mains).",
   ampPower: "Amp power",
   ampPowerHint: AMP_POWER_TIP,
   ampPowerTip: `The space finds each speaker's limit from it. A **${MIRRORED}**, and a Speaker placed twice, share one figure.`,
@@ -364,7 +364,7 @@ export const SPACE_TEXT = {
   /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (in) */
   delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,
   offsetNote: "Some boxes need a time offset to line up at their crossovers.",
-  placementNote: "Some placements play later, to line up with other speakers in the room.",
+  placementNote: "Some Sources play later, to line up with other Sources in the room.",
   outdoors: "Outdoors",
   /** the Placements section's toggle: a dragged box snaps flush against a wall or another box */
   snapFlush: "Snap to walls & boxes",
@@ -379,7 +379,7 @@ export const SPACE_TEXT = {
   targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**, the level is lower above each crossover.`,
   measuredAt: MEASURED_AT,
   systemGain: `${SYSTEM_GAIN}, dB`,
-  systemGainTip: `The gain on all placements together. A box plays at its limit when its **${GAIN}** and this add to 0.`,
+  systemGainTip: `The gain on all Sources together. A box plays at its limit when its **${GAIN}** and this add to 0.`,
   calculateGains: CALCULATE_GAINS,
   calculateGainsTip: `Sets each main's **${GAIN}** so the bands it plays most meet their target at the **${MEASURED_AT}** location. Then it lowers **${SYSTEM_GAIN}** until no band is past its limit. Each fill gets the level of the nearest main.`,
   /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
@@ -457,11 +457,11 @@ export const SPACE_DETAILS = {
   ],
   map: "The map",
   mapLines: (limitHz: number, coherentHz: number) => [
-    "Drag a placement to move it.",
+    "Drag a Source to move it.",
     "Drag its dot to turn it.",
     `Drag or tap to place the **${MAP_MARK_NAMES.listener}**.`,
-    `One frequency shows the interference between the placements (below ${coherentHz} Hz).`,
-    `One frequency goes up to ${limitHz / 1000} kHz. Above ${coherentHz} Hz, it adds the placements by power.`,
+    `One frequency shows the interference between the Sources (below ${coherentHz} Hz).`,
+    `One frequency goes up to ${limitHz / 1000} kHz. Above ${coherentHz} Hz, it adds the Sources by power.`,
   ],
   levels: "Levels",
   /** the target in the band on show, where it is measured (`SPACE_LEVEL_REF_PLACE`), dB */
@@ -477,7 +477,7 @@ export const SPACE_DETAILS = {
   audience: (clearanceFt: number) =>
     `**${SPACE_TEXT.audienceAverage}**: the mean over the floor (excluding ${clearanceFt} ft around each box).`,
   oneMeter: (place: string) =>
-    `${place}: the mean at ear height, 1 m in front of each placed stack or speaker that plays in the band, on its aim.`,
+    `${place}: the mean at ear height, 1 m in front of each Source that plays in the band, on its aim.`,
   stages: "Stages",
   stageLines: [
     "Each stage is solid.",
@@ -493,7 +493,7 @@ export const SPACE_DETAILS = {
     "Each box plays through its crossover, level, and delay.",
     `The stack's delays put the boxes in phase at the crossovers, ${listenM} m out.`,
     "Each driver covers the room from its own place and aim.",
-    "A driver's place includes its cabinet's kick-back, its tilt in the stack and the placement's tilt.",
+    "A driver's place includes its cabinet's kick-back, its tilt in the stack, and the Source's tilt.",
     "Each cone band has a first-order baffle-step shelf.",
   ],
 } as const;
