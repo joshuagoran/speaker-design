@@ -1,7 +1,7 @@
 /** UI copy more than one page shows the same way. */
 export const UI_TEXT = {
   /** the toast when a save to the saved-designs store fails */
-  saveFailed: "Couldn't save — try again",
+  saveFailed: "The save failed. Try again.",
   /** a Stack member's or a Space placement's toggle: its feed turned over (its pressure times −1) */
   invertPolarity: "Invert polarity",
   /** the settings column's title, and its name (and the phone sheet's bar's) for screen readers */
@@ -13,7 +13,7 @@ export const UI_TEXT = {
   partialPriceMark: "+",
   /** an optimizer card's line when some part has no price, and its tip */
   partialPrices: "Partial prices",
-  partialPricesTip: "Some drivers have no price; the real total is higher.",
+  partialPricesTip: "Some drivers have no price. The real total is higher.",
   /** the conditions a sensitivity figure is quoted at */
   splConditions: "2.83 V, half space, 1 m",
   /** the PA stack's sub, as its results section and the system response chart name it */

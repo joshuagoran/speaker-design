@@ -44,7 +44,7 @@ export const SPEAKER_GOAL_TEXT = {
     short: GOAL_SHORT_NAMES.louder,
     name: SHARED_GOAL_NAMES.louder,
     atTarget: SHARED_GOAL_NAMES.louder,
-    why: "Most level inside your limits.",
+    why: "Loudest inside your limits.",
   },
 } as const;
 
@@ -78,7 +78,7 @@ export const SPEAKER_ALT_TEXT = {
   },
   smaller: { label: "Smaller", why: "Smaller than your design, close to the target." },
   lower: { label: "Goes lower", why: "Goes lower than your design." },
-  louder: { label: GOAL_SHORT_NAMES.louder, why: "More level than your design." },
+  louder: { label: GOAL_SHORT_NAMES.louder, why: "Louder than your design." },
 } as const;
 
 /** A fix's sentence (your design fails a check), by the first goal. */
@@ -123,8 +123,8 @@ export const SPEAKER_PROBLEM = {
 export const SPEAKER_PROBLEM_TEXT = {
   unmodeled: "the app cannot calculate a chamber or band in your design",
   driverFit: "a driver or horn no longer fits its chamber",
-  ventFit: "a port doesn't fit its chamber",
-  fitChip: "a duct, tube or hardware fit check fails",
+  ventFit: "a port does not fit its chamber",
+  fitChip: "a duct, tube, or hardware fit check fails",
   budget: "the parts cost more than the budget",
   weight: "the box weighs more than the limit",
   size: "the box is larger than the size limit",

@@ -60,7 +60,7 @@ export const BRACING_CHIP_TEXT = {
   meetsTip: (target: string) => `Every panel is above ${target}.`,
   under: "Under bracing target",
   underTip: (target: string) =>
-    `Not enough braces fit round the drivers, the vent and the horn. Some panels stay under ${target}, or over a strength limit. Details lists them.`,
+    `Not enough braces fit around the drivers, the vent, and the horn. Some panels stay under ${target}, or over a strength limit. Details lists them.`,
 } as const;
 
 /** The Details fold's groups, by chart, and their bullets: short sentences, one fact each. */
@@ -69,7 +69,7 @@ export const SPEAKER_DETAILS_TEXT = {
   responseLines: [
     "On axis, at 1 m, in half space.",
     "Every band gets 2.83 V.",
-    "It does not include the baffle step, the room or the driver positions yet.",
+    "It does not include the baffle step, the room, or the driver positions yet.",
     "The Space page adds them.",
   ],
   fbLine: "Fb marks the tuning of each ported chamber.",
@@ -77,7 +77,7 @@ export const SPEAKER_DETAILS_TEXT = {
   maxOutputLines: [
     "On axis, at 1 m.",
     "Each band gets the full power of its amp, up to its first limit.",
-    "The limits are cone travel, port air speed, radiator travel, the program rating (2 × AES) and the amp.",
+    "The limits are cone travel, port air speed, radiator travel, the program rating (2 × AES), and the amp.",
     "You set the port air speed limit in the chamber.",
     "The max of a band is for music, with one drive for the whole band.",
     "The sum uses one input for all bands.",
@@ -85,7 +85,7 @@ export const SPEAKER_DETAILS_TEXT = {
   ],
   price: "Price",
   priceLines: [
-    "The total of the purchased parts: drivers, horns, radiators, port tubes and hardware.",
+    "The total of the purchased parts: drivers, horns, radiators, port tubes, and hardware.",
     "It does not include the plywood.",
     "The Cutlist tab lists every part.",
   ],

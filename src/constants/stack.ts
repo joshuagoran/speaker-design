@@ -32,7 +32,7 @@ export const STACK_TEXT = {
   /** the empty start in "New from…" */
   empty: "Empty Stack",
   notes: "Notes",
-  librarySpeaker: "Saved speaker",
+  librarySpeaker: "Saved Speaker",
   addMember: "Add box",
   noLibrary: "Save speakers on the Speaker page to add them here (sign in first).",
   remove: "Remove",

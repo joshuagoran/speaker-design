@@ -38,7 +38,7 @@ export const NEAR_MISS_YOURS = "your design";
 
 /** The sentence under a card both optimizers word the same way. */
 export const CARD_WHY = {
-  closest: "Passes the checks; closest to your goal.",
+  closest: "Passes the checks. Closest to your goal.",
   smallest: "Changes one thing from your design.",
   altLower: "Goes lower than your design.",
 } as const;

@@ -298,8 +298,8 @@ export const SPACE_TEXT = {
     stackPresets: "Stack presets",
     speakerTemplates: "Speaker templates",
     open: "Open now",
-    savedStacks: "Saved stacks",
-    savedSpeakers: "Saved speakers",
+    savedStacks: "Saved Stacks",
+    savedSpeakers: "Saved Speakers",
   },
   /** the open stack or speaker in the Place list */
   openStack: (name: string) => `Stack: ${name}`,
@@ -352,7 +352,7 @@ export const SPACE_TEXT = {
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
   alignment: "Alignment",
   alignmentHint: "The settings for each box and band, at the level and delay the space asks of it.",
-  alignmentTip: "A delay, an all-pass filter or moving the box can give a time offset.",
+  alignmentTip: "A delay, an all-pass filter, or moving the box can give a time offset.",
   /** a band's filters, as a row's value: its corner and slope */
   highpass: (filter: string) => `High-pass ${filter}`,
   lowpass: (filter: string) => `Low-pass ${filter}`,
@@ -489,7 +489,7 @@ export const SPACE_DETAILS = {
   ],
   boxes: "Boxes and drivers",
   boxLines: (listenM: number) => [
-    "Each box plays through its crossover, level and delay.",
+    "Each box plays through its crossover, level, and delay.",
     `The stack's delays put the boxes in phase at the crossovers, ${listenM} m out.`,
     "Each driver covers the room from its own place and aim.",
     "A driver's place includes its cabinet's kick-back, its tilt in the stack and the placement's tilt.",

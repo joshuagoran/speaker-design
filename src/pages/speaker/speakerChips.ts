@@ -61,7 +61,7 @@ export function bandChips(
       const name = driverName(hf.driver);
       const derated =
         hf.derate < 1 && band?.highpass
-          ? `, derated ${(-10 * Math.log10(hf.derate)).toFixed(1)} dB for the ${formatHz(band.highpass.hz)} highpass`
+          ? `, derated ${(-10 * Math.log10(hf.derate)).toFixed(1)} dB for the ${formatHz(band.highpass.hz)} high-pass`
           : "";
       return hf.who === LIMIT_NAMES.amp
         ? [
@@ -174,7 +174,7 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
         ? [
             "warn",
             "Radiators pass Xmax at full power",
-            `${pctOf(radiator)}% of their ${radiator.limit.toFixed(1)} mm Xmax at ${formatHz(radiator.hz)}. Use more or larger radiators.`,
+            `${pctOf(radiator)}% of their ${radiator.limit.toFixed(1)} mm Xmax at ${formatHz(radiator.hz)}.`,
             "speakerRadiatorTravel",
           ]
         : [

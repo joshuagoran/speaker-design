@@ -508,7 +508,7 @@ export function CutlistPage({
               {plural(g.cuts.rips, "full-length rip")},{" "}
               {plural(g.cuts.crosscuts, "full-width crosscut")}
               {g.cuts.widestCrosscut > 0 &&
-                `; widest crosscut ${formatInches(g.cuts.widestCrosscut)}″`}
+                `. Widest crosscut ${formatInches(g.cuts.widestCrosscut)}″`}
               {g.offcut &&
                 `; keeps a ${formatInches(g.offcut.w)} × ${formatInches(g.offcut.h)}″ offcut on sheet ${g.offcut.sheet + 1}`}
               {g.fewestSheets !== null &&
@@ -629,7 +629,7 @@ export function CutlistPage({
             <>
               <NumberField
                 label={
-                  <Tooltip tip="18 mm birch is often 0.689″; ¾″ plywood, 23/32″. Measure yours.">
+                  <Tooltip tip="18 mm birch is often 0.689″. ¾″ plywood is often 23/32″. Enter your measured thickness for accuracy.">
                     {`Measured ${PANEL_NOMINAL_NAMES[panel].name}`}
                   </Tooltip>
                 }

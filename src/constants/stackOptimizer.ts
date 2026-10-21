@@ -29,7 +29,7 @@ export const STACK_PROBLEM = { ...SPEAKER_PROBLEM, height: "height" } as const;
 export const STACK_PROBLEM_TEXT = {
   unmodeled: "the app cannot calculate a box, chamber or band in your stack",
   driverFit: "a driver or horn no longer fits its chamber",
-  ventFit: "a port doesn't fit its chamber",
+  ventFit: "a port does not fit its chamber",
   fitChip: "a duct, tube or hardware fit check fails",
   budget: "the parts cost more than the budget",
   weight: "a box weighs more than the limit",
@@ -69,7 +69,7 @@ export const STACK_OPTIMIZER_TEXT = {
     "A locked part stays as it is. Keep a speaker to hold it whole. A locked crossover, level or delay stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
   curveLabel: "Maximum output with one input, this stack against yours",
   failing: (problems: string) =>
-    `Your stack fails: ${problems}. Fixes may cost more, weigh more or stand taller.`,
+    `Your stack fails: ${problems}. Fixes may cost more, weigh more, or stand taller.`,
   /** a speaker's lock on the whole speaker, and the label of a lock on a box axis */
   keepWhole: "Keep the whole speaker",
   boxAxis: { w: "Box width", h: "Box height", d: "Box depth" },

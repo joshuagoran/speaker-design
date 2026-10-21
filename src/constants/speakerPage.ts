@@ -206,7 +206,7 @@ export const MODEL_GAP_TEXT = {
   },
   noModel: {
     why: "the box cannot be calculated from these sizes (air, port, counts)",
-    fix: "Set the air, the port size and the driver counts above zero.",
+    fix: "Set the air, the port size, and the driver counts above zero.",
   },
   badFilter: {
     why: "a band filter has a corner that is not a positive frequency",
@@ -422,7 +422,7 @@ export const SPEAKER_TEXT = {
   wallPanel: "Wall panels",
   /** the wall panels' tooltip, with the frame box's baffle thickness in words */
   wallPanelTip: (baffle: string) =>
-    `The panel size of the sides, top, bottom and back. On a frame box, the baffle stays ${baffle}. On a flush box, the baffle is this size too. Thinner walls get more braces.`,
+    `The panel size of the sides, top, bottom, and back. On a frame box, the baffle stays ${baffle}. On a flush box, the baffle is this size too. Thinner walls get more braces.`,
   /** the construction summary's wall panels, by their thickness in words */
   wallPanelSummary: (t: string) => `${t} walls`,
   braceTarget: "Bracing target",
@@ -528,7 +528,7 @@ export const SPEAKER_TEXT = {
   hornFitMaxOut: (db: string, hz: string, limit: string) =>
     `Maximum output: ${db} dB at ${hz} Hz, limited by ${limit}.`,
   /** the goals check: how far the maximum output falls under the target level */
-  hornFitShort: (db: string) => `That is ${db} dB under the target.`,
+  hornFitShort: (db: string) => `That is ${db} dB quieter than the target.`,
   /** the goals check: the horn holds more air than the chamber has */
   hornFitAir: (horn: string, chamber: string) =>
     `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,

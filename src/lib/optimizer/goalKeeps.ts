@@ -45,7 +45,7 @@ export interface KeepWords {
 
 /** The Speaker optimizer's words: the target is the level at 1 m the page sets (it starts at your design's). */
 export const SPEAKER_KEEP_WORDS: KeepWords = {
-  level: (db) => `level stays at most ${db} under the target`,
+  level: (db) => `level stays, at most, ${db} quieter than the target`,
   note: "Level: the music level at 1 m. F3: the lowest band's.",
   unmodeled: SPEAKER_UNMODELED,
 };

@@ -157,7 +157,7 @@ export const SETTINGS_TEXT = {
   handleType: "Handle type",
   dish: "Input dish",
   dishTip:
-    "An input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell.",
+    "An input dish with two jacks on the back. With a horn on the top, it also has binding posts for the horn. It goes on the lowest chamber of each cabinet.",
   dishNone: "None",
   dishOn: "On the back",
   /** the Construction summary's walls, top and hardware */

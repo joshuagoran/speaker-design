@@ -45,7 +45,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
     .join(", ");
   return [
     [
-      "Floor, air and crowd",
+      "Floor, air, and crowd",
       [
         `Floor reflection: ${FLOOR_REFLECTION.indoors} of the pressure indoors (hard floor), ${FLOOR_REFLECTION.outdoors} outdoors (ground).`,
         `A full floor keeps the bounce below ${CROWD_BOUNCE.loHz} Hz, ${CROWD_BOUNCE.hi} of it from ${CROWD_BOUNCE.hiHz / 1000} kHz. Absorption: the seated-audience row.`,
@@ -63,7 +63,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
     [
       "Summing and readouts",
       [
-        `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase (the stacks interfere); above, band averages (and one frequency) add by power.`,
+        `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase, so may interfere and cause cancellation. Above, band averages (and one frequency) add only by power.`,
         `Bands, Hz: ${bands}; each averaged over ${BAND_POINTS} frequencies, with more where the room modes sum.`,
         `The floor stats leave out ${STATS_CLEARANCE_FT} ft around every box.`,
       ],
@@ -71,7 +71,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
     [
       "Not modeled",
       [
-        "Non-rectangular rooms, balconies, pillars, diffraction (except over stages), crowd shadowing, measured driver directivity.",
+        "Non-rectangular rooms, balconies, pillars, diffraction (except over stages), crowd shadowing, and measured driver directivity.",
       ],
     ],
   ];

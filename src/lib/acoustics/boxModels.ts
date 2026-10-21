@@ -1065,7 +1065,7 @@ export const hornCutoutWords = (
  * and its seal.
  */
 export const partitionNote = (where: string, back: BackJointId, cleats: boolean) =>
-  `${where}${cleats ? "; notch the front corners 3/4″ square round the baffle cleats" : ""}; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`;
+  `${where}${cleats ? "; notch the front corners 3/4″ square around the baffle cleats" : ""}; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`;
 
 /**
  * A frame shell's rows (boxParts of the whole `dims`, label `box`) with an arched top: a semicircle the full width, its
@@ -1125,7 +1125,7 @@ export function archedShellParts(
       a: 0.75,
       b: iw,
       t: BAFFLE_PLY_IN,
-      note: "glue and screw behind the baffle, across the bottom; glue blocks round the arch",
+      note: "glue and screw behind the baffle, across the bottom; glue blocks around the arch",
     },
     {
       box,

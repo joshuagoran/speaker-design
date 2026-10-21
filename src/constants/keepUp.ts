@@ -6,7 +6,7 @@ export const KEEP_UP_TEXT = {
   shortTitle: (upper: string) => `${upper} limits first`,
   /** how short it is, dB (already formatted), where, and the part under it */
   shortDetail: (gap: string, hz: string, upper: string, lower: string) =>
-    `${upper} is ${gap} dB short at ${hz} when ${lower} is at its music limit. Raise the crossover, give ${upper} more amp power, or use a driver that plays louder.`,
+    `${upper} is ${gap} dB short at ${hz} when ${lower} is at its music limit.`,
   /** the upper part keeps up: the part under it */
   okTitle: (lower: string) => `Keeps up with ${lower}`,
   okDetail: (gap: string, hz: string, lower: string) =>

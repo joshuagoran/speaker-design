@@ -31,7 +31,7 @@ export const STATS = {
   },
   firstLimit: {
     label: "First limit, music",
-    tip: "What limits first with music: Xmax, port air speed or other.",
+    tip: "What limits first with music: Xmax, port air speed, or other.",
   },
   peakPortVelocity: {
     label: "Peak port velocity",
@@ -43,7 +43,7 @@ export const STATS = {
   },
   qtc: {
     label: "Qtc",
-    tip: "Sealed-box damping. 0.7 is flat; higher is boomy, lower dry.",
+    tip: "Sealed-box damping. 0.7 is flat. Higher is boomy, lower is dry.",
   },
   tuningFb: {
     label: "Tuning Fb",
@@ -55,7 +55,7 @@ export const STATS = {
   },
   subBass: {
     label: `Sub-bass ${SUB_BASS_BAND_HZ[0]}–${SUB_BASS_BAND_HZ[1]} Hz`,
-    tip: `Average of the max SPL curve from ${SUB_BASS_BAND_HZ[0]} to ${SUB_BASS_BAND_HZ[1]} Hz, with the highpass: steady sine level at the first limit.`,
+    tip: `Average of the max SPL curve from ${SUB_BASS_BAND_HZ[0]} to ${SUB_BASS_BAND_HZ[1]} Hz, with the high-pass. It is the steady sine level at the first limit.`,
   },
   f3InRoom: {
     label: "F3 in room",

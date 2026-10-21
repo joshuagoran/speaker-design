@@ -90,7 +90,7 @@ export const BACK_JOINT_NAMES = {
 /** What each choice does, for its button's tooltip. */
 export const BACK_JOINT_TIPS = {
   screwed:
-    "Removable back: screwed on (into the rabbet on a frame) and to the window braces' rails; its edges count as hinged.",
+    "Removable back: screwed on (into the rabbet on a frame) and to the window braces' rails. Its edges count as hinged.",
   glued: "Glued like the other panels: the joints hold its edges.",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** The back joint a design takes when none is chosen: screwed, the safe side. */

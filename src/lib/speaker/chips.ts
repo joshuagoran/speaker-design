@@ -144,7 +144,7 @@ export function tubeFitChip(
 export const KEEP_UP_SLACK_DB = 0.5;
 
 /** The title of the sub's tube-layout chip, when the round tubes' flares don't fit the baffle round the driver. */
-const TUBES_WONT_FIT = "Tubes won't fit";
+const TUBES_WONT_FIT = "Tubes do not fit";
 /** The title of the sub's duct-fit chip, past the layout's room or in the lengths a bottom slot can't take either way. */
 const DUCT_TOO_LONG = "Duct too long";
 /**
