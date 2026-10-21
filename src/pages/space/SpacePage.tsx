@@ -19,7 +19,6 @@ import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField } from "../../components/ui/SelectField";
-import { Slider } from "../../components/ui/Slider";
 import { Notice } from "../../components/ui/Notice";
 import { SharedNotice, type SharedNoticeProps } from "../../components/ui/SharedNotice";
 import { CoverageBandPicker } from "../../components/ui/CoverageBandPicker";
@@ -46,11 +45,16 @@ import {
 } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
-import { AUTO_BALANCE_MODE_LABEL, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
+import {
+  AUTO_BALANCE_MODE,
+  AUTO_BALANCE_MODE_LABEL,
+  AUTO_BALANCE_TEXT,
+} from "../../constants/autoBalance";
 import { BAND_BALANCE_TIP } from "../../lib/speaker/autoBalance";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
+import { MarkedText } from "../../components/ui/MarkedText";
 import {
   SPACE_SETTINGS_SECTIONS,
   SPACE_SETTINGS_TABS,
@@ -59,6 +63,7 @@ import {
 import {
   COUPLED_FLOOR,
   COUPLED_NAMES,
+  DELAY_NOTE,
   NO_DELAY_MS,
   placementDomId,
   STAGE_FACE,
@@ -66,10 +71,14 @@ import {
   SPACE_LEVEL_REF_PLACE,
   SPACE_LEFT_WALL_TIP,
   SPACE_LEVEL_REFS,
+  SPACE_LEVEL_REF_NAMES,
   SPACE_SAVE_WORDS,
   SPACE_SURFACE_NAMES,
   SPACE_TEXT,
   STAGE_SHAPE,
+  BAND_CLOSE_DB,
+  BAND_NEAR_DB,
+  BAND_ON_TARGET_DB,
 } from "../../constants/space";
 import { shownIn } from "../speaker/speakerFields";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
@@ -84,12 +93,13 @@ import { ArrivalList } from "./ArrivalList";
 import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
 import { itemName } from "./spaceSaves";
-import { spaceFromStart, type SpacePlanner } from "./useSpace";
+import type { SpacePlanner } from "./useSpace";
 import { placeOptions } from "./placeOptions";
 import { designStartOptions } from "../stack/stackPresets";
 import { byId } from "../../lib/tables";
 import { spaceAlignment } from "../../lib/speaker/spaceAlignment";
 import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
+import { aimPoint } from "../../lib/speaker/solveFeeds";
 
 interface Props {
   space: SpacePlanner;
@@ -114,6 +124,14 @@ const VIEW_CELL_BESIDE = "relative self-stretch min-h-[340px]";
 
 /** A share as a whole percentage. */
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+/** A band's status color by how far it is from its target, either way: the text class. */
+const bandClass = (rel: number) =>
+  Math.abs(rel) <= BAND_CLOSE_DB
+    ? "text-green-700"
+    : Math.abs(rel) <= BAND_NEAR_DB
+      ? "text-orange-700"
+      : "text-red-700";
 
 /** How a level compares with the target: the status color's text class. */
 const relClass = (rel: number) =>
@@ -277,13 +295,14 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
       },
       covH: horn ? horn.covH : null,
       turnable: true,
+      aimAt: aimPoint({ item }, venue),
     };
   });
   const bandName =
     space.band === "one"
       ? `${formatHz(space.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[space.band].name} band, ${formatHz(COVERAGE_BANDS[space.band].lo)}–${formatHz(COVERAGE_BANDS[space.band].hi)}`;
-  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.turn.target : null;
+  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.levelBandTarget : null;
   const { audienceDb, audienceAtLimit } = space;
   const tiles: StatTileItem[] = [
     ...(audienceDb !== null
@@ -311,8 +330,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
       listedStages(venue.stages)
         .map((st) => stageNameOf.get(st.id))
         .join(" · ") || SPACE_TEXT.noStages,
-    room: `${venue.room.outdoors ? SPACE_TEXT.outdoors : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`} · ${venue.targetDb} dB target`,
-    placements: names.join(" · ") || SPACE_TEXT.noPlacements,
+    room: venue.room.outdoors
+      ? SPACE_TEXT.outdoors
+      : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`,
+    placements: `${venue.targetDb} dB target · ${names.join(" · ") || SPACE_TEXT.noPlacements}`,
     hardware:
       `${powers} amp power${powers === 1 ? "" : "s"} · ` +
       `${delays} delay${delays === 1 ? "" : "s"}`,
@@ -350,7 +371,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               words={SPACE_SAVE_WORDS}
               starts={START_OPTIONS}
               group={(o) => o.group}
-              onStart={(o) => space.replaceDesign(spaceFromStart(o.id))}
+              onStart={(o) => space.start(o.id)}
             />
           )}
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
@@ -368,7 +389,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     view={view}
                     room={venue.room}
                     listener={venue.listener}
-                    alignAt={venue.alignAt}
                     boxes={boxes}
                     coupling={space.coupling.marks}
                     stages={listedStages(venue.stages).map((st) => ({
@@ -394,7 +414,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                       moveBox: space.moveBox,
                       aimBox: space.aimBox,
                       moveListener: space.moveListener,
-                      moveAlignAt: space.moveAlignAt,
                       beginStageDrag: space.stages.beginDrag,
                       dragStage: space.stages.drag,
                       setDragging: space.setDragging,
@@ -429,7 +448,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                       stages={stageSolids(settled.stages)}
                       items={settled.model.placements.map((p) => p.item)}
                       listener={venue.listener}
-                      alignAt={settled.alignAt}
                       earFt={venue.earFt}
                       view={placements.length > 0 ? settled.view : null}
                       beams={look.beams ? beams : []}
@@ -444,32 +462,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
               <SectionHeading>{SPACE_TEXT.levels}</SectionHeading>
               {tiles.length > 0 && <StatTileGrid tiles={tiles} />}
-              {view && (
-                <p className="text-sm text-stone-500 tabular-nums">
-                  {space.turn.atLimit !== null && space.turn.atLimit < space.turn.target - 0.05
-                    ? SPACE_TEXT.cannotReach(space.turn.target, space.turn.atLimit)
-                    : SPACE_TEXT.turnedDown(-space.turn.gain, space.turn.target)}
-                </p>
-              )}
               {view && listenerRel !== null && (
                 <p className="text-sm text-stone-500 tabular-nums">
                   {SPACE_TEXT.listenerVs}{" "}
                   <span className={relClass(listenerRel)}>{formatSigned(listenerRel)} dB</span>.
-                </p>
-              )}
-              {space.bandLevels.length > 0 && (
-                <p className="text-sm text-stone-500 tabular-nums">
-                  {SPACE_TEXT.bandLevels}{" "}
-                  {space.bandLevels.map((b, k) => (
-                    <span key={b.band} className={relClass(b.db - b.target)}>
-                      {SPACE_TEXT.bandLevel(
-                        COVERAGE_BANDS[b.band].name,
-                        b.db.toFixed(1),
-                        b.target.toFixed(0),
-                      )}
-                      {k < space.bandLevels.length - 1 ? ", " : "."}
-                    </span>
-                  ))}
                 </p>
               )}
             </section>
@@ -548,43 +544,13 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 surfaces={SPACE_SURFACE_NAMES}
                 surfaceTips={{ left: SPACE_LEFT_WALL_TIP }}
               />
-              <Slider
-                label={<Tooltip tip={SPACE_TEXT.targetTip}>{SPACE_TEXT.target}</Tooltip>}
-                value={venue.targetDb}
-                min={COVERAGE_TARGET_DB[0]}
-                max={COVERAGE_TARGET_DB[1]}
-                step={1}
-                unit=" dB SPL"
-                note={
-                  space.bandLevels.length > 0
-                    ? AUTO_BALANCE_TEXT.levels(
-                        space.bandLevels.map((b) => ({
-                          name: COVERAGE_BANDS[b.band].name,
-                          levelDb: b.target,
-                        })),
-                      )
-                    : undefined
-                }
-                onChange={(targetDb) => space.editVenue((v) => ({ ...v, targetDb }))}
-              />
-              <ToggleGroup
-                label={SPACE_TEXT.measuredAt}
-                value={space.levelRef}
-                onChange={(levelRef) => space.editVenue((v) => ({ ...v, levelRef }))}
-                options={SPACE_LEVEL_REFS}
-              />
-              <ToggleGroup
-                label={<Tooltip tip={BAND_BALANCE_TIP}>{AUTO_BALANCE_TEXT.label}</Tooltip>}
-                value={space.balance}
-                onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}
-                options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
-              />
               <div className={FIELD_ROW}>
                 <NumberField
                   label={SPACE_TEXT.ear}
                   value={venue.earFt}
                   min={1}
-                  max={8}
+                  // the ear stays under a low ceiling
+                  max={venue.room.outdoors ? 8 : Math.min(8, venue.room.ceilingFt)}
                   step={0.1}
                   onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
                 />
@@ -608,6 +574,112 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
           {section(
             "placements",
             <>
+              <NumberField
+                label={
+                  <Tooltip tip={<MarkedText text={SPACE_TEXT.targetTip} />}>
+                    {SPACE_TEXT.target}
+                  </Tooltip>
+                }
+                value={venue.targetDb}
+                min={COVERAGE_TARGET_DB[0]}
+                max={COVERAGE_TARGET_DB[1]}
+                step={1}
+                unit="dB SPL"
+                onChange={(targetDb) => space.editVenue((v) => ({ ...v, targetDb }))}
+              />
+              <ToggleGroup
+                label={SPACE_TEXT.measuredAt}
+                value={space.levelRef}
+                onChange={(levelRef) => space.editVenue((v) => ({ ...v, levelRef }))}
+                options={SPACE_LEVEL_REFS}
+              />
+              <ToggleGroup
+                label={<Tooltip tip={BAND_BALANCE_TIP}>{AUTO_BALANCE_TEXT.label}</Tooltip>}
+                value={space.balance}
+                onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}
+                options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
+              />
+              <div className={FIELD_ROW}>
+                <NumberField
+                  label={
+                    <Tooltip tip={<MarkedText text={SPACE_TEXT.systemGainTip} />}>
+                      {SPACE_TEXT.systemGain}
+                    </Tooltip>
+                  }
+                  value={venue.systemDb}
+                  max={0}
+                  step={0.5}
+                  onChange={(systemDb) =>
+                    space.editVenue((v) => ({ ...v, systemDb: Math.min(0, systemDb) }))
+                  }
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateDelaysTip} />}>
+                  <Button onClick={space.calculateDelays}>{SPACE_TEXT.calculateDelays}</Button>
+                </Tooltip>
+                <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateGainsTip} />}>
+                  <Button onClick={space.calculateGains}>{SPACE_TEXT.calculateGains}</Button>
+                </Tooltip>
+              </div>
+              {space.delayNotes.flatMap((note, k) =>
+                note === null
+                  ? []
+                  : [
+                      <Notice key={k}>
+                        {SPACE_TEXT.delayNoteFor(
+                          names[k] ?? "",
+                          note === DELAY_NOTE.clamped
+                            ? SPACE_TEXT.delayClamped
+                            : SPACE_TEXT.delayNoMain,
+                        )}
+                      </Notice>,
+                    ],
+              )}
+              {space.bandLevels.length > 0 && (
+                <p className="text-sm text-stone-500 tabular-nums">
+                  <MarkedText
+                    text={SPACE_TEXT.bandLevelsAt(SPACE_LEVEL_REF_NAMES[space.levelRef])}
+                  />{" "}
+                  {space.bandLevels.map((b, k) => {
+                    const rel = b.db - b.target;
+                    const text = SPACE_TEXT.bandLevel(
+                      COVERAGE_BANDS[b.band].name,
+                      Math.abs(rel) < BAND_ON_TARGET_DB ? b.db.toFixed(0) : formatSigned(rel),
+                    );
+                    return (
+                      <span key={b.band} className={bandClass(rel)}>
+                        {space.balance === AUTO_BALANCE_MODE.moreBass ? (
+                          <Tooltip tip={SPACE_TEXT.bandTarget(b.target.toFixed(0))}>{text}</Tooltip>
+                        ) : (
+                          text
+                        )}
+                        {k < space.bandLevels.length - 1 ? ", " : ""}
+                      </span>
+                    );
+                  })}
+                </p>
+              )}
+              {space.gainLimit && (
+                <div className="text-sm">
+                  <p>{SPACE_TEXT.belowTarget(space.gainLimit.belowDb.toFixed(1))}</p>
+                  {space.gainLimit.limit && (
+                    <p>
+                      <MarkedText
+                        text={SPACE_TEXT.limitsSystem(
+                          space.gainLimit.limit.band,
+                          space.gainLimit.limit.box,
+                        )}
+                      />
+                    </p>
+                  )}
+                </div>
+              )}
+              {space.overLimit.map((o) => (
+                <p key={`${o.box}/${o.band}`} className="text-sm text-red-700">
+                  <MarkedText text={SPACE_TEXT.overLimit(o.band, o.box, o.overDb.toFixed(1))} />
+                </p>
+              ))}
               <SelectField
                 label={SPACE_TEXT.addPlacement}
                 options={placeList}
@@ -653,7 +725,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     space.removePlacement(k);
                     afterRemoved(k);
                   }}
-                  solved={model.solved[k]}
                   coupledWith={coupledWith(k)}
                   standsOn={standsOn(k)}
                 />

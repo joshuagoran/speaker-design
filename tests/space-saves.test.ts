@@ -17,7 +17,7 @@ import {
   spaceSnapshot,
 } from "../src/pages/space/spaceSaves";
 import { fittedSpace, withStack } from "../src/pages/space/useSpace";
-import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
+import { AUTO_DELAY, SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { SEATED_EAR_FT } from "../src/constants/space";
 import type { SavedConfig, SpaceDesign } from "../src/types";
 
@@ -110,7 +110,9 @@ test("space hardware: band groups, amp power per speaker, a library stack copied
   assert.equal(weak.bands[0].ampW, 10);
   assert.deepEqual(withAmpPower(sub, [], 10), sub);
   const headroom = (speakers: typeof design.speakers) =>
-    spaceModel({ ...design, speakers }).headroomDb;
+    Math.min(
+      ...spaceModel({ ...design, speakers }).placements.map((p) => p.headroomDb ?? Infinity),
+    );
   assert.ok(headroom([weak, top]) < headroom([sub, top]));
   // a stack from the library, held already under its id but changed: a numbered copy beside it
   const changed = {
@@ -194,4 +196,23 @@ test("space saves: a venue whose level reference or balance is not a known one i
   // a draft in the browser reads the same way: dropped
   assert.ok(spaceDraft.fromDraft(withVenue({})));
   assert.equal(spaceDraft.fromDraft(withVenue({ balance: "paMusic" })), null);
+});
+
+test("space saves: one from before plain delays and System gain opens with Auto at 0 and full power", () => {
+  const design = paSpace();
+  const [placement] = design.space.placements;
+  const { systemDb: _systemDb, ...venue } = design.space.venue;
+  const old: SavedConfig = {
+    ...asDoc(design, "doc1", "Club"),
+    space: {
+      ...design.space,
+      placements: [{ ...placement, delayMs: AUTO_DELAY, levelDb: AUTO_DELAY }],
+      venue,
+    },
+  };
+  const opened = spaceFromSaved(old)?.space;
+  assert.deepEqual(
+    [opened?.placements[0]?.delayMs, opened?.placements[0]?.levelDb, opened?.venue.systemDb],
+    [0, 0, 0],
+  );
 });

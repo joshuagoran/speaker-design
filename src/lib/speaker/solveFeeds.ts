@@ -1,20 +1,18 @@
-// The space's feed solver: every Auto placement delay and every Auto fill level, worked out from the layout alone.
-// Pure. It reads no value it set before, so the result never depends on the order of edits, and running it again changes nothing.
+// The space's feed solver: what Calculate delays and Calculate gains set, worked out from the layout. Pure. It reads no
+// delay, and a fill's level only as a step from its own, so running it again changes nothing.
 //
-// Mains (every placement that is not a fill) line up at the venue's alignment point: each main's first arrival there
-// (each driver's path at the speed of sound, with its member's delay) is found, and the latest one sets the time. An
-// Auto main waits until then; a Custom main keeps its delay, and counts in the latest with it. Mains keep their typed
-// level. Each fill works at its own aim point (where its axis meets ear height, or a wall first), against the nearest
-// main there:
-// - Auto delay: it arrives FILL_PRECEDENCE_MS after that main (with the main's solved delay), so the sound still seems
-//   to come from the mains (the precedence effect). Never below 0.
-// - Auto level: it plays at that main's level there, in FILL_ALIGN_BAND (the voice range a fill is there for).
-// A mirrored pair is one placement: its two boxes share one delay and one level.
+// Mains (every placement that is not a fill) line up at the listener: each main's first arrival there (each driver's
+// path at the speed of sound, with its member's delay) is found, and the latest one sets the time; each main waits
+// until then. Mains keep their gain. Each fill works at its own aim point (where its axis meets ear height, or a wall
+// first), against the nearest main there:
+// - delay: it arrives FILL_PRECEDENCE_MS after that main (with the main's new delay), so the sound still seems to come
+//   from the mains (the precedence effect). Never below 0.
+// - gain: it plays at that main's level there, in FILL_ALIGN_BAND (the voice range a fill is there for).
+// A mirrored pair is one placement: its two boxes share one delay and one gain.
 import type { FloorPoint, PairSide, SpaceVenue } from "../../types";
 import {
   spaceGridRequest,
   spaceLevelAt,
-  withSolved,
   type SpaceGridRequest,
   type SpaceModel,
   type SpacePlacementModel,
@@ -22,7 +20,6 @@ import {
 import type { RoomPoint } from "./spaceLayout";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { METERS_PER_FOOT } from "../../constants/units";
-import { AUTO_DELAY, AUTO_LEVEL } from "../../constants/speakerSpec";
 import {
   ARRIVAL_MAIN_CLOSE_MS,
   ARRIVAL_MAIN_ON_TIME_MS,
@@ -44,42 +41,19 @@ export type ArrivalStatus = (typeof ARRIVAL_STATUS)[keyof typeof ARRIVAL_STATUS]
 
 /** One placement's feed as the solver sets it: its delay and its level. */
 export interface SolvedFeed {
-  /** the delay it plays with, ms: solved (Auto) or typed (Custom) */
+  /** the delay Calculate delays sets, ms */
   delayMs: number;
-  /** whether the solver set the delay (Auto) */
-  delayAuto: boolean;
   /** why the delay is not what its rule asks; null when it is */
   delayNote: DelayNote | null;
-  /** the level it plays at, dB: solved (a fill's Auto) or typed */
+  /** the gain Calculate gains sets, dB: a fill's, matched to its main; a main keeps its own (lib/speaker/spaceGains) */
   levelDb: number;
-  /** whether the solver set the level (a fill's Auto) */
-  levelAuto: boolean;
 }
 
-/** The venue the solver reads: the alignment point, the ear height and the room. */
-export type SolverVenue = Pick<SpaceVenue, "alignAt" | "earFt" | "room">;
+/** The venue the solver reads: the listener, the ear height and the room. */
+export type SolverVenue = Pick<SpaceVenue, "listener" | "earFt" | "room">;
 
 /** A floor point at ear height, ft. */
 const atEar = (p: FloorPoint, earFt: number): RoomPoint => ({ x: p.x, y: p.y, z: earFt });
-
-/** A placement's typed delay, ms; null when it is Auto. */
-const typedDelay = (p: Pick<SpacePlacementModel["item"]["placement"], "delayMs">) =>
-  p.delayMs === AUTO_DELAY ? null : p.delayMs;
-
-/** A placement's typed level, dB; null when it is Auto. */
-const typedLevel = (p: Pick<SpacePlacementModel["item"]["placement"], "levelDb">) =>
-  p.levelDb === AUTO_LEVEL ? null : p.levelDb;
-
-/** The feed a placement plays before the solver: its typed delay and level, Auto ones at 0. */
-export const typedFeed = (
-  p: Pick<SpacePlacementModel["item"]["placement"], "delayMs" | "levelDb">,
-): SolvedFeed => ({
-  delayMs: typedDelay(p) ?? 0,
-  delayAuto: typedDelay(p) === null,
-  delayNote: null,
-  levelDb: typedLevel(p) ?? 0,
-  levelAuto: typedLevel(p) === null,
-});
 
 /**
  * A box's first arrival at `at` (ft), ms: the least over its drivers of the path at the speed of sound plus its
@@ -116,7 +90,7 @@ function boxesBySource(model: Pick<SpaceModel, "placements">): number[][] {
  * meets ear height, or a wall first. A box with no drivers aims at its own spot.
  */
 export function aimPoint(
-  box: SpacePlacementModel,
+  box: Pick<SpacePlacementModel, "item">,
   venue: Pick<SolverVenue, "earFt" | "room">,
 ): FloorPoint {
   const { drivers, placement } = box.item;
@@ -169,78 +143,78 @@ const nearestFt = (
     ),
   );
 
+/** A request with every placement but `source` silent. */
+export function placementRequest<R extends Pick<SpaceGridRequest, "outputs">>(
+  model: Pick<SpaceModel, "feeds">,
+  req: R,
+  source: number,
+): R {
+  return {
+    ...req,
+    outputs: req.outputs.map((out) =>
+      Object.fromEntries(
+        model.feeds.flatMap((f) =>
+          f.placement === source && out[f.id] ? [[f.id, out[f.id]]] : [],
+        ),
+      ),
+    ),
+  };
+}
+
 /**
  * Placement `source`'s level alone at a floor spot (ft, at ear height), dB: every other placement silent, in the
- * request's band. The model's own levels: a typed one, an Auto one at 0.
+ * request's band, at the levels the model plays.
  */
-export function placementLevelAt(
+export const placementLevelAt = (
   model: Pick<SpaceModel, "feeds">,
   req: Omit<SpaceGridRequest, "cols">,
   source: number,
   at: FloorPoint,
-): number {
-  return spaceLevelAt(
-    {
-      ...req,
-      outputs: req.outputs.map((out) =>
-        Object.fromEntries(
-          model.feeds.flatMap((f) =>
-            f.placement === source && out[f.id] ? [[f.id, out[f.id]]] : [],
-          ),
-        ),
-      ),
-    },
-    at,
-  );
-}
+): number => spaceLevelAt(placementRequest(model, req, source), at);
 
 /**
- * Every placement's feed, by its index in the space (see the file's note). It works from each placement's typed delay
- * and level, Auto ones at 0, whatever `model` plays. A placement with no modeled box keeps its typed values, or 0.
+ * Every placement's feed, by its index in the space (see the file's note), from `model` as it plays. A placement with
+ * no modeled box keeps its level and gets no delay.
  */
 export function solveFeeds(model: SpaceModel, venue: SolverVenue): SolvedFeed[] {
   const bySource = boxesBySource(model);
   /** each placement as set: its first box carries its modes and role */
   const setOf = (k: number) => model.placements[bySource[k]?.[0] ?? -1]?.item.placement;
   const isFill = (k: number) => setOf(k)?.fill ?? false;
-  const solved = bySource.map((_, k) => {
-    const p = setOf(k);
-    return p ? typedFeed(p) : typedFeed({ delayMs: 0, levelDb: 0 });
-  });
-  /** the model at the typed values: what every level is read from, so no solved value feeds back */
-  const typed = withSolved(model, [...solved]);
+  const solved: SolvedFeed[] = bySource.map((_, k) => ({
+    delayMs: 0,
+    delayNote: null,
+    levelDb: setOf(k)?.levelDb ?? 0,
+  }));
   /** placement `k`'s first arrival at `at`, ms, without its own delay */
   const arrivalAt = (k: number, at: RoomPoint) =>
     earliest((bySource[k] ?? []).map((i) => boxArrivalMs(model.placements[i], at)));
 
-  // the mains, at the alignment point: the latest one sets the time (a Custom one with its delay)
-  const alignAt = atEar(venue.alignAt, venue.earFt);
+  // the mains, at the listener: the latest one sets the time
+  const listener = atEar(venue.listener, venue.earFt);
   const mainArrival = new Map(
     bySource.flatMap((_, k) => {
-      const t = isFill(k) ? null : arrivalAt(k, alignAt);
+      const t = isFill(k) ? null : arrivalAt(k, listener);
       return t === null ? [] : [[k, t] as const];
     }),
   );
   const heard = [...mainArrival.keys()];
-  const latest = Math.max(
-    ...heard.map((k) => (mainArrival.get(k) ?? 0) + (solved[k].delayAuto ? 0 : solved[k].delayMs)),
-  );
+  const latest = Math.max(...heard.map((k) => mainArrival.get(k) ?? 0));
   for (const k of heard)
-    if (solved[k].delayAuto)
-      solved[k] = { ...solved[k], delayMs: latest - (mainArrival.get(k) ?? latest) };
+    solved[k] = { ...solved[k], delayMs: latest - (mainArrival.get(k) ?? latest) };
 
   // each fill against the nearest main at each of its boxes' aim points
   /** the band the fill levels are matched in, worked out only when a fill needs it */
   let levelReq: Omit<SpaceGridRequest, "cols"> | null = null;
   const levelAt = (source: number, at: FloorPoint) => {
-    levelReq ??= spaceGridRequest(typed, venue, FILL_ALIGN_BAND, 0, 1);
-    return placementLevelAt(typed, levelReq, source, at);
+    levelReq ??= spaceGridRequest(model, venue, FILL_ALIGN_BAND, 0, 1);
+    return placementLevelAt(model, levelReq, source, at);
   };
   bySource.forEach((boxes, k) => {
     const feed = solved[k];
-    if (!isFill(k) || (!feed.delayAuto && !feed.levelAuto)) return;
+    if (!isFill(k)) return;
     if (!heard.length) {
-      if (feed.delayAuto) solved[k] = { ...feed, delayNote: DELAY_NOTE.noMain };
+      solved[k] = { ...feed, delayNote: DELAY_NOTE.noMain };
       return;
     }
     const sides = boxes.flatMap((i) => {
@@ -256,25 +230,19 @@ export function solveFeeds(model: SpaceModel, venue: SolverVenue): SolvedFeed[] 
       return [{ spot, main, waitMs: mainT + solved[main].delayMs - own + FILL_PRECEDENCE_MS }];
     });
     if (!sides.length) return;
-    let next = feed;
-    if (feed.delayAuto) {
-      // a pair waits for its later box, so neither box plays before the mains in its area
-      const wait = Math.max(...sides.map((s) => s.waitMs));
-      next = {
-        ...next,
-        delayMs: Math.max(0, wait),
-        delayNote: wait < 0 ? DELAY_NOTE.clamped : null,
-      };
-    }
-    if (feed.levelAuto) {
-      // the fill (both boxes of a pair) moves by the step that lands it on the main's level there; a pair takes the mean
-      const steps = sides
-        .map((s) => levelAt(s.main, s.spot) - levelAt(k, s.spot))
-        .filter(Number.isFinite);
-      if (steps.length)
-        next = { ...next, levelDb: steps.reduce((a, b) => a + b, 0) / steps.length };
-    }
-    solved[k] = next;
+    // a pair waits for its later box, so neither box plays before the mains in its area
+    const wait = Math.max(...sides.map((s) => s.waitMs));
+    // the fill (both boxes of a pair) moves by the step that lands it on the main's level there; a pair takes the mean
+    const steps = sides
+      .map((s) => levelAt(s.main, s.spot) - levelAt(k, s.spot))
+      .filter(Number.isFinite);
+    solved[k] = {
+      delayMs: Math.max(0, wait),
+      delayNote: wait < 0 ? DELAY_NOTE.clamped : null,
+      levelDb: steps.length
+        ? feed.levelDb + steps.reduce((a, b) => a + b, 0) / steps.length
+        : feed.levelDb,
+    };
   });
   return solved;
 }
@@ -312,24 +280,24 @@ export function arrivalStatus(afterMainsMs: number, fill: boolean): ArrivalStatu
 const shownMs = (ms: number) => ms.toFixed(1);
 
 /**
- * Each placement's arrival at the listener (ft, at ear height) with its solved delay, after the latest main's: one row
- * a placement, or one a box for a pair whose boxes differ. Empty when no main is heard there.
+ * Each placement's arrival at the listener (ft, at ear height) with its delay, after the latest main's: one row a
+ * placement, or one a box for a pair whose boxes differ. Empty when no main is heard there.
  */
 export function listenerArrivals(
-  model: Pick<SpaceModel, "placements" | "solved">,
+  model: Pick<SpaceModel, "placements">,
   listener: FloorPoint,
   earFt: SpaceVenue["earFt"],
 ): ListenerArrival[] {
   const at = atEar(listener, earFt);
   const bySource = boxesBySource(model);
   /** each box's arrival with its placement's delay, by placement */
-  const times = bySource.map((boxes, k) =>
+  const times = bySource.map((boxes) =>
     boxes.flatMap((i) => {
       const box = model.placements[i];
       const t = boxArrivalMs(box, at);
       return t === null
         ? []
-        : [{ side: box.item.placement.side, ms: t + (model.solved[k]?.delayMs ?? 0) }];
+        : [{ side: box.item.placement.side, ms: t + box.item.placement.delayMs }];
     }),
   );
   const fillOf = (k: number) =>

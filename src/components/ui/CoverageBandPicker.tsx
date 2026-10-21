@@ -1,5 +1,7 @@
 import { useId } from "react";
 import { ToggleGroup } from "./ToggleGroup";
+import { NumberField } from "./NumberField";
+import { UI_TEXT } from "../../constants/uiText";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/acoustics/coverage";
 import { formatHz } from "../../lib/format";
 import { GAP_Y } from "../../styles/layout";
@@ -55,23 +57,33 @@ export function CoverageBandPicker({ band, freqHz, onBand, onFreqHz, oneNote }: 
       />
       {band === "one" && (
         <div>
-          <div className="flex justify-between items-center gap-3 mb-1">
-            <label htmlFor={freqId} className="text-sm text-stone-500">
-              Frequency
-            </label>
-            <span className="text-sm tabular-nums font-medium">{formatHz(freqHz)}</span>
+          <div className="flex items-end gap-3">
+            <div className="flex-1 min-w-0">
+              <label htmlFor={freqId} className="block text-sm text-stone-500 mb-1">
+                {UI_TEXT.frequency}
+              </label>
+              <input
+                id={freqId}
+                type="range"
+                min={0}
+                max={1000}
+                step={1}
+                value={logPos(freqHz)}
+                aria-valuetext={formatHz(freqHz)}
+                onChange={(e) => onFreqHz(fromPos(parseFloat(e.target.value)))}
+                className="w-full accent-stone-900"
+              />
+            </div>
+            <NumberField
+              label={<span className="sr-only">{UI_TEXT.frequency}</span>}
+              value={freqHz}
+              min={SINGLE_FREQ_RANGE[0]}
+              max={SINGLE_FREQ_RANGE[1]}
+              step={1}
+              unit="Hz"
+              onChange={(f) => onFreqHz(Math.round(f))}
+            />
           </div>
-          <input
-            id={freqId}
-            type="range"
-            min={0}
-            max={1000}
-            step={1}
-            value={logPos(freqHz)}
-            aria-valuetext={formatHz(freqHz)}
-            onChange={(e) => onFreqHz(fromPos(parseFloat(e.target.value)))}
-            className="w-full accent-stone-900"
-          />
           <p className="text-xs text-stone-500 mt-1">{oneNote}</p>
         </div>
       )}

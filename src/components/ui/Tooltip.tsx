@@ -5,6 +5,8 @@ interface Props {
   tip: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** the term is a control of its own (a button): a hover or focus on it opens the tip, and a click stays its own */
+  control?: boolean;
 }
 
 /** The tooltip's widest, px (`max-w-[18rem]`), and a tip's gap from the window's edge, px. */
@@ -19,7 +21,7 @@ export const TIP_CLASS =
  * Term with a tooltip. Opens on hover, keyboard focus or tap; Esc or a tap elsewhere closes it. The tip is drawn above
  * the whole page (a portal), so a scrolling pane does not clip it; it follows its term as the page scrolls.
  */
-export function Tooltip({ tip, children, className = "" }: Props) {
+export function Tooltip({ tip, children, className = "", control = false }: Props) {
   const id = useId();
   const [open, setOpen] = useState(false);
   /** where the tip sits in the window, px */
@@ -58,25 +60,31 @@ export function Tooltip({ tip, children, className = "" }: Props) {
       className={`relative inline-block ${className}`}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
+      onFocus={control ? () => setOpen(true) : undefined}
+      onBlur={control ? () => setOpen(false) : undefined}
     >
-      <span
-        role="button"
-        tabIndex={0}
-        aria-describedby={open ? id : undefined}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
-          else if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setOpen((o) => !o);
-          }
-        }}
-        className="cursor-help border-b-2 border-dotted border-soft"
-      >
-        {children}
-      </span>
+      {control ? (
+        children
+      ) : (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-describedby={open ? id : undefined}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            else if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setOpen((o) => !o);
+            }
+          }}
+          className="cursor-help border-b-2 border-dotted border-soft"
+        >
+          {children}
+        </span>
+      )}
       {open &&
         at &&
         typeof document !== "undefined" &&

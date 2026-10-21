@@ -200,7 +200,6 @@ describe("Space 3D view: the PA stack preset", () => {
     stages: [],
     items: model.placements.map((p) => p.item),
     listener: venue.listener,
-    alignAt: venue.alignAt,
     earFt: venue.earFt,
     view: null,
     beams: spaceBeams(model, "high", 1000),

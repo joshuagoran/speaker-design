@@ -1,15 +1,16 @@
 import { ToggleGroup } from "./ToggleGroup";
-import { Slider } from "./Slider";
+import { NumberField } from "./NumberField";
 import { SelectField } from "./SelectField";
 import { Tooltip } from "./Tooltip";
 import { ROOM_MATERIAL_OPTIONS } from "../../lib/acoustics/roomAcoustics";
 import { UI_TEXT } from "../../constants/uiText";
+import { FIELD_ROW } from "../../styles/layout";
 import type { CoverageRoom, FloorCrowd, RoomMaterial, RoomSurface } from "../../types";
 
 /** Room size limits, ft. */
-export const ROOM_WIDTH_FT: [number, number] = [16, 80];
-export const ROOM_LENGTH_FT: [number, number] = [16, 100];
-export const ROOM_CEILING_FT: [number, number] = [8, 40];
+export const ROOM_WIDTH_FT: [number, number] = [6, 100];
+export const ROOM_LENGTH_FT: [number, number] = [6, 100];
+export const ROOM_CEILING_FT: [number, number] = [6, 40];
 
 /** A surface whose material is set, and the name its field shows. */
 export type SurfaceName = readonly [RoomSurface, string];
@@ -57,33 +58,35 @@ export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {
         }
         wrap={false}
       />
-      <Slider
-        label={room.outdoors ? "Area width" : "Width"}
-        value={room.widthFt}
-        min={ROOM_WIDTH_FT[0]}
-        max={ROOM_WIDTH_FT[1]}
-        step={1}
-        unit=" ft"
-        onChange={(widthFt) => actions.setRoomSize({ widthFt, lengthFt: room.lengthFt })}
-      />
-      <Slider
-        label={room.outdoors ? "Area length" : "Length"}
-        value={room.lengthFt}
-        min={ROOM_LENGTH_FT[0]}
-        max={ROOM_LENGTH_FT[1]}
-        step={1}
-        unit=" ft"
-        onChange={(lengthFt) => actions.setRoomSize({ widthFt: room.widthFt, lengthFt })}
-      />
+      <div className={FIELD_ROW}>
+        <NumberField
+          label={room.outdoors ? "Area width" : UI_TEXT.roomWidth}
+          value={room.widthFt}
+          min={ROOM_WIDTH_FT[0]}
+          max={ROOM_WIDTH_FT[1]}
+          step={1}
+          unit="ft"
+          onChange={(widthFt) => actions.setRoomSize({ widthFt, lengthFt: room.lengthFt })}
+        />
+        <NumberField
+          label={room.outdoors ? "Area length" : "Length"}
+          value={room.lengthFt}
+          min={ROOM_LENGTH_FT[0]}
+          max={ROOM_LENGTH_FT[1]}
+          step={1}
+          unit="ft"
+          onChange={(lengthFt) => actions.setRoomSize({ widthFt: room.widthFt, lengthFt })}
+        />
+      </div>
       {!room.outdoors && (
         <>
-          <Slider
+          <NumberField
             label="Ceiling height"
             value={room.ceilingFt}
             min={ROOM_CEILING_FT[0]}
             max={ROOM_CEILING_FT[1]}
             step={1}
-            unit=" ft"
+            unit="ft"
             onChange={actions.setCeilingFt}
           />
           <div className="grid grid-cols-2 gap-3">

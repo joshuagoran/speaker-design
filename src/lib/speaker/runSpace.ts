@@ -8,3 +8,6 @@ export const runSpaceGrid = makeOptimizerRunner(SpaceWorker, computeSpaceGrid);
 
 /** The same in a second worker, for a drag's quick passes: they never wait behind a full one. */
 export const runSpaceQuickGrid = makeOptimizerRunner(SpaceWorker, computeSpaceGrid);
+
+/** The same in a third worker, for the levels at the reference: a drag never stops them. */
+export const runSpaceReferenceGrid = makeOptimizerRunner(SpaceWorker, computeSpaceGrid);

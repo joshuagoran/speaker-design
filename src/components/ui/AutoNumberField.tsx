@@ -4,25 +4,25 @@ import { entriesOf } from "../../lib/records";
 import { SET_BY, SET_BY_NAMES } from "../../constants/speakerPage";
 
 interface Props {
-  /** the name over the Auto / Custom choice */
+  /** the name over the Auto / Manual choice */
   label: React.ReactNode;
-  /** whether its rule sets the value (Auto); false: typed (Custom) */
+  /** whether its rule sets the value (Auto); false: typed (Manual) */
   auto: boolean;
   /** what Auto shows: the value its rule sets, in words */
   autoText: string;
-  /** the typed value, shown in the field under Custom */
+  /** the typed value, shown in the field under Manual */
   value: number;
-  /** the field's name under Custom */
+  /** the field's name under Manual */
   fieldLabel: React.ReactNode;
   unit?: React.ReactNode;
   min?: number;
   step?: number;
-  /** picks Auto (true) or Custom (false); Custom starts from the value Auto set */
+  /** picks Auto (true) or Manual (false); Manual starts from the value Auto set */
   onAuto: (auto: boolean) => void;
   onChange: (value: number) => void;
 }
 
-/** A value its rule sets (Auto, shown as text) or typed (Custom, a number field): an Auto delay or level. */
+/** A value its rule sets (Auto, shown as text) or typed (Manual, a number field): a stack member's Auto delay. */
 export function AutoNumberField({
   label,
   auto,

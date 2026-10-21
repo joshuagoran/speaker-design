@@ -39,6 +39,8 @@ const HANDLE_FT = 5;
 /** how far the horn's coverage edges are drawn, ft */
 const EDGE_FT = 30;
 const PAD = { l: 30, r: 10, t: 24, b: 24 };
+/** A box's aim point's open circle on the map, px radius. */
+const AIM_POINT_R_PX = 4;
 /** A coupled face's bar on the map, px wide. */
 const COUPLING_BAR_PX = 5;
 /** A stage's fill: the light gray at this opacity, so the levels show through (a riser on its stage looks darker). */
@@ -76,18 +78,19 @@ type Drag =
   | { kind: "box"; i: number; dx: number; dy: number }
   | { kind: "stage"; id: string; handle: number | null; from: FloorPoint }
   | { kind: "aim"; i: number }
-  | { kind: "listener" }
-  | { kind: "alignAt" };
+  | { kind: "listener" };
 
 /**
  * A box the map draws, at its spot and aim (ft, degrees): its label, its footprint (in), the horizontal coverage of its
- * horn to draw (null: none), and whether it has a handle to turn it.
+ * horn to draw (null: none), whether it has a handle to turn it, and where its axis meets ear height or a wall (absent:
+ * not drawn).
  */
 export interface MapBox extends FloorPlacement {
   label: string;
   footprint: CoverageStack["footprint"];
   covH: number | null;
   turnable: boolean;
+  aimAt?: FloorPoint;
 }
 
 /**
@@ -104,13 +107,12 @@ export interface MapStage {
 
 /**
  * What a drag on the map does: move box `i` to a spot (`free`: Alt held, so it places freely), turn it to face one, move
- * the listener, or move the alignment point (where it has one).
+ * the listener.
  */
 export interface MapActions {
   moveBox: (i: number, p: FloorPoint, free: boolean) => void;
   aimBox: (i: number, p: FloorPoint, stepped: boolean) => void;
   moveListener: (p: FloorPoint) => void;
-  moveAlignAt?: (p: FloorPoint) => void;
   /** a stage drag begins; then each move drags the stage (handle null) or one of its handles by `by` from its start */
   beginStageDrag?: () => void;
   dragStage?: (id: string, handle: number | null, by: FloorPoint, free: boolean) => void;
@@ -123,8 +125,6 @@ interface Props {
   view: CoverageGridView | null;
   room: CoverageRoom;
   listener: FloorPoint;
-  /** the alignment point, drawn as a diamond (absent: none) */
-  alignAt?: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
   /** the coupled faces, drawn in yellow: along a wall where a box meets it, and where two boxes meet (absent: none) */
@@ -160,7 +160,6 @@ export function CoverageMap({
   view,
   room,
   listener,
-  alignAt,
   actions,
   boxes,
   coupling = [],
@@ -250,7 +249,6 @@ export function CoverageMap({
   const apply = (d: Drag, X: number, Y: number, free: boolean, stepped: boolean) => {
     const p = toFt(X, Y);
     if (d.kind === "listener") actions.moveListener(p);
-    else if (d.kind === "alignAt") actions.moveAlignAt?.(p);
     else if (d.kind === "aim") actions.aimBox(d.i, p, stepped);
     else if (d.kind === "stage")
       actions.dragStage?.(d.id, d.handle, { x: p.x - d.from.x, y: p.y - d.from.y }, free);
@@ -280,8 +278,6 @@ export function CoverageMap({
       return { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
     }
     if (near(px(listener.x), py(listener.y), 18)) return { kind: "listener" };
-    if (alignAt && actions.moveAlignAt && near(px(alignAt.x), py(alignAt.y), 18))
-      return { kind: "alignAt" };
     // a stage under the point: a riser over its stage
     const onStage = [...stages].reverse().find((st) => strictlyInside(st.corners, p));
     if (onStage && actions.dragStage)
@@ -318,7 +314,7 @@ export function CoverageMap({
     if (d.kind === "listener") apply(d, X, Y, e.altKey, e.shiftKey);
     else actions.setDragging?.(true);
   };
-  // a box, its aim, a stage or the alignment point follows the pointer on every move (the page holds its room model a
+  // a box, its aim, or a stage follows the pointer on every move (the page holds its room model a
   // step behind the drag). The listener moves at most every MAP_DRAG_UPDATE_MS (each move reads its levels again): the
   // latest move waits, and runs when the time is up or the drag ends, so the drag always ends where the pointer let go
   const pending = useRef<(() => void) | null>(null);
@@ -438,7 +434,7 @@ export function CoverageMap({
         role="img"
         aria-busy={busy}
         data-testid={COVERAGE_TEST_IDS.map}
-        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room.${alignAt ? ` The alignment point is ${alignAt.x.toFixed(0)} ft across and ${alignAt.y.toFixed(0)} ft down the room.` : ""} Arrow keys move the listener.`}
+        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -522,6 +518,40 @@ export function CoverageMap({
               : [],
           )}
         </g>
+        {boxes.flatMap((b, i) => {
+          const at = b.aimAt;
+          if (!at) return [];
+          return [
+            <g key={`aim${i}`} pointerEvents="none">
+              <line
+                x1={px(b.x)}
+                y1={py(b.y)}
+                x2={px(at.x)}
+                y2={py(at.y)}
+                stroke={ON_DATA.ink}
+                strokeWidth="1"
+                strokeDasharray="2 3"
+              />
+              {/* an open ring, white on an ink edge, so it reads on every level's color */}
+              <circle
+                cx={px(at.x)}
+                cy={py(at.y)}
+                r={AIM_POINT_R_PX}
+                fill="none"
+                stroke={ON_DATA.ink}
+                strokeWidth="3"
+              />
+              <circle
+                cx={px(at.x)}
+                cy={py(at.y)}
+                r={AIM_POINT_R_PX}
+                fill="none"
+                stroke={ON_DATA.white}
+                strokeWidth="1.5"
+              />
+            </g>,
+          ];
+        })}
         {quiet && (
           <text
             x={PAD.l + w / 2}
@@ -673,20 +703,6 @@ export function CoverageMap({
               ),
             ),
           )}
-        {alignAt && (
-          <g transform={`translate(${px(alignAt.x)} ${py(alignAt.y)}) rotate(45)`}>
-            <rect x="-8" y="-8" width="16" height="16" fill={ON_DATA.ink} />
-            <rect
-              x="-6"
-              y="-6"
-              width="12"
-              height="12"
-              fill={ON_DATA.yellow}
-              stroke={ON_DATA.white}
-              strokeWidth="2"
-            />
-          </g>
-        )}
         <circle cx={px(listener.x)} cy={py(listener.y)} r="9" fill={ON_DATA.ink} />
         <circle
           cx={px(listener.x)}
@@ -734,25 +750,6 @@ export function CoverageMap({
           </svg>
           {MAP_MARK_NAMES.listener}
         </span>
-        {alignAt && (
-          <span className="inline-flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="-9 -9 18 18" aria-hidden="true">
-              <g transform="rotate(45)">
-                <rect x="-6" y="-6" width="12" height="12" fill={ON_DATA.ink} />
-                <rect
-                  x="-4.5"
-                  y="-4.5"
-                  width="9"
-                  height="9"
-                  fill={ON_DATA.yellow}
-                  stroke={ON_DATA.white}
-                  strokeWidth="1.5"
-                />
-              </g>
-            </svg>
-            {MAP_MARK_NAMES.alignAt}
-          </span>
-        )}
       </div>
     </div>
   );

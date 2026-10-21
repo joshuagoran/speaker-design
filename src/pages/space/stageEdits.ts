@@ -24,11 +24,11 @@ import {
 } from "../../lib/speaker/spaceStages";
 import {
   NEW_RISER,
-  NEW_RISER_SMALL,
   NEW_STAGE,
   PLACE_SPOT_STEP_FT,
   SNAP_FLUSH_IN,
   STAGE_HEIGHT_FT,
+  STAGE_MIN_AREA_SQFT,
   STAGE_MIN_SIDE_FT,
   STAGE_SHAPE,
   STAGE_SPOT_STEP_FT,
@@ -154,44 +154,95 @@ function newStageId(stages: readonly SpaceStage[]): SpaceStage["id"] {
   return stageId(n);
 }
 
+/** A new stage's footprint, ft. */
+type StageSize = Record<"widthFt" | "depthFt", number>;
+
+/** A new stage's size, ft: `size` scaled to `widthFt` wide, its proportions kept. */
+const scaledTo = (size: StageSize, widthFt: number): StageSize => ({
+  widthFt,
+  depthFt: (widthFt * size.depthFt) / size.widthFt,
+});
+
 /**
- * The layout with a new stage on `on` (a floor stage's id; null: the floor), or null when no spot is free: a stage
- * `NEW_STAGE` big, at the first free spot nearest the middle of the front wall; a riser `NEW_RISER` big (or
- * `NEW_RISER_SMALL` where that doesn't fit), at the first free spot nearest the middle of its stage's back edge.
+ * The layout with a new stage on `on` (a floor stage's id; null: the floor), and its id: a stage `NEW_STAGE` big, at
+ * the first free spot nearest the middle of the front wall; a riser `NEW_RISER` big, at the first free spot nearest
+ * the middle of its stage's back edge. Where that size has no free spot, it is the largest size with one, its
+ * proportions kept, in `STAGE_SPOT_STEP_FT` steps of width. Where even the smallest stage the rules allow
+ * (`STAGE_MIN_AREA_SQFT`, `STAGE_MIN_SIDE_FT`) has none, it is that smallest stage at the first spot, and the stage
+ * checks flag it.
  */
 export function withStageAdded<L extends Layout>(
   layout: L,
   on: SpaceStage["id"] | null,
   plans: SpotPlans,
-): { layout: L; id: SpaceStage["id"] } | null {
+): { layout: L; id: SpaceStage["id"] } {
   const { stages, room } = layout.venue;
   const host = stageById(stages, on);
-  const sizes = host ? [NEW_RISER, NEW_RISER_SMALL] : [NEW_STAGE];
+  const full = host ? NEW_RISER : NEW_STAGE;
   const area = host
     ? boundsOf(host.corners)
     : { x0: -room.widthFt / 2, x1: room.widthFt / 2, y0: 0, y1: room.lengthFt };
   const midX = (area.x0 + area.x1) / 2;
   const id = newStageId(stages);
-  for (const size of sizes) {
+  const ratio = full.depthFt / full.widthFt;
+  const step = STAGE_SPOT_STEP_FT;
+  /** the widths tried, in steps: the smallest the rules allow, and the largest the area holds (at most the full one) */
+  const fewest = Math.ceil(
+    Math.max(Math.sqrt(STAGE_MIN_AREA_SQFT / ratio), STAGE_MIN_SIDE_FT, STAGE_MIN_SIDE_FT / ratio) /
+      step -
+      1e-9,
+  );
+  const most = Math.max(
+    fewest,
+    Math.floor(
+      Math.min(full.widthFt, area.x1 - area.x0, (area.y1 - area.y0) / ratio) / step + 1e-9,
+    ),
+  );
+  const newStage = (x: number, y: number, size: StageSize): SpaceStage => ({
+    id,
+    shape: STAGE_SHAPE.rectangle,
+    corners: rectCorners(x, y, x + size.widthFt, y + size.depthFt),
+    heightFt: full.heightFt,
+    on: host ? host.id : null,
+  });
+  /** the size's free spot nearest the middle of the area's first edge, as the layout; null when none is free */
+  const placed = (size: StageSize): L | null => {
     const xs: number[] = [];
-    for (let x = area.x0; x <= area.x1 - size.widthFt + 1e-9; x += STAGE_SPOT_STEP_FT) xs.push(x);
+    for (let x = area.x0; x <= area.x1 - size.widthFt + 1e-9; x += step) xs.push(x);
     xs.sort(
       (a, b) => Math.abs(a + size.widthFt / 2 - midX) - Math.abs(b + size.widthFt / 2 - midX),
     );
-    for (let y = area.y0; y <= area.y1 - size.depthFt + 1e-9; y += STAGE_SPOT_STEP_FT)
+    for (let y = area.y0; y <= area.y1 - size.depthFt + 1e-9; y += step)
       for (const x of xs) {
-        const stage: SpaceStage = {
-          id,
-          shape: STAGE_SHAPE.rectangle,
-          corners: rectCorners(x, y, x + size.widthFt, y + size.depthFt),
-          heightFt: size.heightFt,
-          on: host ? host.id : null,
-        };
-        const after = withStages(layout, [...stages, stage]);
-        if (keepsRules(layout, after, plans)) return { layout: after, id };
+        const after = withStages(layout, [...stages, newStage(x, y, size)]);
+        if (keepsRules(layout, after, plans)) return after;
       }
+    return null;
+  };
+  // the full size first; then the largest size with a free spot, found by halving (a smaller stage fits where a larger
+  // one does)
+  const fullFits = placed(scaledTo(full, most * step));
+  if (fullFits) return { layout: fullFits, id };
+  let best: L | null = null;
+  let lo = fewest,
+    hi = most - 1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const at = placed(scaledTo(full, mid * step));
+    if (at) {
+      best = at;
+      lo = mid + 1;
+    } else hi = mid - 1;
   }
-  return null;
+  if (best) return { layout: best, id };
+  const smallest = scaledTo(full, fewest * step);
+  return {
+    layout: withStages(layout, [
+      ...stages,
+      newStage(midX - smallest.widthFt / 2, area.y0, smallest),
+    ]),
+    id,
+  };
 }
 
 /** The layout without a stage and its risers; the boxes on them step down to what is under them. */

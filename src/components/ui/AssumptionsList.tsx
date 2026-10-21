@@ -1,6 +1,7 @@
 import { DetailsDropdown } from "./DetailsDropdown";
+import { MarkedText } from "./MarkedText";
 
-/** One line of a group: a sentence, or a heading line with its own lines indented under it. */
+/** One line of a group: a sentence, or a heading line with its own lines indented under it. A control's name is marked `**name**`. */
 export type AssumptionLine = string | readonly [line: string, sublines: readonly string[]];
 
 interface Props {
@@ -23,13 +24,17 @@ export function AssumptionsList({ groups, summary = "Assumptions", columns = fal
       <ul className="list-disc pl-5 flex flex-col gap-1">
         {lines.map((l) =>
           typeof l === "string" ? (
-            <li key={l}>{l}</li>
+            <li key={l}>
+              <MarkedText text={l} />
+            </li>
           ) : (
             <li key={l[0]}>
               {l[0]}
               <ul className="list-[circle] pl-5 mt-1 flex flex-col gap-1">
                 {l[1].map((sub) => (
-                  <li key={sub}>{sub}</li>
+                  <li key={sub}>
+                    <MarkedText text={sub} />
+                  </li>
                 ))}
               </ul>
             </li>

@@ -13,7 +13,7 @@ import { isSavedSpeakerShape } from "../../lib/speaker/speakerSaves";
 import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
 import { homeVenue } from "../../lib/speaker/specParts";
 import { usedParts } from "../../lib/speaker/usedParts";
-import { SPACE_ITEM } from "../../constants/speakerSpec";
+import { AUTO_DELAY, SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
@@ -81,10 +81,24 @@ const isStack = (value: unknown): value is StackSpec =>
 
 /**
  * A placement as a save holds it: one from before a placement could stand upside down has no `upsideDown`, and one
- * from before its polarity could be inverted has no `invertPolarity`.
+ * from before its polarity could be inverted has no `invertPolarity`. One from before delays and levels were plain
+ * numbers may hold Auto (`AUTO_DELAY`) in either.
  */
-type SavedPlacement = Omit<SpacePlacement, "upsideDown" | "invertPolarity"> &
-  Partial<Pick<SpacePlacement, "upsideDown" | "invertPolarity">>;
+type SavedPlacement = Omit<
+  SpacePlacement,
+  "upsideDown" | "invertPolarity" | "levelDb" | "delayMs"
+> &
+  Partial<Pick<SpacePlacement, "upsideDown" | "invertPolarity">> & {
+    levelDb: number | typeof AUTO_DELAY;
+    delayMs: number | typeof AUTO_DELAY;
+  };
+
+/** A delay or level as a save holds it, opened: Auto opens as 0. */
+const plainFeed = (value: number | typeof AUTO_DELAY) => (value === AUTO_DELAY ? 0 : value);
+
+/** A venue as a save holds it: one from before System gain has no `systemDb`, and one from before stages none. */
+type SavedVenue = Omit<SpaceVenue, "systemDb" | "stages"> &
+  Partial<Pick<SpaceVenue, "systemDb" | "stages">>;
 
 /**
  * Whether a value reads as a list of placements: each names an item and has a spot, an aim, whether it is a mirrored
@@ -113,18 +127,11 @@ const isPlacements = (value: unknown): value is SavedPlacement[] =>
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
   Object.values(ids).some((id) => id === value);
 
-/** A venue as a save holds it: one from before stages has none. */
-type SavedVenue = Omit<SpaceVenue, "stages"> & Partial<Pick<SpaceVenue, "stages">>;
-
-/**
- * Whether a value reads as a venue: its room, listener, alignment point, ear height, target, where it is measured and
- * balance, and maybe its stages.
- */
+/** Whether a value reads as a venue: its room, listener, ear height, target, where it is measured and balance, and maybe its stages. */
 const isVenue = (value: unknown): value is SavedVenue =>
   hasFields(value, {
     room: "object",
     listener: "object",
-    alignAt: "object",
     earFt: "number",
     targetDb: "number",
     levelRef: "string",
@@ -163,8 +170,10 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
         ...p,
         upsideDown: p.upsideDown ?? false,
         invertPolarity: p.invertPolarity ?? false,
+        levelDb: plainFeed(p.levelDb),
+        delayMs: plainFeed(p.delayMs),
       })),
-      venue: { ...venue, stages: venue.stages ?? [] },
+      venue: { ...venue, systemDb: Math.min(0, venue.systemDb ?? 0), stages: venue.stages ?? [] },
     },
     stacks: stacks.map((s) => ({ ...s, members: s.members.map(readMember) })),
     speakers: speakers.map(readSpeakerCopy),

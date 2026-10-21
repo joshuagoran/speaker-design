@@ -82,9 +82,11 @@ function assertListMatchesModel(design: SpaceDesign) {
       Math.abs(row.delayMs - feed.delayMs) < 1e-9,
       `${feed.id}: ${row.delayMs} vs ${feed.delayMs}`,
     );
+    // the feed's gain holds its box's level at a gain of 0 too: the settings leave it out
+    const gainDb = feed.gainDb - (model.placements[feed.box]?.fullDb ?? 0);
     assert.ok(
-      Math.abs(row.levelDb - (feed.gainDb + (band?.levelDb ?? 0))) < 1e-9,
-      `${feed.id}: ${row.levelDb} vs ${feed.gainDb}`,
+      Math.abs(row.levelDb - (gainDb + (band?.levelDb ?? 0))) < 1e-9,
+      `${feed.id}: ${row.levelDb} vs ${gainDb}`,
     );
   }
   return rows;

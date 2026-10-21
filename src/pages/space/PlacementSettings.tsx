@@ -1,17 +1,14 @@
 import type { SpacePlacement, SpaceVenue } from "../../types";
-import { Notice } from "../../components/ui/Notice";
 import { Button } from "../../components/ui/Button";
 import { CardFold } from "../../components/ui/CardFold";
 import { NumberField } from "../../components/ui/NumberField";
-import { AutoNumberField } from "../../components/ui/AutoNumberField";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { MarkedText } from "../../components/ui/MarkedText";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { wrapYawDeg } from "../../lib/speaker/spaceLayout";
-import { delayDistanceIn } from "../../lib/speaker/spaceAlignment";
-import type { SolvedFeed } from "../../lib/speaker/solveFeeds";
-import { AUTO_DELAY, AUTO_LEVEL } from "../../constants/speakerSpec";
 import {
-  DELAY_NOTE,
+  PLACEMENT_ROLES,
   placementDomId,
   SPACE_LIFT_MAX_IN,
   SPACE_PITCH_DEG,
@@ -35,8 +32,6 @@ interface Props {
   room: Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
   onEdit: (edit: (p: SpacePlacement) => SpacePlacement) => void;
   onRemove: () => void;
-  /** its delay and level as the space's solver sets them; undefined until the model holds it */
-  solved: SolvedFeed | undefined;
   /** what its boxes stand right against, by name: the floor, the walls and the other placements */
   coupledWith: readonly string[];
   /** the stages its boxes stand on, by name; none: the floor */
@@ -51,8 +46,8 @@ const tenth = (v: number) => Math.round(v * 10) / 10;
 
 /**
  * One placement's settings: where it stands (all in feet), its aim, whether it is upside down, a flip, whether it is a
- * mirrored pair (the box stands again on the other side of the center line), whether it is a fill, and its level and
- * delay on its feed (Auto or typed; a main's level is always typed).
+ * mirrored pair (the box stands again on the other side of the center line), whether it is a main or a fill, and its
+ * gain and delay on its feed.
  */
 export function PlacementSettings({
   index,
@@ -63,18 +58,15 @@ export function PlacementSettings({
   room,
   onEdit,
   onRemove,
-  solved,
   coupledWith,
   standsOn,
 }: Props) {
-  /** the delay and level it plays with, solved or typed */
-  const delayMs = solved?.delayMs ?? (placement.delayMs === AUTO_DELAY ? 0 : placement.delayMs);
-  const levelDb = solved?.levelDb ?? (placement.levelDb === AUTO_LEVEL ? 0 : placement.levelDb);
+  const { delayMs, levelDb } = placement;
   /** how far either side of the center line its spot may go, ft */
   const half = room.widthFt / 2;
   /** the highest height above the floor, ft */
   const heightMaxFt = SPACE_LIFT_MAX_IN / INCHES_PER_FOOT;
-  // the folded row: a pair says so, then the spot of the box as set and the level
+  // the folded row: a pair says so, then the spot of the box as set and the gain
   const where = SPACE_TEXT.placementSummary(
     formatSigned(placement.x),
     placement.y.toFixed(1),
@@ -177,60 +169,30 @@ export function PlacementSettings({
         >
           {SPACE_TEXT.mirrored}
         </ToggleButton>
-        <ToggleButton
-          on={placement.fill}
-          title={SPACE_TEXT.fillTip}
-          onClick={() =>
-            // a new fill's level starts at Auto; a main keeps the level it plays at, typed
-            onEdit((p) => ({
-              ...p,
-              fill: !p.fill,
-              levelDb: p.fill ? tenth(levelDb) : AUTO_LEVEL,
-            }))
-          }
-        >
-          {SPACE_TEXT.fill}
-        </ToggleButton>
       </div>
-      {placement.fill ? (
-        <AutoNumberField
-          label={<Tooltip tip={SPACE_TEXT.fillLevelTip}>{SPACE_TEXT.level}</Tooltip>}
-          auto={placement.levelDb === AUTO_LEVEL}
-          autoText={SPACE_TEXT.levelAuto(formatSigned(levelDb))}
+      <ToggleGroup
+        label={<Tooltip tip={<MarkedText text={SPACE_TEXT.roleTip} />}>{SPACE_TEXT.role}</Tooltip>}
+        value={placement.fill}
+        onChange={(fill) => onEdit((p) => ({ ...p, fill }))}
+        options={PLACEMENT_ROLES}
+      />
+      <div className={FIELD_ROW}>
+        <NumberField
+          label={<Tooltip tip={SPACE_TEXT.feedTip}>{SPACE_TEXT.gain}</Tooltip>}
           value={tenth(levelDb)}
-          fieldLabel={SPACE_TEXT.level}
           step={0.5}
-          // a typed level starts from the one Auto set
-          onAuto={(auto) => onEdit((p) => ({ ...p, levelDb: auto ? AUTO_LEVEL : tenth(levelDb) }))}
           onChange={(db) => onEdit((p) => ({ ...p, levelDb: db }))}
         />
-      ) : (
-        <div className={FIELD_ROW}>
-          <NumberField
-            label={<Tooltip tip={SPACE_TEXT.feedTip}>{SPACE_TEXT.level}</Tooltip>}
-            value={tenth(levelDb)}
-            step={0.5}
-            onChange={(db) => onEdit((p) => ({ ...p, levelDb: db }))}
-          />
-        </div>
-      )}
-      <AutoNumberField
-        label={<Tooltip tip={SPACE_TEXT.delayTip}>{SPACE_TEXT.delay}</Tooltip>}
-        auto={placement.delayMs === AUTO_DELAY}
-        autoText={SPACE_TEXT.delayAuto(
-          delayMs.toFixed(1),
-          (delayDistanceIn(delayMs) / INCHES_PER_FOOT).toFixed(1),
-        )}
-        value={tenth(delayMs)}
-        fieldLabel={SPACE_TEXT.delay}
-        min={0}
-        step={0.1}
-        // a typed delay starts from the one Auto set
-        onAuto={(auto) => onEdit((p) => ({ ...p, delayMs: auto ? AUTO_DELAY : tenth(delayMs) }))}
-        onChange={(ms) => onEdit((p) => ({ ...p, delayMs: ms }))}
-      />
-      {solved?.delayNote === DELAY_NOTE.clamped && <Notice>{SPACE_TEXT.delayClamped}</Notice>}
-      {solved?.delayNote === DELAY_NOTE.noMain && <Notice>{SPACE_TEXT.delayNoMain}</Notice>}
+        <NumberField
+          label={
+            <Tooltip tip={<MarkedText text={SPACE_TEXT.delayTip} />}>{SPACE_TEXT.delay}</Tooltip>
+          }
+          value={tenth(delayMs)}
+          min={0}
+          step={0.1}
+          onChange={(ms) => onEdit((p) => ({ ...p, delayMs: ms }))}
+        />
+      </div>
       <ToggleButton
         on={placement.invertPolarity}
         onClick={() => onEdit((p) => ({ ...p, invertPolarity: !p.invertPolarity }))}

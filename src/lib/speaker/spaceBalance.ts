@@ -3,7 +3,7 @@
 // The target is the venue's level in the lowest band. Each band above a crossover of the space's stacks is the music
 // balance's step lower there (lib/speaker/autoBalance tiltAt: flat 0 dB; the PA music tilt the mid below the sub at a
 // sub crossover, the horn below the mid above it), so the PA presets' targets follow the PA music balance. A band's target is the
-// target at its center (or at the one frequency). The reference the space is turned down to: the audience's
+// target at its center (or at the one frequency). The reference Calculate gains reads: the audience's
 // average (the floor but the space in front of each box), the listener, or the mean of the levels 1 m in front of each placement, on its aim.
 import type { FloorPoint, SpaceDesign, SpaceVenue, SpeakerBand, SpeakerSpec } from "../../types";
 import { oneMeterSpot, type COVERAGE_BANDS } from "../acoustics/coverage";

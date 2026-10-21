@@ -1,11 +1,7 @@
 import type { CoverageLevelRef } from "../types";
 
-/** The point each main box's delay aligns at, as the "Measured at" choice and the map's key name it. */
-export const ALIGNMENT_POINT = "Alignment point";
-
 /** Where the coverage map's target can be measured, by id. */
 export const COVERAGE_LEVEL_REF = {
-  // the alignment point: saves and share links carry "listener", so the key keeps that spelling
   listener: "listener",
   audience: "audience",
   stacks: "stacks",
@@ -13,14 +9,14 @@ export const COVERAGE_LEVEL_REF = {
 
 /** The "Measured at" choices, with their names, in display order. */
 export const COVERAGE_LEVEL_REFS = [
-  [COVERAGE_LEVEL_REF.listener, ALIGNMENT_POINT],
+  [COVERAGE_LEVEL_REF.listener, "Listener"],
   [COVERAGE_LEVEL_REF.audience, "Audience average"],
   [COVERAGE_LEVEL_REF.stacks, "1 m from the stacks"],
 ] as const satisfies readonly (readonly [CoverageLevelRef, string])[];
 
 /** Each reference as a sentence names it ("the target at …"). */
 export const COVERAGE_LEVEL_REF_PLACE = {
-  listener: "the alignment point",
+  listener: "the listener",
   audience: "the audience average",
   stacks: "1 m from the stacks",
 } as const satisfies Record<CoverageLevelRef, string>;

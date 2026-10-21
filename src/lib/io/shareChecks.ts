@@ -19,7 +19,6 @@ import {
 } from "../../constants/share";
 import {
   AUTO_DELAY,
-  AUTO_LEVEL,
   CHAMBER_LOAD,
   DRIVER_KIND,
   SPACE_ITEM,
@@ -61,7 +60,7 @@ const isPoint = (value: unknown) => isRecord(value) && isNum(value.x) && isNum(v
 /** Whether a value is a spot on a face: its `xIn` and `yIn`. */
 const isFace = (value: unknown) => isRecord(value) && isNum(value.xIn) && isNum(value.yIn);
 
-/** Whether a value is a level or a delay that a feed takes: a number, or the solver's Auto. */
+/** Whether a value is a level or a delay that a feed takes: a number, or Auto (a space's from an older link opens as 0). */
 const isFeed = (value: unknown, auto: string) => isNum(value) || value === auto;
 
 /** Whether a value is a yes or no a link from before it was added may lack (`invertPolarity`). */
@@ -109,7 +108,7 @@ const isPlacement = (value: unknown) =>
   // optional: a link from before a placement could stand upside down has none
   (value.upsideDown === undefined || typeof value.upsideDown === "boolean") &&
   isOptionalFlag(value.invertPolarity) &&
-  isFeed(value.levelDb, AUTO_LEVEL) &&
+  isFeed(value.levelDb, AUTO_DELAY) &&
   isFeed(value.delayMs, AUTO_DELAY);
 
 /** Whether a value reads as a room (`CoverageRoom`): sizes above zero, a known material on each surface. */
@@ -158,11 +157,12 @@ const isVenue = (value: unknown) =>
   isRecord(value) &&
   isRoom(value.room) &&
   isPoint(value.listener) &&
-  isPoint(value.alignAt) &&
   (value.stages === undefined ||
     (isStageList(value.stages) && value.stages.length <= SHARE_MAX_STAGES)) &&
   isNum(value.earFt) &&
   isNum(value.targetDb) &&
+  // optional: a link from before System gain has none
+  (value.systemDb === undefined || isNum(value.systemDb)) &&
   typeof value.levelRef === "string" &&
   typeof value.balance === "string";
 

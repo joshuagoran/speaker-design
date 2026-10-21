@@ -171,11 +171,29 @@ test("add: a stage at the middle of the front wall, a riser at the middle of its
   assert.deepEqual(stageBox(r), { x: 0, y: 0, w: NEW_RISER.widthFt, d: NEW_RISER.depthFt });
   assert.equal(r.on, main.id);
   assert.notEqual(r.id, main.id);
-  // a stage too small for an 8 × 4 ft riser takes a 4 × 4 ft one
+});
+
+test("add: a stage in a room too small for it is the largest that fits, its proportions kept", () => {
+  const base = spaceWith([]);
+  const tiny = {
+    ...base,
+    venue: { ...base.venue, room: { ...base.venue.room, widthFt: 10, lengthFt: 10 } },
+  };
+  const { layout, id } = withStageAdded(tiny, null, []);
+  const added = layout.venue.stages.find((s) => s.id === id);
+  assert.ok(added);
+  assert.ok(stageKeepsRules(layout.venue.stages, layout.venue.room, added));
+  assert.deepEqual(stageBox(added), { x: 0, y: 0, w: 10, d: 5 });
+});
+
+test("add: a riser on a stage too small for it is the largest that fits, its proportions kept", () => {
   const small = spaceWith([stage("a", [-3, 0, 3, 6])]);
-  const deck = withStageAdded(small, "a", []);
-  assert.ok(deck);
-  assert.deepEqual(stageBox(deck.layout.venue.stages[1]), { x: 0, y: 0, w: 4, d: 4 });
+  const { layout, id } = withStageAdded(small, "a", []);
+  const riser = layout.venue.stages.find((s) => s.id === id);
+  assert.ok(riser);
+  assert.equal(riser.on, "a");
+  assert.ok(stageKeepsRules(layout.venue.stages, layout.venue.room, riser));
+  assert.deepEqual(stageBox(riser), { x: 0, y: 0, w: 6, d: 3 });
 });
 
 test("drag: a stage moves with its riser; dropped on a stage it is a riser, off it a floor stage", () => {

@@ -79,8 +79,7 @@ export function StageSettings({
       <Button
         variant="primary"
         onClick={() => {
-          const id = actions.add(pick.id === STAGE_ON_FLOOR ? null : pick.id);
-          if (id) onAdded(id);
+          onAdded(actions.add(pick.id === STAGE_ON_FLOOR ? null : pick.id));
         }}
       >
         {SPACE_TEXT.addStage}

@@ -1,5 +1,6 @@
 // The speaker spec (lib/speaker): every saved and synthetic PA design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
+import { AUTO_BALANCE_MODE } from "../src/constants/autoBalance";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
@@ -195,6 +196,19 @@ test("speaker spec: every saved and synthetic PA design reads into a stack with 
     assert.deepEqual(bandOf(topBox, SPEAKER_BAND.high).highpass, hi, c.name);
     assert.ok(
       [...subBox.bands, ...topBox.bands].every((b) => b.drive === HIFI_DRIVE.active),
+      c.name,
+    );
+
+    // every placement starts at a gain of 0; satellite's tilt is the venue's More bass, the others keep it in their levels
+    assert.ok(
+      space.placements.every((p) => p.levelDb === 0),
+      c.name,
+    );
+    assert.equal(
+      space.venue.balance,
+      cfg.layout === "satellite" && cfg.tilt > 0
+        ? AUTO_BALANCE_MODE.moreBass
+        : AUTO_BALANCE_MODE.flat,
       c.name,
     );
 
