@@ -362,7 +362,7 @@ export const SPACE_TEXT = {
   lowpass: (filter: string) => `Low-pass ${filter}`,
   fullRange: "Full range",
   /** a band's level, dB (already formatted) */
-  levelIs: (db: string) => `Level ${db} dB`,
+  gainIs: (db: string) => `${GAIN} ${db} dB`,
   noDelay: "No delay",
   /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (in) */
   delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,
@@ -412,7 +412,7 @@ export const SPACE_TEXT = {
   oneNote: (coherentHz: number) =>
     `One frequency adds all sources (including phase below ${coherentHz} Hz).`,
   audienceAverage: "Audience average",
-  audienceMax: "Audience at the limit",
+  audienceMax: "Audience at full power",
   listener: "Listener",
   /** the share of the floor at or above a level against the target */
   floorAtLeast: (db: string) => `Floor ≥ ${db} dB`,

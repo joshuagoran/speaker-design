@@ -29,7 +29,7 @@ export function AlignmentList({ rows }: { rows: readonly AlignmentRow[] }) {
       rows={rows.map((r) => ({
         id: `${r.member}/${r.box}/${r.bands.map((b) => b.id).join("+")}`,
         title: `${numbered ? `${r.member + 1}. ` : ""}${r.box}: ${r.bands.map((b) => b.name).join(" + ")}`,
-        detail: `${filtersText(r)} · ${SPACE_TEXT.levelIs(formatSigned(r.levelDb))} · ${delayText(r.delayMs)}`,
+        detail: `${filtersText(r)} · ${SPACE_TEXT.gainIs(formatSigned(r.levelDb))} · ${delayText(r.delayMs)}`,
       }))}
     />
   );
