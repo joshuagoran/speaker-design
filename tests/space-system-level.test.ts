@@ -1,10 +1,11 @@
-// The Space page turns the space down once, so that the lowest band reaches the Target level at the reference. The band
-// on show changes the map and the per-band figures only: never the turn-down, the listener's level or the band line.
+// The Space page plays every placement at System level. Calculate levels sets it once, so that the lowest band reaches
+// the Target level at the reference. The band on show changes the map and the per-band figures only: never the level,
+// the listener's level or the band line.
 import { afterEach, expect, test } from "vite-plus/test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { emptySpace, spaceDraft } from "../src/pages/space/spaceSaves";
-import { useSpace, withItemPlaced } from "../src/pages/space/useSpace";
+import { useSpace, withCalculatedLevels, withItemPlaced } from "../src/pages/space/useSpace";
 import { placeOptions } from "../src/pages/space/placeOptions";
 import { emptyStack } from "../src/pages/stack/stackSaves";
 import { emptySpeaker } from "../src/pages/speaker/useSpeakerPage";
@@ -58,21 +59,32 @@ function figures(
   return out;
 }
 
+/** A stack placed in the room, measured at `levelRef`, aiming at `targetDb`. */
+function placedSpace(levelRef: CoverageLevelRef, targetDb: number) {
+  const options = placeOptions({
+    openStack: emptyStack(),
+    openSpeaker: emptySpeaker(),
+    savedStacks: [],
+    savedSpeakers: [],
+  });
+  const placed = withItemPlaced(emptySpace(), options[0].item());
+  return {
+    ...placed,
+    space: { ...placed.space, venue: { ...placed.space.venue, levelRef, targetDb } },
+  };
+}
+
 const BANDS: CoverageBand[] = [...(Object.keys(COVERAGE_BANDS) as CoverageBand[]), "one"];
 
-for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks])
-  test(`${levelRef}: switching the band changes neither the turn-down nor the band line`, () => {
-    const sub = figures(levelRef, "sub");
-    // a target low enough to turn the space down, so the turn-down is a real figure
-    expect(sub.turn.gain).toBeLessThan(0);
-    // the lowest band reaches the target at the reference
-    expect(sub.turn.atLimit !== null && sub.turn.atLimit + sub.turn.gain).toBeCloseTo(
-      sub.turn.target,
-      6,
-    );
+/** A System level under the limit, dB. */
+const SYSTEM_DB = -6;
+
+for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks]) {
+  test(`${levelRef}: switching the band changes neither the level nor the band line`, () => {
+    const sub = figures(levelRef, "sub", 105, { systemDb: SYSTEM_DB });
+    expect(sub.gain).toBe(SYSTEM_DB);
     for (const band of BANDS) {
-      const s = figures(levelRef, band);
-      expect(s.turn, `${band}: turn-down`).toEqual(sub.turn);
+      const s = figures(levelRef, band, 105, { systemDb: SYSTEM_DB });
       expect(s.gain, `${band}: gain`).toBe(sub.gain);
       expect(s.bandLevels, `${band}: each band at the listener`).toEqual(sub.bandLevels);
       expect(s.listenerDb, `${band}: listener`).toBe(sub.listenerDb);
@@ -82,26 +94,44 @@ for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks])
     }
   });
 
+  test(`${levelRef}: Calculate levels sets System level so the reference reaches the target`, async () => {
+    const { design, reference } = await withCalculatedLevels(placedSpace(levelRef, 95));
+    const { systemDb } = design.space.venue;
+    // a target low enough to turn the space down, so the level is a real figure
+    expect(systemDb).toBeLessThan(0);
+    expect(reference.atLimit !== null && reference.atLimit + systemDb).toBeCloseTo(
+      reference.target,
+      1,
+    );
+    // a target past the limit holds it at 0
+    const loud = await withCalculatedLevels(placedSpace(levelRef, 140));
+    expect(loud.design.space.venue.systemDb).toBe(0);
+  });
+}
+
+test("the Target level alone does not change the level", () => {
+  expect(figures(COVERAGE_LEVEL_REF.listener, "sub", 95).gain).toBe(
+    figures(COVERAGE_LEVEL_REF.listener, "sub", 115).gain,
+  );
+});
+
 test("the lowest band is the lowest band", () => {
   const lo = Object.values(COVERAGE_BANDS).map((b) => b.lo);
   expect(COVERAGE_BANDS.sub.lo).toBe(Math.min(...lo));
 });
 
-test("a new space starts at the default coverage layout's 105 dB target", () => {
+test("a new space starts at the default coverage layout's 105 dB target, at full power", () => {
   expect(SPACE_HOME_TARGET_DB).toBe(105);
   expect(emptySpace().space.venue.targetDb).toBe(SPACE_HOME_TARGET_DB);
+  expect(emptySpace().space.venue.systemDb).toBe(0);
   expect(SPACE_HOME_TARGET_DB).toBe(LISTENER_TARGET_DB);
 });
 
-test("measured at the alignment point: moving the listener changes only its readouts, moving the point the turn-down", () => {
+test("moving the listener changes only its readouts", () => {
   const start = figures(COVERAGE_LEVEL_REF.listener, "sub");
   const listenerMoved = figures(COVERAGE_LEVEL_REF.listener, "sub", 105, {
     listener: { x: 4, y: 20 },
   });
-  expect(listenerMoved.turn).toEqual(start.turn);
+  expect(listenerMoved.gain).toBe(start.gain);
   expect(listenerMoved.listenerDb).not.toBe(start.listenerDb);
-  const pointMoved = figures(COVERAGE_LEVEL_REF.listener, "sub", 105, {
-    alignAt: { x: 4, y: 20 },
-  });
-  expect(pointMoved.turn.atLimit).not.toBe(start.turn.atLimit);
 });

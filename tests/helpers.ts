@@ -1,7 +1,6 @@
 // Shared test helpers and independent physics references.
 import assert from "node:assert";
-import { spaceModelLaidOut, withSolved, type SpaceModel } from "../src/lib/speaker/spaceCoverage";
-import { solveFeeds } from "../src/lib/speaker/solveFeeds";
+import { spaceModelLaidOut, type SpaceModel } from "../src/lib/speaker/spaceCoverage";
 import { hornModel, portOfEffectiveLength } from "../src/lib/acoustics/hornModel";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import type {
@@ -24,11 +23,8 @@ import type {
 export const hornGrid = (fmin = 10, fmax = 2000, count = 500) =>
   Array.from({ length: count }, (_, i) => fmin * Math.pow(fmax / fmin, i / (count - 1)));
 
-/** The space worked out with its Auto delays and levels solved, as the Space page shows it. */
-export function spaceModel(design: SpaceDesign): SpaceModel {
-  const laid = spaceModelLaidOut(design);
-  return withSolved(laid, solveFeeds(laid, design.space.venue));
-}
+/** The space worked out at its delays and levels as set, as the Space page shows it. */
+export const spaceModel = (design: SpaceDesign): SpaceModel => spaceModelLaidOut(design);
 
 // The tests give a vent only the fields its layout reads; the cast marks the partial on purpose.
 export const vent = (v: Partial<VentSpec>) => v as VentSpec;

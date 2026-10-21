@@ -69,7 +69,6 @@ import {
   DIRECT_LOAD,
   NO_FILTERS,
   lrFilter,
-  roomCenter,
   spacePlacement,
   speakerIdentity,
   stackMember,
@@ -435,9 +434,9 @@ export function paVenue(floor: PaFloor): SpaceVenue {
   return {
     room,
     listener: floor.listener,
-    alignAt: roomCenter(room),
     earFt: floor.earFt,
     targetDb: floor.targetDb,
+    systemDb: 0,
     // its target in the sub band, measured where the floor says, under the PA music balance
     levelRef: floor.levelRef,
     balance: AUTO_BALANCE_MODE.moreBass,

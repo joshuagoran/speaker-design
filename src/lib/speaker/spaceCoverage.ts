@@ -8,11 +8,11 @@
 // A horn-loaded box's mouth and vent exit take their load from where the box stands (lib/speaker/spaceLoading, from
 // what it is coupled with, lib/speaker/spaceCoupling); every other box plays as it does alone.
 //
-// Each placement's own delay and level are its solved ones (lib/speaker/solveFeeds: Auto ones from the layout, the rest
-// as typed). Its polarity, as set, turns its whole feed over, on top of each member's own.
+// Each placement plays its own delay and level as set (Calculate delays and Calculate levels set them:
+// lib/speaker/solveFeeds). Its polarity, as set, turns its whole feed over, on top of each member's own.
 //
 // The whole space plays from one input. At its music limit the placement with the least headroom (less its level) sets
-// the level; the page then turns it down so the reference (the audience's average) gets the target, never past the limit.
+// the level; the page then plays it at the venue's System level, never past the limit.
 import type {
   BandId,
   BoxLoading,
@@ -56,7 +56,6 @@ import { driverHorn, speakerLayout } from "./speakerLayout";
 import { spaceLayout, type BandOfPart, type PlacedDriver, type PlacedItem } from "./spaceLayout";
 import { spaceCoupling } from "./spaceCoupling";
 import { boxLoadings } from "./spaceLoading";
-import { typedFeed, type SolvedFeed } from "./solveFeeds";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
 import { COAX_HF_EXIT_IN } from "../../constants/coax";
@@ -128,12 +127,8 @@ interface VoiceFeed extends CoverageVoice {
   pressure: readonly Complex[];
   /** the member's level and the placement's, dB */
   gainDb: number;
-  /** of that level, the member's, dB */
-  memberLevelDb: number;
-  /** the member's delay and the placement's, ms */
+  /** the member's delay (the stack's own alignment) and the placement's, ms */
   delayMs: number;
-  /** of that delay, the member's: the stack's own alignment, ms */
-  memberDelayMs: number;
   /** its sign: −1 where the member's polarity or the placement's (not both) is inverted */
   sign: number;
   /** the baffle's width for a cone band's baffle step, in; null for an HF section */
@@ -148,8 +143,6 @@ export interface SpaceModel {
   placements: SpacePlacementModel[];
   scene: CoverageScene;
   feeds: VoiceFeed[];
-  /** each placement's delay and level (by its index in the space; a mirrored pair is one), as the solver sets them */
-  solved: SolvedFeed[];
   /** the space's input headroom at its music limit, dB: the least of its placements', less their levels; 0 unknown */
   headroomDb: number;
   /** a placement names a stack or speaker the design lacks */
@@ -216,36 +209,13 @@ function placementModel(
   return { item, response, limits, headroomDb };
 }
 
-/**
- * The model with each placement playing `solved` (by its index in the space): its feeds' delays and levels, and the
- * space's headroom (the least of its placements', less their levels).
- */
-export function withSolved(model: SpaceModel, solved: SolvedFeed[]): SpaceModel {
-  const rooms = model.placements.flatMap((p) =>
-    p.headroomDb === null ? [] : [p.headroomDb - (solved[p.item.placement.source]?.levelDb ?? 0)],
-  );
-  return {
-    ...model,
-    feeds: model.feeds.map((f) => ({
-      ...f,
-      delayMs: f.memberDelayMs + (solved[f.placement]?.delayMs ?? 0),
-      gainDb: f.memberLevelDb + (solved[f.placement]?.levelDb ?? 0),
-    })),
-    solved,
-    headroomDb: rooms.length ? Math.min(...rooms) : 0,
-  };
-}
-
 /** The voice a box's driver plays (a feed's id): its box, member, band, and pattern. */
 export const voiceId = (
   box: number,
   d: Pick<PlacedDriver, "member" | "band" | "driver" | "part" | "mouth">,
 ) => `${box}/${d.member}/${d.band}/${JSON.stringify(driverPattern(d))}`;
 
-/**
- * The space worked out with each placement's typed delay and level, Auto ones at 0 (what the solver reads; `withSolved`
- * sets the solved ones). Moving the listener or the alignment point doesn't change it.
- */
+/** The space worked out with each placement's delay and level as set. Moving the listener doesn't change it. */
 export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
   const cache = new Map<string, Pick<SpacePlacementModel, "response" | "limits">>();
   const items = spaceLayout(design, bandOfPart);
@@ -277,11 +247,8 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
           id,
           pattern,
           pressure: band.pressure,
-          // the placement's own level and delay are added by `withSolved`
-          gainDb: 0,
-          memberLevelDb: item.stack ? item.stack.stack.members[d.member].levelDb : 0,
-          delayMs: 0,
-          memberDelayMs: member.delayMs,
+          gainDb: (item.stack ? item.stack.stack.members[d.member].levelDb : 0) + placement.levelDb,
+          delayMs: member.delayMs + placement.delayMs,
           sign:
             polaritySign(placement) *
             (item.stack ? polaritySign(item.stack.stack.members[d.member]) : 1),
@@ -303,23 +270,22 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
     });
   });
   const list = [...feeds.values()];
-  // each placement at its typed delay and level, Auto ones at 0
-  return withSolved(
-    {
-      placements,
-      scene: sceneOf(
-        design.space.venue.room,
-        list.map(({ id, pattern }) => ({ id, pattern })),
-        boxes,
-      ),
-      feeds: list,
-      solved: [],
-      headroomDb: 0,
-      missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
-      coupling,
-    },
-    design.space.placements.map(typedFeed),
+  /** each box's headroom, less its placement's level */
+  const rooms = placements.flatMap((p) =>
+    p.headroomDb === null ? [] : [p.headroomDb - p.item.placement.levelDb],
   );
+  return {
+    placements,
+    scene: sceneOf(
+      design.space.venue.room,
+      list.map(({ id, pattern }) => ({ id, pattern })),
+      boxes,
+    ),
+    feeds: list,
+    headroomDb: rooms.length ? Math.min(...rooms) : 0,
+    missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
+    coupling,
+  };
 }
 
 /**

@@ -51,6 +51,7 @@ import { BAND_BALANCE_TIP } from "../../lib/speaker/autoBalance";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
+import { MarkedText } from "../../components/ui/MarkedText";
 import {
   SPACE_SETTINGS_SECTIONS,
   SPACE_SETTINGS_TABS,
@@ -58,6 +59,7 @@ import {
 } from "../../constants/settingsSections";
 import {
   COUPLED_NAMES,
+  DELAY_NOTE,
   NO_DELAY_MS,
   placementDomId,
   SPACE_LEVEL_REF_PLACE,
@@ -76,7 +78,7 @@ import { ArrivalList } from "./ArrivalList";
 import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
 import { itemName } from "./spaceSaves";
-import { spaceFromStart, type SpacePlanner } from "./useSpace";
+import type { SpacePlanner } from "./useSpace";
 import { placeOptions } from "./placeOptions";
 import { designStartOptions } from "../stack/stackPresets";
 import { byId } from "../../lib/tables";
@@ -235,7 +237,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
     space.band === "one"
       ? `${formatHz(space.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[space.band].name} band, ${formatHz(COVERAGE_BANDS[space.band].lo)}–${formatHz(COVERAGE_BANDS[space.band].hi)}`;
-  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.turn.target : null;
+  const listenerRel = space.listenerDb !== null ? space.listenerDb - space.levelBandTarget : null;
   const { audienceDb, audienceAtLimit } = space;
   const tiles: StatTileItem[] = [
     ...(audienceDb !== null
@@ -298,7 +300,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               words={SPACE_SAVE_WORDS}
               starts={START_OPTIONS}
               group={(o) => o.group}
-              onStart={(o) => space.replaceDesign(spaceFromStart(o.id))}
+              onStart={(o) => space.start(o.id)}
             />
           )}
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
@@ -316,7 +318,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     view={view}
                     room={venue.room}
                     listener={venue.listener}
-                    alignAt={venue.alignAt}
                     boxes={boxes}
                     coupling={space.coupling.marks}
                     selected={model.placements.flatMap((p, i) =>
@@ -330,7 +331,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                       moveBox: space.moveBox,
                       aimBox: space.aimBox,
                       moveListener: space.moveListener,
-                      moveAlignAt: space.moveAlignAt,
                     }}
                     busy={space.isPending}
                     maxHeight={maxHeight}
@@ -361,7 +361,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                       room={venue.room}
                       items={model.placements.map((p) => p.item)}
                       listener={venue.listener}
-                      alignAt={venue.alignAt}
                       earFt={venue.earFt}
                       view={placements.length > 0 ? view : null}
                       beams={look.beams ? beams : []}
@@ -376,13 +375,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
               <SectionHeading>{SPACE_TEXT.levels}</SectionHeading>
               {tiles.length > 0 && <StatTileGrid tiles={tiles} />}
-              {view && (
-                <p className="text-sm text-stone-500 tabular-nums">
-                  {space.turn.atLimit !== null && space.turn.atLimit < space.turn.target - 0.05
-                    ? SPACE_TEXT.cannotReach(space.turn.target, space.turn.atLimit)
-                    : SPACE_TEXT.turnedDown(-space.turn.gain, space.turn.target)}
-                </p>
-              )}
               {view && listenerRel !== null && (
                 <p className="text-sm text-stone-500 tabular-nums">
                   {SPACE_TEXT.listenerVs}{" "}
@@ -481,7 +473,11 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 surfaceTips={{ left: SPACE_LEFT_WALL_TIP }}
               />
               <Slider
-                label={<Tooltip tip={SPACE_TEXT.targetTip}>{SPACE_TEXT.target}</Tooltip>}
+                label={
+                  <Tooltip tip={<MarkedText text={SPACE_TEXT.targetTip} />}>
+                    {SPACE_TEXT.target}
+                  </Tooltip>
+                }
                 value={venue.targetDb}
                 min={COVERAGE_TARGET_DB[0]}
                 max={COVERAGE_TARGET_DB[1]}
@@ -511,6 +507,29 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}
                 options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
               />
+              <div className={`${FIELD_ROW} items-end`}>
+                <NumberField
+                  label={
+                    <Tooltip tip={SPACE_TEXT.systemLevelTip}>{SPACE_TEXT.systemLevel}</Tooltip>
+                  }
+                  value={venue.systemDb}
+                  max={0}
+                  step={0.5}
+                  onChange={(systemDb) =>
+                    space.editVenue((v) => ({ ...v, systemDb: Math.min(0, systemDb) }))
+                  }
+                />
+                <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateLevelsTip} />}>
+                  <Button onClick={space.calculateLevels}>{SPACE_TEXT.calculateLevels}</Button>
+                </Tooltip>
+              </div>
+              {space.levelNote &&
+                space.levelNote.atLimit !== null &&
+                space.levelNote.atLimit < space.levelNote.target - 0.05 && (
+                  <Notice>
+                    {SPACE_TEXT.cannotReach(space.levelNote.target, space.levelNote.atLimit)}
+                  </Notice>
+                )}
               <div className={FIELD_ROW}>
                 <NumberField
                   label={SPACE_TEXT.ear}
@@ -526,6 +545,23 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
           {section(
             "placements",
             <>
+              <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateDelaysTip} />}>
+                <Button onClick={space.calculateDelays}>{SPACE_TEXT.calculateDelays}</Button>
+              </Tooltip>
+              {space.delayNotes.flatMap((note, k) =>
+                note === null
+                  ? []
+                  : [
+                      <Notice key={k}>
+                        {SPACE_TEXT.delayNoteFor(
+                          names[k] ?? "",
+                          note === DELAY_NOTE.clamped
+                            ? SPACE_TEXT.delayClamped
+                            : SPACE_TEXT.delayNoMain,
+                        )}
+                      </Notice>,
+                    ],
+              )}
               <SelectField
                 label={SPACE_TEXT.addPlacement}
                 options={placeList}
@@ -571,7 +607,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     space.removePlacement(k);
                     afterRemoved(k);
                   }}
-                  solved={model.solved[k]}
                   coupledWith={coupledWith(k)}
                 />
               ))}

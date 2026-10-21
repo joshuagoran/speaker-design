@@ -158,21 +158,33 @@ function paWithFill(): SpaceDesign {
   };
 }
 
-test("alignment: a pair is one placement to solve; its two boxes share the delay and level", () => {
-  const design = paWithFill();
+test("alignment: a pair is one placement; its two boxes share the delay and level", () => {
+  const base = paWithFill();
+  /** the pair's own delay, ms, and level, dB */
+  const [pairMs, pairDb] = [2.5, -3];
+  const design: SpaceDesign = {
+    ...base,
+    space: {
+      ...base.space,
+      placements: base.space.placements.map((p, k) =>
+        k === 0 ? { ...p, delayMs: pairMs, levelDb: pairDb } : p,
+      ),
+    },
+  };
   const model = spaceModel(design);
-  // three boxes in the model (the pair's two and the fill), two placements in the list and the solver
+  const plain = spaceModel(base);
+  // three boxes in the model (the pair's two and the fill), two placements in the list
   assert.equal(model.placements.length, 3);
   const rows = spaceAlignment(model);
   assert.deepEqual([...new Set(rows.map((r) => r.placement))], [0, 1]);
-  assert.equal(model.solved.length, 2);
-  // every voice of a placement, the pair's two boxes alike, plays its one solved delay
-  for (const f of model.feeds) {
-    const own = model.solved[f.placement];
-    assert.ok(own);
-    assert.ok(Math.abs(f.delayMs - f.memberDelayMs - own.delayMs) < 1e-9, f.id);
-    assert.ok(Math.abs(f.gainDb - f.memberLevelDb - own.levelDb) < 1e-9, f.id);
-  }
+  // every voice of the pair, both boxes alike, plays its one delay and level on top of the stack's own
+  model.feeds.forEach((f, i) => {
+    const was = plain.feeds[i];
+    assert.ok(was);
+    const [ms, db] = f.placement === 0 ? [pairMs, pairDb] : [0, 0];
+    assert.ok(Math.abs(f.delayMs - was.delayMs - ms) < 1e-9, f.id);
+    assert.ok(Math.abs(f.gainDb - was.gainDb - db) < 1e-9, f.id);
+  });
 });
 
 /** A space as the library stores it and reads it back. */

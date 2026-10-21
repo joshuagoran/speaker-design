@@ -12,7 +12,13 @@ import { spaceModel } from "./helpers";
 import { referenceAtLimit } from "../src/pages/space/useSpace";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { oneMeterSpots } from "../src/lib/speaker/spaceBalance";
-import type { CoverageBand, CoverageGrid, CoverageLayout, SpaceDesign } from "../src/types";
+import type {
+  CoverageBand,
+  CoverageGrid,
+  CoverageLayout,
+  CoverageLevelRef,
+  SpaceDesign,
+} from "../src/types";
 
 /** The starting PA design read in as a space on `layout`. */
 function paSpace(layout: CoverageLayout): SpaceDesign {
@@ -135,29 +141,19 @@ test("space model: with Measured at the audience average, moving only the listen
     y: p.item.placement.y,
   }));
   const meterSpots = oneMeterSpots(design, venue.room).map((spot) => ({ at: spot, passbands: [] }));
-  const at = (alignAt: { x: number; y: number } | null) =>
-    referenceAtLimit(
-      COVERAGE_LEVEL_REF.audience,
-      req,
-      { alignAt, meterSpots, boxes },
-      grid,
-      COVERAGE_BANDS.mid,
-    );
+  const at = (
+    listener: { x: number; y: number },
+    levelRef: CoverageLevelRef = COVERAGE_LEVEL_REF.audience,
+  ) => referenceAtLimit(levelRef, req, { listener, meterSpots, boxes }, grid, COVERAGE_BANDS.mid);
   // the map's request holds the room and the ear, not the listener, so its grid is the same wherever one stands
   // and so is the audience average (the whole floor but the boxes' clearance)
   const average = audienceAverage(grid, req.room, boxes);
   assert.ok(average !== null && Number.isFinite(average));
   assert.equal(at({ x: 0, y: 5 }), average);
   assert.equal(at({ x: -6, y: 18 }), average);
-  assert.equal(at(null), average);
-  // only the alignment point's own reference follows the alignment point
-  const atAlignAt = (alignAt: { x: number; y: number }) =>
-    referenceAtLimit(
-      COVERAGE_LEVEL_REF.listener,
-      req,
-      { alignAt, meterSpots, boxes },
-      grid,
-      COVERAGE_BANDS.mid,
-    );
-  assert.notEqual(atAlignAt({ x: 0, y: 5 }), atAlignAt({ x: -6, y: 18 }));
+  // only the listener's own reference follows the listener
+  assert.notEqual(
+    at({ x: 0, y: 5 }, COVERAGE_LEVEL_REF.listener),
+    at({ x: -6, y: 18 }, COVERAGE_LEVEL_REF.listener),
+  );
 });

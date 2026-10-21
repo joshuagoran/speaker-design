@@ -1,6 +1,6 @@
 // What a space asks of the processing ahead of its amps: for each box and band, the
 // crossover filters, the level and the delay to set. Read from the model (the stack's crossovers, levels and worked-out
-// delays, and each placement's own solved level and delay). A mirrored pair is one entry: its two boxes share the
+// delays, and each placement's own level and delay). A mirrored pair is one entry: its two boxes share the
 // settings. Pure.
 import type { BandFilter, BandId, SpeakerBand } from "../../types";
 import type { SpaceModel } from "./spaceCoverage";
@@ -54,12 +54,10 @@ function stricter(
  * The alignment list: each placed box's bands in turn, in the placements' order. A mirrored pair's boxes share their
  * settings, so a pair is one entry per band.
  */
-export function spaceAlignment(model: Pick<SpaceModel, "placements" | "solved">): AlignmentRow[] {
+export function spaceAlignment(model: Pick<SpaceModel, "placements">): AlignmentRow[] {
   return model.placements.flatMap((placed): AlignmentRow[] => {
-    const { image, source } = placed.item.placement;
-    /** the placement's own delay and level: solved (Auto) or typed */
-    const placementDelayMs = model.solved[source]?.delayMs ?? 0;
-    const levelDb = model.solved[source]?.levelDb ?? 0;
+    /** the placement's own delay and level, as set */
+    const { image, source, delayMs: placementDelayMs, levelDb } = placed.item.placement;
     const response = placed.response;
     // the image box plays what the box as set plays
     if (image || !placed.item.stack || !response) return [];

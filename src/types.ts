@@ -20,7 +20,6 @@ import type { HORN_GOAL_LIMIT } from "./constants/hornGoals";
 import type { HORN_LAYOUT, NETWORK_PART, OPENING_LOAD } from "./constants/acousticNetwork";
 import type {
   AUTO_DELAY,
-  AUTO_LEVEL,
   CABINET_CONSTRUCTION,
   ARCH_BLOCK,
   CABINET_TOP,
@@ -2153,18 +2152,18 @@ export interface SpacePlacement extends FloorPoint {
    */
   mirrored: boolean;
   /**
-   * the front end's level on its feed, against the space's other placements, dB (a fill under the mains), or, for a
-   * fill, Auto (`AUTO_LEVEL`): the space's solver sets it (lib/speaker/solveFeeds)
+   * the front end's level on its feed, against the space's other placements, dB (a fill under the mains); Calculate
+   * levels sets a fill's (lib/speaker/solveFeeds)
    */
-  levelDb: number | typeof AUTO_LEVEL;
-  /**
-   * the front end's delay on its feed, ms, or Auto (`AUTO_DELAY`): the space's solver sets it
-   * (lib/speaker/solveFeeds). A mirrored pair's boxes share it.
-   */
-  delayMs: number | typeof AUTO_DELAY;
+  levelDb: number;
+  /** the front end's delay on its feed, ms; Calculate delays sets it (lib/speaker/solveFeeds). A mirrored pair's boxes share it. */
+  delayMs: number;
   /** its whole feed inverted (its pressure times −1); a save or link from before it has none: not inverted */
   invertPolarity: boolean;
-  /** a fill: its Auto delay lines it up with the nearest main at its own aim point, not with the mains */
+  /**
+   * a fill, not a main: Calculate delays lines it up with the nearest main at its own aim point, and Calculate levels
+   * plays it at that main's level there (lib/speaker/solveFeeds)
+   */
   fill: boolean;
   /**
    * turned over about its front-to-back axis (flown near a ceiling): its spot, aim and lift stay as set, and the lift is
@@ -2193,19 +2192,20 @@ export type DriverPart = (typeof DRIVER_PART)[keyof typeof DRIVER_PART];
 /** Where a space plays: the room, the listener (a probe) and the level it should get. */
 export interface SpaceVenue {
   room: CoverageRoom;
+  /** the listener, ft: Calculate delays makes the mains arrive together here (lib/speaker/solveFeeds) */
   listener: FloorPoint;
-  /**
-   * the alignment point, ft: the mains' Auto delays make them arrive together here (lib/speaker/solveFeeds). It
-   * starts at the room's center; moving the listener doesn't move it.
-   */
-  alignAt: FloorPoint;
   /** the ear's height above the floor, ft: the map and the levels are worked out there */
   earFt: CoverageLayout["earFt"];
   /**
    * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
-   * (`balance`) less: the space is turned down to it, never past its limit
+   * (`balance`) less: what the map and the readouts compare with, and what Calculate levels aims `systemDb` at
    */
   targetDb: CoverageLayout["targetDb"];
+  /**
+   * the level every placement plays at, dB: 0 is the space at its music limit (full power), never above. A save or link
+   * from before it has none: 0.
+   */
+  systemDb: number;
   /**
    * where the target is measured: the audience's average (the floor but the space in front of
    * each box), the listener, or 1 m in front of each placement (averaged).
@@ -3218,8 +3218,7 @@ export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 export type SpaceView = Pick<CoverageLayout, "band" | "freqHz">;
 
 /**
- * Where the coverage map's target level is measured: at the alignment point ("listener": saves and share links carry
- * that spelling), as the audience's average (the floor the stats count), or 1 m in front of the stacks.
+ * Where the coverage map's target level is measured: at the listener, as the audience's average (the floor the stats count), or 1 m in front of the stacks.
  */
 export type CoverageLevelRef = "listener" | "audience" | "stacks";
 
@@ -3273,10 +3272,8 @@ export interface CoverageGridView {
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">;
   /** what a grid level is compared against: the grid's band target less the gain (the grid is at the limit), dB */
   target: number;
-  /** the system's gain for this grid, dB, added to a grid level for the absolute level */
+  /** System level, dB, added to a grid level for the absolute level */
   gain: number;
-  /** the level reference's level at the limit for this grid, dB (null when it can't be worked out) */
-  atLimit: number | null;
 }
 
 /** How much of the floor reaches the target, leaving out the space right in front of the boxes. */

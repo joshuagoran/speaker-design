@@ -1,6 +1,6 @@
 // A Space in the 3D view: the room (its floor in the coverage map's colors, its walls and ceiling), each box as the
 // Stack page draws it (buildMembersScene) at its spot, lift, aim, side, and roll as the space model places it
-// (lib/speaker/spaceLayout `placementFrame`), the listener, the alignment point, and each driver's beam (lib/speaker/
+// (lib/speaker/spaceLayout `placementFrame`), the listener, and each driver's beam (lib/speaker/
 // spaceBeams) as its aim line, its dashed −6 dB edge lines, and its fainter dotted −3 dB edge lines, clipped at the
 // walls, floor and ceiling.
 //
@@ -31,7 +31,6 @@ export interface SpaceSceneProps {
   /** each box as the model stands it (a mirrored pair is two), with what it places (null: missing) */
   items: readonly Pick<PlacedItem, "placement" | "stack" | "rollAxisIn">[];
   listener: FloorPoint;
-  alignAt: FloorPoint;
   earFt: SpaceVenue["earFt"];
   /**
    * the grid the map shows (null: none yet, or a quiet room; the floor is then a plain gray, as it is while a grid for
@@ -58,8 +57,6 @@ const BEAM_DOT_OPACITY = 0.55;
 const HEAD_IN = 4.5;
 const BODY_IN = 6;
 const NECK_IN = 1;
-/** The alignment point's mark, in: its radius. */
-const ALIGN_MARK_IN = 5;
 /** How far the contour lines float over the floor, and how far outdoors the ground runs past the map, in. */
 const CONTOUR_LIFT_IN = 1;
 const GROUND_MARGIN = 2;
@@ -303,25 +300,6 @@ function listenerFigure(at: FloorPoint, earFt: number, color: string): THREE.Gro
   return figure;
 }
 
-/** The alignment point: a small diamond at the ear height, on a thin line up from the floor. */
-function alignMark(at: FloorPoint, earFt: number, lineColor: string): THREE.Group {
-  const mark = new THREE.Group();
-  const earIn = earFt * INCHES_PER_FOOT;
-  const diamond = new THREE.Mesh(
-    new THREE.OctahedronGeometry(ALIGN_MARK_IN),
-    new THREE.MeshStandardMaterial({ color: ON_DATA.yellow, roughness: 0.6 }),
-  );
-  diamond.position.y = earIn;
-  const stem = new THREE.BufferGeometry();
-  stem.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, earIn, 0], 3));
-  mark.add(
-    diamond,
-    new THREE.LineSegments(stem, new THREE.LineBasicMaterial({ color: lineColor })),
-  );
-  mark.position.copy(roomPointIn({ ...at, z: 0 }));
-  return mark;
-}
-
 /** The ids the scene key gives the grids it has seen, so a new grid rebuilds the scene and the same one doesn't. */
 const gridIds = new WeakMap<CoverageGrid, number>();
 let nextGridId = 0;
@@ -340,7 +318,7 @@ export function spaceSceneKey(props: SpaceSceneProps): string {
       pose: [p.x, p.y, p.liftIn, p.aim, p.image, p.upsideDown],
       stack: stack ? membersSceneKey({ ...stack, cutaway: false }) : null,
     })),
-    marks: [props.listener, props.alignAt, props.earFt],
+    marks: [props.listener, props.earFt],
     view: view ? [gridId(view.grid), view.room, view.target] : null,
     beams: props.beams,
     cutaway: props.cutaway,
@@ -392,7 +370,6 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
   }
   root.add(boxes);
   root.add(listenerFigure(props.listener, props.earFt, ON_DATA.cyan));
-  root.add(alignMark(props.alignAt, props.earFt, pal.muted));
   // each beam runs as far as its driver falls BEAM_FALL_DB from 1 m, cut off where it meets a surface
   const planes = roomClipPlanes(room);
   for (const beam of props.beams) {

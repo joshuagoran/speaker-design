@@ -60,8 +60,7 @@ function quietLines(text: string, widthPx: number): string[] {
 type Drag =
   | { kind: "box"; i: number; dx: number; dy: number }
   | { kind: "aim"; i: number }
-  | { kind: "listener" }
-  | { kind: "alignAt" };
+  | { kind: "listener" };
 
 /**
  * A box the map draws, at its spot and aim (ft, degrees): its label, its footprint (in), the horizontal coverage of its
@@ -78,13 +77,12 @@ export interface MapBox extends FloorPlacement {
 
 /**
  * What a drag on the map does: move box `i` to a spot (`free`: Alt held, so it places freely), turn it to face one, move
- * the listener, or move the alignment point (where it has one).
+ * the listener.
  */
 export interface MapActions {
   moveBox: (i: number, p: FloorPoint, free: boolean) => void;
   aimBox: (i: number, p: FloorPoint, stepped: boolean) => void;
   moveListener: (p: FloorPoint) => void;
-  moveAlignAt?: (p: FloorPoint) => void;
 }
 
 interface Props {
@@ -92,8 +90,6 @@ interface Props {
   view: CoverageGridView | null;
   room: CoverageRoom;
   listener: FloorPoint;
-  /** the alignment point, drawn as a diamond (absent: none) */
-  alignAt?: FloorPoint;
   actions: MapActions;
   boxes: readonly MapBox[];
   /** the coupled faces, drawn in yellow: along a wall where a box meets it, and where two boxes meet (absent: none) */
@@ -124,7 +120,6 @@ export function CoverageMap({
   view,
   room,
   listener,
-  alignAt,
   actions,
   boxes,
   coupling = [],
@@ -211,7 +206,6 @@ export function CoverageMap({
   const apply = (d: Drag, X: number, Y: number, free: boolean, stepped: boolean) => {
     const p = toFt(X, Y);
     if (d.kind === "listener") actions.moveListener(p);
-    else if (d.kind === "alignAt") actions.moveAlignAt?.(p);
     else if (d.kind === "aim") actions.aimBox(d.i, p, stepped);
     else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy }, free);
   };
@@ -233,8 +227,6 @@ export function CoverageMap({
       return { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
     }
     if (near(px(listener.x), py(listener.y), 18)) return { kind: "listener" };
-    if (alignAt && actions.moveAlignAt && near(px(alignAt.x), py(alignAt.y), 18))
-      return { kind: "alignAt" };
     return null;
   };
   /** the pointer is over a movable item (an open hand shows) */
@@ -363,7 +355,7 @@ export function CoverageMap({
         role="img"
         aria-busy={busy}
         data-testid={COVERAGE_TEST_IDS.map}
-        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room.${alignAt ? ` The alignment point is ${alignAt.x.toFixed(0)} ft across and ${alignAt.y.toFixed(0)} ft down the room.` : ""} Arrow keys move the listener.`}
+        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -580,20 +572,6 @@ export function CoverageMap({
             pointerEvents="none"
           />
         ))}
-        {alignAt && (
-          <g transform={`translate(${px(alignAt.x)} ${py(alignAt.y)}) rotate(45)`}>
-            <rect x="-8" y="-8" width="16" height="16" fill={ON_DATA.ink} />
-            <rect
-              x="-6"
-              y="-6"
-              width="12"
-              height="12"
-              fill={ON_DATA.yellow}
-              stroke={ON_DATA.white}
-              strokeWidth="2"
-            />
-          </g>
-        )}
         <circle cx={px(listener.x)} cy={py(listener.y)} r="9" fill={ON_DATA.ink} />
         <circle
           cx={px(listener.x)}
@@ -641,25 +619,6 @@ export function CoverageMap({
           </svg>
           {MAP_MARK_NAMES.listener}
         </span>
-        {alignAt && (
-          <span className="inline-flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="-9 -9 18 18" aria-hidden="true">
-              <g transform="rotate(45)">
-                <rect x="-6" y="-6" width="12" height="12" fill={ON_DATA.ink} />
-                <rect
-                  x="-4.5"
-                  y="-4.5"
-                  width="9"
-                  height="9"
-                  fill={ON_DATA.yellow}
-                  stroke={ON_DATA.white}
-                  strokeWidth="1.5"
-                />
-              </g>
-            </svg>
-            {MAP_MARK_NAMES.alignAt}
-          </span>
-        )}
       </div>
     </div>
   );

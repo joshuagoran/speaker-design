@@ -10,12 +10,7 @@ import type {
 } from "../types";
 import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
-import {
-  ALIGNMENT_POINT,
-  COVERAGE_LEVEL_REF,
-  COVERAGE_LEVEL_REF_PLACE,
-  COVERAGE_LEVEL_REFS,
-} from "./coverageLevel";
+import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
 import type { SaveRowWords } from "./saveRow";
 
@@ -90,7 +85,7 @@ export const SNAP_FLUSH_IN = 6;
 /** Shift held while turning a box on the map: its yaw steps in multiples of this, degrees. */
 export const AIM_SNAP_DEG = 45;
 
-/** While a box, the listener, or the alignment point is dragged on the map, the design moves at most this often, ms. */
+/** While a box or the listener is dragged on the map, the design moves at most this often, ms. */
 export const MAP_DRAG_UPDATE_MS = 100;
 
 /** A box is coupled with a surface or another box whose face is this near, m (lib/speaker/spaceCoupling). */
@@ -149,12 +144,12 @@ export const SPACE_PITCH_DEG = 30;
 /** The highest lift under a placement, in (a tall stand, a fly bar). */
 export const SPACE_LIFT_MAX_IN = 240;
 
-/** The band a fill's Auto level is matched to the mains in (lib/speaker/solveFeeds): the voice range a fill is there for. */
+/** The band Calculate levels matches a fill to the mains in (lib/speaker/solveFeeds): the voice range a fill is there for. */
 export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
 
 /**
  * How much later than the mains a fill arrives in its area, ms, so the sound still seems to come from the mains (the
- * precedence effect): what a fill's Auto delay adds (lib/speaker/solveFeeds). 5 to 15 ms are usual:
+ * precedence effect): what Calculate delays adds for a fill (lib/speaker/solveFeeds). 5 to 15 ms are usual:
  * `FILL_PRECEDENCE_MS` is the first, `FILL_PRECEDENCE_MAX_MS` the last.
  */
 export const FILL_PRECEDENCE_MS = 5;
@@ -202,8 +197,22 @@ const ADD_PLACEMENT = "Add speaker or stack";
 /** The DOM id of placement `k`'s item in the Placements list, so a pick on the map can scroll it into view. */
 export const placementDomId = (k: number) => `space-placement-${k}`;
 
-/** The coverage map's key for its two marks: the listener (the blue circle) and the alignment point (the yellow diamond). */
-export const MAP_MARK_NAMES = { listener: "Listener", alignAt: ALIGNMENT_POINT } as const;
+/** The coverage map's key for its mark: the listener (the cyan circle). */
+export const MAP_MARK_NAMES = { listener: "Listener" } as const;
+
+/** Control labels that other UI text names (marked `**…**`). */
+const DELAY = "Delay";
+const MEASURED_AT = "Measured at";
+const TARGET_LEVEL = "Target level";
+const SYSTEM_LEVEL = "System level";
+const CALCULATE_LEVELS = "Calculate levels";
+const CALCULATE_DELAYS = "Calculate delays";
+
+/** A placement's Main / Fill choice, by whether it is a fill. */
+export const PLACEMENT_ROLES: readonly ToggleOption<boolean>[] = [
+  [false, "Main"],
+  [true, "Fill"],
+];
 
 export const SPACE_TEXT = {
   /** the name a new space starts with */
@@ -253,15 +262,15 @@ export const SPACE_TEXT = {
   pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
   upsideDown: "Upside down",
   level: "Level, dB",
-  delay: "Delay, ms",
-  delayTip: `Auto delays the early boxes so they arrive with the last one at the alignment point. A fill arrives ${FILL_PRECEDENCE_MS} ms after the mains in its area.`,
-  /** an Auto delay: the time (ms) and the distance it equals (ft), already formatted */
-  delayAuto: (ms: string, ft: string) => `Auto: ${ms} ms (${ft} ft)`,
-  /** an Auto level, dB, already formatted */
-  levelAuto: (db: string) => `Auto: ${db} dB`,
-  fillLevelTip: "Auto plays this fill at the level of the nearest main, where the fill aims.",
-  fill: "Fill",
-  fillTip: `A fill plays ${FILL_PRECEDENCE_MS} ms after the nearest main, where it aims.`,
+  delay: `${DELAY}, ms`,
+  delayTip: `The delay on this placement's feed. **${CALCULATE_DELAYS}** sets it.`,
+  /** the Main / Fill choice's label and tooltip */
+  role: "Main / Fill",
+  roleTip: `**${CALCULATE_DELAYS}** and **${CALCULATE_LEVELS}** treat a fill differently. A fill arrives after the nearest main, at that main's level.`,
+  calculateDelays: CALCULATE_DELAYS,
+  calculateDelaysTip: `Sets each **${DELAY}**. The main boxes arrive together at the **${MAP_MARK_NAMES.listener}**. Each fill arrives ${FILL_PRECEDENCE_MS} ms after the nearest main.`,
+  /** a note from Calculate delays on one placement: its name, then the note */
+  delayNoteFor: (name: string, note: string) => `${name}: ${note}`,
   delayClamped: "This fill arrives late even with no delay. Move it nearer to its area.",
   delayNoMain: "No main to line up with. Add a placement that is not a fill.",
   feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
@@ -294,11 +303,14 @@ export const SPACE_TEXT = {
   coupledTip:
     "Contact changes the load on this box. The low end and its maximum output can change.",
   ear: "Ear height, ft",
-  target: "Target level",
+  target: TARGET_LEVEL,
   /** the Target level's tooltip */
-  targetTip:
-    "The level the lowest band gets at the spot in Measured at. With More bass, each higher band is quieter.",
-  measuredAt: "Measured at",
+  targetTip: `The level to compare with, in the lowest band, at **${MEASURED_AT}**. With More bass, each higher band is quieter.`,
+  measuredAt: MEASURED_AT,
+  systemLevel: `${SYSTEM_LEVEL}, dB`,
+  systemLevelTip: "The level of all placements together. 0 is full power.",
+  calculateLevels: CALCULATE_LEVELS,
+  calculateLevelsTip: `Sets **${SYSTEM_LEVEL}** so the **${MEASURED_AT}** location is at the **${TARGET_LEVEL}**. Each fill gets the level of the nearest main.`,
   /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
   mapCaption: (band: string, target: string, place: string) =>
     `${band}, ${target} dB target at ${place}.`,
@@ -325,40 +337,24 @@ export const SPACE_TEXT = {
   /** the reference can't get the band's target: where it is measured (`COVERAGE_LEVEL_REF_PLACE`), dB */
   cannotReach: (target: number, atLimit: number) =>
     `It cannot reach ${target.toFixed(0)} dB: ${atLimit.toFixed(1)} dB at its limit.`,
-  turnedDown: (db: number, target: number) =>
-    `Turned down ${db.toFixed(1)} dB to reach ${target.toFixed(0)} dB.`,
   listenerVs: "The listener against the target:",
 } as const;
 
 /** The Space page's Details fold: its own groups and lines (the room's groups come from pages/space/assumptionGroups). */
 export const SPACE_DETAILS = {
-  /** the first group: what the alignment point and the listener do, each with its own lines */
-  marks: "Listener and alignment point",
+  /** the first group: what the listener does */
+  marks: MAP_MARK_NAMES.listener,
   markLines: [
-    [
-      MAP_MARK_NAMES.alignAt,
-      [
-        "The main boxes with Auto delay get delays so their sound arrives here at the same time.",
-        "Fills align at their own aim points, not here.",
-        "Moving it changes those delays, so the level can change at every location.",
-        `It can set the target level: choose ${ALIGNMENT_POINT} under ${SPACE_TEXT.measuredAt}.`,
-        "Drag the yellow diamond to move it.",
-      ],
-    ],
-    [
-      MAP_MARK_NAMES.listener,
-      [
-        "It shows the level, the response, and the arrivals at its location. It changes nothing else.",
-        "Tap the map, or drag the cyan dot, to move it.",
-      ],
-    ],
+    "It shows the level, the response, and the arrivals at its location.",
+    `**${CALCULATE_DELAYS}** makes the main boxes arrive together here.`,
+    "Moving it does not change a delay or a level.",
+    "Tap the map, or drag the cyan dot, to move it.",
   ],
   map: "The map",
   mapLines: (limitHz: number, coherentHz: number) => [
     "Drag a placement to move it.",
     "Drag its dot to turn it.",
     "Drag the listener, or tap the floor to put the listener there.",
-    "Drag the alignment point. The mains arrive together there.",
     `One frequency shows the interference between the placements (below ${coherentHz} Hz).`,
     `One frequency goes up to ${limitHz / 1000} kHz. Above ${coherentHz} Hz, it adds the placements by power.`,
   ],
@@ -369,8 +365,7 @@ export const SPACE_DETAILS = {
   moreBass: "With More bass, each band above a crossover is quieter.",
   flat: "With Flat, every band has the same target.",
   headroom: "The box with the least headroom sets the level.",
-  turnDown:
-    "Then the space is turned down once, until the lowest band gets the target at Measured at, never past the limit. The band on show does not change it.",
+  turnDown: `Then all placements play at **${SYSTEM_LEVEL}**. 0 is that limit.`,
   perBand:
     "The map, the audience figures, Floor and Spread are for the band on show. Listener is in the lowest band.",
   bandLevel: "Each band plays at its Level and its box's level.",

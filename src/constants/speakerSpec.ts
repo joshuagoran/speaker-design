@@ -200,13 +200,10 @@ export const FOLD_WALL = {
 export const FIRST_ORDER_FILTER = "1st";
 
 /**
- * A delay its rule sets: a stack member's when the stack aligns it (the PA sub against the tops), a space placement's
- * when the space's solver does (lib/speaker/solveFeeds).
+ * A delay its rule sets: a stack member's when the stack aligns it (the PA sub against the tops). A space placement's
+ * delay or level in a save or link from before they were plain numbers holds it too: it opens as 0.
  */
 export const AUTO_DELAY = "auto";
-
-/** A space fill's level when the space's solver sets it (lib/speaker/solveFeeds): the nearest main's, where it aims. */
-export const AUTO_LEVEL = "auto";
 
 /** What a space places, by id: a stack, or a speaker alone on its own input range. */
 export const SPACE_ITEM = {
