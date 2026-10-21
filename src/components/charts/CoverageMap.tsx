@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MAP_DRAG_UPDATE_MS } from "../../constants/space";
-import { ON_DATA } from "../../styles/palette";
+import { alpha, ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { formatSigned } from "../../lib/format";
@@ -15,6 +15,7 @@ import type {
   RoomSide,
 } from "../../types";
 import type { CouplingMark } from "../../lib/speaker/spaceCoupling";
+import { boundsOf, strictlyInside } from "../../lib/speaker/spaceStages";
 import { SVG_FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
@@ -42,6 +43,22 @@ const PAD = { l: 30, r: 10, t: 24, b: 24 };
 const AIM_POINT_R_PX = 4;
 /** A coupled face's bar on the map, px wide. */
 const COUPLING_BAR_PX = 5;
+/** A stage's fill: the light gray at this opacity, so the levels show through (a riser on its stage looks darker). */
+const STAGE_FILL_OPACITY = 0.55;
+/** A stage's handle, px: a square's half side and a circle's radius, and how near a press grabs it. */
+const STAGE_HANDLE_PX = 5;
+const STAGE_GRAB_PX = 11;
+/** The cursor over each of a rectangle's handles (clockwise from the back left): the way it resizes. */
+const RESIZE_CURSORS = [
+  "nwse-resize",
+  "ns-resize",
+  "nesw-resize",
+  "ew-resize",
+  "nwse-resize",
+  "ns-resize",
+  "nesw-resize",
+  "ew-resize",
+] as const;
 
 /** The quiet line's font size and the width of one of its characters, px (the map's font). */
 const QUIET_FONT_PX = 12;
@@ -59,6 +76,7 @@ function quietLines(text: string, widthPx: number): string[] {
 
 type Drag =
   | { kind: "box"; i: number; dx: number; dy: number }
+  | { kind: "stage"; id: string; handle: number | null; from: FloorPoint }
   | { kind: "aim"; i: number }
   | { kind: "listener" };
 
@@ -76,6 +94,18 @@ export interface MapBox extends FloorPlacement {
 }
 
 /**
+ * A stage the map draws, under the boxes: its id, outline (ft), whether a polygon (its handles move its corners; a
+ * rectangle's move its edges), whether a riser, and its label.
+ */
+export interface MapStage {
+  id: string;
+  corners: readonly FloorPoint[];
+  polygon: boolean;
+  riser: boolean;
+  label: string;
+}
+
+/**
  * What a drag on the map does: move box `i` to a spot (`free`: Alt held, so it places freely), turn it to face one, move
  * the listener.
  */
@@ -83,6 +113,11 @@ export interface MapActions {
   moveBox: (i: number, p: FloorPoint, free: boolean) => void;
   aimBox: (i: number, p: FloorPoint, stepped: boolean) => void;
   moveListener: (p: FloorPoint) => void;
+  /** a stage drag begins; then each move drags the stage (handle null) or one of its handles by `by` from its start */
+  beginStageDrag?: () => void;
+  dragStage?: (id: string, handle: number | null, by: FloorPoint, free: boolean) => void;
+  /** a drag of anything but the listener begins (true) or ends: it moves on every frame, the page's model behind it */
+  setDragging?: (on: boolean) => void;
 }
 
 interface Props {
@@ -100,6 +135,11 @@ interface Props {
    */
   selected?: readonly number[];
   onSelect?: (i: number) => void;
+  /** the stages, floor stages first, each before its risers (absent: none) */
+  stages?: readonly MapStage[];
+  /** the stage picked (its handles show), and the pick of one by a press on it */
+  selectedStage?: string | null;
+  onSelectStage?: (id: string) => void;
   /** the most height the map may take, px */
   maxHeight: number;
   /**
@@ -125,6 +165,9 @@ export function CoverageMap({
   coupling = [],
   selected = [],
   onSelect,
+  stages = [],
+  selectedStage = null,
+  onSelectStage,
   maxHeight,
   busy,
   quiet,
@@ -207,6 +250,8 @@ export function CoverageMap({
     const p = toFt(X, Y);
     if (d.kind === "listener") actions.moveListener(p);
     else if (d.kind === "aim") actions.aimBox(d.i, p, stepped);
+    else if (d.kind === "stage")
+      actions.dragStage?.(d.id, d.handle, { x: p.x - d.from.x, y: p.y - d.from.y }, free);
     else actions.moveBox(d.i, { x: p.x - d.dx, y: p.y - d.dy }, free);
   };
   /** The movable item under a point, px, and the drag it starts (none: open floor or past the room). */
@@ -222,20 +267,41 @@ export function CoverageMap({
       return near(px(m.x), py(m.y), boxPx(b) / 2 + 8);
     });
     if (aimAt >= 0) return { kind: "aim", i: aimAt };
+    // the picked stage's handles, over the boxes
+    const picked = stages.find((st) => st.id === selectedStage);
+    const handleAt = picked
+      ? picked.corners.findIndex((c) => near(px(c.x), py(c.y), STAGE_GRAB_PX))
+      : -1;
+    if (picked && handleAt >= 0) return { kind: "stage", id: picked.id, handle: handleAt, from: p };
     if (onBox >= 0) {
       const b = boxes[onBox];
       return { kind: "box", i: onBox, dx: p.x - b.x, dy: p.y - b.y };
     }
     if (near(px(listener.x), py(listener.y), 18)) return { kind: "listener" };
+    // a stage under the point: a riser over its stage
+    const onStage = [...stages].reverse().find((st) => strictlyInside(st.corners, p));
+    if (onStage && actions.dragStage)
+      return { kind: "stage", id: onStage.id, handle: null, from: p };
     return null;
   };
-  /** the pointer is over a movable item (an open hand shows) */
-  const [grabbable, setGrabbable] = useState(false);
+  /** the cursor over what is under the pointer: a hand over a movable item, a resize or move cursor over a stage */
+  const cursorOf = (d: Drag | null): string | null => {
+    if (!d) return null;
+    if (d.kind !== "stage") return "grab";
+    if (d.handle === null) return "move";
+    const st = stages.find((o) => o.id === d.id);
+    return st?.polygon ? "crosshair" : RESIZE_CURSORS[d.handle];
+  };
+  const [grabbable, setGrabbable] = useState<string | null>(null);
   const down = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
       p = toFt(X, Y);
     const grabbed = grabAt(X, Y);
     if (grabbed?.kind === "aim" || grabbed?.kind === "box") onSelect?.(grabbed.i);
+    if (grabbed?.kind === "stage") {
+      onSelectStage?.(grabbed.id);
+      actions.beginStageDrag?.();
+    }
     // a tap on the open floor puts the listener there
     const d: Drag | null =
       grabbed ??
@@ -246,9 +312,11 @@ export function CoverageMap({
     e.currentTarget.setPointerCapture(e.pointerId);
     setDrag(d);
     if (d.kind === "listener") apply(d, X, Y, e.altKey, e.shiftKey);
+    else actions.setDragging?.(true);
   };
-  // a drag moves the design at most every MAP_DRAG_UPDATE_MS (each move runs the room model again); the latest move
-  // waits, and runs when the time is up or the drag ends, so the drag always ends where the pointer let go
+  // a box, its aim, or a stage follows the pointer on every move (the page holds its room model a
+  // step behind the drag). The listener moves at most every MAP_DRAG_UPDATE_MS (each move reads its levels again): the
+  // latest move waits, and runs when the time is up or the drag ends, so the drag always ends where the pointer let go
   const pending = useRef<(() => void) | null>(null);
   const lastRun = useRef(0);
   const timer = useRef<number | undefined>(undefined);
@@ -263,6 +331,10 @@ export function CoverageMap({
     }
   };
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  // a map gone mid-drag ends the drag
+  const ending = useRef<(() => void) | null>(null);
+  ending.current = drag && drag.kind !== "listener" ? () => actions.setDragging?.(false) : null;
+  useEffect(() => () => ending.current?.(), []);
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
       p = toFt(X, Y);
@@ -271,9 +343,13 @@ export function CoverageMap({
         ? p
         : null,
     );
-    setGrabbable(grabAt(X, Y) !== null);
+    setGrabbable(cursorOf(grabAt(X, Y)));
     if (!drag) return;
     const { altKey, shiftKey } = e;
+    if (drag.kind !== "listener") {
+      apply(drag, X, Y, altKey, shiftKey);
+      return;
+    }
     pending.current = () => apply(drag, X, Y, altKey, shiftKey);
     const wait = MAP_DRAG_UPDATE_MS - (performance.now() - lastRun.current);
     if (wait <= 0) runPending();
@@ -281,6 +357,7 @@ export function CoverageMap({
   };
   const up = () => {
     runPending();
+    if (drag && drag.kind !== "listener") actions.setDragging?.(false);
     setDrag(null);
   };
   const key = (e: React.KeyboardEvent<SVGSVGElement>) => {
@@ -349,7 +426,9 @@ export function CoverageMap({
         className="block max-w-full h-auto mx-auto select-none outline-none focus-visible:outline-2 focus-visible:outline-stone-900"
         style={{
           touchAction: "none",
-          cursor: drag ? "grabbing" : grabbable ? "grab" : "crosshair",
+          cursor:
+            (drag && drag.kind === "stage" ? cursorOf(drag) : drag ? "grabbing" : grabbable) ??
+            "crosshair",
         }}
         tabIndex={0}
         role="img"
@@ -362,7 +441,7 @@ export function CoverageMap({
         onPointerCancel={up}
         onPointerLeave={() => {
           setHover(null);
-          setGrabbable(false);
+          setGrabbable(null);
         }}
         onKeyDown={key}
       >
@@ -395,6 +474,29 @@ export function CoverageMap({
             />
           ))}
         </g>
+        {stages.map((st) => {
+          const b = boundsOf(st.corners);
+          const on = st.id === selectedStage;
+          return (
+            <g key={st.id} pointerEvents="none">
+              <polygon
+                points={st.corners.map((c) => `${px(c.x)},${py(c.y)}`).join(" ")}
+                fill={alpha(ON_DATA.white, STAGE_FILL_OPACITY)}
+                stroke={on ? ON_DATA.cyan : ON_DATA.ink}
+                strokeWidth={on ? 2.5 : 1.5}
+                strokeLinejoin="round"
+              />
+              <text
+                x={px(b.x0) + 4}
+                y={st.riser ? py(b.y0) + 13 : py(b.y1) - 5}
+                fill={ON_DATA.ink}
+                {...font}
+              >
+                {st.label}
+              </text>
+            </g>
+          );
+        })}
         <g clipPath="url(#coverage-room)">
           {boxes.flatMap((b, i) =>
             b.covH
@@ -572,6 +674,35 @@ export function CoverageMap({
             pointerEvents="none"
           />
         ))}
+        {stages
+          .filter((st) => st.id === selectedStage)
+          .flatMap((st) =>
+            st.corners.map((c, k) =>
+              st.polygon ? (
+                <circle
+                  key={`handle${k}`}
+                  cx={px(c.x)}
+                  cy={py(c.y)}
+                  r={STAGE_HANDLE_PX}
+                  fill={ON_DATA.white}
+                  stroke={ON_DATA.cyan}
+                  strokeWidth="2"
+                />
+              ) : (
+                <rect
+                  key={`handle${k}`}
+                  x={px(c.x) - STAGE_HANDLE_PX}
+                  y={py(c.y) - STAGE_HANDLE_PX}
+                  width={2 * STAGE_HANDLE_PX}
+                  height={2 * STAGE_HANDLE_PX}
+                  rx="1"
+                  fill={ON_DATA.white}
+                  stroke={ON_DATA.cyan}
+                  strokeWidth="2"
+                />
+              ),
+            ),
+          )}
         <circle cx={px(listener.x)} cy={py(listener.y)} r="9" fill={ON_DATA.ink} />
         <circle
           cx={px(listener.x)}

@@ -11,6 +11,7 @@ import {
   SHARE_MAX_PARTS,
   SHARE_MAX_PLACEMENTS,
   SHARE_MAX_SPEAKERS,
+  SHARE_MAX_STAGES,
   SHARE_MAX_STACK_NOTES_CHARS,
   SHARE_MAX_STACKS,
   SHARE_MAX_TEXT_CHARS,
@@ -24,10 +25,10 @@ import {
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import { FLOOR_ALPHA, ROOM_MATERIALS } from "../../data/acoustics/materials";
-import { COVERAGE_BAND_IDS } from "../../constants/space";
+import { COVERAGE_BAND_IDS, STAGE_CORNERS, STAGE_SHAPE } from "../../constants/space";
 import { ROOM_SURFACES } from "../acoustics/roomAcoustics";
 import { SINGLE_FREQ_RANGE } from "../acoustics/coverage";
-import type { ShareEnvelope, ShareError } from "../../types";
+import type { ShareEnvelope, ShareError, SpaceStage } from "../../types";
 
 /** What reading an envelope gave: the envelope, or why it is not one. */
 export type ReadEnvelope = { ok: true; envelope: ShareEnvelope } | { ok: false; error: ShareError };
@@ -123,14 +124,41 @@ const isRoom = (value: unknown) =>
     return isText(material) && Object.hasOwn(ROOM_MATERIALS, material);
   });
 
+/** Whether a value reads as a stage (`SpaceStage`): its id, shape, 8 corners, height, and what it stands on. */
+const isStage = (value: unknown) =>
+  isRecord(value) &&
+  isText(value.id) &&
+  isOneOf(STAGE_SHAPE, value.shape) &&
+  isListOf(value.corners, STAGE_CORNERS, isPoint) &&
+  value.corners.length === STAGE_CORNERS &&
+  isNum(value.heightFt) &&
+  (value.on === null || isText(value.on));
+
 /**
- * Whether a value reads as a venue (`SpaceVenue`): its numbers and spots. Which level reference and balance it names is
+ * Whether a value reads as a list of stages (`SpaceStage`): each with an id no other has, a shape, 8 corners, a height,
+ * and what it stands on (the floor, or a floor stage in the list). A shared link and a save both open through it.
+ */
+export function isStageList(value: unknown): value is SpaceStage[] {
+  if (!Array.isArray(value) || !value.every(isStage)) return false;
+  const stages: readonly Pick<SpaceStage, "id" | "on">[] = value;
+  const floor = new Set(stages.filter((s) => s.on === null).map((s) => s.id));
+  return (
+    new Set(stages.map((s) => s.id)).size === stages.length &&
+    stages.every((s) => s.on === null || floor.has(s.on))
+  );
+}
+
+/**
+ * Whether a value reads as a venue (`SpaceVenue`): its numbers and spots, and its stages (a link from before them has
+ * none). Which level reference and balance it names is
  * checked as the space opens.
  */
 const isVenue = (value: unknown) =>
   isRecord(value) &&
   isRoom(value.room) &&
   isPoint(value.listener) &&
+  (value.stages === undefined ||
+    (isStageList(value.stages) && value.stages.length <= SHARE_MAX_STAGES)) &&
   isNum(value.earFt) &&
   isNum(value.targetDb) &&
   // optional: a link from before System level has none

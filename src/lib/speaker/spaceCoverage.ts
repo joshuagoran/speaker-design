@@ -1,5 +1,6 @@
 // The space model: every placement's stack in the room, summed across the floor on the coverage engine
-// (lib/acoustics/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes).
+// (lib/acoustics/coverage: the floor bounce, the walls and ceiling by their materials, the diffuse field and the room's modes,
+// and the stages' faces and tops, and their shadows).
 // Each placement plays its stack's response (lib/speaker/stackResponse: each member's speaker through its crossover,
 // level, polarity and delay), with each band's amp power from its speaker; each driver spot radiates its band's share
 // with its own coverage, at its place and along its aim (lib/speaker/spaceLayout); each cone band has its baffle step
@@ -30,6 +31,7 @@ import {
   coverageFrequencies,
   coverageGrid,
   levelAtPoint,
+  QUICK_BAND_POINTS,
   RESPONSE_FREQS,
   sceneOf,
   sceneSlots,
@@ -56,6 +58,7 @@ import { driverHorn, speakerLayout } from "./speakerLayout";
 import { spaceLayout, type BandOfPart, type PlacedDriver, type PlacedItem } from "./spaceLayout";
 import { spaceCoupling } from "./spaceCoupling";
 import { boxLoadings } from "./spaceLoading";
+import { stageSolids } from "./spaceStages";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
 import { COAX_HF_EXIT_IN } from "../../constants/coax";
@@ -219,7 +222,7 @@ export const voiceId = (
 export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
   const cache = new Map<string, Pick<SpacePlacementModel, "response" | "limits">>();
   const items = spaceLayout(design, bandOfPart);
-  const coupling = spaceCoupling(items, design.space.venue.room);
+  const coupling = spaceCoupling(items, design.space.venue.room, design.space.venue.stages);
   const loadings = boxLoadings(items, coupling.boxes);
   const placements = items.map((item, k) => placementModel(item, loadings[k] ?? [], cache));
   const feeds = new Map<string, VoiceFeed>();
@@ -280,6 +283,11 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
       design.space.venue.room,
       list.map(({ id, pattern }) => ({ id, pattern })),
       boxes,
+      stageSolids(design.space.venue.stages).map((s) => ({
+        corners: s.corners.map((p) => ({ x: p.x * METERS_PER_FOOT, y: p.y * METERS_PER_FOOT })),
+        base: s.baseFt * METERS_PER_FOOT,
+        top: s.topFt * METERS_PER_FOOT,
+      })),
     ),
     feeds: list,
     headroomDb: rooms.length ? Math.min(...rooms) : 0,
@@ -324,18 +332,24 @@ export interface SpaceGridRequest {
   cols: number;
 }
 
-/** The floor map's request in a band (or at one frequency), `cols` cells across. */
+/**
+ * The floor map's request in a band (or at one frequency), `cols` cells across; `quick`: the drag's quick pass, on
+ * `QUICK_BAND_POINTS` band points without modal sub-points.
+ */
 export function spaceGridRequest(
   model: SpaceModel,
   venue: Pick<SpaceVenue, "room" | "earFt">,
   band: CoverageBand,
   freqHz: number,
   cols: number,
+  quick = false,
 ): SpaceGridRequest {
   const { freqs, shares, coherent } = coverageFrequencies(
     band,
     freqHz,
     model.scene.modal?.crossoverHz ?? null,
+    quick ? 1 : undefined,
+    quick ? QUICK_BAND_POINTS : undefined,
   );
   return {
     scene: model.scene,

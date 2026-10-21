@@ -40,7 +40,14 @@ import type {
 import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { POSITION_AXIS } from "./constants/speakerResults";
 import type { FOLD_CHECK, FOLD_DRIVERS_REASON } from "./constants/foldHorn";
-import type { COUPLED_CEILING, COUPLED_FLOOR, DRIVER_PART, PAIR_SIDE } from "./constants/space";
+import type {
+  COUPLED_CEILING,
+  COUPLED_FLOOR,
+  DRIVER_PART,
+  PAIR_SIDE,
+  STAGE_FACE,
+  STAGE_SHAPE,
+} from "./constants/space";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
@@ -2189,9 +2196,39 @@ export interface PlacedSource extends SpacePlacement {
 /** Which part of a driver entry radiates, by id (`DRIVER_PART`): its cone or its HF section. */
 export type DriverPart = (typeof DRIVER_PART)[keyof typeof DRIVER_PART];
 
+/** A stage's outline, by id (`STAGE_SHAPE`): a rectangle (its edges move) or a polygon (each corner moves). */
+export type StageShape = (typeof STAGE_SHAPE)[keyof typeof STAGE_SHAPE];
+
+/**
+ * A stage in a space: a solid block on the floor, or a riser on a floor stage. Its outline is 8 corners on the floor
+ * (`FloorPoint`, ft), clockwise from the back left (the corner nearest the front wall and the left wall): the corners
+ * and the edges' middles of a rectangle (lib/speaker/spaceStages `rectCorners`). Its id is what a riser names its
+ * stage by.
+ */
+export interface SpaceStage {
+  id: string;
+  shape: StageShape;
+  corners: readonly FloorPoint[];
+  /** its height above what it stands on, ft */
+  heightFt: number;
+  /** the floor stage it stands on (a riser), or null: the floor */
+  on: SpaceStage["id"] | null;
+}
+
+/** A face of a stage a box can be coupled with, by id (`STAGE_FACE`): its front, back, a side, or its top. */
+export type StageFace = (typeof STAGE_FACE)[keyof typeof STAGE_FACE];
+
+/** A stage's face a box stands right against: the stage (its id) and which face. */
+export interface StageContact {
+  stage: SpaceStage["id"];
+  face: StageFace;
+}
+
 /** Where a space plays: the room, the listener (a probe) and the level it should get. */
 export interface SpaceVenue {
   room: CoverageRoom;
+  /** the stages and risers on its floor; a save or link from before them has none */
+  stages: readonly SpaceStage[];
   /** the listener, ft: Calculate delays makes the mains arrive together here (lib/speaker/solveFeeds) */
   listener: FloorPoint;
   /** the ear's height above the floor, ft: the map and the levels are worked out there */

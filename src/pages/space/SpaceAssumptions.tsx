@@ -9,7 +9,7 @@ import {
 import { SPACE_DETAILS, SPACE_LEVEL_REF_PLACE } from "../../constants/space";
 import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
-import { sharedAssumptionGroups, type AssumptionGroup } from "./assumptionGroups";
+import { sharedAssumptionGroups, stageSoundLines, type AssumptionGroup } from "./assumptionGroups";
 import type { CoverageLevelRef, SpaceVenue } from "../../types";
 
 interface Props {
@@ -45,6 +45,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
         SPACE_DETAILS.oneMeter(SPACE_LEVEL_REF_PLACE.stacks),
       ],
     ],
+    [SPACE_DETAILS.stages, [...SPACE_DETAILS.stageLines, ...stageSoundLines()]],
     [
       SPACE_DETAILS.boxes,
       [

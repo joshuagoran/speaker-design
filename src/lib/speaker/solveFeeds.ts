@@ -90,7 +90,7 @@ function boxesBySource(model: Pick<SpaceModel, "placements">): number[][] {
  * meets ear height, or a wall first. A box with no drivers aims at its own spot.
  */
 export function aimPoint(
-  box: SpacePlacementModel,
+  box: Pick<SpacePlacementModel, "item">,
   venue: Pick<SolverVenue, "earFt" | "room">,
 ): FloorPoint {
   const { drivers, placement } = box.item;

@@ -134,6 +134,7 @@ export function homeVenue(
   };
   return {
     room,
+    stages: [],
     listener,
     earFt,
     targetDb: SPACE_HOME_TARGET_DB,

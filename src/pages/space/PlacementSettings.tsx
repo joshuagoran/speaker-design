@@ -34,6 +34,8 @@ interface Props {
   onRemove: () => void;
   /** what its boxes stand right against, by name: the floor, the walls and the other placements */
   coupledWith: readonly string[];
+  /** the stages its boxes stand on, by name; none: the floor */
+  standsOn: readonly string[];
 }
 
 /** A value kept between `lo` and `hi`. */
@@ -57,6 +59,7 @@ export function PlacementSettings({
   onEdit,
   onRemove,
   coupledWith,
+  standsOn,
 }: Props) {
   const { delayMs, levelDb } = placement;
   /** how far either side of the center line its spot may go, ft */
@@ -101,7 +104,11 @@ export function PlacementSettings({
           onChange={(y) => onEdit((p) => ({ ...p, y: clamp(y, 0, room.lengthFt) }))}
         />
         <NumberField
-          label={<Tooltip tip={SPACE_TEXT.heightTip}>{SPACE_TEXT.height}</Tooltip>}
+          label={
+            <Tooltip tip={SPACE_TEXT.heightTip}>
+              {standsOn.length ? SPACE_TEXT.heightOnStage : SPACE_TEXT.height}
+            </Tooltip>
+          }
           value={shownIn(placement.liftIn / INCHES_PER_FOOT)}
           min={0}
           max={heightMaxFt}
@@ -114,6 +121,9 @@ export function PlacementSettings({
           }
         />
       </div>
+      {standsOn.length > 0 && (
+        <p className="text-sm">{SPACE_TEXT.standsOn(standsOn.join(" and "))}</p>
+      )}
       <p className="text-sm">
         {coupledWith.length > 0 ? (
           <>

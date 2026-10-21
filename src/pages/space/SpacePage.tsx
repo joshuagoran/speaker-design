@@ -58,22 +58,30 @@ import {
   type SpaceSettingsSection,
 } from "../../constants/settingsSections";
 import {
+  COUPLED_FLOOR,
   COUPLED_NAMES,
   DELAY_NOTE,
   NO_DELAY_MS,
   placementDomId,
+  STAGE_FACE,
+  stageDomId,
   SPACE_LEVEL_REF_PLACE,
   SPACE_LEFT_WALL_TIP,
   SPACE_LEVEL_REFS,
   SPACE_SAVE_WORDS,
   SPACE_SURFACE_NAMES,
   SPACE_TEXT,
+  STAGE_SHAPE,
 } from "../../constants/space";
+import { shownIn } from "../speaker/speakerFields";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { stackFromSaved } from "../stack/stackSaves";
 import type { StackPlanner } from "../stack/useStack";
 import { PlacementSettings } from "./PlacementSettings";
+import { StageSettings } from "./StageSettings";
+import { listedStages, stageNames, stageSolids, stageTopFt } from "../../lib/speaker/spaceStages";
+import type { SpaceStage, StageContact } from "../../types";
 import { ArrivalList } from "./ArrivalList";
 import { HardwareSettings } from "./HardwareSettings";
 import { SpaceAssumptions } from "./SpaceAssumptions";
@@ -130,9 +138,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const [coverageGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   /** each driver's beam in the band on show, each as far as its level falls BEAM_FALL_DB from 1 m (none without a map) */
   const hasMap = view !== null;
+  const { settled } = space;
   const beams = useMemo(
-    () => (hasMap ? spaceBeams(model, space.band, space.freqHz) : []),
-    [model, space.band, space.freqHz, hasMap],
+    () => (hasMap ? spaceBeams(settled.model, space.band, space.freqHz) : []),
+    [settled.model, space.band, space.freqHz, hasMap],
   );
   /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
@@ -159,11 +168,16 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   // the design replaced whole (a start or an opened save): the numbers no longer mean the same placements, so none is
   // picked or open (reset while rendering, so no render holds a stale number). A save keeps them.
   const designKey = space.replaced;
+  /** the stage picked on the map (its handles show), and which stages show their controls */
+  const [pickedStage, setPickedStage] = useState<SpaceStage["id"] | null>(null);
+  const [openStages, setOpenStages] = useState<readonly SpaceStage["id"][]>([]);
   const [seenKey, setSeenKey] = useState(designKey);
   if (seenKey !== designKey) {
     setSeenKey(designKey);
     setSelected(null);
     setOpenItems([]);
+    setPickedStage(null);
+    setOpenStages([]);
   }
   /** the placement to bring into view after the next render, and whether to scroll (a count tells repeats apart) */
   const [reveal, setReveal] = useState<{ k: number; scroll: boolean; n: number } | null>(null);
@@ -187,6 +201,26 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
     if (reveal?.scroll)
       document.getElementById(placementDomId(reveal.k))?.scrollIntoView({ block: "start" });
   }, [reveal]);
+  const stageNameOf = useMemo(() => stageNames(venue.stages), [venue.stages]);
+  /** the stage picked, while it is still there */
+  const selectedStage = pickedStage !== null && stageNameOf.has(pickedStage) ? pickedStage : null;
+  /** the stage to bring into view after the next render (a count tells repeats apart) */
+  const [stageReveal, setStageReveal] = useState<{ id: SpaceStage["id"]; n: number } | null>(null);
+  /** picks stage `id`: opens its item (and the Stages section; on a phone with the sheet open, its tab) */
+  const pickStage = (id: SpaceStage["id"], scroll: boolean) => {
+    setPickedStage(id);
+    setOpenStages((o) => (o.includes(id) ? o : [...o, id]));
+    if (!folds.open.stages) folds.toggle("stages");
+    if (sheet.open) sheet.show("stages");
+    if (scroll) setStageReveal((r) => ({ id, n: (r?.n ?? 0) + 1 }));
+  };
+  useEffect(() => {
+    if (stageReveal)
+      document.getElementById(stageDomId(stageReveal.id))?.scrollIntoView({ block: "nearest" });
+  }, [stageReveal]);
+  /** a stage's face, by name ("Stage 1 front") */
+  const contactName = (c: StageContact) =>
+    SPACE_TEXT.stageFace(stageNameOf.get(c.stage) ?? "", c.face);
   /** after placement `k` goes, the numbers above it move down one */
   const afterRemoved = (k: number) => {
     const shift = (i: number) => (i > k ? i - 1 : i);
@@ -207,16 +241,32 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
     const sources = new Set(
       couplings.flatMap((c) => c.boxes.map((j) => model.placements[j]?.item.placement.source)),
     );
+    const contacts = couplings.flatMap((c) => c.stages);
+    /** the stage tops it stands on (in place of the floor), and the stages' faces beside it */
+    const tops = new Set(contacts.filter((c) => c.face === STAGE_FACE.top).map(contactName));
+    const faces = new Set(contacts.filter((c) => c.face !== STAGE_FACE.top).map(contactName));
     return [
+      ...(surfaces.has(COUPLED_FLOOR) ? [COUPLED_NAMES.floor] : []),
+      ...tops,
       ...keysOf(COUPLED_NAMES)
-        .filter((s) => surfaces.has(s))
+        .filter((s) => s !== COUPLED_FLOOR && surfaces.has(s))
         .map((s) => COUPLED_NAMES[s]),
+      ...faces,
       ...names.filter((_, source) => sources.has(source)),
     ];
   };
+  /** the stages placement `k`'s boxes stand on, by name (none: the floor) */
+  const standsOn = (k: number): string[] => [
+    ...new Set(
+      model.placements.flatMap(({ item }) =>
+        item.placement.source === k && item.standsOn !== null
+          ? [stageNameOf.get(item.standsOn) ?? ""]
+          : [],
+      ),
+    ),
+  ];
   /** the boxes the map draws: a mirrored placement is two, labeled with its number and its side ("1L", "1R") */
-  const boxes: MapBox[] = model.placements.map((box) => {
-    const { item } = box;
+  const boxes: MapBox[] = space.items.map((item) => {
     const sizes = item.boxes.map((b) => speakerLayout(b.speaker.cabinet).size);
     const horn = item.drivers.map(driverPattern).find((p) => p.horn)?.horn;
     return {
@@ -230,7 +280,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
       },
       covH: horn ? horn.covH : null,
       turnable: true,
-      aimAt: aimPoint(box, venue),
+      aimAt: aimPoint({ item }, venue),
     };
   });
   const bandName =
@@ -261,6 +311,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const powers = ampPowerGroups(design).reduce((n, s) => n + s.groups.length, 0);
   const delays = alignment.filter((r) => r.delayMs >= NO_DELAY_MS).length;
   const summaries: Record<SpaceSettingsSection, string> = {
+    stages:
+      listedStages(venue.stages)
+        .map((st) => stageNameOf.get(st.id))
+        .join(" · ") || SPACE_TEXT.noStages,
     room: `${venue.room.outdoors ? SPACE_TEXT.outdoors : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`} · ${venue.targetDb} dB target`,
     placements: names.join(" · ") || SPACE_TEXT.noPlacements,
     hardware:
@@ -320,17 +374,32 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     listener={venue.listener}
                     boxes={boxes}
                     coupling={space.coupling.marks}
-                    selected={model.placements.flatMap((p, i) =>
-                      p.item.placement.source === selected ? [i] : [],
+                    stages={listedStages(venue.stages).map((st) => ({
+                      id: st.id,
+                      corners: st.corners,
+                      polygon: st.shape === STAGE_SHAPE.polygon,
+                      riser: st.on !== null,
+                      label: SPACE_TEXT.stageLabel(
+                        stageNameOf.get(st.id) ?? "",
+                        `${shownIn(stageTopFt(venue.stages, st))}`,
+                      ),
+                    }))}
+                    selectedStage={selectedStage}
+                    onSelectStage={(id) => pickStage(id, window.matchMedia(MD_UP).matches)}
+                    selected={space.items.flatMap((item, i) =>
+                      item.placement.source === selected ? [i] : [],
                     )}
                     onSelect={(i) => {
-                      const box = model.placements[i];
-                      if (box) pickOnMap(box.item.placement.source);
+                      const item = space.items[i];
+                      if (item) pickOnMap(item.placement.source);
                     }}
                     actions={{
                       moveBox: space.moveBox,
                       aimBox: space.aimBox,
                       moveListener: space.moveListener,
+                      beginStageDrag: space.stages.beginDrag,
+                      dragStage: space.stages.drag,
+                      setDragging: space.setDragging,
                     }}
                     busy={space.isPending}
                     maxHeight={maxHeight}
@@ -359,10 +428,11 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   {(cutaway, look) => (
                     <SpaceView3D
                       room={venue.room}
-                      items={model.placements.map((p) => p.item)}
+                      stages={stageSolids(settled.stages)}
+                      items={settled.model.placements.map((p) => p.item)}
                       listener={venue.listener}
                       earFt={venue.earFt}
-                      view={placements.length > 0 ? view : null}
+                      view={placements.length > 0 ? settled.view : null}
                       beams={look.beams ? beams : []}
                       cutaway={cutaway}
                     />
@@ -543,6 +613,20 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
             </>,
           )}
           {section(
+            "stages",
+            <StageSettings
+              stages={venue.stages}
+              names={stageNameOf}
+              room={venue.room}
+              open={openStages}
+              onOpenChange={(id, open) =>
+                setOpenStages((o) => (open ? [...o, id] : o.filter((i) => i !== id)))
+              }
+              actions={space.stages}
+              onAdded={(id) => pickStage(id, true)}
+            />,
+          )}
+          {section(
             "placements",
             <>
               <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateDelaysTip} />}>
@@ -608,6 +692,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     afterRemoved(k);
                   }}
                   coupledWith={coupledWith(k)}
+                  standsOn={standsOn(k)}
                 />
               ))}
             </>,

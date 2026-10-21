@@ -197,6 +197,7 @@ describe("Space 3D view: the PA stack preset", () => {
   const { venue } = design.space;
   const props = (over: Partial<SpaceSceneProps> = {}): SpaceSceneProps => ({
     room: venue.room,
+    stages: [],
     items: model.placements.map((p) => p.item),
     listener: venue.listener,
     earFt: venue.earFt,

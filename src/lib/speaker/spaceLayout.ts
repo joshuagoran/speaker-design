@@ -17,6 +17,7 @@ import type {
   PlacedSource,
   SpaceDesign,
   SpacePlacement,
+  SpaceStage,
   SpeakerChamber,
   SpeakerDriver,
   SpeakerSpec,
@@ -34,6 +35,7 @@ import {
   type StackPoint,
 } from "./stackLayout";
 import { stackMember } from "./specParts";
+import { planCenter, planOf, stageAt, stageTopFt } from "./spaceStages";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { INCHES_PER_FOOT, RAD } from "../../constants/units";
 import { DRIVER_PART, PAIR_SIDE, SPACE_YAW_DEG } from "../../constants/space";
@@ -188,9 +190,14 @@ export interface PlacedBox {
   pitch: number;
 }
 
-/** One box of a placement laid out: as it stands (`expandPlacements`), its stack, its boxes and drivers; null stack: missing. */
+/**
+ * One box of a placement laid out: as it stands (`expandPlacements`), its stack, its boxes and drivers; null stack:
+ * missing. On a stage, its lift is from the floor: the stage's top and its own height.
+ */
 export interface PlacedItem {
   placement: PlacedSource;
+  /** the stage it stands on: the highest under its plan's middle (lib/speaker/spaceStages `stageAt`); null: the floor */
+  standsOn: SpaceStage["id"] | null;
   stack: ReturnType<typeof placementStack>;
   boxes: PlacedBox[];
   drivers: PlacedDriver[];
@@ -213,10 +220,19 @@ export function spaceLayout(
   design: Pick<SpaceDesign, "space" | "stacks" | "speakers">,
   bandOf: BandOfPart,
 ): PlacedItem[] {
+  const { stages } = design.space.venue;
   return expandPlacements(design.space.placements).map((placement) => {
     const stack = placementStack(design, placement.item);
-    if (!stack) return { placement, stack, boxes: [], drivers: [], rollAxisIn: 0 };
-    return { placement, stack, ...layStack(stack, placement, bandOf) };
+    if (!stack) return { placement, standsOn: null, stack, boxes: [], drivers: [], rollAxisIn: 0 };
+    const laid = layStack(stack, placement, bandOf);
+    // on a stage it stands on the stage's top (its plan doesn't change with its height)
+    const stage = stages.length ? stageAt(stages, planCenter(planOf(laid.boxes), placement)) : null;
+    if (!stage) return { placement, standsOn: null, stack, ...laid };
+    const raised = {
+      ...placement,
+      liftIn: placement.liftIn + stageTopFt(stages, stage) * INCHES_PER_FOOT,
+    };
+    return { placement: raised, standsOn: stage.id, stack, ...layStack(stack, raised, bandOf) };
   });
 }
 
