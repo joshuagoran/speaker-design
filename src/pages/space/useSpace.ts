@@ -681,7 +681,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     full.stop = new AbortController();
   }, [dragging]);
   const placed = model.scene.sources.length > 0;
-  // where the target is measured, and the music balance it follows across the bands (lib/speaker/spaceBalance)
+  // where the target is measured, and the Band balance it follows across the bands (lib/speaker/spaceBalance)
   const { levelRef, balance } = venue;
   /**
    * whether the model reads the placements and stages from before the latest: just after a drag, the deferred ones are
@@ -839,7 +839,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     // the response reads the model, the listener and the ear
     [placed, settledModel, venue.listener, venue.earFt],
   );
-  /** the target across the response chart's frequencies, under the music balance */
+  /** the target across the response chart's frequencies, under the Band balance */
   const targetCurve = useMemo(
     () =>
       response.map((o) => ({

@@ -147,7 +147,7 @@ function keepUpWarnings(spec: SpeakerSpec, response: SpeakerResponse, limits: Sp
 
 /**
  * The speaker's F3: its lowest band's (the lowest passband) own F3. Not the sum's: a speaker whose bands sit at
- * different levels (the PA music tilt) has its summed passband in its loudest band.
+ * different levels (a padded horn) has its summed passband in its loudest band.
  */
 export function speakerF3(response: Pick<SpeakerResponse, "bands">): number | null {
   const low = response.bands.reduce<{ curve: FrequencyPoint[]; hz: number } | null>((best, b) => {

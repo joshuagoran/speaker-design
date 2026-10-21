@@ -1,6 +1,7 @@
 import { Button } from "./Button";
 import { Notice } from "./Notice";
 import { Tooltip } from "./Tooltip";
+import { MarkedText } from "./MarkedText";
 import type { AutoBalance } from "../../lib/speaker/autoBalance";
 import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
@@ -26,7 +27,7 @@ export function CalculateGainsButton<L>({ balance, onApply, tip, oneBand }: Prop
   return (
     <div className={GAP_Y_TIGHT}>
       <div>
-        <Tooltip control tip={tip}>
+        <Tooltip control tip={<MarkedText text={tip} />}>
           <Button
             variant="primary"
             disabled={balance.status !== AUTO_BALANCE_STATUS.balanced}
@@ -37,13 +38,19 @@ export function CalculateGainsButton<L>({ balance, onApply, tip, oneBand }: Prop
         </Tooltip>
       </div>
       {balance.status === AUTO_BALANCE_STATUS.oneBand && (
-        <p className="text-xs text-stone-500">{oneBand}</p>
+        <p className="text-xs text-stone-500">
+          <MarkedText text={oneBand} />
+        </p>
       )}
       {balance.status === AUTO_BALANCE_STATUS.unmodeled && (
-        <Notice>{AUTO_BALANCE_TEXT.unmodeled(balance.names)}</Notice>
+        <Notice>
+          <MarkedText text={AUTO_BALANCE_TEXT.unmodeled(balance.names)} />
+        </Notice>
       )}
       {balance.status === AUTO_BALANCE_STATUS.outOfRange && (
-        <Notice>{AUTO_BALANCE_TEXT.outOfRange(FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ)}</Notice>
+        <Notice>
+          <MarkedText text={AUTO_BALANCE_TEXT.outOfRange(FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ)} />
+        </Notice>
       )}
     </div>
   );

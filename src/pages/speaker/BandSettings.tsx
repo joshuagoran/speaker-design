@@ -1,4 +1,5 @@
 import { Tooltip } from "../../components/ui/Tooltip";
+import { MarkedText } from "../../components/ui/MarkedText";
 import { AMP_POWER_TIP } from "../../constants/ampPower";
 import type { SpeakerBand } from "../../types";
 import { Button } from "../../components/ui/Button";
@@ -64,7 +65,9 @@ export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove
       <div className={TRIO_ROW}>
         {isPassive(band) ? (
           <NumberField
-            label={<Tooltip tip={SPEAKER_TEXT.padTip}>{SPEAKER_TEXT.pad}</Tooltip>}
+            label={
+              <Tooltip tip={<MarkedText text={SPEAKER_TEXT.padTip} />}>{SPEAKER_TEXT.pad}</Tooltip>
+            }
             // shown to 0.1 dB (the Hi-fi level match is exact)
             value={Math.round(band.levelDb * 10) / 10}
             max={PAD_MAX_DB}

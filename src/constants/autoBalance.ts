@@ -1,5 +1,6 @@
 // Calculate gains on the Speaker and Stack pages (lib/speaker/autoBalance): its result's kinds, and the words the pages
 // show for it (src/components/ui/CalculateGainsButton).
+import { CALCULATE_GAINS_LABEL, GAIN_LABEL, PAD_LABEL } from "./controlLabels";
 
 /** What Calculate gains gives, by id. */
 export const AUTO_BALANCE_STATUS = {
@@ -14,20 +15,18 @@ export const AUTO_BALANCE_STATUS = {
 } as const;
 
 export const AUTO_BALANCE_TEXT = {
-  button: "Calculate gains",
+  button: CALCULATE_GAINS_LABEL,
   /** the button's tooltip on the Speaker page */
-  speakerTip:
-    "Sets each band's Gain or Pad, so that the bands play at the same level at each crossover. Each driver's sensitivity sets it.",
+  speakerTip: `Sets each band's **${GAIN_LABEL}** or **${PAD_LABEL}**, so that the bands play at the same level at each crossover. Each driver's sensitivity sets it.`,
   /** the button's tooltip on the Stack page */
-  stackTip:
-    "Sets each box's Gain, so that the boxes play at the same level at each crossover. The bands of each Speaker do not change.",
-  oneBand: "Calculate gains needs two or more bands that play.",
+  stackTip: `Sets each box's **${GAIN_LABEL}**, so that the boxes play at the same level at each crossover. The bands of each Speaker do not change.`,
+  oneBand: `**${CALCULATE_GAINS_LABEL}** needs two or more bands that play.`,
   /** the Stack page: fewer than two boxes the app can calculate */
-  oneBox: "Calculate gains needs two or more boxes that play.",
+  oneBox: `**${CALCULATE_GAINS_LABEL}** needs two or more boxes that play.`,
   /** the bands that stop it: bands a driver feeds that the model cannot calculate */
   unmodeled: (names: readonly string[]) =>
-    `Calculate gains did not change the levels. The app cannot calculate: ${names.join(", ")}.`,
+    `**${CALCULATE_GAINS_LABEL}** did not change the levels. The app cannot calculate: ${names.join(", ")}.`,
   /** a crossover outside the model's frequency range (the frequency charts' axis), Hz */
   outOfRange: (minHz: number, maxHz: number) =>
-    `Calculate gains did not change the levels. A crossover is outside the range the app calculates: ${minHz} Hz to ${maxHz} Hz.`,
+    `**${CALCULATE_GAINS_LABEL}** did not change the levels. A crossover is outside the range the app calculates: ${minHz} Hz to ${maxHz} Hz.`,
 } as const;

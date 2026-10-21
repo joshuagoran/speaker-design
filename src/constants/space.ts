@@ -29,6 +29,7 @@ import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
+import { CALCULATE_GAINS_LABEL, GAIN_LABEL } from "./controlLabels";
 import type { SaveRowWords } from "./saveRow";
 
 /** The coverage map's bands, by id: the ones a shared Space link may name. */
@@ -284,9 +285,9 @@ export const MAP_MARK_NAMES = { listener: "Listener" } as const;
 const DELAY = "Delay";
 const MEASURED_AT = "Measured at";
 const TARGET_LEVEL = "Target level";
-const GAIN = "Gain";
+const GAIN = GAIN_LABEL;
 const SYSTEM_GAIN = "System gain";
-const CALCULATE_GAINS = "Calculate gains";
+const CALCULATE_GAINS = CALCULATE_GAINS_LABEL;
 const CALCULATE_DELAYS = "Calculate delays";
 
 /** A placement's Main / Fill choice, by whether it is a fill. */

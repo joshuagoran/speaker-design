@@ -2230,7 +2230,7 @@ export interface SpaceVenue {
   /** the ear's height above the floor, ft: the map and the levels are worked out there */
   earFt: CoverageLayout["earFt"];
   /**
-   * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
+   * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the Band balance
    * (`balance`) less: what the map and the readouts compare with, and what Calculate gains aims the Gains at
    */
   targetDb: CoverageLayout["targetDb"];
@@ -3274,7 +3274,7 @@ export interface CoverageLayout {
   mirror: boolean;
   band: CoverageBand;
   freqHz: number;
-  /** the target level in the sub band, dB SPL (the other bands follow the music balance) */
+  /** the target level in the sub band, dB SPL (the other bands follow the Band balance) */
   targetDb: number;
   /** where the target is measured: the system is turned down until it gets the target there, never past its limit */
   levelRef: CoverageLevelRef;

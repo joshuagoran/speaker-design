@@ -18,6 +18,7 @@ import type {
 } from "../types";
 import { FIRST_ORDER_FILTER } from "./speakerSpec";
 import { UI_TEXT } from "./uiText";
+import { GAIN_LABEL, PAD_LABEL } from "./controlLabels";
 import { FOLD_DRIVERS_REASON, FOLD_MAGNET_CLEAR_IN } from "./foldHorn";
 
 /** Each driver kind as the Speaker page names it: the catalog table it picks from. */
@@ -566,10 +567,9 @@ export const SPEAKER_TEXT = {
   hornMountTip:
     "In the baffle: the horn mouth is cut into the baffle. Freestanding on top: the horn stands on the top of the chamber.",
   /** an active band's level field, and a passive band's (its tooltip is `padTip`) */
-  gain: "Gain",
-  pad: "Pad",
-  padTip:
-    "Cuts this band against the other bands on its amp channel, in dB. A passive crossover can only cut, so the highest value is 0 dB.",
+  gain: GAIN_LABEL,
+  pad: PAD_LABEL,
+  padTip: `Cuts this band against the other bands on its amp channel, in dB. An **${DRIVE_NAMES.passive}** crossover can only cut, so the highest value is 0 dB.`,
   levelTip:
     "Sets the level of this band against the other bands, in dB. A negative value makes the band quieter. The default is 0 dB: no change, so each driver plays at its own sensitivity.",
   driveTip:

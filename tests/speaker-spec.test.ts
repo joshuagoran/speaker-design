@@ -17,7 +17,15 @@ import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { hornModel } from "../src/lib/acoustics/hornModel";
 import { hornGrid } from "./helpers";
-import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES, HORN_OPTIONS } from "../src/lib/data";
+import {
+  HIFI_COAXES,
+  HIFI_TWEETERS,
+  HIFI_WAVEGUIDES,
+  HIFI_WOOFERS,
+  HORN_OPTIONS,
+} from "../src/lib/data";
+import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { crossoverSlopeName } from "../src/constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../src/constants/hifiEngine";
@@ -48,6 +56,7 @@ import {
 } from "../src/constants/speakerSpec";
 import type {
   BandId,
+  HifiDesignState,
   DesignLayers,
   DriverKind,
   PaLayout,
@@ -514,4 +523,24 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
     gapOf(chamberOf(speakerOf(read, SPEAKER_PART.top), DRIVER_KIND.mid)),
     HORN_ENGINE_GAP.driver,
   );
+});
+
+test("hifi adapter: a passive tweeter's Pad is never above 0 dB, where the active level match lifts it", () => {
+  const id = { id: "hifi", name: "Hi-fi" };
+  const highOf = (state: HifiDesignState) =>
+    speakerFromHifi(state, DEFAULT_HIFI_LOOK, id).bands.find((b) => b.id === SPEAKER_BAND.high)
+      ?.levelDb ?? 0;
+  let lifted = 0;
+  for (const woofer of HIFI_WOOFERS)
+    for (const tweeter of HIFI_TWEETERS) {
+      const state = { ...DEFAULT_HIFI, woofer, tweeter };
+      if (highOf({ ...state, drive: HIFI_DRIVE.active }) <= 0) continue;
+      lifted++;
+      assert.equal(
+        highOf({ ...state, drive: HIFI_DRIVE.passive }),
+        0,
+        `${woofer.id} + ${tweeter.id}`,
+      );
+    }
+  assert.ok(lifted > 0, "no pair where the level match lifts the tweeter");
 });

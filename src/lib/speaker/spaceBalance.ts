@@ -1,4 +1,4 @@
-// The Space page's target across the bands and where it is measured ("Measured at" and the music balance). Pure.
+// The Space page's target across the bands and where it is measured ("Measured at" and the Band balance). Pure.
 //
 // The target is the venue's level in the lowest band. Each band above a crossover of the space's stacks is the band
 // balance's step lower there (Flat: 0 dB; More bass: `MORE_BASS_STEP_DB`, a larger step at a sub crossover). A band's

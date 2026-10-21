@@ -1,9 +1,16 @@
 // Where a new stack (Stack page) or space (Space page) starts: a preset, read in through the L1 adapters as speakers, a
-// stack and a space. A PA preset's band Gains come from the Speaker page's Calculate gains, flat. Pure.
+// stack and a space. A PA preset's band Gains come from the Speaker page's Calculate gains, flat, and its box Gains
+// from the Stack page's, flat. Pure.
 import type { DesignLayers, PaLayout, SpecIdentity, StackDesign } from "../../types";
 import { layersFromPa } from "../../lib/speaker/paSpec";
 import { layersFromHifi } from "../../lib/speaker/hifiSpec";
-import { withCalculatedBandGains } from "../../lib/speaker/autoBalance";
+import {
+  autoBalanceStack,
+  withCalculatedBandGains,
+  withStackLevels,
+} from "../../lib/speaker/autoBalance";
+import { stackResponse } from "../../lib/speaker/stackResponse";
+import { AUTO_BALANCE_STATUS } from "../../constants/autoBalance";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/acoustics/coverageLayout";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../../lib/defaults";
 import {
@@ -26,10 +33,17 @@ const PA_PRESET_LAYOUTS = {
   paTower: "tower",
 } as const satisfies Partial<Record<StackPreset, PaLayout>>;
 
-/** A PA preset: the default PA design in `layout`, on the default floor layout, its bands at their calculated Gains. */
+/**
+ * A PA preset: the default PA design in `layout`, on the default floor layout, its bands and then its boxes at their
+ * calculated Gains (a stack of one box keeps its Gain).
+ */
 function paPreset(layout: PaLayout, identity: SpecIdentity): DesignLayers {
-  const layers = layersFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT);
-  return { ...layers, speakers: layers.speakers.map(withCalculatedBandGains) };
+  const read = layersFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT);
+  const layers = { ...read, speakers: read.speakers.map(withCalculatedBandGains) };
+  const boxes = autoBalanceStack(layers, stackResponse(layers.stack, layers.speakers));
+  return boxes.status === AUTO_BALANCE_STATUS.balanced
+    ? withStackLevels(layers, boxes.levels)
+    : layers;
 }
 
 /** The layers a preset gives under `identity`: a PA preset, or the Hi-fi pair (the default Hi-fi design). */
