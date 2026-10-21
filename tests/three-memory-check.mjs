@@ -52,12 +52,14 @@ const VIEWS = [
       await builtTwice(page);
     },
   },
-  // the Space page started from the PA stack preset ("New from…"), its room's first size stepped: the room, the boxes,
+  // the Space page started from the PA stack preset ("New from…"), its room's width stepped: the room, the boxes,
   // the beams, and the coverage floor rebuilt
   {
     name: "Space",
     hash: "#space",
+    // the room's width slider: the first number field is now the System gain, which does not rebuild the view
     ...NUMBER,
+    control: 'input[type="range"]:visible',
     prepare: async (page) => {
       await page
         .getByLabel(SAVE_ROW_TEXT.newFrom)
