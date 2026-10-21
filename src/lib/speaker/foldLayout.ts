@@ -264,7 +264,10 @@ function innerPlace(
   return { alongIn: best, offIn: bestOff };
 }
 
-/** A serpentine's layout: how many legs, whether a sealed chamber sits under them, where the drivers and mouth go. */
+/**
+ * A serpentine's layout: how many legs, whether a sealed chamber sits under them, and where the drivers go. The mouth
+ * opens in the baffle at the last leg's end, as real folded horns' do.
+ */
 interface SerpentinePlan {
   /** how many legs the path runs in, closed end at the bottom */
   legs: number;
@@ -274,8 +277,6 @@ interface SerpentinePlan {
    * over it)
    */
   carrier: number;
-  /** the wall the mouth opens in: the baffle (the last leg's end) or the top (over the last leg's end) */
-  mouth: typeof FOLD_WALL.baffle | typeof FOLD_WALL.top;
 }
 
 /**
@@ -406,10 +407,7 @@ function serpentine(
     return {
       boards,
       drivers: { board, along: place / lengthIn, face: faceFor(mount.a, mount.b, chamber) },
-      mouth:
-        plan.mouth === FOLD_WALL.baffle
-          ? { wall: FOLD_WALL.baffle, fromIn: lastY + t / 2, toIn: H }
-          : { wall: FOLD_WALL.top, fromIn: 0, toIn: Math.min(D, snap(H - lastY - t / 2)) },
+      mouth: { wall: FOLD_WALL.baffle, fromIn: lastY + t / 2, toIn: H },
     };
   };
 
@@ -553,8 +551,7 @@ function candidatesFor(
   const legCounts = [nearest - 1, nearest, nearest + 1].filter(
     (n) => n >= (kind === HORN_DRIVE.tapped ? 2 : 1) && n <= FOLD_LAYOUT_MAX_LEGS,
   );
-  const mouths = [FOLD_WALL.baffle, FOLD_WALL.top] as const;
-  // over a sealed chamber: each mouth; tapped: the drivers on each inner board in turn, the mouth on the baffle
+  // over a sealed chamber: the drivers on the chamber board; tapped: the drivers on each inner board in turn
   // (the tapped plans whose taps can fall nearest the target's)
   const plans: SerpentinePlan[] =
     kind === HORN_DRIVE.tapped
@@ -562,12 +559,12 @@ function candidatesFor(
           .flatMap((legs) =>
             Array.from({ length: legs - 1 }, (_, i) => {
               const place = innerPlace(shape, driver, room.depthIn, shape.lengthIn / legs, i + 1);
-              return { legs, carrier: i + 1, mouth: FOLD_WALL.baffle, offIn: place.offIn };
+              return { legs, carrier: i + 1, offIn: place.offIn };
             }),
           )
           .sort((p, q) => p.offIn - q.offIn)
           .slice(0, FOLD_LAYOUT_TAPPED_PLANS)
-      : legCounts.flatMap((legs) => mouths.map((mouth) => ({ legs, carrier: 0, mouth })));
+      : legCounts.map((legs) => ({ legs, carrier: 0 }));
   return [
     ...(kind === HORN_DRIVE.tapped ? [spiral(room, driver, shape)] : []),
     ...plans.map((plan) => serpentine(room, driver, shape, kind, plan)),
