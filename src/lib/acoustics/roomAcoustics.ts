@@ -10,6 +10,12 @@ export const ROOM_MATERIAL_OPTIONS: readonly { id: RoomMaterial; name: string }[
   ["concrete", "drywall", "wood", "glass", "curtain", "open"] as const
 ).map((id) => ({ id, name: ROOM_MATERIALS[id].name }));
 
+/**
+ * What a stage's faces and top reflect as: plywood decking and skirts on a frame, nearest the "Wood paneling" row
+ * (3/8 in plywood paneling).
+ */
+export const STAGE_MATERIAL = "wood" satisfies RoomMaterial;
+
 /** The surfaces the room's materials are set for, in the order the image sources take them. */
 export const ROOM_SURFACES = [
   "front",

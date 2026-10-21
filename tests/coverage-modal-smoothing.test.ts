@@ -10,6 +10,7 @@ import {
   coverageFrequencies,
   coverageGrid,
   levelAtPoint,
+  QUICK_BAND_POINTS,
   sceneSlots,
 } from "../src/lib/acoustics/coverage";
 import { modalTopHz } from "../src/lib/acoustics/roomAcoustics";
@@ -148,4 +149,15 @@ test("modal smoothing: the band average stays a power average, by share", () => 
   const [a, b] = [read([100], [1]), read([140], [1])];
   const mean = 10 * Math.log10(0.75 * 10 ** (a / 10) + 0.25 * 10 ** (b / 10));
   assert.ok(Math.abs(read([100, 140], [0.75, 0.25]) - mean) < 1e-9);
+});
+
+test("quick pass: a drag's map reads a few points across each band, none split, each weighing 1", () => {
+  for (const band of BANDS)
+    for (const crossover of CROSSOVERS) {
+      const { freqs, shares } = coverageFrequencies(band, 0, crossover, 1, QUICK_BAND_POINTS);
+      assert.equal(freqs.length, QUICK_BAND_POINTS);
+      assert.ok(shares.every((s) => s === 1));
+      const { lo, hi } = COVERAGE_BANDS[band];
+      assert.ok(Math.abs(freqs[0] - lo) < 1e-9 && Math.abs(freqs[freqs.length - 1] - hi) < 1e-6);
+    }
 });

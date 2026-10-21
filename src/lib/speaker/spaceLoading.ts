@@ -3,11 +3,11 @@
 // the box is coupled with (lib/speaker/spaceCoupling). Pure.
 //
 // At bass wavelengths a few cm (a box's wall) acts as touching: so the box's coupling stands in for its mouth's.
-// - angle: half space from the box's front baffle; each coupled surface at right angles to its front (the floor, the
-//   ceiling, a side wall) halves it, to a quarter of space at most. A wall behind the box or in front of it does not change it.
+// - angle: half space from the box's front baffle; each coupled surface at right angles to its front (the floor or the
+//   top of the stage it stands on, the ceiling, a side wall, a stage's straight face) halves it, to a quarter of space at most. A wall behind the box or in front of it does not change it.
 // - count: the identical boxes (the same Speaker, in this item or another) coupled with it in a chain, facing the same
 //   way with their fronts in one plane. A coupled box of another design adds nothing.
-import type { BoxLoading, CoupledSurface } from "../../types";
+import type { BoxLoading, CoupledSurface, StageFace } from "../../types";
 import type { BoxCoupling } from "./spaceCoupling";
 import type { PlacedItem, RoomPoint } from "./spaceLayout";
 import { COUPLED_CEILING, COUPLED_FLOOR, COUPLING_GAP_M } from "../../constants/space";
@@ -23,6 +23,14 @@ const SURFACE_AXIS: Record<CoupledSurface, keyof RoomPoint> = {
   back: "y",
   left: "x",
   right: "x",
+};
+
+/** The room axis each stage face stands across: its top is a floor to what stands on it. */
+const STAGE_FACE_AXIS: Record<StageFace, keyof RoomPoint> = {
+  front: "y",
+  back: "y",
+  side: "x",
+  top: "z",
 };
 
 /** A front within this of a surface's axis (its cosine) faces it or away from it; less is at right angles. */
@@ -96,9 +104,12 @@ export function boxLoadings(
     it.boxes.forEach((b, box) => {
       if (!b.speaker.cabinet.chambers.some((c) => c.load.kind === CHAMBER_LOAD.horn)) return;
       const { normal } = fronts[item][box];
-      const across = (coupling[item]?.members[box]?.surfaces ?? []).filter(
-        (s) => Math.abs(normal[SURFACE_AXIS[s]]) < FACING_COS,
-      ).length;
+      const member = coupling[item]?.members[box];
+      const axes = [
+        ...(member?.surfaces ?? []).map((s) => SURFACE_AXIS[s]),
+        ...(member?.stages ?? []).map((c) => STAGE_FACE_AXIS[c.face]),
+      ];
+      const across = axes.filter((axis) => Math.abs(normal[axis]) < FACING_COS).length;
       out[b.member] = {
         angle:
           RADIATION_ANGLES[Math.min(across, RADIATION_ANGLES.length - 1)] ??

@@ -1,6 +1,7 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
 import type {
   CoupledSurface,
+  StageFace,
   CoverageBand,
   CoverageLevelRef,
   CoverageRoom,
@@ -90,7 +91,7 @@ export const SNAP_FLUSH_IN = 6;
 /** Shift held while turning a box on the map: its yaw steps in multiples of this, degrees. */
 export const AIM_SNAP_DEG = 45;
 
-/** While a box, the listener, or the alignment point is dragged on the map, the design moves at most this often, ms. */
+/** While something is dragged on the map, the room model (and a dragged listener) moves at most this often, ms. */
 export const MAP_DRAG_UPDATE_MS = 100;
 
 /** A box is coupled with a surface or another box whose face is this near, m (lib/speaker/spaceCoupling). */
@@ -114,6 +115,56 @@ export const COUPLED_NAMES: Record<CoupledSurface, string> = {
   left: "left wall",
   right: "right wall",
 };
+
+/** A stage's outline, by id: a rectangle (its handles move its edges) or a polygon (its handles move each corner). */
+export const STAGE_SHAPE = { rectangle: "rectangle", polygon: "polygon" } as const;
+
+/** A stage's faces a box can be coupled with, by id: its front (toward the back wall), its back, a side, its top. */
+export const STAGE_FACE = { front: "front", back: "back", side: "side", top: "top" } as const;
+
+/** Each stage face as a "Coupled with" line names it after the stage's name ("Stage 1 front"). */
+export const STAGE_FACE_NAMES: Record<StageFace, string> = {
+  front: "front",
+  back: "back",
+  side: "side",
+  top: "top",
+};
+
+/** How many corners a stage's outline has: a rectangle's corners and its edges' middles. */
+export const STAGE_CORNERS = 8;
+
+/** A stage and a riser as they are added, ft: a club stage of four 4 × 8 ft decks, and a DJ or drum riser of one. */
+export const NEW_STAGE = { widthFt: 16, depthFt: 8, heightFt: 2 } as const;
+export const NEW_RISER = { widthFt: 8, depthFt: 4, heightFt: 1 } as const;
+/** A riser too big for its stage: a 4 × 4 ft deck, ft. */
+export const NEW_RISER_SMALL = { widthFt: 4, depthFt: 4, heightFt: NEW_RISER.heightFt } as const;
+
+/** The steps a new stage's spot is searched in, ft. */
+export const STAGE_SPOT_STEP_FT = 0.5;
+
+/** The steps a new placement's free spot is searched in, ft. */
+export const PLACE_SPOT_STEP_FT = 0.25;
+
+/** The smallest stage, sq ft. */
+export const STAGE_MIN_AREA_SQFT = 4;
+
+/** The narrowest side a stage's fields or handles give it, ft. */
+export const STAGE_MIN_SIDE_FT = 1;
+
+/** A stage's height above what it stands on, ft: the lowest and the highest. */
+export const STAGE_HEIGHT_FT = [0.5, 8] as const;
+
+/** A point this near a stage's edge is on it, ft. */
+export const STAGE_ON_EDGE_FT = 0.02;
+
+/** The Add stage/riser choice that puts a new stage on the floor (a riser's choice is its stage's id). */
+export const STAGE_ON_FLOOR = "floor";
+
+/** A new stage's id: its number, unique in its space. */
+export const stageId = (n: number) => `stage-${n}`;
+
+/** The DOM id of a stage's item in the Stages list, so a pick on the map can scroll it into view. */
+export const stageDomId = (id: string) => `space-stage-${id}`;
 
 /** The Target level a new space starts with (and the empty start, and a fill or Hi-fi preset that names none), dB SPL: as the default coverage layout. */
 export const SPACE_HOME_TARGET_DB = 105;
@@ -245,7 +296,11 @@ export const SPACE_TEXT = {
   fromCenterTip:
     "Its front center from the room's center line. + is to the right, seen from the listener.",
   down: "From the front wall, ft",
-  height: "Height above the floor, ft",
+  height: "Height above floor, ft",
+  /** the height field of a placement that stands on a stage */
+  heightOnStage: "Height above stage, ft",
+  /** where a placement on a stage stands: the stages, joined */
+  standsOn: (where: string) => `On ${where}.`,
   heightTip: "The gap under it: a plinth, a stand, a fly bar.",
   yaw: "Rotation, °",
   yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
@@ -328,6 +383,33 @@ export const SPACE_TEXT = {
   turnedDown: (db: number, target: number) =>
     `Turned down ${db.toFixed(1)} dB to reach ${target.toFixed(0)} dB.`,
   listenerVs: "The listener against the target:",
+  /** the Stages section */
+  addStage: "Add stage/riser",
+  stageOnFloor: "Stage, on the floor",
+  riserOn: (stage: string) => `Riser, on ${stage}`,
+  noStages: "No stages",
+  stageName: (n: number) => `Stage ${n}`,
+  riserName: (n: number) => `Riser ${n}`,
+  removeStage: (name: string) => `Remove ${name}`,
+  /** a stage's folded row: its size, height, and where it stands (already formatted, ft) */
+  stageSummary: (w: string, d: string, h: string, where: string) =>
+    `${w} ft × ${d} ft · ${h} ft high · ${where}`,
+  stageFromFront: (y: string) => `${y} ft from the front wall`,
+  stageOn: (stage: string) => `on ${stage}`,
+  /** a stage on the map: its name and the height of its top, ft (already formatted) */
+  stageLabel: (name: string, topFt: string) => `${name}, ${topFt} ft`,
+  shape: "Shape",
+  rectangle: "Rectangle",
+  polygon: "Polygon",
+  stageFromCenterTip:
+    "Its middle from the room's center line. + is to the right, seen from the listener.",
+  stageFromFrontTip: "Its back edge from the front wall.",
+  width: "Width, ft",
+  depth: "Depth, ft",
+  stageHeight: "Height, ft",
+  stageHeightTip: "A riser's height is above its stage.",
+  /** a stage's face, as a placement's "Coupled with" line names it */
+  stageFace: (stage: string, face: StageFace) => `${stage} ${STAGE_FACE_NAMES[face]}`,
 } as const;
 
 /** The Space page's Details fold: its own groups and lines (the room's groups come from pages/space/assumptionGroups). */
@@ -378,6 +460,16 @@ export const SPACE_DETAILS = {
     `Audience average: the mean over the floor, except ${clearanceFt} ft around every box.`,
   oneMeter: (place: string) =>
     `${place}: the mean at ear height, 1 m in front of each placed stack or speaker that plays in the band, on its aim.`,
+  stages: "Stages",
+  stageLines: [
+    "Each stage is solid.",
+    "Its edges act as walls for the boxes beside it.",
+    "A riser stands on a stage. Its height is above that stage.",
+    "Stages can touch, but they cannot overlap.",
+    "A box stands on the highest stage under its middle.",
+    "Drag a stage to move it. Drag it onto a stage to make it a riser.",
+    "Drag its handles to change its size or its corners.",
+  ],
   boxes: "Boxes and drivers",
   boxLines: (listenM: number) => [
     "Each box plays through its crossover, level and delay.",

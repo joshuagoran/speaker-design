@@ -43,6 +43,8 @@ export const SHARE_MAX_DEPTH = 12;
 export const SHARE_MAX_PLACEMENTS = 200;
 export const SHARE_MAX_STACKS = 100;
 export const SHARE_MAX_SPEAKERS = 200;
+/** The most stages and risers a link may carry. */
+export const SHARE_MAX_STAGES = 100;
 
 /** The most members in a stack, bands in a speaker, or chambers in a cabinet a link may carry. */
 export const SHARE_MAX_PARTS = 64;

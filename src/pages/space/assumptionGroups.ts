@@ -14,7 +14,10 @@ import {
   MODAL_HZ,
   modalCrossoverHz,
   roomAbsorption,
+  STAGE_MATERIAL,
 } from "../../lib/acoustics/roomAcoustics";
+import { BARRIER_CAP_DB } from "../../lib/acoustics/stageAcoustics";
+import { ROOM_MATERIALS } from "../../data/acoustics/materials";
 import type { CoverageRoom } from "../../types";
 import type { AssumptionLine } from "../../components/ui/AssumptionsList";
 
@@ -23,6 +26,15 @@ export type AssumptionGroup = [heading: string, lines: AssumptionLine[]];
 
 /** A frequency in the list's short form: 2k for 2000 Hz. */
 const hz = (f: number) => (f >= 1000 ? `${f / 1000}k` : `${f}`);
+
+/** What the map does with the stages: their reflections and their shadows (the Stages group's last lines). */
+export const stageSoundLines = (): AssumptionLine[] => [
+  `Each stage face and top reflects like ${ROOM_MATERIALS[STAGE_MATERIAL].name.toLowerCase()}.`,
+  "A small face reflects less at low frequencies.",
+  `A stage blocks the high end behind it, by up to ${BARRIER_CAP_DB} dB.`,
+  "The low end bends around a stage.",
+  "Indoors, the room's lowest notes do not see stages.",
+];
 
 /** The groups after a map's own levels and sources: the floor, air and crowd, the room, the summing, what isn't modeled. */
 export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
@@ -59,7 +71,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
     [
       "Not modeled",
       [
-        "Non-rectangular rooms, balconies, pillars, diffraction, crowd shadowing, measured driver directivity.",
+        "Non-rectangular rooms, balconies, pillars, diffraction (except over stages), crowd shadowing, measured driver directivity.",
       ],
     ],
   ];

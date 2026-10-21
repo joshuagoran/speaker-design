@@ -12,6 +12,8 @@ interface Props {
   summary: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** buttons at the right end of the row, before the fold's sign (a trash icon); a press on one doesn't fold it */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -19,7 +21,7 @@ interface Props {
  * A card that folds, for a list of like items (a placement): its row shows the name and a one-line summary and opens to
  * the item's controls. The parent says which items are open.
  */
-export function CardFold({ id, title, summary, open, onOpenChange, children }: Props) {
+export function CardFold({ id, title, summary, open, onOpenChange, actions, children }: Props) {
   return (
     <Card id={id} pad="none">
       <AnimatedDetails
@@ -31,6 +33,12 @@ export function CardFold({ id, title, summary, open, onOpenChange, children }: P
               <b className="font-semibold">{title}</b>
               {summary && <span className="text-sm text-stone-500"> · {summary}</span>}
             </span>
+            {actions && (
+              // the buttons sit in the row; their presses don't reach it
+              <span className="inline-flex gap-1" onClick={(e) => e.stopPropagation()}>
+                {actions}
+              </span>
+            )}
             <span
               className={`text-stone-500 text-base group-hover:text-stone-900 ${HOVER_TRANSITION}`}
               aria-hidden="true"

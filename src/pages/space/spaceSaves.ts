@@ -17,6 +17,7 @@ import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
+import { isStageList } from "../../lib/io/shareChecks";
 import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
 import { DRAFT_ID } from "../../constants/saveRow";
 import { readMember } from "../stack/stackSaves";
@@ -112,11 +113,14 @@ const isPlacements = (value: unknown): value is SavedPlacement[] =>
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
   Object.values(ids).some((id) => id === value);
 
+/** A venue as a save holds it: one from before stages has none. */
+type SavedVenue = Omit<SpaceVenue, "stages"> & Partial<Pick<SpaceVenue, "stages">>;
+
 /**
  * Whether a value reads as a venue: its room, listener, alignment point, ear height, target, where it is measured and
- * balance.
+ * balance, and maybe its stages.
  */
-const isVenue = (value: unknown): value is SpaceVenue =>
+const isVenue = (value: unknown): value is SavedVenue =>
   hasFields(value, {
     room: "object",
     listener: "object",
@@ -127,7 +131,8 @@ const isVenue = (value: unknown): value is SpaceVenue =>
     balance: "string",
   }) &&
   isOneOf(COVERAGE_LEVEL_REF, Reflect.get(value, "levelRef")) &&
-  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance"));
+  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance")) &&
+  (Reflect.get(value, "stages") === undefined || isStageList(Reflect.get(value, "stages")));
 
 /**
  * A saved space opened: the document's id and name, its placements and venue, and its stacks and speakers;
@@ -159,7 +164,7 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
         upsideDown: p.upsideDown ?? false,
         invertPolarity: p.invertPolarity ?? false,
       })),
-      venue,
+      venue: { ...venue, stages: venue.stages ?? [] },
     },
     stacks: stacks.map((s) => ({ ...s, members: s.members.map(readMember) })),
     speakers: speakers.map(readSpeakerCopy),
