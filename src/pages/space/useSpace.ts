@@ -272,7 +272,7 @@ export function withStack(
 
 /**
  * A new space from a start: the empty space, or a preset read in as a space (a PA layout on the PA floor's starting
- * layout, or the Hi-fi pair in its room). A PA preset takes its music balance in its band Levels. Its id is the draft
+ * layout, or the Hi-fi pair in its room). A PA preset's bands start at their calculated Gains. Its id is the draft
  * id: no save.
  */
 export function spaceFromStart(start: DesignStart): SpaceDesign {

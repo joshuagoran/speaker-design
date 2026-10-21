@@ -1,5 +1,5 @@
 // Small parts the read adapters share (lib/speaker paSpec, hifiSpec, fillSpec).
-import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
+import { BAND_BALANCE } from "../../constants/space";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import type {
   BandFilter,
@@ -141,6 +141,6 @@ export function homeVenue(
     systemDb: 0,
     // measured as the audience average, the same target in every band
     levelRef: COVERAGE_LEVEL_REF.audience,
-    balance: AUTO_BALANCE_MODE.flat,
+    balance: BAND_BALANCE.flat,
   };
 }

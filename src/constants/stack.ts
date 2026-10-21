@@ -65,6 +65,5 @@ export const STACK_SAVE_WORDS = {
   savedList: "Saved Stacks",
   pick: (n: number) => `Saved Stacks (${n})`,
   noSaved: "No saved Stacks yet",
-  newFromTip:
-    "Starts a new Stack, empty or from a preset. It replaces the current design. A PA start sets each band's level to the More bass band balance.",
+  newFromTip: "Starts a new Stack, empty or from a preset. It replaces the current design.",
 } as const satisfies SaveRowWords;

@@ -1,6 +1,6 @@
 // The speaker spec (lib/speaker): every saved and synthetic PA design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
-import { AUTO_BALANCE_MODE } from "../src/constants/autoBalance";
+import { BAND_BALANCE } from "../src/constants/space";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
@@ -189,7 +189,7 @@ test("speaker spec: every saved and synthetic PA design reads into a stack with 
       const topMember = stack.members.find((m) => m.speakerId === topBox.id);
       assert.deepEqual(subMember?.crossover.lowpass, lo, c.name);
       assert.deepEqual(topMember?.crossover.highpass, lo, c.name);
-      assert.equal(topMember?.levelDb, -cfg.tilt, c.name);
+      assert.equal(topMember?.levelDb, 0, c.name);
       assert.equal(subMember?.delayMs, AUTO_DELAY, `${c.name}: the sub aligned to the top`);
     }
     assert.deepEqual(bandOf(topBox, SPEAKER_BAND.mid).lowpass, hi, c.name);
@@ -199,18 +199,12 @@ test("speaker spec: every saved and synthetic PA design reads into a stack with 
       c.name,
     );
 
-    // every placement starts at a gain of 0; satellite's tilt is the venue's More bass, the others keep it in their levels
+    // every placement starts at a gain of 0, the band balance Flat
     assert.ok(
       space.placements.every((p) => p.levelDb === 0),
       c.name,
     );
-    assert.equal(
-      space.venue.balance,
-      cfg.layout === "satellite" && cfg.tilt > 0
-        ? AUTO_BALANCE_MODE.moreBass
-        : AUTO_BALANCE_MODE.flat,
-      c.name,
-    );
+    assert.equal(space.venue.balance, BAND_BALANCE.flat, c.name);
 
     // the stacks (and satellite's sub) stand on the plinth; the amp power as the design powers each band
     for (const p of space.placements)

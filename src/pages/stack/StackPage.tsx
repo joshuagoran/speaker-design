@@ -18,7 +18,7 @@ import { TextField } from "../../components/ui/TextField";
 import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
 import { SharedNotice, type SharedNoticeProps } from "../../components/ui/SharedNotice";
-import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
+import { CalculateGainsButton } from "../../components/ui/CalculateGainsButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
@@ -398,13 +398,11 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
                 <p className="text-xs text-stone-500">{STACK_TEXT.noLibrary}</p>
               )}
               {members.length > 0 && (
-                <AutoBalanceButton
+                <CalculateGainsButton
                   balance={stack.balance}
                   onApply={stack.applyBalance}
-                  mode={stack.balanceMode}
-                  onMode={stack.setBalanceMode}
-                  tipExtra={AUTO_BALANCE_TEXT.stackTip}
-                  notes={stack.shared.map((ks) => AUTO_BALANCE_TEXT.sharedCrossover(ks))}
+                  tip={AUTO_BALANCE_TEXT.stackTip}
+                  oneBand={AUTO_BALANCE_TEXT.oneBox}
                 />
               )}
             </>,

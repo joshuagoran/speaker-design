@@ -1,13 +1,11 @@
 // Where a new stack (Stack page) or space (Space page) starts: a preset, read in through the L1 adapters as speakers, a
-// stack and a space. A PA preset takes its music balance from its saved band Levels
-// (src/data/presets/pa-band-levels.ts). Pure.
+// stack and a space. A PA preset's band Gains come from the Speaker page's Calculate gains, flat. Pure.
 import type { DesignLayers, PaLayout, SpecIdentity, StackDesign } from "../../types";
 import { layersFromPa } from "../../lib/speaker/paSpec";
 import { layersFromHifi } from "../../lib/speaker/hifiSpec";
-import { withBandLevels } from "../../lib/speaker/paBalance";
+import { withCalculatedBandGains } from "../../lib/speaker/autoBalance";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/acoustics/coverageLayout";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../../lib/defaults";
-import { PA_PRESET_BAND_LEVELS } from "../../data/presets/pa-band-levels";
 import {
   EMPTY_START,
   STACK_PRESET,
@@ -28,12 +26,11 @@ const PA_PRESET_LAYOUTS = {
   paTower: "tower",
 } as const satisfies Partial<Record<StackPreset, PaLayout>>;
 
-/** A PA preset: the default PA design in `layout`, on the default floor layout, with its saved Levels. */
-const paPreset = (layout: PaLayout, identity: SpecIdentity) =>
-  withBandLevels(
-    layersFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT),
-    PA_PRESET_BAND_LEVELS[layout],
-  );
+/** A PA preset: the default PA design in `layout`, on the default floor layout, its bands at their calculated Gains. */
+function paPreset(layout: PaLayout, identity: SpecIdentity): DesignLayers {
+  const layers = layersFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT);
+  return { ...layers, speakers: layers.speakers.map(withCalculatedBandGains) };
+}
 
 /** The layers a preset gives under `identity`: a PA preset, or the Hi-fi pair (the default Hi-fi design). */
 export function presetLayers(preset: StackPreset, identity: SpecIdentity): DesignLayers {

@@ -55,7 +55,7 @@ import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
-import type { AutoBalanceMode } from "./constants/autoBalance";
+import type { BandBalance } from "./constants/space";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
   HARDWARE_KIND_NAMES,
@@ -965,11 +965,7 @@ export interface PaDesignConfig {
   xoLoOrder: CrossoverOrder;
   xoHiOrder: CrossoverOrder;
   mAmpW: number;
-  /** the music balance: how far the mid band's level sits below the sub's, dB (a level, not an angle; the saved key keeps its old name) */
-  tilt: number;
   hfAmpW: number;
-  /** the music balance: how far the horn band's level sits below the mid's, dB (a level, not an angle; the saved key keeps its old name) */
-  hfTilt: number;
   layout: PaLayout;
   /** each box's handles and their offsets (lib/build/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
   hardware?: PaHardware;
@@ -2249,10 +2245,10 @@ export interface SpaceVenue {
    */
   levelRef: CoverageLevelRef;
   /**
-   * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
-   * or the PA music tilt (lib/speaker/autoBalance).
+   * the band balance the target follows across the bands: Flat (the same in every band) or More bass, lower above each
+   * crossover (lib/speaker/spaceBalance)
    */
-  balance: AutoBalanceMode;
+  balance: BandBalance;
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them. */
@@ -3286,9 +3282,6 @@ export interface CoverageLayout {
   listener: FloorPoint;
 }
 
-/** A PA design's music balance: its crossovers, and how much less the mid band needs than the sub and the horn than the mid. */
-export type MusicBalance = Pick<PaDesignConfig, "xoLo" | "xoHi" | "tilt" | "hfTilt">;
-
 /** The stack the map places: the dispersion model's stack, its footprint and the mid box's width, inches. */
 export interface CoverageStack extends PaStackGeometry {
   footprint: Pick<Dims3, "w" | "d">;
@@ -3359,8 +3352,6 @@ export type PaDefaultedField =
   | "xoHi"
   | "xoLoOrder"
   | "xoHiOrder"
-  | "tilt"
-  | "hfTilt"
   | "ampW"
   | "mAmpW"
   | "hfAmpW"
