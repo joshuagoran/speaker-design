@@ -54,7 +54,7 @@ import { BAND_BALANCE_TIP } from "../../lib/speaker/autoBalance";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
-import { MarkedText } from "../../components/ui/MarkedText";
+import { literal, MarkedText } from "../../components/ui/MarkedText";
 import {
   SPACE_SETTINGS_SECTIONS,
   SPACE_SETTINGS_TABS,
@@ -335,7 +335,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
       : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`,
     placements: (
       <MarkedText
-        text={`${venue.targetDb} dB target · ${names.join(" · ") || SPACE_TEXT.noPlacements}`}
+        text={`${venue.targetDb} dB target · ${names.map(literal).join(" · ") || SPACE_TEXT.noPlacements}`}
       />
     ),
     hardware:
@@ -665,8 +665,8 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     <p>
                       <MarkedText
                         text={SPACE_TEXT.limitsSystem(
-                          space.gainLimit.limit.band,
-                          space.gainLimit.limit.box,
+                          literal(space.gainLimit.limit.band),
+                          literal(space.gainLimit.limit.box),
                         )}
                       />
                     </p>
@@ -675,7 +675,13 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               )}
               {space.overLimit.map((o) => (
                 <p key={`${o.box}/${o.band}`} className="text-sm text-red-700">
-                  <MarkedText text={SPACE_TEXT.overLimit(o.band, o.box, o.overDb.toFixed(1))} />
+                  <MarkedText
+                    text={SPACE_TEXT.overLimit(
+                      literal(o.band),
+                      literal(o.box),
+                      o.overDb.toFixed(1),
+                    )}
+                  />
                 </p>
               ))}
               <SelectField

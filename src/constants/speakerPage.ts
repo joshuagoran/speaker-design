@@ -501,7 +501,7 @@ export const SPEAKER_TEXT = {
   elbowsTip:
     "The bends in each tube. Each bend adds a little to the length that the air sees, so the port tunes lower.",
   /** the side ducts' dividers' tooltip: the shared tip, and which thickness each size takes */
-  ductDividersTip: `${UI_TEXT.ductDividersTip} Dividers of the wall size have the thickness of the walls. You can measure it on the **${CUTLIST_TAB_NAME}** page. Dividers of a different size have the default thickness.`,
+  ductDividersTip: `${UI_TEXT.ductDividersTip} Dividers of the wall size have the thickness of the walls. You can measure it on the **${CUTLIST_TAB_NAME}** tab. Dividers of a different size have the default thickness.`,
   ventFixed: "The shape of this port sets its position.",
   load: "Type",
   loadTip:

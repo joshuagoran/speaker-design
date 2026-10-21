@@ -15,7 +15,7 @@ const BANNED_NAMES = /\bPA (sub|boxes?)\b|\bhi-fi\b/i;
 // (CLAUDE.md, Writing). Only these phrases, which almost always mean the item; the plain words stay allowed (a speaker
 // on a stand, the space of a room).
 const LOWER_CASE_ITEMS =
-  /\b([Aa] speaker(?! (on|in|of)\b)|[Tt]his stack|[Tt]he space(?! (of|between|behind|around|under|above|below)\b)|[Aa]dd (speaker|source)|[Tt]his source)\b/;
+  /\b([Aa] speaker(?! (on|in|of)\b)|[Tt]his stack|[Yy]our stack|[Tt]he space(?! (of|between|behind|around|under|above|below)\b)|[Aa]dd (speaker|source)|[Tt]his source)\b/;
 /** Strings with a lower-case item that wait for the owner's review (issue #173): each is a whole string literal's text. */
 const PENDING_REVIEW = new Set([
   "A box's speaker is missing from this stack, so the response leaves it out.",

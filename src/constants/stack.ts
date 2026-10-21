@@ -13,7 +13,7 @@ export const STACK_TEXT = {
   /** the name a new stack starts with */
   newName: "New Stack",
   views: "Views",
-  front: `The boxes as the stack places them, to scale. A mirrored box is drawn flipped. The dashed line is the **${LISTEN_AXIS_NAME}**.`,
+  front: `The boxes as the Stack places them, to scale. A mirrored box is drawn flipped. The dashed line is the **${LISTEN_AXIS_NAME}**.`,
   response: "Response at the listening point",
   yLabel: "dB SPL @ 2.83 V, 1 m",
   maxOutput: "Maximum output",

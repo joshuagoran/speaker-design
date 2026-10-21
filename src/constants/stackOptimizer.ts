@@ -27,7 +27,7 @@ export const STACK_PROBLEM = { ...SPEAKER_PROBLEM, height: "height" } as const;
 
 /** Each problem in words, as the near miss lists them. */
 export const STACK_PROBLEM_TEXT = {
-  unmodeled: "the app cannot calculate a box, chamber or band in your stack",
+  unmodeled: "the app cannot calculate a box, chamber or band in your Stack",
   driverFit: "a driver or horn no longer fits its chamber",
   ventFit: "a port does not fit its chamber",
   fitChip: "a duct, tube or hardware fit check fails",
@@ -51,7 +51,7 @@ export const STACK_NEAR_MISS_TEXT = {
 } as const;
 
 /** The notice when your stack has no box the model runs: there is nothing to score. */
-export const STACK_UNMODELED = "Cannot calculate your stack: it has no box that plays.";
+export const STACK_UNMODELED = "Cannot calculate your Stack: it has no box that plays.";
 
 /**
  * The Stack page's optimizer fold and result cards: the Speaker page's words (`SPEAKER_OPTIMIZER_TEXT`), with those
@@ -59,7 +59,7 @@ export const STACK_UNMODELED = "Cannot calculate your stack: it has no box that 
  */
 export const STACK_OPTIMIZER_TEXT = {
   ...SPEAKER_OPTIMIZER_TEXT,
-  targetYours: (db: string) => `Your stack plays ${db} dB at 1 m.`,
+  targetYours: (db: string) => `Your Stack plays ${db} dB at 1 m.`,
   budgetField: "Most all the parts cost",
   weight: "Weight per box",
   weightField: "Most a box weighs",
@@ -69,7 +69,7 @@ export const STACK_OPTIMIZER_TEXT = {
     "A locked part stays as it is. Lock a speaker to hold it whole. A locked crossover, level or delay stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
   curveLabel: "Maximum output with one input, this Stack against yours",
   failing: (problems: string) =>
-    `Your stack fails: ${problems}. Fixes may cost more, weigh more, or stand taller.`,
+    `Your Stack fails: ${problems}. Fixes may cost more, weigh more, or stand taller.`,
   /** a speaker's lock on the whole speaker, and the label of a lock on a box axis */
   keepWhole: "Lock the whole speaker",
   boxAxis: { w: "Box width", h: "Box height", d: "Box depth" },
