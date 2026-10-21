@@ -1,4 +1,5 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
+import { AUTO_BALANCE_MODE, AUTO_BALANCE_MODE_LABEL } from "./autoBalance";
 import type {
   CoupledSurface,
   StageFace,
@@ -360,7 +361,7 @@ export const SPACE_TEXT = {
   ear: "Ear height, ft",
   target: TARGET_LEVEL,
   /** the Target level's tooltip */
-  targetTip: `The level to compare with, in the lowest band, at **${MEASURED_AT}**. With More bass, each higher band is quieter.`,
+  targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**, the level is lower above each crossover.`,
   measuredAt: MEASURED_AT,
   systemLevel: `${SYSTEM_LEVEL}, dB`,
   systemLevelTip: "The level of all placements together. 0 is full power.",
