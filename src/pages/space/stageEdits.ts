@@ -1,5 +1,6 @@
-// The Space page's edits to its stages: add, remove, reshape, size and move one (with its risers and the boxes on it),
-// each kept only when it breaks no rule the space kept before (lib/speaker/spaceStages). Pure.
+// The Space page's edits to its stages: add, remove, reshape, size and move one (with its risers and the boxes on it).
+// A new stage keeps every rule the space kept before (lib/speaker/spaceStages); the other edits keep the stages' rules
+// only: the boxes on a stage ride along, and a box it leaves stands on what is under it. Pure.
 import type { FloorPoint, SpacePlacement, SpaceSpec, SpaceStage, StageShape } from "../../types";
 import { expandPlacements, type PlacedItem } from "../../lib/speaker/spaceLayout";
 import {
@@ -104,32 +105,32 @@ export function freeSpot(
   return from;
 }
 
-/** The rules a layout breaks: the stages (by id) and the boxes (by index) that break one. */
-function broken(layout: Layout, plans: SpotPlans) {
-  const { stages, room } = layout.venue;
-  return {
-    stages: new Set(stages.filter((s) => !stageKeepsRules(stages, room, s)).map((s) => s.id)),
-    boxes: new Set(
-      placedPlans(layout.placements, plans).flatMap((plan, i) =>
-        boxFits(stages, plan) ? [] : [i],
-      ),
+/** The stages (by id) that break a stage rule. */
+const brokenStages = ({ venue: { stages, room } }: Layout) =>
+  new Set(stages.filter((s) => !stageKeepsRules(stages, room, s)).map((s) => s.id));
+
+/** The boxes (by index) that break a box rule. */
+const brokenBoxes = (layout: Layout, plans: SpotPlans) =>
+  new Set(
+    placedPlans(layout.placements, plans).flatMap((plan, i) =>
+      boxFits(layout.venue.stages, plan) ? [] : [i],
     ),
-  };
-}
+  );
+
+/** Whether every one of `now` was in `was`. */
+const noneNew = <T>(was: ReadonlySet<T>, now: ReadonlySet<T>) => [...now].every((k) => was.has(k));
+
+/** Whether `after`'s stages break no stage rule `before`'s kept; the boxes are not checked. */
+const stagesKeepRules = (before: Layout, after: Layout): boolean =>
+  noneNew(brokenStages(before), brokenStages(after));
 
 /** Whether `after` breaks no rule `before` kept (a layout that broke one already can still change elsewhere). */
-export function keepsRules(before: Layout, after: Layout, plans: SpotPlans): boolean {
-  const was = broken(before, plans),
-    now = broken(after, plans);
-  return (
-    [...now.stages].every((id) => was.stages.has(id)) &&
-    [...now.boxes].every((i) => was.boxes.has(i))
-  );
-}
+export const keepsRules = (before: Layout, after: Layout, plans: SpotPlans): boolean =>
+  stagesKeepRules(before, after) && noneNew(brokenBoxes(before, plans), brokenBoxes(after, plans));
 
-/** `after` when it keeps the rules `before` kept, else `before`. */
-const ruled = <L extends Layout>(before: L, after: L, plans: SpotPlans): L =>
-  keepsRules(before, after, plans) ? after : before;
+/** `after` when its stages keep the rules `before`'s kept, else `before`: a stage edit never fails on the boxes. */
+const ruled = <L extends Layout>(before: L, after: L): L =>
+  stagesKeepRules(before, after) ? after : before;
 
 /** A layout with its stages changed. */
 const withStages = <L extends Layout>(layout: L, stages: readonly SpaceStage[]): L => ({
@@ -212,14 +213,13 @@ export function withStageShape<L extends Layout>(
   layout: L,
   id: SpaceStage["id"],
   shape: StageShape,
-  plans: SpotPlans,
 ): L {
   const after = withStage(layout, id, (s) => {
     if (shape === STAGE_SHAPE.polygon) return { ...s, shape };
     const b = boundsOf(s.corners);
     return { ...s, shape, corners: rectCorners(b.x0, b.y0, b.x1, b.y1) };
   });
-  return ruled(layout, after, plans);
+  return ruled(layout, after);
 }
 
 /** The layout with a stage's height above what it stands on set, ft (within `STAGE_HEIGHT_FT`). */
@@ -227,14 +227,13 @@ export function withStageHeight<L extends Layout>(
   layout: L,
   id: SpaceStage["id"],
   heightFt: number,
-  plans: SpotPlans,
 ): L {
   const [lo, hi] = STAGE_HEIGHT_FT;
   const after = withStage(layout, id, (s) => ({
     ...s,
     heightFt: Math.min(hi, Math.max(lo, heightFt)),
   }));
-  return ruled(layout, after, plans);
+  return ruled(layout, after);
 }
 
 /** A stage's place and size as its fields set them, ft: its middle from the center line, its back edge, its width, depth. */
@@ -252,8 +251,8 @@ export function stageBox(stage: Pick<SpaceStage, "corners">): StageBox {
 }
 
 /**
- * The placements with the boxes standing on `ids` (as `layout` stands them) moved by `by`, ft: a placement moves once,
- * by its box as set, or by its mirror image (which moves the other way across the room).
+ * The placements with the boxes standing on `ids` (as `layout` stands them) moved by `by`, ft: a placement moves once.
+ * A mirrored pair moves down the room only: across it, it stays where it is.
  */
 function ridersMoved(
   layout: Layout,
@@ -263,18 +262,16 @@ function ridersMoved(
 ): SpacePlacement[] {
   const { stages } = layout.venue;
   const placed = placedPlans(layout.placements, plans);
-  const riding = new Map<number, boolean>();
+  const riding = new Set<number>();
   expandPlacements(layout.placements).forEach((p, i) => {
     const plan = placed[i];
     if (!plan.length) return;
     const on = stageAt(stages, planCenter(plan, p));
-    if (!on || !ids.has(on.id)) return;
-    if (!riding.has(p.source) || !p.image) riding.set(p.source, p.image);
+    if (on && ids.has(on.id)) riding.add(p.source);
   });
-  return layout.placements.map((p, k) => {
-    const image = riding.get(k);
-    return image === undefined ? p : { ...p, x: p.x + (image ? -by.x : by.x), y: p.y + by.y };
-  });
+  return layout.placements.map((p, k) =>
+    riding.has(k) ? { ...p, x: p.mirrored ? p.x : p.x + by.x, y: p.y + by.y } : p,
+  );
 }
 
 /** The layout with a stage and its risers, and the boxes on them, moved by `by`, ft. */
@@ -297,7 +294,8 @@ function withFamilyMoved<L extends Layout>(
 
 /**
  * The layout with a stage's place and size set from its fields (`StageBox`, any part of it): its outline scales and
- * moves to the new box; its risers and the boxes on it move with its back left corner.
+ * moves to the new box; its risers and the boxes on it move with its back left corner. A change that breaks a stage
+ * rule leaves the layout as it was.
  */
 export function withStageBox<L extends Layout>(
   layout: L,
@@ -324,7 +322,7 @@ export function withStageBox<L extends Layout>(
       y: y0 + (p.y - was.y0) * sy,
     })),
   }));
-  return ruled(layout, after, plans);
+  return ruled(layout, after);
 }
 
 /** Snaps to a quarter foot. */
@@ -377,7 +375,8 @@ export interface StageDrag {
 /**
  * The layout after a drag from `start` (as it was when the drag began): the stage moved with its risers and the boxes
  * on it (a stage dropped wholly on a floor stage becomes its riser, unless it has risers of its own; off it, a floor
- * stage again), a rectangle's edge moved by its handle, or a polygon's corner. Null when it breaks a rule `start` kept.
+ * stage again), a rectangle's edge moved by its handle, or a polygon's corner. A box the stage leaves stands on what is
+ * under it. Null when it breaks a stage rule `start` kept.
  */
 export function withStageDragged<L extends Layout>(
   start: L,
@@ -440,5 +439,5 @@ export function withStageDragged<L extends Layout>(
       ),
     }));
   }
-  return keepsRules(start, after, plans) ? after : null;
+  return stagesKeepRules(start, after) ? after : null;
 }

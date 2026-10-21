@@ -212,7 +212,7 @@ test("edit: a rectangle's handle moves its edge; a polygon's corner moves; back 
   );
   assert.ok(deeper);
   assert.deepEqual(stageBox(deeper.venue.stages[0]), { x: 0, y: 0, w: 16, d: 10 });
-  const poly = withStageShape(start, "a", STAGE_SHAPE.polygon, []);
+  const poly = withStageShape(start, "a", STAGE_SHAPE.polygon);
   const pulled = withStageDragged(
     poly,
     { id: "a", handle: 4, by: { x: -2, y: 0 }, snaps: false },
@@ -220,7 +220,7 @@ test("edit: a rectangle's handle moves its edge; a polygon's corner moves; back 
   );
   assert.ok(pulled);
   assert.deepEqual(pulled.venue.stages[0].corners[4], { x: 6, y: 8 });
-  const squared = withStageShape(pulled, "a", STAGE_SHAPE.rectangle, []);
+  const squared = withStageShape(pulled, "a", STAGE_SHAPE.rectangle);
   assert.deepEqual(squared.venue.stages[0].corners, rectCorners(-8, 0, 8, 8));
   // a corner pulled across the outline is undone
   const crossed = withStageDragged(
@@ -310,6 +310,70 @@ test("rules on boxes: a move onto a stage's edge is undone; a drag near a stage'
     stages: { edges: straightEdges(main), fits: () => true },
   });
   assert.ok(near(moved.y, 8 + subD));
+});
+
+/** The model's plans and what each box stands on, for this design. */
+function laidOut(design: SpaceDesign) {
+  const model = spaceModelLaidOut(design);
+  return {
+    plans: spotPlans(model.placements.map((p) => p.item)),
+    standsOn: model.placements.map((p) => p.item.standsOn),
+  };
+}
+
+test("move: the boxes on a stage ride along; a mirrored pair only down the room, so a box left behind falls off", () => {
+  const main = stage("a", [-8, 0, 8, 8]);
+  const { design } = designWith(
+    [main],
+    [
+      ["top", -5, 3],
+      ["top", 0, 6],
+    ],
+  );
+  const pair = { ...design.space.placements[0], mirrored: true };
+  const start = {
+    ...design,
+    space: { ...design.space, placements: [pair, design.space.placements[1]] },
+  };
+  const { plans, standsOn } = laidOut(start);
+  assert.deepEqual(standsOn, ["a", "a", "a"]);
+  // the stage's left edge stops short of the pair's left box, under its side: the move is not refused
+  const by = { x: 3.5, y: 2 };
+  const after = withStageDragged(start.space, { id: "a", handle: null, by, snaps: false }, plans);
+  assert.ok(after);
+  assert.deepEqual(
+    after.placements.map((p) => [p.x, p.y]),
+    [
+      [-5, 5],
+      [3.5, 8],
+    ],
+  );
+  // the left box overlaps the stage's edge: allowed
+  assert.ok(!keepsRules(start.space, after, plans));
+  // the pair's left box stands on the floor, its right box and the plain box on the stage
+  assert.deepEqual(laidOut({ ...start, space: after }).standsOn, [null, "a", "a"]);
+  // the fields move it the same way
+  const set = withStageBox(start.space, "a", { x: by.x, y: by.y }, plans);
+  assert.deepEqual(set.placements, after.placements);
+});
+
+test("resize: a stage shrinks from under a box; the box stays where it is, on the floor", () => {
+  const main = stage("a", [-8, 0, 8, 8]);
+  const { design } = designWith([main], [["top", 4, 6]]);
+  const { plans } = laidOut(design);
+  // the right edge's middle handle (3) pulls it in past the box
+  const narrow = withStageDragged(
+    design.space,
+    { id: "a", handle: 3, by: { x: -10, y: 0 }, snaps: false },
+    plans,
+  );
+  assert.ok(narrow);
+  // the fields take its front edge in past the box
+  const shallow = withStageBox(design.space, "a", { d: 4 }, plans);
+  for (const space of [narrow, shallow]) {
+    assert.deepEqual(space.placements, design.space.placements);
+    assert.deepEqual(laidOut({ ...design, space }).standsOn, [null]);
+  }
 });
 
 test("remove: a stage goes with its risers", () => {

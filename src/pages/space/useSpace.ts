@@ -755,7 +755,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /** moves the alignment point, where the mains arrive together */
     moveAlignAt: (p: FloorPoint) => editVenue((v) => ({ ...v, alignAt: onFloor(p, v.room) })),
-    /** the stages' edits (pages/space/stageEdits), each kept only when it breaks no rule */
+    /** the stages' edits (pages/space/stageEdits), each kept only when it breaks no stage rule */
     stages: {
       /** adds a stage on the floor (null) or a riser on a floor stage; its id, or null when no spot is free */
       add: (on: SpaceStage["id"] | null): SpaceStage["id"] | null => {
@@ -766,9 +766,9 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       },
       remove: (id: SpaceStage["id"]) => editSpace((s) => withStageRemoved(s, id)),
       setShape: (id: SpaceStage["id"], shape: StageShape) =>
-        editSpace((s) => withStageShape(s, id, shape, plans)),
+        editSpace((s) => withStageShape(s, id, shape)),
       setHeight: (id: SpaceStage["id"], heightFt: number) =>
-        editSpace((s) => withStageHeight(s, id, heightFt, plans)),
+        editSpace((s) => withStageHeight(s, id, heightFt)),
       setBox: (id: SpaceStage["id"], box: Partial<StageBox>) =>
         editSpace((s) => withStageBox(s, id, box, plans)),
       /** a drag on the map begins: its moves start from the space as it is now */
@@ -777,7 +777,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       },
       /**
        * a drag on the map moves stage `id` (handle null) or one of its handles by `by` from where it began; it snaps
-       * while Snap to walls & boxes is on, unless `free` (Alt held). A move that breaks a rule keeps the last one.
+       * while Snap to walls & boxes is on, unless `free` (Alt held). A move that breaks a stage rule keeps the last one.
        */
       drag: (id: SpaceStage["id"], handle: number | null, by: FloorPoint, free: boolean) => {
         const start = stageDragStart.current;
