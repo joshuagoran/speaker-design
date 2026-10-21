@@ -32,8 +32,27 @@ import {
   roomWalls,
   snapFlush,
   type RoomWall,
+  type SnapStages,
   type StandingItem,
 } from "../../lib/speaker/spaceCoupling";
+import {
+  movedPlan,
+  planCenter,
+  stageAt,
+  stagesOn,
+  straightEdges,
+} from "../../lib/speaker/spaceStages";
+import {
+  keepsRules,
+  spotPlans,
+  withStageAdded,
+  withStageBox,
+  withStageDragged,
+  withStageHeight,
+  withStageRemoved,
+  withStageShape,
+  type StageBox,
+} from "./stageEdits";
 import { AIM_SNAP_DEG, SNAP_FLUSH_IN } from "../../constants/space";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
@@ -64,6 +83,8 @@ import type {
   CoverageGridView,
   CoverageLevelRef,
   FloorPoint,
+  SpaceStage,
+  StageShape,
   PlacedSource,
   SavedConfig,
   SpaceDesign,
@@ -129,13 +150,14 @@ export function fittedSpace(space: SpaceSpec): SpaceSpec {
 export type DraggedBox = Pick<PlacedSource, "source" | "image" | "x" | "y">;
 
 /**
- * What a drag snaps flush against (`snapFlush`): the boxes as they stand, the dragged one's index among them, and the
- * room's walls.
+ * What a drag snaps flush against (`snapFlush`): the boxes as they stand, the dragged one's index among them, the
+ * room's walls, and the stages' edges at its level with the rules a spot keeps.
  */
 export interface FlushSnap {
   items: readonly StandingItem[];
   at: number;
   walls: readonly RoomWall[];
+  stages?: SnapStages;
 }
 
 /**
@@ -153,7 +175,10 @@ export function withBoxMoved(
 ): SpacePlacement[] {
   const grid = onFloor(p, room);
   const to = flush
-    ? inRoom(snapFlush(p, grid, flush.items, flush.at, flush.walls, SNAP_FLUSH_IN), room)
+    ? inRoom(
+        snapFlush(p, grid, flush.items, flush.at, flush.walls, SNAP_FLUSH_IN, flush.stages),
+        room,
+      )
     : grid;
   return placements.map((o, i) => (i === box.source ? movedPlacement(o, box.image, to) : o));
 }
@@ -591,8 +616,24 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     setDesign((d) => ({ ...d, space: edit(d.space) }));
   const editPlacements = (edit: (list: readonly SpacePlacement[]) => SpacePlacement[]) =>
     editSpace((s) => ({ ...s, placements: edit(s.placements) }));
+  /** each box's plan from its spot, as the model lays it out: what the stage rules read */
+  const plans = useMemo(() => spotPlans(model.placements.map((p) => p.item)), [model]);
+  /** a change to the space kept only when it breaks no rule the space kept (lib/speaker/spaceStages) */
+  const editRuled = (edit: (s: SpaceSpec) => SpaceSpec) =>
+    editSpace((s) => {
+      const next = edit(s);
+      return keepsRules(s, next, plans) ? next : s;
+    });
+  // an edit that adds or drops a mirror image changes which plan is whose: it is not checked
   const editPlacement = (k: number, edit: (p: SpacePlacement) => SpacePlacement) =>
-    editPlacements((list) => list.map((p, i) => (i === k ? edit(p) : p)));
+    editSpace((s) => {
+      const placements = s.placements.map((p, i) => (i === k ? edit(p) : p));
+      const next = { ...s, placements };
+      const same = placements[k]?.mirrored === s.placements[k]?.mirrored;
+      return !same || keepsRules(s, next, plans) ? next : s;
+    });
+  /** the space when a stage drag began: each move of the drag starts from it */
+  const stageDragStart = useRef<SpaceSpec | null>(null);
   /** the box the model places at index `i` (what the map draws; a mirrored pair is two boxes) */
   const boxAt = (i: number): DraggedBox | undefined => model.placements[i]?.item.placement;
   const editVenue = (edit: (v: SpaceVenue) => SpaceVenue) =>
@@ -674,11 +715,31 @@ export function useSpace(initialBand: CoverageBand = "mid") {
      */
     moveBox: (i: number, p: FloorPoint, free: boolean) => {
       const box = boxAt(i);
-      const flush: FlushSnap | undefined =
-        snapsFlush && !free
-          ? { items: model.placements.map((m) => m.item), at: i, walls: roomWalls(venue.room) }
-          : undefined;
-      if (box) editPlacements((list) => withBoxMoved(list, box, p, venue.room, flush));
+      if (!box) return;
+      const plan = plans[i];
+      editRuled((s) => {
+        const { stages } = s.venue;
+        // the stage it would stand on: its edges, and those of the stages beside it at that level
+        const host = plan ? stageAt(stages, planCenter(movedPlan(plan, p), p)) : null;
+        const edges = [...stagesOn(stages, host ? host.id : null), ...(host ? [host] : [])].flatMap(
+          straightEdges,
+        );
+        const placedAt = (to: FloorPoint) =>
+          s.placements.map((o, k) => (k === box.source ? movedPlacement(o, box.image, to) : o));
+        const flush: FlushSnap | undefined =
+          snapsFlush && !free
+            ? {
+                items: model.placements.map((m) => m.item),
+                at: i,
+                walls: roomWalls(s.venue.room),
+                stages: {
+                  edges,
+                  fits: (to) => keepsRules(s, { ...s, placements: placedAt(to) }, plans),
+                },
+              }
+            : undefined;
+        return { ...s, placements: withBoxMoved(s.placements, box, p, s.venue.room, flush) };
+      });
     },
     /** turns a box of the map to face `p` on the floor; its placement's other box follows. `stepped` (Shift held): in `AIM_SNAP_DEG` steps */
     aimBox: (i: number, p: FloorPoint, stepped: boolean) => {
@@ -689,6 +750,46 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /** moves the alignment point, where the mains arrive together */
     moveAlignAt: (p: FloorPoint) => editVenue((v) => ({ ...v, alignAt: onFloor(p, v.room) })),
+    /** the stages' edits (pages/space/stageEdits), each kept only when it breaks no rule */
+    stages: {
+      /** adds a stage on the floor (null) or a riser on a floor stage; its id, or null when no spot is free */
+      add: (on: SpaceStage["id"] | null): SpaceStage["id"] | null => {
+        const added = withStageAdded(space, on, plans);
+        if (added)
+          editSpace((s) => ({ ...s, venue: { ...s.venue, stages: added.layout.venue.stages } }));
+        return added ? added.id : null;
+      },
+      remove: (id: SpaceStage["id"]) => editSpace((s) => withStageRemoved(s, id)),
+      setShape: (id: SpaceStage["id"], shape: StageShape) =>
+        editSpace((s) => withStageShape(s, id, shape, plans)),
+      setHeight: (id: SpaceStage["id"], heightFt: number) =>
+        editSpace((s) => withStageHeight(s, id, heightFt, plans)),
+      setBox: (id: SpaceStage["id"], box: Partial<StageBox>) =>
+        editSpace((s) => withStageBox(s, id, box, plans)),
+      /** a drag on the map begins: its moves start from the space as it is now */
+      beginDrag: () => {
+        stageDragStart.current = space;
+      },
+      /**
+       * a drag on the map moves stage `id` (handle null) or one of its handles by `by` from where it began; it snaps
+       * while Snap to walls & boxes is on, unless `free` (Alt held). A move that breaks a rule keeps the last one.
+       */
+      drag: (id: SpaceStage["id"], handle: number | null, by: FloorPoint, free: boolean) => {
+        const start = stageDragStart.current;
+        if (!start) return;
+        const after = withStageDragged(
+          start,
+          { id, handle, by, snaps: snapsFlush && !free },
+          plans,
+        );
+        if (after)
+          editSpace((s) => ({
+            ...s,
+            placements: after.placements,
+            venue: { ...s.venue, stages: after.venue.stages },
+          }));
+      },
+    },
     /** the room's settings (`RoomFields`) */
     room: {
       // a smaller room keeps what it holds inside

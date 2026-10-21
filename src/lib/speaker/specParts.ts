@@ -141,6 +141,7 @@ export function homeVenue(
   };
   return {
     room,
+    stages: [],
     listener,
     alignAt: roomCenter(room),
     earFt,

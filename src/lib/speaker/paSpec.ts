@@ -434,6 +434,7 @@ export function paVenue(floor: PaFloor): SpaceVenue {
   const { room } = floor;
   return {
     room,
+    stages: [],
     listener: floor.listener,
     alignAt: roomCenter(room),
     earFt: floor.earFt,

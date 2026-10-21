@@ -43,6 +43,7 @@ const standing = (placements: readonly SpacePlacement[], sizes: readonly Size[] 
     // a box turns over about the middle of its height
     return {
       placement,
+      standsOn: null,
       boxes: [
         { corners: boxCorners(ORIGIN, size).map(placementFrame(placement, size.h / 2).toRoom) },
       ],
@@ -109,13 +110,15 @@ test("coupling: a box lifted onto another is coupled with it, not the floor; lif
   const stacked = coupled([at(0, 10), at(0, 10, 0, CUBE.h)]);
   assert.deepEqual(stacked.boxes[1], {
     surfaces: [],
+    stages: [],
     boxes: [0],
-    members: [{ surfaces: [], boxes: [{ item: 0, box: 0 }] }],
+    members: [{ surfaces: [], stages: [], boxes: [{ item: 0, box: 0 }] }],
   });
   assert.deepEqual(stacked.boxes[0], {
     surfaces: [COUPLED_FLOOR],
+    stages: [],
     boxes: [1],
-    members: [{ surfaces: [COUPLED_FLOOR], boxes: [{ item: 1, box: 0 }] }],
+    members: [{ surfaces: [COUPLED_FLOOR], stages: [], boxes: [{ item: 1, box: 0 }] }],
   });
   // one on top of the other has no face to mark on the plan
   assert.equal(stacked.marks.length, 0);

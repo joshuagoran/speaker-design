@@ -5,6 +5,7 @@ import type {
   SavedSpaceData,
   SpaceDesign,
   SpacePlacement,
+  SpaceStage,
   SpaceVenue,
   SpeakerSpec,
   StackSpec,
@@ -16,7 +17,13 @@ import { usedParts } from "../../lib/speaker/usedParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
-import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
+import {
+  SEATED_EAR_FT,
+  SPACE_HOME_SEAT,
+  SPACE_TEXT,
+  STAGE_CORNERS,
+  STAGE_SHAPE,
+} from "../../constants/space";
 import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
 import { DRAFT_ID } from "../../constants/saveRow";
 import { readMember } from "../stack/stackSaves";
@@ -112,11 +119,45 @@ const isPlacements = (value: unknown): value is SavedPlacement[] =>
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
   Object.values(ids).some((id) => id === value);
 
+/** Whether a value is a spot on the floor. */
+const isPoint = (value: unknown) => hasFields(value, { x: "number", y: "number" });
+
+/**
+ * Whether a value reads as a list of stages: each with an id no other has, a shape, its corners and height, and what it
+ * stands on (the floor, or a floor stage in the list).
+ */
+function isStageList(value: unknown): value is SpaceStage[] {
+  if (!Array.isArray(value) || !value.every(isStage)) return false;
+  const stages: readonly Pick<SpaceStage, "id" | "on">[] = value;
+  const floor = new Set(stages.filter((s) => s.on === null).map((s) => s.id));
+  return (
+    new Set(stages.map((s) => s.id)).size === stages.length &&
+    stages.every((s) => s.on === null || floor.has(s.on))
+  );
+}
+
+/** Whether a value reads as a stage: its id, shape, 8 corners, height, and what it stands on. */
+function isStage(value: unknown): boolean {
+  if (!hasFields(value, { id: "string", shape: "string", heightFt: "number" })) return false;
+  const corners: unknown = Reflect.get(value, "corners");
+  const on: unknown = Reflect.get(value, "on");
+  return (
+    isOneOf(STAGE_SHAPE, Reflect.get(value, "shape")) &&
+    Array.isArray(corners) &&
+    corners.length === STAGE_CORNERS &&
+    corners.every(isPoint) &&
+    (on === null || typeof on === "string")
+  );
+}
+
+/** A venue as a save holds it: one from before stages has none. */
+type SavedVenue = Omit<SpaceVenue, "stages"> & Partial<Pick<SpaceVenue, "stages">>;
+
 /**
  * Whether a value reads as a venue: its room, listener, alignment point, ear height, target, where it is measured and
- * balance.
+ * balance, and maybe its stages.
  */
-const isVenue = (value: unknown): value is SpaceVenue =>
+const isVenue = (value: unknown): value is SavedVenue =>
   hasFields(value, {
     room: "object",
     listener: "object",
@@ -127,7 +168,8 @@ const isVenue = (value: unknown): value is SpaceVenue =>
     balance: "string",
   }) &&
   isOneOf(COVERAGE_LEVEL_REF, Reflect.get(value, "levelRef")) &&
-  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance"));
+  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance")) &&
+  (Reflect.get(value, "stages") === undefined || isStageList(Reflect.get(value, "stages")));
 
 /**
  * A saved space opened: the document's id and name, its placements and venue, and its stacks and speakers;
@@ -159,7 +201,7 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
         upsideDown: p.upsideDown ?? false,
         invertPolarity: p.invertPolarity ?? false,
       })),
-      venue,
+      venue: { ...venue, stages: venue.stages ?? [] },
     },
     stacks: stacks.map((s) => ({ ...s, members: s.members.map(readMember) })),
     speakers: speakers.map(readSpeakerCopy),

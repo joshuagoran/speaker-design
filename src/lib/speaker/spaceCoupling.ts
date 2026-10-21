@@ -1,13 +1,31 @@
-// What each placed box stands right against (the floor, a wall, another box), and the snap that puts a dragged box
-// flush against a wall or a box. Both read the boxes as lib/speaker/spaceLayout places them: room feet, x across from
+// What each placed box stands right against (the floor, a wall, a stage's straight face or top, another box), and the
+// snap that puts a dragged box flush against a wall, a stage's straight edge, or a box. Both read the boxes as lib/speaker/spaceLayout places them: room feet, x across from
 // the center line, y down the room from the front wall, z up from the floor. Pure.
-import type { CoupledSurface, CoverageRoom, FloorPoint, PlacedSource, RoomSide } from "../../types";
-import type { PlacedBox, RoomPoint } from "./spaceLayout";
-import { COUPLED_CEILING, COUPLED_FLOOR, COUPLING_GAP_M, OPEN_SIDE } from "../../constants/space";
+import type {
+  CoupledSurface,
+  CoverageRoom,
+  FloorPoint,
+  PlacedSource,
+  RoomSide,
+  SpaceStage,
+  StageContact,
+} from "../../types";
+import type { PlacedBox, PlacedItem, RoomPoint } from "./spaceLayout";
+import { stageById, stageBaseFt, stageTopFt, straightEdges, type StageEdge } from "./spaceStages";
+import {
+  COUPLED_CEILING,
+  COUPLED_FLOOR,
+  COUPLING_GAP_M,
+  OPEN_SIDE,
+  STAGE_FACE,
+} from "../../constants/space";
 import { INCHES_PER_FOOT, METERS_PER_FOOT, METERS_PER_INCH } from "../../constants/units";
 
-/** One box of a placement as it stands (`expandPlacements`): its spot, aim and lift, and its members' corners. */
-export interface StandingItem {
+/**
+ * One box of a placement as it stands (`expandPlacements`): its spot, aim and lift (from the floor), the stage it stands
+ * on, and its members' corners.
+ */
+export interface StandingItem extends Pick<PlacedItem, "standsOn"> {
   placement: Pick<PlacedSource, "source" | "x" | "y" | "liftIn" | "aim" | "mirrored">;
   boxes: readonly Pick<PlacedBox, "corners">[];
 }
@@ -24,6 +42,8 @@ export interface RoomWall {
  */
 export interface MemberCoupling {
   surfaces: CoupledSurface[];
+  /** the stages' faces and tops it stands right against */
+  stages: StageContact[];
   /** each by its item's index and its box's index in that item's `boxes` */
   boxes: { item: number; box: number }[];
 }
@@ -34,6 +54,8 @@ export interface MemberCoupling {
  */
 export interface BoxCoupling {
   surfaces: CoupledSurface[];
+  /** the stages' straight faces and the stage top it stands right against (straight faces only: angled ones don't count) */
+  stages: StageContact[];
   boxes: number[];
   members: MemberCoupling[];
 }
@@ -202,18 +224,25 @@ function sharedFace(a: Face, b: Face): { mark: CouplingMark | null } | null {
   return { mark: { from: at(lo), to: at(hi) } };
 }
 
+/** Whether a list holds a stage contact already. */
+const hasContact = (list: readonly StageContact[], c: StageContact) =>
+  list.some((o) => o.stage === c.stage && o.face === c.face);
+
 /**
  * What each box stands right against in `room`, in `items`' order (a mirrored pair as two, `expandPlacements`): the
- * floor (its lift within the coupling gap, `COUPLING_GAP_M`), the ceiling (its top within the gap; none outdoors or
- * open; not marked, as the plan can't show it), each wall a face of it is within the gap of, and each other box with
- * a face within the gap of one of its own and a shared area. Each member box on its own too: the floor only where its
- * lowest corner is within the gap of it (a box stacked on another is not), the ceiling where its top is, and the other member boxes it meets, its own
- * item's too. With the marks the plan draws: each stretch of wall a box meets, and once each upright face two items'
- * boxes share.
+ * floor (its lift within the coupling gap, `COUPLING_GAP_M`), or the top of the stage it stands on (its lift above that
+ * top within the gap); the ceiling (its top within the gap; none outdoors or open; not marked, as the plan can't show
+ * it), each wall a face of it is within the gap of; each straight face of a stage (`stages`) a face of it is within the
+ * gap of, sharing some width and some height; and each other box with a face within the gap of one of its own and a
+ * shared area. Each member box on its own too: the floor or the stage top only where its lowest corner is within the
+ * gap of it (a box stacked on another is not), the ceiling where its top is, the walls and stage faces it meets, and the
+ * other member boxes it meets, its own item's too. With the marks the plan draws: each stretch of wall or stage face a
+ * box meets, and once each upright face two items' boxes share.
  */
 export function spaceCoupling(
   items: readonly StandingItem[],
   room: Pick<CoverageRoom, "widthFt" | "lengthFt" | "ceilingFt" | "outdoors" | "materials">,
+  stages: readonly SpaceStage[] = [],
 ): { boxes: BoxCoupling[]; marks: CouplingMark[] } {
   const walls = roomWalls(room);
   /** the ceiling's height, ft: none outdoors, or open */
@@ -222,17 +251,37 @@ export function spaceCoupling(
   /** whether corners reach the ceiling, within the gap */
   const atCeiling = (corners: readonly RoomPoint[]) =>
     ceilingFt !== null && Math.max(...corners.map((c) => c.z)) >= ceilingFt - GAP_FT;
+  /** each stage's straight faces, with the heights they span, ft */
+  const faces3 = stages.flatMap((stage) =>
+    straightEdges(stage).map((edge) => ({
+      edge,
+      zLo: stageBaseFt(stages, stage),
+      zHi: stageTopFt(stages, stage),
+    })),
+  );
   const marks: CouplingMark[] = [];
   const faces = items.map((it) => it.boxes.map((b) => facesOf(b.corners)));
   const boxes = items.map((it, i): BoxCoupling => {
     const surfaces: CoupledSurface[] = [];
-    if (it.placement.liftIn * METERS_PER_INCH <= COUPLING_GAP_M) surfaces.push(COUPLED_FLOOR);
+    const contacts: StageContact[] = [];
+    /** the level it stands on: the floor, or its stage's top, ft */
+    const stage = stageById(stages, it.standsOn);
+    const levelFt = stage ? stageTopFt(stages, stage) : 0;
+    const top: StageContact | null = stage ? { stage: stage.id, face: STAGE_FACE.top } : null;
+    if (it.placement.liftIn / INCHES_PER_FOOT - levelFt <= GAP_FT) {
+      if (top) contacts.push(top);
+      else surfaces.push(COUPLED_FLOOR);
+    }
     if (atCeiling(it.boxes.flatMap((b) => b.corners))) surfaces.push(COUPLED_CEILING);
     const members = it.boxes.map((b): MemberCoupling => {
       const own: CoupledSurface[] = [];
-      if (Math.min(...b.corners.map((c) => c.z)) <= GAP_FT) own.push(COUPLED_FLOOR);
+      const ownStages: StageContact[] = [];
+      if (Math.min(...b.corners.map((c) => c.z)) <= levelFt + GAP_FT) {
+        if (top) ownStages.push(top);
+        else own.push(COUPLED_FLOOR);
+      }
       if (atCeiling(b.corners)) own.push(COUPLED_CEILING);
-      return { surfaces: own, boxes: [] };
+      return { surfaces: own, stages: ownStages, boxes: [] };
     });
     for (const wall of walls) {
       const { axis, along, low } = WALL_FACE[wall.side];
@@ -257,7 +306,18 @@ export function spaceCoupling(
         });
       }
     }
-    return { surfaces, boxes: [], members };
+    for (const { edge, zLo, zHi } of faces3) {
+      const contact: StageContact = { stage: edge.stage.id, face: edge.face };
+      for (const [box, own] of faces[i].entries())
+        for (const f of own) {
+          const met = stageFaceMet(f, edge, zLo, zHi);
+          if (!met) continue;
+          if (!hasContact(contacts, contact)) contacts.push(contact);
+          if (!hasContact(members[box].stages, contact)) members[box].stages.push(contact);
+          marks.push(met);
+        }
+    }
+    return { surfaces, stages: contacts, boxes: [], members };
   });
   /** whether two boxes' faces meet; each upright face they share marked on `into` */
   const meet = (a: readonly Face[], b: readonly Face[], into: CouplingMark[] | null) => {
@@ -297,6 +357,24 @@ export function spaceCoupling(
   return { boxes, marks };
 }
 
+/**
+ * Where a box's face meets a stage's straight face (`zLo` to `zHi` ft up): its stretch on the plan, or null when the
+ * box's face doesn't look at the stage's, isn't within the gap of it, or shares no width or height with it.
+ */
+function stageFaceMet(f: Face, edge: StageEdge, zLo: number, zHi: number): CouplingMark | null {
+  const { axis } = edge;
+  const along = axis === "x" ? "y" : "x";
+  if (f.normal[axis] * edge.out > -0.5) return null;
+  if (!f.corners.every((c) => Math.abs(c[axis] - edge.at) <= GAP_FT)) return null;
+  const heights = f.corners.map((c) => c.z);
+  if (spanOverlap(Math.min(...heights), Math.max(...heights), zLo, zHi) <= EPS) return null;
+  const span = f.corners.map((c) => c[along]);
+  const lo = Math.max(Math.min(...span), edge.lo),
+    hi = Math.min(Math.max(...span), edge.hi);
+  if (hi - lo <= EPS) return null;
+  return { from: ON_AXIS[axis](edge.at, lo), to: ON_AXIS[axis](edge.at, hi) };
+}
+
 /** A box's extent, ft: low and high on the plan, and its height span. */
 interface Extent {
   lo: FloorPoint;
@@ -324,8 +402,18 @@ const outline = (e: Extent, by: FloorPoint): FloorPoint[] => [
 const quarterTurn = (yawDeg: number) => Math.abs(yawDeg / 90 - Math.round(yawDeg / 90)) < EPS;
 
 /**
+ * What else a drag snaps to and keeps: the straight edges of the stages at the box's level and of the stage it stands
+ * on (`StageEdge`), and whether a spot keeps the layout's rules (a snap that breaks them gives way to the next).
+ */
+export interface SnapStages {
+  edges: readonly StageEdge[];
+  fits: (p: FloorPoint) => boolean;
+}
+
+/**
  * Where a dragged box lands: `grid` (the drag on the quarter-foot grid), except that on each axis a face of it within
- * `reachIn` inches of a wall, or of another box's face (one squared with the room, sharing some height and some width
+ * `reachIn` inches of a wall, of a stage's straight edge (`stages`, sharing some width across the axis), or of another
+ * box's face (one squared with the room, sharing some height and some width
  * across the axis), snaps flush against the nearest. A mirrored pair's two boxes snap together at the center line. Only a box
  * squared with the room snaps, and never into another box: a snap that would overlap one gives way to the next
  * nearest, and with none left the box stays on the grid.
@@ -338,6 +426,7 @@ export function snapFlush(
   at: number,
   walls: readonly RoomWall[],
   reachIn: number,
+  stages?: SnapStages,
 ): FloorPoint {
   const reachFt = reachIn / INCHES_PER_FOOT;
   const dragged = items[at];
@@ -393,6 +482,12 @@ export function snapFlush(
         candidates[axis].push(o.extent.hi[axis] - m.lo[axis], o.extent.lo[axis] - m.hi[axis]);
       }
     }
+    for (const edge of stages?.edges ?? []) {
+      const across = edge.axis === "x" ? "y" : "x";
+      const side = raw[across];
+      if (spanOverlap(side + m.lo[across], side + m.hi[across], edge.lo, edge.hi) <= EPS) continue;
+      candidates[edge.axis].push(edge.at - m.lo[edge.axis], edge.at - m.hi[edge.axis]);
+    }
     // a pair's other box is this one's mirror image: they meet at the center line
     if (placement.mirrored) candidates.x.push(-m.lo.x, -m.hi.x);
   }
@@ -431,5 +526,5 @@ export function snapFlush(
     )
     .filter((t) => t.free < 2)
     .sort((p, q) => p.free - q.free || p.off - q.off);
-  return tries.find((t) => !overlaps(t.p))?.p ?? grid;
+  return tries.find((t) => !overlaps(t.p) && (stages?.fits(t.p) ?? true))?.p ?? grid;
 }

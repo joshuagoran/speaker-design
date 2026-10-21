@@ -249,7 +249,7 @@ export const voiceId = (
 export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
   const cache = new Map<string, Pick<SpacePlacementModel, "response" | "limits">>();
   const items = spaceLayout(design, bandOfPart);
-  const coupling = spaceCoupling(items, design.space.venue.room);
+  const coupling = spaceCoupling(items, design.space.venue.room, design.space.venue.stages);
   const loadings = boxLoadings(items, coupling.boxes);
   const placements = items.map((item, k) => placementModel(item, loadings[k] ?? [], cache));
   const feeds = new Map<string, VoiceFeed>();

@@ -11,6 +11,7 @@ import {
   SHARE_MAX_PARTS,
   SHARE_MAX_PLACEMENTS,
   SHARE_MAX_SPEAKERS,
+  SHARE_MAX_STAGES,
   SHARE_MAX_STACK_NOTES_CHARS,
   SHARE_MAX_STACKS,
   SHARE_MAX_TEXT_CHARS,
@@ -25,7 +26,7 @@ import {
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import { FLOOR_ALPHA, ROOM_MATERIALS } from "../../data/acoustics/materials";
-import { COVERAGE_BAND_IDS } from "../../constants/space";
+import { COVERAGE_BAND_IDS, STAGE_CORNERS, STAGE_SHAPE } from "../../constants/space";
 import { ROOM_SURFACES } from "../acoustics/roomAcoustics";
 import { SINGLE_FREQ_RANGE } from "../acoustics/coverage";
 import type { ShareEnvelope, ShareError } from "../../types";
@@ -125,7 +126,21 @@ const isRoom = (value: unknown) =>
   });
 
 /**
- * Whether a value reads as a venue (`SpaceVenue`): its numbers and spots. Which level reference and balance it names is
+ * Whether a value reads as a stage (`SpaceStage`): its id, shape, 8 corners, height, and what it stands on. Which stage a
+ * riser names is checked as the space opens.
+ */
+const isStage = (value: unknown) =>
+  isRecord(value) &&
+  isText(value.id) &&
+  isOneOf(STAGE_SHAPE, value.shape) &&
+  isListOf(value.corners, STAGE_CORNERS, isPoint) &&
+  value.corners.length === STAGE_CORNERS &&
+  isNum(value.heightFt) &&
+  (value.on === null || isText(value.on));
+
+/**
+ * Whether a value reads as a venue (`SpaceVenue`): its numbers and spots, and its stages (a link from before them has
+ * none). Which level reference and balance it names is
  * checked as the space opens.
  */
 const isVenue = (value: unknown) =>
@@ -133,6 +148,7 @@ const isVenue = (value: unknown) =>
   isRoom(value.room) &&
   isPoint(value.listener) &&
   isPoint(value.alignAt) &&
+  (value.stages === undefined || isListOf(value.stages, SHARE_MAX_STAGES, isStage)) &&
   isNum(value.earFt) &&
   isNum(value.targetDb) &&
   typeof value.levelRef === "string" &&
