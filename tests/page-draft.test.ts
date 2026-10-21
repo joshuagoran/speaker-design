@@ -1,6 +1,7 @@
 // The pages' working designs kept in the browser (src/hooks/usePageDraft): a valid draft is restored, an invalid one is
 // dropped, storage that throws leaves the page on its empty design, and the Speaker, Stack and Space pages read back a
 // changed design.
+import { AUTO_BALANCE_MODE } from "../src/constants/autoBalance";
 import { afterEach, test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./pa-configs";
@@ -175,9 +176,11 @@ test("clearing the drafts brings back each page's default design, and storage th
 });
 
 test("a Space draft with a balance id from before is dropped, and the page starts on the empty space", () => {
-  const { space, stack, speakers } = paLayers();
+  const { space: layers, stack, speakers } = paLayers();
+  // a PA preset may start Flat: the draft needs More bass for the old id to replace
+  const space = { ...layers, venue: { ...layers.venue, balance: AUTO_BALANCE_MODE.moreBass } };
   const kept = JSON.stringify(spaceDraft.toDraft({ space, stacks: [stack], speakers }));
-  const old = kept.replace('"balance":"moreBass"', '"balance":"paMusic"');
+  const old = kept.replace(`"balance":"${AUTO_BALANCE_MODE.moreBass}"`, '"balance":"paMusic"');
   assert.notEqual(old, kept, "the draft carries the old id");
   const items: Record<string, string> = { [PAGE_DRAFT_KEYS.space]: old };
   useStorage(items);
