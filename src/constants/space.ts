@@ -365,15 +365,19 @@ export const SPACE_TEXT = {
     "The space finds each speaker's limit from it. A mirrored pair, and a speaker placed twice, share one figure.",
   /** a band's amp power field: the band (or a passive network's bands) it is for */
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
-  alignment: "Alignment",
-  alignmentHint: "The settings for each box and band, at the level and delay the space asks of it.",
+  alignment: "DSP settings",
+  alignmentHint: "Put these settings in the DSP. Each row is one amp channel.",
   alignmentTip: "A delay, an all-pass filter or moving the box can give a time offset.",
   /** a band's filters, as a row's value: its corner and slope */
   highpass: (filter: string) => `High-pass ${filter}`,
   lowpass: (filter: string) => `Low-pass ${filter}`,
   fullRange: "Full range",
-  /** a band's level, dB (already formatted) */
+  /** a DSP output's total gain, dB (already formatted) */
   gainIs: (db: string) => `${GAIN} ${db} dB`,
+  /** a passive row's Pads in the box: each band and its Pad, dB (already formatted) */
+  padsAre: (pads: readonly string[]) => `Pads in the box: ${pads.join(", ")}`,
+  /** one band's Pad, as `padsAre` lists it */
+  padIs: (band: string, db: string) => `${band} ${db} dB`,
   noDelay: "No delay",
   /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (in) */
   delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,

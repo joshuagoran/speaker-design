@@ -18,8 +18,8 @@ const filtersText = (r: Pick<AlignmentRow, "highpass" | "lowpass">) =>
     .join(", ") || SPACE_TEXT.fullRange;
 
 /**
- * One placed speaker's alignment rows, one row per box and band (`DetailList`): the box and band name, and under it the
- * filters, level and delay.
+ * One placed speaker's DSP rows, one row per DSP output (`DetailList`): the box and band name, and under it the
+ * filters, total Gain and delay; a passive row lists its Pads in the box under that.
  */
 export function AlignmentList({ rows }: { rows: readonly AlignmentRow[] }) {
   /** a stack's members are numbered; a speaker alone isn't */
@@ -29,7 +29,18 @@ export function AlignmentList({ rows }: { rows: readonly AlignmentRow[] }) {
       rows={rows.map((r) => ({
         id: `${r.member}/${r.box}/${r.bands.map((b) => b.id).join("+")}`,
         title: `${numbered ? `${r.member + 1}. ` : ""}${r.box}: ${r.bands.map((b) => b.name).join(" + ")}`,
-        detail: `${filtersText(r)} · ${SPACE_TEXT.gainIs(formatSigned(r.levelDb))} · ${delayText(r.delayMs)}`,
+        detail: (
+          <>
+            <div>{`${filtersText(r)} · ${SPACE_TEXT.gainIs(formatSigned(r.gainDb))} · ${delayText(r.delayMs)}`}</div>
+            {r.pads.length > 0 && (
+              <div>
+                {SPACE_TEXT.padsAre(
+                  r.pads.map((p) => SPACE_TEXT.padIs(p.name, formatSigned(p.padDb))),
+                )}
+              </div>
+            )}
+          </>
+        ),
       }))}
     />
   );
