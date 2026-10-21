@@ -45,6 +45,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
         SPACE_DETAILS.oneMeter(SPACE_LEVEL_REF_PLACE.stacks),
       ],
     ],
+    [SPACE_DETAILS.stages, [...SPACE_DETAILS.stageLines]],
     [
       SPACE_DETAILS.boxes,
       [

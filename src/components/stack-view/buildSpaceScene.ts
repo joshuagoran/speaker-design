@@ -1,4 +1,5 @@
-// A Space in the 3D view: the room (its floor in the coverage map's colors, its walls and ceiling), each box as the
+// A Space in the 3D view: the room (its floor in the coverage map's colors, its walls and ceiling), each stage as a
+// solid from its base to its top, each box as the
 // Stack page draws it (buildMembersScene) at its spot, lift, aim, side, and roll as the space model places it
 // (lib/speaker/spaceLayout `placementFrame`), the listener, the alignment point, and each driver's beam (lib/speaker/
 // spaceBeams) as its aim line, its dashed −6 dB edge lines, and its fainter dotted −3 dB edge lines, clipped at the
@@ -16,6 +17,7 @@ import { INCHES_PER_FOOT } from "../../constants/units";
 import { ROOM_SURFACE_NAME } from "../../constants/space";
 import type { PlacedItem, RoomPoint, placementFrame } from "../../lib/speaker/spaceLayout";
 import type { SpaceBeam } from "../../lib/speaker/spaceBeams";
+import type { StageSolid } from "../../lib/speaker/spaceStages";
 import type {
   CoverageGrid,
   CoverageGridView,
@@ -28,6 +30,8 @@ import type {
 /** What the scene draws. */
 export interface SpaceSceneProps {
   room: Pick<CoverageRoom, "widthFt" | "lengthFt" | "ceilingFt" | "outdoors">;
+  /** the stages and risers, each as a solid */
+  stages: readonly StageSolid[];
   /** each box as the model stands it (a mirrored pair is two), with what it places (null: missing) */
   items: readonly Pick<PlacedItem, "placement" | "stack" | "rollAxisIn">[];
   listener: FloorPoint;
@@ -322,6 +326,26 @@ function alignMark(at: FloorPoint, earFt: number, lineColor: string): THREE.Grou
   return mark;
 }
 
+/**
+ * A stage as a solid: its outline pushed up from its base to its top. The shape is drawn on the room's plan (x across,
+ * y down the room) and turned so its plan's y runs down the room (the scene's z) and its depth runs down from its top.
+ */
+function stageSolid(stage: StageSolid, color: string): THREE.Mesh {
+  const shape = new THREE.Shape(
+    stage.corners.map((c) => new THREE.Vector2(c.x * INCHES_PER_FOOT, c.y * INCHES_PER_FOOT)),
+  );
+  const mesh = new THREE.Mesh(
+    new THREE.ExtrudeGeometry(shape, {
+      depth: (stage.topFt - stage.baseFt) * INCHES_PER_FOOT,
+      bevelEnabled: false,
+    }),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.9 }),
+  );
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.y = stage.topFt * INCHES_PER_FOOT;
+  return mesh;
+}
+
 /** The ids the scene key gives the grids it has seen, so a new grid rebuilds the scene and the same one doesn't. */
 const gridIds = new WeakMap<CoverageGrid, number>();
 let nextGridId = 0;
@@ -336,6 +360,7 @@ export function spaceSceneKey(props: SpaceSceneProps): string {
   const { room, items, view } = props;
   return JSON.stringify({
     room: [room.widthFt, room.lengthFt, room.ceilingFt, room.outdoors],
+    stages: props.stages,
     items: items.map(({ placement: p, stack }) => ({
       pose: [p.x, p.y, p.liftIn, p.aim, p.image, p.upsideDown],
       stack: stack ? membersSceneKey({ ...stack, cutaway: false }) : null,
@@ -382,6 +407,9 @@ export function buildSpaceScene(props: SpaceSceneProps): THREE.Group {
     edges.position.set(0, h / 2, l / 2);
     root.add(edges);
   }
+  // the stages, a riser darker than a floor stage
+  for (const stage of props.stages)
+    root.add(stageSolid(stage, stage.riser ? pal.muted : pal.faint));
   const boxes = new THREE.Group();
   for (const { placement, stack, rollAxisIn } of props.items) {
     if (!stack) continue;

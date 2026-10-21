@@ -157,6 +157,9 @@ export const STAGE_ON_EDGE_FT = 0.02;
 /** The Add stage/riser choice that puts a new stage on the floor (a riser's choice is its stage's id). */
 export const STAGE_ON_FLOOR = "floor";
 
+/** A new stage's id: its number, unique in its space. */
+export const stageId = (n: number) => `stage-${n}`;
+
 /** The DOM id of a stage's item in the Stages list, so a pick on the map can scroll it into view. */
 export const stageDomId = (id: string) => `space-stage-${id}`;
 

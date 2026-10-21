@@ -28,6 +28,7 @@ import {
   STAGE_MIN_SIDE_FT,
   STAGE_SHAPE,
   STAGE_SPOT_STEP_FT,
+  stageId,
 } from "../../constants/space";
 import { INCHES_PER_FOOT } from "../../constants/units";
 
@@ -51,21 +52,27 @@ export const placedPlans = (placements: readonly SpacePlacement[], plans: SpotPl
     return plan ? movedPlan(plan, p) : [];
   });
 
-/** The rules a layout breaks: each stage (by id) and box (by its index) that breaks one. */
-function broken(layout: Layout, plans: SpotPlans): Set<string> {
+/** The rules a layout breaks: the stages (by id) and the boxes (by index) that break one. */
+function broken(layout: Layout, plans: SpotPlans) {
   const { stages, room } = layout.venue;
-  const out = new Set<string>();
-  for (const s of stages) if (!stageKeepsRules(stages, room, s)) out.add(`stage:${s.id}`);
-  placedPlans(layout.placements, plans).forEach((plan, i) => {
-    if (!boxFits(stages, plan)) out.add(`box:${i}`);
-  });
-  return out;
+  return {
+    stages: new Set(stages.filter((s) => !stageKeepsRules(stages, room, s)).map((s) => s.id)),
+    boxes: new Set(
+      placedPlans(layout.placements, plans).flatMap((plan, i) =>
+        boxFits(stages, plan) ? [] : [i],
+      ),
+    ),
+  };
 }
 
 /** Whether `after` breaks no rule `before` kept (a layout that broke one already can still change elsewhere). */
 export function keepsRules(before: Layout, after: Layout, plans: SpotPlans): boolean {
-  const was = broken(before, plans);
-  return [...broken(after, plans)].every((k) => was.has(k));
+  const was = broken(before, plans),
+    now = broken(after, plans);
+  return (
+    [...now.stages].every((id) => was.stages.has(id)) &&
+    [...now.boxes].every((i) => was.boxes.has(i))
+  );
 }
 
 /** `after` when it keeps the rules `before` kept, else `before`. */
@@ -81,8 +88,8 @@ const withStages = <L extends Layout>(layout: L, stages: readonly SpaceStage[]):
 /** A new stage's id: one no stage in the list has. */
 function newStageId(stages: readonly SpaceStage[]): SpaceStage["id"] {
   let n = stages.length + 1;
-  while (stages.some((s) => s.id === `stage-${n}`)) n++;
-  return `stage-${n}`;
+  while (stages.some((s) => s.id === stageId(n))) n++;
+  return stageId(n);
 }
 
 /**
@@ -286,11 +293,20 @@ function snapTo(v: number, lines: readonly number[]): number {
   return best;
 }
 
-/** The lines a dragged stage's corners snap to, ft: the walls, the other stages' corners, and the boxes' faces. */
+/**
+ * The lines a dragged stage's corners snap to, ft: the walls, the other stages' corners, and the faces of the boxes
+ * that don't stand on it.
+ */
 function snapLines(layout: Layout, skip: ReadonlySet<SpaceStage["id"]>, plans: SpotPlans) {
   const { stages, room } = layout.venue;
   const others = stages.filter((s) => !skip.has(s.id)).flatMap((s) => s.corners);
-  const boxes = placedPlans(layout.placements, plans).flatMap((plan) => plan.flat());
+  // the boxes on the stages that move are left out: they move with them
+  const boxes = placedPlans(layout.placements, plans)
+    .filter((plan) => {
+      const on = plan.length ? stageAt(stages, planCenter(plan, { x: 0, y: 0 })) : null;
+      return !on || !skip.has(on.id);
+    })
+    .flatMap((plan) => plan.flat());
   return {
     x: [-room.widthFt / 2, room.widthFt / 2, ...others.map((p) => p.x), ...boxes.map((p) => p.x)],
     y: [0, room.lengthFt, ...others.map((p) => p.y), ...boxes.map((p) => p.y)],
@@ -325,25 +341,23 @@ export function withStageDragged<L extends Layout>(
   const sy = (v: number) => (drag.snaps ? snapTo(quarter(v), lines.y) : v);
   let after: L;
   if (drag.handle === null) {
-    // the move that puts a corner on a line, the nearest such corner on each axis
+    // the move that puts a corner on a line, the nearest such corner on each axis (one on a line already stays)
     let by = drag.by;
     if (drag.snaps) {
-      let gapX = SNAP_FT,
-        gapY = SNAP_FT;
-      const snapped = { x: quarter(by.x), y: quarter(by.y) };
-      for (const p of stage.corners) {
-        const ox = snapTo(p.x + by.x, lines.x) - p.x,
-          oy = snapTo(p.y + by.y, lines.y) - p.y;
-        if (ox !== by.x && Math.abs(ox - by.x) < gapX) {
-          gapX = Math.abs(ox - by.x);
-          snapped.x = ox;
-        }
-        if (oy !== by.y && Math.abs(oy - by.y) < gapY) {
-          gapY = Math.abs(oy - by.y);
-          snapped.y = oy;
-        }
-      }
-      by = snapped;
+      const axis = (k: keyof FloorPoint) => {
+        let best: number | null = null,
+          gap = SNAP_FT;
+        for (const p of stage.corners)
+          for (const l of lines[k]) {
+            const off = Math.abs(l - (p[k] + by[k]));
+            if (off < gap || (off === gap && best === null)) {
+              gap = off;
+              best = l - p[k];
+            }
+          }
+        return best ?? quarter(by[k]);
+      };
+      by = { x: axis("x"), y: axis("y") };
     }
     const moved = withFamilyMoved(start, stage, by, plans);
     const corners = movedOutline(stage.corners, by);
