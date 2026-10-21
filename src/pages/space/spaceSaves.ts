@@ -173,7 +173,7 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
         levelDb: plainFeed(p.levelDb),
         delayMs: plainFeed(p.delayMs),
       })),
-      venue: { ...venue, systemDb: venue.systemDb ?? 0, stages: venue.stages ?? [] },
+      venue: { ...venue, systemDb: Math.min(0, venue.systemDb ?? 0), stages: venue.stages ?? [] },
     },
     stacks: stacks.map((s) => ({ ...s, members: s.members.map(readMember) })),
     speakers: speakers.map(readSpeakerCopy),

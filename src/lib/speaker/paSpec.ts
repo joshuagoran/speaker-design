@@ -388,7 +388,7 @@ function towerSpeaker(cfg: PaDesign, design: SpecIdentity): SpeakerSpec {
 /**
  * The PA design's stack: the sub with the top on it (a gap, or the pole's spacer), the top on its stand beside the sub
  * (satellite), or the tower alone. The crossover between the sub and the top is each member's. The sub's delay is
- * auto (`AUTO_DELAY`): in phase with the top's mid at the crossover, as the Space page aligns it, the top waiting
+ * auto (`AUTO_DELAY`): in phase with the top's mid at the crossover, the top waiting
  * where the sub has to play early. The top sits `tilt` below the sub, as the tower's mid band does.
  */
 function paStack(cfg: PaDesign, design: SpecIdentity): StackSpec {
