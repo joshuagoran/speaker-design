@@ -136,7 +136,9 @@ const isVenue = (value: unknown) =>
   isNum(value.earFt) &&
   isNum(value.targetDb) &&
   typeof value.levelRef === "string" &&
-  typeof value.balance === "string";
+  typeof value.balance === "string" &&
+  // optional: a link from before Auto delay and level could be turned off has none
+  isOptionalFlag(value.autoDelayLevel);
 
 /** Whether a value reads as a coverage view (`SpaceView`): a known band, and a frequency in the band picker's range. */
 const isView = (value: unknown) =>

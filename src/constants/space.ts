@@ -265,6 +265,14 @@ export const SPACE_TEXT = {
   delayClamped: "This fill arrives late even with no delay. Move it nearer to its area.",
   delayNoMain: "No main to line up with. Add a placement that is not a fill.",
   feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
+  /** the Placements section's Auto delay and level setting: its label, its choices, and its tooltip */
+  autoDelayLevel: "Auto delay and level",
+  autoDelayLevelOn: "On",
+  autoDelayLevelOff: "Off",
+  autoDelayLevelTip:
+    "On: Auto delays line the mains up, and fills play after them. Off: each placement plays the level and delay you type.",
+  /** a placement's level with Auto delay and level off */
+  plainFeedTip: "A level and a delay on this placement's feed.",
   ampPower: "Amp power",
   ampPowerHint: AMP_POWER_TIP,
   ampPowerTip:

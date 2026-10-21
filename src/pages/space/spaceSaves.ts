@@ -11,7 +11,7 @@ import type {
 } from "../../types";
 import { isSavedSpeakerShape } from "../../lib/speaker/speakerSaves";
 import { readSpeakerCopy } from "../../lib/speaker/speakerSaves";
-import { homeVenue } from "../../lib/speaker/specParts";
+import { homeVenue, usesAutoDelayLevel } from "../../lib/speaker/specParts";
 import { usedParts } from "../../lib/speaker/usedParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
@@ -112,11 +112,14 @@ const isPlacements = (value: unknown): value is SavedPlacement[] =>
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
   Object.values(ids).some((id) => id === value);
 
+/** A venue as a save holds it: one from before Auto delay and level could be turned off has no `autoDelayLevel`. */
+type SavedVenue = Omit<SpaceVenue, "autoDelayLevel"> & Partial<Pick<SpaceVenue, "autoDelayLevel">>;
+
 /**
  * Whether a value reads as a venue: its room, listener, alignment point, ear height, target, where it is measured and
- * balance.
+ * balance, and maybe whether Auto delay and level are on.
  */
-const isVenue = (value: unknown): value is SpaceVenue =>
+const isVenue = (value: unknown): value is SavedVenue =>
   hasFields(value, {
     room: "object",
     listener: "object",
@@ -127,7 +130,8 @@ const isVenue = (value: unknown): value is SpaceVenue =>
     balance: "string",
   }) &&
   isOneOf(COVERAGE_LEVEL_REF, Reflect.get(value, "levelRef")) &&
-  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance"));
+  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance")) &&
+  ["undefined", "boolean"].includes(typeof Reflect.get(value, "autoDelayLevel"));
 
 /**
  * A saved space opened: the document's id and name, its placements and venue, and its stacks and speakers;
@@ -159,7 +163,8 @@ export function spaceFromSaved(c: SavedConfig): SpaceDesign | null {
         upsideDown: p.upsideDown ?? false,
         invertPolarity: p.invertPolarity ?? false,
       })),
-      venue,
+      // one from before the setting: on where it uses Auto or a fill
+      venue: { ...venue, autoDelayLevel: venue.autoDelayLevel ?? usesAutoDelayLevel(placements) },
     },
     stacks: stacks.map((s) => ({ ...s, members: s.members.map(readMember) })),
     speakers: speakers.map(readSpeakerCopy),

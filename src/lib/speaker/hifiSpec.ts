@@ -35,6 +35,7 @@ import {
   NO_HARDWARE,
   NO_FILTERS,
   homeVenue,
+  usesAutoDelayLevel,
   lrFilter,
   spacePlacement,
   speakerIdentity,
@@ -260,11 +261,14 @@ export function layersFromHifi(
       ...design,
       placements: [placement],
       // the seat is `listeningSeat.y` back from the speakers
-      venue: homeVenue(
-        state.speakerSpacingFt,
-        { x: state.listeningSeat.x, y: state.distanceToWallFt + state.listeningSeat.y },
-        state.earHeightIn / INCHES_PER_FOOT,
-      ),
+      venue: {
+        ...homeVenue(
+          state.speakerSpacingFt,
+          { x: state.listeningSeat.x, y: state.distanceToWallFt + state.listeningSeat.y },
+          state.earHeightIn / INCHES_PER_FOOT,
+        ),
+        autoDelayLevel: usesAutoDelayLevel([placement]),
+      },
     },
   };
 }

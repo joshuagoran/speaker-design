@@ -74,6 +74,7 @@ import {
   speakerIdentity,
   stackMember,
   stuffingPctOf,
+  usesAutoDelayLevel,
 } from "./specParts";
 
 /** The sub's round tubes as a round port: `nt` tubes of `dia`, `len` long, with the elbows the model takes. */
@@ -441,6 +442,7 @@ export function paVenue(floor: PaFloor): SpaceVenue {
     // its target in the sub band, measured where the floor says, under the PA music balance
     levelRef: floor.levelRef,
     balance: AUTO_BALANCE_MODE.moreBass,
+    autoDelayLevel: false,
   };
 }
 
@@ -485,7 +487,7 @@ export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor
     space: {
       ...design,
       placements,
-      venue: paVenue(floor),
+      venue: { ...paVenue(floor), autoDelayLevel: usesAutoDelayLevel(placements) },
     },
   };
 }

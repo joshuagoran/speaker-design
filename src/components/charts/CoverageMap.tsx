@@ -38,6 +38,8 @@ const HANDLE_FT = 5;
 /** how far the horn's coverage edges are drawn, ft */
 const EDGE_FT = 30;
 const PAD = { l: 30, r: 10, t: 24, b: 24 };
+/** A box's aim point's open circle on the map, px radius. */
+const AIM_POINT_R_PX = 4;
 /** A coupled face's bar on the map, px wide. */
 const COUPLING_BAR_PX = 5;
 
@@ -63,13 +65,15 @@ type Drag =
 
 /**
  * A box the map draws, at its spot and aim (ft, degrees): its label, its footprint (in), the horizontal coverage of its
- * horn to draw (null: none), and whether it has a handle to turn it.
+ * horn to draw (null: none), whether it has a handle to turn it, and where its axis meets ear height or a wall (absent:
+ * not drawn).
  */
 export interface MapBox extends FloorPlacement {
   label: string;
   footprint: CoverageStack["footprint"];
   covH: number | null;
   turnable: boolean;
+  aimAt?: FloorPoint;
 }
 
 /**
@@ -420,6 +424,40 @@ export function CoverageMap({
               : [],
           )}
         </g>
+        {boxes.flatMap((b, i) => {
+          const at = b.aimAt;
+          if (!at) return [];
+          return [
+            <g key={`aim${i}`} pointerEvents="none">
+              <line
+                x1={px(b.x)}
+                y1={py(b.y)}
+                x2={px(at.x)}
+                y2={py(at.y)}
+                stroke={ON_DATA.ink}
+                strokeWidth="1"
+                strokeDasharray="2 3"
+              />
+              {/* an open ring, white on an ink edge, so it reads on every level's color */}
+              <circle
+                cx={px(at.x)}
+                cy={py(at.y)}
+                r={AIM_POINT_R_PX}
+                fill="none"
+                stroke={ON_DATA.ink}
+                strokeWidth="3"
+              />
+              <circle
+                cx={px(at.x)}
+                cy={py(at.y)}
+                r={AIM_POINT_R_PX}
+                fill="none"
+                stroke={ON_DATA.white}
+                strokeWidth="1.5"
+              />
+            </g>,
+          ];
+        })}
         {quiet && (
           <text
             x={PAD.l + w / 2}

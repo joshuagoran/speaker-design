@@ -82,6 +82,7 @@ import { designStartOptions } from "../stack/stackPresets";
 import { byId } from "../../lib/tables";
 import { spaceAlignment } from "../../lib/speaker/spaceAlignment";
 import { ampPowerGroups } from "../../lib/speaker/spaceHardware";
+import { aimPoint } from "../../lib/speaker/solveFeeds";
 
 interface Props {
   space: SpacePlanner;
@@ -95,6 +96,12 @@ interface Props {
 
 /** The starts "New from…" lists: the empty space, then the presets. */
 const START_OPTIONS = designStartOptions(SPACE_TEXT.empty);
+
+/** The Auto delay and level setting's choices. */
+const AUTO_DELAY_LEVEL_OPTIONS = [
+  [true, SPACE_TEXT.autoDelayLevelOn],
+  [false, SPACE_TEXT.autoDelayLevelOff],
+] as const;
 
 /** The 3D view's height under the map: on a phone, and in a narrow results pane. */
 const VIEW_HEIGHT = "h-[320px] md:h-[clamp(340px,55vh,620px)]";
@@ -212,7 +219,8 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
     ];
   };
   /** the boxes the map draws: a mirrored placement is two, labeled with its number and its side ("1L", "1R") */
-  const boxes: MapBox[] = model.placements.map(({ item }) => {
+  const boxes: MapBox[] = model.placements.map((box) => {
+    const { item } = box;
     const sizes = item.boxes.map((b) => speakerLayout(b.speaker.cabinet).size);
     const horn = item.drivers.map(driverPattern).find((p) => p.horn)?.horn;
     return {
@@ -226,6 +234,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
       },
       covH: horn ? horn.covH : null,
       turnable: true,
+      aimAt: aimPoint(box, venue),
     };
   });
   const bandName =
@@ -523,6 +532,14 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
           {section(
             "placements",
             <>
+              <ToggleGroup
+                label={
+                  <Tooltip tip={SPACE_TEXT.autoDelayLevelTip}>{SPACE_TEXT.autoDelayLevel}</Tooltip>
+                }
+                value={venue.autoDelayLevel}
+                onChange={space.setAutoDelayLevel}
+                options={AUTO_DELAY_LEVEL_OPTIONS}
+              />
               <SelectField
                 label={SPACE_TEXT.addPlacement}
                 options={placeList}
@@ -569,6 +586,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     afterRemoved(k);
                   }}
                   solved={model.solved[k]}
+                  autoDelayLevel={venue.autoDelayLevel}
                   coupledWith={coupledWith(k)}
                 />
               ))}

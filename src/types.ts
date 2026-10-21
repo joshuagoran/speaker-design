@@ -2215,7 +2215,12 @@ export interface SpaceVenue {
    * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
    * or the PA music tilt (lib/speaker/autoBalance).
    */
-  balance: AutoBalanceMode;
+  balance: AutoBalanceMode /**
+   * whether the solver sets the Auto delays and levels and the fills work as fills (lib/speaker/solveFeeds); off, every
+   * placement plays its typed level and delay. A save or link from before it has none (lib/speaker/specParts
+   * `usesAutoDelayLevel`).
+   */;
+  autoDelayLevel: boolean;
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them. */
