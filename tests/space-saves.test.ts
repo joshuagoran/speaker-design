@@ -17,7 +17,7 @@ import {
   spaceSnapshot,
 } from "../src/pages/space/spaceSaves";
 import { fittedSpace, withStack } from "../src/pages/space/useSpace";
-import { AUTO_DELAY, AUTO_LEVEL, SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
+import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { SEATED_EAR_FT } from "../src/constants/space";
 import type { SavedConfig, SpaceDesign } from "../src/types";
 
@@ -194,37 +194,4 @@ test("space saves: a venue whose level reference or balance is not a known one i
   // a draft in the browser reads the same way: dropped
   assert.ok(spaceDraft.fromDraft(withVenue({})));
   assert.equal(spaceDraft.fromDraft(withVenue({ balance: "paMusic" })), null);
-});
-
-test("space saves: one without Auto delay and level opens with it on only where a placement uses Auto or is a fill", () => {
-  const design = paSpace();
-  const [placement] = design.space.placements;
-  /** the design's save document with these placements and no Auto delay and level setting */
-  const old = (placements: readonly object[]): SavedConfig => {
-    const { autoDelayLevel: _autoDelayLevel, ...venue } = design.space.venue;
-    return { ...asDoc(design, "doc1", "Club"), space: { ...design.space, placements, venue } };
-  };
-  const opened = (placements: readonly object[]) =>
-    spaceFromSaved(old(placements))?.space.venue.autoDelayLevel;
-  assert.equal(opened([placement]), false);
-  assert.equal(opened([{ ...placement, delayMs: AUTO_DELAY }]), true);
-  assert.equal(opened([{ ...placement, levelDb: AUTO_LEVEL }]), true);
-  assert.equal(opened([{ ...placement, fill: true }]), true);
-  // a save that has it keeps it, and a new space starts with it off
-  const kept = (on: boolean) => ({
-    ...design,
-    space: { ...design.space, venue: { ...design.space.venue, autoDelayLevel: on } },
-  });
-  assert.equal(spaceFromSaved(asDoc(kept(true), "doc1", "Club"))?.space.venue.autoDelayLevel, true);
-  assert.equal(
-    spaceFromSaved(asDoc(kept(false), "doc1", "Club"))?.space.venue.autoDelayLevel,
-    false,
-  );
-  assert.equal(emptySpace().space.venue.autoDelayLevel, false);
-  // a preset follows the same rule: the PA design's Auto delays turn it on
-  assert.equal(
-    layersFromPa(paDesign(configs[0]), { id: "draft", name: "PA" }, PA_FLOOR).space.venue
-      .autoDelayLevel,
-    true,
-  );
 });

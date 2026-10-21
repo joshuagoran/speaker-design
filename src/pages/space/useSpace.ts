@@ -44,7 +44,7 @@ import {
   type DesignStart,
 } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
-import { listenerArrivals, solveFeeds, withTypedFeeds } from "../../lib/speaker/solveFeeds";
+import { listenerArrivals, solveFeeds } from "../../lib/speaker/solveFeeds";
 import { withSpeaker } from "../stack/useStack";
 import type { RoomActions } from "../../components/ui/RoomFields";
 import { SPACES_COLLECTION, SPACE_ITEM } from "../../constants/speakerSpec";
@@ -282,20 +282,14 @@ export function referenceAtLimit(
 const systemGain = (target: number, atLimit: number | null) =>
   atLimit !== null ? Math.min(0, target - atLimit) : 0;
 
-/** The space with an item placed at the new spot; with Auto delay and level off, its delay is typed at 0. */
-const withPlaced = (d: SpaceDesign, item: SpacePlacement["item"]): SpaceDesign => {
-  const placement = spacePlacement(NEW_SPOT, item, 0);
-  return {
-    ...d,
-    space: {
-      ...d.space,
-      placements: [
-        ...d.space.placements,
-        d.space.venue.autoDelayLevel ? placement : { ...placement, delayMs: 0 },
-      ],
-    },
-  };
-};
+/** The space with an item placed at the new spot. */
+const withPlaced = (d: SpaceDesign, item: SpacePlacement["item"]): SpaceDesign => ({
+  ...d,
+  space: {
+    ...d.space,
+    placements: [...d.space.placements, spacePlacement(NEW_SPOT, item, 0)],
+  },
+});
 
 /** The space with a stack placed: its copy in the space (`withStack`), at the new spot. */
 export function withStackPlaced(d: SpaceDesign, saved: StackDesign): SpaceDesign {
@@ -354,20 +348,14 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   );
   /** every Auto delay and level, solved from the layout (the listener doesn't move them) */
   const solved = useMemo(
-    () =>
-      solveFeeds(laidOut, {
-        alignAt: venue.alignAt,
-        earFt: venue.earFt,
-        room,
-        autoDelayLevel: venue.autoDelayLevel,
-      }),
-    [laidOut, venue.alignAt, venue.earFt, room, venue.autoDelayLevel],
+    () => solveFeeds(laidOut, { alignAt: venue.alignAt, earFt: venue.earFt, room }),
+    [laidOut, venue.alignAt, venue.earFt, room],
   );
   const model = useMemo(() => withSolved(laidOut, solved), [laidOut, solved]);
   /** each placement's arrival at the listener against the latest main */
   const arrivals = useMemo(
-    () => listenerArrivals(model, venue.listener, venue),
-    [model, venue.listener, venue.earFt, venue.autoDelayLevel],
+    () => listenerArrivals(model, venue.listener, venue.earFt),
+    [model, venue.listener, venue.earFt],
   );
   const req = useMemo<Omit<SpaceGridRequest, "cols">>(
     () => spaceGridRequest(model, { room, earFt: venue.earFt }, band, freqHz, COVERAGE_GRID_COLS),
@@ -698,16 +686,6 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       if (box)
         editPlacements((list) => withBoxAimed(list, box, p, stepped ? AIM_SNAP_DEG : undefined));
     },
-    /**
-     * turns Auto delay and level on or off; off, each Auto delay and level is typed at its solved value, so the sound
-     * does not change
-     */
-    setAutoDelayLevel: (on: boolean) =>
-      editSpace((s) => ({
-        ...s,
-        placements: on ? s.placements : withTypedFeeds(s.placements, model.solved),
-        venue: { ...s.venue, autoDelayLevel: on },
-      })),
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /** moves the alignment point, where the mains arrive together */
     moveAlignAt: (p: FloorPoint) => editVenue((v) => ({ ...v, alignAt: onFloor(p, v.room) })),

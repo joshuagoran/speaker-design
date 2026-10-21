@@ -23,7 +23,6 @@ import { defaultBraceStyleNear } from "../build/bracing";
 import { PA_PANEL_TARGET_HZ } from "../build/boxBracing";
 import {
   AUTO_DELAY,
-  AUTO_LEVEL,
   CABINET_CONSTRUCTION,
   CABINET_TOP,
   CHAMBER_LOAD,
@@ -119,14 +118,6 @@ export const spacePlacement = (
   upsideDown: false,
 });
 
-/**
- * Whether a space needs Auto delay and level on: a placement has an Auto delay or level, or is a fill. A save, link,
- * or preset without the setting opens with it.
- */
-export const usesAutoDelayLevel = (
-  placements: readonly Pick<SpacePlacement, "delayMs" | "levelDb" | "fill">[],
-) => placements.some((p) => p.delayMs === AUTO_DELAY || p.levelDb === AUTO_LEVEL || p.fill);
-
 /** The middle of a room's floor, ft: where a new space's alignment point starts. */
 export const roomCenter = (room: Pick<SpaceVenue["room"], "lengthFt">): FloorPoint => ({
   x: 0,
@@ -157,6 +148,5 @@ export function homeVenue(
     // measured as the audience average, the same target in every band
     levelRef: COVERAGE_LEVEL_REF.audience,
     balance: AUTO_BALANCE_MODE.flat,
-    autoDelayLevel: false,
   };
 }

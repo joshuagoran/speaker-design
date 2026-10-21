@@ -64,7 +64,7 @@ const isFace = (value: unknown) => isRecord(value) && isNum(value.xIn) && isNum(
 const isFeed = (value: unknown, auto: string) => isNum(value) || value === auto;
 
 /** Whether a value is a yes or no a link from before it was added may lack (`invertPolarity`). */
-export const isOptionalFlag = (value: unknown) => value === undefined || typeof value === "boolean";
+const isOptionalFlag = (value: unknown) => value === undefined || typeof value === "boolean";
 
 /** Whether a value is one of a const record's values (a text that names an id the app has). */
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
@@ -136,9 +136,7 @@ const isVenue = (value: unknown) =>
   isNum(value.earFt) &&
   isNum(value.targetDb) &&
   typeof value.levelRef === "string" &&
-  typeof value.balance === "string" &&
-  // optional: a link from before Auto delay and level could be turned off has none
-  isOptionalFlag(value.autoDelayLevel);
+  typeof value.balance === "string";
 
 /** Whether a value reads as a coverage view (`SpaceView`): a known band, and a frequency in the band picker's range. */
 const isView = (value: unknown) =>

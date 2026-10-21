@@ -97,12 +97,6 @@ interface Props {
 /** The starts "New from…" lists: the empty space, then the presets. */
 const START_OPTIONS = designStartOptions(SPACE_TEXT.empty);
 
-/** The Auto delay and level setting's choices. */
-const AUTO_DELAY_LEVEL_OPTIONS = [
-  [true, SPACE_TEXT.autoDelayLevelOn],
-  [false, SPACE_TEXT.autoDelayLevelOff],
-] as const;
-
 /** The 3D view's height under the map: on a phone, and in a narrow results pane. */
 const VIEW_HEIGHT = "h-[320px] md:h-[clamp(340px,55vh,620px)]";
 /**
@@ -532,14 +526,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
           {section(
             "placements",
             <>
-              <ToggleGroup
-                label={
-                  <Tooltip tip={SPACE_TEXT.autoDelayLevelTip}>{SPACE_TEXT.autoDelayLevel}</Tooltip>
-                }
-                value={venue.autoDelayLevel}
-                onChange={space.setAutoDelayLevel}
-                options={AUTO_DELAY_LEVEL_OPTIONS}
-              />
               <SelectField
                 label={SPACE_TEXT.addPlacement}
                 options={placeList}
@@ -586,7 +572,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     afterRemoved(k);
                   }}
                   solved={model.solved[k]}
-                  autoDelayLevel={venue.autoDelayLevel}
                   coupledWith={coupledWith(k)}
                 />
               ))}

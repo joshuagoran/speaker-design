@@ -10,8 +10,7 @@
 //   to come from the mains (the precedence effect). Never below 0.
 // - Auto level: it plays at that main's level there, in FILL_ALIGN_BAND (the voice range a fill is there for).
 // A mirrored pair is one placement: its two boxes share one delay and one level.
-// With the venue's Auto delay and level off, every placement plays its typed values and a fill is a plain box.
-import type { FloorPoint, PairSide, SpacePlacement, SpaceVenue } from "../../types";
+import type { FloorPoint, PairSide, SpaceVenue } from "../../types";
 import {
   spaceGridRequest,
   spaceLevelAt,
@@ -57,8 +56,8 @@ export interface SolvedFeed {
   levelAuto: boolean;
 }
 
-/** The venue the solver reads: the alignment point, the ear height, the room, and whether Auto delay and level are on. */
-export type SolverVenue = Pick<SpaceVenue, "alignAt" | "earFt" | "room" | "autoDelayLevel">;
+/** The venue the solver reads: the alignment point, the ear height and the room. */
+export type SolverVenue = Pick<SpaceVenue, "alignAt" | "earFt" | "room">;
 
 /** A floor point at ear height, ft. */
 const atEar = (p: FloorPoint, earFt: number): RoomPoint => ({ x: p.x, y: p.y, z: earFt });
@@ -81,27 +80,6 @@ export const typedFeed = (
   levelDb: typedLevel(p) ?? 0,
   levelAuto: typedLevel(p) === null,
 });
-
-/** The feed a placement plays with Auto delay and level off: its typed delay and level, Auto ones at 0. */
-const plainFeed = (p: Pick<SpacePlacementModel["item"]["placement"], "delayMs" | "levelDb">) => ({
-  ...typedFeed(p),
-  delayAuto: false,
-  levelAuto: false,
-});
-
-/**
- * The placements as Auto delay and level turned off leaves them: each Auto delay and level typed at the value it was
- * solved to (`solved`, by placement), so the sound does not change. A fill keeps its flag for when it is turned on again.
- */
-export const withTypedFeeds = (
-  placements: readonly SpacePlacement[],
-  solved: readonly SolvedFeed[],
-): SpacePlacement[] =>
-  placements.map((p, k) => ({
-    ...p,
-    delayMs: p.delayMs === AUTO_DELAY ? (solved[k]?.delayMs ?? 0) : p.delayMs,
-    levelDb: p.levelDb === AUTO_LEVEL ? (solved[k]?.levelDb ?? 0) : p.levelDb,
-  }));
 
 /**
  * A box's first arrival at `at` (ft), ms: the least over its drivers of the path at the speed of sound plus its
@@ -226,10 +204,9 @@ export function solveFeeds(model: SpaceModel, venue: SolverVenue): SolvedFeed[] 
   const setOf = (k: number) => model.placements[bySource[k]?.[0] ?? -1]?.item.placement;
   const isFill = (k: number) => setOf(k)?.fill ?? false;
   const solved = bySource.map((_, k) => {
-    const p = setOf(k) ?? { delayMs: 0, levelDb: 0 };
-    return venue.autoDelayLevel ? typedFeed(p) : plainFeed(p);
+    const p = setOf(k);
+    return p ? typedFeed(p) : typedFeed({ delayMs: 0, levelDb: 0 });
   });
-  if (!venue.autoDelayLevel) return solved;
   /** the model at the typed values: what every level is read from, so no solved value feeds back */
   const typed = withSolved(model, [...solved]);
   /** placement `k`'s first arrival at `at`, ms, without its own delay */
@@ -336,13 +313,12 @@ const shownMs = (ms: number) => ms.toFixed(1);
 
 /**
  * Each placement's arrival at the listener (ft, at ear height) with its solved delay, after the latest main's: one row
- * a placement, or one a box for a pair whose boxes differ. Empty when no main is heard there. With Auto delay and level
- * off (`autoDelayLevel`), a fill counts as a main.
+ * a placement, or one a box for a pair whose boxes differ. Empty when no main is heard there.
  */
 export function listenerArrivals(
   model: Pick<SpaceModel, "placements" | "solved">,
   listener: FloorPoint,
-  { earFt, autoDelayLevel }: Pick<SpaceVenue, "earFt" | "autoDelayLevel">,
+  earFt: SpaceVenue["earFt"],
 ): ListenerArrival[] {
   const at = atEar(listener, earFt);
   const bySource = boxesBySource(model);
@@ -357,7 +333,7 @@ export function listenerArrivals(
     }),
   );
   const fillOf = (k: number) =>
-    autoDelayLevel && (model.placements[bySource[k]?.[0] ?? -1]?.item.placement.fill ?? false);
+    model.placements[bySource[k]?.[0] ?? -1]?.item.placement.fill ?? false;
   const mainTimes = times.flatMap((t, k) =>
     fillOf(k) || !t.length ? [] : [Math.min(...t.map((b) => b.ms))],
   );

@@ -10,7 +10,6 @@ import {
   listenerArrivals,
   placementLevelAt,
   solveFeeds,
-  withTypedFeeds,
 } from "../src/lib/speaker/solveFeeds";
 import {
   spaceGridRequest,
@@ -22,7 +21,7 @@ import { spaceModel } from "./helpers";
 import { speakerFromFill } from "../src/lib/speaker/fillSpec";
 import { homeVenue, spacePlacement } from "../src/lib/speaker/specParts";
 import { DEFAULT_FILL } from "../src/lib/defaults";
-import { AUTO_DELAY, AUTO_LEVEL, SPACE_ITEM } from "../src/constants/speakerSpec";
+import { AUTO_LEVEL, SPACE_ITEM } from "../src/constants/speakerSpec";
 import {
   ARRIVAL_STATUS,
   DELAY_NOTE,
@@ -51,7 +50,7 @@ const fillAt = (spot: FloorPoint, over: Partial<SpacePlacement> = {}): SpacePlac
 /** A 30 × 50 ft room holding `placements`, the listener and the alignment point where given. */
 function design(
   placements: readonly SpacePlacement[],
-  where: { listener?: FloorPoint; alignAt?: FloorPoint; autoDelayLevel?: boolean } = {},
+  where: { listener?: FloorPoint; alignAt?: FloorPoint } = {},
 ): SpaceDesign {
   const venue = homeVenue(10, { x: 0, y: 40 }, SEATED_EAR_FT);
   return {
@@ -66,7 +65,6 @@ function design(
         room: { ...venue.room, widthFt: 30, lengthFt: 50 },
         listener: where.listener ?? venue.listener,
         alignAt: where.alignAt ?? { x: 0, y: 30 },
-        autoDelayLevel: where.autoDelayLevel ?? true,
       },
     },
   };
@@ -199,7 +197,7 @@ test("arrivals: each placement at the listener after the latest main, in its sta
   const list = [at({ x: 0, y: 2 }), at({ x: 0, y: 12 }), fillAt({ x: 0, y: 25 })];
   const d = design(list, { listener: { x: 0, y: 30 }, alignAt: { x: 0, y: 30 } });
   const model = spaceModel(d);
-  const rows = listenerArrivals(model, d.space.venue.listener, d.space.venue);
+  const rows = listenerArrivals(model, d.space.venue.listener, d.space.venue.earFt);
   assert.deepEqual(
     rows.map((r) => r.placement),
     [0, 1, 2],
@@ -208,7 +206,7 @@ test("arrivals: each placement at the listener after the latest main, in its sta
   assert.equal(rows[0].status, ARRIVAL_STATUS.onTime);
   // elsewhere, a main's row is its own arrival less the latest main's
   const off = { x: 12, y: 8 };
-  const [a, b] = listenerArrivals(model, off, d.space.venue);
+  const [a, b] = listenerArrivals(model, off, d.space.venue.earFt);
   const t0 = arrival(model, 0, off) + model.solved[0].delayMs;
   const t1 = arrival(model, 1, off) + model.solved[1].delayMs;
   assert.ok(Math.abs(a.afterMainsMs - (t0 - Math.max(t0, t1))) < 1e-9);
@@ -222,40 +220,4 @@ test("arrivals: each placement at the listener after the latest main, in its sta
     [arrivalStatus(6, true), arrivalStatus(2, true), arrivalStatus(20, true)],
     [ARRIVAL_STATUS.onTime, ARRIVAL_STATUS.close, ARRIVAL_STATUS.close],
   );
-});
-
-test("solver: with Auto delay and level off, every placement plays its typed values and a fill is a plain box", () => {
-  const list = [
-    at({ x: 0, y: 2 }),
-    at({ x: 0, y: 12 }, { delayMs: 3, levelDb: -2 }),
-    fillAt({ x: -6, y: 22 }),
-  ];
-  const off = design(list, { autoDelayLevel: false });
-  const model = spaceModel(off);
-  assert.deepEqual(
-    model.solved.map((s) => [s.delayMs, s.delayAuto, s.delayNote, s.levelDb, s.levelAuto]),
-    [
-      [0, false, null, 0, false],
-      [3, false, null, -2, false],
-      [0, false, null, 0, false],
-    ],
-  );
-  // the fill counts as a main at the listener
-  const rows = listenerArrivals(model, off.space.venue.listener, off.space.venue);
-  assert.ok(rows.length > 0 && rows.every((r) => !r.fill));
-});
-
-test("solver: turning Auto delay and level off types each Auto value at its solved one, so the feeds stay the same", () => {
-  const list = [at({ x: 8, y: 2 }), at({ x: -8, y: 2 }, { delayMs: 1 }), fillAt({ x: -6, y: 22 })];
-  const on = spaceModel(design(list));
-  const typed = withTypedFeeds(list, on.solved);
-  assert.ok(typed.every((p) => p.delayMs !== AUTO_DELAY && p.levelDb !== AUTO_LEVEL));
-  // a typed value stays, and the fill keeps its flag for when it is turned on again
-  assert.equal(typed[1]?.delayMs, 1);
-  assert.equal(typed[2]?.fill, true);
-  const off = spaceModel(design(typed, { autoDelayLevel: false }));
-  off.solved.forEach((s, k) => {
-    assert.ok(Math.abs(s.delayMs - (on.solved[k]?.delayMs ?? NaN)) < 1e-9, `delay ${k}`);
-    assert.ok(Math.abs(s.levelDb - (on.solved[k]?.levelDb ?? NaN)) < 1e-9, `level ${k}`);
-  });
 });
