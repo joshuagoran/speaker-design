@@ -4,7 +4,9 @@
 //
 // Reflections: each vertical face of an outline (from the stage's base to its top) and each top is a short wall of the
 // stage's material (STAGE_MATERIAL). A face small against the wavelength reflects less: a first-order high-pass in
-// pressure, (f/fc)/√(1 + (f/fc)²), with fc = c / (2 × the face's smaller side).
+// pressure, (f/fc)/√(1 + (f/fc)²), with fc = c / (2 × the face's smaller side). A reflection fades out across the
+// face's ends and its top edge (a top: across its outline) over the first Fresnel zone there (`edgeFade`), so it
+// doesn't stop where its reflection point leaves the surface.
 //
 // Blocking: a single-edge barrier over the stage's top (Maekawa's curve in the Kurze–Anderson form) on the Fresnel number
 // N = 2δ/λ, δ the path's detour over the top in the path's vertical plane. That curve is for a thin screen: it keeps
@@ -84,6 +86,25 @@ export function sizeFade(f: number, sizeM: number): number {
   return x / Math.hypot(1, x);
 }
 
+/**
+ * The first Fresnel zone's radius at a reflection point `d1` from the source and `d2` from the listener, at wavelength
+ * `lambda`, m: √(λ·d₁d₂/(d₁ + d₂)).
+ */
+export const fresnelRadius = (lambda: number, d1: number, d2: number) =>
+  Math.sqrt((lambda * d1 * d2) / (d1 + d2));
+
+/**
+ * How much of a reflection a surface's edge keeps (pressure), by how far inside the edge its reflection point lies
+ * (`insideM`, negative outside) against the first Fresnel zone's radius there (`zoneM`): a raised-cosine ramp from 0
+ * one radius outside to 1 one radius inside, ½ on the edge. It stands in for the knife edge's Fresnel-integral
+ * amplitude, which it follows near the edge, without that curve's ripples and long tail.
+ */
+export function edgeFade(insideM: number, zoneM: number): number {
+  if (insideM >= zoneM) return 1;
+  if (insideM <= -zoneM) return 0;
+  return 0.5 + 0.5 * Math.sin((Math.PI / 2) * (insideM / zoneM));
+}
+
 /** An outline without its repeated corners and the corners in the middle of a straight run. */
 function mergedOutline(corners: SceneStage["corners"]): SceneStage["corners"] {
   const pts = corners.filter((p, i) => {
@@ -155,6 +176,22 @@ export function stageGeometry(stages: readonly SceneStage[]): {
 /** A point's height over a face's plan line (+ on the face's outer side), m. */
 export const faceSide = (f: FaceLine, x: number, y: number) =>
   (x - f.ax) * f.nx + (y - f.ay) * f.ny;
+
+/** How far a point lies inside a block's outline, m (negative outside): its distance from the nearest edge. */
+export function outlineDepth(b: StageBlock, x: number, y: number): number {
+  const { xs, ys } = b;
+  let near = Infinity;
+  for (let i = 0, j = xs.length - 1; i < xs.length; j = i++) {
+    const ex = xs[i] - xs[j],
+      ey = ys[i] - ys[j],
+      t = Math.min(
+        1,
+        Math.max(0, ((x - xs[j]) * ex + (y - ys[j]) * ey) / (ex * ex + ey * ey || 1)),
+      );
+    near = Math.min(near, Math.hypot(x - xs[j] - t * ex, y - ys[j] - t * ey));
+  }
+  return insideBlock(b, x, y) ? near : -near;
+}
 
 /** Whether a point lies inside a block's outline (even–odd). */
 export function insideBlock(b: StageBlock, x: number, y: number): boolean {

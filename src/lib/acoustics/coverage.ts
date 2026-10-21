@@ -11,8 +11,8 @@
 // Below COHERENT_BELOW_HZ the image paths sum with phase, so the two stacks interfere; above it a band average, or one
 // frequency, adds the separate paths (each box, each reflection) by power: their comb filtering is finer than the map.
 // Stages and risers (stageAcoustics.ts): each face and top a driver sees adds its image (a face with its floor bounce
-// too), kept at a point only where its reflection lands on that face; and a stage in the way of a path takes off its
-// barrier loss. They are image paths: indoors, below the crossover, the modal sum and the diffuse field don't see them.
+// too), kept at a point where its reflection lands on that face and faded out across the face's edges; and a stage in
+// the way of a path takes off its barrier loss. They are image paths: indoors, below the crossover, the modal sum and the diffuse field don't see them.
 import {
   MODAL_SUBPOINTS,
   MODAL_SUBPOINTS_WHOLE_BAND,
@@ -28,9 +28,10 @@ import { METERS_PER_FOOT as FT } from "../../constants/units";
 import {
   barrierLossDb,
   BARRIER_BRIGHT_N,
+  edgeFade,
   faceSide,
-  insideBlock,
   lineDetour,
+  outlineDepth,
   sizeFade,
   stageGeometry,
   type Detour,
@@ -593,16 +594,24 @@ export function coverageFrequencies(
 }
 
 // scratch space for the sum: per source geometry (GEO values each), per path pressure, the detour over the stages
-const GEO = 8;
+const GEO = 12;
 let geo = new Float64Array(0),
   pre = new Float64Array(0),
   pim = new Float64Array(0);
 const detour: Detour = { delta: -Infinity, stage: -1 };
 
 /**
- * Where a stage image's path reflects on its face or top on the way to a point (m), or null where that point lies off
- * the face (past its ends, under its base or over its top) or off the top's outline. A face's floor-bounce image hits
- * the face as high as its line crosses the face's plane below the floor or above it.
+ * A stage image's reflection on the way to a point (`stageReflection`): where it lands (m), its first Fresnel zone's
+ * scale (2π·d₁d₂/(d₁ + d₂): over k, the zone's radius squared), and how far inside its surface's edges it lands, m (a
+ * face's two ends and its top edge; a top's outline, then Infinity twice).
+ */
+const hit = { x: 0, y: 0, z: 0, zone: 0, in1: Infinity, in2: Infinity, in3: Infinity };
+
+/**
+ * Where a stage image's path reflects on its face or top on the way to a point `dist` m from the image (`hit`): false
+ * where that point is behind the face or under the top, where it lands under a face's base, or where it lands more
+ * than a Fresnel zone (at the lowest wavenumber, `kMin`) past an edge. A face's floor-bounce image hits the face as high
+ * as its line crosses the face's plane below the floor or above it.
  */
 function stageReflection(
   s: SceneSource,
@@ -611,23 +620,37 @@ function stageReflection(
   px: number,
   py: number,
   pz: number,
-): [x: number, y: number, z: number] | null {
+  dist: number,
+  kMin: number,
+): boolean {
+  let t: number;
   if (!r.face) {
-    if (pz <= r.top) return null;
-    const t = (r.top - s.z) / (pz - s.z),
-      x = s.x + (px - s.x) * t,
-      y = s.y + (py - s.y) * t;
-    return insideBlock(block, x, y) ? [x, y, r.top] : null;
+    if (pz <= r.top) return false;
+    t = (r.top - s.z) / (pz - s.z);
+    hit.z = r.top;
+  } else {
+    const from = faceSide(r.face, s.x, s.y),
+      to = faceSide(r.face, px, py);
+    if (to <= 0) return false;
+    t = from / (from - to);
+    hit.z = Math.abs(s.z + (pz - s.z) * t);
+    if (hit.z < r.base) return false;
   }
-  const from = faceSide(r.face, s.x, s.y),
-    to = faceSide(r.face, px, py);
-  if (to <= 0) return null;
-  const t = from / (from - to),
-    x = s.x + (px - s.x) * t,
-    y = s.y + (py - s.y) * t,
-    z = Math.abs(s.z + (pz - s.z) * t),
-    along = (x - r.face.ax) * r.face.ux + (y - r.face.ay) * r.face.uy;
-  return along >= 0 && along <= r.face.len && z >= r.base && z <= r.top ? [x, y, z] : null;
+  hit.x = s.x + (px - s.x) * t;
+  hit.y = s.y + (py - s.y) * t;
+  // the legs to and from the reflection are t and 1 − t of the path
+  hit.zone = 2 * Math.PI * t * (1 - t) * dist;
+  const reach = Math.sqrt(hit.zone / kMin);
+  if (!r.face) {
+    hit.in1 = outlineDepth(block, hit.x, hit.y);
+    hit.in2 = hit.in3 = Infinity;
+    return hit.in1 > -reach;
+  }
+  const along = (hit.x - r.face.ax) * r.face.ux + (hit.y - r.face.ay) * r.face.uy;
+  hit.in1 = along;
+  hit.in2 = r.face.len - along;
+  hit.in3 = r.top - hit.z;
+  return Math.min(hit.in1, hit.in2, hit.in3) > -reach;
 }
 
 /**
@@ -639,7 +662,7 @@ function stageReflection(
 function sourceDetour(
   scene: CoverageScene,
   s: SceneSource,
-  hit: readonly number[] | null,
+  reflects: boolean,
   px: number,
   py: number,
   pz: number,
@@ -650,11 +673,10 @@ function sourceDetour(
   if (s.reflector < 0) {
     lineDetour(blocks, s.x, s.y, s.z, px, py, pz, -1, detour);
     if (s.floor) lineDetour(blocks, s.x, s.y, -s.z, px, py, -pz, -1, detour);
-  } else if (hit) {
-    const own = scene.reflectors[s.reflector].stage,
-      [qx, qy, qz] = hit;
-    lineDetour(blocks, s.ox, s.oy, s.oz, qx, qy, qz, own, detour);
-    lineDetour(blocks, qx, qy, qz, px, py, pz, own, detour);
+  } else if (reflects) {
+    const own = scene.reflectors[s.reflector].stage;
+    lineDetour(blocks, s.ox, s.oy, s.oz, hit.x, hit.y, hit.z, own, detour);
+    lineDetour(blocks, hit.x, hit.y, hit.z, px, py, pz, own, detour);
   }
 }
 
@@ -678,6 +700,10 @@ export function levelAtPoint(
     pim = new Float64Array(paths);
   }
   let geoReady = false;
+  /** the lowest wavenumber the images sum at: its Fresnel zones are the widest */
+  let kMin = Infinity;
+  for (const sl of slots)
+    if (!(sl.modal && modal && sl.modal.weight >= 1)) kMin = Math.min(kMin, sl.k);
   let acc = 0,
     totalShare = 0;
   for (const sl of slots) {
@@ -693,32 +719,41 @@ export function levelAtPoint(
     if (!geoReady) {
       // distance, angles off the source's axis (horizontal, vertical), sine of the total angle (a piston's pattern
       // stops at 90°), whether the point is behind the box, whether the path is there (a stage image's reflection on
-      // its face), and its detour over the stages (and which). The point in the source's own frame: forward along its
-      // axis (its yaw, then its pitch), right, and up.
+      // or near its face), its detour over the stages (and which), and a stage image's Fresnel zone scale and how far
+      // inside its surface's edges it reflects. The point in the source's own frame: forward along its axis (its yaw,
+      // then its pitch), right, and up.
       for (let i = 0; i < n; i++) {
         const s = sources[i],
           g = GEO * i;
-        geo[g + 5] = 1;
-        geo[g + 6] = -Infinity;
-        if (staged) {
-          const r = s.reflector < 0 ? null : reflectors[s.reflector],
-            hit = r && stageReflection(s, r, blocks[r.stage], px, py, pz);
-          if (r && !hit) {
-            geo[g + 5] = 0;
-            continue;
-          }
-          sourceDetour(scene, s, hit, px, py, pz);
-          geo[g + 6] = detour.delta;
-          geo[g + 7] = detour.stage;
-        }
         const dx = px - s.x,
           dy = py - s.y,
           dz = pz - s.z,
-          ahead = dx * s.sy + dy * s.cy,
+          r = Math.hypot(dx, dy, dz);
+        geo[g + 5] = 1;
+        geo[g + 6] = -Infinity;
+        if (staged) {
+          const reflector = s.reflector < 0 ? null : reflectors[s.reflector],
+            reflects =
+              !!reflector &&
+              stageReflection(s, reflector, blocks[reflector.stage], px, py, pz, r, kMin);
+          if (reflector && !reflects) {
+            geo[g + 5] = 0;
+            continue;
+          }
+          sourceDetour(scene, s, reflects, px, py, pz);
+          geo[g + 6] = detour.delta;
+          geo[g + 7] = detour.stage;
+          if (reflects) {
+            geo[g + 8] = hit.zone;
+            geo[g + 9] = hit.in1;
+            geo[g + 10] = hit.in2;
+            geo[g + 11] = hit.in3;
+          }
+        }
+        const ahead = dx * s.sy + dy * s.cy,
           fwd = ahead * s.cp + dz * s.sp,
           right = dx * s.cy - dy * s.sy,
           up = dz * s.cp - ahead * s.sp,
-          r = Math.hypot(dx, dy, dz),
           th = Math.atan2(right, fwd),
           tv = Math.atan2(up, Math.hypot(fwd, right)),
           c = r > 0 ? fwd / r : 1;
@@ -738,6 +773,13 @@ export function levelAtPoint(
         g = GEO * i;
       let gain = sl.refl[s.refl];
       if (!v || !gain || !geo[g + 5]) continue;
+      // a stage image fades out across its surface's edges, over the first Fresnel zone
+      if (s.reflector >= 0) {
+        const zone = Math.sqrt(geo[g + 8] / sl.k);
+        gain *=
+          edgeFade(geo[g + 9], zone) * edgeFade(geo[g + 10], zone) * edgeFade(geo[g + 11], zone);
+        if (!gain) continue;
+      }
       // a stage in the way: its barrier loss at this path's Fresnel number, N = 2δ/λ = δk/π
       const fresnel = (geo[g + 6] * sl.k) / Math.PI;
       if (fresnel > BARRIER_BRIGHT_N)

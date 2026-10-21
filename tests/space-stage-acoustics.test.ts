@@ -6,8 +6,11 @@ import {
   BARRIER_CAP_DB,
   BARRIER_GRAZING_DB,
   barrierLossDb,
+  edgeFade,
+  fresnelRadius,
   type SceneStage,
 } from "../src/lib/acoustics/stageAcoustics";
+import { SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { levelAtPoint, sceneOf, sceneSlots } from "../src/lib/acoustics/coverage";
 import {
   spaceGridRequest,
@@ -74,6 +77,52 @@ test("stage face: a reflection point past the face's end gives no image there; o
   assert.ok(Math.abs(level([stage], 8, 3) - level([], 8, 3)) < 1e-9);
   // from straight in front it lands on the face
   assert.ok(Math.abs(level([stage], 0.5, 5) - level([], 0.5, 5)) > 0.1);
+});
+
+test("edge fade: ½ on the edge, full a zone inside, none a zone outside; wide at 50 Hz, narrow at 2 kHz", () => {
+  const zone = (f: number) => fresnelRadius(SPEED_OF_SOUND / f, 3, 10);
+  assert.equal(edgeFade(0, 1), 0.5);
+  assert.equal(edgeFade(1, 1), 1);
+  assert.equal(edgeFade(-1, 1), 0);
+  for (let x = -1.2; x < 1.2; x += 0.01) assert.ok(edgeFade(x + 0.01, 1) >= edgeFade(x, 1));
+  // 1 m past the edge: some of it at 50 Hz (a zone about 4 m), none at 2 kHz (about 0.6 m)
+  assert.ok(zone(50) > 3.5 && zone(2000) < 0.7, `${zone(50)}, ${zone(2000)}`);
+  assert.ok(edgeFade(-1, zone(50)) > 0.25 && edgeFade(1, zone(50)) < 0.75);
+  assert.equal(edgeFade(-1, zone(2000)), 0);
+  assert.equal(edgeFade(1, zone(2000)), 1);
+});
+
+test("stage face: its reflection fades out smoothly past the face's end, full well inside it and gone well outside", () => {
+  // a face at y = 1 m from x = −3 to 0.5 m, 3 m high; a driver 0.5 m in front of it, aimed at it; the listener 5 m
+  // down the room
+  const face = (x0: number, x1: number): SceneStage => ({
+    corners: [
+      { x: x0, y: 0 },
+      { x: x1, y: 0 },
+      { x: x1, y: 1 },
+      { x: x0, y: 1 },
+    ],
+    base: 0,
+    top: 3,
+  });
+  const voices = [{ id: "v", pattern: { a: 0.1 } }];
+  const box = [[{ voice: "v", x: 0, y: 1.5, z: 0.5, yaw: Math.PI, pitch: 0, alignM: 0 }]];
+  const level = (stages: SceneStage[], x: number) => {
+    const scene = sceneOf(OUTDOORS, voices, box, stages);
+    // 1 kHz: the paths add by power
+    const slots = sceneSlots(scene, [1000], false, () => ({ v: { re: 1, im: 0 } }));
+    return levelAtPoint(scene, slots, x, 5, 1.7);
+  };
+  // the reflection lands at a ninth of the listener's x: the end at 0.5 m is under x = 4.5 m
+  let last = level([face(-3, 0.5)], 2);
+  for (let x = 2.02; x < 7; x += 0.02) {
+    const now = level([face(-3, 0.5)], x);
+    assert.ok(Math.abs(now - last) < 0.2, `${x}: ${last} → ${now}`);
+    last = now;
+  }
+  assert.ok(level([face(-3, 0.5)], 2) - level([face(-3, 0.5)], 7) > 3);
+  assert.ok(Math.abs(level([face(-3, 0.5)], -9) - level([face(-30, 30)], -9)) < 1e-9);
+  assert.ok(Math.abs(level([face(-3, 0.5)], 20) - level([], 20)) < 1e-9);
 });
 
 /** A rectangular stage from x0 to x1 across and y0 to y1 down the room, ft. */

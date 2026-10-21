@@ -71,7 +71,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
     [
       "Not modeled",
       [
-        "Non-rectangular rooms, balconies, pillars, diffraction, crowd shadowing, measured driver directivity.",
+        "Non-rectangular rooms, balconies, pillars, diffraction (except over stages), crowd shadowing, measured driver directivity.",
       ],
     ],
   ];
