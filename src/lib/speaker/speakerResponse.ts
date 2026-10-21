@@ -40,6 +40,7 @@ import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
 import { HORN_LAYOUT } from "../../constants/acousticNetwork";
 import { ONE_BOX_HALF_SPACE } from "../../constants/hornEngine";
+import { bandLevelDb } from "./bandLevel";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
 import {
   CHAMBER_LOAD,
@@ -406,7 +407,7 @@ export function speakerResponse(
       gaps.push(SPEAKER_MODEL_GAP.badFilter);
       continue;
     }
-    const gain = Math.pow(10, band.levelDb / 20);
+    const gain = Math.pow(10, bandLevelDb(band) / 20);
     const out = drivers.map((p, i) =>
       scale(
         multiply(multiply(p, filtersTransfer(freqs[i], band)), filtersTransfer(freqs[i], feed)),

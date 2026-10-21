@@ -7,6 +7,7 @@
 //   `inputDish`). Its handles stay off where the old choice had No handles, as the dish alone was then built.
 // - A Box chamber's net air could be typed in (Custom). It is now always worked out from the chamber's size, so a typed
 //   value reads as worked out. A horn chamber keeps its net air: it is the horn's rear chamber.
+// - A passive band's level is a Pad, never above 0 dB: a positive value reads as 0. Every other level stays.
 import type {
   BoxHandles,
   ChamberBracing,
@@ -25,6 +26,7 @@ import { CHAMBER_LOAD } from "../../constants/speakerSpec";
 import { PA_PANEL_TARGET_HZ } from "../build/boxBracing";
 import { NO_HANDLE_SET, savedBox } from "../build/hardware";
 import { defaultBraceStyleNear } from "../build/bracing";
+import { withPadCapped } from "./bandLevel";
 
 /** A saved speaker's spec, as the library holds it (no id or name). */
 type SavedSpeaker = SavedSpeakerData["speaker"];
@@ -110,6 +112,7 @@ export function readSavedSpeaker(value: unknown): SavedSpeaker | null {
       inputDish: split ? cabinet.inputDish === true : isObject(hardware),
       chambers: cabinet.chambers.map((c) => readChamber(c, fallback)),
     },
+    bands: value.bands.map(withPadCapped),
   };
 }
 

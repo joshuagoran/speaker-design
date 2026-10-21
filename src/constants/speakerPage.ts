@@ -565,6 +565,11 @@ export const SPEAKER_TEXT = {
     "A horn or waveguide on this compression driver or tweeter. None: the driver has no horn.",
   hornMountTip:
     "In the baffle: the horn mouth is cut into the baffle. Freestanding on top: the horn stands on the top of the chamber.",
+  /** an active band's level field, and a passive band's (its tooltip is `padTip`) */
+  gain: "Gain",
+  pad: "Pad",
+  padTip:
+    "Cuts this band against the other bands on its amp channel, in dB. A passive crossover can only cut, so the highest value is 0 dB.",
   levelTip:
     "Sets the level of this band against the other bands, in dB. A negative value makes the band quieter. The default is 0 dB: no change, so each driver plays at its own sensitivity.",
   driveTip:

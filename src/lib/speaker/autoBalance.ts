@@ -32,6 +32,7 @@ import type {
   StackResponse,
 } from "../../types";
 import { curveLevelAt } from "../acoustics/coverage";
+import { bandLevelDb } from "./bandLevel";
 import { passbandCenterHz, passbandEdgesHz } from "./speakerResponse";
 import { DEFAULT_PA } from "../defaults";
 import { PA_SLIDERS } from "../../constants/paSliders";
@@ -191,7 +192,7 @@ function speakerBands(
     }
     bands.push({
       key: band.id,
-      curve: modeled.curve.map((o) => ({ f: o.f, spl: o.spl - band.levelDb })),
+      curve: modeled.curve.map((o) => ({ f: o.f, spl: o.spl - bandLevelDb(band) })),
       lowpassHz: band.lowpass?.hz ?? null,
       highpassHz: band.highpass?.hz ?? null,
       feedLowpassHz: spec.input.lowpass?.hz ?? null,
