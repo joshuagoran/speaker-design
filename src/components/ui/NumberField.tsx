@@ -17,7 +17,10 @@ interface Props {
   className?: string;
 }
 
-/** Number input with a unit. Clearing the box does not force 0: the value only changes once a number is typed. */
+/**
+ * Number input with a unit. Clearing the box does not force 0: the value only changes once a number is typed. A number
+ * outside `min`–`max` waits while it is typed, and on leaving the box it is moved to the nearest end.
+ */
 export function NumberField({
   label,
   value,
@@ -32,6 +35,8 @@ export function NumberField({
 }: Props) {
   const id = useId();
   const [raw, setRaw] = useState(String(value));
+  /** `n` moved into `min`–`max` */
+  const inRange = (n: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n));
   useEffect(() => {
     setRaw((r) => (parseFloat(r) === value ? r : String(value)));
   }, [value]);
@@ -50,9 +55,14 @@ export function NumberField({
           onChange={(e) => {
             setRaw(e.target.value);
             const n = parseFloat(e.target.value);
-            if (Number.isFinite(n)) onChange(n);
+            if (Number.isFinite(n) && inRange(n) === n) onChange(n);
           }}
-          onBlur={() => setRaw(String(value))}
+          onBlur={() => {
+            const n = parseFloat(raw);
+            if (!Number.isFinite(n) || inRange(n) === n) return setRaw(String(value));
+            onChange(inRange(n));
+            setRaw(String(inRange(n)));
+          }}
           className={`${fill ? "w-full min-w-0" : "w-24"} px-3 py-2 font-value rounded border border-stone-300 bg-panel ${HOVER_TRANSITION} ${disabled ? "text-stone-500 cursor-not-allowed" : "hover:border-stone-500"}`}
         />
         {unit}

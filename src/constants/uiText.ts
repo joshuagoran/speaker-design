@@ -26,6 +26,10 @@ export const UI_TEXT = {
   midBass: "Mid-bass",
   /** a room with no walls: the optimizer's room choice and the coverage map's */
   outdoors: "Outdoors",
+  /** the coverage map's one-frequency slider and field */
+  frequency: "Frequency",
+  /** a room's width field (indoors) */
+  roomWidth: "Width",
   /** the summary line of the Details drop-downs (each page's written details, the optimizer's goal notes) */
   details: "Details",
   /** the 3D view's buttons: full screen and back, and the cutaway (the cabinet as a ghost, the parts inside showing) */

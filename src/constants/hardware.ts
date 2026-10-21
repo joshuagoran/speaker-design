@@ -62,7 +62,7 @@ export const placementLabel = (axis: HandleAxis, source: string) =>
   `${HANDLE_AXIS_NAMES[axis]}: ${source}`;
 /** A handle offset slider's label, the same for both axes but the axis word. */
 export const handleOffsetLabel = (axis: HandleAxis) => placementLabel(axis, "from the preset");
-/** A handle offset slider's tooltip, one short line. */
+/** A handle offset field's tooltip, one short line. */
 export const handleOffsetTip = (axis: HandleAxis) =>
   `${HANDLE_AXIS_SIGNS[axis][0]} (+) or ${HANDLE_AXIS_SIGNS[axis][1]} (−) from ${HANDLE_PRESET_WORDS[axis]}.`;
 
@@ -93,8 +93,8 @@ export const HARDWARE_ADVICE = {
   posts: "no clear place on the lid",
 } as const;
 
-/** The handle offset sliders' range and step, in: either way from the preset. */
-export const HANDLE_OFFSET_SLIDER = { min: -8, max: 8, step: 0.25 } as const;
+/** The handle offset fields' range and step, in: either way from the preset. */
+export const HANDLE_OFFSET_RANGE = { min: -8, max: 8, step: 0.25 } as const;
 
 /** The fit chip's line when every part fits, with the liters the recesses take (already formatted). */
 export const hardwareFitsLine = (liters: string) =>

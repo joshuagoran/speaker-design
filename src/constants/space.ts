@@ -132,8 +132,6 @@ export const STAGE_CORNERS = 8;
 /** A stage and a riser as they are added, ft: a club stage of four 4 × 8 ft decks, and a DJ or drum riser of one. */
 export const NEW_STAGE = { widthFt: 16, depthFt: 8, heightFt: 2 } as const;
 export const NEW_RISER = { widthFt: 8, depthFt: 4, heightFt: 1 } as const;
-/** A riser too big for its stage: a 4 × 4 ft deck, ft. */
-export const NEW_RISER_SMALL = { widthFt: 4, depthFt: 4, heightFt: NEW_RISER.heightFt } as const;
 
 /** The steps a new stage's spot is searched in, ft. */
 export const STAGE_SPOT_STEP_FT = 0.5;
@@ -334,8 +332,6 @@ export const SPACE_TEXT = {
   pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
   upsideDown: "Upside down",
   gain: `${GAIN}, dB`,
-  /** beside a placement's Gain: the least headroom of its bands, dB (already formatted) */
-  headroomIs: (db: string) => `Headroom ${db} dB`,
   delay: `${DELAY}, ms`,
   delayTip: `The delay on this placement's feed. **${CALCULATE_DELAYS}** sets it.`,
   /** the Main / Fill choice's label and tooltip */

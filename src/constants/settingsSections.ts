@@ -33,7 +33,7 @@ export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;
 
 /** The Space settings column's fold sections, by id, and the name each shows (also the phone sheet's heading). */
 export const SPACE_SETTINGS_SECTIONS = {
-  room: "Room and listeners",
+  room: "Room",
   stages: "Stages",
   placements: "Placements",
   hardware: "Amp power and alignment",
@@ -41,6 +41,5 @@ export const SPACE_SETTINGS_SECTIONS = {
 export type SpaceSettingsSection = keyof typeof SPACE_SETTINGS_SECTIONS;
 /** The Space page's phone sheet tabs that need a shorter name than their section (one word, so the row fits). */
 export const SPACE_SETTINGS_TABS = {
-  room: "Room",
   hardware: "Amps",
 } as const satisfies Partial<Record<SpaceSettingsSection, string>>;

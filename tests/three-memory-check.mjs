@@ -2,7 +2,7 @@
 // `vp test`).
 //   node tests/three-memory-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE, PW_CHROMIUM as for tests/mobile-check.mjs.
-// On each page, rebuilds its 3D view many times (its first number field, stepped up and back) and fails if the live
+// On each page, rebuilds its 3D view many times (a number field, stepped up and back) and fails if the live
 // geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
 // canvas (one WebGL renderer for the component's life). The counts are read once the view has settled: the Space's
@@ -16,7 +16,10 @@ import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
 import { UI_TEXT } from "../src/constants/uiText.ts";
 
 const REBUILDS = 30;
-/** The control each page steps: the first number field shown (a closed settings fold keeps its fields in the page, hidden). */
+/**
+ * The control each page steps: the first number field shown (a closed settings fold keeps its fields in the page, hidden),
+ * or a page's own locator.
+ */
 const NUMBER = { control: 'input[type="number"]:visible', up: "ArrowUp", down: "ArrowDown" };
 /** Waits for the view's second build: built empty when the page opens, then as the start. */
 const builtTwice = (page) =>
@@ -57,9 +60,9 @@ const VIEWS = [
   {
     name: "Space",
     hash: "#space",
-    // the room's width slider: the first number field is now the System gain, which does not rebuild the view
+    // the room's Width field
     ...NUMBER,
-    control: 'input[type="range"]:visible',
+    control: (page) => page.getByLabel(UI_TEXT.roomWidth, { exact: true }).first(),
     prepare: async (page) => {
       await page
         .getByLabel(SAVE_ROW_TEXT.newFrom)
@@ -92,11 +95,11 @@ for (const { name, hash, control, up, down, prepare } of VIEWS) {
       textures: Number(el.dataset.textures),
       canvases: el.querySelectorAll("canvas").length,
     }));
-  const slider = page.locator(control).first();
+  const field = typeof control === "string" ? page.locator(control).first() : control(page);
   /** Steps the control and waits for the rebuild it starts (after the viewer's 120 ms throttle). */
   const step = async (key) => {
     const before = await view.evaluate((el) => Number(el.dataset.rebuilds));
-    await slider.press(key);
+    await field.press(key);
     await page.waitForFunction(
       (n) => Number(document.querySelector("[data-geometries]")?.dataset.rebuilds) > n,
       before,
@@ -112,7 +115,7 @@ for (const { name, hash, control, up, down, prepare } of VIEWS) {
       await page.waitForTimeout(SETTLED_MS);
     }
   };
-  await slider.focus();
+  await field.focus();
   await settle();
   const first = await read();
   const counts = [];

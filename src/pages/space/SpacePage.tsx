@@ -19,7 +19,6 @@ import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField } from "../../components/ui/SelectField";
-import { Slider } from "../../components/ui/Slider";
 import { Notice } from "../../components/ui/Notice";
 import { SharedNotice, type SharedNoticeProps } from "../../components/ui/SharedNotice";
 import { CoverageBandPicker } from "../../components/ui/CoverageBandPicker";
@@ -331,8 +330,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
       listedStages(venue.stages)
         .map((st) => stageNameOf.get(st.id))
         .join(" · ") || SPACE_TEXT.noStages,
-    room: `${venue.room.outdoors ? SPACE_TEXT.outdoors : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`} · ${venue.targetDb} dB target`,
-    placements: names.join(" · ") || SPACE_TEXT.noPlacements,
+    room: venue.room.outdoors
+      ? SPACE_TEXT.outdoors
+      : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`,
+    placements: `${venue.targetDb} dB target · ${names.join(" · ") || SPACE_TEXT.noPlacements}`,
     hardware:
       `${powers} amp power${powers === 1 ? "" : "s"} · ` +
       `${delays} delay${delays === 1 ? "" : "s"}`,
@@ -543,7 +544,36 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 surfaces={SPACE_SURFACE_NAMES}
                 surfaceTips={{ left: SPACE_LEFT_WALL_TIP }}
               />
-              <Slider
+              <div className={FIELD_ROW}>
+                <NumberField
+                  label={SPACE_TEXT.ear}
+                  value={venue.earFt}
+                  min={1}
+                  max={8}
+                  step={0.1}
+                  onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
+                />
+              </div>
+            </>,
+          )}
+          {section(
+            "stages",
+            <StageSettings
+              stages={venue.stages}
+              names={stageNameOf}
+              room={venue.room}
+              open={openStages}
+              onOpenChange={(id, open) =>
+                setOpenStages((o) => (open ? [...o, id] : o.filter((i) => i !== id)))
+              }
+              actions={space.stages}
+              onAdded={(id) => pickStage(id, true)}
+            />,
+          )}
+          {section(
+            "placements",
+            <>
+              <NumberField
                 label={
                   <Tooltip tip={<MarkedText text={SPACE_TEXT.targetTip} />}>
                     {SPACE_TEXT.target}
@@ -553,7 +583,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 min={COVERAGE_TARGET_DB[0]}
                 max={COVERAGE_TARGET_DB[1]}
                 step={1}
-                unit=" dB SPL"
+                unit="dB SPL"
                 onChange={(targetDb) => space.editVenue((v) => ({ ...v, targetDb }))}
               />
               <ToggleGroup
@@ -568,7 +598,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}
                 options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
               />
-              <div className={`${FIELD_ROW} items-end`}>
+              <div className={FIELD_ROW}>
                 <NumberField
                   label={
                     <Tooltip tip={<MarkedText text={SPACE_TEXT.systemGainTip} />}>
@@ -582,10 +612,29 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     space.editVenue((v) => ({ ...v, systemDb: Math.min(0, systemDb) }))
                   }
                 />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateDelaysTip} />}>
+                  <Button onClick={space.calculateDelays}>{SPACE_TEXT.calculateDelays}</Button>
+                </Tooltip>
                 <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateGainsTip} />}>
                   <Button onClick={space.calculateGains}>{SPACE_TEXT.calculateGains}</Button>
                 </Tooltip>
               </div>
+              {space.delayNotes.flatMap((note, k) =>
+                note === null
+                  ? []
+                  : [
+                      <Notice key={k}>
+                        {SPACE_TEXT.delayNoteFor(
+                          names[k] ?? "",
+                          note === DELAY_NOTE.clamped
+                            ? SPACE_TEXT.delayClamped
+                            : SPACE_TEXT.delayNoMain,
+                        )}
+                      </Notice>,
+                    ],
+              )}
               {space.bandLevels.length > 0 && (
                 <p className="text-sm text-stone-500 tabular-nums">
                   <MarkedText
@@ -630,52 +679,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   <MarkedText text={SPACE_TEXT.overLimit(o.band, o.box, o.overDb.toFixed(1))} />
                 </p>
               ))}
-              <div className={FIELD_ROW}>
-                <NumberField
-                  label={SPACE_TEXT.ear}
-                  value={venue.earFt}
-                  min={1}
-                  max={8}
-                  step={0.1}
-                  onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
-                />
-              </div>
-            </>,
-          )}
-          {section(
-            "stages",
-            <StageSettings
-              stages={venue.stages}
-              names={stageNameOf}
-              room={venue.room}
-              open={openStages}
-              onOpenChange={(id, open) =>
-                setOpenStages((o) => (open ? [...o, id] : o.filter((i) => i !== id)))
-              }
-              actions={space.stages}
-              onAdded={(id) => pickStage(id, true)}
-            />,
-          )}
-          {section(
-            "placements",
-            <>
-              <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateDelaysTip} />}>
-                <Button onClick={space.calculateDelays}>{SPACE_TEXT.calculateDelays}</Button>
-              </Tooltip>
-              {space.delayNotes.flatMap((note, k) =>
-                note === null
-                  ? []
-                  : [
-                      <Notice key={k}>
-                        {SPACE_TEXT.delayNoteFor(
-                          names[k] ?? "",
-                          note === DELAY_NOTE.clamped
-                            ? SPACE_TEXT.delayClamped
-                            : SPACE_TEXT.delayNoMain,
-                        )}
-                      </Notice>,
-                    ],
-              )}
               <SelectField
                 label={SPACE_TEXT.addPlacement}
                 options={placeList}
@@ -723,7 +726,6 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   }}
                   coupledWith={coupledWith(k)}
                   standsOn={standsOn(k)}
-                  headroomDb={space.placementHeadrooms[k] ?? null}
                 />
               ))}
             </>,

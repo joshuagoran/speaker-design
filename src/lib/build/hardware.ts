@@ -22,7 +22,7 @@ import type {
   PlacedHardware,
 } from "../../types";
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
-import { HANDLE_OFFSET_SLIDER, NO_HANDLES } from "../../constants/hardware";
+import { HANDLE_OFFSET_RANGE, NO_HANDLES } from "../../constants/hardware";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { panelLbPerSqFt } from "./panel";
 import { bracingRegions } from "./bracing";
@@ -70,7 +70,7 @@ export const handlePart = (id: HandleChoice): CabinetPart | null =>
 const isHandleChoice = (x: unknown): x is HandleChoice => HANDLE_CHOICES.some((c) => c === x);
 const offset = (x: unknown) =>
   typeof x === "number" && Number.isFinite(x)
-    ? Math.min(HANDLE_OFFSET_SLIDER.max, Math.max(HANDLE_OFFSET_SLIDER.min, x))
+    ? Math.min(HANDLE_OFFSET_RANGE.max, Math.max(HANDLE_OFFSET_RANGE.min, x))
     : 0;
 /** One box's saved handles: its model and offsets where they read right, else `fallback`'s model and no offsets. */
 /** No handles: a hardware plan with the input dish alone, or an old save whose handle model doesn't read. */

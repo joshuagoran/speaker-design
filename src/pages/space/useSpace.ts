@@ -813,11 +813,6 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   );
   /** every driver band's headroom at the space's System gain */
   const headrooms = useMemo(() => bandHeadrooms(model, gain), [model, gain]);
-  /** each placement's least band headroom, dB; null with no limit known */
-  const placementHeadrooms = space.placements.map((_, k) => {
-    const own = headrooms.filter((h) => h.placement === k);
-    return own.length ? Math.min(...own.map((h) => h.headroomDb)) : null;
-  });
   /** each driver band past its limit, by name, with how far, dB: once for a band a mirrored pair plays twice */
   const overLimit = useMemo(() => {
     const out = new Map<string, NamedBand & { overDb: number }>();
@@ -934,7 +929,6 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     /** the target in the lowest band: what the Listener readout is compared with */
     levelBandTarget,
     bandLevels,
-    placementHeadrooms,
     overLimit,
     response,
     targetCurve,
@@ -1026,12 +1020,11 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     gainLimit: gainNote && gainNote.space === space ? gainNote.limit : null,
     /** the stages' edits (pages/space/stageEdits), each kept only when it breaks no stage rule */
     stages: {
-      /** adds a stage on the floor (null) or a riser on a floor stage; its id, or null when no spot is free */
-      add: (on: SpaceStage["id"] | null): SpaceStage["id"] | null => {
+      /** adds a stage on the floor (null) or a riser on a floor stage, smaller where the full size has no room; its id */
+      add: (on: SpaceStage["id"] | null): SpaceStage["id"] => {
         const added = withStageAdded(space, on, plans);
-        if (added)
-          editSpace((s) => ({ ...s, venue: { ...s.venue, stages: added.layout.venue.stages } }));
-        return added ? added.id : null;
+        editSpace((s) => ({ ...s, venue: { ...s.venue, stages: added.layout.venue.stages } }));
+        return added.id;
       },
       remove: (id: SpaceStage["id"]) => editSpace((s) => withStageRemoved(s, id)),
       setShape: (id: SpaceStage["id"], shape: StageShape) =>
