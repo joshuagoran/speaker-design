@@ -67,7 +67,7 @@ export const STACK_OPTIMIZER_TEXT = {
   heightField: "Tallest the stack may stand",
   keepHint:
     "A locked part stays as it is. Lock a speaker to hold it whole. A locked crossover, level or delay stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
-  curveLabel: "Maximum output with one input, this stack against yours",
+  curveLabel: "Maximum output with one input, this Stack against yours",
   failing: (problems: string) =>
     `Your stack fails: ${problems}. Fixes may cost more, weigh more, or stand taller.`,
   /** a speaker's lock on the whole speaker, and the label of a lock on a box axis */
