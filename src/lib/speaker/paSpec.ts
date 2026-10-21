@@ -50,7 +50,7 @@ import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
-import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
+import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import {
   AUTO_DELAY,
   CABINET_CONSTRUCTION,
@@ -427,9 +427,10 @@ export type PaFloor = Pick<
 >;
 
 /**
- * The PA floor as a venue: its room, listener, ear height and target, and where the target is measured.
+ * The PA floor as a venue: its room, listener, ear height and target, where the target is measured, and its band
+ * balance.
  */
-export function paVenue(floor: PaFloor): SpaceVenue {
+export function paVenue(floor: PaFloor, balance: AutoBalanceMode): SpaceVenue {
   const { room } = floor;
   return {
     room,
@@ -438,9 +439,9 @@ export function paVenue(floor: PaFloor): SpaceVenue {
     earFt: floor.earFt,
     targetDb: floor.targetDb,
     systemDb: 0,
-    // its target in the sub band, measured where the floor says, under the PA music balance
+    // its target in the sub band, measured where the floor says
     levelRef: floor.levelRef,
-    balance: AUTO_BALANCE_MODE.moreBass,
+    balance,
   };
 }
 
@@ -448,8 +449,9 @@ export function paVenue(floor: PaFloor): SpaceVenue {
  * The PA design read in: its speakers, its stack (`paStack`) and its space on the PA floor: the stacks at
  * its spots (`stacks`: one mirrored placement at the left spot stands for both)
  * on their plinths. Satellite places no stack: one sub on its plinth midway, and the tops on their stands at the spots,
- * each on its own input range, `tilt` under the sub as in the stack. Each band's amp power is the design's; the venue
- * is the floor's room and listener (`paVenue`).
+ * each on its own input range at a gain of 0. Its tilt is the venue's More bass band balance; the stack and the tower
+ * keep the tilt in their levels, with a Flat balance, so it counts once. Each band's amp power is the design's; the
+ * venue is the floor's room and listener (`paVenue`).
  */
 export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor): DesignLayers {
   const stack = paStack(cfg, design);
@@ -465,27 +467,27 @@ export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor
   const pair = (item: SpacePlacement["item"], liftIn: number) => [
     spacePlacement(left, item, liftIn, { yawDeg: left.aim, mirrored: true }),
   ];
-  const placements: SpacePlacement[] =
-    cfg.layout === "satellite"
-      ? [
-          spacePlacement(
-            { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 },
-            speakerItem(subId),
-            PLINTH_HEIGHT_IN,
-          ),
-          ...pair(speakerItem(topId), SATELLITE_COLUMN_H_IN).map((p) => ({
-            ...p,
-            levelDb: -cfg.tilt,
-          })),
-        ]
-      : pair(stackItem, PLINTH_HEIGHT_IN);
+  const satellite = cfg.layout === "satellite";
+  const placements: SpacePlacement[] = satellite
+    ? [
+        spacePlacement(
+          { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 },
+          speakerItem(subId),
+          PLINTH_HEIGHT_IN,
+        ),
+        ...pair(speakerItem(topId), SATELLITE_COLUMN_H_IN),
+      ]
+    : pair(stackItem, PLINTH_HEIGHT_IN);
   return {
     speakers,
     stack,
     space: {
       ...design,
       placements,
-      venue: paVenue(floor),
+      venue: paVenue(
+        floor,
+        satellite && cfg.tilt > 0 ? AUTO_BALANCE_MODE.moreBass : AUTO_BALANCE_MODE.flat,
+      ),
     },
   };
 }

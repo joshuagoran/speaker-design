@@ -161,7 +161,7 @@ const isVenue = (value: unknown) =>
     (isStageList(value.stages) && value.stages.length <= SHARE_MAX_STAGES)) &&
   isNum(value.earFt) &&
   isNum(value.targetDb) &&
-  // optional: a link from before System level has none
+  // optional: a link from before System gain has none
   (value.systemDb === undefined || isNum(value.systemDb)) &&
   typeof value.levelRef === "string" &&
   typeof value.balance === "string";

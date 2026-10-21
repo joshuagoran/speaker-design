@@ -62,7 +62,7 @@ export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove
       />
       <div className={TRIO_ROW}>
         <NumberField
-          label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Level</Tooltip>}
+          label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Gain</Tooltip>}
           // shown to 0.1 dB (the Hi-fi level match is exact)
           value={Math.round(band.levelDb * 10) / 10}
           step={SPEAKER_STEPS.levelDb}

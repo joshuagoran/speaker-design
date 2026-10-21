@@ -96,7 +96,7 @@ type SavedPlacement = Omit<
 /** A delay or level as a save holds it, opened: Auto opens as 0. */
 const plainFeed = (value: number | typeof AUTO_DELAY) => (value === AUTO_DELAY ? 0 : value);
 
-/** A venue as a save holds it: one from before System level has no `systemDb`, and one from before stages none. */
+/** A venue as a save holds it: one from before System gain has no `systemDb`, and one from before stages none. */
 type SavedVenue = Omit<SpaceVenue, "systemDb" | "stages"> &
   Partial<Pick<SpaceVenue, "systemDb" | "stages">>;
 

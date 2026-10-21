@@ -2011,7 +2011,7 @@ export interface SpeakerBand {
   lowpass: BandFilter | null;
   /**
    * against the speaker's other bands, dB: a pad (0 or less), or a DSP's gain where the Hi-fi level match lifts a tweeter
-   * quieter than its woofer
+   * quieter than its woofer. The page calls it Gain; saves keep the key `levelDb`
    */
   levelDb: number;
   /**
@@ -2104,7 +2104,7 @@ export interface StackMember {
   mirror: boolean;
   /** the crossover between boxes on its feed (to the sub, to the tops): the speaker's input range in the stack */
   crossover: SpeakerSpec["input"];
-  /** the front end's level, against the stack's other members, dB */
+  /** the front end's gain, against the stack's other members, dB (the page's Gain; saves keep the key `levelDb`) */
   levelDb: number;
   /** the front end's delay, ms, or the stack's own alignment (lib/speaker/stackResponse) */
   delayMs: number | typeof AUTO_DELAY;
@@ -2159,8 +2159,8 @@ export interface SpacePlacement extends FloorPoint {
    */
   mirrored: boolean;
   /**
-   * the front end's level on its feed, against the space's other placements, dB (a fill under the mains); Calculate
-   * levels sets a fill's (lib/speaker/solveFeeds)
+   * the front end's gain on its feed, dB: 0 plays its box at its music limit (with System gain 0). Calculate gains sets
+   * it (lib/speaker/spaceGains, a fill's in lib/speaker/solveFeeds). The page calls it Gain; saves keep the key `levelDb`
    */
   levelDb: number;
   /** the front end's delay on its feed, ms; Calculate delays sets it (lib/speaker/solveFeeds). A mirrored pair's boxes share it. */
@@ -2168,7 +2168,7 @@ export interface SpacePlacement extends FloorPoint {
   /** its whole feed inverted (its pressure times −1); a save or link from before it has none: not inverted */
   invertPolarity: boolean;
   /**
-   * a fill, not a main: Calculate delays lines it up with the nearest main at its own aim point, and Calculate levels
+   * a fill, not a main: Calculate delays lines it up with the nearest main at its own aim point, and Calculate gains
    * plays it at that main's level there (lib/speaker/solveFeeds)
    */
   fill: boolean;
@@ -2235,12 +2235,12 @@ export interface SpaceVenue {
   earFt: CoverageLayout["earFt"];
   /**
    * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
-   * (`balance`) less: what the map and the readouts compare with, and what Calculate levels aims `systemDb` at
+   * (`balance`) less: what the map and the readouts compare with, and what Calculate gains aims the Gains at
    */
   targetDb: CoverageLayout["targetDb"];
   /**
-   * the level every placement plays at, dB: 0 is the space at its music limit (full power), never above. A save or link
-   * from before it has none: 0.
+   * the gain on every placement, dB, never above 0: the page's System gain (saves keep the key `systemDb`). A save or
+   * link from before it has none: 0.
    */
   systemDb: number;
   /**
@@ -2474,6 +2474,11 @@ export interface StackLimits {
    * and the member at the stack's limit
    */
   members: ({ limits: SpeakerLimits; atLimit: FrequencyPoint[] } | null)[];
+  /**
+   * each member's bands: the headroom of its music limit over its passband against the stack's input, less the
+   * member's level, dB
+   */
+  bands: { member: number; band: BandId; roomDb: number }[];
   /** the stack's level for music, dB at 1 m: its passband level where the first band of a member reaches its music limit */
   musicDb: number | null;
   /** the member and the band that set it */
@@ -3309,7 +3314,7 @@ export interface CoverageGridView {
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">;
   /** what a grid level is compared against: the grid's band target less the gain (the grid is at the limit), dB */
   target: number;
-  /** System level, dB, added to a grid level for the absolute level */
+  /** System gain, dB, added to a grid level for the absolute level */
   gain: number;
 }
 

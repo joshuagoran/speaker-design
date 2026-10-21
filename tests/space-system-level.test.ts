@@ -1,11 +1,20 @@
-// The Space page plays every placement at System level. Calculate levels sets it once, so that the lowest band reaches
-// the Target level at the reference. The band on show changes the map and the per-band figures only: never the level,
-// the listener's level or the band line.
+// The Space page plays every placement at its Gain and the System gain. Calculate gains sets them once: the bands each
+// main plays most meet their targets at the reference, and System gain keeps every band under its limit. The band on
+// show changes the map and the per-band figures only: never the gain, the listener's level or the band line.
 import { afterEach, expect, test } from "vite-plus/test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { emptySpace, spaceDraft } from "../src/pages/space/spaceSaves";
-import { useSpace, withCalculatedLevels, withItemPlaced } from "../src/pages/space/useSpace";
+import {
+  bandTargets,
+  referenceLevelsNow,
+  useSpace,
+  withCalculatedGains,
+  withItemPlaced,
+} from "../src/pages/space/useSpace";
+import { spaceModelLaidOut } from "../src/lib/speaker/spaceCoverage";
+import { bandHeadrooms } from "../src/lib/speaker/spaceGains";
+import { keysOf } from "../src/lib/records";
 import { placeOptions } from "../src/pages/space/placeOptions";
 import { emptyStack } from "../src/pages/stack/stackSaves";
 import { emptySpeaker } from "../src/pages/speaker/useSpeakerPage";
@@ -76,7 +85,7 @@ function placedSpace(levelRef: CoverageLevelRef, targetDb: number) {
 
 const BANDS: CoverageBand[] = [...(Object.keys(COVERAGE_BANDS) as CoverageBand[]), "one"];
 
-/** A System level under the limit, dB. */
+/** A System gain under the limit, dB. */
 const SYSTEM_DB = -6;
 
 for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks]) {
@@ -94,22 +103,37 @@ for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks])
     }
   });
 
-  test(`${levelRef}: Calculate levels sets System level so the reference reaches the target`, async () => {
-    const { design, reference } = await withCalculatedLevels(placedSpace(levelRef, 95));
-    const { systemDb } = design.space.venue;
-    // a target low enough to turn the space down, so the level is a real figure
-    expect(systemDb).toBeLessThan(0);
-    expect(reference.atLimit !== null && reference.atLimit + systemDb).toBeCloseTo(
-      reference.target,
-      1,
-    );
-    // a target past the limit holds it at 0
-    const loud = await withCalculatedLevels(placedSpace(levelRef, 140));
-    expect(loud.design.space.venue.systemDb).toBe(0);
+  test(`${levelRef}: Calculate gains meets the target and keeps every band under its limit`, async () => {
+    /** each band's level against its target at the reference after Calculate gains, dB, and the least headroom */
+    const after = async (targetDb: number) => {
+      const { design, limit } = await withCalculatedGains(placedSpace(levelRef, targetDb));
+      const model = spaceModelLaidOut(design);
+      const { systemDb } = design.space.venue;
+      const levels = referenceLevelsNow(design, model) ?? {};
+      const targets = bandTargets(design);
+      const rel = keysOf(COVERAGE_BANDS).flatMap((b) => {
+        const db = levels[b];
+        return db === undefined ? [] : [db + systemDb - targets[b]];
+      });
+      const least = Math.min(...bandHeadrooms(model, systemDb).map((h) => h.headroomDb));
+      return { rel, least, limit, systemDb };
+    };
+    // a quiet target: a band meets it, none goes past it, and nothing holds System gain down
+    const quiet = await after(95);
+    expect(quiet.systemDb).toBe(0);
+    expect(quiet.limit).toBeNull();
+    expect(Math.max(...quiet.rel)).toBeCloseTo(0, 0);
+    // a target past the limit: System gain comes down, every band under its limit, and the note names the band
+    const loud = await after(140);
+    expect(loud.systemDb).toBeLessThan(0);
+    expect(loud.least).toBeGreaterThanOrEqual(-0.1);
+    expect(loud.limit?.belowDb).toBeCloseTo(-loud.systemDb, 5);
+    expect(loud.limit?.limit?.band).toBeTruthy();
+    expect(Math.max(...loud.rel)).toBeLessThan(0);
   });
 }
 
-test("the Target level alone does not change the level", () => {
+test("the Target level alone does not change the gain", () => {
   expect(figures(COVERAGE_LEVEL_REF.listener, "sub", 95).gain).toBe(
     figures(COVERAGE_LEVEL_REF.listener, "sub", 115).gain,
   );

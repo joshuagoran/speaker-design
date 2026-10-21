@@ -1,14 +1,14 @@
-// The space's feed solver: what Calculate delays and Calculate levels set, worked out from the layout. Pure. It reads no
+// The space's feed solver: what Calculate delays and Calculate gains set, worked out from the layout. Pure. It reads no
 // delay, and a fill's level only as a step from its own, so running it again changes nothing.
 //
 // Mains (every placement that is not a fill) line up at the listener: each main's first arrival there (each driver's
 // path at the speed of sound, with its member's delay) is found, and the latest one sets the time; each main waits
-// until then. Mains keep their level. Each fill works at its own aim point (where its axis meets ear height, or a wall
+// until then. Mains keep their gain. Each fill works at its own aim point (where its axis meets ear height, or a wall
 // first), against the nearest main there:
 // - delay: it arrives FILL_PRECEDENCE_MS after that main (with the main's new delay), so the sound still seems to come
 //   from the mains (the precedence effect). Never below 0.
-// - level: it plays at that main's level there, in FILL_ALIGN_BAND (the voice range a fill is there for).
-// A mirrored pair is one placement: its two boxes share one delay and one level.
+// - gain: it plays at that main's level there, in FILL_ALIGN_BAND (the voice range a fill is there for).
+// A mirrored pair is one placement: its two boxes share one delay and one gain.
 import type { FloorPoint, PairSide, SpaceVenue } from "../../types";
 import {
   spaceGridRequest,
@@ -45,7 +45,7 @@ export interface SolvedFeed {
   delayMs: number;
   /** why the delay is not what its rule asks; null when it is */
   delayNote: DelayNote | null;
-  /** the level Calculate levels sets, dB: a fill's, matched to its main; a main keeps its own */
+  /** the gain Calculate gains sets, dB: a fill's, matched to its main; a main keeps its own (lib/speaker/spaceGains) */
   levelDb: number;
 }
 
@@ -143,30 +143,34 @@ const nearestFt = (
     ),
   );
 
+/** A request with every placement but `source` silent. */
+export function placementRequest<R extends Pick<SpaceGridRequest, "outputs">>(
+  model: Pick<SpaceModel, "feeds">,
+  req: R,
+  source: number,
+): R {
+  return {
+    ...req,
+    outputs: req.outputs.map((out) =>
+      Object.fromEntries(
+        model.feeds.flatMap((f) =>
+          f.placement === source && out[f.id] ? [[f.id, out[f.id]]] : [],
+        ),
+      ),
+    ),
+  };
+}
+
 /**
  * Placement `source`'s level alone at a floor spot (ft, at ear height), dB: every other placement silent, in the
  * request's band, at the levels the model plays.
  */
-export function placementLevelAt(
+export const placementLevelAt = (
   model: Pick<SpaceModel, "feeds">,
   req: Omit<SpaceGridRequest, "cols">,
   source: number,
   at: FloorPoint,
-): number {
-  return spaceLevelAt(
-    {
-      ...req,
-      outputs: req.outputs.map((out) =>
-        Object.fromEntries(
-          model.feeds.flatMap((f) =>
-            f.placement === source && out[f.id] ? [[f.id, out[f.id]]] : [],
-          ),
-        ),
-      ),
-    },
-    at,
-  );
-}
+): number => spaceLevelAt(placementRequest(model, req, source), at);
 
 /**
  * Every placement's feed, by its index in the space (see the file's note), from `model` as it plays. A placement with

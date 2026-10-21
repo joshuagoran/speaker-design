@@ -110,7 +110,9 @@ test("space hardware: band groups, amp power per speaker, a library stack copied
   assert.equal(weak.bands[0].ampW, 10);
   assert.deepEqual(withAmpPower(sub, [], 10), sub);
   const headroom = (speakers: typeof design.speakers) =>
-    spaceModel({ ...design, speakers }).headroomDb;
+    Math.min(
+      ...spaceModel({ ...design, speakers }).placements.map((p) => p.headroomDb ?? Infinity),
+    );
   assert.ok(headroom([weak, top]) < headroom([sub, top]));
   // a stack from the library, held already under its id but changed: a numbered copy beside it
   const changed = {
@@ -196,7 +198,7 @@ test("space saves: a venue whose level reference or balance is not a known one i
   assert.equal(spaceDraft.fromDraft(withVenue({ balance: "paMusic" })), null);
 });
 
-test("space saves: one from before plain delays and System level opens with Auto at 0 and full power", () => {
+test("space saves: one from before plain delays and System gain opens with Auto at 0 and full power", () => {
   const design = paSpace();
   const [placement] = design.space.placements;
   const { systemDb: _systemDb, ...venue } = design.space.venue;

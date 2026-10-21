@@ -50,7 +50,7 @@ export const STACK_TEXT = {
   tiltTip:
     "Its tilt in the stack, + up, about its bottom front edge: a top angled down on its sub. The Space page's coverage uses it; the response here is on axis.",
   mirror: "Mirror image",
-  level: "Level",
+  gain: "Gain",
   delay: "Delay",
   crossoverHint:
     "The filters ahead of this box, between boxes. In the stack they are the speaker's input range.",

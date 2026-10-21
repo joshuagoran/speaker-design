@@ -27,6 +27,7 @@ import {
   spaceModelLaidOut,
   spaceResponse,
   type SpaceGridRequest,
+  type SpaceModel,
 } from "../../lib/speaker/spaceCoverage";
 import { aimedPlacement, movedPlacement, spaceLayout } from "../../lib/speaker/spaceLayout";
 import {
@@ -57,7 +58,16 @@ import {
 } from "./stageEdits";
 import { AIM_SNAP_DEG, MAP_DRAG_UPDATE_MS, SNAP_FLUSH_IN } from "../../constants/space";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
-import { runSpaceGrid, runSpaceQuickGrid } from "../../lib/speaker/runSpace";
+import { runSpaceGrid, runSpaceQuickGrid, runSpaceReferenceGrid } from "../../lib/speaker/runSpace";
+import {
+  bandHeadrooms,
+  leastHeadroom,
+  mainGains,
+  systemGainFor,
+  type BandHeadroom,
+  type BandLevels,
+  type LevelBand,
+} from "../../lib/speaker/spaceGains";
 import { useHeld, useThrottled } from "../../hooks/useThrottled";
 import { presetLayers } from "../stack/stackPresets";
 import {
@@ -68,6 +78,7 @@ import {
 import { spacePlacement } from "../../lib/speaker/specParts";
 import {
   listenerArrivals,
+  placementRequest,
   solveFeeds,
   type DelayNote,
   type SolvedFeed,
@@ -115,11 +126,11 @@ import type {
 /** What the library's row says when a document holds no space. */
 const MISSING_SPACE_TEXT = "That save holds no space";
 
-/**
- * The band Calculate levels reads the reference in: the lowest. It sets System level so that this band reaches the
- * Target level at the reference; the band on show never changes it. The Listener readout is in it too.
- */
+/** The band the Listener readout is in: the lowest, whatever band is on show. */
 const LEVEL_BAND = "sub" satisfies CoverageBand;
+
+/** The bands the reference is read in, from the lowest. */
+const LEVEL_BANDS = keysOf(COVERAGE_BANDS);
 
 /** Where a new placement stands: a little off the front wall, in the middle, ft. */
 const NEW_SPOT: FloorPoint = { x: 0, y: 3 };
@@ -329,13 +340,6 @@ export function referenceAtLimit(
   return grid ? audienceAverage(grid, req.room, spots.boxes) : null;
 }
 
-/**
- * The System level Calculate levels sets, dB: what brings the reference's level (at the limit) down to the target, or 0
- * (the limit) when it doesn't reach it.
- */
-const systemGain = (target: number, atLimit: number | null) =>
-  atLimit !== null ? Math.min(0, target - atLimit) : 0;
-
 /** A value rounded to a tenth, as a field shows it. */
 const tenth = (v: number) => Math.round(v * 10) / 10;
 
@@ -364,64 +368,159 @@ export function withCalculatedDelays(d: SpaceDesign): {
   return { design, notes: solved.map((s) => s.delayNote) };
 }
 
-/** What Calculate levels reads: the reference's level at the limit in LEVEL_BAND (null: nothing reaches it) and its target there. */
-export interface ReferenceLevel {
-  target: number;
-  atLimit: number | null;
-}
-
-/**
- * The reference's level at the limit in LEVEL_BAND, and its target there. The audience average needs a grid, so it is
- * worked out on the worker.
- */
-export async function referenceLevel(d: SpaceDesign): Promise<ReferenceLevel> {
+/** Each band's target at the reference, dB: the Target level, under the band balance above each crossover. */
+export function bandTargets(d: SpaceDesign): Record<LevelBand, number> {
   const { venue } = d.space;
-  const { room } = venue;
-  const model = spaceModelLaidOut(d);
-  const target = spaceTargetAt(
-    venue.targetDb,
-    bandCenterHz(LEVEL_BAND, SINGLE_FREQ_RANGE[0]),
-    spaceCrossoversHz(d),
-    venue.balance,
-  );
-  if (!model.scene.sources.length) return { target, atLimit: null };
-  const req = spaceGridRequest(
-    model,
-    { room, earFt: venue.earFt },
-    LEVEL_BAND,
-    SINGLE_FREQ_RANGE[0],
-    COVERAGE_GRID_COLS,
-  );
-  const boxes = model.placements.map((p) => ({ x: p.item.placement.x, y: p.item.placement.y }));
-  if (venue.levelRef === COVERAGE_LEVEL_REF.audience) {
-    const grid = await runSpaceGrid({ ...req, cols: COVERAGE_GRID_COLS });
-    return { target, atLimit: audienceAverage(grid, room, boxes) };
-  }
-  const atLimit = referenceAtLimit(
-    venue.levelRef,
-    req,
-    { listener: venue.listener, meterSpots: meterSpotsOf(d, model, room), boxes },
-    null,
-    bandRangeHz(LEVEL_BAND, SINGLE_FREQ_RANGE[0]),
-  );
-  return { target, atLimit };
+  const crossovers = spaceCrossoversHz(d);
+  const at = (b: LevelBand) =>
+    spaceTargetAt(venue.targetDb, bandCenterHz(b, SINGLE_FREQ_RANGE[0]), crossovers, venue.balance);
+  return { sub: at("sub"), kick: at("kick"), mid: at("mid"), high: at("high") };
+}
+
+/** The reference's request in band `b`: the whole space, or placement `source` alone. */
+function bandRequest(
+  d: SpaceDesign,
+  model: SpaceModel,
+  b: LevelBand,
+  source: number | null,
+): Omit<SpaceGridRequest, "cols"> {
+  const { room, earFt } = d.space.venue;
+  const req = spaceGridRequest(model, { room, earFt }, b, SINGLE_FREQ_RANGE[0], COVERAGE_GRID_COLS);
+  return source === null ? req : placementRequest(model, req, source);
+}
+
+/** The boxes' spots in a model: the audience average leaves the floor right in front of them out. */
+const boxSpots = (model: SpaceModel): FloorPoint[] =>
+  model.placements.map((p) => ({ x: p.item.placement.x, y: p.item.placement.y }));
+
+/** Levels kept where something reaches the reference. */
+function reached(levels: readonly (readonly [LevelBand, number | null])[]): BandLevels {
+  const out: BandLevels = {};
+  for (const [b, db] of levels) if (db !== null && Number.isFinite(db)) out[b] = db;
+  return out;
 }
 
 /**
- * Calculate levels: each fill's Level as the solver sets it (the nearest main's, where it aims), then System level so
- * the reference reaches the target, never past the limit. It also gives what it read, for the page's note.
+ * Each band's level at the listener or 1 m from the speakers at System gain 0, dB: of the whole space, or of placement
+ * `source` alone (null: the whole space). Null for the audience average: it needs grids (`referenceLevels`).
  */
-export async function withCalculatedLevels(
+export function referenceLevelsNow(
   d: SpaceDesign,
-): Promise<{ design: SpaceDesign; reference: ReferenceLevel }> {
-  const { design } = withSolvedFeeds(d, (p, s) =>
+  model: SpaceModel,
+  source: number | null = null,
+): BandLevels | null {
+  const { venue } = d.space;
+  if (venue.levelRef === COVERAGE_LEVEL_REF.audience) return null;
+  if (!model.scene.sources.length) return {};
+  const spots: ReferenceSpots = {
+    listener: venue.listener,
+    meterSpots: meterSpotsOf(d, model, venue.room),
+    boxes: boxSpots(model),
+  };
+  return reached(
+    LEVEL_BANDS.map((b) => [
+      b,
+      referenceAtLimit(
+        venue.levelRef,
+        bandRequest(d, model, b, source),
+        spots,
+        null,
+        bandRangeHz(b, SINGLE_FREQ_RANGE[0]),
+      ),
+    ]),
+  );
+}
+
+/** Each band's level at the reference at System gain 0 (`referenceLevelsNow`); the audience average's grids on the worker. */
+export async function referenceLevels(
+  d: SpaceDesign,
+  model: SpaceModel,
+  source: number | null = null,
+): Promise<BandLevels> {
+  const now = referenceLevelsNow(d, model, source);
+  if (now) return now;
+  if (!model.scene.sources.length) return {};
+  const { room } = d.space.venue;
+  const levels: [LevelBand, number | null][] = [];
+  // one grid at a time: the worker runs them in turn
+  for (const b of LEVEL_BANDS) {
+    const grid = await runSpaceReferenceGrid({
+      ...bandRequest(d, model, b, source),
+      cols: COVERAGE_GRID_COLS,
+    });
+    levels.push([b, audienceAverage(grid, room, boxSpots(model))]);
+  }
+  return reached(levels);
+}
+
+/** The space with its venue changed by `edit`. */
+const withVenue = (d: SpaceDesign, edit: Partial<SpaceVenue>): SpaceDesign => ({
+  ...d,
+  space: { ...d.space, venue: { ...d.space.venue, ...edit } },
+});
+
+/** A band of a box by name, as the limit notes name it: the band's and the box's (its speaker's). */
+export interface NamedBand {
+  band: string;
+  box: string;
+}
+
+/** A driver band's names (`NamedBand`); null when the model has no such band. */
+export function bandNames(
+  model: Pick<SpaceModel, "placements">,
+  h: BandHeadroom,
+): NamedBand | null {
+  const speaker = model.placements[h.box]?.response?.members[h.member]?.speaker;
+  const band = speaker?.bands.find((b) => b.id === h.band);
+  return speaker && band ? { band: band.name, box: speaker.name } : null;
+}
+
+/** What Calculate gains reports when a limit holds System gain down: how far every band is under it, dB, and the band. */
+export interface GainLimit {
+  belowDb: number;
+  limit: NamedBand | null;
+}
+
+/**
+ * Calculate gains (lib/speaker/spaceGains): each main's Gain from its levels at the reference, then each fill's (the
+ * nearest main's level where it aims), then System gain, so no driver band goes past its limit. It also gives the
+ * limit that held System gain down; null when none did.
+ */
+export async function withCalculatedGains(
+  d: SpaceDesign,
+): Promise<{ design: SpaceDesign; limit: GainLimit | null }> {
+  const start = withVenue(d, { systemDb: 0 });
+  const model = spaceModelLaidOut(start);
+  const { placements } = start.space;
+  const heard = new Set(model.placements.map((p) => p.item.placement.source));
+  const mains = placements.flatMap((p, k) => (!p.fill && heard.has(k) ? [k] : []));
+  const levels: BandLevels[] = [];
+  for (const k of mains) levels.push(await referenceLevels(start, model, k));
+  const gains = mainGains(
+    mains.map((k, i) => ({ gainDb: placements[k]?.levelDb ?? 0, levels: levels[i] ?? {} })),
+    bandTargets(start),
+  );
+  const gained: SpaceDesign = {
+    ...start,
+    space: {
+      ...start.space,
+      placements: placements.map((p, k) => {
+        const i = mains.indexOf(k);
+        return i < 0 ? p : { ...p, levelDb: tenth(gains[i] ?? p.levelDb) };
+      }),
+    },
+  };
+  const { design: filled } = withSolvedFeeds(gained, (p, s) =>
     p.fill ? { ...p, levelDb: tenth(s.levelDb) } : p,
   );
-  const reference = await referenceLevel(design);
-  const systemDb = tenth(systemGain(reference.target, reference.atLimit));
+  const filledModel = spaceModelLaidOut(filled);
+  const bands = bandHeadrooms(filledModel, 0);
+  const systemDb = tenth(systemGainFor(bands));
+  const least = leastHeadroom(bands);
   return {
-    design: { ...design, space: { ...design.space, venue: { ...design.space.venue, systemDb } } },
-    reference,
+    design: withVenue(filled, { systemDb }),
+    limit:
+      systemDb < 0 && least ? { belowDb: -systemDb, limit: bandNames(filledModel, least) } : null,
   };
 }
 
@@ -631,9 +730,9 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, shown.spots) : null),
     [shown, placed],
   );
-  /** every placement plays at System level, dB: 0 is the limit */
+  /** every placement plays at System gain, dB, on top of its own Gain */
   const gain = venue.systemDb;
-  // the grid on show with the target of its band, at System level (an older space's while the next computes)
+  // the grid on show with the target of its band, at System gain (an older space's while the next computes)
   const view = useMemo<CoverageGridView | null>(() => {
     if (!shown || !placed) return null;
     const t = spaceTargetAt(venue.targetDb, shown.centerHz, crossovers, balance);
@@ -649,41 +748,88 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     placements: readonly SpacePlacement[];
     notes: (DelayNote | null)[];
   } | null>(null);
-  /** what the last Calculate levels read, while the space is as it left it */
-  const [levelNote, setLevelNote] = useState<{
-    space: SpaceSpec;
-    reference: ReferenceLevel;
-  } | null>(null);
-  /** each band's level at the listener at the limit (the model from before a drag, while it lasts) */
-  const bandsAtLimit = useMemo(
-    () =>
-      placed
-        ? keysOf(COVERAGE_BANDS).map((b) => ({
-            band: b,
-            db: spaceLevelAt(
-              spaceGridRequest(
-                settledModel,
-                { room, earFt: venue.earFt },
-                b,
-                freqHz,
-                COVERAGE_GRID_COLS,
-              ),
-              venue.listener,
-            ),
-          }))
-        : [],
-    [placed, settledModel, room, venue.earFt, venue.listener, freqHz],
+  /** what the last Calculate gains reported, while the space is as it left it */
+  const [gainNote, setGainNote] = useState<{ space: SpaceSpec; limit: GainLimit | null } | null>(
+    null,
   );
-  /** each band's level at the listener at the space's level, and its target */
+  /** the space the model reads, for the levels at the reference (the model from before a drag, while it lasts) */
+  const modelDesign = useMemo(
+    () => ({
+      space: { ...space, placements, venue: { ...venue, room, stages } },
+      stacks,
+      speakers,
+    }),
+    // the reference reads the placements, the room, the ear, the listener and where it is measured
+    [placements, stages, room, venue.earFt, venue.listener, venue.levelRef, stacks, speakers],
+  );
+  /** each band's level at the reference at System gain 0: at once, or the audience's from the worker */
+  const levelsNow = useMemo(
+    () => referenceLevelsNow(modelDesign, settledModel),
+    [modelDesign, settledModel],
+  );
+  const [audienceLevels, setAudienceLevels] = useState<{
+    model: SpaceModel;
+    levels: BandLevels;
+  } | null>(null);
+  useEffect(() => {
+    if (levelsNow) return;
+    let live = true;
+    referenceLevels(modelDesign, settledModel).then(
+      (levels) => {
+        if (live) setAudienceLevels({ model: settledModel, levels });
+      },
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [levelsNow, modelDesign, settledModel]);
+  const atReference =
+    levelsNow ??
+    (audienceLevels && audienceLevels.model === settledModel ? audienceLevels.levels : {});
+  /** each band's level at the reference at the space's System gain, and its target */
   const bandLevels = useMemo(
     () =>
-      bandsAtLimit.map(({ band: b, db }) => ({
-        band: b,
-        db: db + gain,
-        target: spaceTargetAt(venue.targetDb, bandCenterHz(b, freqHz), crossovers, balance),
-      })),
-    [bandsAtLimit, venue.targetDb, freqHz, gain, crossovers, balance],
+      placed
+        ? LEVEL_BANDS.flatMap((b) => {
+            const db = atReference[b];
+            return db === undefined
+              ? []
+              : [
+                  {
+                    band: b,
+                    db: db + gain,
+                    target: spaceTargetAt(
+                      venue.targetDb,
+                      bandCenterHz(b, freqHz),
+                      crossovers,
+                      balance,
+                    ),
+                  },
+                ];
+          })
+        : [],
+    [placed, atReference, venue.targetDb, freqHz, gain, crossovers, balance],
   );
+  /** every driver band's headroom at the space's System gain */
+  const headrooms = useMemo(() => bandHeadrooms(model, gain), [model, gain]);
+  /** each placement's least band headroom, dB; null with no limit known */
+  const placementHeadrooms = space.placements.map((_, k) => {
+    const own = headrooms.filter((h) => h.placement === k);
+    return own.length ? Math.min(...own.map((h) => h.headroomDb)) : null;
+  });
+  /** each driver band past its limit, by name, with how far, dB: once for a band a mirrored pair plays twice */
+  const overLimit = useMemo(() => {
+    const out = new Map<string, NamedBand & { overDb: number }>();
+    for (const h of headrooms) {
+      const names = h.headroomDb < 0 ? bandNames(model, h) : null;
+      if (!names) continue;
+      const key = JSON.stringify([h.placement, h.member, h.band]);
+      const overDb = Math.max(-h.headroomDb, out.get(key)?.overDb ?? 0);
+      out.set(key, { ...names, overDb });
+    }
+    return [...out.values()];
+  }, [headrooms, model]);
   const responseAtLimit = useMemo(
     () => (placed ? spaceResponse(settledModel, venue, venue.listener) : []),
     // the response reads the model, the listener and the ear
@@ -730,11 +876,11 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     setDesign(d);
     setReplaced((n) => n + 1);
   };
-  /** Calculate levels from `d`; the result replaces the space unless it changed meanwhile */
-  const calculateLevels = async (d: SpaceDesign) => {
-    const { design: next, reference } = await withCalculatedLevels(d);
+  /** Calculate gains from `d`; the result replaces the space unless it changed meanwhile */
+  const calculateGains = async (d: SpaceDesign) => {
+    const { design: next, limit } = await withCalculatedGains(d);
     setDesign((now) => (now.space === d.space ? next : now));
-    setLevelNote({ space: next.space, reference });
+    setGainNote({ space: next.space, limit });
   };
   /** the shared view: a link's space shows in place of the page's own, and the page's picks end with each switch */
   const sharedView: SharedMode<SpaceDesign> = {
@@ -776,7 +922,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     setFreqHz,
     isPending: placed && !(failed && failed.req === req) && (!shown || shown.req !== req),
     error: failed ? failed.message : "",
-    /** the listener's level in the lowest band at System level: the same in every band on show */
+    /** the listener's level in the lowest band at System gain: the same in every band on show */
     listenerDb: listenerAtLimit !== null ? listenerAtLimit + gain : null,
     /** the audience's average at the space's level (null until a grid arrives) */
     audienceDb: audienceAtLimit !== null ? audienceAtLimit + gain : null,
@@ -788,6 +934,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     /** the target in the lowest band: what the Listener readout is compared with */
     levelBandTarget,
     bandLevels,
+    placementHeadrooms,
+    overLimit,
     response,
     targetCurve,
     store,
@@ -856,13 +1004,13 @@ export function useSpace(initialBand: CoverageBand = "mid") {
         );
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
-    /** a start from "New from…": a preset or template gets Calculate delays and Calculate levels once */
+    /** a start from "New from…": a preset or template gets Calculate delays and Calculate gains once */
     start: (id: DesignStart) => {
       const fresh = spaceFromStart(id);
       if (id === EMPTY_START) return replaceDesign(fresh);
       const { design: aligned } = withCalculatedDelays(fresh);
       replaceDesign(aligned);
-      void calculateLevels(aligned);
+      void calculateGains(aligned);
     },
     /** sets every placement's Delay once, and keeps the solver's notes */
     calculateDelays: () => {
@@ -870,12 +1018,12 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       setDesign(next);
       setDelayNotes({ placements: next.space.placements, notes });
     },
-    /** sets each fill's Level and System level once */
-    calculateLevels: () => calculateLevels(design),
+    /** sets each placement's Gain and System gain once */
+    calculateGains: () => calculateGains(design),
     /** the notes from the last Calculate delays, by placement; empty once a placement changes */
     delayNotes: delayNotes && delayNotes.placements === space.placements ? delayNotes.notes : [],
-    /** what the last Calculate levels read; null once the space changes */
-    levelNote: levelNote && levelNote.space === space ? levelNote.reference : null,
+    /** the limit that held the last Calculate gains down; null once the space changes, or when none did */
+    gainLimit: gainNote && gainNote.space === space ? gainNote.limit : null,
     /** the stages' edits (pages/space/stageEdits), each kept only when it breaks no stage rule */
     stages: {
       /** adds a stage on the floor (null) or a riser on a floor stage; its id, or null when no spot is free */

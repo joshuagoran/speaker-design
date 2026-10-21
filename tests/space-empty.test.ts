@@ -1,5 +1,6 @@
 // The Space page with nothing placed (a new page, the empty start, the last placement removed): the default living room,
 // quiet, with the room's map, 3D view and listener drawn and no level text that reads NaN or -Infinity.
+import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { afterEach, test } from "vite-plus/test";
 import assert from "node:assert";
 import { createElement } from "react";
@@ -82,7 +83,7 @@ test("a first visit shows the empty room: the map and 3D view drawn, one line as
     html.includes(`<span class="font-semibold">${SPACE_TEXT.calculateDelays}</span>`),
     "a control's name in semibold",
   );
-  assert.ok(!html.includes(SPACE_TEXT.bandLevels), "no band levels");
+  assert.ok(!html.includes(SPACE_TEXT.bandLevelsAt("").split("**")[0]), "no band levels");
   assert.ok(!html.includes(SPACE_TEXT.response), "no response chart");
   assert.ok(!/NaN|Infinity/.test(html), "no NaN or Infinity text");
 });
@@ -96,12 +97,20 @@ test("a placed space has no quiet line and no NaN", () => {
   });
   const placed = withItemPlaced(emptySpace(), options[0].item());
   assert.equal(placed.space.placements.length, 1);
-  const html = render(spaceDraft.toDraft(placed));
+  // measured at the listener: the band levels show at once (the audience average's wait for the worker)
+  const atListener = {
+    ...placed,
+    space: {
+      ...placed.space,
+      venue: { ...placed.space.venue, levelRef: COVERAGE_LEVEL_REF.listener },
+    },
+  };
+  const html = render(spaceDraft.toDraft(atListener));
   assert.ok(!html.includes(SPACE_TEXT.quietRoom));
   assert.match(
     html,
-    /Sub −?[\d.]+ dB, Kick −?[\d.]+ dB, Mid −?[\d.]+ dB, High −?[\d.]+ dB/,
-    "each band target",
+    /Sub [−+]?[\d.]+ dB.*Kick [−+]?[\d.]+ dB.*Mid [−+]?[\d.]+ dB.*High [−+]?[\d.]+ dB/,
+    "each band at the reference",
   );
   assert.ok(!/NaN|Infinity/.test(html), "no NaN or Infinity text");
 });

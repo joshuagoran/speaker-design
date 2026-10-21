@@ -1,4 +1,4 @@
-// The space's feed solver (lib/speaker/solveFeeds), what Calculate delays and Calculate levels set: the mains' delays at
+// The space's feed solver (lib/speaker/solveFeeds), what Calculate delays and Calculate gains set: the mains' delays at
 // the listener, each fill's delay and level at its own aim point, no history (any order, run twice: the same), typed
 // delays not read, a mirrored pair's one delay, and the arrival list at the listener.
 import { test } from "vite-plus/test";
@@ -79,7 +79,7 @@ const arrival = (model: SpaceModel, k: number, spot: FloorPoint) => {
 /** What the solver sets for a design. */
 const solve = (d: SpaceDesign) => solveFeeds(spaceModel(d), d.space.venue);
 
-/** The design with the solver's delays and levels set, as Calculate delays and Calculate levels leave it. */
+/** The design with the solver's delays and levels set, as Calculate delays and Calculate gains leave it. */
 const applied = (d: SpaceDesign, solved: readonly SolvedFeed[] = solve(d)): SpaceDesign => ({
   ...d,
   space: {

@@ -105,7 +105,7 @@ export function MemberSettings({
         {STACK_TEXT.mirror}
       </ToggleButton>
       <NumberField
-        label={STACK_TEXT.level}
+        label={STACK_TEXT.gain}
         value={Math.round(member.levelDb * 10) / 10}
         step={STACK_STEPS.levelDb}
         unit="dB"

@@ -362,11 +362,11 @@ export function stackLimits(
     r.limits.bands.map((b) => ({
       member: r.k,
       band: b.id,
-      room:
+      roomDb:
         b.musicDb - (r.m.response.bands.find((rb) => rb.id === b.id)?.passbandDb ?? 0) - r.levelDb,
     })),
   );
-  const first = music.length ? music.reduce((a, b) => (b.room < a.room ? b : a)) : null;
+  const first = music.length ? music.reduce((a, b) => (b.roomDb < a.roomDb ? b : a)) : null;
   return {
     sum,
     members: runs.map((r) =>
@@ -381,7 +381,8 @@ export function stackLimits(
           }
         : null,
     ),
-    musicDb: first ? passbandDb(response.sum) + first.room : null,
+    bands: music,
+    musicDb: first ? passbandDb(response.sum) + first.roomDb : null,
     member: first ? first.member : null,
     band: first ? first.band : null,
   };

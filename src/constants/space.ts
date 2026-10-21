@@ -196,7 +196,7 @@ export const SPACE_PITCH_DEG = 30;
 /** The highest lift under a placement, in (a tall stand, a fly bar). */
 export const SPACE_LIFT_MAX_IN = 240;
 
-/** The band Calculate levels matches a fill to the mains in (lib/speaker/solveFeeds): the voice range a fill is there for. */
+/** The band Calculate gains matches a fill to the mains in (lib/speaker/solveFeeds): the voice range a fill is there for. */
 export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
 
 /**
@@ -220,6 +220,12 @@ export const ARRIVAL_MAIN_ON_TIME_MS = 1;
 /** A main within this of the latest main is close (orange); beyond it, off (red), ms. */
 export const ARRIVAL_MAIN_CLOSE_MS = 3;
 
+/** A band at the reference within this of its target is on it: the readout shows its level, not the gap, dB. */
+export const BAND_ON_TARGET_DB = 0.5;
+/** A band within this of its target is close (green); within `BAND_NEAR_DB`, near (orange); past it, off (red), dB. */
+export const BAND_CLOSE_DB = 3;
+export const BAND_NEAR_DB = 6;
+
 /** How a box's arrival at the listener compares with the mains, by id (the status colors: green, orange, red). */
 export const ARRIVAL_STATUS = { onTime: "onTime", close: "close", off: "off" } as const;
 
@@ -228,10 +234,19 @@ const SPACE_ONE_METER = "1 m from the speakers";
 const SPACE_ONE_METER_TIP =
   "The mean level at ear height, 1 m in front of each placed stack or speaker that plays in the band, on its aim.";
 
-/** The Space page's "Measured at" choices: the PA's, with its own 1 m reference. */
+/** The Space page's "Measured at" choices' names: the PA's, with its own 1 m reference. */
+export const SPACE_LEVEL_REF_NAMES: Record<CoverageLevelRef, string> = {
+  listener: COVERAGE_LEVEL_REFS[0][1],
+  audience: COVERAGE_LEVEL_REFS[1][1],
+  stacks: SPACE_ONE_METER,
+};
+
+/** The Space page's "Measured at" choices. */
 export const SPACE_LEVEL_REFS: readonly ToggleOption<CoverageLevelRef>[] = COVERAGE_LEVEL_REFS.map(
-  ([id, label]) =>
-    id === COVERAGE_LEVEL_REF.stacks ? [id, SPACE_ONE_METER, SPACE_ONE_METER_TIP] : [id, label],
+  ([id]) =>
+    id === COVERAGE_LEVEL_REF.stacks
+      ? [id, SPACE_LEVEL_REF_NAMES[id], SPACE_ONE_METER_TIP]
+      : [id, SPACE_LEVEL_REF_NAMES[id]],
 );
 
 /** Each Space reference as a sentence names it ("the target at …"). */
@@ -256,8 +271,9 @@ export const MAP_MARK_NAMES = { listener: "Listener" } as const;
 const DELAY = "Delay";
 const MEASURED_AT = "Measured at";
 const TARGET_LEVEL = "Target level";
-const SYSTEM_LEVEL = "System level";
-const CALCULATE_LEVELS = "Calculate levels";
+const GAIN = "Gain";
+const SYSTEM_GAIN = "System gain";
+const CALCULATE_GAINS = "Calculate gains";
 const CALCULATE_DELAYS = "Calculate delays";
 
 /** A placement's Main / Fill choice, by whether it is a fill. */
@@ -294,7 +310,7 @@ export const SPACE_TEXT = {
   noLibrary: "Sign in to place your saved stacks and speakers here too.",
   noLibrarySaved: "Save a stack or speaker to place it here.",
   remove: "Remove",
-  /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its level, dB */
+  /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its gain, dB */
   placementSummary: (fromCenter: string, fromFront: string, level: string) =>
     `${fromCenter} ft from the center line · ${fromFront} ft from the front wall · ${level} dB`,
   mirrored: "Mirrored pair",
@@ -317,19 +333,21 @@ export const SPACE_TEXT = {
   pitch: "Tilt, °",
   pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
   upsideDown: "Upside down",
-  level: "Level, dB",
+  gain: `${GAIN}, dB`,
+  /** beside a placement's Gain: the least headroom of its bands, dB (already formatted) */
+  headroomIs: (db: string) => `Headroom ${db} dB`,
   delay: `${DELAY}, ms`,
   delayTip: `The delay on this placement's feed. **${CALCULATE_DELAYS}** sets it.`,
   /** the Main / Fill choice's label and tooltip */
   role: "Main / Fill",
-  roleTip: `**${CALCULATE_DELAYS}** and **${CALCULATE_LEVELS}** treat a fill differently. A fill arrives after the nearest main, at that main's level.`,
+  roleTip: `**${CALCULATE_DELAYS}** and **${CALCULATE_GAINS}** treat a fill differently. A fill arrives after the nearest main, at that main's level.`,
   calculateDelays: CALCULATE_DELAYS,
   calculateDelaysTip: `Sets each **${DELAY}**. The main boxes arrive together at the **${MAP_MARK_NAMES.listener}**. Each fill arrives ${FILL_PRECEDENCE_MS} ms after the nearest main.`,
   /** a note from Calculate delays on one placement: its name, then the note */
   delayNoteFor: (name: string, note: string) => `${name}: ${note}`,
   delayClamped: "This fill arrives late even with no delay. Move it nearer to its area.",
   delayNoMain: "No main to line up with. Add a placement that is not a fill.",
-  feedTip: "A level and a delay on this placement's feed (a fill under, and after, the mains).",
+  feedTip: "A gain and a delay on this placement's feed (a fill under, and after, the mains).",
   ampPower: "Amp power",
   ampPowerHint: AMP_POWER_TIP,
   ampPowerTip:
@@ -363,17 +381,27 @@ export const SPACE_TEXT = {
   /** the Target level's tooltip */
   targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**, the level is lower above each crossover.`,
   measuredAt: MEASURED_AT,
-  systemLevel: `${SYSTEM_LEVEL}, dB`,
-  systemLevelTip: "The level of all placements together. 0 is full power.",
-  calculateLevels: CALCULATE_LEVELS,
-  calculateLevelsTip: `Sets **${SYSTEM_LEVEL}** so the **${MEASURED_AT}** location is at the **${TARGET_LEVEL}**. Each fill gets the level of the nearest main.`,
+  systemGain: `${SYSTEM_GAIN}, dB`,
+  systemGainTip: `The gain on all placements together. A box plays at its limit when its **${GAIN}** and this add to 0.`,
+  calculateGains: CALCULATE_GAINS,
+  calculateGainsTip: `Sets each main's **${GAIN}** so the bands it plays most meet their target at the **${MEASURED_AT}** location. Then it lowers **${SYSTEM_GAIN}** until no band is past its limit. Each fill gets the level of the nearest main.`,
   /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
   mapCaption: (band: string, target: string, place: string) =>
     `${band}, ${target} dB target at ${place}.`,
-  /** the band levels' heading: each band at the listener */
-  bandLevels: "Each band at the listener, at this level:",
-  /** one band's level and target there, dB (already formatted) */
-  bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
+  /** the band levels' heading: where they are measured (a Measured at choice) */
+  bandLevelsAt: (place: string) => `At the **${place}**:`,
+  /** one band there: on its target, its level; off it, how far, dB (already formatted) */
+  bandLevel: (band: string, db: string) => `${band} ${db} dB`,
+  /** a band's tooltip with More bass: its own target, dB (already formatted) */
+  bandTarget: (db: string) => `Target ${db} dB`,
+  /** after Calculate gains, when a limit holds System gain down: how far every band is under its target, dB (formatted) */
+  belowTarget: (db: string) => `Every band is ${db} dB below the target.`,
+  /** the band and the box that limit the system */
+  limitsSystem: (band: string, box: string) =>
+    `The **${band}** band of the **${box}** limits the system.`,
+  /** a band a hand-set gain puts past its limit, and how far, dB (already formatted) */
+  overLimit: (band: string, box: string, db: string) =>
+    `The **${band}** band of the **${box}** is ${db} dB over its limit.`,
   targetCurve: "Target, band balance",
   arrivals: "Arrival at the listener",
   arrivalsTip: `Each box against the last main. Mains want 0 ms. A fill wants ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms.`,
@@ -390,9 +418,6 @@ export const SPACE_TEXT = {
   floorAtLeast: (db: string) => `Floor ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
-  /** the reference can't get the band's target: where it is measured (`COVERAGE_LEVEL_REF_PLACE`), dB */
-  cannotReach: (target: number, atLimit: number) =>
-    `It cannot reach ${target.toFixed(0)} dB: ${atLimit.toFixed(1)} dB at its limit.`,
   listenerVs: "The listener against the target:",
   /** the Stages section */
   addStage: "Add stage/riser",
@@ -447,11 +472,11 @@ export const SPACE_DETAILS = {
     `Target: ${targetDb} dB SPL in the lowest band, at ${place} (${bandDb} dB in this band).`,
   moreBass: "With More bass, each band above a crossover is quieter.",
   flat: "With Flat, every band has the same target.",
-  headroom: "The box with the least headroom sets the level.",
-  turnDown: `Then all placements play at **${SYSTEM_LEVEL}**. 0 is that limit.`,
+  headroom: `A box plays at its limit when its **${GAIN}** and the **${SYSTEM_GAIN}** add to 0.`,
+  turnDown: `**${CALCULATE_GAINS}** lowers **${SYSTEM_GAIN}** until no band is past its limit.`,
   perBand:
     "The map, the audience figures, Floor and Spread are for the band on show. Listener is in the lowest band.",
-  bandLevel: "Each band plays at its Level and its box's level.",
+  bandLevel: "Each band plays at its gain and its box's gain.",
   audience: (clearanceFt: number) =>
     `Audience average: the mean over the floor, except ${clearanceFt} ft around every box.`,
   oneMeter: (place: string) =>

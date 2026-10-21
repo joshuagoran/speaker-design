@@ -36,6 +36,8 @@ interface Props {
   coupledWith: readonly string[];
   /** the stages its boxes stand on, by name; none: the floor */
   standsOn: readonly string[];
+  /** the least headroom of its bands, dB (below 0: past a limit); null with no limit known */
+  headroomDb: number | null;
 }
 
 /** A value kept between `lo` and `hi`. */
@@ -47,7 +49,7 @@ const tenth = (v: number) => Math.round(v * 10) / 10;
 /**
  * One placement's settings: where it stands (all in feet), its aim, whether it is upside down, a flip, whether it is a
  * mirrored pair (the box stands again on the other side of the center line), whether it is a main or a fill, and its
- * level and delay on its feed.
+ * gain (with its headroom) and delay on its feed.
  */
 export function PlacementSettings({
   index,
@@ -60,13 +62,14 @@ export function PlacementSettings({
   onRemove,
   coupledWith,
   standsOn,
+  headroomDb,
 }: Props) {
   const { delayMs, levelDb } = placement;
   /** how far either side of the center line its spot may go, ft */
   const half = room.widthFt / 2;
   /** the highest height above the floor, ft */
   const heightMaxFt = SPACE_LIFT_MAX_IN / INCHES_PER_FOOT;
-  // the folded row: a pair says so, then the spot of the box as set and the level
+  // the folded row: a pair says so, then the spot of the box as set and the gain
   const where = SPACE_TEXT.placementSummary(
     formatSigned(placement.x),
     placement.y.toFixed(1),
@@ -178,11 +181,18 @@ export function PlacementSettings({
       />
       <div className={FIELD_ROW}>
         <NumberField
-          label={<Tooltip tip={SPACE_TEXT.feedTip}>{SPACE_TEXT.level}</Tooltip>}
+          label={<Tooltip tip={SPACE_TEXT.feedTip}>{SPACE_TEXT.gain}</Tooltip>}
           value={tenth(levelDb)}
           step={0.5}
           onChange={(db) => onEdit((p) => ({ ...p, levelDb: db }))}
         />
+        {headroomDb !== null && (
+          <p className={`self-end text-sm tabular-nums ${headroomDb < 0 ? "text-red-700" : ""}`}>
+            {SPACE_TEXT.headroomIs(
+              headroomDb < 0 ? formatSigned(headroomDb) : headroomDb.toFixed(1),
+            )}
+          </p>
+        )}
         <NumberField
           label={
             <Tooltip tip={<MarkedText text={SPACE_TEXT.delayTip} />}>{SPACE_TEXT.delay}</Tooltip>

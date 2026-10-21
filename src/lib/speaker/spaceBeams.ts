@@ -114,7 +114,7 @@ function reachM(meanSquares: readonly { ms: number; airDb: number }[]): number {
  * axis alone.
  */
 export function spaceBeams(
-  model: Pick<SpaceModel, "placements" | "feeds" | "headroomDb" | "scene">,
+  model: Pick<SpaceModel, "placements" | "feeds" | "scene">,
   band: CoverageBand,
   freqHz: number,
 ): SpaceBeam[] {

@@ -36,7 +36,7 @@ export const AUTO_BALANCE_TEXT = {
   tip: (subStepDb: number, stepDb: number, subMaxHz: number) =>
     `Flat: each band plays at the same level. More bass: each band is quieter than the band below it, ${subStepDb} dB at a crossover of ${subMaxHz} Hz or lower and ${stepDb} dB above ${subMaxHz} Hz.`,
   /** what the Stack page's tooltip adds */
-  stackTip: "Each box level goes to 0 dB.",
+  stackTip: "Each box gain goes to 0 dB.",
   /** under the button with More bass: each band's level, from the lowest band, dB (a true minus sign, as the charts write it) */
   levels: (bands: readonly { name: string; levelDb: number }[]) =>
     bands
