@@ -114,6 +114,8 @@ export interface MapActions {
   /** a stage drag begins; then each move drags the stage (handle null) or one of its handles by `by` from its start */
   beginStageDrag?: () => void;
   dragStage?: (id: string, handle: number | null, by: FloorPoint, free: boolean) => void;
+  /** a drag of anything but the listener begins (true) or ends: it moves on every frame, the page's model behind it */
+  setDragging?: (on: boolean) => void;
 }
 
 interface Props {
@@ -314,9 +316,11 @@ export function CoverageMap({
     e.currentTarget.setPointerCapture(e.pointerId);
     setDrag(d);
     if (d.kind === "listener") apply(d, X, Y, e.altKey, e.shiftKey);
+    else actions.setDragging?.(true);
   };
-  // a drag moves the design at most every MAP_DRAG_UPDATE_MS (each move runs the room model again); the latest move
-  // waits, and runs when the time is up or the drag ends, so the drag always ends where the pointer let go
+  // a box, its aim, a stage or the alignment point follows the pointer on every move (the page holds its room model a
+  // step behind the drag). The listener moves at most every MAP_DRAG_UPDATE_MS (each move reads its levels again): the
+  // latest move waits, and runs when the time is up or the drag ends, so the drag always ends where the pointer let go
   const pending = useRef<(() => void) | null>(null);
   const lastRun = useRef(0);
   const timer = useRef<number | undefined>(undefined);
@@ -331,6 +335,10 @@ export function CoverageMap({
     }
   };
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  // a map gone mid-drag ends the drag
+  const ending = useRef<(() => void) | null>(null);
+  ending.current = drag && drag.kind !== "listener" ? () => actions.setDragging?.(false) : null;
+  useEffect(() => () => ending.current?.(), []);
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const { X, Y } = at(e),
       p = toFt(X, Y);
@@ -342,6 +350,10 @@ export function CoverageMap({
     setGrabbable(cursorOf(grabAt(X, Y)));
     if (!drag) return;
     const { altKey, shiftKey } = e;
+    if (drag.kind !== "listener") {
+      apply(drag, X, Y, altKey, shiftKey);
+      return;
+    }
     pending.current = () => apply(drag, X, Y, altKey, shiftKey);
     const wait = MAP_DRAG_UPDATE_MS - (performance.now() - lastRun.current);
     if (wait <= 0) runPending();
@@ -349,6 +361,7 @@ export function CoverageMap({
   };
   const up = () => {
     runPending();
+    if (drag && drag.kind !== "listener") actions.setDragging?.(false);
     setDrag(null);
   };
   const key = (e: React.KeyboardEvent<SVGSVGElement>) => {

@@ -135,9 +135,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const [coverageGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   /** each driver's beam in the band on show, each as far as its level falls BEAM_FALL_DB from 1 m (none without a map) */
   const hasMap = view !== null;
+  const { settled } = space;
   const beams = useMemo(
-    () => (hasMap ? spaceBeams(model, space.band, space.freqHz) : []),
-    [model, space.band, space.freqHz, hasMap],
+    () => (hasMap ? spaceBeams(settled.model, space.band, space.freqHz) : []),
+    [settled.model, space.band, space.freqHz, hasMap],
   );
   /** the libraries, as the Place list reads them (empty when signed out) */
   const stacks = (stack.store.saved ?? []).flatMap((c) => {
@@ -262,7 +263,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
     ),
   ];
   /** the boxes the map draws: a mirrored placement is two, labeled with its number and its side ("1L", "1R") */
-  const boxes: MapBox[] = model.placements.map(({ item }) => {
+  const boxes: MapBox[] = space.items.map((item) => {
     const sizes = item.boxes.map((b) => speakerLayout(b.speaker.cabinet).size);
     const horn = item.drivers.map(driverPattern).find((p) => p.horn)?.horn;
     return {
@@ -382,12 +383,12 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     }))}
                     selectedStage={selectedStage}
                     onSelectStage={(id) => pickStage(id, window.matchMedia(MD_UP).matches)}
-                    selected={model.placements.flatMap((p, i) =>
-                      p.item.placement.source === selected ? [i] : [],
+                    selected={space.items.flatMap((item, i) =>
+                      item.placement.source === selected ? [i] : [],
                     )}
                     onSelect={(i) => {
-                      const box = model.placements[i];
-                      if (box) pickOnMap(box.item.placement.source);
+                      const item = space.items[i];
+                      if (item) pickOnMap(item.placement.source);
                     }}
                     actions={{
                       moveBox: space.moveBox,
@@ -396,6 +397,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                       moveAlignAt: space.moveAlignAt,
                       beginStageDrag: space.stages.beginDrag,
                       dragStage: space.stages.drag,
+                      setDragging: space.setDragging,
                     }}
                     busy={space.isPending}
                     maxHeight={maxHeight}
@@ -424,12 +426,12 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   {(cutaway, look) => (
                     <SpaceView3D
                       room={venue.room}
-                      stages={stageSolids(venue.stages)}
-                      items={model.placements.map((p) => p.item)}
+                      stages={stageSolids(settled.stages)}
+                      items={settled.model.placements.map((p) => p.item)}
                       listener={venue.listener}
-                      alignAt={venue.alignAt}
+                      alignAt={settled.alignAt}
                       earFt={venue.earFt}
-                      view={placements.length > 0 ? view : null}
+                      view={placements.length > 0 ? settled.view : null}
                       beams={look.beams ? beams : []}
                       cutaway={cutaway}
                     />

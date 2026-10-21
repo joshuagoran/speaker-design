@@ -91,7 +91,7 @@ export const SNAP_FLUSH_IN = 6;
 /** Shift held while turning a box on the map: its yaw steps in multiples of this, degrees. */
 export const AIM_SNAP_DEG = 45;
 
-/** While a box, the listener, or the alignment point is dragged on the map, the design moves at most this often, ms. */
+/** While something is dragged on the map, the room model (and a dragged listener) moves at most this often, ms. */
 export const MAP_DRAG_UPDATE_MS = 100;
 
 /** A box is coupled with a surface or another box whose face is this near, m (lib/speaker/spaceCoupling). */

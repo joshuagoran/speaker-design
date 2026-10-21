@@ -31,6 +31,7 @@ import {
   coverageFrequencies,
   coverageGrid,
   levelAtPoint,
+  QUICK_BAND_POINTS,
   RESPONSE_FREQS,
   sceneOf,
   sceneSlots,
@@ -365,18 +366,24 @@ export interface SpaceGridRequest {
   cols: number;
 }
 
-/** The floor map's request in a band (or at one frequency), `cols` cells across. */
+/**
+ * The floor map's request in a band (or at one frequency), `cols` cells across; `quick`: the drag's quick pass, on
+ * `QUICK_BAND_POINTS` band points without modal sub-points.
+ */
 export function spaceGridRequest(
   model: SpaceModel,
   venue: Pick<SpaceVenue, "room" | "earFt">,
   band: CoverageBand,
   freqHz: number,
   cols: number,
+  quick = false,
 ): SpaceGridRequest {
   const { freqs, shares, coherent } = coverageFrequencies(
     band,
     freqHz,
     model.scene.modal?.crossoverHz ?? null,
+    quick ? 1 : undefined,
+    quick ? QUICK_BAND_POINTS : undefined,
   );
   return {
     scene: model.scene,

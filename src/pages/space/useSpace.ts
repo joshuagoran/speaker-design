@@ -7,6 +7,7 @@ import {
   coverageStats,
   COVERAGE_BANDS,
   COVERAGE_GRID_COLS,
+  QUICK_GRID_COLS,
   SINGLE_FREQ_RANGE,
 } from "../../lib/acoustics/coverage";
 import {
@@ -20,6 +21,7 @@ import {
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { keysOf } from "../../lib/records";
 import {
+  bandOfPart,
   spaceGridRequest,
   spaceLevelAt,
   spaceModelLaidOut,
@@ -54,9 +56,11 @@ import {
   withStageShape,
   type StageBox,
 } from "./stageEdits";
-import { AIM_SNAP_DEG, SNAP_FLUSH_IN } from "../../constants/space";
+import { AIM_SNAP_DEG, MAP_DRAG_UPDATE_MS, SNAP_FLUSH_IN } from "../../constants/space";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
-import { runSpaceGrid } from "../../lib/speaker/runSpace";
+import { runSpaceGrid, runSpaceQuickGrid } from "../../lib/speaker/runSpace";
+import { isOptimizerCancel } from "../../lib/makeOptimizerRunner";
+import { useHeld, useThrottled } from "../../hooks/useThrottled";
 import { presetLayers } from "../stack/stackPresets";
 import {
   EMPTY_START,
@@ -243,13 +247,17 @@ export function spaceFromStart(start: DesignStart): SpaceDesign {
 const ANCHOR_GRID = { none: "none", own: "own", other: "other" } as const;
 
 /**
- * One grid for the worker: the request, the frequency its band's target is read at (Hz), and the boxes' spots it was
- * asked for (the audience average and the stats leave the floor in front of them out, whatever the boxes are by then).
- * `anchor` is the same space's request in the turn-down band; `anchorGrid` says whether the turn-down reads the
- * audience average, which needs that band's grid too.
+ * One grid for the worker: the request and its columns (`quick`: a drag's quick pass), the frequency its band's target
+ * is read at (Hz), and the boxes' spots it was asked for (the audience average and the stats leave the floor in front
+ * of them out, whatever the boxes are by then). `anchor` is the same space's request in the turn-down band;
+ * `anchorGrid` says whether the turn-down reads the audience average, which needs that band's grid too. `seq` orders
+ * the jobs as they were asked for.
  */
 interface GridJob {
   req: Omit<SpaceGridRequest, "cols">;
+  cols: number;
+  quick: boolean;
+  seq: number;
   centerHz: number;
   spots: readonly FloorPoint[];
   anchor: Omit<SpaceGridRequest, "cols">;
@@ -358,28 +366,44 @@ export function useSpace(initialBand: CoverageBand = "mid") {
   const [replaced, setReplaced] = useState(0);
   /** whether a dragged box snaps flush against a wall or another box */
   const [snapsFlush, setSnapsFlush] = useState(true);
+  /**
+   * whether a box, its aim, a stage or the alignment point is being dragged on the map: the model then follows the drag
+   * at most every MAP_DRAG_UPDATE_MS, the map takes quick passes, and the 3D view, the band levels and the response at
+   * the listener wait for the drag's end
+   */
+  const [dragging, setDragging] = useState(false);
   const { space } = design;
   const { venue } = space;
-  // the model reads the placements, the room, the stacks and the speakers, a step behind the typing
-  const placements = useDeferredValue(space.placements);
+  /** the space the model reads: during a drag, a step behind it */
+  const modelSpace = useThrottled(space, dragging, MAP_DRAG_UPDATE_MS);
+  // the model reads the placements, the stages, the room, the stacks and the speakers, a step behind the typing
+  const placements = useDeferredValue(modelSpace.placements);
+  const stages = useDeferredValue(modelSpace.venue.stages);
   const room = useDeferredValue(venue.room);
   const stacks = useDeferredValue(design.stacks);
   const speakers = useDeferredValue(design.speakers);
+  const { alignAt } = modelSpace.venue;
+  /** the boxes as the design places them now, which the map draws: a drag's box follows the pointer */
+  const items = useMemo(
+    () => spaceLayout(design, bandOfPart),
+    // the layout reads only these
+    [design.space.placements, design.space.venue.stages, design.stacks, design.speakers],
+  );
   /** the model at the typed delays and levels (Auto ones at 0): what the solver reads */
   const laidOut = useMemo(
     () =>
       spaceModelLaidOut({
-        space: { ...space, placements, venue: { ...venue, room } },
+        space: { ...space, placements, venue: { ...venue, room, stages } },
         stacks,
         speakers,
       }),
     // the model reads only these (the name, the listener and the target don't move it)
-    [placements, room, stacks, speakers],
+    [placements, stages, room, stacks, speakers],
   );
   /** every Auto delay and level, solved from the layout (the listener doesn't move them) */
   const solved = useMemo(
-    () => solveFeeds(laidOut, { alignAt: venue.alignAt, earFt: venue.earFt, room }),
-    [laidOut, venue.alignAt, venue.earFt, room],
+    () => solveFeeds(laidOut, { alignAt, earFt: venue.earFt, room }),
+    [laidOut, alignAt, venue.earFt, room],
   );
   const model = useMemo(() => withSolved(laidOut, solved), [laidOut, solved]);
   /** each placement's arrival at the listener against the latest main */
@@ -387,9 +411,11 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     () => listenerArrivals(model, venue.listener, venue.earFt),
     [model, venue.listener, venue.earFt],
   );
+  /** the map's columns: fewer during a drag (its quick pass) */
+  const cols = dragging ? QUICK_GRID_COLS : COVERAGE_GRID_COLS;
   const req = useMemo<Omit<SpaceGridRequest, "cols">>(
-    () => spaceGridRequest(model, { room, earFt: venue.earFt }, band, freqHz, COVERAGE_GRID_COLS),
-    [model, room, venue.earFt, band, freqHz],
+    () => spaceGridRequest(model, { room, earFt: venue.earFt }, band, freqHz, cols, dragging),
+    [model, room, venue.earFt, band, freqHz, cols, dragging],
   );
   /** the space in the turn-down band: what sets the turn-down, whatever band is on show (no frequency is read) */
   const anchorReq = useMemo<Omit<SpaceGridRequest, "cols">>(
@@ -399,10 +425,15 @@ export function useSpace(initialBand: CoverageBand = "mid") {
         { room, earFt: venue.earFt },
         TURN_DOWN_BAND,
         SINGLE_FREQ_RANGE[0],
-        COVERAGE_GRID_COLS,
+        cols,
+        dragging,
       ),
-    [model, room, venue.earFt],
+    [model, room, venue.earFt, cols, dragging],
   );
+  /** the model the band levels, the response and the 3D view read: during a drag, the one from before it */
+  const settledModel = useHeld(model, dragging);
+  const settledStages = useHeld(stages, dragging);
+  const settledAlignAt = useHeld(venue.alignAt, dragging);
   /** what each box stands right against: the floor, the walls and the other boxes, with the map's marks */
   const { coupling } = model;
   /** the boxes' spots: the stats leave the floor right in front of them out */
@@ -411,46 +442,76 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     [model],
   );
 
-  // the worker queue: one job at a time, and only the newest waiting job is kept
-  // each job carries the frequency its band's target is read at, so a grid on show keeps its own band's target
+  // two worker queues, full passes and a drag's quick ones (each in its own worker, so a quick pass never waits for a
+  // full one): one job at a time in each, and only the newest waiting job is kept. A grid shows only when it is newer
+  // than the one on show. Each job carries the frequency its band's target is read at, so a grid on show keeps its own
+  // band's target
   const [shown, setShown] = useState<
     (GridJob & { grid: CoverageGrid; anchorOf: CoverageGrid | null }) | null
   >(null);
+  const shownSeq = useRef(0);
+  const jobSeq = useRef(0);
   const [failed, setFailed] = useState<{ req: typeof req; message: string } | null>(null);
-  const busy = useRef(false);
-  const want = useRef<GridJob | null>(null);
+  const lanes = useRef({
+    full: {
+      run: runSpaceGrid,
+      busy: false,
+      want: null as GridJob | null,
+      stop: new AbortController(),
+    },
+    quick: {
+      run: runSpaceQuickGrid,
+      busy: false,
+      want: null as GridJob | null,
+      stop: new AbortController(),
+    },
+  });
   /** the turn-down band's last grid, by its request: a change of band on show doesn't compute it again */
   const anchorCache = useRef<{ req: GridJob["anchor"]; grid: CoverageGrid } | null>(null);
-  const pump = () => {
-    if (busy.current || !want.current) return;
-    const next = want.current;
-    want.current = null;
-    busy.current = true;
+  const pump = (lane: (typeof lanes.current)["full"]) => {
+    if (lane.busy || !lane.want) return;
+    const next = lane.want;
+    lane.want = null;
+    lane.busy = true;
+    const { signal } = lane.stop;
     /** the turn-down band's grid for the grid just computed: the same grid, a kept one or a new one */
     const anchorOf = async (grid: CoverageGrid): Promise<CoverageGrid | null> => {
       if (next.anchorGrid === ANCHOR_GRID.none) return null;
       if (next.anchorGrid === ANCHOR_GRID.own) return grid;
       const kept = anchorCache.current;
       if (kept && kept.req === next.anchor) return kept.grid;
-      const made = await runSpaceGrid({ ...next.anchor, cols: COVERAGE_GRID_COLS });
+      const made = await lane.run({ ...next.anchor, cols: next.cols }, { signal });
       anchorCache.current = { req: next.anchor, grid: made };
       return made;
     };
-    runSpaceGrid({ ...next.req, cols: COVERAGE_GRID_COLS })
+    lane
+      .run({ ...next.req, cols: next.cols }, { signal })
       .then(async (grid) => ({ grid, anchor: await anchorOf(grid) }))
       .then(
         ({ grid, anchor }) => {
+          if (next.seq < shownSeq.current) return;
+          shownSeq.current = next.seq;
           setShown({ ...next, grid, anchorOf: anchor });
           setFailed(null);
         },
-        (e: unknown) =>
-          setFailed({ req: next.req, message: e instanceof Error ? e.message : String(e) }),
+        (e: unknown) => {
+          if (!isOptimizerCancel(e))
+            setFailed({ req: next.req, message: e instanceof Error ? e.message : String(e) });
+        },
       )
       .finally(() => {
-        busy.current = false;
-        pump();
+        lane.busy = false;
+        pump(lane);
       });
   };
+  // a drag stops the full pass under way: the drag has made it old (its worker starts again for the next one)
+  useEffect(() => {
+    if (!dragging) return;
+    const { full } = lanes.current;
+    full.want = null;
+    full.stop.abort();
+    full.stop = new AbortController();
+  }, [dragging]);
   const placed = model.scene.sources.length > 0;
   // where the target is measured, and the music balance it follows across the bands (lib/speaker/spaceBalance)
   const { levelRef, balance } = venue;
@@ -463,14 +524,18 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       : ANCHOR_GRID.other;
   useEffect(() => {
     if (!placed) return;
-    want.current = {
+    const lane = dragging ? lanes.current.quick : lanes.current.full;
+    lane.want = {
       req,
+      cols,
+      quick: dragging,
+      seq: ++jobSeq.current,
       centerHz: bandCenterHz(band, freqHz),
       spots,
       anchor: anchorReq,
       anchorGrid,
     };
-    pump();
+    pump(lane);
   }, [req, placed, anchorReq, anchorGrid]);
 
   const crossovers = useMemo(
@@ -551,6 +616,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     crossovers,
     balance,
   ]);
+  const settledView = useHeld(view, dragging);
   const stats = useMemo(
     () => (view && shown ? coverageStats(view.grid, view.room, shown.spots, view.target) : null),
     [view, shown],
@@ -563,43 +629,40 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     target: turnDownTarget,
     atLimit: fromGrid ? (view ? view.atLimit : null) : anchorAtLimit,
   };
-  /** each band's level at the listener at the space's level, and its target */
-  const bandLevels = useMemo(
+  /** each band's level at the listener at the limit (the model from before a drag, while it lasts) */
+  const bandsAtLimit = useMemo(
     () =>
       placed
         ? keysOf(COVERAGE_BANDS).map((b) => ({
             band: b,
-            db:
-              spaceLevelAt(
-                spaceGridRequest(
-                  model,
-                  { room, earFt: venue.earFt },
-                  b,
-                  freqHz,
-                  COVERAGE_GRID_COLS,
-                ),
-                venue.listener,
-              ) + gain,
-            target: spaceTargetAt(venue.targetDb, bandCenterHz(b, freqHz), crossovers, balance),
+            db: spaceLevelAt(
+              spaceGridRequest(
+                settledModel,
+                { room, earFt: venue.earFt },
+                b,
+                freqHz,
+                COVERAGE_GRID_COLS,
+              ),
+              venue.listener,
+            ),
           }))
         : [],
-    [
-      placed,
-      model,
-      room,
-      venue.earFt,
-      venue.listener,
-      venue.targetDb,
-      freqHz,
-      gain,
-      crossovers,
-      balance,
-    ],
+    [placed, settledModel, room, venue.earFt, venue.listener, freqHz],
+  );
+  /** each band's level at the listener at the space's level, and its target */
+  const bandLevels = useMemo(
+    () =>
+      bandsAtLimit.map(({ band: b, db }) => ({
+        band: b,
+        db: db + gain,
+        target: spaceTargetAt(venue.targetDb, bandCenterHz(b, freqHz), crossovers, balance),
+      })),
+    [bandsAtLimit, venue.targetDb, freqHz, gain, crossovers, balance],
   );
   const responseAtLimit = useMemo(
-    () => (placed ? spaceResponse(model, venue, venue.listener) : []),
+    () => (placed ? spaceResponse(settledModel, venue, venue.listener) : []),
     // the response reads the model, the listener and the ear
-    [placed, model, venue.listener, venue.earFt],
+    [placed, settledModel, venue.listener, venue.earFt],
   );
   const response = useMemo(
     () => responseAtLimit.map((o) => ({ f: o.f, spl: o.spl + gain })),
@@ -621,8 +684,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     setDesign((d) => ({ ...d, space: edit(d.space) }));
   const editPlacements = (edit: (list: readonly SpacePlacement[]) => SpacePlacement[]) =>
     editSpace((s) => ({ ...s, placements: edit(s.placements) }));
-  /** each box's plan from its spot, as the model lays it out: what the stage rules read */
-  const plans = useMemo(() => spotPlans(model.placements.map((p) => p.item)), [model]);
+  /** each box's plan from its spot, as the design lays it out now: what the stage rules read */
+  const plans = useMemo(() => spotPlans(items), [items]);
   /** a change to the space kept only when it breaks no rule the space kept (lib/speaker/spaceStages) */
   const editRuled = (edit: (s: SpaceSpec) => SpaceSpec) =>
     editSpace((s) => {
@@ -639,8 +702,8 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     });
   /** the space when a stage drag began: each move of the drag starts from it */
   const stageDragStart = useRef<SpaceSpec | null>(null);
-  /** the box the model places at index `i` (what the map draws; a mirrored pair is two boxes) */
-  const boxAt = (i: number): DraggedBox | undefined => model.placements[i]?.item.placement;
+  /** the box the design places at index `i` (what the map draws; a mirrored pair is two boxes) */
+  const boxAt = (i: number): DraggedBox | undefined => items[i]?.placement;
   const editVenue = (edit: (v: SpaceVenue) => SpaceVenue) =>
     editSpace((s) => ({ ...s, venue: edit(s.venue) }));
   const replaceDesign = (d: SpaceDesign) => {
@@ -667,6 +730,17 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     /** replaces the design whole: a start, a clear or an opened save */
     replaceDesign,
     model,
+    /** the boxes as the design places them now (the model's may be a step behind a drag), in the model's order */
+    items,
+    /** what the 3D view shows: during a drag, the model, stages, alignment point and map from before it */
+    settled: {
+      model: settledModel,
+      stages: settledStages,
+      alignAt: settledAlignAt,
+      view: settledView,
+    },
+    /** a drag of a box, its aim, a stage or the alignment point on the map begins (true) or ends */
+    setDragging,
     arrivals,
     view,
     stats,
@@ -734,7 +808,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
         const flush: FlushSnap | undefined =
           snapsFlush && !free
             ? {
-                items: model.placements.map((m) => m.item),
+                items,
                 at: i,
                 walls: roomWalls(s.venue.room),
                 stages: {

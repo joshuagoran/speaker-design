@@ -89,10 +89,16 @@ export const COVERAGE_BANDS: Record<
   mid: { name: "Mid", lo: 160, hi: 2000 },
   high: { name: "High", lo: 2000, hi: 16000 },
 };
-/** Grid columns across the room: one resolution, during a drag too, so the map never changes look. */
+/** Grid columns across the room. */
 export const COVERAGE_GRID_COLS = 40;
 /** frequencies averaged per band */
 export const BAND_POINTS = 10;
+/**
+ * The map's quick pass while something is dragged on it: a third of the columns, this many band points, and no modal
+ * sub-points. The full pass follows when the drag ends.
+ */
+export const QUICK_GRID_COLS = Math.round(COVERAGE_GRID_COLS / 3);
+export const QUICK_BAND_POINTS = 4;
 /** Below this the paths sum with phase, in a band average or at one frequency; above it they add by power. */
 export const COHERENT_BELOW_HZ = 500;
 /** the single-frequency view's range, Hz: above `COHERENT_BELOW_HZ` it adds by power, as the bands do */
@@ -562,13 +568,15 @@ export function sceneSlots(
  * is clamped to the band's range (the sub-points then space evenly across the clamped share, still weighing 1/M each,
  * and the point's total weight stays 1): no frequency falls below the band's bottom or above its top. M is `subpoints`,
  * else `MODAL_SUBPOINTS`, or `MODAL_SUBPOINTS_WHOLE_BAND` for a band that lies wholly below the top of the crossfade.
- * The one-frequency view never splits, and sums with phase only below `COHERENT_BELOW_HZ`.
+ * The one-frequency view never splits, and sums with phase only below `COHERENT_BELOW_HZ`. `points` (the quick pass's
+ * fewer) takes the place of `BAND_POINTS`.
  */
 export function coverageFrequencies(
   band: CoverageBand,
   freqHz: number,
   modalCrossoverHz: number | null = null,
   subpoints?: number,
+  points = BAND_POINTS,
 ): { freqs: number[]; shares: number[]; coherent: boolean } {
   if (band === "one") return { freqs: [freqHz], shares: [1], coherent: freqHz < COHERENT_BELOW_HZ };
   const b = COVERAGE_BANDS[band];
@@ -576,10 +584,10 @@ export function coverageFrequencies(
   /** M, how many frequencies a point in the modal range splits into */
   const split = subpoints ?? (b.hi < modalTop ? MODAL_SUBPOINTS_WHOLE_BAND : MODAL_SUBPOINTS);
   /** the ratio of one band point to the next */
-  const pointRatio = Math.pow(b.hi / b.lo, 1 / (BAND_POINTS - 1));
+  const pointRatio = Math.pow(b.hi / b.lo, 1 / (points - 1));
   const freqs: number[] = [],
     shares: number[] = [];
-  for (const f of logSpacedFrequencies(b.lo, b.hi, BAND_POINTS)) {
+  for (const f of logSpacedFrequencies(b.lo, b.hi, points)) {
     if (split > 1 && f < modalTop) {
       /** the point's share of the band, Hz: a ratio either side of it, clamped to the band's edges */
       const from = Math.max(b.lo, f / Math.sqrt(pointRatio)),
