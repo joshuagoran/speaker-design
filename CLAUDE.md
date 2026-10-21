@@ -22,6 +22,8 @@ Vite+ docs: `node_modules/vite-plus/docs`.
   through CSS variables: no `dark:` variants, no `bg-white`, cards use `bg-panel`, and code reads `usePalette()`. Data
   colors and the `ON_DATA` marks are the same in both themes. Color literals only in the favicon, the color picker's
   ring, and the cabinet finishes. `tests/contrast.test.ts` checks contrast.
+- UI text uses STE, as the docs do. A string that names a control builds the name from that label's constant and marks
+  it `**…**`; the app shows it in semibold. Replies and docs show app names in **bold**.
 - Writing: US spelling (a key that saved data or links carry keeps its spelling, with a comment). Oxford comma.
   Louder/quieter for dB, higher/lower for Hz. One short sentence per line on a page; more goes in a Tooltip or the
   Details fold. Speaker, Stack, and Space start with a capital when they mean the design item or the page; the plain
