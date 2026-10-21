@@ -3305,10 +3305,8 @@ export interface CoverageGrid {
 export interface CoverageGridView {
   grid: CoverageGrid;
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">;
-  /** what a grid level is compared against: the grid's band target less the gain (the grid is at the limit), dB */
+  /** what a grid level is compared against: the grid's band target, dB (the grid is at System gain) */
   target: number;
-  /** System gain, dB, added to a grid level for the absolute level */
-  gain: number;
 }
 
 /** How much of the floor reaches the target, leaving out the space right in front of the boxes. */
