@@ -26,10 +26,13 @@ import {
 } from "./directivity";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
 import {
-  barrierLossDb,
   BARRIER_BRIGHT_N,
+  BARRIER_CAP_NEPERS,
+  barrierCapped,
+  barrierNepers,
   edgeFade,
   faceSide,
+  fresnelRadius,
   lineDetour,
   outlineDepth,
   sizeFade,
@@ -594,7 +597,9 @@ export function coverageFrequencies(
 }
 
 // scratch space for the sum: per source geometry (GEO values each), per path pressure, the detour over the stages
-const GEO = 12;
+const GEO = 14;
+/** A detour's δk past which no slot's barrier takes anything off (N = δk/π at its bright-side end). */
+const BRIGHT_DETOUR_K = BARRIER_BRIGHT_N * Math.PI;
 let geo = new Float64Array(0),
   pre = new Float64Array(0),
   pim = new Float64Array(0);
@@ -640,8 +645,15 @@ function stageReflection(
   hit.y = s.y + (py - s.y) * t;
   // the legs to and from the reflection are t and 1 − t of the path
   hit.zone = 2 * Math.PI * t * (1 - t) * dist;
-  const reach = Math.sqrt(hit.zone / kMin);
+  const reach = fresnelRadius((2 * Math.PI) / kMin, t * dist, (1 - t) * dist);
   if (!r.face) {
+    if (
+      hit.x < block.x0 - reach ||
+      hit.x > block.x1 + reach ||
+      hit.y < block.y0 - reach ||
+      hit.y > block.y1 + reach
+    )
+      return false;
     hit.in1 = outlineDepth(block, hit.x, hit.y);
     hit.in2 = hit.in3 = Infinity;
     return hit.in1 > -reach;
@@ -741,13 +753,16 @@ export function levelAtPoint(
             continue;
           }
           sourceDetour(scene, s, reflects, px, py, pz);
-          geo[g + 6] = detour.delta;
+          // none at any slot: well on the bright side at the lowest wavenumber; all at the cap from it up
+          geo[g + 6] = detour.delta * kMin > BRIGHT_DETOUR_K ? detour.delta : -Infinity;
           geo[g + 7] = detour.stage;
+          geo[g + 13] = barrierCapped((detour.delta * kMin) / Math.PI) ? 1 : 0;
           if (reflects) {
             geo[g + 8] = hit.zone;
             geo[g + 9] = hit.in1;
             geo[g + 10] = hit.in2;
             geo[g + 11] = hit.in3;
+            geo[g + 12] = Math.min(hit.in1, hit.in2, hit.in3);
           }
         }
         const ahead = dx * s.sy + dy * s.cy,
@@ -773,26 +788,32 @@ export function levelAtPoint(
         g = GEO * i;
       let gain = sl.refl[s.refl];
       if (!v || !gain || !geo[g + 5]) continue;
-      // a stage image fades out across its surface's edges, over the first Fresnel zone
-      if (s.reflector >= 0) {
+      // a stage image fades out across its surface's edges, over the first Fresnel zone (nearer than one zone's
+      // radius to an edge: m·|m| < radius²)
+      const nearest = geo[g + 12];
+      if (s.reflector >= 0 && nearest * Math.abs(nearest) < geo[g + 8] / sl.k) {
         const zone = Math.sqrt(geo[g + 8] / sl.k);
         gain *=
           edgeFade(geo[g + 9], zone) * edgeFade(geo[g + 10], zone) * edgeFade(geo[g + 11], zone);
         if (!gain) continue;
       }
-      // a stage in the way: its barrier loss at this path's Fresnel number, N = 2δ/λ = δk/π
-      const fresnel = (geo[g + 6] * sl.k) / Math.PI;
-      if (fresnel > BARRIER_BRIGHT_N)
-        gain *= Math.pow(10, (-barrierLossDb(fresnel) * sl.stageFade[geo[g + 7]]) / 20);
-      const r = geo[g],
-        half = s.horn ? sl.hornHalf[s.voice] : undefined;
+      const r = geo[g];
+      // what the air takes off, and a stage in the way: its barrier loss at this path's Fresnel number, N = 2δ/λ = δk/π
+      // (nepers)
+      let loss = sl.air * r;
+      const detourK = geo[g + 6] * sl.k;
+      if (detourK > BRIGHT_DETOUR_K)
+        loss +=
+          sl.stageFade[geo[g + 7]] *
+          (geo[g + 13] ? BARRIER_CAP_NEPERS : barrierNepers(detourK / Math.PI));
+      const half = s.horn ? sl.hornHalf[s.voice] : undefined;
       let d: number;
       if (half) d = waveguideGain(geo[g + 1], geo[g + 2], half);
       else {
         d = pistonPattern((sl.ka[s.voice] ?? 0) * geo[g + 3]);
         if (geo[g + 4]) d *= sl.shadow;
       }
-      const mag = (d * gain * Math.exp(-sl.air * r)) / r,
+      const mag = (d * gain * Math.exp(-loss)) / r,
         // less the alignment, so the box's drivers arrive together at its alignment point
         ph = -sl.k * (r - s.alignM),
         c = Math.cos(ph),

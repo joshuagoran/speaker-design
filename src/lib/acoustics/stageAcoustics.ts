@@ -25,10 +25,15 @@ export interface SceneStage {
   top: number;
 }
 
-/** A stage as the barrier test reads it: its outline's corners (collinear runs merged), its plan's bounds, its top. */
+/**
+ * A stage as the barrier test reads it: its outline's corners (collinear runs merged), each edge's run from the corner
+ * before (ex, ey: corner i less corner i − 1), its plan's bounds, its top.
+ */
 export interface StageBlock extends Pick<SceneStage, "top"> {
   xs: number[];
   ys: number[];
+  ex: number[];
+  ey: number[];
   x0: number;
   x1: number;
   y0: number;
@@ -64,17 +69,44 @@ export const BARRIER_CAP_DB = 20;
 /** On the bright side the loss has faded to 0 by this Fresnel number. */
 export const BARRIER_BRIGHT_N = -0.2;
 
-/**
- * A single-edge barrier's loss at Fresnel number `n` (N = 2δ/λ, negative on the bright side), dB: Kurze–Anderson,
- * 5 + 20·log10(x / tanh x) in the shadow and 5 + 20·log10(x / tan x) on the bright side, x = √(2π|N|); 0 from
- * `BARRIER_BRIGHT_N` down, never past `BARRIER_CAP_DB`.
- */
-export function barrierLossDb(n: number): number {
-  if (n <= BARRIER_BRIGHT_N) return 0;
+/** The barrier's loss at grazing and at its cap, as pressure ratios. */
+const GRAZING_RATIO = 10 ** (BARRIER_GRAZING_DB / 20),
+  CAP_RATIO = 10 ** (BARRIER_CAP_DB / 20);
+/** The barrier's cap in nepers. */
+export const BARRIER_CAP_NEPERS = Math.log(CAP_RATIO);
+/** The Fresnel number where the loss reaches its cap: x / tanh x ≥ x, so from where x alone reaches it. */
+const CAP_N = (CAP_RATIO / GRAZING_RATIO) ** 2 / (2 * Math.PI);
+
+/** Whether the barrier's loss is at its cap at Fresnel number `n` (and at every larger one). */
+export const barrierCapped = (n: number) => n >= CAP_N;
+
+/** The barrier's curve in nepers (`barrierNepers`), before its floor at 0 and its cap. */
+function rawBarrierNepers(n: number): number {
   const x = Math.sqrt(2 * Math.PI * Math.abs(n));
-  if (x < EPS) return BARRIER_GRAZING_DB;
-  const ratio = n > 0 ? x / Math.tanh(x) : x / Math.tan(x);
-  return Math.min(BARRIER_CAP_DB, Math.max(0, BARRIER_GRAZING_DB + 20 * Math.log10(ratio)));
+  if (x < EPS) return Math.log(GRAZING_RATIO);
+  return Math.log(GRAZING_RATIO * (n > 0 ? x / Math.tanh(x) : x / Math.tan(x)));
+}
+
+/** That curve every `NEPERS_STEP` of N from the bright side's end to the cap, for the sum's hot loop. */
+const NEPERS_STEP = 1 / 2048;
+const NEPERS_TABLE = Float64Array.from(
+  { length: Math.ceil((CAP_N - BARRIER_BRIGHT_N) / NEPERS_STEP) + 2 },
+  (_, i) => rawBarrierNepers(BARRIER_BRIGHT_N + i * NEPERS_STEP),
+);
+
+/**
+ * A single-edge barrier's loss at Fresnel number `n` (N = 2δ/λ, negative on the bright side), in nepers (its pressure
+ * ratio's natural log): Kurze–Anderson, 5 + 20·log10(x / tanh x) dB in the shadow and 5 + 20·log10(x / tan x) dB on
+ * the bright side, x = √(2π|N|); 0 from `BARRIER_BRIGHT_N` down, never past `BARRIER_CAP_DB`. For the sum's hot loop it
+ * reads a table of the curve, interpolated: within 1e-5 dB of it.
+ */
+export function barrierNepers(n: number): number {
+  if (n <= BARRIER_BRIGHT_N) return 0;
+  if (n >= CAP_N) return BARRIER_CAP_NEPERS;
+  const at = (n - BARRIER_BRIGHT_N) / NEPERS_STEP,
+    i = Math.floor(at),
+    lo = NEPERS_TABLE[i];
+  return Math.min(BARRIER_CAP_NEPERS, Math.max(0, lo + (NEPERS_TABLE[i + 1] - lo) * (at - i)));
 }
 
 /**
@@ -133,6 +165,8 @@ export function stageGeometry(stages: readonly SceneStage[]): {
     const block = {
       xs,
       ys,
+      ex: xs.map((x, i) => x - xs[(i + xs.length - 1) % xs.length]),
+      ey: ys.map((y, i) => y - ys[(i + ys.length - 1) % ys.length]),
       x0: Math.min(...xs),
       x1: Math.max(...xs),
       y0: Math.min(...ys),
@@ -180,21 +214,24 @@ export const faceSide = (f: FaceLine, x: number, y: number) =>
 /** How far a point lies inside a block's outline, m (negative outside): its distance from the nearest edge. */
 export function outlineDepth(b: StageBlock, x: number, y: number): number {
   const { xs, ys } = b;
-  let near = Infinity;
+  let near2 = Infinity;
   for (let i = 0, j = xs.length - 1; i < xs.length; j = i++) {
-    const ex = xs[i] - xs[j],
-      ey = ys[i] - ys[j],
-      t = Math.min(
-        1,
-        Math.max(0, ((x - xs[j]) * ex + (y - ys[j]) * ey) / (ex * ex + ey * ey || 1)),
-      );
-    near = Math.min(near, Math.hypot(x - xs[j] - t * ex, y - ys[j] - t * ey));
+    const ex = b.ex[i],
+      ey = b.ey[i],
+      wx = x - xs[j],
+      wy = y - ys[j],
+      t = Math.min(1, Math.max(0, (wx * ex + wy * ey) / (ex * ex + ey * ey || 1))),
+      ux = wx - t * ex,
+      uy = wy - t * ey;
+    near2 = Math.min(near2, ux * ux + uy * uy);
   }
+  const near = Math.sqrt(near2);
   return insideBlock(b, x, y) ? near : -near;
 }
 
 /** Whether a point lies inside a block's outline (even–odd). */
 export function insideBlock(b: StageBlock, x: number, y: number): boolean {
+  if (x < b.x0 || x > b.x1 || y < b.y0 || y > b.y1) return false;
   const { xs, ys } = b;
   let hit = false;
   for (let i = 0, j = xs.length - 1; i < xs.length; j = i++)
@@ -240,50 +277,36 @@ export function lineDetour(
   }
   const dx = bx - ax,
     dy = by - ay,
-    D = Math.hypot(dx, dy);
+    D = Math.sqrt(dx * dx + dy * dy);
   if (D < EPS) return;
-  const lx0 = Math.min(ax, bx),
-    lx1 = Math.max(ax, bx),
-    ly0 = Math.min(ay, by),
-    ly1 = Math.max(ay, by);
+  // the same plan as the last line (a box's drivers stand one over another): its crossings are kept
+  const samePlan =
+    plan.blocks === blocks && plan.ax === ax && plan.ay === ay && plan.bx === bx && plan.by === by;
+  if (!samePlan) {
+    plan.blocks = blocks;
+    plan.ax = ax;
+    plan.ay = ay;
+    plan.bx = bx;
+    plan.by = by;
+    planCrossings(blocks, ax, ay, bx, by);
+  }
   for (let s = 0; s < blocks.length; s++) {
-    const b = blocks[s];
-    if (s === skip || lx1 < b.x0 || lx0 > b.x1 || ly1 < b.y0 || ly0 > b.y1) continue;
-    // where the line's plan runs over the outline: from its first entry t1 to its last exit t2 (0 to 1 along it)
-    const { xs, ys, top } = b;
-    let t1 = 2,
-      t2 = -1;
-    for (let i = 0, j = xs.length - 1; i < xs.length; j = i++) {
-      const ex = xs[i] - xs[j],
-        ey = ys[i] - ys[j],
-        den = dx * ey - dy * ex;
-      if (!den) continue;
-      const wx = xs[j] - ax,
-        wy = ys[j] - ay,
-        t = (wx * ey - wy * ex) / den,
-        u = (wx * dy - wy * dx) / den;
-      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-        t1 = Math.min(t1, t);
-        t2 = Math.max(t2, t);
-      }
-    }
-    const inA = insideBlock(b, ax, ay),
-      inB = insideBlock(b, bx, by);
-    if (inA) t1 = 0;
-    if (inB) t2 = 1;
-    if (t2 < t1) continue;
-    const edge1 = !(inA && az >= top),
-      edge2 = !(inB && bz >= top);
+    const t1 = plan.t1[s],
+      t2 = plan.t2[s];
+    if (s === skip || t2 < t1) continue;
+    const { top } = blocks[s];
+    const edge1 = !(plan.inA[s] && az >= top),
+      edge2 = !(plan.inB[s] && bz >= top);
     if (!edge1 && !edge2) continue;
     const rise = bz - az,
       x1 = t1 * D,
       x2 = t2 * D,
-      L = Math.hypot(D, rise),
+      L = Math.sqrt(D * D + rise * rise),
       // a to each edge and on to b, in the vertical plane
-      a1 = Math.hypot(x1, top - az),
-      b1 = Math.hypot(D - x1, bz - top),
-      a2 = Math.hypot(x2, top - az),
-      b2 = Math.hypot(D - x2, bz - top);
+      a1 = Math.sqrt(x1 * x1 + (top - az) ** 2),
+      b1 = Math.sqrt((D - x1) ** 2 + (bz - top) ** 2),
+      a2 = Math.sqrt(x2 * x2 + (top - az) ** 2),
+      b2 = Math.sqrt((D - x2) ** 2 + (bz - top) ** 2);
     const under1 = edge1 && az + rise * t1 < top,
       under2 = edge2 && az + rise * t2 < top;
     let delta: number;
@@ -297,5 +320,83 @@ export function lineDetour(
       best.delta = delta;
       best.stage = s;
     }
+  }
+}
+
+/**
+ * The last plan `lineDetour` crossed the blocks with (from a to b), and over each block where it runs: from its first
+ * entry t1 to its last exit t2 (0 to 1 along it; t2 < t1: it misses), and whether each end stands inside the outline.
+ */
+const plan = {
+  blocks: null as readonly StageBlock[] | null,
+  ax: NaN,
+  ay: NaN,
+  bx: NaN,
+  by: NaN,
+  t1: [] as number[],
+  t2: [] as number[],
+  inA: [] as boolean[],
+  inB: [] as boolean[],
+};
+
+/** Whether the line from a along d (0 to 1) misses a block's bounds (Liang–Barsky). */
+function missesBounds(b: StageBlock, ax: number, ay: number, dx: number, dy: number): boolean {
+  let lo = 0,
+    hi = 1;
+  if (dx) {
+    const t0 = (b.x0 - ax) / dx,
+      t1 = (b.x1 - ax) / dx;
+    lo = Math.max(lo, dx > 0 ? t0 : t1);
+    hi = Math.min(hi, dx > 0 ? t1 : t0);
+  } else if (ax < b.x0 || ax > b.x1) return true;
+  if (dy) {
+    const t0 = (b.y0 - ay) / dy,
+      t1 = (b.y1 - ay) / dy;
+    lo = Math.max(lo, dy > 0 ? t0 : t1);
+    hi = Math.min(hi, dy > 0 ? t1 : t0);
+  } else if (ay < b.y0 || ay > b.y1) return true;
+  return hi < lo;
+}
+
+/** Crosses the plan from a to b with each block's outline (`plan`). */
+function planCrossings(
+  blocks: readonly StageBlock[],
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): void {
+  const dx = bx - ax,
+    dy = by - ay;
+  for (let s = 0; s < blocks.length; s++) {
+    const b = blocks[s];
+    plan.t1[s] = 2;
+    plan.t2[s] = -1;
+    plan.inA[s] = plan.inB[s] = false;
+    // the part of the line inside the block's bounds (Liang–Barsky): none, and it misses
+    if (missesBounds(b, ax, ay, dx, dy)) continue;
+    const { xs, ys } = b;
+    let t1 = 2,
+      t2 = -1;
+    for (let i = 0, j = xs.length - 1; i < xs.length; j = i++) {
+      const ex = b.ex[i],
+        ey = b.ey[i],
+        den = dx * ey - dy * ex;
+      if (!den) continue;
+      const wx = xs[j] - ax,
+        wy = ys[j] - ay,
+        t = (wx * ey - wy * ex) / den,
+        u = (wx * dy - wy * dx) / den;
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+        t1 = Math.min(t1, t);
+        t2 = Math.max(t2, t);
+      }
+    }
+    const inA = insideBlock(b, ax, ay),
+      inB = insideBlock(b, bx, by);
+    plan.t1[s] = inA ? 0 : t1;
+    plan.t2[s] = inB ? 1 : t2;
+    plan.inA[s] = inA;
+    plan.inB[s] = inB;
   }
 }

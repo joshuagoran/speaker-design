@@ -5,7 +5,7 @@ import assert from "node:assert";
 import {
   BARRIER_CAP_DB,
   BARRIER_GRAZING_DB,
-  barrierLossDb,
+  barrierNepers,
   edgeFade,
   fresnelRadius,
   type SceneStage,
@@ -31,18 +31,32 @@ import type { CoverageBand, CoverageRoom, FloorPoint, SpaceDesign, SpaceStage } 
 /** A standing listener's ear, ft. */
 const STANDING_EAR_FT = 5.5;
 
+/** The barrier's loss at Fresnel number `n`, dB. */
+const barrierLossDb = (n: number) => (barrierNepers(n) * 20) / Math.LN10;
+
 test("barrier: about 5 dB at grazing, continuous across the shadow boundary, 0 on the bright side, capped", () => {
-  assert.equal(barrierLossDb(0), BARRIER_GRAZING_DB);
+  assert.ok(Math.abs(barrierLossDb(0) - BARRIER_GRAZING_DB) < 1e-5);
   assert.ok(Math.abs(barrierLossDb(1e-6) - BARRIER_GRAZING_DB) < 0.01);
   assert.ok(Math.abs(barrierLossDb(-1e-6) - BARRIER_GRAZING_DB) < 0.01);
   assert.equal(barrierLossDb(-0.2), 0);
   assert.equal(barrierLossDb(-1), 0);
   // Maekawa's curve: about 13 dB at N = 1
   assert.ok(Math.abs(barrierLossDb(1) - 13) < 0.5, `${barrierLossDb(1)}`);
-  assert.equal(barrierLossDb(100), BARRIER_CAP_DB);
+  assert.ok(Math.abs(barrierLossDb(100) - BARRIER_CAP_DB) < 1e-9);
   // it only rises with N
   for (let n = -0.25; n < 6; n += 0.01)
     assert.ok(barrierLossDb(n + 0.01) >= barrierLossDb(n) - 1e-9, `${n}`);
+});
+
+test("barrier: within 1e-5 dB of Kurze–Anderson's curve", () => {
+  const curve = (n: number) => {
+    if (n <= -0.2) return 0;
+    const x = Math.sqrt(2 * Math.PI * Math.abs(n));
+    const ratio = x < 1e-9 ? 1 : n > 0 ? x / Math.tanh(x) : x / Math.tan(x);
+    return Math.min(BARRIER_CAP_DB, Math.max(0, BARRIER_GRAZING_DB + 20 * Math.log10(ratio)));
+  };
+  for (let n = -0.3; n < 6; n += 0.000731)
+    assert.ok(Math.abs(barrierLossDb(n) - curve(n)) < 1e-5, `${n}: ${barrierLossDb(n)}`);
 });
 
 const OUTDOORS: CoverageRoom = {
