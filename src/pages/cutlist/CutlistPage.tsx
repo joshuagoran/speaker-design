@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { MarkedText } from "../../components/ui/MarkedText";
 import type {
   CornerJoint,
   CutBoxId,
@@ -293,8 +294,9 @@ export function CutlistPage({
           {CSV_SECTIONS.purchased}
         </h3>
         <p className="text-sm text-stone-500 mb-2">
-          Counts for {plural(boxSetCount, proj.set)}. Prices in US dollars. Source shows where each
-          price comes from. A dash shows a part with no known price.
+          Counts for {plural(boxSetCount, proj.set)}. Prices in US dollars.{" "}
+          <MarkedText text={`**${PURCHASED_COLUMNS.vendor}** shows where each price comes from.`} />{" "}
+          A dash shows a part with no known price.
         </p>
         <div className="overflow-x-auto">
           <table className="text-sm w-full border-collapse tabular-nums">
@@ -307,7 +309,7 @@ export function CutlistPage({
                   {PURCHASED_COLUMNS.unit}
                 </th>
                 <th className={`${th} pr-3 text-right`}>{PURCHASED_COLUMNS.total}</th>
-                <th className={`${th}`}>{PURCHASED_COLUMNS.source}</th>
+                <th className={`${th}`}>{PURCHASED_COLUMNS.vendor}</th>
               </tr>
             </thead>
             <tbody>
@@ -380,7 +382,7 @@ export function CutlistPage({
         Panels
       </h3>
       <p className="text-sm text-stone-500 mb-2">
-        Finished sizes in inches. L is the length and W the width.{" "}
+        Finished sizes in inches.{" "}
         {grainless
           ? `L is the long side (${mat.word} has no grain).`
           : "L runs along the grain (↕) on a grain-locked part, else L is the long side."}{" "}
@@ -563,7 +565,7 @@ export function CutlistPage({
               </Button>
             </div>
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>
-              The {mat.word} parts of {proj.source}, {wallName} walls, for{" "}
+              The {mat.word} parts of <MarkedText text={proj.source} />, {wallName} walls, for{" "}
               {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
             </p>
           </div>
@@ -734,7 +736,9 @@ export function CutlistPage({
             <>
               <ToggleGroup
                 label={
-                  <Tooltip tip="Rip first: full-length strips before any crosscut. Can use more sheets.">
+                  <Tooltip
+                    tip={`**${CUT_STYLE_NAMES.rips}**: full-length strips before any crosscut. May use more sheets.`}
+                  >
                     Cut style
                   </Tooltip>
                 }

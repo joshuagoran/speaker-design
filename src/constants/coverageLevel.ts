@@ -7,17 +7,20 @@ export const COVERAGE_LEVEL_REF = {
   stacks: "stacks",
 } as const satisfies Record<CoverageLevelRef, CoverageLevelRef>;
 
+/** The "Measured at" choice for the mean over the floor. */
+const AUDIENCE_AVERAGE = "Audience average";
+
 /** The "Measured at" choices, with their names, in display order. */
 export const COVERAGE_LEVEL_REFS = [
   [COVERAGE_LEVEL_REF.listener, "Listener"],
-  [COVERAGE_LEVEL_REF.audience, "Audience average"],
+  [COVERAGE_LEVEL_REF.audience, AUDIENCE_AVERAGE],
   [COVERAGE_LEVEL_REF.stacks, "1 m from the stacks"],
 ] as const satisfies readonly (readonly [CoverageLevelRef, string])[];
 
 /** Each reference as a sentence names it ("the target at …"). */
 export const COVERAGE_LEVEL_REF_PLACE = {
   listener: "the listener",
-  audience: "the audience average",
+  audience: `the **${AUDIENCE_AVERAGE}**`,
   stacks: "1 m from the stacks",
 } as const satisfies Record<CoverageLevelRef, string>;
 

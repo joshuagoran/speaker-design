@@ -28,13 +28,16 @@ export const AUTO_BALANCE_MODE_LABEL: Record<AutoBalanceMode, string> = {
   [AUTO_BALANCE_MODE.moreBass]: "More bass",
 };
 
+/** The button that sets the band Levels, which its notes name. */
+const AUTO_BALANCE_NAME = "Auto balance";
+
 export const AUTO_BALANCE_TEXT = {
   /** the toggle's field label (its tooltip is `tip`) */
   label: "Band balance",
-  button: "Auto balance",
+  button: AUTO_BALANCE_NAME,
   /** the label's tooltip: both options, the steps of More bass, dB, and the highest crossover that takes the first, Hz */
   tip: (subStepDb: number, stepDb: number, subMaxHz: number) =>
-    `Flat: each band plays at the same level. More bass: each band is quieter than the band below it, ${subStepDb} dB at a crossover of ${subMaxHz} Hz or lower and ${stepDb} dB above ${subMaxHz} Hz.`,
+    `**${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.flat]}**: each band plays at the same level. **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**: each band is quieter than the band below it. The step is ${subStepDb} dB at a crossover of ${subMaxHz} Hz or lower, and ${stepDb} dB above ${subMaxHz} Hz.`,
   /** what the Stack page's tooltip adds */
   stackTip: "Each box gain goes to 0 dB.",
   /** under the button with More bass: each band's level, from the lowest band, dB (a true minus sign, as the charts write it) */
@@ -45,13 +48,13 @@ export const AUTO_BALANCE_TEXT = {
         return `${name} ${db < 0 ? `−${-db}` : db} dB`;
       })
       .join(", "),
-  oneBand: "Auto balance needs two or more bands that play.",
+  oneBand: `**${AUTO_BALANCE_NAME}** needs two or more bands that play.`,
   /** the bands that stop it: bands a driver feeds that the model cannot calculate */
   unmodeled: (names: readonly string[]) =>
-    `Auto balance did not change the levels. The app cannot calculate: ${names.join(", ")}.`,
+    `**${AUTO_BALANCE_NAME}** did not change the levels. The app cannot calculate: ${names.join(", ")}.`,
   /** a crossover outside the model's frequency range (the frequency charts' axis), Hz */
   outOfRange: (minHz: number, maxHz: number) =>
-    `Auto balance did not change the levels. A crossover is outside the range the app calculates: ${minHz} Hz to ${maxHz} Hz.`,
+    `**${AUTO_BALANCE_NAME}** did not change the levels. A crossover is outside the range the app calculates: ${minHz} Hz to ${maxHz} Hz.`,
   /**
    * boxes that use the same speaker with different crossovers, numbered from 1: the balance takes the first
    * box's crossover (lib/speaker/autoBalance `sharedCrossovers`)

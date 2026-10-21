@@ -164,10 +164,14 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
     ...response.chambers.flatMap((c, i): StatTileItem[] => {
       const which = one ? "" : ` ${i + 1}`;
       return [
-        [`Net air${which}`, c.netLiters.toFixed(1), "L"],
+        [`${SPEAKER_TEXT.netAir}${which}`, c.netLiters.toFixed(1), "L"],
         c.qtc !== null
           ? [`Qtc${which}`, c.qtc.toFixed(2), ""]
-          : [`Fb${which}`, c.fb !== null ? c.fb.toFixed(1) : "—", c.fb !== null ? "Hz" : ""],
+          : [
+              `${SPEAKER_TEXT.fb}${which}`,
+              c.fb !== null ? c.fb.toFixed(1) : "—",
+              c.fb !== null ? "Hz" : "",
+            ],
       ];
     }),
     ...response.bands.map((b): StatTileItem => [

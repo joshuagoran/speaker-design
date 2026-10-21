@@ -1,13 +1,19 @@
 // The Stack page's words (src/pages/stack).
 import { STACK_LISTEN_DISTANCE_M } from "./speakerSpec";
 import type { SaveRowWords } from "./saveRow";
+import { CUTLIST_TAB_NAME, PROJECT_NAMES } from "./pages";
+import { SPEAKER_TEXT } from "./speakerPage";
+import { SETTINGS_TEXT } from "./speakerSettings";
+import { UI_TEXT } from "./uiText";
+
+/** The listening height's tile, which the front view's note names. */
+const LISTEN_AXIS_NAME = "Listening axis";
 
 export const STACK_TEXT = {
   /** the name a new stack starts with */
   newName: "New Stack",
   views: "Views",
-  front:
-    "The boxes as the stack places them, to scale. A mirrored box is drawn flipped. The dashed line is the listening axis.",
+  front: `The boxes as the stack places them, to scale. A mirrored box is drawn flipped. The dashed line is the **${LISTEN_AXIS_NAME}**.`,
   response: "Response at the listening point",
   yLabel: "dB SPL @ 2.83 V, 1 m",
   maxOutput: "Maximum output",
@@ -15,9 +21,8 @@ export const STACK_TEXT = {
   sum: "Stack",
   stackMax: "Stack max",
   /** under the stack's price, weight and height */
-  totalsNote:
-    "The price is the total of the boxes' purchased parts on the Cutlist tab, without the plywood. The weight is the total of the boxes' weights, each as the Speaker page shows it. The height is from the stack's base to its highest point, with each box's tilt. The weight and the height do not include the plinth or a stand. These go under the stack on the Space page.",
-  listenHeight: "Listening axis",
+  totalsNote: `The **${UI_TEXT.price}** is the total of the boxes' purchased parts on the **${CUTLIST_TAB_NAME}** tab, without the plywood. The **${SPEAKER_TEXT.weight}** is the total of the boxes' weights, each as the **${PROJECT_NAMES.speaker}** page shows it. The **${UI_TEXT.height}** is from the stack's base to its highest point, with each box's tilt. The **${SPEAKER_TEXT.weight}** and the **${UI_TEXT.height}** do not include the plinth or a stand. These go under the stack on the **${PROJECT_NAMES.space}** page.`,
+  listenHeight: LISTEN_AXIS_NAME,
   modelNote: `Each box plays as its speaker does on the Speaker page, fed through its crossover, then its level and delay. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay puts a box in phase with the box it crosses, at their crossover. If that box would have to play early, the others wait instead, so no delay is less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
   maxNote:
     "One input drives the whole stack. At each frequency, the box with the least headroom sets the level, and every box plays at that input. The crossovers are in the front end, ahead of the amps.",
@@ -52,8 +57,7 @@ export const STACK_TEXT = {
   mirror: "Mirror image",
   gain: "Gain",
   delay: "Delay",
-  crossoverHint:
-    "The filters ahead of this box, between boxes. In the stack they are the speaker's input range.",
+  crossoverHint: `The filters ahead of this box, between boxes. In the Stack they are the Speaker's **${SETTINGS_TEXT.externalCrossover}**.`,
   noFilter: "None",
   /** a library speaker's newer copy beside the one the stack's boxes already name */
   copyName: (name: string, n: number) => `${name} (copy ${n})`,

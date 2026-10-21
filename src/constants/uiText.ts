@@ -28,8 +28,13 @@ export const UI_TEXT = {
   outdoors: "Outdoors",
   /** the coverage map's one-frequency slider and field */
   frequency: "Frequency",
+  /** the coverage map's band choice that shows one frequency */
+  oneFrequency: "One frequency",
   /** a room's width field (indoors) */
   roomWidth: "Width",
+  /** the totals tiles: the purchased parts' price, and a Stack's height */
+  price: "Price",
+  height: "Height",
   /** the summary line of the Details drop-downs (each page's written details, the optimizer's goal notes) */
   details: "Details",
   /** the 3D view's buttons: full screen and back, and the cutaway (the cabinet as a ghost, the parts inside showing) */

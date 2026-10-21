@@ -1,5 +1,6 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
 import { AUTO_BALANCE_MODE, AUTO_BALANCE_MODE_LABEL } from "./autoBalance";
+import { UI_TEXT } from "./uiText";
 import type {
   CoupledSurface,
   StageFace,
@@ -273,6 +274,7 @@ const GAIN = "Gain";
 const SYSTEM_GAIN = "System gain";
 const CALCULATE_GAINS = "Calculate gains";
 const CALCULATE_DELAYS = "Calculate delays";
+const MIRRORED = "Mirrored pair";
 
 /** A placement's Main / Fill choice, by whether it is a fill. */
 export const PLACEMENT_ROLES: readonly ToggleOption<boolean>[] = [
@@ -288,7 +290,7 @@ export const SPACE_TEXT = {
   levels: "Levels",
   /** the line on the map of a room with nothing placed */
   quietRoom: "Add a speaker or stack to hear the room.",
-  noPlacements: `Nothing is placed yet. Pick a stack or speaker and press ${ADD_PLACEMENT}.`,
+  noPlacements: `Nothing is placed yet. Pick a Stack or Speaker and press **${ADD_PLACEMENT}**.`,
   missing: "A placement names a stack or speaker that is not in this space, so it is left out.",
   /** the empty start in "New from…" */
   empty: "Empty Space",
@@ -311,7 +313,7 @@ export const SPACE_TEXT = {
   /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its gain, dB */
   placementSummary: (fromCenter: string, fromFront: string, level: string) =>
     `${fromCenter} ft from the center line · ${fromFront} ft from the front wall · ${level} dB`,
-  mirrored: "Mirrored pair",
+  mirrored: MIRRORED,
   mirroredTip:
     "Adds a copy on the other side of the center line. It mirrors this box's position and rotation.",
   /** a mirrored placement's folded row says it stands twice */
@@ -346,8 +348,7 @@ export const SPACE_TEXT = {
   feedTip: "A gain and a delay on this placement's feed (a fill under, and after, the mains).",
   ampPower: "Amp power",
   ampPowerHint: AMP_POWER_TIP,
-  ampPowerTip:
-    "The space finds each speaker's limit from it. A mirrored pair, and a speaker placed twice, share one figure.",
+  ampPowerTip: `The space finds each speaker's limit from it. A **${MIRRORED}**, and a Speaker placed twice, share one figure.`,
   /** a band's amp power field: the band (or a passive network's bands) it is for */
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
   alignment: "Alignment",
@@ -406,7 +407,7 @@ export const SPACE_TEXT = {
   /** under the one-frequency slider */
   /** under the single-frequency slider: where it still adds with phase */
   oneNote: (coherentHz: number) =>
-    `One frequency adds all sources (including phase below ${coherentHz} Hz).`,
+    `**${UI_TEXT.oneFrequency}** adds all sources (including phase below ${coherentHz} Hz).`,
   audienceAverage: "Audience average",
   audienceMax: "Audience at full power",
   listener: "Listener",
@@ -458,7 +459,7 @@ export const SPACE_DETAILS = {
   mapLines: (limitHz: number, coherentHz: number) => [
     "Drag a placement to move it.",
     "Drag its dot to turn it.",
-    "Drag the listener, or tap the floor to put the listener there.",
+    `Drag or tap to place the **${MAP_MARK_NAMES.listener}**.`,
     `One frequency shows the interference between the placements (below ${coherentHz} Hz).`,
     `One frequency goes up to ${limitHz / 1000} kHz. Above ${coherentHz} Hz, it adds the placements by power.`,
   ],
@@ -466,15 +467,15 @@ export const SPACE_DETAILS = {
   /** the target in the band on show, where it is measured (`SPACE_LEVEL_REF_PLACE`), dB */
   targetLine: (targetDb: number, place: string, bandDb: number) =>
     `Target: ${targetDb} dB SPL in the lowest band, at ${place} (${bandDb} dB in this band).`,
-  moreBass: "With More bass, each band above a crossover is quieter.",
-  flat: "With Flat, every band has the same target.",
+  moreBass: `With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**, each band above a crossover is quieter.`,
+  flat: `With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.flat]}**, every band has the same target.`,
   headroom: `A box plays at its limit when its **${GAIN}** and the **${SYSTEM_GAIN}** add to 0.`,
   turnDown: `**${CALCULATE_GAINS}** lowers **${SYSTEM_GAIN}** until no band is past its limit.`,
   perBand:
     "The map, the audience figures, Floor and Spread are for the band on show. Listener is in the lowest band.",
   bandLevel: "Each band plays at its gain and its box's gain.",
   audience: (clearanceFt: number) =>
-    `Audience average: the mean over the floor, except ${clearanceFt} ft around every box.`,
+    `**${SPACE_TEXT.audienceAverage}**: the mean over the floor (excluding ${clearanceFt} ft around each box).`,
   oneMeter: (place: string) =>
     `${place}: the mean at ear height, 1 m in front of each placed stack or speaker that plays in the band, on its aim.`,
   stages: "Stages",

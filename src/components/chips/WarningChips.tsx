@@ -1,5 +1,6 @@
 import type { Chip, ChipId } from "../../types";
 import { Tooltip } from "../ui/Tooltip";
+import { MarkedText } from "../ui/MarkedText";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /** Background and border classes for each warning-chip status: a light tint of the status color with a matching border. */
@@ -56,7 +57,9 @@ export function WarningChips({ chips, tips, row }: Props) {
           <b className={`font-semibold mr-1.5 ${CHIP_TITLE_CLASSES[kind]}`}>
             {tips?.[id] ? <Tooltip tip={tips[id]}>{head}</Tooltip> : head}
           </b>
-          <span className="text-stone-500">{body}</span>
+          <span className="text-stone-500">
+            <MarkedText text={body} />
+          </span>
         </div>
       ))}
     </div>

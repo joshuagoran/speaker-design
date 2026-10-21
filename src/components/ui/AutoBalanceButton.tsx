@@ -1,5 +1,6 @@
 import { Button } from "./Button";
 import { Notice } from "./Notice";
+import { MarkedText } from "./MarkedText";
 import { Tooltip } from "./Tooltip";
 import { ToggleGroup, type ToggleOption } from "./ToggleGroup";
 import { BAND_BALANCE_TIP, type AutoBalance } from "../../lib/speaker/autoBalance";
@@ -70,7 +71,9 @@ export function AutoBalanceButton<L>({
       {balance.status === AUTO_BALANCE_STATUS.balanced &&
         notes.map((note) => <Notice key={note}>{note}</Notice>)}
       {balance.status === AUTO_BALANCE_STATUS.oneBand && (
-        <p className="text-xs text-stone-500">{AUTO_BALANCE_TEXT.oneBand}</p>
+        <p className="text-xs text-stone-500">
+          <MarkedText text={AUTO_BALANCE_TEXT.oneBand} />
+        </p>
       )}
       {balance.status === AUTO_BALANCE_STATUS.unmodeled && (
         <Notice>{AUTO_BALANCE_TEXT.unmodeled(balance.names)}</Notice>

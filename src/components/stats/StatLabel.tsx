@@ -70,11 +70,11 @@ export const STATS = {
     tip: "Driver cost for both speakers.",
   },
   partsPrice: {
-    label: "Price",
+    label: UI_TEXT.price,
     tip: `The purchased parts on the Cutlist tab, without the plywood. A ${UI_TEXT.partialPriceMark} shows that some parts have no price.`,
   },
   stackHeight: {
-    label: "Height",
+    label: UI_TEXT.height,
     tip: "From the stack's base to its highest point, with a horn on a top. A plinth or stand under the stack is not included.",
   },
 } as const satisfies Record<string, StatDef>;

@@ -12,6 +12,7 @@ import {
   useSettingsSheet,
 } from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
+import { MarkedText } from "../../components/ui/MarkedText";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
@@ -218,14 +219,18 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
                     listenHeightIn={response.listenHeightIn}
                   />
                 </div>
-                <p className="text-xs text-stone-500 mt-2">{STACK_TEXT.front}</p>
+                <p className="text-xs text-stone-500 mt-2">
+                  <MarkedText text={STACK_TEXT.front} />
+                </p>
               </Card>
             </div>
             {members.length > 0 && (
               <>
                 <StatTileGrid tiles={totalTiles} />
                 {totals.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
-                <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.totalsNote}</p>
+                <p className={`${READING_WIDTH} text-sm text-stone-500`}>
+                  <MarkedText text={STACK_TEXT.totalsNote} />
+                </p>
               </>
             )}
             {members.length === 0 && <Notice>{STACK_TEXT.noMembers}</Notice>}
@@ -412,7 +417,9 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
           {section(
             "crossovers",
             <>
-              <p className="text-xs text-stone-500">{STACK_TEXT.crossoverHint}</p>
+              <p className="text-xs text-stone-500">
+                <MarkedText text={STACK_TEXT.crossoverHint} />
+              </p>
               {members.map((member, k) => (
                 <Card key={k}>
                   <h4 className="font-semibold min-w-0 truncate">{names[k]}</h4>

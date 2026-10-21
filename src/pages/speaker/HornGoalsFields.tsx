@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MarkedText, plainText } from "../../components/ui/MarkedText";
 import type { HornGoalFit, HornGoals } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
@@ -72,7 +73,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
             size="xs"
             className="shrink-0"
             disabled={designing || outOfOrder}
-            title={SETTINGS_TEXT.designTip}
+            title={plainText(SETTINGS_TEXT.designTip)}
             onClick={() => {
               setDesigning(true);
               // let the button show the work before the search holds the page
@@ -108,21 +109,25 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
       {fit && (
         <>
           <p className="text-xs text-stone-500">
-            {SPEAKER_TEXT.hornFitSpread(
-              String(shownTenth(fit.spreadDb)),
-              String(goals.lowHz),
-              String(goals.highHz),
-            )}
+            <MarkedText
+              text={SPEAKER_TEXT.hornFitSpread(
+                String(shownTenth(fit.spreadDb)),
+                String(goals.lowHz),
+                String(goals.highHz),
+              )}
+            />
           </p>
           {fit.lowEdgeDb < -LOW_EDGE_DB && (
             <Notice>{SPEAKER_TEXT.hornFitLowEdge(String(shownTenth(-fit.lowEdgeDb)))}</Notice>
           )}
           <p className="text-xs text-stone-500">
-            {SPEAKER_TEXT.hornFitMaxOut(
-              String(shownTenth(fit.maxOutDb)),
-              String(Math.round(fit.maxOutHz)),
-              HORN_GOAL_LIMIT_NAMES[fit.limit],
-            )}
+            <MarkedText
+              text={SPEAKER_TEXT.hornFitMaxOut(
+                String(shownTenth(fit.maxOutDb)),
+                String(Math.round(fit.maxOutHz)),
+                HORN_GOAL_LIMIT_NAMES[fit.limit],
+              )}
+            />
           </p>
           {short > 0 && <Notice>{SPEAKER_TEXT.hornFitShort(String(shownTenth(short)))}</Notice>}
         </>
