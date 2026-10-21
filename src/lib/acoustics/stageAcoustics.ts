@@ -4,9 +4,10 @@
 //
 // Reflections: each vertical face of an outline (from the stage's base to its top) and each top is a short wall of the
 // stage's material (STAGE_MATERIAL). A face small against the wavelength reflects less: a first-order high-pass in
-// pressure, (f/fc)/√(1 + (f/fc)²), with fc = c / (2 × the face's smaller side). A reflection fades out across the
-// face's ends and its top edge (a top: across its outline) over the first Fresnel zone there (`edgeFade`), so it
-// doesn't stop where its reflection point leaves the surface.
+// pressure, (f/fc)/√(1 + (f/fc)²), with fc = c / (2 × the face's smaller side). A floor stage's face meets the floor:
+// with its floor image it acts as a face twice its height. A reflection fades out across the face's ends, its top edge
+// and a riser's bottom edge (a top: across its outline) over the first Fresnel zone there (`edgeFade`), so it doesn't
+// stop where its reflection point leaves the surface.
 //
 // Blocking: a single-edge barrier over the stage's top (Maekawa's curve in the Kurze–Anderson form) on the Fresnel number
 // N = 2δ/λ, δ the path's detour over the top in the path's vertical plane. That curve is for a thin screen: it keeps
@@ -56,7 +57,7 @@ export interface StageReflector extends Pick<SceneStage, "base" | "top"> {
   /** the stage it belongs to, by its index in the scene's stages */
   stage: number;
   face: FaceLine | null;
-  /** its smaller side, m: its reflection fades below c / (2 × size) */
+  /** its smaller side, m (a floor stage's face: with its floor image), its reflection fades below c / (2 × size) */
   size: number;
 }
 
@@ -182,7 +183,9 @@ export function stageGeometry(stages: readonly SceneStage[]): {
         return a + p.x * q.y - q.x * p.y;
       }, 0),
     );
-    const height = s.top - s.base;
+    // a floor stage's face and its floor image act as one face twice its height; a riser's face meets its stage's top,
+    // not the floor: it keeps its own height
+    const faceHeight = (s.top - s.base) * (s.base > 0 ? 1 : 2);
     for (const [i, a] of pts.entries()) {
       const b = pts[(i + 1) % pts.length];
       const len = Math.hypot(b.x - a.x, b.y - a.y),
@@ -193,7 +196,7 @@ export function stageGeometry(stages: readonly SceneStage[]): {
         face: { ax: a.x, ay: a.y, ux, uy, len, nx: turn * uy, ny: -turn * ux },
         base: s.base,
         top: s.top,
-        size: Math.min(len, height),
+        size: Math.min(len, faceHeight),
       });
     }
     reflectors.push({
@@ -324,19 +327,32 @@ export function lineDetour(
 }
 
 /**
- * The last plan `lineDetour` crossed the blocks with (from a to b), and over each block where it runs: from its first
- * entry t1 to its last exit t2 (0 to 1 along it; t2 < t1: it misses), and whether each end stands inside the outline.
+ * A plan line crossed with the blocks (from a to b), and over each block where it runs: from its first entry t1 to its
+ * last exit t2 (0 to 1 along it; t2 < t1: it misses), and whether each end stands inside the outline.
  */
-const plan = {
-  blocks: null as readonly StageBlock[] | null,
+interface PlanCrossings {
+  blocks: readonly StageBlock[] | null;
+  ax: number;
+  ay: number;
+  bx: number;
+  by: number;
+  t1: number[];
+  t2: number[];
+  inA: boolean[];
+  inB: boolean[];
+}
+
+/** The last plan `lineDetour` crossed the blocks with: a box's drivers, one over another, share it. */
+const plan: PlanCrossings = {
+  blocks: null,
   ax: NaN,
   ay: NaN,
   bx: NaN,
   by: NaN,
-  t1: [] as number[],
-  t2: [] as number[],
-  inA: [] as boolean[],
-  inB: [] as boolean[],
+  t1: [],
+  t2: [],
+  inA: [],
+  inB: [],
 };
 
 /** Whether the line from a along d (0 to 1) misses a block's bounds (Liang–Barsky). */

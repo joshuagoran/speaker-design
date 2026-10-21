@@ -8,6 +8,9 @@ import {
   barrierNepers,
   edgeFade,
   fresnelRadius,
+  lineDetour,
+  stageGeometry,
+  type Detour,
   type SceneStage,
 } from "../src/lib/acoustics/stageAcoustics";
 import { SPEED_OF_SOUND } from "../src/constants/acoustics";
@@ -107,8 +110,8 @@ test("edge fade: ½ on the edge, full a zone inside, none a zone outside; wide a
 });
 
 test("stage face: its reflection fades out smoothly past the face's end, full well inside it and gone well outside", () => {
-  // a face at y = 1 m from x = −3 to 0.5 m, 3 m high; a driver 0.5 m in front of it, aimed at it; the listener 5 m
-  // down the room
+  // a face at y = 1 m from x = −3 to 0.5 m, 1.5 m high (3 m with its floor image, under its length: a longer face
+  // fades the same at the low end); a driver 0.5 m in front of it, aimed at it; the listener 5 m down the room
   const face = (x0: number, x1: number): SceneStage => ({
     corners: [
       { x: x0, y: 0 },
@@ -117,7 +120,7 @@ test("stage face: its reflection fades out smoothly past the face's end, full we
       { x: x0, y: 1 },
     ],
     base: 0,
-    top: 3,
+    top: 1.5,
   });
   const voices = [{ id: "v", pattern: { a: 0.1 } }];
   const box = [[{ voice: "v", x: 0, y: 1.5, z: 0.5, yaw: Math.PI, pitch: 0, alignM: 0 }]];
@@ -137,6 +140,70 @@ test("stage face: its reflection fades out smoothly past the face's end, full we
   assert.ok(level([face(-3, 0.5)], 2) - level([face(-3, 0.5)], 7) > 3);
   assert.ok(Math.abs(level([face(-3, 0.5)], -9) - level([face(-30, 30)], -9)) < 1e-9);
   assert.ok(Math.abs(level([face(-3, 0.5)], 20) - level([], 20)) < 1e-9);
+});
+
+/** A rectangle from x0 to x1 across and y0 to y1 down the room, m, as a scene stage's corners. */
+const rect = (x0: number, y0: number, x1: number, y1: number): SceneStage["corners"] => [
+  { x: x0, y: y0 },
+  { x: x1, y: y0 },
+  { x: x1, y: y1 },
+  { x: x0, y: y1 },
+];
+
+test("face size: a floor stage's face with its floor image is twice its height; a riser's face is its own", () => {
+  const { reflectors } = stageGeometry([
+    { corners: rect(-2, 0, 2, 1), base: 0, top: 0.9 },
+    { corners: rect(-2, 0, 2, 0.5), base: 0.9, top: 1.2 },
+  ]);
+  const sizes = (stage: number) =>
+    reflectors.filter((r) => r.stage === stage && r.face).map((r) => r.size);
+  // the 4 m edges and the 1 m ends: min(length, 2 × 0.9 m)
+  assert.deepEqual(
+    sizes(0).sort((a, b) => a - b),
+    [1, 1, 1.8, 1.8],
+  );
+  // the riser's 0.3 m face
+  for (const size of sizes(1)) assert.ok(Math.abs(size - 0.3) < 1e-9, `${size}`);
+});
+
+test("riser face: its reflection fades out smoothly across the face's bottom edge", () => {
+  // a riser's face at y = 1 m from 0.9 to 1.5 m up; a driver 0.5 m in front of it just over its bottom edge, aimed at
+  // it; the listener 5 m down the room, lower and lower: the reflection point goes down past the bottom edge
+  const riser: SceneStage = { corners: rect(-5, 0, 5, 1), base: 0.9, top: 1.5 };
+  const voices = [{ id: "v", pattern: { a: 0.1 } }];
+  const box = [[{ voice: "v", x: 0, y: 1.5, z: 0.95, yaw: Math.PI, pitch: 0, alignM: 0 }]];
+  const level = (stages: SceneStage[], z: number) => {
+    const scene = sceneOf(OUTDOORS, voices, box, stages);
+    const slots = sceneSlots(scene, [1000], false, () => ({ v: { re: 1, im: 0 } }));
+    return levelAtPoint(scene, slots, 0, 5, z);
+  };
+  let last = level([riser], 1.7);
+  for (let z = 1.68; z > 0.05; z -= 0.02) {
+    const now = level([riser], z);
+    assert.ok(Math.abs(now - last) < 0.2, `${z}: ${last} → ${now}`);
+    last = now;
+  }
+  // at 0.1 m up the reflection lands about 5 cm under the bottom edge: within a zone, so part of it is left
+  assert.ok(level([riser], 0.1) - level([], 0.1) > 0.1);
+});
+
+test("detour: a line with the same plan as the last one but other heights gives what a fresh one does", () => {
+  const { blocks } = stageGeometry([{ corners: rect(-2, 2, 2, 4), base: 0, top: 1 }]);
+  const detourOf = (list: typeof blocks, az: number, bz: number) => {
+    const best: Detour = { delta: -Infinity, stage: -1 };
+    lineDetour(list, 0, 0, az, 0.5, 8, bz, -1, best);
+    return best;
+  };
+  const heights = [-1.5, -0.2, 0.3, 0.9, 1.4, 2.5];
+  for (const az of heights)
+    for (const bz of heights) {
+      // the plan of the line before: the same ends on the plan, other heights
+      detourOf(blocks, 0.5, 1.7);
+      const kept = detourOf(blocks, az, bz);
+      // a copy of the blocks: no kept plan
+      const fresh = detourOf([...blocks], az, bz);
+      assert.deepEqual(kept, fresh, `${az}, ${bz}`);
+    }
 });
 
 /** A rectangular stage from x0 to x1 across and y0 to y1 down the room, ft. */

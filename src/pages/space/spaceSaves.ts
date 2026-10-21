@@ -5,7 +5,6 @@ import type {
   SavedSpaceData,
   SpaceDesign,
   SpacePlacement,
-  SpaceStage,
   SpaceVenue,
   SpeakerSpec,
   StackSpec,
@@ -17,13 +16,8 @@ import { usedParts } from "../../lib/speaker/usedParts";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
-import {
-  SEATED_EAR_FT,
-  SPACE_HOME_SEAT,
-  SPACE_TEXT,
-  STAGE_CORNERS,
-  STAGE_SHAPE,
-} from "../../constants/space";
+import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
+import { isStageList } from "../../lib/io/shareChecks";
 import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
 import { DRAFT_ID } from "../../constants/saveRow";
 import { readMember } from "../stack/stackSaves";
@@ -118,37 +112,6 @@ const isPlacements = (value: unknown): value is SavedPlacement[] =>
 /** Whether a value is one of a const record's values (a saved string that names an id the app has). */
 const isOneOf = (ids: Record<string, string>, value: unknown) =>
   Object.values(ids).some((id) => id === value);
-
-/** Whether a value is a spot on the floor. */
-const isPoint = (value: unknown) => hasFields(value, { x: "number", y: "number" });
-
-/**
- * Whether a value reads as a list of stages: each with an id no other has, a shape, its corners and height, and what it
- * stands on (the floor, or a floor stage in the list).
- */
-function isStageList(value: unknown): value is SpaceStage[] {
-  if (!Array.isArray(value) || !value.every(isStage)) return false;
-  const stages: readonly Pick<SpaceStage, "id" | "on">[] = value;
-  const floor = new Set(stages.filter((s) => s.on === null).map((s) => s.id));
-  return (
-    new Set(stages.map((s) => s.id)).size === stages.length &&
-    stages.every((s) => s.on === null || floor.has(s.on))
-  );
-}
-
-/** Whether a value reads as a stage: its id, shape, 8 corners, height, and what it stands on. */
-function isStage(value: unknown): boolean {
-  if (!hasFields(value, { id: "string", shape: "string", heightFt: "number" })) return false;
-  const corners: unknown = Reflect.get(value, "corners");
-  const on: unknown = Reflect.get(value, "on");
-  return (
-    isOneOf(STAGE_SHAPE, Reflect.get(value, "shape")) &&
-    Array.isArray(corners) &&
-    corners.length === STAGE_CORNERS &&
-    corners.every(isPoint) &&
-    (on === null || typeof on === "string")
-  );
-}
 
 /** A venue as a save holds it: one from before stages has none. */
 type SavedVenue = Omit<SpaceVenue, "stages"> & Partial<Pick<SpaceVenue, "stages">>;

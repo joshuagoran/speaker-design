@@ -59,7 +59,6 @@ import {
 import { AIM_SNAP_DEG, MAP_DRAG_UPDATE_MS, SNAP_FLUSH_IN } from "../../constants/space";
 import { withAmpPower } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid, runSpaceQuickGrid } from "../../lib/speaker/runSpace";
-import { isOptimizerCancel } from "../../lib/makeOptimizerRunner";
 import { useHeld, useThrottled } from "../../hooks/useThrottled";
 import { presetLayers } from "../stack/stackPresets";
 import {
@@ -81,6 +80,14 @@ import {
   spaceSnapshot,
 } from "./spaceSaves";
 import { usePageDraft, type SharedMode } from "../../hooks/usePageDraft";
+import {
+  dragChanged,
+  jobSettled,
+  queueJob,
+  takeJob,
+  type JobLane,
+  type JobLanes,
+} from "./gridLanes";
 import type {
   BandId,
   CoverageBand,
@@ -202,6 +209,27 @@ export function withBoxAimed(
 }
 
 /**
+ * The design with its placements changed by `edit`, or the design as it was when the change breaks a rule the space
+ * kept (`keepsRules`). The boxes are laid out again after the change, so a turned box is checked at its new aim. A
+ * change that adds or drops a mirror image changes which plan is whose: it is not checked.
+ */
+export function withPlacementsRuled(
+  d: SpaceDesign,
+  edit: (list: readonly SpacePlacement[]) => SpacePlacement[],
+): SpaceDesign {
+  const before = d.space.placements;
+  const placements = edit(before);
+  const next = { ...d, space: { ...d.space, placements } };
+  const sameImages =
+    placements.length === before.length &&
+    placements.every((p, i) => p.mirrored === before[i]?.mirrored);
+  if (!sameImages) return next;
+  // only the boxes' plans are read: no driver feeds a band
+  const plansOf = (design: SpaceDesign) => spotPlans(spaceLayout(design, () => null));
+  return keepsRules(d.space, next.space, plansOf(d), plansOf(next)) ? next : d;
+}
+
+/**
  * A copy of a library stack for a space: its speakers as the space's own copies (`withSpeaker`), and the stack under a
  * new id and a numbered name where the space holds another stack by its id.
  */
@@ -263,6 +291,9 @@ interface GridJob {
   anchor: Omit<SpaceGridRequest, "cols">;
   anchorGrid: (typeof ANCHOR_GRID)[keyof typeof ANCHOR_GRID];
 }
+
+/** A lane of grid jobs, with its worker and what stops the job under way. */
+type GridLane = JobLane<GridJob> & { run: typeof runSpaceGrid; stop: AbortController };
 
 /**
  * The mean of a request's levels at the 1 m spots of the placements that play in the band, dB, skipping levels that
@@ -442,37 +473,23 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     [model],
   );
 
-  // two worker queues, full passes and a drag's quick ones (each in its own worker, so a quick pass never waits for a
-  // full one): one job at a time in each, and only the newest waiting job is kept. A grid shows only when it is newer
-  // than the one on show. Each job carries the frequency its band's target is read at, so a grid on show keeps its own
-  // band's target
+  // two worker lanes, full passes and a drag's quick ones (./gridLanes). Each job carries the frequency its band's target
+  // is read at, so a grid on show keeps its own band's target
   const [shown, setShown] = useState<
     (GridJob & { grid: CoverageGrid; anchorOf: CoverageGrid | null }) | null
   >(null);
-  const shownSeq = useRef(0);
-  const jobSeq = useRef(0);
   const [failed, setFailed] = useState<{ req: typeof req; message: string } | null>(null);
-  const lanes = useRef({
-    full: {
-      run: runSpaceGrid,
-      busy: false,
-      want: null as GridJob | null,
-      stop: new AbortController(),
-    },
-    quick: {
-      run: runSpaceQuickGrid,
-      busy: false,
-      want: null as GridJob | null,
-      stop: new AbortController(),
-    },
+  const lanes = useRef<JobLanes<GridJob, GridLane>>({
+    full: { run: runSpaceGrid, busy: false, want: null, stop: new AbortController() },
+    quick: { run: runSpaceQuickGrid, busy: false, want: null, stop: new AbortController() },
+    seq: 0,
+    shownSeq: 0,
   });
   /** the turn-down band's last grid, by its request: a change of band on show doesn't compute it again */
   const anchorCache = useRef<{ req: GridJob["anchor"]; grid: CoverageGrid } | null>(null);
-  const pump = (lane: (typeof lanes.current)["full"]) => {
-    if (lane.busy || !lane.want) return;
-    const next = lane.want;
-    lane.want = null;
-    lane.busy = true;
+  const pump = (lane: GridLane) => {
+    const next = takeJob(lane);
+    if (!next) return;
     const { signal } = lane.stop;
     /** the turn-down band's grid for the grid just computed: the same grid, a kept one or a new one */
     const anchorOf = async (grid: CoverageGrid): Promise<CoverageGrid | null> => {
@@ -489,26 +506,23 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       .then(async (grid) => ({ grid, anchor: await anchorOf(grid) }))
       .then(
         ({ grid, anchor }) => {
-          if (next.seq < shownSeq.current) return;
-          shownSeq.current = next.seq;
+          if (!jobSettled(lanes.current, lane, next).show) return;
           setShown({ ...next, grid, anchorOf: anchor });
           setFailed(null);
         },
-        (e: unknown) => {
-          if (!isOptimizerCancel(e))
-            setFailed({ req: next.req, message: e instanceof Error ? e.message : String(e) });
+        (error: unknown) => {
+          const end = jobSettled(lanes.current, lane, next, { error });
+          if (!end.show && end.failure !== null) setFailed({ req: next.req, message: end.failure });
         },
       )
-      .finally(() => {
-        lane.busy = false;
-        pump(lane);
-      });
+      .finally(() => pump(lane));
   };
-  // a drag stops the full pass under way: the drag has made it old (its worker starts again for the next one)
+  // a drag stops the full pass under way: the drag has made it old (its worker starts again for the next one). Its end
+  // drops the quick pass that waits
   useEffect(() => {
+    dragChanged(lanes.current, dragging);
     if (!dragging) return;
     const { full } = lanes.current;
-    full.want = null;
     full.stop.abort();
     full.stop = new AbortController();
   }, [dragging]);
@@ -522,21 +536,30 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     : band === TURN_DOWN_BAND
       ? ANCHOR_GRID.own
       : ANCHOR_GRID.other;
+  /**
+   * whether the model reads the placements and stages from before the latest: just after a drag, the deferred ones are
+   * a render behind the space at its end
+   */
+  const behind = placements !== modelSpace.placements || stages !== modelSpace.venue.stages;
   useEffect(() => {
-    if (!placed) return;
-    const lane = dragging ? lanes.current.quick : lanes.current.full;
-    lane.want = {
-      req,
-      cols,
-      quick: dragging,
-      seq: ++jobSeq.current,
-      centerHz: bandCenterHz(band, freqHz),
-      spots,
-      anchor: anchorReq,
-      anchorGrid,
-    };
+    // a full pass waits for the latest space: none runs for the model from before a drag's end
+    if (!placed || (!dragging && behind)) return;
+    const lane = queueJob(
+      lanes.current,
+      (seq) => ({
+        req,
+        cols,
+        quick: dragging,
+        seq,
+        centerHz: bandCenterHz(band, freqHz),
+        spots,
+        anchor: anchorReq,
+        anchorGrid,
+      }),
+      dragging,
+    );
     pump(lane);
-  }, [req, placed, anchorReq, anchorGrid]);
+  }, [req, placed, anchorReq, anchorGrid, behind]);
 
   const crossovers = useMemo(
     () => spaceCrossoversHz({ space: { ...space, placements }, stacks, speakers }),
@@ -692,14 +715,9 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       const next = edit(s);
       return keepsRules(s, next, plans) ? next : s;
     });
-  // an edit that adds or drops a mirror image changes which plan is whose: it is not checked
+  /** a change to one placement, kept only when it breaks no rule the space kept (a turn: at its new aim) */
   const editPlacement = (k: number, edit: (p: SpacePlacement) => SpacePlacement) =>
-    editSpace((s) => {
-      const placements = s.placements.map((p, i) => (i === k ? edit(p) : p));
-      const next = { ...s, placements };
-      const same = placements[k]?.mirrored === s.placements[k]?.mirrored;
-      return !same || keepsRules(s, next, plans) ? next : s;
-    });
+    setDesign((d) => withPlacementsRuled(d, (list) => list.map((p, i) => (i === k ? edit(p) : p))));
   /** the space when a stage drag began: each move of the drag starts from it */
   const stageDragStart = useRef<SpaceSpec | null>(null);
   /** the box the design places at index `i` (what the map draws; a mirrored pair is two boxes) */
@@ -820,11 +838,18 @@ export function useSpace(initialBand: CoverageBand = "mid") {
         return { ...s, placements: withBoxMoved(s.placements, box, p, s.venue.room, flush) };
       });
     },
-    /** turns a box of the map to face `p` on the floor; its placement's other box follows. `stepped` (Shift held): in `AIM_SNAP_DEG` steps */
+    /**
+     * turns a box of the map to face `p` on the floor; its placement's other box follows. `stepped` (Shift held): in
+     * `AIM_SNAP_DEG` steps. A turn that breaks a rule the space kept is undone
+     */
     aimBox: (i: number, p: FloorPoint, stepped: boolean) => {
       const box = boxAt(i);
       if (box)
-        editPlacements((list) => withBoxAimed(list, box, p, stepped ? AIM_SNAP_DEG : undefined));
+        setDesign((d) =>
+          withPlacementsRuled(d, (list) =>
+            withBoxAimed(list, box, p, stepped ? AIM_SNAP_DEG : undefined),
+          ),
+        );
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
     /** moves the alignment point, where the mains arrive together */

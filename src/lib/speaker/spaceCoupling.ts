@@ -19,7 +19,7 @@ import {
   OPEN_SIDE,
   STAGE_FACE,
 } from "../../constants/space";
-import { INCHES_PER_FOOT, METERS_PER_FOOT, METERS_PER_INCH } from "../../constants/units";
+import { INCHES_PER_FOOT, METERS_PER_FOOT } from "../../constants/units";
 
 /**
  * One box of a placement as it stands (`expandPlacements`): its spot, aim and lift (from the floor), the stage it stands

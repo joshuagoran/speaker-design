@@ -26,7 +26,12 @@ import {
   withStageShape,
 } from "../src/pages/space/stageEdits";
 import { emptySpace, spaceFromSaved, spaceSnapshot } from "../src/pages/space/spaceSaves";
-import { withBoxMoved, withSpeakerPlaced } from "../src/pages/space/useSpace";
+import {
+  withBoxAimed,
+  withBoxMoved,
+  withPlacementsRuled,
+  withSpeakerPlaced,
+} from "../src/pages/space/useSpace";
 import { spaceModelLaidOut } from "../src/lib/speaker/spaceCoverage";
 import { roomWalls } from "../src/lib/speaker/spaceCoupling";
 import { spacePlacement } from "../src/lib/speaker/specParts";
@@ -312,6 +317,31 @@ test("rules on boxes: a move onto a stage's edge is undone; a drag near a stage'
   assert.ok(near(moved.y, 8 + subD));
 });
 
+test("rules on boxes: a turn is checked at the new aim; a long box beside a stage turned into it is undone", () => {
+  const main = stage("a", [-8, 0, 8, 8]);
+  const dual = { ...templateSpeaker(SPEAKER_TEMPLATE.genericDualSub18), id: "dual" };
+  const { w } = speakerLayout(dual.cabinet).size;
+  // flush beside the stage's right edge, facing down the room: its 46 in width across, its back on the stage's side
+  const spot = { x: 8 + w / INCHES_PER_FOOT / 2, y: 4 };
+  const design: SpaceDesign = {
+    space: spaceWith([main], [spacePlacement(spot, { kind: SPACE_ITEM.speaker, id: "dual" }, 0)]),
+    stacks: [],
+    speakers: [dual],
+  };
+  const turned = (yawDeg: number) =>
+    withPlacementsRuled(design, (list) => list.map((p) => ({ ...p, aim: { ...p.aim, yawDeg } })));
+  // turned 90° about its front: its back reaches over the stage
+  assert.equal(turned(90), design);
+  // turned the other way: clear of it
+  assert.equal(turned(-90).space.placements[0].aim.yawDeg, -90);
+  // a map drag's turn too
+  const box = spaceModelLaidOut(design).placements[0].item.placement;
+  const aimed = withPlacementsRuled(design, (list) =>
+    withBoxAimed(list, box, { x: spot.x + 10, y: spot.y }),
+  );
+  assert.equal(aimed, design);
+});
+
 /** The model's plans and what each box stands on, for this design. */
 function laidOut(design: SpaceDesign) {
   const model = spaceModelLaidOut(design);
@@ -405,6 +435,17 @@ test("share link: stages round trip", async () => {
   const opened = openEnvelope(decoded.envelope);
   assert.ok(opened && opened.kind === SHARE_KIND.space);
   assert.deepEqual(opened.design.space.venue.stages, space.venue.stages);
+  // a riser that names no floor stage, or two stages with one id: not a link the app reads
+  for (const stages of [
+    [stage("r", [-4, 0, 4, 4], 1, "x")],
+    [stage("a", [-8, 0, 8, 8]), stage("a", [10, 0, 14, 8])],
+  ]) {
+    const bad = { ...design, space: spaceWith(stages) };
+    const read = await decodeLink(
+      linkFragment(SHARE_KIND.space, await encodeLink(spaceEnvelope(bad))),
+    );
+    assert.ok(!read.ok);
+  }
 });
 
 test("stages: a new placement lands at the first free spot on the floor, off the stages and the other boxes", () => {

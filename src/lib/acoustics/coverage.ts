@@ -605,7 +605,7 @@ export function coverageFrequencies(
 }
 
 // scratch space for the sum: per source geometry (GEO values each), per path pressure, the detour over the stages
-const GEO = 14;
+const GEO = 15;
 /** A detour's δk past which no slot's barrier takes anything off (N = δk/π at its bright-side end). */
 const BRIGHT_DETOUR_K = BARRIER_BRIGHT_N * Math.PI;
 let geo = new Float64Array(0),
@@ -616,15 +616,25 @@ const detour: Detour = { delta: -Infinity, stage: -1 };
 /**
  * A stage image's reflection on the way to a point (`stageReflection`): where it lands (m), its first Fresnel zone's
  * scale (2π·d₁d₂/(d₁ + d₂): over k, the zone's radius squared), and how far inside its surface's edges it lands, m (a
- * face's two ends and its top edge; a top's outline, then Infinity twice).
+ * face's two ends, its top edge and a riser's bottom edge, which a floor stage's face lacks; a top's outline, then
+ * Infinity three times).
  */
-const hit = { x: 0, y: 0, z: 0, zone: 0, in1: Infinity, in2: Infinity, in3: Infinity };
+const hit = {
+  x: 0,
+  y: 0,
+  z: 0,
+  zone: 0,
+  in1: Infinity,
+  in2: Infinity,
+  in3: Infinity,
+  in4: Infinity,
+};
 
 /**
  * Where a stage image's path reflects on its face or top on the way to a point `dist` m from the image (`hit`): false
- * where that point is behind the face or under the top, where it lands under a face's base, or where it lands more
- * than a Fresnel zone (at the lowest wavenumber, `kMin`) past an edge. A face's floor-bounce image hits the face as high
- * as its line crosses the face's plane below the floor or above it.
+ * where that point is behind the face or under the top, or where it lands more than a Fresnel zone (at the lowest
+ * wavenumber, `kMin`) past an edge. A face's floor-bounce image hits the face as high as its line crosses the face's
+ * plane below the floor or above it.
  */
 function stageReflection(
   s: SceneSource,
@@ -647,7 +657,6 @@ function stageReflection(
     if (to <= 0) return false;
     t = from / (from - to);
     hit.z = Math.abs(s.z + (pz - s.z) * t);
-    if (hit.z < r.base) return false;
   }
   hit.x = s.x + (px - s.x) * t;
   hit.y = s.y + (py - s.y) * t;
@@ -663,14 +672,16 @@ function stageReflection(
     )
       return false;
     hit.in1 = outlineDepth(block, hit.x, hit.y);
-    hit.in2 = hit.in3 = Infinity;
+    hit.in2 = hit.in3 = hit.in4 = Infinity;
     return hit.in1 > -reach;
   }
   const along = (hit.x - r.face.ax) * r.face.ux + (hit.y - r.face.ay) * r.face.uy;
   hit.in1 = along;
   hit.in2 = r.face.len - along;
   hit.in3 = r.top - hit.z;
-  return Math.min(hit.in1, hit.in2, hit.in3) > -reach;
+  // a floor stage's face meets the floor (its image carries on below it); a riser's face ends at its base
+  hit.in4 = r.base > 0 ? hit.z - r.base : Infinity;
+  return Math.min(hit.in1, hit.in2, hit.in3, hit.in4) > -reach;
 }
 
 /**
@@ -770,7 +781,8 @@ export function levelAtPoint(
             geo[g + 9] = hit.in1;
             geo[g + 10] = hit.in2;
             geo[g + 11] = hit.in3;
-            geo[g + 12] = Math.min(hit.in1, hit.in2, hit.in3);
+            geo[g + 12] = Math.min(hit.in1, hit.in2, hit.in3, hit.in4);
+            geo[g + 14] = hit.in4;
           }
         }
         const ahead = dx * s.sy + dy * s.cy,
@@ -802,7 +814,10 @@ export function levelAtPoint(
       if (s.reflector >= 0 && nearest * Math.abs(nearest) < geo[g + 8] / sl.k) {
         const zone = Math.sqrt(geo[g + 8] / sl.k);
         gain *=
-          edgeFade(geo[g + 9], zone) * edgeFade(geo[g + 10], zone) * edgeFade(geo[g + 11], zone);
+          edgeFade(geo[g + 9], zone) *
+          edgeFade(geo[g + 10], zone) *
+          edgeFade(geo[g + 11], zone) *
+          edgeFade(geo[g + 14], zone);
         if (!gain) continue;
       }
       const r = geo[g];

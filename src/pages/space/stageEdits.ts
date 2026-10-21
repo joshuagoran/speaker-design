@@ -124,9 +124,18 @@ const noneNew = <T>(was: ReadonlySet<T>, now: ReadonlySet<T>) => [...now].every(
 const stagesKeepRules = (before: Layout, after: Layout): boolean =>
   noneNew(brokenStages(before), brokenStages(after));
 
-/** Whether `after` breaks no rule `before` kept (a layout that broke one already can still change elsewhere). */
-export const keepsRules = (before: Layout, after: Layout, plans: SpotPlans): boolean =>
-  stagesKeepRules(before, after) && noneNew(brokenBoxes(before, plans), brokenBoxes(after, plans));
+/**
+ * Whether `after` breaks no rule `before` kept (a layout that broke one already can still change elsewhere). The boxes'
+ * plans are `plans` in both; `afterPlans` are `after`'s where they differ (a box turned).
+ */
+export const keepsRules = (
+  before: Layout,
+  after: Layout,
+  plans: SpotPlans,
+  afterPlans: SpotPlans = plans,
+): boolean =>
+  stagesKeepRules(before, after) &&
+  noneNew(brokenBoxes(before, plans), brokenBoxes(after, afterPlans));
 
 /** `after` when its stages keep the rules `before`'s kept, else `before`: a stage edit never fails on the boxes. */
 const ruled = <L extends Layout>(before: L, after: L): L =>
