@@ -381,7 +381,7 @@ test("speaker settings: construction, top, a vent's and a mouth's positions surv
     0,
   );
 
-  // a round port: Auto is the Hi-fi rule's row; Custom moves it, to the back too
+  // a round port: Auto is the Hi-fi rule's row; Manual moves it, to the back too
   const chamber = onlyChamber(base);
   const placed = speakerLayout(base.cabinet).chambers[0];
   const auto = ventPlace(base.cabinet, placed);
@@ -424,7 +424,7 @@ test("speaker settings: construction, top, a vent's and a mouth's positions surv
   assert.equal(ventPlace(paCabinet, speakerLayout(paCabinet).chambers[0]), null);
   assert.equal(withVentPosition(paSub.vent, position), paSub.vent);
 
-  // a horn mouth: Auto on the clear face's center; Custom moves it, inside the face
+  // a horn mouth: Auto on the clear face's center; Manual moves it, inside the face
   const bin = templateSpeaker(SPEAKER_TEMPLATE.paV2MidBox);
   const binPlaced = speakerLayout(bin.cabinet).chambers[0];
   const mouth = mouthPlace(bin.cabinet, binPlaced);

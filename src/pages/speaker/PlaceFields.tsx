@@ -13,7 +13,7 @@ interface Props<P extends FacePoint> {
   label: React.ReactNode;
   /** the set position, from the chamber's center line and its bottom; undefined: its rule places it (Auto) */
   value: P | undefined;
-  /** where its rule puts it: Auto shows it, and Custom starts from it */
+  /** where its rule puts it: Auto shows it, and Manual starts from it */
   auto: P;
   onChange: (position: P | undefined) => void;
   /** more fields for a set position (a vent's panel), under the toggle */
@@ -21,7 +21,7 @@ interface Props<P extends FacePoint> {
 }
 
 /**
- * A part's place on its chamber: Auto (its rule places it; the fields show where, read-only) or Custom (set), its center
+ * A part's place on its chamber: Auto (its rule places it; the fields show where, read-only) or Manual (set), its center
  * left or right of the chamber's center and up from its bottom, as a driver's.
  */
 export function PlaceFields<P extends FacePoint>({

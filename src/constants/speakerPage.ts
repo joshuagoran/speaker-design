@@ -114,16 +114,17 @@ export const FILTER_TYPE_NAMES = {
   LR48: "LR48",
 } as const satisfies Record<FilterType, string>;
 
-/** Where a setting's value comes from, by id: worked out by its rule (Auto), or typed in (Custom). */
+/** Where a setting's value comes from, by id: worked out by its rule (Auto), or typed in (Manual). */
 export const SET_BY = {
   auto: "auto",
+  // shown as Manual; the key keeps its old name
   custom: "custom",
 } as const;
 
 /** The name the settings show for each. */
 export const SET_BY_NAMES = {
   auto: "Auto",
-  custom: "Custom",
+  custom: "Manual",
 } as const satisfies Record<keyof typeof SET_BY, string>;
 
 /** The panels a vent can be cut into, as the Speaker page names them. */
@@ -430,7 +431,7 @@ export const SPEAKER_TEXT = {
     `Braces are added until the first resonance of each panel is above this frequency. Default: ${def}.`,
   /** under the Top choice when an arched top cannot apply: the start of the reason (`ARCH_BLOCK_TEXT`) */
   archFlat: "The top stays flat.",
-  placeTip: "Auto: the chamber's layout places it. Custom: you set the position of its center.",
+  placeTip: "Auto: the chamber's layout places it. Manual: you set the position of its center.",
   portPlace: "Port position",
   radiatorPlace: "Radiator position",
   mouthPlace: "Horn mouth position",
