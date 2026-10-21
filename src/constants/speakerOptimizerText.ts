@@ -16,7 +16,7 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   budgetField: "Most the parts cost",
   weight: "Weight",
   weightField: "Most the box weighs",
-  keep: "Keep",
+  keep: "Locks",
   keepHint:
     "A locked part stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
   run: "Find designs",
@@ -44,7 +44,7 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   vent: "vent",
   axis: { w: "Width", h: "Height", d: "Depth" },
   summaryNoGoal: "no goal picked",
-  summaryKeeps: (n: number) => `${n} kept`,
+  summaryKeeps: (n: number) => `${n} locked`,
   summaryTarget: (db: number) => `target ${db} dB`,
   summaryBudget: (dollars: number | null) =>
     dollars === null ? "no budget limit" : `budget $${dollars}`,

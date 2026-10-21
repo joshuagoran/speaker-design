@@ -66,14 +66,14 @@ export const STACK_OPTIMIZER_TEXT = {
   height: "Stack height",
   heightField: "Tallest the stack may stand",
   keepHint:
-    "A locked part stays as it is. Keep a speaker to hold it whole. A locked crossover, level or delay stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
+    "A locked part stays as it is. Lock a speaker to hold it whole. A locked crossover, level or delay stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
   curveLabel: "Maximum output with one input, this stack against yours",
   failing: (problems: string) =>
     `Your stack fails: ${problems}. Fixes may cost more, weigh more, or stand taller.`,
   /** a speaker's lock on the whole speaker, and the label of a lock on a box axis */
-  keepWhole: "Keep the whole speaker",
+  keepWhole: "Lock the whole speaker",
   boxAxis: { w: "Box width", h: "Box height", d: "Box depth" },
-  /** the Keep list's group of the boxes' own settings, and each lock in it */
+  /** the Locks list's group of the boxes' own settings, and each lock in it */
   members: "Boxes",
   membersTip:
     "These locks stay on their boxes. When you add or remove a box, the app clears a lock if it cannot find its box.",
