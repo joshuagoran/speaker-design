@@ -1,5 +1,6 @@
 // The Space page's saves (the `spaces` collection under users/{uid}): what a save stores and how a document opens.
 // Pure.
+import { isOptionalFlag } from "../../lib/io/shareChecks";
 import type {
   SavedConfig,
   SavedSpaceData,
@@ -131,7 +132,8 @@ const isVenue = (value: unknown): value is SavedVenue =>
   }) &&
   isOneOf(COVERAGE_LEVEL_REF, Reflect.get(value, "levelRef")) &&
   isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance")) &&
-  ["undefined", "boolean"].includes(typeof Reflect.get(value, "autoDelayLevel"));
+  // a save from before the setting has none
+  isOptionalFlag(Reflect.get(value, "autoDelayLevel"));
 
 /**
  * A saved space opened: the document's id and name, its placements and venue, and its stacks and speakers;
