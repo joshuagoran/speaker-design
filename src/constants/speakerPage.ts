@@ -46,7 +46,7 @@ export const NO_HORN_NAME = "None";
 
 /** Each driver kind as the Speaker page names it: the catalog table it picks from. */
 export const DRIVER_KIND_NAMES = {
-  sub: "Subwoofer",
+  sub: "Sub",
   mid: "Mid-bass",
   compression: "Compression driver",
   woofer: "Woofer",
@@ -74,7 +74,7 @@ export const wooferSizeName = (size: number) => `${size} in`;
 /** Each vent kind as the Speaker page names it. */
 export const VENT_KIND_NAMES = {
   sealed: "Sealed",
-  vented: "Ported",
+  vented: "Vented",
   radiator: "Passive radiator",
 } as const satisfies Record<HifiBoxKind, string>;
 
@@ -206,8 +206,8 @@ export const ARCH_BLOCK_TEXT = {
   frame: `An arch needs the **${CABINET_CONSTRUCTION_NAMES.frameInset}** construction.`,
   shell: "An arch needs all chambers in one box: the same depth, with no gaps.",
   topChambers: "An arch needs one chamber at the top.",
-  width: "An arch needs the top chamber to be the full width of the cabinet.",
-  height: "An arch needs the top chamber to be at least half as tall as the cabinet is wide.",
+  width: "An arch needs the top chamber to be the full width of the box.",
+  height: "An arch needs the top chamber to be at least half as tall as the box is wide.",
 } as const satisfies Record<ArchBlock, string>;
 
 /**
@@ -229,8 +229,8 @@ export const MODEL_GAP_TEXT = {
     fix: "Choose the radiator again.",
   },
   noModel: {
-    why: "the box cannot be calculated from these sizes (air, port, counts)",
-    fix: "Set the air, the port size, and the driver counts above zero.",
+    why: "the box cannot be calculated from these sizes (air, vent, counts)",
+    fix: "Set the air, the vent size, and the driver counts above zero.",
   },
   badFilter: {
     why: "a band filter has a corner that is not a positive frequency",
@@ -285,7 +285,7 @@ export const FOLD_CHART_TEXT = {
 const FOLD_TOOL_NAMES = {
   move: "Move",
   board: "Add board",
-  remove: "Delete",
+  remove: "Remove",
   drivers: "Drivers",
   mouth: "Mouth",
   vent: "Vent",
@@ -313,7 +313,7 @@ export const FOLD_EDITOR_TEXT = {
     boards: "boards",
     passage: "passage, dark at the closed end",
     sealed: "sealed air",
-    ported: "ported air",
+    ported: "vented air",
     drivers: "drivers (the line is the cone)",
     mouth: "mouth",
     vent: "vent",
@@ -377,7 +377,7 @@ export const SPEAKER_TEXT = {
   hornMouthMoved:
     "A horn mouth is set outside the face its chamber leaves it (the clear face, less any side slots). The views move it to the nearest place that fits.",
   ventMoved:
-    "A port or radiator is set outside the clear face of its chamber. The views move it to the nearest place that fits.",
+    "A vent or radiator is set outside the clear face of its chamber. The views move it to the nearest place that fits.",
   response: "Response",
   chambers: "Chambers",
   bands: "Bands",
@@ -469,7 +469,7 @@ export const SPEAKER_TEXT = {
   /** under the Top choice when an arched top cannot apply: the start of the reason (`ARCH_BLOCK_TEXT`) */
   archFlat: "The top stays flat.",
   placeTip: `**${SET_BY_NAMES.auto}**: the chamber's layout places it. **${SET_BY_NAMES.custom}**: you set the position of its center.`,
-  portPlace: "Port position",
+  portPlace: "Vent position",
   radiatorPlace: "Radiator position",
   mouthPlace: "Horn mouth position",
   panel: "Panel",
@@ -497,10 +497,10 @@ export const SPEAKER_TEXT = {
   tubeLayout: "Tube position",
   elbows: "Elbows",
   elbowsTip:
-    "The bends in each tube. Each bend adds a little to the length that the air sees, so the port tunes lower.",
+    "The bends in each tube. Each bend adds a little to the length that the air sees, so the vent tunes lower.",
   /** the side ducts' dividers' tooltip: the shared tip, and which thickness each size takes */
   ductDividersTip: `${UI_TEXT.ductDividersTip} Dividers of the wall size have the thickness of the walls. You can measure it on the **${CUTLIST_TAB_NAME}** tab. Dividers of a different size have the default thickness.`,
-  ventFixed: "The shape of this port sets its position.",
+  ventFixed: "The shape of this vent sets its position.",
   load: "Type",
   loadTip: `**${CHAMBER_LOAD_NAMES.direct}**: the cones radiate from the baffle. **${CHAMBER_LOAD_NAMES.horn}**: a horn in the box. A new horn has one conical section from the cones to the clear face.`,
   loadNoCone: "A horn needs a cone driver with Thiele/Small parameters in this chamber.",
@@ -533,7 +533,7 @@ export const SPEAKER_TEXT = {
   hornRearTapTip:
     "Where the front and back of the cones join the horn, counted from the closed end.",
   /** the line under a tapped horn's settings: what the chamber's volume is */
-  hornTappedAir: "The chamber volume is the air behind the cones.",
+  hornTappedAir: "The chamber's net air is the air behind the cones.",
   /** why a tapped horn's chamber takes no vent */
   ventTapped: "A tapped horn has no vent.",
   hornGoals: "Target band",
@@ -589,7 +589,7 @@ export const SPEAKER_TEXT = {
   driverHornTip: `A horn or waveguide on this compression driver or tweeter. **${NO_HORN_NAME}**: the driver has no horn.`,
   hornMountTip: `**${HORN_PLACEMENT_NAMES.baffle}**: the mouth is cut into the baffle. **${HORN_PLACEMENT_NAMES.top}**: the horn stands on the chamber.`,
   levelTip:
-    "Sets the level of this band against the other bands, in dB. A negative value makes the band quieter. The default is 0 dB: no change, so each driver plays at its own sensitivity.",
+    "Sets the gain of this band against the other bands, in dB. A negative value makes the band quieter. The default is 0 dB: no change, so each driver plays at its own sensitivity.",
   driveTip: `**${DRIVE_NAMES.active}**: a crossover or DSP splits the signal before the amps. Each band has its own amp channel. **${DRIVE_NAMES.passive}**: a passive crossover in the box splits the amplified signal. One amp channel drives these bands.`,
   /** a passive band's amp power field: the one amp channel its network shares */
   sharedAmp: "Shared amp channel",
@@ -597,7 +597,7 @@ export const SPEAKER_TEXT = {
     "The corner frequency of the filter. A high-pass cuts below it. A low-pass cuts above it.",
   airSpeed: "Air speed limit",
   airSpeedTip:
-    "The highest air speed in the port at full power. Above it, the port makes noise. The maximum output stops at this limit.",
+    "The highest air speed in the vent at full power. Above it, the vent makes noise. The maximum output stops at this limit.",
   radiatorMassTip: "Mass that you add to each passive radiator. More mass tunes the box lower.",
   hornStepsOff: HORN_STEPS_OFF_NAME,
   hornStepsOn: HORN_STEPS_ON_NAME,

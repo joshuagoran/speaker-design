@@ -33,10 +33,10 @@ export const POSITION_TIPS = {
   partX: "From the chamber's center, seen from the front.",
   partY: "From the chamber's bottom.",
   partZ: "From the chamber's front edge, seen from the side.",
-  chamberX: "From the cabinet's center, seen from the front.",
-  chamberY: "From the cabinet's bottom.",
+  chamberX: "From the box's center, seen from the front.",
+  chamberY: "From the box's bottom.",
   /** a cabinet of one chamber: the chamber is the cabinet, so it has no position of its own */
-  oneChamber: "With one chamber, the chamber is the cabinet. It has no position of its own.",
+  oneChamber: "With one chamber, the chamber is the box. It has no position of its own.",
 } as const;
 
 /** Each fill level as its button names it. */
@@ -86,7 +86,7 @@ export const SETTINGS_TEXT = {
   addChamber: "Add chamber",
   addDriver: "Add driver",
   /** a driver's trash icon: what it does, by the driver's place */
-  deleteDriver: (n: number) => `Delete driver ${n}`,
+  deleteDriver: (n: number) => `Remove driver ${n}`,
   noDrivers: "No drivers yet.",
   ventType: "Vent type",
   advanced: "Advanced",
@@ -164,7 +164,7 @@ export const SETTINGS_TEXT = {
   fullRange: "full range",
   // construction
   top: "Top",
-  topTip: `**${CABINET_TOP_NAMES.flat}**, or a semicircle the full width of the cabinet. Only for speakers where every chamber is a **${BOX_LOAD_NAME}**.`,
+  topTip: `**${CABINET_TOP_NAMES.flat}**, or a semicircle the full width of the box. Only for speakers where every chamber is a **${BOX_LOAD_NAME}**.`,
   handles: "Handles",
   handlesTip: "Two handles, one on each side. They go on the lowest chamber of each shell.",
   handlesNone: "None",
@@ -172,7 +172,7 @@ export const SETTINGS_TEXT = {
   handleType: "Handle type",
   dish: "Input dish",
   dishTip:
-    "An input dish with two jacks on the back. With a horn on the top, it also has binding posts for the horn. It goes on the lowest chamber of each cabinet.",
+    "An input dish with two jacks on the back. With a horn on the top, it also has binding posts for the horn. It goes on the lowest chamber of each box.",
   dishNone: "None",
   dishOn: "On the back",
   /** the Construction summary's walls, top and hardware */

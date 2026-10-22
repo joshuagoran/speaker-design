@@ -300,7 +300,7 @@ export const SPACE_TEXT = {
   /** the Place list's groups */
   placeGroups: {
     stackPresets: "Stack presets",
-    speakerTemplates: "Speaker templates",
+    speakerTemplates: "Speaker presets",
     open: "Open now",
     savedStacks: "Saved Stacks",
     savedSpeakers: "Saved Speakers",
@@ -331,9 +331,9 @@ export const SPACE_TEXT = {
   standsOn: (where: string) => `On ${where}.`,
   heightTip: "The gap under it: a plinth, a stand, a fly bar.",
   yaw: "Rotation, °",
-  yawTip: "Its turn on the floor from straight down the room. + turns toward the right side.",
+  yawTip: "Its rotation on the floor from straight down the room. + rotates toward the right side.",
   pitch: "Tilt, °",
-  pitchTip: "+ tilts it up. A box's tilt in the stack and its cabinet's kick-back add to it.",
+  pitchTip: "+ tilts it up. A box's tilt in the stack and the box's kick-back add to it.",
   upsideDown: "Upside down",
   gain: `${GAIN}, dB`,
   delay: `${DELAY}, ms`,
@@ -355,7 +355,7 @@ export const SPACE_TEXT = {
   /** a band's amp power field: the band (or a passive network's bands) it is for */
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
   alignment: "Alignment",
-  alignmentHint: "The settings for each box and band, at the level and delay the Space asks of it.",
+  alignmentHint: "The settings for each box and band, at the gain and delay the Space asks of it.",
   alignmentTip: "A delay, an all-pass filter, or moving the box can give a time offset.",
   /** a band's filters, as a row's value: its corner and slope */
   highpass: (filter: string) => `High-pass ${filter}`,
@@ -455,13 +455,13 @@ export const SPACE_DETAILS = {
   markLines: [
     "It shows the level, the response, and the arrivals at its location.",
     `**${CALCULATE_DELAYS}** makes the main boxes arrive together here.`,
-    "Moving it does not change a delay or a level.",
+    "Moving it does not change a delay or a gain.",
     "Tap the map, or drag the cyan dot, to move it.",
   ],
   map: "The map",
   mapLines: (limitHz: number, coherentHz: number) => [
     "Drag a Source to move it.",
-    "Drag its dot to turn it.",
+    "Drag its dot to rotate it.",
     `Drag or tap to place the **${MAP_MARK_NAMES.listener}**.`,
     `**${UI_TEXT.oneFrequency}** shows the interference between the Sources below ${coherentHz} Hz.`,
     `**${UI_TEXT.oneFrequency}** goes up to ${limitHz / 1000} kHz.`,
@@ -492,10 +492,10 @@ export const SPACE_DETAILS = {
   ],
   boxes: "Boxes and drivers",
   boxLines: (listenM: number) => [
-    "Each box plays through its crossover, level, and delay.",
+    "Each box plays through its crossover, gain, and delay.",
     `The stack's delays put the boxes in phase at the crossovers, ${listenM} m out.`,
     "Each driver covers the room from its own place and aim.",
-    "A driver's place includes its cabinet's kick-back, its tilt in the stack, and the Source's tilt.",
+    "A driver's place includes its box's kick-back, its tilt in the stack, and the Source's tilt.",
     "Each cone band has a first-order baffle-step shelf.",
   ],
 } as const;

@@ -29,7 +29,7 @@ export const STACK_PROBLEM = { ...SPEAKER_PROBLEM, height: "height" } as const;
 export const STACK_PROBLEM_TEXT = {
   unmodeled: "the app cannot calculate part of your Stack",
   driverFit: "a driver or horn no longer fits its chamber",
-  ventFit: "a port does not fit its chamber",
+  ventFit: "a vent does not fit its chamber",
   fitChip: "a duct, tube, or hardware fit check fails",
   budget: "the parts cost more than the budget",
   weight: "a box weighs more than the limit",

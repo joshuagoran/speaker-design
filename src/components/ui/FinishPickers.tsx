@@ -21,7 +21,7 @@ interface Props {
 export function CabinetFinishPicker({ value, onChange }: Props) {
   return (
     <SwatchPicker
-      label="Cabinet finish"
+      label="Box finish"
       value={value}
       onChange={onChange}
       swatches={PAINT_SWATCHES}

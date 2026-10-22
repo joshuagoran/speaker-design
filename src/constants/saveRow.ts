@@ -12,7 +12,7 @@ export const SAVE_ROW_TEXT = {
   saveAs: "Save as",
   open: "Open",
   /** the start list, as screen readers hear it (the Node checks find it by this), and its first line */
-  newFrom: "New from a template",
+  newFrom: "New from a preset",
   newFromPrompt: "New from…",
   signIn: "Sign in with Google to save",
   signOut: "Sign out",

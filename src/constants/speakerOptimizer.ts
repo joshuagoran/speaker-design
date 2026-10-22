@@ -123,7 +123,7 @@ export const SPEAKER_PROBLEM = {
 export const SPEAKER_PROBLEM_TEXT = {
   unmodeled: "the app cannot calculate a chamber or band in your design",
   driverFit: "a driver or horn no longer fits its chamber",
-  ventFit: "a port does not fit its chamber",
+  ventFit: "a vent does not fit its chamber",
   fitChip: "a duct, tube, or hardware fit check fails",
   budget: "the parts cost more than the budget",
   weight: "the box weighs more than the limit",
