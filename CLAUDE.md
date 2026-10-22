@@ -94,6 +94,8 @@ Keep token use low, in every session and subagent.
 - Before a push, run `vp check` and the affected tests. Run the full suite, the build, or the phone check locally only
   when CI fails or the change touches the build or the layout.
 - Review each code PR once; fix the findings without a second review. A docs PR gets a light review or none.
+- A CI failure outside the PR's change that passes locally: re-run once, log an issue, and move on. Time-box any
+  hunt to 15 minutes, and ask the owner before starting a second agent on the same problem.
 - Take screenshots only when the owner asks, or for a taste decision.
 - Never wait in the foreground. Ask the owner before a job that takes minutes.
 - Answer the owner's batched notes in one message, with questions in one short list.

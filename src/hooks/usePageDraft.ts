@@ -105,7 +105,7 @@ const sharedDocument = <T>(draft: PageDraft<T>, shared: SharedDesign<T>) => ({
  * Calls `write` with `value` `DRAFT_WRITE_MS` after its last change, and at once when the page is left (a reload inside
  * the delay would lose the last change). Nothing is written while `value` is the same one.
  */
-export function useDelayedWrite<V>(value: V, write: (value: V) => void) {
+function useDelayedWrite<V>(value: V, write: (value: V) => void) {
   /** the value waiting to be written; null when what is stored is current */
   const pending = useRef<{ value: V } | null>(null);
   const flush = () => {
