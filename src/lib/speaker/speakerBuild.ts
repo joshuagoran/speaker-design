@@ -48,7 +48,6 @@ import type {
 } from "../../types";
 import type { HardwareDriver } from "../build/hardware";
 import {
-  BAFFLE_PLY_IN,
   MID_FIXINGS_LB,
   SUB_FIXINGS_LB,
   archStripIn,
@@ -145,7 +144,12 @@ import {
 } from "../../data/catalog/driver-cutouts";
 import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
-import { CM2_PER_IN2, KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
+import {
+  CM2_PER_IN2,
+  KG_PER_LB,
+  LITERS_PER_CUBIC_IN,
+  SQ_IN_PER_SQ_FT,
+} from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
 import { SPEAKER_TEXT, DRIVER_KIND_NAMES, FOLD_WALL_NAMES } from "../../constants/speakerPage";
 import { FOLD_END, FOLD_SQUARE_TOL_DEG } from "../../constants/foldHorn";
@@ -167,13 +171,12 @@ import {
   SLOT_PLACE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
+import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
 
 /** The least air the build gives a chamber, L (the Hi-fi box model's floor). */
 export const MIN_NET_L = 1;
 /** The joint the build cuts a chamber with to count the wood inside it (the joint doesn't move the inside). */
 const COUNT_JOINT: CornerJoint = "butt";
-/** in² to ft² */
-const SQ_IN_PER_SQ_FT = 144;
 
 /** A chamber's inside behind the baffle, in: its clear width and height, its depth, and a bottom slot's band. */
 export interface ChamberInside {
@@ -676,10 +679,23 @@ function chamberBracingAs(
         handles ?? undefined,
         back,
         targetHz,
+        cabinet.panel.material,
       ),
       hardware: fitted(
         handles &&
-          subHardwarePlan(f.box, t, inset, portStyle, vent, sub, style, handles, back, targetHz),
+          subHardwarePlan(
+            f.box,
+            t,
+            inset,
+            portStyle,
+            vent,
+            sub,
+            style,
+            handles,
+            back,
+            targetHz,
+            cabinet.panel.material,
+          ),
       ),
     };
   }
@@ -709,6 +725,7 @@ function chamberBracingAs(
           },
           bracing,
           keepOut,
+          material: cabinet.panel.material,
         }),
     );
   const placed = plan(null);

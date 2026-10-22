@@ -20,6 +20,7 @@ import type {
   HardwarePanel,
   PaHardware,
   PlacedHardware,
+  PanelMaterial,
 } from "../../types";
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
 import {
@@ -28,16 +29,11 @@ import {
   HARDWARE_PANEL,
   NO_HANDLES,
 } from "../../constants/hardware";
-import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
+import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
+import { LITERS_PER_CUBIC_IN, SQ_IN_PER_SQ_FT } from "../../constants/units";
 import { panelLbPerSqFt } from "./panel";
 import { bracingRegions } from "./bracing";
 
-/** Cubic inches to liters. */
-const IN3_TO_L = 16.387 / 1000;
-/** The baffle's ply, in (3/4″ whatever the walls, as everywhere in the PA boxes). */
-const BAFFLE_IN = 0.75;
-/** The baffle's weight, lb/ft² (3/4″ ply, as the box weights take it). */
-const BAFFLE_LB_PER_SQFT = 2.3;
 /**
  * How far a cutout stays in from each inside edge of its panel, in: the joints, the back's rabbet and the baffle's
  * 3/4″ cleats take that strip.
@@ -106,7 +102,7 @@ export const mountedFlange = (part: CabinetPart) =>
 /** The liters a part's recess takes inside a box with walls `t` thick: its cutout over the depth past the wall. */
 export const partRecessLiters = (part: CabinetPart, t: number) =>
   part.cutout && part.depthIn !== null
-    ? part.cutout.w * part.cutout.h * Math.max(0, part.depthIn - t) * IN3_TO_L
+    ? part.cutout.w * part.cutout.h * Math.max(0, part.depthIn - t) * LITERS_PER_CUBIC_IN
     : 0;
 
 /** A box's parts with its handle model (null: none). */
@@ -128,36 +124,40 @@ export interface HardwareDriver {
 const insideOf = (box: Dims3, t: number, inset: number) => ({
   x: box.w - 2 * t,
   y: box.h - 2 * t,
-  z: box.d - inset - BAFFLE_IN - t,
+  z: box.d - inset - BAFFLE_PLY_IN - t,
 });
 
 /**
- * A box's center of gravity, in from its outside: `y` up from the bottom, `z` back from the front. The walls (each at
- * its middle), the baffle, the driver (its weight at half its mounting depth) and `more` (the vent's panels, where
- * they sit: lib/acoustics/boxModels subVentMasses) count; the braces spread through the box and are left out.
+ * A box's center of gravity, in from its outside: `y` up from the bottom, `z` back from the front, and `lb` the weight
+ * it counts. The walls (each at its middle), the baffle, the driver (its weight at half its mounting depth) and `more`
+ * (the vent's panels, where they sit: lib/acoustics/boxModels subVentMasses) count; the braces spread through the box
+ * and are left out. The walls and the baffle weigh what the cutlist's panels of `material` weigh (lib/build/panel).
  */
 export function boxCenterOfGravity(
   box: Dims3,
   t: number,
   inset: number,
   drv: HardwareDriver,
+  material: PanelMaterial,
   more: readonly CogMass[] = [],
 ) {
   const { w, h, d } = box;
-  const wallLb = panelLbPerSqFt(t, PLYWOOD_MATERIAL) / 144;
+  const wallLb = panelLbPerSqFt(t, material) / SQ_IN_PER_SQ_FT;
   const sides = 2 * d * h * wallLb,
     topBottom = 2 * w * d * wallLb,
     back = w * h * wallLb,
-    baffle = (w - 2 * t) * (h - 2 * t) * (BAFFLE_LB_PER_SQFT / 144);
+    baffle =
+      (w - 2 * t) * (h - 2 * t) * (panelLbPerSqFt(BAFFLE_PLY_IN, material) / SQ_IN_PER_SQ_FT);
   const masses: [number, number, number][] = [
     [sides + topBottom, h / 2, d / 2],
     [back, h / 2, d - t / 2],
-    [baffle, h / 2, inset + BAFFLE_IN / 2],
+    [baffle, h / 2, inset + BAFFLE_PLY_IN / 2],
     [drv.lb, t + drv.center.y, inset + DRIVER_MASS_DEPTH_SHARE * drv.depthIn],
     ...more.map((m): [number, number, number] => [m.lb, m.y, m.z]),
   ];
   const total = masses.reduce((a, [m]) => a + m, 0);
   return {
+    lb: total,
     y: masses.reduce((a, [m, y]) => a + m * y, 0) / total,
     z: masses.reduce((a, [m, , z]) => a + m * z, 0) / total,
   };
@@ -260,7 +260,7 @@ function clearOfEdges(
   const e = HARDWARE_EDGE_CLEAR_IN,
     f = HARDWARE_FLANGE_EDGE_IN;
   // in the panel's plane: each axis the cutout spans, inside, and the flange on the outside face
-  const out = { x: t, y: t, z: inset + BAFFLE_IN };
+  const out = { x: t, y: t, z: inset + BAFFLE_PLY_IN };
   const outer = { x: box.w, y: box.h, z: box.d };
   const axes = (["x", "y", "z"] as const).filter((k) => s[k] > 0);
   return axes.every((k) => {
@@ -311,7 +311,7 @@ function place(
   inset: number,
   hits: HardwareObstacle[],
 ): PlacedHardware {
-  const out = { x: t + d.at.x, y: t + d.at.y, z: inset + BAFFLE_IN + d.at.z };
+  const out = { x: t + d.at.x, y: t + d.at.y, z: inset + BAFFLE_PLY_IN + d.at.z };
   const uv =
     d.panel === HARDWARE_PANEL.sideL || d.panel === HARDWARE_PANEL.sideR
       ? { u: out.z, v: out.y }
@@ -367,13 +367,14 @@ function handlePreset(
   inset: number,
   handle: CabinetPart,
   driver: HardwareDriver,
+  material: PanelMaterial,
   more: readonly CogMass[],
   obs: Obstacles,
   inner: Record<"x" | "y" | "z", number>,
 ) {
-  const cog = boxCenterOfGravity(dims, t, inset, driver, more);
+  const cog = boxCenterOfGravity(dims, t, inset, driver, material, more);
   const y = cog.y - t,
-    z0 = cog.z - inset - BAFFLE_IN;
+    z0 = cog.z - inset - BAFFLE_PLY_IN;
   const clearAt = (z: number) =>
     ([HARDWARE_PANEL.sideL, HARDWARE_PANEL.sideR] as const).every(
       (panel) =>
@@ -408,6 +409,8 @@ export interface BoxHardwareInput {
   bracing: BoxBracing | null;
   keepOut: BoxKeepOut;
   ventMasses?: readonly CogMass[];
+  /** the walls' and the baffle's material, for the center of gravity */
+  material: PanelMaterial;
 }
 
 /**
@@ -425,6 +428,7 @@ export function planBoxHardware({
   bracing,
   keepOut,
   ventMasses = [],
+  material,
 }: BoxHardwareInput): BoxHardwarePlan {
   const inner = insideOf(dims, t, inset);
   // the parts go where the driver, the vent, the edges and each other leave room; the braces go around them after
@@ -432,7 +436,10 @@ export function planBoxHardware({
   const placed: PlacedHardware[] = [];
   const handle = handlePart(handles.model);
   if (handle) {
-    const at = { ...handlePreset(dims, t, inset, handle, driver, ventMasses, obs, inner), x: 0 };
+    const at = {
+      ...handlePreset(dims, t, inset, handle, driver, material, ventMasses, obs, inner),
+      x: 0,
+    };
     at.y += handles.upIn;
     at.z += handles.backIn;
     for (const panel of [HARDWARE_PANEL.sideL, HARDWARE_PANEL.sideR] as const) {
@@ -500,7 +507,7 @@ export function planBoxHardware({
 
 /** A placed part's cutout center back on the box axes (the panel's own axis at its inside face), as its draft had it. */
 function atOf(p: PlacedHardware, inner: Record<"x" | "y" | "z", number>, t: number, inset: number) {
-  const front = inset + BAFFLE_IN;
+  const front = inset + BAFFLE_PLY_IN;
   switch (p.panel) {
     case HARDWARE_PANEL.sideL:
       return { x: 0, y: p.v - t, z: p.u - front };

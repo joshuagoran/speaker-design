@@ -25,11 +25,13 @@ import {
   subBoxBracing,
   subHardwarePlan,
   braceWoodIn3,
-  plywoodLbPerSqFt,
   SUB_FIXINGS_LB,
 } from "../src/lib/acoustics/boxModels";
+import { panelLbPerSqFt } from "../src/lib/build/panel";
+import { BAFFLE_PLY_IN, PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
+import { close } from "./helpers";
 import { towerHornCutout } from "../src/lib/speaker/tower";
-import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
+import { DEFAULT_HARDWARE, boxCenterOfGravity } from "../src/lib/build/hardware";
 import { PA_PANEL_TARGET_HZ } from "../src/lib/build/boxBracing";
 import {
   BACK_JOINT_FLUSH_NOTES,
@@ -54,11 +56,18 @@ import {
   SPEAKER_PART,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
-import type { CutPart, PaDesign, SpeakerCabinet, SpeakerChamber, SpeakerSpec } from "../src/types";
+import type {
+  CutPart,
+  PaDesign,
+  PanelMaterial,
+  SpeakerCabinet,
+  SpeakerChamber,
+  SpeakerSpec,
+} from "../src/types";
 
 /**
- * The PA sub rules' loaded weight, lb, worked out here as an independent check: a 3/4″ baffle at 2.3 lb/ft², the other
- * panels at the wall ply, the braces' wood, the driver, the hardware, and the fixings.
+ * The PA sub rules' loaded weight, lb, worked out here as an independent check: a 3/4″ baffle (2.3 lb/ft² in plywood),
+ * the other panels at the wall's thickness, the braces' wood, the driver, the hardware, and the fixings.
  */
 const subWeightLb = (
   b: { w: number; h: number; d: number },
@@ -66,25 +75,29 @@ const subWeightLb = (
   drvLb: number,
   bracing: Parameters<typeof braceWoodIn3>[0],
   hardwareLb: number,
+  material: PanelMaterial = PLYWOOD_MATERIAL,
 ) =>
-  (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
-  (braceWoodIn3(bracing) * plywoodLbPerSqFt(wall)) / 144 / wall +
+  (b.w * b.h * panelLbPerSqFt(BAFFLE_PLY_IN, material) +
+    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * panelLbPerSqFt(wall, material)) /
+    144 +
+  (braceWoodIn3(bracing) * panelLbPerSqFt(wall, material)) / 144 / wall +
   drvLb +
   hardwareLb +
   SUB_FIXINGS_LB;
 
 /** The PA sub rules' numbers for a design (with the design's back joint and handles): its bracing and loaded weight. */
-function paSubRules(cfg: PaDesign) {
+function paSubRules(cfg: PaDesign, material: PanelMaterial = PLYWOOD_MATERIAL) {
   const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
   assert.ok(sub);
   const { hardware, braceStyle, backJoint, wall, inset } = cfg;
   const vent = [cfg.cDim, wall, inset, cfg.portStyle, cfg.cVent, sub, braceStyle] as const;
-  const subBracing = subBoxBracing(...vent, hardware.sub, backJoint);
-  const subHw = subHardwarePlan(...vent, hardware.sub, backJoint);
+  const target = PA_PANEL_TARGET_HZ;
+  const subBracing = subBoxBracing(...vent, hardware.sub, backJoint, target, material);
+  const subHw = subHardwarePlan(...vent, hardware.sub, backJoint, target, material);
   return {
     subBracing,
     /** the loaded sub box */
-    subLb: subWeightLb(cfg.cDim, wall, sub.lb, subBracing, subHw.lb),
+    subLb: subWeightLb(cfg.cDim, wall, sub.lb, subBracing, subHw.lb, material),
   };
 }
 
@@ -106,6 +119,25 @@ test("speaker build: the PA designs' subs take the PA sub rules (bracing, net ai
     assert.ok(Math.abs(subNet - netL) < 1e-9 * netL, `${c.name}: sub net air`);
     assert.ok(Math.abs(subBuild.chambers[0].lb.total - rules.subLb) < LB, `${c.name}: sub lb`);
   }
+});
+
+test("an MDF box weighs what its cutlist weighs, and its handles find its center of gravity by that weight", () => {
+  const cfg = paDesign(configs[0]);
+  const read = layersFromPa(cfg, { id: "pa", name: configs[0].name }, PA_FLOOR);
+  const { cabinet } = speakerAndFeed(read, SPEAKER_PART.sub).spec;
+  const mdf = "mdf" satisfies PanelMaterial;
+  const build = cabinetBuild({ ...cabinet, panel: { ...cabinet.panel, material: mdf } });
+  assert.ok(Math.abs(build.chambers[0].lb.total - paSubRules(cfg, mdf).subLb) < LB, "MDF sub lb");
+  // the center of gravity weighs the walls and the inset baffle at the same rates
+  const { w, h, d } = cfg.cDim;
+  const t = cfg.wall;
+  const bare = { center: { x: 0, y: 0 }, lb: 0, depthIn: 0 };
+  const shellLb = (material: PanelMaterial) =>
+    ((2 * d * h + 2 * w * d + w * h) * panelLbPerSqFt(t, material) +
+      (w - 2 * t) * (h - 2 * t) * panelLbPerSqFt(BAFFLE_PLY_IN, material)) /
+    144;
+  close(null, boxCenterOfGravity(cfg.cDim, t, cfg.inset, bare, mdf).lb, shellLb(mdf), 1e-9);
+  assert.ok(shellLb(mdf) > shellLb(PLYWOOD_MATERIAL) * 1.3, "MDF is heavier than plywood");
 });
 
 /** The empty speaker's spec with a cabinet edit. */
