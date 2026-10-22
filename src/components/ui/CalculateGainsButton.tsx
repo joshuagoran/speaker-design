@@ -14,16 +14,15 @@ interface Props<L> {
   onApply: () => void;
   /** the button's tooltip: what it sets on this page */
   tip: string;
-  /** what the page says when there are fewer than two bands (or boxes) to balance */
-  oneBand: string;
 }
 
 /**
- * The Speaker and Stack pages' "Calculate gains" button. It is off, with a word why, when there is one band (or box) or
- * less to balance, when the model cannot calculate a band (then the levels stay), or when a crossover is outside the
- * model's frequency range.
+ * The Speaker and Stack pages' "Calculate gains" button. It is hidden when there is one band (or box) or less to
+ * balance, and off, with a word why, when the model cannot calculate a band (then the levels stay) or when a crossover
+ * is outside the model's frequency range.
  */
-export function CalculateGainsButton<L>({ balance, onApply, tip, oneBand }: Props<L>) {
+export function CalculateGainsButton<L>({ balance, onApply, tip }: Props<L>) {
+  if (balance.status === AUTO_BALANCE_STATUS.oneBand) return null;
   return (
     <div className={GAP_Y_TIGHT}>
       <div>
@@ -37,11 +36,6 @@ export function CalculateGainsButton<L>({ balance, onApply, tip, oneBand }: Prop
           </Button>
         </Tooltip>
       </div>
-      {balance.status === AUTO_BALANCE_STATUS.oneBand && (
-        <p className="text-xs text-stone-500">
-          <MarkedText text={oneBand} />
-        </p>
-      )}
       {balance.status === AUTO_BALANCE_STATUS.unmodeled && (
         <Notice>
           <MarkedText text={AUTO_BALANCE_TEXT.unmodeled(balance.names)} />

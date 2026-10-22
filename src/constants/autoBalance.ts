@@ -20,9 +20,6 @@ export const AUTO_BALANCE_TEXT = {
   speakerTip: `Sets each band's **${GAIN_LABEL}** or **${PAD_LABEL}**, so that the bands play at the same level at each crossover. Each driver's sensitivity sets it.`,
   /** the button's tooltip on the Stack page */
   stackTip: `Sets each box's **${GAIN_LABEL}**, so that the boxes play at the same level at each crossover. The bands of each Speaker do not change.`,
-  oneBand: `**${CALCULATE_GAINS_LABEL}** needs two or more bands that play.`,
-  /** the Stack page: fewer than two boxes the app can calculate */
-  oneBox: `**${CALCULATE_GAINS_LABEL}** needs two or more boxes that play.`,
   /** the bands that stop it: bands a driver feeds that the model cannot calculate */
   unmodeled: (names: readonly string[]) =>
     `**${CALCULATE_GAINS_LABEL}** did not change the levels. The app cannot calculate: ${names.join(", ")}.`,

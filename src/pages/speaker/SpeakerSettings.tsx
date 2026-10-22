@@ -328,7 +328,6 @@ export function SpeakerSettings({
                 balance={speakerPage.balance}
                 onApply={speakerPage.applyBalance}
                 tip={AUTO_BALANCE_TEXT.speakerTip}
-                oneBand={AUTO_BALANCE_TEXT.oneBand}
               />
             </>,
           )}

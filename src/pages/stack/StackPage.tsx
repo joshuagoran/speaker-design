@@ -402,7 +402,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
                   balance={stack.balance}
                   onApply={stack.applyBalance}
                   tip={AUTO_BALANCE_TEXT.stackTip}
-                  oneBand={AUTO_BALANCE_TEXT.oneBox}
                 />
               )}
             </>,
