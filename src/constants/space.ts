@@ -368,7 +368,7 @@ export const SPACE_TEXT = {
   ampPowerTip:
     "The space finds each speaker's limit from it. A mirrored pair, and a speaker placed twice, share one figure.",
   /** a band's amp power field: the band (or a passive network's bands) it is for */
-  ampPowerFor: (bands: string) => `${bands}: amp power`,
+  ampPowerFor: (bands: string) => `${bands} amp power`,
   alignment: "Alignment",
   alignmentHint: "The settings for each amp channel.",
   alignmentTip: "A delay, an all-pass filter or moving the box can give a time offset.",
