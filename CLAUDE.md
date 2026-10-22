@@ -52,6 +52,8 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 - The catalog and acoustics tables are typed data in `src/data/`; adding a part is a data edit. Mark missing specs;
   don't drop the part. UI text that names parts or defaults reads them from the data.
 - Every setting a template or preset can set is also a setting on its page.
+- The same physics uses one shared calculation on every page; the Speaker, Stack, and Space pages never compute it two
+  ways.
 - When an optimizer change is meant to change its snapshot test, rewrite it with `vp run speaker-optimizer-snapshot` or
   `vp run stack-optimizer-snapshot`.
 - Delete code a change makes obsolete. `vp run dead-exports` must list nothing before each push.
