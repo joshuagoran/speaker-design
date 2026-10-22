@@ -15,7 +15,7 @@ import {
   waterfallStrips,
 } from "../src/lib/build/cutlist";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { cutBoxName } from "../src/constants/cutParts";
+import { CUT_STYLE, cutBoxName, GRAIN_DIR, OFFCUT_SHAPE } from "../src/constants/cutParts";
 import type { CutPart, CutlistSettings, PortStyle } from "../src/types";
 import { close } from "./helpers";
 import { checkSheet } from "./guillotine";
@@ -39,8 +39,8 @@ const settings = (o: Partial<CutlistSettings> = {}): CutlistSettings => ({
   grain: GRAIN_PRESETS.wrap,
   waterfall: false,
   joint: "butt",
-  offcut: "strip",
-  cuts: "sheets",
+  offcut: OFFCUT_SHAPE.strip,
+  cuts: CUT_STYLE.sheets,
   ...o,
 });
 
@@ -62,7 +62,7 @@ describe("layoutCutlist", () => {
     for (const g of L.groups)
       for (const it of g.sheets.flatMap((s) => s.items)) {
         if (!it.grain) continue;
-        const along = it.grain === "b" ? it.b : it.a;
+        const along = it.grain === GRAIN_DIR.b ? it.b : it.a;
         assert.ok(!it.crossed, `${it.part} fits along the grain`);
         close(null, it.h, along, EPS, `${it.part} along the grain`);
       }
@@ -72,7 +72,7 @@ describe("layoutCutlist", () => {
 
   test("a locked part that only fits across the grain is placed across and flagged", () => {
     // locked with 40 along the length, its 60 would have to fit the 48″ width: only the other way round fits
-    const r = { a: 40, b: 60, grain: "a" as const };
+    const r = { a: 40, b: 60, grain: GRAIN_DIR.a };
     const p = packSheets([r], PLYWOOD_SHEETS["4x8"], 0.125);
     const it = p.sheets[0].items[0];
     assert.ok(it.crossed);
@@ -123,7 +123,7 @@ describe("layoutCutlist", () => {
 });
 
 describe("offcut", () => {
-  for (const shape of ["strip", "panel"] as const)
+  for (const shape of [OFFCUT_SHAPE.strip, OFFCUT_SHAPE.panel] as const)
     test(`${shape}: never costs a sheet, and the offcut is clear of parts`, () => {
       let seen = 0;
       for (const stacks of [1, 2, 4]) {
@@ -137,7 +137,7 @@ describe("offcut", () => {
           if (!o) continue; // the last sheet is too full to leave one worth keeping
           seen++;
           assert.equal(o.sheet, g.sheets.length - 1, "on the last sheet");
-          if (shape === "strip") close(null, o.h, S.h, EPS, "full length");
+          if (shape === OFFCUT_SHAPE.strip) close(null, o.h, S.h, EPS, "full length");
           else close(null, o.w, S.w, EPS, "full width");
           for (const it of g.sheets[o.sheet].items)
             assert.ok(
@@ -163,7 +163,8 @@ describe("offcut", () => {
           );
           if (before)
             assert.ok(
-              (shape === "strip" ? o.w : o.h) >= (shape === "strip" ? before.w : before.h) - EPS,
+              (shape === OFFCUT_SHAPE.strip ? o.w : o.h) >=
+                (shape === OFFCUT_SHAPE.strip ? before.w : before.h) - EPS,
             );
         }
       }
@@ -174,7 +175,7 @@ describe("offcut", () => {
     const sheet = {
       items: [{ a: 10, b: 96, x: 0, y: 0, w: 10, h: 96 }],
     };
-    const o = offcutOf(sheet, 0, { w: 48, h: 96 }, 0.125, 0, "strip");
+    const o = offcutOf(sheet, 0, { w: 48, h: 96 }, 0.125, 0, OFFCUT_SHAPE.strip);
     assert.ok(o);
     close(null, o.x, 10.125, EPS);
     close(null, o.w, 48 - 10.125, EPS);
@@ -201,7 +202,7 @@ describe("waterfall", () => {
       assert.ok(!out.some((p) => p.box === box && (p.part === "side" || p.part === "topBottom")));
       close(null, strip.b, 2 * side.b + top.b + 2 * 0.125, EPS);
       assert.deepEqual(strip.pieces, [side.b, top.b, side.b]);
-      assert.equal(strip.grain, "b");
+      assert.equal(strip.grain, GRAIN_DIR.b);
       assert.equal(bottom.qty, 1);
     }
   });
@@ -253,7 +254,7 @@ describe("cut style", () => {
   for (const sheet of ["4x8", "5x5"] as const)
     test(`${sheet} rip first: no full-width crosscut, still guillotine, and its cost is reported`, () => {
       for (const stacks of [1, 2, 4]) {
-        const s = settings({ sheet, stacks, cuts: "rips" });
+        const s = settings({ sheet, stacks, cuts: CUT_STYLE.rips });
         const L = layoutCutlist(parts(), s, { runs: SEARCH_RUNS });
         const free = layoutCutlist(parts(), settings({ sheet, stacks }), {
           runs: SEARCH_RUNS,
@@ -282,7 +283,7 @@ describe("review fixes", () => {
     const crossed = (L: ReturnType<typeof layoutCutlist>) =>
       L.groups.flatMap((g) => g.sheets.flatMap((s) => s.items)).filter((it) => it.crossed).length;
     for (const sheet of ["4x8", "5x5"] as const)
-      for (const offcut of ["strip", "panel"] as const)
+      for (const offcut of [OFFCUT_SHAPE.strip, OFFCUT_SHAPE.panel] as const)
         for (const grain of ["wrap", "horizontal"] as const)
           for (const stacks of [1, 2]) {
             const s = settings({
@@ -303,7 +304,7 @@ describe("review fixes", () => {
   test("rip first keeps a long strip even when a wide panel is asked for", () => {
     const L = layoutCutlist(
       parts(),
-      settings({ sheet: "5x5", cuts: "rips", offcut: "panel", stacks: 1 }),
+      settings({ sheet: "5x5", cuts: CUT_STYLE.rips, offcut: OFFCUT_SHAPE.panel, stacks: 1 }),
     );
     for (const g of L.groups) {
       assert.equal(g.cuts.crosscuts, 0);

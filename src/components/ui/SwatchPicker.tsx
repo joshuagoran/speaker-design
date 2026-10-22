@@ -65,6 +65,7 @@ export function SwatchPicker({
           className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative"
           title="Custom color"
         >
+          {/* The color picker's ring: its color literals are allowed. */}
           <span
             className="absolute inset-0"
             style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }}

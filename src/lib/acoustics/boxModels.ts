@@ -49,7 +49,7 @@ import {
   type TubeDriver,
 } from "../build/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
-import { ELBOW_WORDS } from "../../constants/portStyles";
+import { ELBOW_WORDS, PORT_STYLE } from "../../constants/portStyles";
 import {
   BACK_JOINT_CUT_NOTES,
   BACK_JOINT_PARTITION_NOTES,
@@ -326,9 +326,9 @@ export const ductFlagsOf = (
   drv: TubeDriver,
 ): DuctFlags => ({
   holds: ductHolds(box, t, inset, style, v),
-  folds: style === "slots" && slotFolds(box, v, t),
+  folds: style === PORT_STYLE.slot && slotFolds(box, v, t),
   wallHolds:
-    style === "slots" &&
+    style === PORT_STYLE.slot &&
     slotFolds(box, v, t) &&
     foldedRearWallIn(box, v, t) >= DUCT_SUPPORT_MIN_SHARE * paInside(box, t, inset).ih,
   elbows:
@@ -344,7 +344,8 @@ const ductHolds = (
   v: Pick<VentSpec, "slotH" | "len">,
 ) => {
   const { inD } = paInside(box, t, inset);
-  const len = style === "slots" && slotFolds(box, v, t) ? foldedShelfIn(box, v.slotH, t) : v.len;
+  const len =
+    style === PORT_STYLE.slot && slotFolds(box, v, t) ? foldedShelfIn(box, v.slotH, t) : v.len;
   return slotRunIn({ len }, inset) >= DUCT_SUPPORT_MIN_SHARE * inD;
 };
 /**
@@ -358,7 +359,7 @@ export function subVentLines(
   v: Pick<VentSpec, "slotH" | "throat" | "div" | "fins">,
 ): PaBoxSupports {
   const { iw, ih } = paInside(box, t, 0);
-  if (style === "slots") {
+  if (style === PORT_STYLE.slot) {
     const shelf = v.slotH + t / 2;
     // the fins' centers, in from the left side (the 3D view's)
     const bottom = slotFinLayout(iw, t, slotFinsOf(v, iw, t)).centers.map((c) => iw / 2 + c);
@@ -509,7 +510,7 @@ export function subKeepOut(
   );
   const vent: BoxRegion[] = [];
   const z: readonly [number, number] = [0, inD];
-  if (style === "slots") {
+  if (style === PORT_STYLE.slot) {
     const band = v.slotH + t;
     const slotEnd = wholeFloor ? inD : slotRoomIn(inD, inset, v, bends.folds);
     vent.push({ x: [0, iw], y: [0, band], z: [0, slotEnd] });
@@ -677,7 +678,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${targetHz}|${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${slotFinsOf(v, box.w - 2 * t, t)}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
+  const key = `${targetHz}|${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === PORT_STYLE.slot ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${slotFinsOf(v, box.w - 2 * t, t)}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -690,11 +691,11 @@ export function subBoxBracing(
       box,
       t,
       inset,
-      style === "slots" ? v.slotH + t : 0,
+      style === PORT_STYLE.slot ? v.slotH + t : 0,
       {
         ...(flags.holds ? subVentLines(box, t, style, v) : NO_SUPPORTS),
         // a straight slot's fins run the whole depth, however short its shelf: they hold the floor
-        ...(style === "slots" && !flags.folds
+        ...(style === PORT_STYLE.slot && !flags.folds
           ? { bottom: subVentLines(box, t, style, v).bottom, finIn: v.slotH }
           : {}),
         // a folded slot's rear channel wall holds both sides where it rises far enough
@@ -706,7 +707,7 @@ export function subBoxBracing(
         ...subVentStops(box, t, style, v),
         sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
         bottomZ:
-          style === "slots" && !flags.folds
+          style === PORT_STYLE.slot && !flags.folds
             ? [slotRoomIn(paInside(box, t, inset).inD, inset, v, false)]
             : [],
       },
@@ -716,7 +717,7 @@ export function subBoxBracing(
       back,
       baffleCutout(
         subDriverCenter(box, t, style, v, drv.size),
-        style === "slots" ? v.slotH + t : 0,
+        style === PORT_STYLE.slot ? v.slotH + t : 0,
         drv,
       ),
       drv.ts,
@@ -963,7 +964,7 @@ export function hardwareCutNotes(plan: BoxHardwarePlan, box: Dims3, t: number): 
 export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceVent): CogMass[] {
   const { iw, ih } = paInside(box, t, 0);
   const ply = (a: number, b: number, th: number) => (a * b * plywoodLbPerSqFt(th)) / 144;
-  if (style === "slots") {
+  if (style === PORT_STYLE.slot) {
     const folded = slotFolds(box, v, t);
     const len = folded
       ? foldedShelfIn(box, v.slotH, t)
@@ -1180,7 +1181,7 @@ export function subVentParts(
 ): { parts: CutPart[]; vent: string[] } {
   const iw = subBox.w - 2 * t,
     ih = subBox.h - 2 * t;
-  if (portStyle === "slots") {
+  if (portStyle === PORT_STYLE.slot) {
     const folded = slotFolds(subBox, cVent, t);
     const len = folded ? foldedShelfIn(subBox, cVent.slotH, t) : cVent.len;
     const parts: CutPart[] = [

@@ -1,5 +1,6 @@
 // Handles and input plates (lib/build/hardware): the presets' fit checks, the liters their recesses take off the boxes,
 // the cutlist's cutout notes and the defaults older saves load with.
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { DEFAULT_PA } from "../src/lib/defaults";
@@ -204,24 +205,24 @@ test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles do
       inset: d.inset,
       handles: DEFAULT_HARDWARE.sub,
       driver: {
-        center: subDriverCenter(d.cDim, t, "slots", v, d.sub.size),
+        center: subDriverCenter(d.cDim, t, PORT_STYLE.slot, v, d.sub.size),
         lb: d.sub.lb,
         depthIn: subDriverDepthIn(d.sub),
       },
-      bracing: subBoxBracing(d.cDim, t, d.inset, "slots", v, d.sub, undefined),
-      keepOut: subKeepOut(d.cDim, t, d.inset, "slots", v, d.sub, undefined, true),
-      ventMasses: masses ? subVentMasses(d.cDim, t, "slots", v) : [],
+      bracing: subBoxBracing(d.cDim, t, d.inset, PORT_STYLE.slot, v, d.sub, undefined),
+      keepOut: subKeepOut(d.cDim, t, d.inset, PORT_STYLE.slot, v, d.sub, undefined, true),
+      ventMasses: masses ? subVentMasses(d.cDim, t, PORT_STYLE.slot, v) : [],
     });
   const slot = { ...vent, len: 12 };
   // the box's hardware plan counts the vent: the same as the plan given its panels
-  assert.deepStrictEqual(subPlan(DEFAULT_HARDWARE.sub, "slots", slot), plan(true, slot));
+  assert.deepStrictEqual(subPlan(DEFAULT_HARDWARE.sub, PORT_STYLE.slot, slot), plan(true, slot));
   assert.ok(
     plan(true, slot).parts[0].v < plan(false, slot).parts[0].v,
     "lower with the shelf and fins",
   );
   // a folded slot adds its rear wall: three panels, and the handles still sit lower than without the vent
   const folded = { ...vent, len: d.cDim.d + 4 };
-  assert.equal(subVentMasses(d.cDim, t, "slots", folded).length, 3);
+  assert.equal(subVentMasses(d.cDim, t, PORT_STYLE.slot, folded).length, 3);
   assert.ok(plan(true, folded).parts[0].v < plan(false, folded).parts[0].v);
   // a side duct's wall and dividers sit at mid-height; round tubes count none
   assert.equal(subVentMasses(d.cDim, t, "vslots", vent).length, 2);

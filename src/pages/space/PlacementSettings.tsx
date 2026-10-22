@@ -1,3 +1,4 @@
+import { clamp } from "../../lib/clamp";
 import type { SpacePlacement, SpaceVenue } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { CardFold } from "../../components/ui/CardFold";
@@ -37,9 +38,6 @@ interface Props {
   /** the stages its boxes stand on, by name; none: the floor */
   standsOn: readonly string[];
 }
-
-/** A value kept between `lo` and `hi`. */
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** A value rounded to a tenth, as a field shows it. */
 const tenth = (v: number) => Math.round(v * 10) / 10;

@@ -259,7 +259,7 @@ test("the sound model reads the traced horn in place of the stored one", () => {
   };
   const chamber: SpeakerChamber = {
     ...bin,
-    vent: { kind: "sealed" } as SpeakerChamber["vent"], // boundary cast: the sealed vent has no other fields
+    vent: { kind: VENT_KIND.sealed } as SpeakerChamber["vent"], // boundary cast: the sealed vent has no other fields
     load: { kind: CHAMBER_LOAD.horn, horn },
   };
   const read = hornDesignOf(

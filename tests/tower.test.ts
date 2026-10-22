@@ -1,5 +1,6 @@
 // The tower layout's cabinet: the cutlist, the weight and the cards' front view all built from towerSpec, the same
 // geometry the 3D view builds the tower from.
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { towerMidDims, towerSpec } from "../src/lib/speaker/tower";
@@ -52,7 +53,7 @@ const parts = (
   layout: "tower" | "stack",
   h: Horn,
   joint: CornerJoint = "butt",
-  portStyle: PortStyle = "slots",
+  portStyle: PortStyle = PORT_STYLE.slot,
   cVent: VentSpec = SLOTS,
   backJoint?: BackJointId,
 ) =>
@@ -183,7 +184,7 @@ test("tower cutlist: the arched top is a bent strip, the sides stop at the sprin
 
 test("tower cutlist: the back, its rabbets and the partitions follow the back setting", () => {
   for (const back of [DEFAULT_BACK_JOINT, GLUED_BACK] as const) {
-    const P = parts("tower", ROUND, "rabbet", "slots", SLOTS, back);
+    const P = parts("tower", ROUND, "rabbet", PORT_STYLE.slot, SLOTS, back);
     const rabbet = `on rear edge for the ${BACK_JOINT_SUMMARY[back]}`;
     assert.ok(one(P, "back").note.startsWith(BACK_JOINT_CUT_NOTES[back]), back);
     assert.ok(one(P, "archTop").note.includes(`${rabbet}'s arch`), back);
@@ -237,7 +238,7 @@ test("a stack's cutlist has no partitions or arched top, and the tower's sub cha
   for (const p of parts("stack", ROUND)) assert.ok(p.part !== "partition" && p.part !== "archTop");
   const at = (layout: "tower" | "stack") =>
     paSubBuild(
-      paSubBox(BOX, "slots", SLOTS, {
+      paSubBox(BOX, PORT_STYLE.slot, SLOTS, {
         layout,
         sub: SUB.id,
         mid: MID.id,

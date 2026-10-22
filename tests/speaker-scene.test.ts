@@ -134,7 +134,7 @@ const CASES: { name: string; spec: SpeakerSpec }[] = [
       hifiSpeaker({
         tweeter: byIdOrThrow(HIFI_TWEETERS, "de250", "tweeters"),
         selectedWaveguide: byIdOrThrow(HIFI_WAVEGUIDES, "diy_os90x70", "waveguides"),
-        boxType: "vented",
+        boxType: VENT_KIND.vented,
         boxDims: { w: 10, h: 20, d: 11 },
       }),
     ),

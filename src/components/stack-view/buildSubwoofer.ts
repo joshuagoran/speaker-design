@@ -1,3 +1,4 @@
+import { PORT_STYLE } from "../../constants/portStyles";
 import * as THREE from "three";
 import { roundedRectShape, roundedRectPath, circlePath } from "./geometry";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
@@ -204,7 +205,7 @@ export function buildSubSlotShelf(
   const wantLen = pg.tubeLen != null ? pg.tubeLen : s.d - T - 3;
   const ductLen = Math.max(2, Math.min(wantLen, maxStraightSlotIn(s, ductH, T))); // from the frame face back, open gap behind
   // a slot longer than the straight run holds folds up the back wall, as the model and the cutlist take it
-  const folded = portStyle === "slots" && slotFolds(s, { slotH: ductH, len: wantLen }, T);
+  const folded = portStyle === PORT_STYLE.slot && slotFolds(s, { slotH: ductH, len: wantLen }, T);
   if (folded) {
     // floor leg to a rear channel, then up the back wall; open at the top of the rear channel
     const bz = -s.d / 2 + T; // inside face of the back panel
@@ -230,7 +231,7 @@ export function buildSubSlotShelf(
     rw.position.set(0, wallBot + wallH / 2, wallZ);
     rw.name = VENT_MESH_NAME;
     subGroup.add(rw);
-  } else if (portStyle === "slots") {
+  } else if (portStyle === PORT_STYLE.slot) {
     const ductZ = s.d / 2 - ductLen / 2;
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, ductLen), plyIn);
     shelf.position.set(0, pl + T + ductH + T / 2, ductZ);

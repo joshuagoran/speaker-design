@@ -1,8 +1,11 @@
 import type {
   ChamberCutBoxId,
   CutBoxId,
+  CutStyle,
+  GrainDir,
   MemberCutBoxId,
   NamedCutBoxId,
+  OffcutShape,
   SpeakerCutBoxId,
 } from "../types";
 
@@ -168,3 +171,16 @@ export const PANEL = {
   back: "back",
   side: "side",
 } as const satisfies Record<string, keyof typeof CUT_PART_NAMES>;
+
+/** How the cutlist cuts its sheets, by id: the fewest sheets, or rip strips first. */
+export const CUT_STYLE = { sheets: "sheets", rips: "rips" } as const satisfies {
+  [K in CutStyle]: K;
+};
+
+/** Which offcut the least-full sheet keeps, by id: a full-length strip or a full-width panel. */
+export const OFFCUT_SHAPE = { strip: "strip", panel: "panel" } as const satisfies {
+  [K in OffcutShape]: K;
+};
+
+/** A part's grain direction, by id: along its side a, along its side b, or either way. */
+export const GRAIN_DIR = { a: "a", b: "b", any: "any" } as const satisfies { [K in GrainDir]: K };

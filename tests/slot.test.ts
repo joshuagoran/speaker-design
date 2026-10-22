@@ -1,3 +1,4 @@
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
@@ -71,7 +72,7 @@ test("long thin slot: end correction grows only as log of the width", (t) => {
 });
 test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   const box = { w: 22, h: 30, d: 20 },
-    g = paSubVent(box, "slots", { slotH: 3, len: 14 });
+    g = paSubVent(box, PORT_STYLE.slot, { slotH: 3, len: 14 });
   const W = box.w - 1.5 - 1.5;
   // outside, the floor mirrors the mouth (a slot twice as tall); inside, its mouth on the floor, the back wall behind,
   // its shelf running into the box's air from behind the baffle (set 0.75 back, 0.75 thick)
@@ -175,7 +176,7 @@ test("bottom slot: straight while it fits, folded past that (a sharp bend, and i
   // the straight run holds d - t - slotH = 16.25 (from the frame front); its mouth is a slot height from the back wall
   /** the Speaker build's vent of a slot `len` long, and whether its cutlist folds it up the back wall */
   const slot = (len: number) => {
-    const sub = paSubBuild(paSubBox(box, "slots", { slotH: 3, len }));
+    const sub = paSubBuild(paSubBox(box, PORT_STYLE.slot, { slotH: 3, len }));
     assert.ok(sub.vent);
     return { ...sub.vent, folded: sub.parts().some((p) => p.part === "ductRearWall") };
   };
@@ -230,7 +231,12 @@ test("bottom slot: the shortest fold tunes a little above the longest straight r
   for (const [box, slotH] of cases) {
     const at = (len: number) =>
       paSubBuild(
-        paSubBox(box, "slots", { slotH, len }, { sub: SUB_OPTIONS[0].id, wall: 0.75, inset: 0.75 }),
+        paSubBox(
+          box,
+          PORT_STYLE.slot,
+          { slotH, len },
+          { sub: SUB_OPTIONS[0].id, wall: 0.75, inset: 0.75 },
+        ),
       );
     const straight = at(maxStraightSlotIn(box, slotH, 0.75)),
       fold = at(minFoldedSlotIn(box, 0.75));

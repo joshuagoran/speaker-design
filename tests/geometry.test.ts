@@ -1,3 +1,4 @@
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
@@ -33,7 +34,7 @@ test("clear volume: inner width/height lose two walls, depth loses inset + 3/4 b
   close(t, clearL(0.5, 1.5), 19 * 23 * 13.25 * IN3_L, 1e-9);
 });
 test("vent: letterbox area = slot height x inner width less two fins", (t) => {
-  const g = paSubVent({ w: 22, h: 30, d: 20 }, "slots", { slotH: 3, len: 14 });
+  const g = paSubVent({ w: 22, h: 30, d: 20 }, PORT_STYLE.slot, { slotH: 3, len: 14 });
   close(t, g.areaIn2, 3 * (22 - 1.5 - 1.5), 1e-9);
   assert.equal(g.openings, 1);
 });
@@ -55,7 +56,7 @@ test("wood inside: duct shelf + fins + brace rails + cleats, by hand", (t) => {
   const sub = paSubBuild(
     paSubBox(
       box,
-      "slots",
+      PORT_STYLE.slot,
       { slotH: 3, len: 14 },
       { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 },
     ),
@@ -98,13 +99,18 @@ test("folded slot: the longest fold leaves a slot height under the lid, in the f
   close(t, maxFoldedRearWallIn(box, slotH, t0), 22.5, 1e-12);
   const longest = maxFoldedSlotIn(box, slotH, t0);
   close(t, longest, 20 - 0.75 + 22.5, 1e-12);
-  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0, 0.75, DRV18).maxFold, longest, 1e-12);
+  close(
+    t,
+    ductFit(box, PORT_STYLE.slot, vent({ slotH, len: 0 }), t0, 0.75, DRV18).maxFold,
+    longest,
+    1e-12,
+  );
   for (const len of [longest, longest + 5]) {
     const v = vent({ slotH, len });
     close(t, foldedRearWallIn(box, v, t0), 22.5, 1e-12);
     close(t, foldedLidGapIn(box, v, t0), slotH, 1e-12);
     const parts = paSubBuild(
-      paSubBox(box, "slots", v, { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 }),
+      paSubBox(box, PORT_STYLE.slot, v, { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 }),
     ).parts();
     close(t, parts.find((p) => p.part === "ductRearWall")?.b ?? NaN, 22.5, 1e-12);
   }
@@ -193,11 +199,11 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
     const inD = back - inset - baffle; // the box's inside depth, behind the baffle
     // a straight bottom slot's mouth is a slot height from the back wall; its shelf runs the rest of the inside depth
     const slot = vent({ slotH: 3, len: 0 });
-    const slotLen = ductFit(box, "slots", slot, wall, inset, DRV18).maxStraight;
+    const slotLen = ductFit(box, PORT_STYLE.slot, slot, wall, inset, DRV18).maxStraight;
     close(t, back - slotLen, slot.slotH, 1e-12, `slots ${at}`);
     close(
       t,
-      paSubVent(box, "slots", { ...slot, len: slotLen }, { wall, inset }).endCorrectionIn,
+      paSubVent(box, PORT_STYLE.slot, { ...slot, len: slotLen }, { wall, inset }).endCorrectionIn,
       rectangleEndCorrection(2 * slot.slotH, box.w - 4 * wall) +
         slotMouthCorrection(slot.slotH, box.h - 2 * wall, slot.slotH, wall, inD - slot.slotH),
       1e-12,

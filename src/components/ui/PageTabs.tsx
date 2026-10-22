@@ -17,7 +17,7 @@ interface Props<Id extends string> {
 /** A project's row of page tabs under the header: every project shows its pages the same way. */
 export function PageTabs<Id extends string>({ tabs, current, label, onNavigate, end }: Props<Id>) {
   return (
-    <div className="flex items-end gap-4 mt-3 border-b border-stone-300">
+    <div className="flex items-end gap-4 border-b border-stone-300">
       <nav className="flex gap-4" style={{ fontFamily: FONT }} aria-label={label}>
         {tabs.map(([v, text, href]) => (
           <a

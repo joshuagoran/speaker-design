@@ -1,6 +1,7 @@
 // The trace of a folded horn: from the boards, the drivers and the mouth the user draws in the side section, find the air
 // the mouth reaches (the passage), its length and width along the path, the air it does not reach (sealed pockets), where
 // each side of the cones opens, the horn type that makes, and the checks. Pure; no DOM.
+import { clamp } from "../clamp";
 import {
   FOLD_BASKET_FLARE,
   FOLD_BASKET_SHARE,
@@ -330,7 +331,6 @@ export function foldTrace(input: FoldTraceInput): FoldTrace {
     zIn: (i + 0.5) * cellIn,
     yIn: (j + 0.5) * cellIn,
   });
-  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
   /** set `value` in `cells` for the cells of the box `[z0, z1] × [y0, y1]` (in) that `inside` takes */
   const mark = (
     cells: Uint8Array,

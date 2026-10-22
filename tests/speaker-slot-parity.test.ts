@@ -2,6 +2,7 @@
 // its size and length, the model's vent and net air by the PA slot rule and the PA sub box's sum, the cutlist's pieces
 // and the 3D view's fins match. And a letterbox built from the settings with another fin count carries it into the
 // cutlist, the model and the views.
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import * as THREE from "three";
@@ -70,7 +71,7 @@ function letterboxOf(spec: SpeakerSpec) {
 }
 
 test("the Speaker page's PA sub matches the PA design's: fins, slot, vent, net air, cutlist and 3D fins", () => {
-  assert.equal(DEFAULT_PA.portStyle, "slots", "the PA's starting sub has the letterbox");
+  assert.equal(DEFAULT_PA.portStyle, PORT_STYLE.slot, "the PA's starting sub has the letterbox");
   const pa = paSub();
   const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
   const { chamber, port } = letterboxOf(spec);

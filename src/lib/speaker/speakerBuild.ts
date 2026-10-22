@@ -16,6 +16,7 @@
 // - Weight: the PA's rule on a frame (its box weights: the 3/4″ baffle and the walls by their outside faces, the braces,
 //   the fixings; a chamber over another adds what it builds, as the tower's cabinet over its sub box), the Hi-fi's on a
 //   flush box; the drivers with their horns, the radiators and the hardware.
+import { PORT_STYLE } from "../../constants/portStyles";
 import type {
   PurchasedPart,
   BraceStyleId,
@@ -285,7 +286,7 @@ function chamberFrames(cabinet: SpeakerCabinet, layout: SpeakerLayout): ChamberF
         inD: isFrame(cabinet)
           ? chamber.dims.d - baffleInsetIn(cabinet) - BAFFLE_PLY_IN - t
           : chamber.dims.d - 2 * t,
-        band: paSub?.style === "slots" ? paSub.vent.slotH + t : 0,
+        band: paSub?.style === PORT_STYLE.slot ? paSub.vent.slotH + t : 0,
       },
       shared,
       paSub,

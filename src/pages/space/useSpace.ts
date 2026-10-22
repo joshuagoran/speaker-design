@@ -1,3 +1,4 @@
+import { clamp } from "../../lib/clamp";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import {
@@ -140,9 +141,6 @@ type RoomFloor = Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
 
 /** Snaps to a quarter foot. */
 const snap = (v: number) => Math.round(v * 4) / 4;
-
-/** A value kept between `lo` and `hi`. */
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** A point kept on the room's floor, ft. */
 const inRoom = <P extends FloorPoint>(p: P, room: RoomFloor): P => ({

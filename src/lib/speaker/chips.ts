@@ -1,6 +1,7 @@
 // Warning chips for the Speaker and Stack pages: pure functions of the numbers the page already has.
 // Each returns [kind, head, body, id][] with kind "ok" | "warn" | "bad" and id the check's (CHIP_IDS).
 
+import { PORT_STYLE } from "../../constants/portStyles";
 import type {
   BoxHardwarePlan,
   ChipSeverity,
@@ -50,7 +51,7 @@ export function ductFit(
   const maxFold = maxFoldedSlotIn(subBox, sH, PT); // bottom slot, folded up to a slot height under the lid
   const maxSide = inD - cVent.throat; // side ducts
   const ways: { span: readonly [number, number]; what: string }[] =
-    portStyle === "slots"
+    portStyle === PORT_STYLE.slot
       ? [
           { span: [0, maxStraight] as const, what: "a straight slot" },
           { span: [minFold, maxFold] as const, what: "a slot folded up the back wall" },
@@ -103,7 +104,7 @@ export function ductFitChip(
       "bad",
       DUCT_TOO_LONG,
       `${cVent.len.toFixed(1)}″ does not fit. This layout holds ${fit.toFixed(1)}″` +
-        (portStyle === "slots"
+        (portStyle === PORT_STYLE.slot
           ? ", folded up the back wall."
           : isRoundPort(portStyle) && ways.length > 1
             ? `, with ${ways.length === 2 ? "an elbow" : "two elbows"}.`

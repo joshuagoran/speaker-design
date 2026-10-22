@@ -79,14 +79,17 @@ import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
 import {
+  CUT_PART_NAMES,
+  CUT_STYLE,
   cutBoxHeading,
   cutBoxName,
   cutBoxTag,
   cutBoxTint,
-  CUT_PART_NAMES,
+  GRAIN_DIR,
   GRAIN_LOOK_NAMES,
-  PANEL_MATERIAL_NAMES,
   type GrainLook,
+  OFFCUT_SHAPE,
+  PANEL_MATERIAL_NAMES,
 } from "../../constants/cutParts";
 import {
   CUTLIST_SETTINGS_SECTIONS,
@@ -134,9 +137,9 @@ const GRAIN_ROWS = GRAIN_LOOKS.map(
       panel,
       label,
       [
-        ["b", GRAIN_LOOK_NAMES[look.b]],
-        ["a", GRAIN_LOOK_NAMES[look.a]],
-        ["any", GRAIN_LOOK_NAMES.any],
+        [GRAIN_DIR.b, GRAIN_LOOK_NAMES[look.b]],
+        [GRAIN_DIR.a, GRAIN_LOOK_NAMES[look.a]],
+        [GRAIN_DIR.any, GRAIN_LOOK_NAMES.any],
       ],
     ] as const,
 );
@@ -267,7 +270,7 @@ export function CutlistPage({
     grain: grainless
       ? `${mat.word}: no grain`
       : `${preset ? PRESET_NAMES[preset] : "Custom"}${waterfall ? ", waterfall" : ""}`,
-    cuts: `${CUT_STYLE_NAMES[cutStyle]}, keep ${OFFCUT_NAMES[cutStyle === "rips" ? "strip" : offcutShape].toLowerCase()}`,
+    cuts: `${CUT_STYLE_NAMES[cutStyle]}, keep ${OFFCUT_NAMES[cutStyle === CUT_STYLE.rips ? OFFCUT_SHAPE.strip : offcutShape].toLowerCase()}`,
   };
   const section = (id: CutlistSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -748,13 +751,13 @@ export function CutlistPage({
                     Keep offcut
                   </Tooltip>
                 }
-                value={cutStyle === "rips" ? "strip" : offcutShape}
+                value={cutStyle === CUT_STYLE.rips ? OFFCUT_SHAPE.strip : offcutShape}
                 onChange={setOffcutShape}
                 options={entriesOf(OFFCUT_NAMES)}
                 disabled={
-                  cutStyle === "rips"
+                  cutStyle === CUT_STYLE.rips
                     ? {
-                        values: ["panel"],
+                        values: [OFFCUT_SHAPE.panel],
                         why: "Keeping a full-width panel takes a full-width crosscut",
                       }
                     : undefined
