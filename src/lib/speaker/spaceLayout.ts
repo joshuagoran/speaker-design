@@ -36,7 +36,8 @@ import {
 } from "./stackLayout";
 import { stackMember } from "./specParts";
 import { planCenter, planOf, stageAt, stageTopFt } from "./spaceStages";
-import { SPACE_ITEM } from "../../constants/speakerSpec";
+import { FOLD_WALL, SPACE_ITEM } from "../../constants/speakerSpec";
+import type { HornMouth } from "./hornMouth";
 import { INCHES_PER_FOOT, RAD } from "../../constants/units";
 import { DRIVER_PART, PAIR_SIDE, SPACE_YAW_DEG } from "../../constants/space";
 
@@ -173,8 +174,8 @@ export interface PlacedDriver {
   driver: SpeakerDriver;
   part: DriverPart;
   band: BandId;
-  /** a horn-loaded chamber's mouth, in, where the spot is its mouth */
-  mouth: { w: number; h: number } | null;
+  /** a horn-loaded chamber's mouth, where the spot is its mouth: its size, in, and its walls (lib/speaker/hornMouth) */
+  mouth: Pick<HornMouth, "w" | "h" | "wallDeg"> | null;
   at: RoomPoint;
   /** its axis, radians: the placement's yaw, and every tilt added */
   yaw: number;
@@ -263,7 +264,19 @@ export function layStack(
   for (const { k2, speaker, memberTilt, inStack, corners } of members) {
     const pitch = frame.memberPitch(memberTilt);
     boxes.push({ member: k2, speaker, pitch, corners: corners.map(frame.toRoom) });
-    for (const spot of driverSpotsIn(speaker))
+    for (const spot of driverSpotsIn(speaker)) {
+      // a mouth on the back faces the other way (its pitch turned over); on the top or bottom, a quarter turn up or down
+      const back = spot.facing === FOLD_WALL.back;
+      const turn =
+        spot.facing === FOLD_WALL.top
+          ? Math.PI / 2
+          : spot.facing === FOLD_WALL.bottom
+            ? -Math.PI / 2
+            : 0;
+      const aim = {
+        yaw: back ? frame.yaw + Math.PI : frame.yaw,
+        pitch: back ? -pitch : frame.memberPitch(memberTilt + turn),
+      };
       for (const part of [DRIVER_PART.cone, DRIVER_PART.hf]) {
         const band = bandOf(spot.chamber, spot.driver, part);
         if (band === null) continue;
@@ -276,11 +289,11 @@ export function layStack(
             part,
             band,
             mouth: spot.mouth,
-            at: frame.toRoom(inStack({ x: q.x, y: q.y, z: 0 })),
-            yaw: frame.yaw,
-            pitch,
+            at: frame.toRoom(inStack(q)),
+            ...aim,
           });
       }
+    }
   }
   return { boxes, drivers, rollAxisIn };
 }

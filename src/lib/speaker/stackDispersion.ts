@@ -3,8 +3,9 @@
 //
 // Each driver spot radiates its band's share as the stack model plays it (lib/speaker/stackResponse: each member's
 // speaker through its crossover, its level, polarity and delay), with its own coverage (lib/speaker/spaceCoverage
-// driverPattern: a cone or a horn mouth as a piston, a horn or waveguide by its rated coverage), at its place in the
-// stack and along its member's aim (lib/speaker/spaceLayout). The arc is DISPERSION_DISTANCE_M out from the middle of
+// driverPattern: a cone as a piston, a horn-loaded chamber's mouth by its size and walls, a horn or waveguide by its
+// rated coverage), at its place in the stack and along its axis (lib/speaker/spaceLayout: its member's aim, turned for
+// a mouth that opens in the back, top or bottom). A horn-loaded chamber radiates from its mouth alone. The arc is DISPERSION_DISTANCE_M out from the middle of
 // the stack's front at its listening height (the highest band's center, as the stack model's listening point):
 // horizontal at that height, vertical below (−) to above (+) it. Each spot's path sets its level (1/r) and its time
 // against the arc's radius, as the stack model does at its listening point. Not modeled: the room, the baffle step,
@@ -27,6 +28,8 @@ import { layStack } from "./spaceLayout";
 import { memberGain, stackCrossoversHz } from "./stackResponse";
 import { bandCenters } from "./stackLayout";
 import { stackMember } from "./specParts";
+import { speakerLayout } from "./speakerLayout";
+import { hornMouth } from "./hornMouth";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { DISPERSION_DISTANCE_M } from "../../constants/chartScales";
 import { METERS_PER_FOOT, METERS_PER_INCH, RAD } from "../../constants/units";
@@ -77,6 +80,7 @@ export function stackDispersionMap(
         x: d.at.x * METERS_PER_FOOT,
         y: d.at.y * METERS_PER_FOOT,
         z: d.at.z * METERS_PER_FOOT,
+        yaw: d.yaw,
         pitch: d.pitch,
         pattern: driverPattern(d),
         gain: gain / (spots.get(key(d.member, d.band)) ?? 1),
@@ -101,7 +105,12 @@ export function stackDispersionMap(
         dy = p.y - s.y,
         dz = p.z - s.z;
       const r = Math.hypot(dx, dy, dz);
-      return { r, th: Math.atan2(dx, dy), tv: Math.atan2(dz, Math.hypot(dx, dy)) - s.pitch };
+      const th = Math.atan2(dx, dy) - s.yaw;
+      return {
+        r,
+        th: th - 2 * Math.PI * Math.round(th / (2 * Math.PI)),
+        tv: Math.atan2(dz, Math.hypot(dx, dy)) - s.pitch,
+      };
     });
     return freqs.map((f, i) => {
       let sum = complex(0);
@@ -120,16 +129,22 @@ export function stackDispersionMap(
 }
 
 /**
+ * Whether the map models these speakers: every horn-loaded chamber has a mouth it radiates from (lib/speaker/hornMouth).
+ * Not yet a back-loaded horn (its mouth and its cones both radiate) or a folded horn with no drawing (its cones would
+ * stand in for its mouth, so the map would be wrong).
+ */
+export const dispersionModeled = (speakers: readonly Pick<SpeakerSpec, "cabinet">[]) =>
+  speakers.every((s) =>
+    speakerLayout(s.cabinet).chambers.every(
+      (placed) =>
+        placed.chamber.load.kind !== CHAMBER_LOAD.horn || hornMouth(s.cabinet, placed) !== null,
+    ),
+  );
+
+/**
  * The map of one speaker on its input range (the Speaker page's), from its response: a stack of one at the base, its
  * listening height its highest band's center.
  */
-/**
- * Whether the map models these speakers: not yet one with a horn-loaded chamber (its cones stand in for its mouth, so
- * the map would be wrong; issue #202).
- */
-export const dispersionModeled = (speakers: readonly Pick<SpeakerSpec, "cabinet">[]) =>
-  speakers.every((s) => s.cabinet.chambers.every((c) => c.load.kind !== CHAMBER_LOAD.horn));
-
 export function speakerDispersionMap(
   spec: SpeakerSpec,
   response: StackMemberResponse["response"],

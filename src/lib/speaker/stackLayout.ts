@@ -3,16 +3,20 @@
 // band centers for the paths to the listening point; the Stack page's front drawing reads the boxes. x is across from
 // the stack's center line (+ to the right seen from the front), y up from its base, z back from its front. A member
 // tilts about its bottom front edge (`memberPoint`), as the aim model in lib/speaker/spaceLayout says. Pure.
-import type { BandId, Dims3, SpeakerSpec, StackMember, StackSpec } from "../../types";
+import type {
+  BandId,
+  Dims3,
+  FoldWall,
+  SpeakerChamber,
+  SpeakerDriver,
+  SpeakerSpec,
+  StackMember,
+  StackSpec,
+} from "../../types";
 import { RAD } from "../../constants/units";
-import {
-  driverHorn,
-  driverSpots,
-  driversOnBaffle,
-  hornFlare,
-  onTop,
-  speakerLayout,
-} from "./speakerLayout";
+import { driverHorn, driverSpots, onTop, speakerLayout } from "./speakerLayout";
+import { hornMouth, type HornMouth } from "./hornMouth";
+import { FOLD_WALL } from "../../constants/speakerSpec";
 
 /** A point in the stack, in: across, up and back. */
 export interface StackPoint {
@@ -81,29 +85,54 @@ export const memberPoint =
     return { x: m.at.x + t.x, y: m.at.y + t.y, z: m.at.z + t.z };
   };
 
+/** A driver entry's spots in its speaker (`driverSpotsIn`). */
+interface DriverSpots {
+  chamber: SpeakerChamber;
+  driver: SpeakerDriver;
+  points: StackPoint[];
+  facing: FoldWall;
+  mouth: Pick<HornMouth, "w" | "h" | "wallDeg"> | null;
+}
+
 /**
- * Each driver entry's spots in its speaker's front view, in (x from the cabinet's center line, y up from its bottom):
- * where its drivers are on the baffle (a horn on the top at its mouth's middle, half its height above the lid); a
- * horn-loaded chamber's drivers at the middle of its mouth (`mouth`, its size; null on the baffle).
+ * Each driver entry's spots in its speaker, in (x from the cabinet's center line, y up from its bottom, z back from its
+ * front), and the way they face: where its drivers are on the baffle (a horn on the top at its mouth's middle, half
+ * its height above the lid). A horn whose drivers stand inside it radiates from its mouth alone (lib/speaker/hornMouth):
+ * one spot, given with its first driver inside it, at the mouth's middle and facing out of its wall (`mouth`, its size
+ * and walls; null for a spot on the baffle); its other drivers inside it give none. A folded horn with no drawing yet
+ * has no mouth: its cones stand in for it on the baffle.
  */
-export function driverSpotsIn(spec: Pick<SpeakerSpec, "cabinet">) {
+export function driverSpotsIn(spec: Pick<SpeakerSpec, "cabinet">): DriverSpots[] {
   const layout = speakerLayout(spec.cabinet);
   return layout.chambers.flatMap((placed) => {
-    const flare = hornFlare(spec.cabinet, placed);
-    return placed.chamber.drivers.map((driver) => {
+    const mouth = hornMouth(spec.cabinet, placed);
+    const inHorn = placed.chamber.drivers.filter((d) => !onTop(d));
+    return placed.chamber.drivers.flatMap((driver): DriverSpots[] => {
       const horn = driverHorn(driver);
-      const onBaffle = driversOnBaffle(placed.chamber) || onTop(driver) || !flare;
-      return {
-        chamber: placed.chamber,
-        driver,
-        points: onBaffle
-          ? driverSpots(placed, driver).map((s) => ({
+      if (!mouth || onTop(driver))
+        return [
+          {
+            chamber: placed.chamber,
+            driver,
+            points: driverSpots(placed, driver).map((s) => ({
               x: s.xIn,
               y: s.yIn + (horn && onTop(driver) ? horn.size.h / 2 : 0),
-            }))
-          : [{ x: flare.mouth.x + flare.mouth.w / 2, y: flare.mouth.y + flare.mouth.h / 2 }],
-        mouth: onBaffle ? null : { w: flare.mouth.w, h: flare.mouth.h },
-      };
+              z: 0,
+            })),
+            facing: FOLD_WALL.baffle,
+            mouth: null,
+          },
+        ];
+      if (driver !== inHorn[0]) return [];
+      return [
+        {
+          chamber: placed.chamber,
+          driver,
+          points: [mouth.at],
+          facing: mouth.facing,
+          mouth: { w: mouth.w, h: mouth.h, wallDeg: mouth.wallDeg },
+        },
+      ];
     });
   });
 }

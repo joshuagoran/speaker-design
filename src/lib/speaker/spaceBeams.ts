@@ -8,7 +8,13 @@ import {
   coverageFrequencies,
   type CoveragePattern,
 } from "../acoustics/coverage";
-import { pistonPattern, waveguideHalfAngles } from "../acoustics/directivity";
+import {
+  linePistonX,
+  mouthPlane,
+  pistonPattern,
+  waveguideHalfAngles,
+  type MouthPlane,
+} from "../acoustics/directivity";
 import { abs } from "../acoustics/complex";
 import { airDbPerM } from "../acoustics/roomAcoustics";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
@@ -39,7 +45,9 @@ const PISTON_X: Record<number, number> = {
 /**
  * A pattern's half angles at `f`, radians, wide and high: where it falls `fallDb` off its axis. A horn's are its own
  * −6 dB angles (wider below its mouth's control), scaled by its −6·(θ/half)² dB fall; a piston's are where ka·sin θ
- * reaches that fall. Each is a quarter turn at most: where it never falls that far in front.
+ * reaches that fall. A horn mouth's are each plane's own (lib/acoustics/directivity `mouthPlane`): where its walls hold
+ * it, the held half angle scaled by the same fall; else where its strip's (kW/2)·sin θ reaches that fall. Each is a
+ * quarter turn at most: where it never falls that far in front.
  */
 export function beamHalfAngles(
   pattern: CoveragePattern,
@@ -51,6 +59,17 @@ export function beamHalfAngles(
     const scale = Math.sqrt(fallDb / BEAM_EDGE_DB);
     const [h, v] = waveguideHalfAngles(f, covH, covV, wIn, hIn);
     return [Math.min(h * scale, Math.PI / 2), Math.min(v * scale, Math.PI / 2)];
+  }
+  if (pattern.mouth) {
+    const { wIn, hIn, wallH, wallV } = pattern.mouth;
+    const x = linePistonX(fallDb);
+    const half = (plane: MouthPlane) =>
+      plane.half !== undefined
+        ? Math.min(plane.half * Math.sqrt(fallDb / BEAM_EDGE_DB), Math.PI / 2)
+        : plane.kHalfW > x
+          ? Math.asin(x / plane.kHalfW)
+          : Math.PI / 2;
+    return [half(mouthPlane(f, wIn, wallH)), half(mouthPlane(f, hIn, wallV))];
   }
   const x = PISTON_X[fallDb] ?? pistonX(fallDb);
   const ka = ((2 * Math.PI * f) / SPEED_OF_SOUND) * pattern.a;

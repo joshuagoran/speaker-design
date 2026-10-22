@@ -77,13 +77,17 @@ export const bandOfPart: BandOfPart = (chamber, driver, part) =>
 const piston = (diaIn: number): CoveragePattern => ({ a: (diaIn / 2) * METERS_PER_INCH });
 
 /**
- * How a driver spot spreads its sound: a horn-loaded chamber's mouth or a cone as a piston of its area; an HF section
- * on a horn or waveguide (its own, as a ribbon's plate or a coaxial's cone) by that horn's coverage and mouth, or else a
- * piston of its exit (a bare 1″ exit where the catalog gives none).
+ * How a driver spot spreads its sound: a horn-loaded chamber's mouth plane by plane, by its size and its walls' angles
+ * (lib/acoustics/directivity `mouthPlane`); a cone as a piston of its area; an HF section on a horn or waveguide (its
+ * own, as a ribbon's plate or a coaxial's cone) by that horn's coverage and mouth, or else a piston of its exit (a bare
+ * 1″ exit where the catalog gives none).
  */
 export function driverPattern(d: Pick<PlacedDriver, "driver" | "part" | "mouth">): CoveragePattern {
   const { driver } = d;
-  if (d.mouth) return { a: Math.sqrt((d.mouth.w * d.mouth.h) / Math.PI) * METERS_PER_INCH };
+  if (d.mouth)
+    return {
+      mouth: { wIn: d.mouth.w, hIn: d.mouth.h, wallH: d.mouth.wallDeg.h, wallV: d.mouth.wallDeg.v },
+    };
   if (d.part === DRIVER_PART.cone) {
     const parts = coneParts(driver);
     return { a: parts ? Math.sqrt(parts.ts.Sd / SQ_CM_PER_SQ_M / Math.PI) : 0 };

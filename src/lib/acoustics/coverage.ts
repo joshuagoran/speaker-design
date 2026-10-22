@@ -20,11 +20,15 @@ import {
 } from "../../constants/acoustics";
 import {
   logSpacedFrequencies,
+  mouthGain,
+  mouthPlane,
+  mouthPlaneHalf,
   pistonPattern,
   waveguideGain,
   waveguideHalfAngles,
+  type MouthPlane,
 } from "./directivity";
-import { METERS_PER_FOOT as FT } from "../../constants/units";
+import { METERS_PER_FOOT as FT, METERS_PER_INCH } from "../../constants/units";
 import {
   BARRIER_BRIGHT_N,
   BARRIER_CAP_NEPERS,
@@ -132,10 +136,25 @@ const stageReflIndex = (reflector: number, floor: boolean) =>
 /** A horn's coverage, as the map radiates it: its −6 dB angles, degrees, and its mouth, inches. */
 export type HornCoverage = Omit<PaStackGeometry["horn"], "zIn">;
 
-/** How a radiator spreads its sound: a piston of radius `a`, m (a cone), or a horn of its coverage. */
+/**
+ * A horn's mouth, as the map radiates it (lib/acoustics/directivity `mouthPlane`): its size, in, across (`wIn`) and the
+ * other way (`hIn`), and its walls' included angle in each of those planes, degrees (null: parallel walls).
+ */
+export interface MouthCoverage {
+  wIn: number;
+  hIn: number;
+  wallH: number | null;
+  wallV: number | null;
+}
+
+/**
+ * How a radiator spreads its sound: a piston of radius `a`, m (a cone), a horn of its rated coverage, or a horn's
+ * mouth by its size and walls.
+ */
 export type CoveragePattern =
-  | { a: number; horn?: undefined }
-  | { horn: HornCoverage; a?: undefined };
+  | { a: number; horn?: undefined; mouth?: undefined }
+  | { horn: HornCoverage; a?: undefined; mouth?: undefined }
+  | { mouth: MouthCoverage; a?: undefined; horn?: undefined };
 
 /**
  * What radiates in a scene, by id: one kind of driver of one box (the PA stack's sub, mid or horn; a band of a placed
@@ -173,6 +192,8 @@ interface SceneSource extends Pick<SceneDriver, "voice" | "x" | "y" | "z" | "ali
   sp: number;
   /** a horn (its voice's pattern), not a piston */
   horn: boolean;
+  /** a horn's mouth (its voice's pattern) */
+  mouth: boolean;
   /** the reflections along this path (see reflIndex): the slot has what they keep at its frequency */
   refl: number;
   /** it bounces off the room's floor */
@@ -212,6 +233,8 @@ export interface CoverageSlot {
   out: Partial<Record<CoverageVoice["id"], Complex>>;
   ka: Partial<Record<CoverageVoice["id"], number>>;
   hornHalf: Partial<Record<CoverageVoice["id"], [h: number, v: number]>>;
+  /** each mouth's planes, across and up (lib/acoustics/directivity `mouthPlane`) */
+  mouthPlanes: Partial<Record<CoverageVoice["id"], [MouthPlane, MouthPlane]>>;
   shadow: number;
   /** pressure each kind of path keeps after its reflections, by SceneSource.refl */
   refl: Float64Array;
@@ -273,6 +296,7 @@ export function sceneOf(
   const modalSources: ModalSource[] = [];
   const reflects = (i: number) => indoors && room.materials[ROOM_SURFACES[i]] !== "open";
   const horns = new Set(voices.filter((v) => v.pattern.horn).map((v) => v.id));
+  const mouths = new Set(voices.filter((v) => v.pattern.mouth).map((v) => v.id));
   const sources: SceneSource[] = [];
   const source = (
     d: SceneDriver,
@@ -293,6 +317,7 @@ export function sceneOf(
     cp: Math.cos(at.pitch),
     sp: Math.sin(at.pitch),
     horn: horns.has(d.voice),
+    mouth: mouths.has(d.voice),
     refl,
     floor,
     reflector,
@@ -469,11 +494,24 @@ export function sceneSlots(
     const k = (2 * Math.PI * f) / C;
     const out = { ...outputs(f, i) },
       ka: CoverageSlot["ka"] = {},
-      hornHalf: CoverageSlot["hornHalf"] = {};
+      hornHalf: CoverageSlot["hornHalf"] = {},
+      mouthPlanes: CoverageSlot["mouthPlanes"] = {};
     for (const { id, pattern } of voices)
       if (pattern.horn) {
         const { covH, covV, wIn, hIn } = pattern.horn;
         hornHalf[id] = waveguideHalfAngles(f, covH, covV, wIn, hIn);
+      } else if (pattern.mouth) {
+        const { wIn, hIn, wallH, wallV } = pattern.mouth;
+        const planes: [MouthPlane, MouthPlane] = [
+          mouthPlane(f, wIn, wallH),
+          mouthPlane(f, hIn, wallV),
+        ];
+        mouthPlanes[id] = planes;
+        // its Q for the reverberant field: a held plane by Molloy's estimate from the −6 dB angles (`hornQ`), else as
+        // a round piston of its area (our approximation: a strip's own Q is not modeled)
+        if (planes.some((p) => p.half !== undefined))
+          hornHalf[id] = [mouthPlaneHalf(planes[0]), mouthPlaneHalf(planes[1])];
+        else ka[id] = k * Math.sqrt((wIn * hIn) / Math.PI) * METERS_PER_INCH;
       } else ka[id] = k * pattern.a;
     // a voice more than SILENT_DB under the loudest adds nothing the map can show: leave it out of the sums
     const loudest = Math.max(0, ...Object.values(out).map((v) => (v ? Math.hypot(v.re, v.im) : 0)));
@@ -548,6 +586,7 @@ export function sceneSlots(
       out,
       ka,
       hornHalf,
+      mouthPlanes,
       shadow,
       refl,
       stageFade,
@@ -829,10 +868,14 @@ export function levelAtPoint(
         loss +=
           sl.stageFade[geo[g + 7]] *
           (geo[g + 13] ? BARRIER_CAP_NEPERS : barrierNepers(detourK / Math.PI));
-      const half = s.horn ? sl.hornHalf[s.voice] : undefined;
+      const half = s.horn ? sl.hornHalf[s.voice] : undefined,
+        planes = s.mouth ? sl.mouthPlanes[s.voice] : undefined;
       let d: number;
       if (half) d = waveguideGain(geo[g + 1], geo[g + 2], half);
-      else {
+      else if (planes) {
+        d = mouthGain(geo[g + 1], geo[g + 2], planes);
+        if (geo[g + 4]) d *= sl.shadow;
+      } else {
         d = pistonPattern((sl.ka[s.voice] ?? 0) * geo[g + 3]);
         if (geo[g + 4]) d *= sl.shadow;
       }
