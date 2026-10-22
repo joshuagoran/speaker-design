@@ -341,6 +341,17 @@ export function closedBoxQtc(driver: BoxModelTS, liters: number) {
 }
 
 /**
+ * A small source's pressure per unit of flow at r = 1 m, `count` boxes together in the solid angle Ω (`solidAngle`,
+ * sr), at angular frequency ω: |p| = ωρ·count·|U|/Ω. Every engine's radiated pressure comes from it (`sourcePressure`).
+ */
+export const sourcePressureFactor = (omega: number, solidAngle: number, count: number) =>
+  (omega * AIR_DENSITY * count) / solidAngle;
+
+/** A small source's pressure at r = 1 m from its flow, Pa: p = jωρ·count·U/(Ω·r) (`sourcePressureFactor`). */
+export const sourcePressure = (flow: Complex, omega: number, solidAngle: number, count: number) =>
+  multiply(imaginary(sourcePressureFactor(omega, solidAngle, count)), flow);
+
+/**
  * How much a source's on-axis pressure scales to give its power-based pressure (Hornresp's SPL): √(c·Ω·R/(ρ·n))/ω for
  * a source of radiation resistance R (Pa·s/m³) at angular frequency ω, n boxes side by side, in a solid angle Ω.
  */
@@ -449,9 +460,8 @@ export function hornModel(
     const ventFlow = ventAt ? divide(chamberPressure, ventAt.impedance) : complex(0);
     const ventExitFlow = ventAt ? multiply(ventFlow, ventAt.flowOut) : complex(0);
     const leakFlow = scale(chamberPressure, leakAdmittance);
-    // a small source's pressure at r = 1 m in the solid angle Ω, all boxes together: p = jωρ·count·flow/(Ω·r)
-    const pressureOf = (flow: Complex) =>
-      scale(multiply(imaginary(omega * AIR_DENSITY), flow), count / solidAngle);
+    // a small source's pressure at r = 1 m in the solid angle Ω, all boxes together
+    const pressureOf = (flow: Complex) => sourcePressure(flow, omega, solidAngle, count);
     // the vent and leak radiate in antiphase to the cone's front, from `ventSetback` behind the mouth
     const setback = exp(complex(0, -k * ventSetback));
     const mouthPressure = pressureOf(mouthFlow),

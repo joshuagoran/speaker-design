@@ -63,7 +63,7 @@ import { stageSolids } from "./spaceStages";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
 import { COAX_HF_EXIT_IN } from "../../constants/coax";
-import { METERS_PER_FOOT, METERS_PER_INCH, SQ_CM_PER_SQ_M } from "../../constants/units";
+import { METERS_PER_FOOT, METERS_PER_INCH, MS_PER_S, SQ_CM_PER_SQ_M } from "../../constants/units";
 
 /** The band a driver part feeds, as the speaker model feeds it: a cone its chamber's first cone's first band. */
 export const bandOfPart: BandOfPart = (chamber, driver, part) =>
@@ -160,9 +160,6 @@ export interface SpaceModel {
   /** System gain, dB: in every feed's gain, as each placement's own Gain is */
   systemDb: SpaceVenue["systemDb"];
 }
-
-/** Milliseconds in a second. */
-const MS_PER_S = 1000;
 
 /** An angle wrapped to ±π. */
 const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));

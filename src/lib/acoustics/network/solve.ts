@@ -28,25 +28,14 @@ import type {
   NetworkState,
   OpeningLoad,
 } from "../../../types";
-import { AIR_DENSITY, SPEED_OF_SOUND, SPL_REFERENCE_PA } from "../../../constants/acoustics";
+import { SPEED_OF_SOUND, SPL_REFERENCE_PA } from "../../../constants/acoustics";
 import { NETWORK_PART, OPENING_LOAD } from "../../../constants/acousticNetwork";
 import { CM_PER_M, GRAMS_PER_KG, LITERS_PER_CUBIC_M } from "../../../constants/units";
-import {
-  abs,
-  add,
-  arg,
-  complex,
-  exp,
-  imaginary,
-  multiply,
-  scale,
-  subtract,
-  divide,
-} from "../complex";
+import { abs, add, arg, complex, exp, multiply, scale, subtract, divide } from "../complex";
 import { coilFactor, coilImpedance, driverCircuit } from "../driverCircuit";
 import { chainMatrix, isSizedSegment } from "../hornSegments";
 import { mouthImpedance } from "../radiation";
-import { AIR_STIFFNESS, MILLI, powerScale, setPhaseAndDelay } from "../hornModel";
+import { AIR_STIFFNESS, MILLI, powerScale, setPhaseAndDelay, sourcePressure } from "../hornModel";
 
 /**
  * The smallest pivot the elimination takes, against rows scaled to 1: below it the system is singular to rounding (a
@@ -434,9 +423,8 @@ export function networkResponse(
     const omega = 2 * Math.PI * f,
       k = omega / SPEED_OF_SOUND;
     const flows = flowsOf(prepared, unknowns, f);
-    // a small source's pressure at r = 1 m in the solid angle Ω, all boxes together: p = jωρ·count·flow/(Ω·r)
-    const pressureOf = (flow: Complex) =>
-      scale(multiply(imaginary(omega * AIR_DENSITY), flow), network.count / solidAngle);
+    // a small source's pressure at r = 1 m in the solid angle Ω, all boxes together
+    const pressureOf = (flow: Complex) => sourcePressure(flow, omega, solidAngle, network.count);
     let pressure = complex(0),
       powerPressure = complex(0);
     const xmm: number[] = [],

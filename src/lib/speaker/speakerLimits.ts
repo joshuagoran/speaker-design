@@ -37,7 +37,7 @@ import type {
 } from "../../types";
 import { abs } from "../acoustics/complex";
 import { ampVoltage, ampWatts, hornPower, sineLimitAt } from "../acoustics/boxModels";
-import { voltsToWatts } from "../power";
+import { programWatts, voltsToWatts } from "../power";
 import { tweeterMaxLevel } from "./twoWay";
 import { CD_OPTIONS, HIFI_PASSIVES, hifiDriverById } from "../data";
 import { byId } from "../tables";
@@ -315,7 +315,7 @@ export function speakerLimits(
       radiator,
       throat,
       driveW: ampWatts(driveV, loadOf(id)),
-      programW: 2 * parts.ts.aes,
+      programW: programWatts(parts.ts.aes),
     };
   });
   /** each band's headroom over the response at each frequency, dB, and what sets it, for the sum */

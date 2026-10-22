@@ -23,7 +23,7 @@ import type {
   SpeakerResponse,
   SpeakerSpec,
 } from "../../types";
-import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
+import { add, complex, levelDb, multiply, phasor, scale } from "../acoustics/complex";
 import { hornLayoutModel } from "./hornLayoutModel";
 import { tracedHorn } from "./foldHorn";
 import { closedBoxQtc, hornModel } from "../acoustics/hornModel";
@@ -40,6 +40,7 @@ import { filtersTransfer } from "./bandFilter";
 import { NO_FILTERS } from "./specParts";
 import { HORN_LAYOUT } from "../../constants/acousticNetwork";
 import { ONE_BOX_HALF_SPACE } from "../../constants/hornEngine";
+import { sensitivityAt283 } from "../power";
 import { bandLevelDb } from "./bandLevel";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
 import {
@@ -91,7 +92,6 @@ const PASSBAND_DB = 3;
 const pressureOf = (db: number, phase = 0): Complex => scale(phasor(phase), Math.pow(10, db / 20));
 
 /** A level, dB, from a pressure. */
-const levelOf = (p: Complex) => 20 * Math.log10(Math.max(1e-9, abs(p)));
 
 /**
  * `count` alike cones in parallel, each on the full voltage, as one cone for the radiator box model and Qtc: the areas
@@ -273,7 +273,7 @@ const hornById = (id: Horn["id"]) => byId(HORN_OPTIONS, id) ?? byId(HIFI_WAVEGUI
  * the PA's datasheet horn model; a tweeter keeps the Hi-fi engine's flat sensitivity.
  */
 function hfLevelAt(driver: SpeakerDriver, sens: number, imp: number, volts: number, f: number) {
-  const flat = sens + 10 * Math.log10(8 / imp) + 20 * Math.log10(volts / ONE_WATT_VOLTS);
+  const flat = sensitivityAt283(sens, { imp }) + 20 * Math.log10(volts / ONE_WATT_VOLTS);
   const lowHz =
     driver.kind === DRIVER_KIND.compression && driver.horn
       ? (hornById(driver.horn.hornId)?.hf?.lowHz ?? 0)
@@ -415,11 +415,11 @@ export function speakerResponse(
       ),
     );
     total = total.map((p, i) => add(p, out[i]));
-    const curve = out.map((p, i) => ({ f: freqs[i], spl: levelOf(p) }));
+    const curve = out.map((p, i) => ({ f: freqs[i], spl: levelDb(p) }));
     bands.push({ id: band.id, curve, pressure: out, passbandDb: passbandDb(curve) });
   }
   return {
-    sum: total.map((p, i) => ({ f: freqs[i], spl: levelOf(p) })),
+    sum: total.map((p, i) => ({ f: freqs[i], spl: levelDb(p) })),
     bands,
     chambers,
     gaps,

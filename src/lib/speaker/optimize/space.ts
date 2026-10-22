@@ -47,6 +47,7 @@ import { byId } from "../../tables";
 import { CHAMBER_LOAD, DRIVER_KIND, VENT_KIND } from "../../../constants/speakerSpec";
 import { HIFI_DRIVE } from "../../../constants/hifiEngine";
 import { SPEAKER_STEPS } from "../../../constants/speakerSteps";
+import { programWatts } from "../../power";
 
 /** The app catalog as the optimizer's candidates (`SpeakerOptimizerInput.catalog` absent). */
 export const SPEAKER_OPTIMIZER_CATALOG: SpeakerOptimizerCatalog = {
@@ -783,9 +784,9 @@ export function topAmps(
                 ? byId(HIFI_WOOFERS, id)?.ts
                 : byId(FILL_OPTIONS, id)?.ts;
         // the program rating, 2 × AES: the amp power is the watts into the driver
-        if (ts) raise(u.bands[0], 2 * ts.aes);
+        if (ts) raise(u.bands[0], programWatts(ts.aes));
         const coaxHf = u.driverKind === DRIVER_KIND.coaxial ? byId(FILL_OPTIONS, id)?.hf : null;
-        if (coaxHf && u.bands[1]) raise(u.bands[1], 2 * coaxHf.aes);
+        if (coaxHf && u.bands[1]) raise(u.bands[1], programWatts(coaxHf.aes));
       }
     } else {
       for (const p of u.parts) {
@@ -793,7 +794,7 @@ export function topAmps(
           spec.cabinet.chambers[u.chamber].drivers[u.entry].kind === DRIVER_KIND.compression
             ? byId(CD_OPTIONS, p.driverId)?.hf
             : byId(HIFI_TWEETERS, p.driverId)?.hf;
-        if (hf) raise(u.band, 2 * hf.aes);
+        if (hf) raise(u.band, programWatts(hf.aes));
       }
     }
   }

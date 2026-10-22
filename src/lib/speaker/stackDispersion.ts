@@ -22,9 +22,15 @@ import type {
   StackSpec,
 } from "../../types";
 import { dispersionGrid } from "../acoustics/directivity";
-import { directivityAt, directivityGain, offAxis, sourceAxis } from "../acoustics/coverage";
+import {
+  arrival,
+  directivityAt,
+  directivityGain,
+  offAxis,
+  sourceAxis,
+} from "../acoustics/coverage";
 import { CHAMBER_LOAD } from "../../constants/speakerSpec";
-import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
+import { add, complex, levelDb } from "../acoustics/complex";
 import { bandOfPart, driverPattern, radiatedAt, spotBaffleWIn, spotBoxWIn } from "./spaceCoverage";
 import { layStack } from "./spaceLayout";
 import { memberGain, stackCrossoversHz } from "./stackResponse";
@@ -32,12 +38,8 @@ import { bandCenters } from "./stackLayout";
 import { stackMember } from "./specParts";
 import { speakerLayout } from "./speakerLayout";
 import { hornMouth } from "./hornMouth";
-import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { DISPERSION_DISTANCE_M } from "../../constants/chartScales";
-import { METERS_PER_FOOT, METERS_PER_INCH, RAD } from "../../constants/units";
-
-/** Milliseconds in a second. */
-const MS_PER_S = 1000;
+import { METERS_PER_FOOT, METERS_PER_INCH, MS_PER_S, RAD } from "../../constants/units";
 
 /** The stack laid out where its own frame is the room's: its base's front center on the floor's origin, unturned. */
 const OWN_POSE = {
@@ -114,11 +116,10 @@ export function stackDispersionMap(
       let sum = complex(0);
       sources.forEach((s, k) => {
         const { r, th, tv } = paths[k];
-        const seconds = (r - D) / SPEED_OF_SOUND + s.delayS;
-        const amp = (s.gain * directivityGain(directivity[k][i], th, tv) * D) / r;
-        sum = add(sum, multiply(scale(feeds[k][i], amp), phasor(-2 * Math.PI * f * seconds)));
+        const gain = s.gain * directivityGain(directivity[k][i], th, tv);
+        sum = add(sum, arrival(feeds[k][i], f, gain, r, D, s.delayS));
       });
-      return 20 * Math.log10(Math.max(1e-9, abs(sum)));
+      return levelDb(sum);
     });
   };
   const on = levelsAt(0);

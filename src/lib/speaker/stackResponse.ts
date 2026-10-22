@@ -28,20 +28,17 @@ import type {
   StackResponse,
   StackSpec,
 } from "../../types";
-import { abs, add, complex, divide, multiply, phasor, scale } from "../acoustics/complex";
+import { abs, add, complex, divide, levelDb } from "../acoustics/complex";
+import { arrival } from "../acoustics/coverage";
 import { filtersTransfer } from "./bandFilter";
 import { SPEAKER_RESPONSE_FREQUENCIES, passbandDb, speakerResponse } from "./speakerResponse";
 import { speakerLimits } from "./speakerLimits";
 import { stackLayout, type StackPoint } from "./stackLayout";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
-import { METERS_PER_INCH } from "../../constants/units";
+import { METERS_PER_INCH, MS_PER_S } from "../../constants/units";
 import { AUTO_DELAY, STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
 
 /** A level, dB, from a pressure. */
-const levelOf = (p: Complex) => 20 * Math.log10(Math.max(1e-9, abs(p)));
-
-/** Milliseconds in a second. */
-const MS_PER_S = 1000;
 
 /** A feed's sign: −1 where its polarity is inverted (a save from before it has none: 1). */
 export const polaritySign = (feed: Pick<StackMember, "invertPolarity">) =>
@@ -298,22 +295,30 @@ export function stackResponse(
     for (const band of m.response.bands) {
       const path = m.paths.get(band.id) ?? STACK_LISTEN_DISTANCE_M;
       // the spreading against the listening distance, and the time: the path's and the delay's
-      const k1 = (gain * STACK_LISTEN_DISTANCE_M) / path;
-      const seconds = (path - STACK_LISTEN_DISTANCE_M) / SPEED_OF_SOUND + delayMs / MS_PER_S;
       pressure = pressure.map((p, i) =>
-        add(p, multiply(scale(band.pressure[i], k1), phasor(-2 * Math.PI * freqs[i] * seconds))),
+        add(
+          p,
+          arrival(
+            band.pressure[i],
+            freqs[i],
+            gain,
+            path,
+            STACK_LISTEN_DISTANCE_M,
+            delayMs / MS_PER_S,
+          ),
+        ),
       );
     }
     total = total.map((p, i) => add(p, pressure[i]));
     return {
       ...m,
       delayMs,
-      curve: pressure.map((p, i) => ({ f: freqs[i], spl: levelOf(p) })),
+      curve: pressure.map((p, i) => ({ f: freqs[i], spl: levelDb(p) })),
       pressure,
     };
   });
   return {
-    sum: total.map((p, i) => ({ f: freqs[i], spl: levelOf(p) })),
+    sum: total.map((p, i) => ({ f: freqs[i], spl: levelDb(p) })),
     members,
     listenHeightIn,
   };

@@ -1,5 +1,5 @@
 // The dispersion check at a crossover between two of a speaker's bands, on the speaker's own parts: each band's −6 dB
-// beam width there, from the directivity every page shares (lib/acoustics/coverage `beamWidthDeg`); where the lower
+// beam width there, from the directivity every page shares (lib/speaker/spaceBeams `beamHalfAngles`); where the lower
 // band's is narrower than the upper band's, the off-axis response dips at the crossover. One check per crossing
 // (`crossingPairs`), on the lower band. Pure.
 import type { BandId, SpeakerDriver, SpeakerSpec } from "../../types";
@@ -10,8 +10,10 @@ import {
   DISPERSION_TEXT,
 } from "../../constants/dispersionCheck";
 import { CHAMBER_LOAD, DRIVER_KIND } from "../../constants/speakerSpec";
-import { DRIVER_PART } from "../../constants/space";
-import { beamWidthDeg, directivityAt, type CoveragePattern } from "../acoustics/coverage";
+import { BEAM_EDGE_DB, DRIVER_PART } from "../../constants/space";
+import { directivityAt, type CoveragePattern } from "../acoustics/coverage";
+import { RAD } from "../../constants/units";
+import { beamHalfAngles } from "./spaceBeams";
 import { isConeKind } from "./driverParts";
 import { driverPattern } from "./spaceCoverage";
 import { speakerLayout } from "./speakerLayout";
@@ -26,9 +28,12 @@ export interface DispersionCheck {
   chip: ChipBody;
 }
 
-/** How wide `pattern` beams at `hz` from a box `boxWIn` wide, degrees (rounded), as the dispersion map shows it. */
+/**
+ * How wide `pattern` beams across at `hz` from a box `boxWIn` wide, degrees (rounded): between its −6 dB edges, as the
+ * dispersion map and the Space page's beams show them; 180 where it never falls that far in front.
+ */
 const beamDeg = (pattern: CoveragePattern, hz: number, boxWIn: number) =>
-  Math.round(beamWidthDeg(directivityAt(pattern, hz, boxWIn)));
+  Math.round((2 * beamHalfAngles(directivityAt(pattern, hz, boxWIn), BEAM_EDGE_DB)[0]) / RAD);
 
 /** What the check knows of the upper band's coverage: its beam, and how the tip says it (a figure, or a coaxial's or dome's words). */
 interface UpperCoverage {

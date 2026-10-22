@@ -30,6 +30,7 @@ import {
   type MouthPlane,
 } from "./directivity";
 import { METERS_PER_FOOT as FT, METERS_PER_INCH } from "../../constants/units";
+import { multiply, phasor, scale } from "./complex";
 import {
   BARRIER_BRIGHT_N,
   BARRIER_CAP_NEPERS,
@@ -212,26 +213,23 @@ export function directivityGain(d: SourceDirectivity, th: number, tv: number): n
   return behind ? front * d.shadow : front;
 }
 
-/** The angle step, radians, at which `beamWidthDeg` looks for the −6 dB point: a quarter degree. */
-const BEAM_STEP = Math.PI / 720;
-
 /**
- * A source's −6 dB beam width across (its level off its axis, `directivityGain`, at half its on-axis pressure),
- * degrees, within the dispersion map's ±90°: 180 when it is wider. The Speaker and Stack pages' crossover check reads it.
+ * A source's pressure `p` (at `refM`, m) where it arrives along a path `pathM` long, m, at `f`, Hz: times `gain`,
+ * spread 1/r against `refM`, and late by the path's extra length and by `delayS`, s. The Speaker and Stack pages' sum
+ * and their dispersion maps share it.
  */
-export function beamWidthDeg(d: SourceDirectivity): number {
-  let before = 1;
-  for (let th = BEAM_STEP; th <= Math.PI / 2 + 1e-9; th += BEAM_STEP) {
-    const gain = directivityGain(d, th, 0);
-    if (gain < 0.5) {
-      // between the two steps, where the level is half its on-axis value
-      const at = th - BEAM_STEP * ((0.5 - gain) / (before - gain));
-      return (2 * at * 180) / Math.PI;
-    }
-    before = gain;
-  }
-  return 180;
-}
+export const arrival = (
+  p: Complex,
+  f: number,
+  gain: number,
+  pathM: number,
+  refM: number,
+  delayS: number,
+): Complex =>
+  multiply(
+    scale(p, (gain * refM) / pathM),
+    phasor(-2 * Math.PI * f * ((pathM - refM) / C + delayS)),
+  );
 
 /** A source's axis: its yaw from straight ahead (+y, + toward +x) and its pitch (+ up), as cosines and sines. */
 export interface SourceAxis {
