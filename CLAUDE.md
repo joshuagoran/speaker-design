@@ -24,6 +24,8 @@ Vite+ docs: `node_modules/vite-plus/docs`.
   ring, and the cabinet finishes. `tests/contrast.test.ts` checks contrast.
 - UI text uses STE, as the docs do. A string that names a control builds the name from that label's constant and marks
   it `**…**`; the app shows it in semibold. Replies and docs show app names in **bold**.
+- While you build, show the owner each new or changed UI string, where it appears, and get an OK before the commit.
+  Propose one short wording, not a list of options.
 - Writing: US spelling (a key that saved data or links carry keeps its spelling, with a comment). Oxford comma.
   Louder/quieter for dB, higher/lower for Hz. One short sentence per line on a page; more goes in a Tooltip or the
   Details fold. Speaker, Stack, Space, and Source start with a capital when they mean the design item or the page (a
