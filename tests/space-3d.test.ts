@@ -16,8 +16,15 @@ import {
 import { FRAME_BOX_KEY } from "../src/components/stack-view/sceneFraming";
 import { buildMembersScene } from "../src/components/stack-view/buildMembersScene";
 import { beamHalfAngles, spaceBeams, type SpaceBeam } from "../src/lib/speaker/spaceBeams";
+import {
+  airNepers,
+  directivityAt,
+  directivityGain,
+  pathAmplitude,
+  sceneSlots,
+} from "../src/lib/acoustics/coverage";
 import { placementFrame } from "../src/lib/speaker/spaceLayout";
-import { pistonDirectivity, waveguideHalfAngles } from "../src/lib/acoustics/directivity";
+import { waveguideHalfAngles } from "../src/lib/acoustics/directivity";
 import { spaceFromStart } from "../src/pages/space/useSpace";
 import { STACK_PRESET } from "../src/constants/stackPresets";
 import { INCHES_PER_FOOT, METERS_PER_FOOT } from "../src/constants/units";
@@ -136,26 +143,40 @@ test("a wall between the camera and the room is the near one", () => {
   expect(wallIsNear(front, behindAudience)).toBe(false);
 });
 
+/** A box's width, in: only what reaches behind it, which a beam's edges in front never see. */
+const BOX_W_IN = 20;
+
 test("a beam's angles: where the pattern falls 6 dB, and 3 dB", () => {
   // a piston small against the wavelength never falls 6 or 3 dB in front: a quarter turn each way
   for (const fall of [BEAM_EDGE_DB, BEAM_INNER_EDGE_DB])
-    expect(beamHalfAngles({ a: 0.05 }, 100, fall)).toEqual([Math.PI / 2, Math.PI / 2]);
+    expect(beamHalfAngles(directivityAt({ a: 0.05 }, 100, BOX_W_IN), fall)).toEqual([
+      Math.PI / 2,
+      Math.PI / 2,
+    ]);
   // a 15 inch cone at 2 kHz: the pattern falls 6 dB, and 3 dB, at the angles
   const a = 0.19;
-  const [h, v] = beamHalfAngles({ a }, 2000, BEAM_EDGE_DB);
+  const [h, v] = beamHalfAngles(directivityAt({ a }, 2000, BOX_W_IN), BEAM_EDGE_DB);
   expect(h).toBe(v);
-  expect(20 * Math.log10(pistonDirectivity(2000, a, h))).toBeCloseTo(-6, 1);
-  const [h3] = beamHalfAngles({ a }, 2000, BEAM_INNER_EDGE_DB);
+  expect(20 * Math.log10(directivityGain(directivityAt({ a }, 2000, BOX_W_IN), h, 0))).toBeCloseTo(
+    -6,
+    1,
+  );
+  const [h3] = beamHalfAngles(directivityAt({ a }, 2000, BOX_W_IN), BEAM_INNER_EDGE_DB);
   expect(h3).toBeLessThan(h);
-  expect(20 * Math.log10(pistonDirectivity(2000, a, h3))).toBeCloseTo(-3, 1);
+  expect(20 * Math.log10(directivityGain(directivityAt({ a }, 2000, BOX_W_IN), h3, 0))).toBeCloseTo(
+    -3,
+    1,
+  );
   // a horn: its own half angles at 6 dB, never past a quarter turn; at 3 dB, where −6·(θ/half)² dB is −3
   const horn = { covH: 90, covV: 40, wIn: 20, hIn: 10 };
   const own = waveguideHalfAngles(8000, 90, 40, 20, 10);
-  expect(beamHalfAngles({ horn }, 8000, BEAM_EDGE_DB)).toEqual(own);
-  beamHalfAngles({ horn }, 8000, BEAM_INNER_EDGE_DB).forEach((half, i) =>
+  beamHalfAngles(directivityAt({ horn }, 8000, BOX_W_IN), BEAM_EDGE_DB).forEach((half, i) =>
+    expect(half).toBeCloseTo(own[i], 9),
+  );
+  beamHalfAngles(directivityAt({ horn }, 8000, BOX_W_IN), BEAM_INNER_EDGE_DB).forEach((half, i) =>
     expect(half).toBeCloseTo(own[i] / Math.SQRT2, 9),
   );
-  for (const half of beamHalfAngles({ horn }, 40, BEAM_EDGE_DB))
+  for (const half of beamHalfAngles(directivityAt({ horn }, 40, BOX_W_IN), BEAM_EDGE_DB))
     expect(half).toBeLessThanOrEqual(Math.PI / 2);
 });
 
@@ -326,6 +347,18 @@ describe("Space 3D view: the PA stack preset", () => {
     for (const b of spaceBeams(model, "high", 1000)) {
       expect(b.reachFt * METERS_PER_FOOT).toBeLessThan(10 ** (BEAM_FALL_DB / 20));
       expect(b.reachFt * METERS_PER_FOOT).toBeGreaterThan(1);
+    }
+  });
+
+  test("a beam's reach and the map's direct path agree on the level there", () => {
+    for (const f of [1000, 4000, 16000]) {
+      // the map's slot at this frequency: its air's absorption, as its direct paths take it off
+      const [slot] = sceneSlots(model.scene, [f], false, () => ({}));
+      for (const b of spaceBeams(model, "one", f)) {
+        const r = b.reachFt * METERS_PER_FOOT;
+        const direct = (pathM: number) => pathAmplitude(pathM, 1, airNepers(slot.air, pathM));
+        expect(20 * Math.log10(direct(1) / direct(r))).toBeCloseTo(BEAM_FALL_DB, 6);
+      }
     }
   });
 

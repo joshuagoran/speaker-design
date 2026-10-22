@@ -11,8 +11,9 @@
 // The modal sum stops at a highest mode, which smooths the field within about a wavelength of that mode around each
 // driver; the swapped terms don't change that.
 import type { Complex } from "../../types";
+import { SPEED_OF_SOUND } from "../../constants/acoustics";
 
-const C = 343;
+const C = SPEED_OF_SOUND;
 
 /** The modes a room sums: its size and how many indices each axis runs to. */
 export interface RoomModes {

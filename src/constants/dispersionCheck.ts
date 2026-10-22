@@ -1,21 +1,12 @@
 // The Speaker and Stack pages' dispersion check words and figures (lib/speaker/dispersionCheck): whether the band under
 // a crossover is as wide there as the band over it. The upper band is named by its display name.
 
-/** The widest a beam is taken to be, degrees: a cone this small, or a dome, covers a half sphere. */
-export const DISPERSION_FULL_BEAM_DEG = 180;
-
-/** The coverage taken for a dome (and for a driver with no horn), degrees. */
-export const DISPERSION_DOME_COVERAGE_DEG = 160;
-
-/** Where a cone's beam starts to narrow: ka, the cone's circumference over the wavelength. */
-export const DISPERSION_NARROW_KA = 2.2;
-
 /** The share of the upper band's coverage the lower band's beam must reach to match it. */
 export const DISPERSION_MATCH_SHARE = 0.75;
 
 /**
- * How the check knows the upper band's coverage, by id: a rated horn, a cone's own beam at the crossover, a coaxial
- * with none published, or a dome.
+ * What the upper band is, for how the tip says its coverage, by id: a horn or waveguide, a cone, a coaxial with no
+ * coverage published, or a dome.
  */
 export const DISPERSION_COVERAGE = {
   rated: "rated",

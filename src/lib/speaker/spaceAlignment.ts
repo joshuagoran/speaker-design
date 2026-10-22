@@ -10,10 +10,7 @@ import { bandLevelDb } from "./bandLevel";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { NO_DELAY_MS, SPACE_TEXT } from "../../constants/space";
-import { METERS_PER_INCH } from "../../constants/units";
-
-/** Milliseconds in a second. */
-const MS_PER_S = 1000;
+import { METERS_PER_INCH, MS_PER_S } from "../../constants/units";
 
 /** How far a sound travels in `ms` milliseconds, in: the distance a delay equals (move the box back by it). */
 export const delayDistanceIn = (ms: number) => ((ms / MS_PER_S) * SPEED_OF_SOUND) / METERS_PER_INCH;

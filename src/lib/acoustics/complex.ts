@@ -40,7 +40,10 @@ export const exp = (z: Complex): Complex => {
   const size = Math.exp(z.re);
   return complex(size * Math.cos(z.im), size * Math.sin(z.im));
 };
+/** A pressure's level against 1, dB (a floor at −180 dB for silence). */
+export const levelDb = (p: Complex) => 20 * Math.log10(Math.max(1e-9, abs(p)));
 /** e^(jθ): a unit phasor at angle θ, radians */
+
 export const phasor = (angle: number): Complex => complex(Math.cos(angle), Math.sin(angle));
 /** j·x for a real x: a pure imaginary number, such as the reactance jωM of an acoustic mass M */
 export const imaginary = (x: number): Complex => complex(0, x);

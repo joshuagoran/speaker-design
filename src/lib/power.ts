@@ -11,6 +11,27 @@ export const FALLBACK_OHMS = 8;
 /** The load a 2.83 V sensitivity is 1 W into, Ω: a datasheet's 1 W figure moves to 2.83 V by 10·log10(8 / imp). */
 export const SENSITIVITY_REFERENCE_OHMS = 8;
 
+/** A datasheet's 1 W sensitivity `sens1W` (dB at 1 m) at 2.83 V into its nominal impedance, dB: `SENSITIVITY_REFERENCE_OHMS`. */
+export const sensitivityAt283 = (sens1W: number, part: NominalImpedance): number =>
+  sens1W + 10 * Math.log10(SENSITIVITY_REFERENCE_OHMS / ohmsOf(part));
+
+/**
+ * A driver's program rating, W: twice its AES rating. AES noise has a 6 dB crest, so a sine with the same peak voltage
+ * carries twice the AES power.
+ */
+export const programWatts = (aes: number): number => 2 * aes;
+
+/**
+ * The share of an HF driver's power rating it keeps crossed at `xo`, Hz: 1 at or above the frequency its AES rating
+ * was measured at (`aesXo`), and 6 dB/oct less below it.
+ */
+export const aesDerate = (xo: number, aesXo: number | null | undefined): number =>
+  aesXo && xo < aesXo ? Math.pow(xo / aesXo, 2) : 1;
+
+/** An HF driver's program rating crossed at `xo`, Hz, W: `programWatts` times its `aesDerate` there. */
+export const hfProgramWatts = (hf: { aes: number; aesXo: number | null | undefined }, xo: number) =>
+  programWatts(hf.aes) * aesDerate(xo, hf.aesXo);
+
 /** A part's nominal impedance, Ω: its own, or `FALLBACK_OHMS` where it isn't entered. */
 export const ohmsOf = (part: NominalImpedance): number =>
   part.imp !== undefined && part.imp > 0 ? part.imp : FALLBACK_OHMS;

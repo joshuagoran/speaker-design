@@ -23,11 +23,7 @@ import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
 import { dispersionModeled, stackDispersionMap } from "../../lib/speaker/stackDispersion";
-import {
-  DISPERSION_HEADING,
-  DISPERSION_HORN_NOTE,
-  DISPERSION_START_PLANE,
-} from "../../constants/dispersionPlanes";
+import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/stats/StatLabel";
 import { priceText } from "../../lib/speaker/speakerTotals";
@@ -314,12 +310,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
                 </div>
               )}
               <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.maxNote}</p>
-            </section>
-          )}
-          {modeled.length > 0 && !dispersionModeled(design.speakers) && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
-              <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
-              <Notice>{DISPERSION_HORN_NOTE}</Notice>
             </section>
           )}
           {dispersion && (

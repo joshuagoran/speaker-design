@@ -1,6 +1,9 @@
 /** Radians in a degree. */
 export const RAD = Math.PI / 180;
 
+/** Milliseconds in a second. */
+export const MS_PER_S = 1000;
+
 /** Meters in one foot. */
 export const METERS_PER_FOOT = 0.3048;
 

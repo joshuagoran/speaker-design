@@ -13,6 +13,8 @@ import { areaAtShare, driveAfterRemoval, withDriveKind } from "../src/pages/spea
 import { hornFromRecord } from "../src/pages/speaker/hornrespImport";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import { hornGoalFit } from "../src/lib/speaker/hornGoals";
+import { hornLayoutModel } from "../src/lib/speaker/hornLayoutModel";
+import { thermalVoltageLimit } from "../src/lib/acoustics/boxModels";
 import { speakerResponse, SPEAKER_RESPONSE_FREQUENCIES } from "../src/lib/speaker/speakerResponse";
 import { speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { frontChamber, throatCones } from "../src/lib/speaker/hornThroat";
@@ -209,6 +211,21 @@ test("horn goals: the fit's maximum output is the lower of the power and Xmax li
     hornGoalFit(read.design, { ...HORN_GOALS_DEFAULT, highHz: 30 }, cones.parts.ts),
     null,
   );
+});
+
+test("horn goals: the power limit is the program rating the Speaker page's limits read", () => {
+  const read = hornDesignOf(TAPPED, { count: 1, angle: 2 }, roomOf(TAPPED));
+  assert.ok(read.ok);
+  const cones = throatCones(TAPPED.drivers);
+  assert.ok(cones);
+  // with almost no power, the power rating limits it everywhere: the least level there, lifted to the rating
+  const weak = { ...cones.parts.ts, aes: 0.01 };
+  const fit = hornGoalFit(read.design, HORN_GOALS_DEFAULT, weak);
+  assert.ok(fit);
+  const model = hornLayoutModel(read.design, [fit.maxOutHz], SPEAKER_RESPONSE_VOLTS);
+  assert.ok(model);
+  const liftDb = 20 * Math.log10(thermalVoltageLimit(weak) / SPEAKER_RESPONSE_VOLTS);
+  assert.ok(Math.abs(fit.maxOutDb - (model.curve[0].spl + liftDb)) < 1e-9);
 });
 
 test("horn goals: a tapped horn sized for 40–100 Hz plays flat in the box and stays in its air", () => {

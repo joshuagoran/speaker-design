@@ -85,7 +85,15 @@ import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
 import { towerHornCutout } from "../speaker/tower";
 import { KG_PER_LB } from "../../constants/units";
-import { SENSITIVITY_REFERENCE_OHMS, ohmsOf, voltsToWatts, wattsToVolts } from "../power";
+import {
+  aesDerate,
+  hfProgramWatts,
+  ohmsOf,
+  programWatts,
+  sensitivityAt283,
+  voltsToWatts,
+  wattsToVolts,
+} from "../power";
 import { PA_SLOT_FINS } from "../../constants/speakerSpec";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
@@ -215,8 +223,8 @@ interface Complex {
   re: number;
   im: number;
 }
-// Filter magnitudes. Butterworth order n: x^n / sqrt(1 + x^2n). Linkwitz-Riley 2m: a
-// Butterworth m squared, x^2m / (1 + x^2m). LR24 is -6 dB at the corner, BW24 -3 dB.
+// Each highpass type's alignment and order (lib/speaker/bandFilter `filterTransfer`): Butterworth n, or a
+// Linkwitz-Riley 2m, a Butterworth m squared. LR24 is -6 dB at the corner, BW24 -3 dB.
 export const HIGHPASS_ALIGNMENTS: Record<
   HighpassType,
   readonly [kind: "bw" | "lr", order: number]
@@ -225,12 +233,6 @@ export const HIGHPASS_ALIGNMENTS: Record<
   LR24: ["lr", 4],
   BW48: ["bw", 8],
   LR48: ["lr", 8],
-};
-export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24") => {
-  const [kind, n] = HIGHPASS_ALIGNMENTS[type] || HIGHPASS_ALIGNMENTS.BW24,
-    x = f / fc;
-  const xn = Math.pow(x, n);
-  return kind === "bw" ? xn / Math.sqrt(1 + xn * xn) : xn / (1 + xn);
 };
 // The normalized Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2.
 // Kept per order: the hi-fi crossover calls for them at every frequency of every design the optimizer tries.
@@ -1393,7 +1395,7 @@ export function internalWoodLiters(parts: CutPart[], box: CutBoxId) {
 // impedance (lib/power): AES noise has a 6 dB crest, so a sine with the same peak voltage carries
 // twice the AES power; music with at least that crest keeps the coil's average at or under AES.
 export const thermalVoltageLimit = (ts: Pick<ThieleSmall, "aes" | "imp">) =>
-  wattsToVolts(2 * ts.aes, ts);
+  wattsToVolts(programWatts(ts.aes), ts);
 /** The amp's voltage at an amp power `W`, the watts into its load's nominal impedance, V RMS (lib/power). */
 export const ampVoltage = (W: number, load: NominalImpedance) => wattsToVolts(W, load);
 /** The amp power that gives `V` into the load, W: the watts into its nominal impedance (lib/power). */
@@ -1447,8 +1449,8 @@ export function hornPower(
 ): Pick<HornResponse, "P" | "pAmp" | "pProg" | "derate" | "imp" | "who"> {
   const imp = ohmsOf(hf);
   const pAmp = hfAmpW;
-  const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
-  const pProg = 2 * hf.aes * derate;
+  const derate = aesDerate(xoHi, hf.aesXo);
+  const pProg = hfProgramWatts(hf, xoHi);
   const P = Math.min(pAmp, pProg);
   return { P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "thermal" };
 }
@@ -1478,10 +1480,7 @@ export const midDisplacementL = (mid: Pick<MidDriver, "size" | "ts">) =>
  */
 export function fillHfPadDb(hf: FillDriver["hf"], wooferSensDb: number): number {
   if (!hf) return 0;
-  return Math.max(
-    0,
-    hf.sens + 10 * Math.log10(SENSITIVITY_REFERENCE_OHMS / ohmsOf(hf)) - wooferSensDb,
-  );
+  return Math.max(0, sensitivityAt283(hf.sens, hf) - wooferSensDb);
 }
 
 /**
