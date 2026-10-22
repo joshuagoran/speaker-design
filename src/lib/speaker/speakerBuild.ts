@@ -1419,7 +1419,7 @@ function withoutGivenWalls(
           qty: p.qty - left,
           b: p.b - below * t,
           note: joinNotes([
-            shared.left && "right side only: its left side is the chamber beside it's right side",
+            shared.left && "right side only: the chamber beside it shares its left side",
             shared.below && "stands on the top of the chamber below",
             sideNote(p.note),
           ]),

@@ -51,7 +51,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
       [
         ...SPACE_DETAILS.boxLines(STACK_LISTEN_DISTANCE_M),
         `Cones and horn mouths: rigid pistons, behind the box −3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB/octave above.`,
-        "Horns and waveguides: rated coverage (−6 dB at the edges) above their control frequency, wider below, at most 40 dB down.",
+        "Horns and waveguides: rated coverage (−6 dB at the edges) above their control frequency, wider below.",
       ],
     ],
     ...sharedAssumptionGroups(venue.room),

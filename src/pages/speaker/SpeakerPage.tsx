@@ -136,7 +136,8 @@ export function SpeakerPage(props: Props) {
 /** The page inside its position focus (`SpeakerPage`). */
 function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) {
   const pal = usePalette();
-  const { spec, response, limits, build, price, optimizer, store, snapshot, restore } = speakerPage;
+  const { spec, response, limits, build, price, optimizer, store, snapshot, holds, restore } =
+    speakerPage;
   const folds = useFolds(
     "speaker.settingsFolds",
     keysOf(SPEAKER_SETTINGS_SECTIONS),
@@ -432,6 +433,7 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
             <SaveRow
               store={store}
               snapshot={snapshot}
+              holds={holds}
               restore={restore}
               name={spec.name}
               onName={speakerPage.setName}
@@ -516,16 +518,10 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
               .filter((f) => !f.path.fits)
               .map((f, i) => (
                 <Notice key={i}>
-                  {SPEAKER_TEXT.hornNoRoom(
-                    {
-                      depth: formatInches(f.path.needs.depthIn),
-                      height: formatInches(f.path.needs.heightIn),
-                    },
-                    {
-                      depth: formatInches(f.path.room.depthIn),
-                      height: formatInches(f.path.room.heightIn),
-                    },
-                  )}
+                  {SPEAKER_TEXT.hornNoRoom({
+                    depth: formatInches(f.path.needs.depthIn),
+                    height: formatInches(f.path.needs.heightIn),
+                  })}
                 </Notice>
               ))}
             {flares.some((f) => f.mouthClipped) && <Notice>{SPEAKER_TEXT.hornMouthClipped}</Notice>}

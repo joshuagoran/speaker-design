@@ -318,7 +318,7 @@ export function HornSettings({
       <InsetGroup title={SETTINGS_TEXT.horn}>
         <div className={offsetTap ? PAIR_ROW : ""}>
           <SelectField
-            label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
+            label={SPEAKER_TEXT.hornDrive}
             options={DRIVE_OPTIONS}
             value={byId(DRIVE_OPTIONS, drive.kind)}
             onChange={(o) => {

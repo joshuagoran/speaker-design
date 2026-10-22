@@ -513,9 +513,14 @@ export function CutlistPage({
                 `. Widest crosscut ${formatInches(g.cuts.widestCrosscut)}″`}
               {g.offcut &&
                 `; keeps a ${formatInches(g.offcut.w)} × ${formatInches(g.offcut.h)}″ offcut on sheet ${g.offcut.sheet + 1}`}
-              {g.fewestSheets !== null &&
-                g.fewestSheets < g.sheets.length &&
-                `. Rip first uses ${plural(g.sheets.length - g.fewestSheets, "sheet")} more`}
+              {g.fewestSheets !== null && g.fewestSheets < g.sheets.length && (
+                <>
+                  .{" "}
+                  <MarkedText
+                    text={`**${CUT_STYLE_NAMES.rips}** adds ${plural(g.sheets.length - g.fewestSheets, "sheet")}`}
+                  />
+                </>
+              )}
               .
             </p>
             {g.tooBig.length > 0 && (
@@ -691,7 +696,9 @@ export function CutlistPage({
                 <div className={GAP_Y_TIGHT}>
                   <ToggleGroup
                     label={
-                      <Tooltip tip="Locked: along the sheet's length. Any: the layout can turn it.">
+                      <Tooltip
+                        tip={`Locked: along the sheet's length. **${GRAIN_LOOK_NAMES.any}**: the layout can turn the panel.`}
+                      >
                         Grain
                       </Tooltip>
                     }

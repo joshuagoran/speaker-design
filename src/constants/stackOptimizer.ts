@@ -27,10 +27,10 @@ export const STACK_PROBLEM = { ...SPEAKER_PROBLEM, height: "height" } as const;
 
 /** Each problem in words, as the near miss lists them. */
 export const STACK_PROBLEM_TEXT = {
-  unmodeled: "the app cannot calculate a box, chamber or band in your Stack",
+  unmodeled: "the app cannot calculate part of your Stack",
   driverFit: "a driver or horn no longer fits its chamber",
   ventFit: "a port does not fit its chamber",
-  fitChip: "a duct, tube or hardware fit check fails",
+  fitChip: "a duct, tube, or hardware fit check fails",
   budget: "the parts cost more than the budget",
   weight: "a box weighs more than the limit",
   size: "a box is larger than its size limit",
@@ -66,7 +66,7 @@ export const STACK_OPTIMIZER_TEXT = {
   height: "Stack height",
   heightField: "Tallest the stack may stand",
   keepHint:
-    "A locked part stays as it is. Lock a speaker to hold it whole. A locked crossover, level or delay stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
+    "The optimizer does not change a locked part. Size: free, up to this size (≤), or exactly this size (=).",
   curveLabel: "Maximum output with one input, this Stack against yours",
   failing: (problems: string) =>
     `Your Stack fails: ${problems}. Fixes may cost more, weigh more, or stand taller.`,

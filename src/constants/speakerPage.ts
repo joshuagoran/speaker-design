@@ -38,6 +38,8 @@ const SLOT_FINS_NAME = "Fins";
 const SLOT_COUNT_NAME = "Count";
 const SLOT_FOLD_NAME = "Fold";
 const STRAIGHT_HORN_NAME = "Straight horn";
+const HORN_STEPS_OFF_NAME = "Off";
+const HORN_STEPS_ON_NAME = "On";
 
 /** The horn picker's first choice: no horn. */
 export const NO_HORN_NAME = "None";
@@ -157,8 +159,8 @@ export const VENT_PANEL_NAMES = {
 
 /** Each place a horn on a driver can sit, as the Speaker page names it (`HORN_PLACEMENT`). */
 export const HORN_PLACEMENT_NAMES = {
-  baffle: "In the baffle",
-  top: "Freestanding on top",
+  baffle: "Baffle-mounted",
+  top: "Freestanding",
 } as const satisfies Record<HornPlacement, string>;
 
 /** Why a horn can't sit in a place, by place (the place's button shows it). */
@@ -367,9 +369,9 @@ export const FOLD_CHECK_TEXT = {
 
 /** The Speaker page's results headings and chart labels. */
 export const SPEAKER_TEXT = {
-  /** the horn's path does not fit its chamber: what it needs and what the chamber gives, as formatted lengths */
-  hornNoRoom: (needs: { depth: string; height: string }, room: { depth: string; height: string }) =>
-    `A horn path does not fit its chamber. It needs ${needs.depth} of depth and ${needs.height} of height. The chamber gives ${room.depth} and ${room.height}. The views draw the horn as it is, past the walls. Make the chamber larger, shorten the path, or set the path to Folded.`,
+  /** the horn's path does not fit its chamber: what it needs, as formatted lengths */
+  hornNoRoom: (needs: { depth: string; height: string }) =>
+    `A horn path does not fit its chamber. It needs ${needs.depth} of depth and ${needs.height} of height.`,
   hornMouthClipped:
     "A horn mouth is larger than the face its chamber leaves it (the clear face, less any side slots). The views draw it at that face, with a smaller flare.",
   hornMouthMoved:
@@ -402,8 +404,7 @@ export const SPEAKER_TEXT = {
   chamberWeight: (n: number) => `Chamber ${n} weight`,
   noBraces: "no braces",
   /** the Construction summary when the cabinet has no bracing (`NO_BRACING`) */
-  hornNoFit:
-    "A horn does not fit where it is mounted. Another chamber is on its top, or its mouth is larger than the baffle of its chamber. Select the other mounting in the driver settings. Until you do, the views and the cutlist do not show the horn.",
+  hornNoFit: "A horn does not fit where it is mounted. The views and the cutlist do not show it.",
   /** the driver board's cutlist note: where the drivers mount, how a doubled board is glued, and each cone's cutout */
   driverBoardNote: (pieces: number) =>
     pieces > 1
@@ -478,21 +479,18 @@ export const SPEAKER_TEXT = {
   slotHeight: "Slot height",
   portLength: PORT_LENGTH_NAME,
   slotKind: SLOT_KIND_NAME,
-  slotKindTip:
-    "Divided slot: a slot along the floor, split by fins. It folds up the back when it is too long. It needs the frame construction. Open slot: a rectangular opening with no fins. You can use more than one.",
+  slotKindTip: `**${SLOT_KIND_NAMES.letterbox}**: a slot along the floor, split by fins. **${SLOT_KIND_NAMES.plain}**: a rectangular opening with no fins.`,
   slotPlace: "Slot position",
-  slotPlaceTip:
-    "Floor: the slots stack up from the floor. Front sides: the slots stand on the floor against the side walls, beside the horn mouth.",
+  slotPlaceTip: `**${SLOT_PLACE_NAMES.floor}**: the slots stack up from the floor. **${SLOT_PLACE_NAMES.sides}**: the slots stand on the floor against the side walls, beside the horn mouth.`,
   slotFins: SLOT_FINS_NAME,
   slotFinsTip:
-    "Fins split a divided slot into equal openings. Each fin is as thick as the walls. Default: two. Most: each opening stays at least half the slot height wide.",
+    "Fins split a divided slot into equal openings. Each fin is as thick as the walls. The default is two.",
   slotKindResets: `Switching **${SLOT_KIND_NAME}** resets the other type's settings: **${SLOT_FINS_NAME}**, or **${SLOT_COUNT_NAME}** and **${SLOT_FOLD_NAME}**.`,
   slotFolds: "The slot is too long to run straight. It folds up the back.",
   slotStraight: "The slot runs straight along the floor.",
   slotCount: SLOT_COUNT_NAME,
   slotFold: SLOT_FOLD_NAME,
-  slotFoldTip:
-    "Up the back: if the slot is too long to run straight, it folds up the back wall. No: the slot must fit straight.",
+  slotFoldTip: `**${SLOT_FOLD_NAMES.folded}**: if the slot is too long to run straight, it folds up the back wall. **${SLOT_FOLD_NAMES.straight}**: the slot must fit straight.`,
   tubeEnds: "Tube ends",
   tubeEndsTip: `**${TUBE_ENDS_NAMES.flared}**: tubes with flared ends. They need a sub driver in this chamber. **${TUBE_ENDS_NAMES.plain}**: plain round tubes.`,
   tubeEndsNoSub: `**${TUBE_ENDS_NAMES.flared}** tubes need a cone driver in this chamber.`,
@@ -504,8 +502,7 @@ export const SPEAKER_TEXT = {
   ductDividersTip: `${UI_TEXT.ductDividersTip} Dividers of the wall size have the thickness of the walls. You can measure it on the **${CUTLIST_TAB_NAME}** tab. Dividers of a different size have the default thickness.`,
   ventFixed: "The shape of this port sets its position.",
   load: "Type",
-  loadTip:
-    "Box: the cones radiate from the baffle, sealed or ported. Horn: a horn in the box, straight or folded. A new horn has one conical section from the cones to the clear face. The net air is then the rear chamber.",
+  loadTip: `**${CHAMBER_LOAD_NAMES.direct}**: the cones radiate from the baffle. **${CHAMBER_LOAD_NAMES.horn}**: a horn in the box. A new horn has one conical section from the cones to the clear face.`,
   loadNoCone: "A horn needs a cone driver with Thiele/Small parameters in this chamber.",
   horn: "Horn",
   hornSections: "Flare sections",
@@ -515,7 +512,7 @@ export const SPEAKER_TEXT = {
   hornEnd: HORN_END_NAME,
   hornCompression: "Compression ratio",
   hornCompressionTip:
-    "How much of the cone the horn walls cover. A higher ratio loads the cone more. It gives more output low in the band but less at the top, and faster air at the throat.",
+    "How much of the cone the horn walls cover. A higher ratio loads the cone more. It makes lower frequencies louder and high frequencies quieter, with faster air at the throat.",
   hornFrontChamber: "Front chamber",
   /** added to the front chamber's tip when the catalog gives no surround width or cone depth */
   hornFrontChamberEstimate:
@@ -527,8 +524,6 @@ export const SPEAKER_TEXT = {
   hornBoardDouble: "Double",
   hornPath: "Path",
   hornDrive: HORN_TYPE_NAME,
-  hornDriveTip:
-    "Where the cones feed the horn: at the start (front-loaded), part way along (offset), from both sides (tapped), or from the back (rear-loaded).",
   hornTap: "Tap after section",
   hornTapTip: "Where the front of the cones joins the horn, counted from the closed end.",
   hornFrontTap: "Front tap after section",
@@ -585,16 +580,14 @@ export const SPEAKER_TEXT = {
   /** the Advanced fold's summary: the steps in the horn now */
   hornSteps: (n: number) => `Steps: ${n === 0 ? "none" : n}`,
   hornStepsSetting: "Steps",
-  hornStepsTip:
-    "Off: each section starts at the end area of the section before it, so the horn is smooth. On: each section after the first shows its start area, so you can make a step. When you set Off, each start area goes back to the end area before it.",
+  hornStepsTip: `**${HORN_STEPS_OFF_NAME}**: each section starts where the section before it ends. **${HORN_STEPS_ON_NAME}**: each section after the first shows its **${HORN_START_NAME}**, so you can make a step.`,
   hornProfileTip: `The shape of the flare in this section: how its area grows from the start to the end. **${HORN_PROFILE_NAMES.con}**: both sides grow together. **${HORN_PROFILE_NAMES.exp}**: a flat top and bottom, curved sides. **${HORN_PROFILE_NAMES.par}**: a flat top and bottom, straight sides.`,
   hornStartTip: "The area of the section at its throat end, in².",
   hornEndTip: "The area of the section at its mouth end, in².",
   hornLengthTip: "The length of the section along the horn path.",
   hornPathSectionsTip: "The horn is a row of sections, from the throat to the mouth.",
   driverHornTip: `A horn or waveguide on this compression driver or tweeter. **${NO_HORN_NAME}**: the driver has no horn.`,
-  hornMountTip:
-    "In the baffle: the horn mouth is cut into the baffle. Freestanding on top: the horn stands on the top of the chamber.",
+  hornMountTip: `**${HORN_PLACEMENT_NAMES.baffle}**: the mouth is cut into the baffle. **${HORN_PLACEMENT_NAMES.top}**: the horn stands on the chamber.`,
   levelTip:
     "Sets the level of this band against the other bands, in dB. A negative value makes the band quieter. The default is 0 dB: no change, so each driver plays at its own sensitivity.",
   driveTip: `**${DRIVE_NAMES.active}**: a crossover or DSP splits the signal before the amps. Each band has its own amp channel. **${DRIVE_NAMES.passive}**: a passive crossover in the box splits the amplified signal. One amp channel drives these bands.`,
@@ -606,8 +599,8 @@ export const SPEAKER_TEXT = {
   airSpeedTip:
     "The highest air speed in the port at full power. Above it, the port makes noise. The maximum output stops at this limit.",
   radiatorMassTip: "Mass that you add to each passive radiator. More mass tunes the box lower.",
-  hornStepsOff: "Off",
-  hornStepsOn: "On",
+  hornStepsOff: HORN_STEPS_OFF_NAME,
+  hornStepsOn: HORN_STEPS_ON_NAME,
   addSection: "Add section",
   removeSection: "Remove section",
 } as const;

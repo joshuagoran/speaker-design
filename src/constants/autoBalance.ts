@@ -60,7 +60,7 @@ export const AUTO_BALANCE_TEXT = {
    * box's crossover (lib/speaker/autoBalance `sharedCrossovers`)
    */
   sharedCrossover: (boxes: readonly number[]) =>
-    `Boxes ${boxes.slice(0, -1).join(", ")} and ${boxes[boxes.length - 1]} use the same speaker with different crossovers. Auto balance uses the crossover of box ${boxes[0]}.`,
+    `Boxes ${boxes.slice(0, -1).join(", ")} and ${boxes[boxes.length - 1]} are the same Speaker with different crossovers. **${AUTO_BALANCE_NAME}** uses box ${boxes[0]}'s crossover.`,
   /** a band of a stack box's speaker, as the notice names it */
   memberBand: (speaker: string, band: string) => `${speaker} (${band})`,
 } as const;

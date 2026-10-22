@@ -3,6 +3,7 @@
 import { CUTLIST_TAB_NAME, PROJECT_NAMES } from "./pages";
 import { SPEAKER_TEXT } from "./speakerPage";
 import { UI_TEXT } from "./uiText";
+import { SAVE_ROW_TEXT } from "./saveRow";
 
 /**
  * The 2D drawing's views, by id: the speaker seen from the front, cut through its center from the side, or cut through
@@ -38,7 +39,7 @@ export const SPEAKER_SAVE_WORDS = {
   savedList: "Saved Speakers",
   pick: (n: number) => `Saved Speakers (${n})`,
   noSaved: "No saved Speakers yet",
-  newFromTip: "Starts a new Speaker from a template. It replaces the current design.",
+  newFromTip: SAVE_ROW_TEXT.newFromTip(PROJECT_NAMES.speaker),
 } as const;
 
 /** The checks' row labels: a band's, by its name, and a chamber's, by its place. */
@@ -111,8 +112,8 @@ export const SPEAKER_DETAILS_TEXT = {
     `**${SPEAKER_VIEW_NAMES.side}**: cut through the center, the front at the left.`,
     `**${SPEAKER_VIEW_NAMES.top}**: each chamber cut through its middle height, the front at the bottom.`,
     `**${SPEAKER_VIEW_NAMES.top}**: stacked chambers show one above the other, the highest at the top.`,
-    "Top: a drawn fold shows the boards where the cut crosses them.",
-    "Top: a dashed vent or horn is below or above the cut.",
+    `**${SPEAKER_VIEW_NAMES.top}**: a folded horn shows its boards at the height of the cut.`,
+    `**${SPEAKER_VIEW_NAMES.top}**: a dashed vent or horn is below or above the cut.`,
     "Each driver shows in the color of its band.",
   ],
   /** a straight horn in the Side and Top views */

@@ -24,6 +24,9 @@ export const SAVE_ROW_TEXT = {
   deleteLabel: (name: string) => `Delete ${name}`,
   /** Delete's confirm step, inline (a browser dialog can be blocked in the artifact host) */
   confirmDelete: (name: string) => `Delete “${name}”?`,
+  /** the start list's tip: what picking a start does, by the design's noun */
+  newFromTip: (design: string) =>
+    `Starts a new ${design}, empty or from a preset, replacing the current design.`,
 } as const;
 
 /** The nouns a page's row names its designs with: the name box's placeholder, the saved list and the start list's tip. */

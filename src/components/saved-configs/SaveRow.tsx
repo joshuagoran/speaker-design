@@ -13,6 +13,8 @@ interface Props<T extends SelectOption> {
   store: ConfigStore;
   /** what a save stores */
   snapshot: () => SavedConfigData;
+  /** whether a save holds this page's design: the list shows only those */
+  holds: (config: SavedConfig) => boolean;
   /** opens a saved design: the design takes the save's id, so it is open in that save */
   restore: (config: SavedConfig) => void;
   /** the design's name, which a save takes: edited and saved, it renames the open save */
@@ -41,6 +43,7 @@ const NAME_MAX = 60;
 export function SaveRow<T extends SelectOption>({
   store,
   snapshot,
+  holds,
   restore,
   name,
   onName,
@@ -63,7 +66,7 @@ export function SaveRow<T extends SelectOption>({
   const latest = useRef(openId);
   latest.current = openId;
   const openIdNow = () => latest.current;
-  const list = saved ?? [];
+  const list = (saved ?? []).filter(holds);
   const cur = list.find((c) => c.id === (sel || openId));
   const trimmed = name.trim();
   const reset = () => setConfirming(false);

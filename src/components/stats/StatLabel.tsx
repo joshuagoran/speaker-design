@@ -1,6 +1,7 @@
 import { Tooltip } from "../ui/Tooltip";
 import { SUB_BASS_BAND_HZ } from "../../lib/acoustics/boxModels";
 import { UI_TEXT } from "../../constants/uiText";
+import { CUTLIST_TAB_NAME } from "../../constants/pages";
 
 /** A statistic with plain-language help: its label, and the tooltip shown on it. */
 export interface StatDef {
@@ -23,7 +24,7 @@ export const STATS = {
   },
   hydraulicDiameter: {
     label: "Hydraulic diameter",
-    tip: "4 × area ÷ perimeter. Small values mean turbulence; flared mouths help.",
+    tip: "4 × area ÷ perimeter. Small values mean turbulence.",
   },
   midbandSensitivity: {
     label: "Midband sensitivity",
@@ -51,7 +52,7 @@ export const STATS = {
   },
   systemF3: {
     label: "System F3",
-    tip: "−3 dB point against this driver's midband, with the highpass. Shape, not level.",
+    tip: "−3 dB point against this driver's midband, with the high-pass.",
   },
   subBass: {
     label: `Sub-bass ${SUB_BASS_BAND_HZ[0]}–${SUB_BASS_BAND_HZ[1]} Hz`,
@@ -71,7 +72,7 @@ export const STATS = {
   },
   partsPrice: {
     label: UI_TEXT.price,
-    tip: `The purchased parts on the Cutlist tab, without the plywood. A ${UI_TEXT.partialPriceMark} shows that some parts have no price.`,
+    tip: `The purchased parts on the **${CUTLIST_TAB_NAME}** tab, without the plywood. A ${UI_TEXT.partialPriceMark} shows that some parts have no price.`,
   },
   stackHeight: {
     label: UI_TEXT.height,

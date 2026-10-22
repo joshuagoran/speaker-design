@@ -64,7 +64,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
       "Summing and readouts",
       [
         `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase, so may interfere and cause cancellation. Above, band averages (and one frequency) add only by power.`,
-        `Bands, Hz: ${bands}; each averaged over ${BAND_POINTS} frequencies, with more where the room modes sum.`,
+        `Bands, Hz: ${bands}. Each averages over ${BAND_POINTS} frequencies.`,
         `The floor stats leave out ${STATS_CLEARANCE_FT} ft around every box.`,
       ],
     ],

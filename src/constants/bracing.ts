@@ -132,7 +132,7 @@ export const BACK_JOINT_RAIL_NOTES = {
 /** How the tower's partitions meet its back, by the back's joint (their cutlist row). */
 export const BACK_JOINT_PARTITION_NOTES = {
   screwed:
-    "glue and screw to the sides, the baffle to their front edges; the back screws to their rear edges (foam tape, no glue)",
+    "glue and screw to the sides and baffle. Screw the back to their rear edges (foam tape, no glue)",
   glued: "glue and screw to the sides and back, the baffle to their front edges",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** A saved design's back joint: one of the ids, else absent (the default). */

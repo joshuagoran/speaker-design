@@ -195,7 +195,7 @@ export function useConfigStore(collection: string) {
       await db.collection(collection).doc(id).delete();
       return true;
     } catch {
-      flash("Couldn't delete");
+      flash("The delete failed");
       return false;
     }
   };

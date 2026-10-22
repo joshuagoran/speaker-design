@@ -21,9 +21,6 @@ import { useStackOptimizer } from "./useStackOptimizer";
 import { STACK_TEXT } from "../../constants/stack";
 import type { SavedConfig, SpeakerSpec, StackDesign, StackMember, StackSpec } from "../../types";
 
-/** What the library's row says when a document holds no stack. */
-const MISSING_STACK_TEXT = "That save holds no stack";
-
 /**
  * The members left when member `k` goes: the ones that stood on it stand on the base where it stood (its pose added to
  * theirs, up to its bottom), and the later ones' references move down one.
@@ -165,12 +162,13 @@ export function useStack() {
     },
     store,
     snapshot: () => stackSnapshot(design),
+    /** whether a save holds a stack: the library lists only those */
+    holds: (c: SavedConfig) => stackFromSaved(c) !== null,
     /** opens a saved stack: the document's id and name, its members and its speakers */
     restore: (c: SavedConfig) => {
       const saved = stackFromSaved(c);
-      // a document without a stack (written elsewhere): left closed, with a word on the library's row
+      // the library lists only saves that hold a stack (`holds`)
       if (saved) replaceDesign(saved);
-      else store.flash(MISSING_STACK_TEXT);
     },
     setName: (name: string) => editStack((s) => ({ ...s, name })),
     /** sets the save the stack is open in, as its id; null: none (a new stack's draft id) */

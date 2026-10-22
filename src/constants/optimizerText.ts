@@ -67,7 +67,7 @@ export const CHANGE_NAMES = {
   midDriver: "mid driver",
   midBox: "mid box",
   hf: "HF",
-  highpass: "highpass",
+  highpass: "high-pass",
   crossovers: "crossovers",
   ampPower: "amp power",
   woofer: "woofer",

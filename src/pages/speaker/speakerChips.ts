@@ -150,7 +150,7 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
         ? [
             "warn",
             "Port too fast at full power",
-            `${port.peak.toFixed(1)} m/s at ${formatHz(port.hz)}, over the ${port.limit.toFixed(1)} m/s it takes. Use a larger port.`,
+            `${port.peak.toFixed(1)} m/s at ${formatHz(port.hz)}, over the ${port.limit.toFixed(1)} m/s limit.`,
             "speakerPortSpeed",
           ]
         : [

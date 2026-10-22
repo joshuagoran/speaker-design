@@ -15,7 +15,8 @@ import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
-import type { SaveRowWords } from "./saveRow";
+import { SAVE_ROW_TEXT, type SaveRowWords } from "./saveRow";
+import { PROJECT_NAMES } from "./pages";
 
 /** The coverage map's bands, by id: the ones a shared Space link may name. */
 export const COVERAGE_BAND_IDS = [
@@ -231,7 +232,7 @@ export const ARRIVAL_STATUS = { onTime: "onTime", close: "close", off: "off" } a
 /** The Space page's 1 m reference: it averages each placement with a modeled stack or speaker, not two stacks. */
 const SPACE_ONE_METER = "1 m from the Sources";
 const SPACE_ONE_METER_TIP =
-  "The mean level at ear height, 1 m in front of each Source that plays in the band, on its aim.";
+  "The mean level at ear height, 1 m in front of each Source, on its aim.";
 
 /** The Space page's "Measured at" choices' names: the PA's, with its own 1 m reference. */
 export const SPACE_LEVEL_REF_NAMES: Record<CoverageLevelRef, string> = {
@@ -271,6 +272,7 @@ const DELAY = "Delay";
 const MEASURED_AT = "Measured at";
 const TARGET_LEVEL = "Target level";
 const GAIN = "Gain";
+const FLOOR = "Floor";
 const SYSTEM_GAIN = "System gain";
 const CALCULATE_GAINS = "Calculate gains";
 const CALCULATE_DELAYS = "Calculate delays";
@@ -307,8 +309,8 @@ export const SPACE_TEXT = {
   openStack: (name: string) => `Stack: ${name}`,
   openSpeaker: (name: string) => `Speaker: ${name}`,
   /** under the Place list: signed out, and signed in with nothing saved */
-  noLibrary: "Sign in to place your saved stacks and speakers here too.",
-  noLibrarySaved: "Save a stack or speaker to place it here.",
+  noLibrary: "Sign in to place your saved Stacks and Speakers here too.",
+  noLibrarySaved: "Save a Stack or Speaker to place it here.",
   remove: "Remove",
   /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its gain, dB */
   placementSummary: (fromCenter: string, fromFront: string, level: string) =>
@@ -348,11 +350,12 @@ export const SPACE_TEXT = {
   feedTip: "A gain and a delay on this Source's signal (a fill under, and after, the mains).",
   ampPower: "Amp power",
   ampPowerHint: AMP_POWER_TIP,
-  ampPowerTip: `The space finds each speaker's limit from it. A **${MIRRORED}**, and a Speaker placed twice, share one figure.`,
+  ampPowerTip:
+    "The Space finds each speaker's limit from it. Every Source with the same Speaker shares one figure.",
   /** a band's amp power field: the band (or a passive network's bands) it is for */
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
   alignment: "Alignment",
-  alignmentHint: "The settings for each box and band, at the level and delay the space asks of it.",
+  alignmentHint: "The settings for each box and band, at the level and delay the Space asks of it.",
   alignmentTip: "A delay, an all-pass filter, or moving the box can give a time offset.",
   /** a band's filters, as a row's value: its corner and slope */
   highpass: (filter: string) => `High-pass ${filter}`,
@@ -376,7 +379,7 @@ export const SPACE_TEXT = {
   ear: "Ear height, ft",
   target: TARGET_LEVEL,
   /** the Target level's tooltip */
-  targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**, the level is lower above each crossover.`,
+  targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**, the level is quieter above each crossover.`,
   measuredAt: MEASURED_AT,
   systemGain: `${SYSTEM_GAIN}, dB`,
   systemGainTip: `The gain on all Sources together. A box plays at its limit when its **${GAIN}** and this add to 0.`,
@@ -398,7 +401,7 @@ export const SPACE_TEXT = {
     `The **${band}** band of the **${box}** limits the system.`,
   /** a band a hand-set gain puts past its limit, and how far, dB (already formatted) */
   overLimit: (band: string, box: string, db: string) =>
-    `The **${band}** band of the **${box}** is ${db} dB over its limit.`,
+    `The **${band}** band of the **${box}** is ${db} dB louder than its limit.`,
   targetCurve: "Target, band balance",
   arrivals: "Arrival at the listener",
   arrivalsTip: `Each box against the last main. Mains want 0 ms. A fill wants ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms.`,
@@ -412,7 +415,7 @@ export const SPACE_TEXT = {
   audienceMax: "Audience at full power",
   listener: "Listener",
   /** the share of the floor at or above a level against the target */
-  floorAtLeast: (db: string) => `Floor ≥ ${db} dB`,
+  floorAtLeast: (db: string) => `${FLOOR} ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
   listenerVs: "The listener against the target:",
@@ -460,8 +463,8 @@ export const SPACE_DETAILS = {
     "Drag a Source to move it.",
     "Drag its dot to turn it.",
     `Drag or tap to place the **${MAP_MARK_NAMES.listener}**.`,
-    `One frequency shows the interference between the Sources (below ${coherentHz} Hz).`,
-    `One frequency goes up to ${limitHz / 1000} kHz. Above ${coherentHz} Hz, it adds the Sources by power.`,
+    `**${UI_TEXT.oneFrequency}** shows the interference between the Sources below ${coherentHz} Hz.`,
+    `**${UI_TEXT.oneFrequency}** goes up to ${limitHz / 1000} kHz.`,
   ],
   levels: "Levels",
   /** the target in the band on show, where it is measured (`SPACE_LEVEL_REF_PLACE`), dB */
@@ -471,13 +474,12 @@ export const SPACE_DETAILS = {
   flat: `With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.flat]}**, every band has the same target.`,
   headroom: `A box plays at its limit when its **${GAIN}** and the **${SYSTEM_GAIN}** add to 0.`,
   turnDown: `**${CALCULATE_GAINS}** lowers **${SYSTEM_GAIN}** until no band is past its limit.`,
-  perBand:
-    "The map, the audience figures, Floor and Spread are for the band on show. Listener is in the lowest band.",
-  bandLevel: "Each band plays at its gain and its box's gain.",
+  perBand: `The map, the audience figures, **${FLOOR}**, and **${SPACE_TEXT.spread}** are for the band on show. **${SPACE_TEXT.listener}** is in the lowest band.`,
+  bandLevel: `Each band plays at its **${GAIN}** and its box's gain.`,
   audience: (clearanceFt: number) =>
     `**${SPACE_TEXT.audienceAverage}**: the mean over the floor (excluding ${clearanceFt} ft around each box).`,
   oneMeter: (place: string) =>
-    `${place}: the mean at ear height, 1 m in front of each Source that plays in the band, on its aim.`,
+    `${place}: the mean level at ear height, 1 m in front of each Source, on its aim.`,
   stages: "Stages",
   stageLines: [
     "Each stage is solid.",
@@ -504,8 +506,7 @@ export const SPACE_SAVE_WORDS = {
   savedList: "Saved Spaces",
   pick: (n: number) => `Saved Spaces (${n})`,
   noSaved: "No saved Spaces yet",
-  newFromTip:
-    "Starts a new Space, empty or from a preset. It replaces the current design. A preset brings its own room. A PA preset also sets the band balance to More bass.",
+  newFromTip: SAVE_ROW_TEXT.newFromTip(PROJECT_NAMES.space),
 } as const satisfies SaveRowWords;
 
 /** The name of each wall's and the ceiling's mesh in the 3D view (stack-view/buildSpaceScene), so a check can find them. */

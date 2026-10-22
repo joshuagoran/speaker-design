@@ -367,6 +367,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
             <SaveRow
               store={space.store}
               snapshot={space.snapshot}
+              holds={space.holds}
               restore={space.restore}
               name={name}
               onName={space.setName}
