@@ -132,6 +132,8 @@ export const RESPONSE_FREQS = logSpacedFrequencies(15, 20000, 120);
 const SILENT = 1e-4;
 /** pressure → nepers per meter from dB per meter */
 const NEPER_PER_DB = Math.LN10 / 20;
+/** What the air absorbs at `f`, Hz, nepers per meter (pressure): a slot's `air`, and the Space page's beam reach. */
+export const airNepersPerM = (f: number) => airDbPerM(f) * NEPER_PER_DB;
 
 /**
  * The reflections a path has taken, as an index into a slot's `refl`: 2 × the surface (0 none, then 1 + its place in
@@ -691,7 +693,7 @@ export function sceneSlots(
       directivity,
       refl,
       stageFade,
-      air: airDbPerM(f) * NEPER_PER_DB,
+      air: airNepersPerM(f),
       diffuse,
       modal: ms,
     };

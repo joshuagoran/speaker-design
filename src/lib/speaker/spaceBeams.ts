@@ -3,15 +3,17 @@
 // (lib/acoustics/coverage `directivityGain`), and how far its direct level falls `BEAM_FALL_DB` below its level at 1 m. Pure.
 import type { CoverageBand } from "../../types";
 import {
+  airNepers,
+  airNepersPerM,
   bandCenterHz,
   bandRangeHz,
   coverageFrequencies,
   directivityAt,
   directivityGain,
+  pathAmplitude,
   type SourceDirectivity,
 } from "../acoustics/coverage";
 import { abs } from "../acoustics/complex";
-import { airDbPerM } from "../acoustics/roomAcoustics";
 import { BEAM_EDGE_DB, BEAM_FALL_DB, BEAM_INNER_EDGE_DB } from "../../constants/space";
 import { METERS_PER_FOOT } from "../../constants/units";
 import { spaceOutputs, voiceId, type SpaceModel } from "./spaceCoverage";
@@ -75,16 +77,27 @@ export interface SpaceBeam {
 /** The bisection steps for a beam's reach: 1 to 10 m in 60 halvings is far finer than a draw needs. */
 const REACH_STEPS = 60;
 
+/** One frequency's share of a beam's direct level: its mean square at 1 m, by its share, and the air there, Np/m. */
+interface AxisPower {
+  ms: number;
+  air: number;
+}
+
 /**
  * Where a direct level on the axis falls `BEAM_FALL_DB` below its level at 1 m, m: the mean square at 1 m of each
- * frequency (by its share), each falling as 1/r² and by the air's absorption there, as the map has it. Without the air
- * that is 10^(BEAM_FALL_DB/20) m; the air only brings it nearer.
+ * frequency (by its share), each along the map's path (`pathAmplitude`, less the air's absorption, `airNepers`). Without
+ * the air that is 10^(BEAM_FALL_DB/20) m; the air only brings it nearer.
  */
-function reachM(meanSquares: readonly { ms: number; airDb: number }[]): number {
+function reachM(axisPowers: readonly AxisPower[]): number {
+  /** the mean square at `r` m */
+  const level = (r: number) =>
+    axisPowers.reduce(
+      (sum, { ms, air }) => sum + ms * pathAmplitude(r, 1, airNepers(air, r)) ** 2,
+      0,
+    );
+  const atOneM = level(1);
   /** the level at `r` m over the level at 1 m, as a power ratio */
-  const fall = (r: number) =>
-    meanSquares.reduce((sum, { ms, airDb }) => sum + ms * 10 ** ((-airDb * r) / 10), 0) /
-    (r * r * meanSquares.reduce((sum, { ms, airDb }) => sum + ms * 10 ** (-airDb / 10), 0));
+  const fall = (r: number) => level(r) / atOneM;
   const floor = 10 ** (-BEAM_FALL_DB / 10);
   let near = 1,
     far = 10 ** (BEAM_FALL_DB / 20);
@@ -115,12 +128,12 @@ export function spaceBeams(
     model.scene.modal?.crossoverHz ?? null,
   );
   /** each voice's mean square at 1 m on its axis at each frequency, by its share, with the air's absorption there */
-  const power = new Map<string, { ms: number; airDb: number }[]>();
+  const power = new Map<string, AxisPower[]>();
   freqs.forEach((f, i) => {
-    const airDb = airDbPerM(f);
+    const air = airNepersPerM(f);
     for (const [id, p] of Object.entries(spaceOutputs(model, f)))
       if (p && abs(p) > 0)
-        power.set(id, [...(power.get(id) ?? []), { ms: shares[i] * abs(p) ** 2, airDb }]);
+        power.set(id, [...(power.get(id) ?? []), { ms: shares[i] * abs(p) ** 2, air }]);
   });
   const range = bandRangeHz(band, freqHz);
   const f = bandCenterHz(band, freqHz);
@@ -133,9 +146,9 @@ export function spaceBeams(
       if (band !== "one" && !playsInBand([bandPassband(speakerBand, member.crossover)], range))
         return [];
       const id = voiceId(box, d);
-      const meanSquares = power.get(id);
+      const axisPowers = power.get(id);
       const voice = model.scene.voices.find((v) => v.id === id);
-      if (!meanSquares || !voice) return [];
+      if (!axisPowers || !voice) return [];
       const directivity = directivityAt(voice.pattern, f, voice.boxWIn);
       return [
         {
@@ -144,7 +157,7 @@ export function spaceBeams(
           pitch: d.pitch,
           edges6: beamEdges(directivity, BEAM_EDGE_DB),
           edges3: beamEdges(directivity, BEAM_INNER_EDGE_DB),
-          reachFt: reachM(meanSquares) / METERS_PER_FOOT,
+          reachFt: reachM(axisPowers) / METERS_PER_FOOT,
         },
       ];
     }),

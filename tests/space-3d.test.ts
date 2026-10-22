@@ -16,7 +16,13 @@ import {
 import { FRAME_BOX_KEY } from "../src/components/stack-view/sceneFraming";
 import { buildMembersScene } from "../src/components/stack-view/buildMembersScene";
 import { beamHalfAngles, spaceBeams, type SpaceBeam } from "../src/lib/speaker/spaceBeams";
-import { directivityAt, directivityGain } from "../src/lib/acoustics/coverage";
+import {
+  airNepers,
+  directivityAt,
+  directivityGain,
+  pathAmplitude,
+  sceneSlots,
+} from "../src/lib/acoustics/coverage";
 import { placementFrame } from "../src/lib/speaker/spaceLayout";
 import { waveguideHalfAngles } from "../src/lib/acoustics/directivity";
 import { spaceFromStart } from "../src/pages/space/useSpace";
@@ -341,6 +347,18 @@ describe("Space 3D view: the PA stack preset", () => {
     for (const b of spaceBeams(model, "high", 1000)) {
       expect(b.reachFt * METERS_PER_FOOT).toBeLessThan(10 ** (BEAM_FALL_DB / 20));
       expect(b.reachFt * METERS_PER_FOOT).toBeGreaterThan(1);
+    }
+  });
+
+  test("a beam's reach and the map's direct path agree on the level there", () => {
+    for (const f of [1000, 4000, 16000]) {
+      // the map's slot at this frequency: its air's absorption, as its direct paths take it off
+      const [slot] = sceneSlots(model.scene, [f], false, () => ({}));
+      for (const b of spaceBeams(model, "one", f)) {
+        const r = b.reachFt * METERS_PER_FOOT;
+        const direct = (pathM: number) => pathAmplitude(pathM, 1, airNepers(slot.air, pathM));
+        expect(20 * Math.log10(direct(1) / direct(r))).toBeCloseTo(BEAM_FALL_DB, 6);
+      }
     }
   });
 
