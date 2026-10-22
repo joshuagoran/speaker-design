@@ -3,7 +3,7 @@ import { MAP_DRAG_UPDATE_MS } from "../../constants/space";
 import { alpha, ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
-import { formatSigned } from "../../lib/format";
+import { formatSigned, formatDb } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/acoustics/coverage";
 import { materialAlpha } from "../../lib/acoustics/roomAcoustics";
 import type {
@@ -413,7 +413,7 @@ export function CoverageMap({
         </span>
         <span className="tabular-nums text-stone-900">
           {readout != null && hover && view
-            ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${readout.toFixed(1)} dB (${formatSigned(readout - view.target)})`
+            ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${formatDb(readout)} dB (${formatSigned(readout - view.target)})`
             : `Color: ${SCALE_UNIT}`}
         </span>
       </div>

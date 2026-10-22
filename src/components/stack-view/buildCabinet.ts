@@ -4,9 +4,7 @@ import { ROUNDOVER_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import { NO_WALL_OPENINGS, openingRect, panelPieces, type WallOpenings } from "./wallCuts";
 import type { Dims3 } from "../../types";
-
-/** The baffle's thickness, in: ¾″ ply, whatever the walls are. */
-export const BAFFLE_THICKNESS_IN = 0.75;
+import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
 
 /** The radius of the frame's baffle's corners, in: an opening that reaches a corner has at least this one. */
 export const BAFFLE_CORNER_IN = 0.12;
@@ -47,7 +45,7 @@ export function buildCabinet(
 ): { baffleZ: number; top: number } {
   const { shell, baffle: baffleMat, inner } = ctx.materials;
   const { wall: T, inset: REVEAL, cutaway } = ctx;
-  const BT = BAFFLE_THICKNESS_IN,
+  const BT = BAFFLE_PLY_IN,
     RO = ROUNDOVER_IN;
   if (archTop) {
     const R = w / 2,

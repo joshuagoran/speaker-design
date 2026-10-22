@@ -11,6 +11,7 @@ import {
   type StoredCutlistProject,
 } from "../../constants/cutlistProjects";
 import { savedPanelExactIn } from "../../lib/build/panel";
+import { CORNER_JOINT } from "../../constants/cutParts";
 
 /** Where this browser keeps each project's cutlist choices. */
 const STORE_KEYS = {
@@ -24,7 +25,7 @@ type StoredCutlist = CutlistSettings & { exactIn: PanelExactIn };
 /** A stored project's cutlist choices on first load: butt-jointed pairs, the PA cutlist's sheet and cut defaults. */
 const STORED_CUTLIST_DEFAULTS: CutlistSettings = {
   ...CUTLIST_DEFAULTS,
-  joint: "butt",
+  joint: CORNER_JOINT.butt,
   sheet: "4x8",
   stacks: 2,
 };
@@ -34,7 +35,9 @@ const fromStored =
   (project: CutlistProject) =>
   (c: Partial<StoredCutlist>): StoredCutlist => {
     const joint =
-      c.joint === "rabbet" || c.joint === "miter" ? c.joint : STORED_CUTLIST_DEFAULTS.joint;
+      c.joint === CORNER_JOINT.rabbet || c.joint === CORNER_JOINT.miter
+        ? c.joint
+        : STORED_CUTLIST_DEFAULTS.joint;
     const sets: readonly number[] = project.sets;
     return {
       ...savedCutlist({ ...c, joint, waterfall: c.waterfall ?? STORED_CUTLIST_DEFAULTS.waterfall }),

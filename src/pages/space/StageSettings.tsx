@@ -129,6 +129,7 @@ export function StageSettings({
                 min={-half}
                 max={half}
                 step={0.5}
+                unit="ft"
                 onChange={(x) => actions.setBox(stage.id, { x })}
               />
               <NumberField
@@ -137,6 +138,7 @@ export function StageSettings({
                 min={0}
                 max={room.lengthFt}
                 step={0.5}
+                unit="ft"
                 onChange={(y) => actions.setBox(stage.id, { y })}
               />
             </div>
@@ -147,6 +149,7 @@ export function StageSettings({
                 min={STAGE_MIN_SIDE_FT}
                 max={room.widthFt}
                 step={0.5}
+                unit="ft"
                 onChange={(w) => actions.setBox(stage.id, { w })}
               />
               <NumberField
@@ -155,6 +158,7 @@ export function StageSettings({
                 min={STAGE_MIN_SIDE_FT}
                 max={room.lengthFt}
                 step={0.5}
+                unit="ft"
                 onChange={(d) => actions.setBox(stage.id, { d })}
               />
               <NumberField
@@ -163,6 +167,7 @@ export function StageSettings({
                 min={STAGE_HEIGHT_FT[0]}
                 max={STAGE_HEIGHT_FT[1]}
                 step={0.5}
+                unit="ft"
                 onChange={(h) => actions.setHeight(stage.id, h)}
               />
             </div>

@@ -1,6 +1,7 @@
 // A driver entry dragged on the front drawing (drawings/SpeakerFront): where its group's center goes, as the spec's
 // `position` keeps it (across from the chamber's center line, up from its bottom), kept on the chamber's clear face and
 // rounded to the drag's step.
+import { clamp } from "../clamp";
 import type { FacePoint } from "../../types";
 import {
   driverSpots,
@@ -50,7 +51,8 @@ export function dragStart(
 }
 
 /** A value kept in a span. */
-const clamp = (v: number, [lo, hi]: Span) => Math.min(hi, Math.max(lo, v));
+/** `v` held within `span` */
+const clampToSpan = (v: number, [lo, hi]: Span) => clamp(v, lo, hi);
 /** A value rounded to the step. */
 const snap = (v: number, step: number) => Math.round(v / step) * step;
 
@@ -65,8 +67,8 @@ export function draggedPosition(
   step = DRAG_STEP_IN,
 ): FacePoint {
   const at = (v: number, span: Span) => {
-    const snapped = snap(clamp(v, span), step);
-    return snapped < span[0] - 1e-9 || snapped > span[1] + 1e-9 ? clamp(v, span) : snapped;
+    const snapped = snap(clampToSpan(v, span), step);
+    return snapped < span[0] - 1e-9 || snapped > span[1] + 1e-9 ? clampToSpan(v, span) : snapped;
   };
   return { xIn: at(start.xIn + delta.xIn, bounds.x), yIn: at(start.yIn + delta.yIn, bounds.y) };
 }

@@ -1,3 +1,4 @@
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
@@ -217,12 +218,20 @@ test("the vent's parts count as supports: a slot's shelf lifts the sides, its fi
   const hz = (style: PortStyle, id: string) =>
     subBoxBracing(box, 0.75, 0.75, style, cv, sub, "window").panels.find((p) => p.id === id)
       ?.bareHz ?? NaN;
-  assert.ok(hz("slots", "sideL") > hz("round2", "sideL"));
-  assert.ok(hz("slots", "bottom") > hz("round2", "bottom"));
+  assert.ok(hz(PORT_STYLE.slot, "sideL") > hz("round2", "sideL"));
+  assert.ok(hz(PORT_STYLE.slot, "bottom") > hz("round2", "bottom"));
   assert.ok(hz("vslots", "sideL") > hz("round2", "sideL"));
   assert.ok(hz("vslot1", "sideR") > hz("vslot1", "sideL"), "one duct, on the right");
   // a short slot (under DUCT_SUPPORT_MIN_SHARE of the depth) is left out
-  const short = subBoxBracing(box, 0.75, 0.75, "slots", vent({ slotH: 3, len: 4 }), sub, "window");
+  const short = subBoxBracing(
+    box,
+    0.75,
+    0.75,
+    PORT_STYLE.slot,
+    vent({ slotH: 3, len: 4 }),
+    sub,
+    "window",
+  );
   close(
     { name: "short" },
     short.panels.find((p) => p.id === "sideL")?.bareHz ?? NaN,
@@ -239,7 +248,7 @@ test("the notes under the Bracing setting name the cabinet and each panel left u
     { w: 30, h: 32, d: 18 },
     0.5,
     DEFAULT_PA.inset,
-    "slots",
+    PORT_STYLE.slot,
     { ...DEFAULT_PA.cVent, len: 4 },
     sub,
     "ribs",
@@ -362,7 +371,7 @@ test("ribs: a first pick one way doesn't lock a panel out of the other way when 
     { w: 20, h: 24, d: 22 },
     0.625,
     DEFAULT_PA.inset,
-    "slots",
+    PORT_STYLE.slot,
     { ...DEFAULT_PA.cVent, len: 14 },
     sub,
     "ribs",
@@ -414,7 +423,7 @@ test("rib rings: with a glued back, the back's rib lines up with the sides' and 
     { w: 22, h: 24, d: 22 },
     0.5,
     DEFAULT_PA.inset,
-    "slots",
+    PORT_STYLE.slot,
     { ...DEFAULT_PA.cVent, len: 4 },
     sub,
     "ribs",
@@ -438,7 +447,7 @@ test("short ribs and a short slot: the basket no longer keeps ribs off the sides
     box,
     0.5,
     DEFAULT_PA.inset,
-    "slots",
+    PORT_STYLE.slot,
     { ...DEFAULT_PA.cVent, len: 4 },
     sub,
     "ribs",
@@ -447,7 +456,7 @@ test("short ribs and a short slot: the basket no longer keeps ribs off the sides
     box,
     0.5,
     DEFAULT_PA.inset,
-    "slots",
+    PORT_STYLE.slot,
     { ...DEFAULT_PA.cVent, len: 4 },
     sub,
   );
@@ -544,7 +553,7 @@ test("rib depths: a long span takes deeper ribs where they lift it more for the 
     { w: 30, h: 32, d: 18 },
     0.5,
     DEFAULT_PA.inset,
-    "slots",
+    PORT_STYLE.slot,
     { ...DEFAULT_PA.cVent, len: 4 },
     sub,
     "ribs",
@@ -571,7 +580,7 @@ test("a rib counts only where it runs most of the panel: none shorter than RIB_M
         box,
         t,
         DEFAULT_PA.inset,
-        "slots",
+        PORT_STYLE.slot,
         { ...DEFAULT_PA.cVent, len },
         sub,
         "ribs",
@@ -595,26 +604,32 @@ test("a straight slot's fins run to the back, and the back's and top's ribs line
     cVent = { ...DEFAULT_PA.cVent, len: 8 };
   // the fins' lines, in from the left side (subVentLines' bottom)
   const fins = (box: { w: number; h: number; d: number }) =>
-    subVentLines(box, t, "slots", cVent).bottom;
+    subVentLines(box, t, PORT_STYLE.slot, cVent).bottom;
   const near = (xs: number[], ys: number[]) =>
     xs.length === ys.length && xs.every((x, i) => Math.abs(x - ys[i]) < 1e-9);
   // 30 × 24 × 22: the back's two ribs stand on the fins, up from them
   const wide = { w: 30, h: 24, d: 22 };
-  const b = subBoxBracing(wide, t, DEFAULT_PA.inset, "slots", cVent, sub, "ribs");
+  const b = subBoxBracing(wide, t, DEFAULT_PA.inset, PORT_STYLE.slot, cVent, sub, "ribs");
   const back = b.ribs.filter((r) => r.panel === "back");
   assert.ok(back.length === 1 && back[0].across === "x", JSON.stringify(back));
   assert.ok(near(back[0].at, fins(wide)), JSON.stringify(back[0].at));
   assert.ok(Math.abs(back[0].from - cVent.slotH) < 1e-9, `starts ${back[0].from}″ up`);
   // 30 × 34 × 22: the top's two ribs run front to back over the fins
   const tall = { w: 30, h: 34, d: 22 };
-  const top = subBoxBracing(tall, t, DEFAULT_PA.inset, "slots", cVent, sub, "ribs").ribs.filter(
-    (r) => r.panel === "top",
-  );
+  const top = subBoxBracing(
+    tall,
+    t,
+    DEFAULT_PA.inset,
+    PORT_STYLE.slot,
+    cVent,
+    sub,
+    "ribs",
+  ).ribs.filter((r) => r.panel === "top");
   assert.ok(top.length === 1 && top[0].across === "x", JSON.stringify(top));
   assert.ok(near(top[0].at, fins(tall)), JSON.stringify(top[0].at));
   // and the cutlist's fins run from the front to the back panel
   const fin = paSubBuild(
-    paSubBox(wide, "slots", cVent, { sub: sub.id, wall: t, inset: DEFAULT_PA.inset }),
+    paSubBox(wide, PORT_STYLE.slot, cVent, { sub: sub.id, wall: t, inset: DEFAULT_PA.inset }),
     "none",
   )
     .parts()

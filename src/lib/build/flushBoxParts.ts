@@ -18,6 +18,7 @@ import { cutoutNote, formatInches } from "../acoustics/boxModels";
 import { GRAIN_PRESETS, NOTE_SEP } from "./cutlist";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { passiveRadiatorShape } from "../acoustics/wooferBox";
+import { CORNER_JOINT } from "../../constants/cutParts";
 
 /** A driver's cutout note from its nominal size: the typical cutout, or the datasheet's where none is on file. */
 export const sizedCutout = (size: number) => {
@@ -32,7 +33,7 @@ export const joinNotes = (notes: readonly (string | false | null | undefined)[])
  * How far a flush box's baffle edge sits above the box bottom, in: a butt-jointed baffle covers the front edges, a
  * rabbeted or mitered one sits t/2 up in the rabbets.
  */
-const baffleEdgeIn = (joint: CornerJoint, t: number) => (joint === "butt" ? 0 : t / 2);
+const baffleEdgeIn = (joint: CornerJoint, t: number) => (joint === CORNER_JOINT.butt ? 0 : t / 2);
 /**
  * A height on a flush box's baffle, as the cutlist marks it on the loose panel: up from the baffle's own bottom edge
  * (`baffleEdgeIn`), from a height up from the box bottom.
@@ -115,7 +116,7 @@ export function radiatorCutoutNote(
 /** The baffle's roundover note: routed after glue-up but on a butt joint, and the warning past the stock's depth. */
 export const roundoverNote = (r: number, t: number, joint: CornerJoint) =>
   r > 0 &&
-  `${formatInches(r)}″ roundover on the front edges${joint === "butt" ? "" : " (rout after glue-up)"}${r > t + 1e-9 ? `${NOTE_SEP}roundover deeper than the ${formatInches(t)}″ stock: double the baffle up or glue hardwood strips along its edges` : ""}`;
+  `${formatInches(r)}″ roundover on the front edges${joint === CORNER_JOINT.butt ? "" : " (rout after glue-up)"}${r > t + 1e-9 ? `${NOTE_SEP}roundover deeper than the ${formatInches(t)}″ stock: double the baffle up or glue hardwood strips along its edges` : ""}`;
 
 /** The notes a flush box's panels carry: their cutouts and fittings, by panel. */
 export interface FlushBoxNotes {
@@ -165,7 +166,7 @@ export function flushBoxPanels(
     miter: `45° on both ends; ${rabbet("the front and rear edges")}`,
   }[joint];
   const faceNote = (where: "front" | "rear") =>
-    joint === "butt" ? `covers the ${where} edges` : `sits in the ${where} rabbets`;
+    joint === CORNER_JOINT.butt ? `covers the ${where} edges` : `sits in the ${where} rabbets`;
   return [
     {
       box,

@@ -2,7 +2,7 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { SHARE_ERROR, SHARE_FORMAT, SHARE_KIND, SHARE_VERSION } from "./constants/share";
-import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
+import type { CORNER_JOINT, CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
 import type {
   BACK_JOINT_NAMES,
@@ -851,7 +851,7 @@ export type PortStyle = VentKind | "vslot1";
 export type HighpassType = "BW24" | "LR24" | "BW48" | "LR48";
 export type PaLayout = "stack" | "pole" | "tower" | "satellite";
 /** How the cutlist joins the corners. */
-export type CornerJoint = "butt" | "rabbet" | "miter";
+export type CornerJoint = (typeof CORNER_JOINT)[keyof typeof CORNER_JOINT];
 export type PlywoodSheetKind = "4x8" | "5x5";
 
 /** A plywood sheet size in inches. */

@@ -1,7 +1,6 @@
 // What the driver mounts in front of a horn's throat flange (the aluminum plate, the plywood mount) share: the horn's
 // throat as drawn, the driver's bolt pattern, the bolts' holes and washers, and where a foot or base on the lid stops.
 import * as THREE from "three";
-import { MM_IN } from "./geometry";
 import { ROUNDOVER_IN } from "./stackHeights";
 import { HARDWARE_MESH_NAME } from "./buildHardware";
 import { hornBody } from "./hornBody";
@@ -9,13 +8,14 @@ import type { SceneContext } from "./sceneContext";
 import type { HornAxis } from "./buildHorn";
 import { cdBodySteps, stepsDia } from "../../lib/data";
 import type { CompressionDriver, Horn } from "../../types";
+import { IN_PER_MM } from "../../constants/units";
 
 /** The mounts' hardware and clearances, in. */
 export const MOUNT_FIT = {
   /** the clearance hole for the driver's bolts (M6 or 1/4-20): 9/32 in */
   boltHole: 9 / 32,
   /** how far a bolt's washer (or a button head's flange) reaches past its hole: the room a hole needs round it */
-  washerPast: 6 * MM_IN,
+  washerPast: 6 * IN_PER_MM,
   /** a foot or base on the lid stays this far under the driver, else it stops in front of the driver */
   driverGap: 1 / 16,
   /** how far a foot or base stops short of a part on the lid behind it (the horn's binding posts) */
@@ -27,16 +27,16 @@ export const WASHER_R_IN = MOUNT_FIT.boltHole / 2 + MOUNT_FIT.washerPast;
 
 /** How close to the throat plane a vertex counts as on it, and how far off the flange's rim one counts as at it, in. */
 const ON_PLANE_IN = 1e-4;
-const RIM_TOL_IN = 1 * MM_IN;
+const RIM_TOL_IN = 1 * IN_PER_MM;
 /** A drawn horn whose back face reaches this much past its throat has a flange there, in. */
 const FLANGE_MIN_IN = 0.25;
 /**
  * A drilled hole's edge: the flange's back-face points between the throat and the rim (by more than `RIM_TOL_IN`),
  * linked into one hole while each is this close to another, in.
  */
-const HOLE_LINK_IN = 4 * MM_IN;
+const HOLE_LINK_IN = 4 * IN_PER_MM;
 /** A driver bolt lands on a drilled hole when it is this close to the hole's center, in. */
-const HOLE_MATCH_IN = 2 * MM_IN;
+const HOLE_MATCH_IN = 2 * IN_PER_MM;
 
 /** A point across the throat, in the axis' frame (x across, y up from the axis). */
 export interface XY {

@@ -1,4 +1,15 @@
 import type { Dims3 } from "../types";
+import { DELAY_DECIMALS } from "../constants/speakerSteps";
+
+/** Formats a delay, ms, without its unit: to `DELAY_DECIMALS` places, as every delay shows. */
+export const formatDelayMs = (ms: number): string => ms.toFixed(DELAY_DECIMALS);
+
+/** A delay, ms, rounded to what a delay field shows (`DELAY_DECIMALS` places). */
+export const roundDelayMs = (ms: number): number =>
+  Math.round(ms * 10 ** DELAY_DECIMALS) / 10 ** DELAY_DECIMALS;
+
+/** Formats a level, dB, without its unit: to one decimal, as every level readout shows. */
+export const formatDb = (db: number): string => db.toFixed(1);
 
 /** Formats an amount as whole US dollars, e.g. $1,234. */
 export const formatDollars = (x: number): string => `$${Math.round(x).toLocaleString()}`;

@@ -2,6 +2,7 @@ import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { MAX_OUTPUT_BOT, MAX_OUTPUT_TOP } from "../../constants/chartScales";
 import { useState } from "react";
+import { formatDb } from "../../lib/format";
 
 /** One curve point: frequency in Hz, level in dB. */
 type CurvePoint = readonly [hz: number, db: number];
@@ -132,8 +133,8 @@ export function OptimizerCurveChart({
             );
           })()}
           <text x={L} y={9} fontSize="8.5" fill={pal.ink}>
-            {hov.f.toFixed(0)} Hz: {hov.h1[1].toFixed(0)} dB
-            {hov.h2 ? ` · yours ${hov.h2[1].toFixed(0)} dB` : ""}
+            {hov.f.toFixed(0)} Hz: {formatDb(hov.h1[1])} dB
+            {hov.h2 ? ` · yours ${formatDb(hov.h2[1])} dB` : ""}
           </text>
         </>
       ) : (

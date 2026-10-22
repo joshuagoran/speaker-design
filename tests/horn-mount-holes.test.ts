@@ -8,21 +8,21 @@ import { plateFit, PLATE_MESH_NAMES } from "../src/components/stack-view/buildPl
 import { plyMountFit } from "../src/components/stack-view/buildPlyMount";
 import { BRACKET_MESH_NAME } from "../src/components/stack-view/buildBracket";
 import { BOLT_TURNS, type XY } from "../src/components/stack-view/throatFit";
-import { MM_IN } from "../src/components/stack-view/geometry";
 import { HORN_MESH_NAME } from "../src/components/stack-view/buildHorn";
 import { HORN_MESHES } from "../src/data/meshes";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { base, meshed, meshesNamed, scene } from "./mount-helpers";
 import type { Horn, PartMesh } from "../src/types";
+import { IN_PER_MM } from "../src/constants/units";
 
 /** How far a bolt may sit from a hole's center and still be on it, in. */
-const ON_HOLE_IN = 0.5 * MM_IN;
+const ON_HOLE_IN = 0.5 * IN_PER_MM;
 /** Back-face points this close to each other belong to one hole's edge, in. */
-const HOLE_LINK_IN = 4 * MM_IN;
+const HOLE_LINK_IN = 4 * IN_PER_MM;
 
 /** A mesh's drilled holes, read off its back face (z = 0) between the throat and the rim: each hole's center, in. */
 function meshHoles(mesh: PartMesh): XY[] {
-  const k = mesh.unitMm * MM_IN;
+  const k = mesh.unitMm * IN_PER_MM;
   const face: (XY & { r: number })[] = [];
   for (let i = 0; i < mesh.positions.length; i += 3)
     if (mesh.positions[i + 2] === 0) {
@@ -32,7 +32,7 @@ function meshHoles(mesh: PartMesh): XY[] {
   const rim = Math.max(...face.map((p) => p.r));
   const throat = Math.min(...face.map((p) => p.r));
   let groups: XY[][] = [];
-  for (const p of face.filter((q) => q.r > throat + 1 * MM_IN && q.r < rim - 1 * MM_IN)) {
+  for (const p of face.filter((q) => q.r > throat + 1 * IN_PER_MM && q.r < rim - 1 * IN_PER_MM)) {
     const near = groups.filter((h) =>
       h.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < HOLE_LINK_IN),
     );
@@ -97,9 +97,9 @@ const LEVEL_HORN: Horn = {
   ...rx28,
   id: "test_level_two_hole",
   size: {
-    w: (LEVEL_MESH.max[0] - LEVEL_MESH.min[0]) * MM_IN,
-    h: (LEVEL_MESH.max[1] - LEVEL_MESH.min[1]) * MM_IN,
-    d: LEVEL_MESH.max[2] * MM_IN,
+    w: (LEVEL_MESH.max[0] - LEVEL_MESH.min[0]) * IN_PER_MM,
+    h: (LEVEL_MESH.max[1] - LEVEL_MESH.min[1]) * IN_PER_MM,
+    d: LEVEL_MESH.max[2] * IN_PER_MM,
   },
 };
 beforeAll(() => {
@@ -115,7 +115,7 @@ describe("bolts through the mounts sit on the flange's holes", () => {
     expect(holes).toHaveLength(2);
     for (const h of holes) {
       expect(Math.abs(h.y)).toBeLessThan(ON_HOLE_IN);
-      expect(Math.abs(h.x)).toBeCloseTo(38 * MM_IN, 2);
+      expect(Math.abs(h.x)).toBeCloseTo(38 * IN_PER_MM, 2);
     }
   });
 
@@ -143,7 +143,7 @@ describe("bolts through the mounts sit on the flange's holes", () => {
     for (const cd of CD_OPTIONS.filter((c) => c.exit === LEVEL_HORN.exit && c.body.bolts.n === 2)) {
       const fit = plateFit(LEVEL_HORN, cd, base.mid.box.w);
       // only a pair on the holes' 76 mm circle lands on them
-      const onCircle = Math.abs(cd.body.bolts.circle / 2 - 38 * MM_IN) < ON_HOLE_IN;
+      const onCircle = Math.abs(cd.body.bolts.circle / 2 - 38 * IN_PER_MM) < ON_HOLE_IN;
       if (!onCircle) {
         expect(fit, `${cd.id}: off the holes' circle`).toBeNull();
         continue;

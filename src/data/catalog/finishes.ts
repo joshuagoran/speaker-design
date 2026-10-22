@@ -5,6 +5,9 @@ import type { CabinetFinish, FinishId, PaintSwatch } from "../../types";
 /** The near-black paint: the generic PA boxes' cabinet and baffle. */
 export const NEAR_BLACK_PAINT = "#2b2725";
 
+/** The deep green paint: the default baffle color. */
+export const DEEP_GREEN_PAINT = "#4a5d4e";
+
 export const PAINT_SWATCHES: readonly PaintSwatch[] = [
   ["#e8b4a8", "Dusty pink"],
   [NEAR_BLACK_PAINT, "Near black"],
@@ -13,7 +16,7 @@ export const PAINT_SWATCHES: readonly PaintSwatch[] = [
   ["#8fa3ad", "Slate blue"],
   ["#b23a2f", "Oxide red"],
   ["#efe8dc", "Bone"],
-  ["#4a5d4e", "Deep green"],
+  [DEEP_GREEN_PAINT, "Deep green"],
 ];
 
 export const CABINET_FINISHES: Record<FinishId, CabinetFinish> = {

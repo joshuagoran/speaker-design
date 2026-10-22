@@ -1,4 +1,7 @@
 // The default designs and parts, as whole objects: the drivers are the table entries themselves.
+import { PORT_STYLE } from "../constants/portStyles";
+import { FINISH_ID } from "../constants/finishes";
+import { DEEP_GREEN_PAINT } from "../data/catalog/finishes";
 import {
   A460G2_14,
   B15,
@@ -83,6 +86,7 @@ import {
 } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
+import { CORNER_JOINT } from "../constants/cutParts";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
@@ -124,7 +128,7 @@ export const DEFAULT_PA = {
   cd: N314T,
   horn: A460G2_14,
   midBox: B15,
-  portStyle: "slots",
+  portStyle: PORT_STYLE.slot,
   cDim: { w: 24, h: 32, d: 18 },
   cVent: { slotH: 3, nt: 2, dia: 4.25, throat: 2, len: 14 },
   hpf: 31,
@@ -146,10 +150,10 @@ export const DEFAULT_PA = {
   hardware: DEFAULT_HARDWARE,
   backJoint: DEFAULT_BACK_JOINT,
   hornMount: HORN_MOUNT_DEFAULT,
-  baffleColor: "#4a5d4e",
-  cabFinish: "birch",
+  baffleColor: DEEP_GREEN_PAINT,
+  cabFinish: FINISH_ID.birch,
   spacerH: 20,
-  joint: "butt",
+  joint: CORNER_JOINT.butt,
   ...CUTLIST_DEFAULTS,
   exactIn: {},
   midSize: 12,
@@ -165,7 +169,7 @@ export const DEFAULT_HIFI = {
   woofer: SB17NRX,
   tweeter: SB26STCN,
   selectedWaveguide: ST260,
-  boxType: "vented",
+  boxType: VENT_KIND.vented,
   boxDims: { w: 9, h: 15, d: 11 },
   wallPanel: "3/4",
   panelExactIn: {},
@@ -201,7 +205,7 @@ export const DEFAULT_HIFI_LOOK = {
 /** The default fill design. */
 export const DEFAULT_FILL = {
   driver: BC10CXN64,
-  boxType: "vented",
+  boxType: VENT_KIND.vented,
   boxDims: { w: 11.5, h: 16, d: 11 },
   portSpec: { n: 1, dia: 3, len: 4 },
   highpassHz: 70,

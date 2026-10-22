@@ -2,6 +2,7 @@
 // its size and length, the model's vent and net air by the PA slot rule and the PA sub box's sum, the cutlist's pieces
 // and the 3D view's fins match. And a letterbox built from the settings with another fin count carries it into the
 // cutlist, the model and the views.
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import * as THREE from "three";
@@ -29,6 +30,7 @@ import { DEFAULT_PA } from "../src/lib/defaults";
 import { PA_SLOT_FINS, PORT_SHAPE, VENT_KIND } from "../src/constants/speakerSpec";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import type { CutPart, Dims3, SpeakerChamber, SpeakerSpec } from "../src/types";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 /** A cutlist's pieces by part and size: each part's count at each size (the box, row and note aside). */
 function pieces(parts: readonly CutPart[]) {
@@ -70,7 +72,7 @@ function letterboxOf(spec: SpeakerSpec) {
 }
 
 test("the Speaker page's PA sub matches the PA design's: fins, slot, vent, net air, cutlist and 3D fins", () => {
-  assert.equal(DEFAULT_PA.portStyle, "slots", "the PA's starting sub has the letterbox");
+  assert.equal(DEFAULT_PA.portStyle, PORT_STYLE.slot, "the PA's starting sub has the letterbox");
   const pa = paSub();
   const spec = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
   const { chamber, port } = letterboxOf(spec);
@@ -99,7 +101,7 @@ test("the Speaker page's PA sub matches the PA design's: fins, slot, vent, net a
   const netL = paSubNetAir(pa.cfg);
   assert.ok(Math.abs(net - netL) < 1e-9 * netL, `net ${net}`);
   // the cutlist: the PA design's sub's pieces, the fins among them
-  const parts = speakerCutParts(spec.cabinet, "butt").parts;
+  const parts = speakerCutParts(spec.cabinet, CORNER_JOINT.butt).parts;
   assert.deepEqual(pieces(parts), pieces(pa.parts));
   const fins = parts.find((p) => p.part === "ductFin");
   assert.equal(fins?.qty, PA_SLOT_FINS);
@@ -142,7 +144,9 @@ test("a letterbox's fin count reaches the cutlist, the model and the views", () 
     const vent = chamberVentModel(s.cabinet, c);
     assert.ok(vent && Math.abs(vent.areaIn2 - port.h * (iw - fins * t)) < 1e-9, `${fins}: area`);
     // the cutlist: that many fins, none for none
-    const row = speakerCutParts(s.cabinet, "butt").parts.find((p) => p.part === "ductFin");
+    const row = speakerCutParts(s.cabinet, CORNER_JOINT.butt).parts.find(
+      (p) => p.part === "ductFin",
+    );
     assert.equal(row?.qty ?? 0, fins, `${fins}: cutlist`);
     // the 3D view: that many fins, and the front drawing's openings between them
     assert.equal(finsIn(buildSpeakerScene({ spec: s, cutaway: true }), t, port.h), fins);
@@ -175,7 +179,7 @@ test("a high fin count is held to what the width takes: the area stays positive,
   const vent = chamberVentModel(s.cabinet, c);
   assert.ok(vent && vent.areaIn2 > 0 && Number.isFinite(vent.endCorrectionIn));
   assert.ok(Math.abs(vent.areaIn2 - port.h * (iw - most * t)) < 1e-9);
-  const row = speakerCutParts(s.cabinet, "butt").parts.find((p) => p.part === "ductFin");
+  const row = speakerCutParts(s.cabinet, CORNER_JOINT.butt).parts.find((p) => p.part === "ductFin");
   assert.equal(row?.qty, most);
   assert.equal(finsIn(buildSpeakerScene({ spec: s, cutaway: true }), t, port.h), most);
 });

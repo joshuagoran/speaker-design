@@ -8,7 +8,7 @@ import { buildCabinet } from "../src/components/stack-view/buildCabinet";
 import { buildHardware } from "../src/components/stack-view/buildHardware";
 import { buildHorn } from "../src/components/stack-view/buildHorn";
 import { paConeRadius } from "../src/components/stack-view/buildCone";
-import { circlePath, MM_IN } from "../src/components/stack-view/geometry";
+import { circlePath } from "../src/components/stack-view/geometry";
 import { HORN_MESHES } from "../src/data/meshes";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
@@ -17,6 +17,7 @@ import { paDesignWith, paMidBuild } from "./pa-build";
 import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "../src/constants/paLayouts";
 import { SCENE_CASE_NAMES, sceneCases } from "./scene-cases";
 import type { CompressionDriver, PaLayout, PartMesh } from "../src/types";
+import { IN_PER_MM } from "../src/constants/units";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
 export const CONTACT_IN = 0.01;
@@ -166,13 +167,13 @@ export function hornSamples(body: THREE.Mesh, near: THREE.Box3) {
 
 /** The throat flange of a horn's CAD mesh, in: its rim radius and its front face's z from the back face. */
 export function meshFlange(mesh: PartMesh) {
-  const k = mesh.unitMm * MM_IN;
+  const k = mesh.unitMm * IN_PER_MM;
   const v = Array.from({ length: mesh.positions.length / 3 }, (_, i) => ({
     r: Math.hypot(mesh.positions[3 * i], mesh.positions[3 * i + 1]) * k,
     z: mesh.positions[3 * i + 2] * k,
   }));
   const rim = Math.max(...v.filter((p) => p.z === 0).map((p) => p.r));
-  const front = Math.min(...v.filter((p) => p.z > 0 && p.r > rim - 1 * MM_IN).map((p) => p.z));
+  const front = Math.min(...v.filter((p) => p.z > 0 && p.r > rim - 1 * IN_PER_MM).map((p) => p.z));
   return { rim, front };
 }
 

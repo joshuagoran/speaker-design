@@ -1,4 +1,5 @@
 // The PA designs many tests run: the saved seeds plus synthetic ones covering the options.
+import { PORT_STYLE } from "../src/constants/portStyles";
 import fs from "node:fs";
 import { SEED_NAMES } from "./seeds";
 import { B15 } from "../src/lib/data";
@@ -22,12 +23,12 @@ const synth = (
     { name: "synthetic: LR48 highpass", hpType: "LR48" },
     {
       name: "synthetic: slots",
-      portStyle: "slots",
+      portStyle: PORT_STYLE.slot,
       cVent: { slotH: 3, nt: 2, dia: 3.5, throat: 2, len: 12 },
     },
     {
       name: "synthetic: slots, folded",
-      portStyle: "slots",
+      portStyle: PORT_STYLE.slot,
       cVent: { slotH: 3, nt: 2, dia: 3.5, throat: 2, len: 20 },
     },
     {

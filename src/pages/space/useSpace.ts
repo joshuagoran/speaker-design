@@ -1,3 +1,4 @@
+import { clamp } from "../../lib/clamp";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import {
@@ -122,6 +123,7 @@ import type {
   StackDesign,
   StackSpec,
 } from "../../types";
+import { roundDelayMs } from "../../lib/format";
 
 /** The band the Listener readout is in: the lowest, whatever band is on show. */
 const LEVEL_BAND = "sub" satisfies CoverageBand;
@@ -137,9 +139,6 @@ type RoomFloor = Pick<SpaceVenue["room"], "widthFt" | "lengthFt">;
 
 /** Snaps to a quarter foot. */
 const snap = (v: number) => Math.round(v * 4) / 4;
-
-/** A value kept between `lo` and `hi`. */
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** A point kept on the room's floor, ft. */
 const inRoom = <P extends FloorPoint>(p: P, room: RoomFloor): P => ({
@@ -361,7 +360,10 @@ export function withCalculatedDelays(d: SpaceDesign): {
   design: SpaceDesign;
   notes: (DelayNote | null)[];
 } {
-  const { design, solved } = withSolvedFeeds(d, (p, s) => ({ ...p, delayMs: tenth(s.delayMs) }));
+  const { design, solved } = withSolvedFeeds(d, (p, s) => ({
+    ...p,
+    delayMs: roundDelayMs(s.delayMs),
+  }));
   return { design, notes: solved.map((s) => s.delayNote) };
 }
 

@@ -193,8 +193,8 @@ test("space alignment: a delay as the distance sound travels in it, and as words
   // under the smallest delay, no delay; at it and above, the time and the distance
   assert.equal(delayText(0), SPACE_TEXT.noDelay);
   assert.equal(delayText(NO_DELAY_MS - 0.01), SPACE_TEXT.noDelay);
-  assert.equal(delayText(2), SPACE_TEXT.delayIs("2.0", String(Math.round(delayDistanceIn(2)))));
-  assert.equal(delayText(2), SPACE_TEXT.delayIs("2.0", "27"));
+  assert.equal(delayText(2), SPACE_TEXT.delayIs("2.00", String(Math.round(delayDistanceIn(2)))));
+  assert.equal(delayText(2), SPACE_TEXT.delayIs("2.00", "27"));
   assert.notEqual(delayText(NO_DELAY_MS), SPACE_TEXT.noDelay);
 });
 

@@ -258,10 +258,10 @@ export const ONE_WATT_VOLTS = 2.83;
 export const SPEAKER_RESPONSE_VOLTS = ONE_WATT_VOLTS;
 
 /**
- * How far in front of a stack its response is worked out, m: there the members' paths differ as a listener hears them
- * (lib/speaker/stackResponse).
+ * How far in front of a stack its boxes are summed, m: the point where its response is worked out, not a listener. There
+ * the members' paths differ as they would at a distance (lib/speaker/stackResponse).
  */
-export const STACK_LISTEN_DISTANCE_M = 4;
+export const STACK_SUM_POINT_M = 4;
 
 /** The saved speakers' collection under users/{uid} (the speaker library). */
 export const SPEAKERS_COLLECTION = "speakers";
