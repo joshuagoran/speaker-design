@@ -2,6 +2,7 @@
 // with its phase, and the grid every dispersion map is sampled on. Pure functions, no DOM.
 import { complex, divide } from "./complex";
 import { keeleFrequency } from "./boxModels";
+import { BAFFLE_STEP_HZ_M } from "../../constants/acoustics";
 import type { Complex, HifiDispersionMap } from "../../types";
 import {
   DISPERSION_ANGLE_MAX_DEG,
@@ -14,7 +15,8 @@ const C = 343,
   IN = 0.0254;
 
 // ---- baffle step, placement, compensation (magnitude shelves; the baffle step also with its phase) ----
-export const baffleStepF3 = (baffleWIn: number) => 115 / (baffleWIn * IN); // −3 dB point, Hz
+/** The baffle step's −3 dB point for a baffle `baffleWIn` inches wide, Hz (`BAFFLE_STEP_HZ_M`). */
+export const baffleStepF3 = (baffleWIn: number) => BAFFLE_STEP_HZ_M / (baffleWIn * IN);
 // the same step with its phase: the first-order shelf 0.5 (1 + 2jx) / (1 + jx), whose magnitude is baffleStepGain
 export function baffleStepShelf(f: number, baffleWIn: number): Complex {
   const x = (0.707 * f) / baffleStepF3(baffleWIn);

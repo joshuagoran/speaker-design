@@ -19,6 +19,7 @@ import {
   SPEED_OF_SOUND,
 } from "../../constants/acoustics";
 import {
+  baffleStepF3,
   logSpacedFrequencies,
   mouthGain,
   mouthPlane,
@@ -107,8 +108,16 @@ export const QUICK_BAND_POINTS = 4;
 export const COHERENT_BELOW_HZ = 500;
 /** the single-frequency view's range, Hz: above `COHERENT_BELOW_HZ` it adds by power, as the bands do */
 export const SINGLE_FREQ_RANGE: [number, number] = [20, 16000];
-/** A box shadows what's behind its cone: rule of thumb, −3 dB here and 6 dB/oct above. */
-export const BOX_SHADOW_HZ = 150;
+/**
+ * How much of a cone's or a mouth's sound a box `boxWIn` inches wide lets reach behind it at `f`, pressure: −3 dB at
+ * its baffle step's corner (`baffleStepF3`, from `BAFFLE_STEP_HZ_M`) and 6 dB/octave above. Below the corner the box is
+ * small against the wavelength and the sound wraps round it; above it the front gains the baffle step's 6 dB and the
+ * back keeps the level it had, so the back falls against the front from the same corner. Source for the step: Olson
+ * (1951), see `BAFFLE_STEP_HZ_M`. Our approximation: the first-order fall above the corner. Shortcomings: one width
+ * for the whole box (not its height, its depth, or where the driver sits on it); the fall is smooth, with no lobes
+ * from the box's edges; the box's back is no reflector.
+ */
+export const boxShadow = (f: number, boxWIn: number) => 1 / Math.hypot(1, f / baffleStepF3(boxWIn));
 /**
  * The modal sum takes modes up to this many times the highest wavenumber it is evaluated at, so the direct sound near
  * a box isn't smoothed away by the cutoff.
@@ -163,6 +172,8 @@ export type CoveragePattern =
 export interface CoverageVoice {
   id: string;
   pattern: CoveragePattern;
+  /** the width of the box it plays from, in: it sets how much of its sound reaches behind the box (`boxShadow`) */
+  boxWIn: number;
 }
 
 /** A driver as a scene places it: its voice, where it is (m: x across from the center line, y down the room, z up), its aim. */
@@ -235,7 +246,8 @@ export interface CoverageSlot {
   hornHalf: Partial<Record<CoverageVoice["id"], [h: number, v: number]>>;
   /** each mouth's planes, across and up (lib/acoustics/directivity `mouthPlane`) */
   mouthPlanes: Partial<Record<CoverageVoice["id"], [MouthPlane, MouthPlane]>>;
-  shadow: number;
+  /** each voice's share of its sound behind its box (`boxShadow`) */
+  shadow: Partial<Record<CoverageVoice["id"], number>>;
   /** pressure each kind of path keeps after its reflections, by SceneSource.refl */
   refl: Float64Array;
   /** how much of each stage's barrier loss (dB) holds here: none where the stage is small against the wavelength */
@@ -519,7 +531,8 @@ export function sceneSlots(
       const v = out[id];
       if (v && Math.hypot(v.re, v.im) < loudest * SILENT) delete out[id];
     }
-    const shadow = 1 / Math.hypot(1, f / BOX_SHADOW_HZ);
+    const shadow: CoverageSlot["shadow"] = {};
+    for (const { id, boxWIn } of voices) shadow[id] = boxShadow(f, boxWIn);
     // what each kind of path keeps: its side or ceiling's reflection, times the floor's when it bounces off it too
     const floor = floorReflection(room, f),
       refl = new Float64Array(REFL_ROOM + 2 * scene.reflectors.length);
@@ -557,7 +570,7 @@ export function sceneSlots(
           const v = out[id],
             half = hornHalf[id];
           if (!v) continue;
-          const q = half ? hornQ(half) : pistonQ(ka[id] ?? 0, shadow);
+          const q = half ? hornQ(half) : pistonQ(ka[id] ?? 0, shadow[id] ?? 1);
           diffuse +=
             ((count[id] ?? 0) * 16 * Math.PI * (v.re * v.re + v.im * v.im) * (1 - abs.alpha) ** 2) /
             (q * abs.area);
@@ -874,10 +887,10 @@ export function levelAtPoint(
       if (half) d = waveguideGain(geo[g + 1], geo[g + 2], half);
       else if (planes) {
         d = mouthGain(geo[g + 1], geo[g + 2], planes);
-        if (geo[g + 4]) d *= sl.shadow;
+        if (geo[g + 4]) d *= sl.shadow[s.voice] ?? 1;
       } else {
         d = pistonPattern((sl.ka[s.voice] ?? 0) * geo[g + 3]);
-        if (geo[g + 4]) d *= sl.shadow;
+        if (geo[g + 4]) d *= sl.shadow[s.voice] ?? 1;
       }
       const mag = (d * gain * Math.exp(-loss)) / r,
         // less the alignment, so the box's drivers arrive together at its alignment point

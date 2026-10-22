@@ -14,6 +14,16 @@ export const MODAL_SUBPOINTS = 4;
  */
 export const MODAL_SUBPOINTS_WHOLE_BAND = 2;
 
+/**
+ * The baffle step's corner, Hz·m: a box's front radiates into half space above about this over its width in meters,
+ * and into full space below it (−3 dB of the 6 dB step there). The step follows the box's size against the wavelength:
+ * H. F. Olson, "Direct Radiator Loudspeaker Enclosures", Audio Engineering (1951), measured it for many box shapes.
+ * The 115 is a common rule of thumb fitted to such curves, not Olson's own figure: an approximation. Shortcomings: it
+ * reads only the width (not the height or the depth, or where the driver sits) and gives one smooth first-order step,
+ * with none of the ripple real edges add.
+ */
+export const BAFFLE_STEP_HZ_M = 115;
+
 /** The density of air, kg/m³: the value every model in the app uses. */
 export const AIR_DENSITY = 1.18;
 

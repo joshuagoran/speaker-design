@@ -275,6 +275,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
             polaritySign(placement) *
             (item.stack ? polaritySign(item.stack.stack.members[d.member]) : 1),
           baffleWIn: d.part === DRIVER_PART.cone ? speakerLayout(d.speaker.cabinet).size.w : null,
+          boxWIn: speakerLayout(d.speaker.cabinet).size.w,
           share: 1 / (spots.get(`${d.member}/${d.band}`) ?? 1),
         });
       return [
@@ -296,7 +297,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
     placements,
     scene: sceneOf(
       design.space.venue.room,
-      list.map(({ id, pattern }) => ({ id, pattern })),
+      list.map(({ id, pattern, boxWIn }) => ({ id, pattern, boxWIn })),
       boxes,
       stageSolids(design.space.venue.stages).map((s) => ({
         corners: s.corners.map((p) => ({ x: p.x * METERS_PER_FOOT, y: p.y * METERS_PER_FOOT })),
