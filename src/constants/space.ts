@@ -1,5 +1,4 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
-import { AUTO_BALANCE_MODE, AUTO_BALANCE_MODE_LABEL } from "./autoBalance";
 import type {
   CoupledSurface,
   StageFace,
@@ -10,10 +9,27 @@ import type {
   RoomMaterial,
   RoomSurface,
 } from "../types";
+
+/**
+ * The Space's band balance options, by id: Flat (the default) or More bass, a target that is lower above each crossover
+ * (lib/speaker/spaceBalance). Saves keep these ids.
+ */
+export const BAND_BALANCE = {
+  flat: "flat",
+  moreBass: "moreBass",
+} as const;
+export type BandBalance = (typeof BAND_BALANCE)[keyof typeof BAND_BALANCE];
+
+/** The band balance options' labels, as the toggle shows them. */
+export const BAND_BALANCE_LABEL: Record<BandBalance, string> = {
+  [BAND_BALANCE.flat]: "Flat",
+  [BAND_BALANCE.moreBass]: "More bass",
+};
 import type { ToggleOption } from "../components/ui/ToggleGroup";
 import type { SurfaceName } from "../components/ui/RoomFields";
 import { COVERAGE_LEVEL_REF, COVERAGE_LEVEL_REF_PLACE, COVERAGE_LEVEL_REFS } from "./coverageLevel";
 import { AMP_POWER_TIP } from "./ampPower";
+import { CALCULATE_GAINS_LABEL, GAIN_LABEL } from "./controlLabels";
 import type { SaveRowWords } from "./saveRow";
 
 /** The coverage map's bands, by id: the ones a shared Space link may name. */
@@ -269,9 +285,9 @@ export const MAP_MARK_NAMES = { listener: "Listener" } as const;
 const DELAY = "Delay";
 const MEASURED_AT = "Measured at";
 const TARGET_LEVEL = "Target level";
-const GAIN = "Gain";
+const GAIN = GAIN_LABEL;
 const SYSTEM_GAIN = "System gain";
-const CALCULATE_GAINS = "Calculate gains";
+const CALCULATE_GAINS = CALCULATE_GAINS_LABEL;
 const CALCULATE_DELAYS = "Calculate delays";
 
 /** A placement's Main / Fill choice, by whether it is a fill. */
@@ -351,14 +367,18 @@ export const SPACE_TEXT = {
   /** a band's amp power field: the band (or a passive network's bands) it is for */
   ampPowerFor: (bands: string) => `${bands}: amp power, W`,
   alignment: "Alignment",
-  alignmentHint: "The settings for each box and band, at the level and delay the space asks of it.",
+  alignmentHint: "The settings for each amp channel.",
   alignmentTip: "A delay, an all-pass filter or moving the box can give a time offset.",
   /** a band's filters, as a row's value: its corner and slope */
   highpass: (filter: string) => `High-pass ${filter}`,
   lowpass: (filter: string) => `Low-pass ${filter}`,
   fullRange: "Full range",
-  /** a band's level, dB (already formatted) */
+  /** a DSP output's total gain, dB (already formatted) */
   gainIs: (db: string) => `${GAIN} ${db} dB`,
+  /** a passive row's Pads in the box: each band and its Pad, dB (already formatted) */
+  padsAre: (pads: readonly string[]) => `Pads: ${pads.join(", ")}`,
+  /** one band's Pad, as `padsAre` lists it */
+  padIs: (band: string, db: string) => `${band} ${db} dB`,
   noDelay: "No delay",
   /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (in) */
   delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,
@@ -374,8 +394,12 @@ export const SPACE_TEXT = {
     "Contact changes the load on this box. The low end and its maximum output can change.",
   ear: "Ear height, ft",
   target: TARGET_LEVEL,
+  bandBalance: "Band balance",
+  /** the band balance's tooltip: the steps of More bass, dB, and the highest crossover that takes the first, Hz */
+  bandBalanceTip: (subStepDb: number, stepDb: number, subMaxHz: number) =>
+    `Flat: each band plays at the same level. More bass: each band is quieter than the band below it, ${subStepDb} dB at a crossover of ${subMaxHz} Hz or lower and ${stepDb} dB above ${subMaxHz} Hz.`,
   /** the Target level's tooltip */
-  targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${AUTO_BALANCE_MODE_LABEL[AUTO_BALANCE_MODE.moreBass]}**, the level is lower above each crossover.`,
+  targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${BAND_BALANCE_LABEL[BAND_BALANCE.moreBass]}**, the level is lower above each crossover.`,
   measuredAt: MEASURED_AT,
   systemGain: `${SYSTEM_GAIN}, dB`,
   systemGainTip: `The gain on all placements together. A box plays at its limit when its **${GAIN}** and this add to 0.`,
@@ -504,7 +528,7 @@ export const SPACE_SAVE_WORDS = {
   pick: (n: number) => `Saved Spaces (${n})`,
   noSaved: "No saved Spaces yet",
   newFromTip:
-    "Starts a new Space, empty or from a preset. It replaces the current design. A preset brings its own room. A PA preset also sets the band balance to More bass.",
+    "Starts a new Space, empty or from a preset. It replaces the current design. A preset brings its own room.",
 } as const satisfies SaveRowWords;
 
 /** The name of each wall's and the ceiling's mesh in the 3D view (stack-view/buildSpaceScene), so a check can find them. */

@@ -1,6 +1,7 @@
 // The Stack page's words (src/pages/stack).
 import { STACK_LISTEN_DISTANCE_M } from "./speakerSpec";
 import type { SaveRowWords } from "./saveRow";
+import { GAIN_LABEL } from "./controlLabels";
 
 export const STACK_TEXT = {
   /** the name a new stack starts with */
@@ -50,7 +51,7 @@ export const STACK_TEXT = {
   tiltTip:
     "Its tilt in the stack, + up, about its bottom front edge: a top angled down on its sub. The Space page's coverage uses it; the response here is on axis.",
   mirror: "Mirror image",
-  gain: "Gain",
+  gain: GAIN_LABEL,
   delay: "Delay",
   crossoverHint:
     "The filters ahead of this box, between boxes. In the stack they are the speaker's input range.",
@@ -65,6 +66,5 @@ export const STACK_SAVE_WORDS = {
   savedList: "Saved Stacks",
   pick: (n: number) => `Saved Stacks (${n})`,
   noSaved: "No saved Stacks yet",
-  newFromTip:
-    "Starts a new Stack, empty or from a preset. It replaces the current design. A PA start sets each band's level to the More bass band balance.",
+  newFromTip: "Starts a new Stack, empty or from a preset. It replaces the current design.",
 } as const satisfies SaveRowWords;

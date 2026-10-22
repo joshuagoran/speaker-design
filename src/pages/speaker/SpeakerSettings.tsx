@@ -17,7 +17,8 @@ import { HandleOffsetFields } from "../../components/ui/HandleFields";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { Notice } from "../../components/ui/Notice";
 import { BandDot } from "../../components/ui/BandDot";
-import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
+import { CalculateGainsButton } from "../../components/ui/CalculateGainsButton";
+import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import {
   BaffleColorPicker,
   CabinetFinishPicker,
@@ -323,11 +324,10 @@ export function SpeakerSettings({
                   Add band
                 </Button>
               </div>
-              <AutoBalanceButton
+              <CalculateGainsButton
                 balance={speakerPage.balance}
                 onApply={speakerPage.applyBalance}
-                mode={speakerPage.balanceMode}
-                onMode={speakerPage.setBalanceMode}
+                tip={AUTO_BALANCE_TEXT.speakerTip}
               />
             </>,
           )}

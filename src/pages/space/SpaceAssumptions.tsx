@@ -7,7 +7,7 @@ import {
   STATS_CLEARANCE_FT,
 } from "../../lib/acoustics/coverage";
 import { SPACE_DETAILS, SPACE_LEVEL_REF_PLACE } from "../../constants/space";
-import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
+import { BAND_BALANCE, type BandBalance } from "../../constants/space";
 import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
 import { sharedAssumptionGroups, stageSoundLines, type AssumptionGroup } from "./assumptionGroups";
 import type { CoverageLevelRef, SpaceVenue } from "../../types";
@@ -15,7 +15,7 @@ import type { CoverageLevelRef, SpaceVenue } from "../../types";
 interface Props {
   venue: Pick<SpaceVenue, "room" | "targetDb">;
   levelRef: CoverageLevelRef;
-  balance: AutoBalanceMode;
+  balance: BandBalance;
   /** the target in the band on show, dB */
   target: number;
 }
@@ -36,7 +36,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
           SPACE_LEVEL_REF_PLACE[levelRef],
           Math.round(target),
         ),
-        balance === AUTO_BALANCE_MODE.moreBass ? SPACE_DETAILS.moreBass : SPACE_DETAILS.flat,
+        balance === BAND_BALANCE.moreBass ? SPACE_DETAILS.moreBass : SPACE_DETAILS.flat,
         SPACE_DETAILS.headroom,
         SPACE_DETAILS.turnDown,
         SPACE_DETAILS.perBand,

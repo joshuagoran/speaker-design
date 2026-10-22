@@ -272,7 +272,7 @@ export function withStack(
 
 /**
  * A new space from a start: the empty space, or a preset read in as a space (a PA layout on the PA floor's starting
- * layout, or the Hi-fi pair in its room). A PA preset takes its music balance in its band Levels. Its id is the draft
+ * layout, or the Hi-fi pair in its room). A PA preset's bands start at their calculated Gains. Its id is the draft
  * id: no save.
  */
 export function spaceFromStart(start: DesignStart): SpaceDesign {
@@ -514,7 +514,7 @@ export async function withCalculatedGains(
     p.fill ? { ...p, levelDb: tenth(s.levelDb) } : p,
   );
   const filledModel = spaceModelLaidOut(filled);
-  const bands = bandHeadrooms(filledModel, 0);
+  const bands = bandHeadrooms(filledModel);
   const systemDb = tenth(systemGainFor(bands));
   const least = leastHeadroom(bands);
   return {
@@ -605,7 +605,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
         speakers,
       }),
     // the model reads only these (the name, the listener and the target don't move it)
-    [placements, stages, room, stacks, speakers],
+    [placements, stages, room, venue.systemDb, stacks, speakers],
   );
   /** each placement's arrival at the listener against the latest main */
   const arrivals = useMemo(
@@ -681,7 +681,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     full.stop = new AbortController();
   }, [dragging]);
   const placed = model.scene.sources.length > 0;
-  // where the target is measured, and the music balance it follows across the bands (lib/speaker/spaceBalance)
+  // where the target is measured, and the Band balance it follows across the bands (lib/speaker/spaceBalance)
   const { levelRef, balance } = venue;
   /**
    * whether the model reads the placements and stages from before the latest: just after a drag, the deferred ones are
@@ -720,24 +720,23 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     crossovers,
     balance,
   );
-  /** the listener's level at the limit in the lowest band, the same in every band on show */
-  const listenerAtLimit = useMemo(
+  /** the listener's level at System gain in the lowest band, the same in every band on show */
+  const listenerLevel = useMemo(
     () => (placed ? spaceLevelAt(levelBandReq, venue.listener) : null),
     [placed, levelBandReq, venue.listener],
   );
-  // the grid on show: the audience's average at the limit in its band (over the spots it was computed with)
-  const audienceAtLimit = useMemo(
+  // the grid on show: the audience's average at System gain in its band (over the spots it was computed with)
+  const audienceLevel = useMemo(
     () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, shown.spots) : null),
     [shown, placed],
   );
-  /** every placement plays at System gain, dB, on top of its own Gain */
-  const gain = venue.systemDb;
-  // the grid on show with the target of its band, at System gain (an older space's while the next computes)
+  // the grid on show (at System gain, as the model plays) with the target of its band (an older space's while the next
+  // computes)
   const view = useMemo<CoverageGridView | null>(() => {
     if (!shown || !placed) return null;
-    const t = spaceTargetAt(venue.targetDb, shown.centerHz, crossovers, balance);
-    return { grid: shown.grid, room: shown.req.room, target: t - gain, gain };
-  }, [shown, placed, gain, venue.targetDb, crossovers, balance]);
+    const target = spaceTargetAt(venue.targetDb, shown.centerHz, crossovers, balance);
+    return { grid: shown.grid, room: shown.req.room, target };
+  }, [shown, placed, venue.targetDb, crossovers, balance]);
   const settledView = useHeld(view, dragging);
   const stats = useMemo(
     () => (view && shown ? coverageStats(view.grid, view.room, shown.spots, view.target) : null),
@@ -759,10 +758,20 @@ export function useSpace(initialBand: CoverageBand = "mid") {
       stacks,
       speakers,
     }),
-    // the reference reads the placements, the room, the ear, the listener and where it is measured
-    [placements, stages, room, venue.earFt, venue.listener, venue.levelRef, stacks, speakers],
+    // the reference reads the placements, the room, the ear, the listener, where it is measured and System gain
+    [
+      placements,
+      stages,
+      room,
+      venue.earFt,
+      venue.listener,
+      venue.levelRef,
+      venue.systemDb,
+      stacks,
+      speakers,
+    ],
   );
-  /** each band's level at the reference at System gain 0: at once, or the audience's from the worker */
+  /** each band's level at the reference at System gain: at once, or the audience's from the worker */
   const levelsNow = useMemo(
     () => referenceLevelsNow(modelDesign, settledModel),
     [modelDesign, settledModel],
@@ -798,7 +807,7 @@ export function useSpace(initialBand: CoverageBand = "mid") {
               : [
                   {
                     band: b,
-                    db: db + gain,
+                    db,
                     target: spaceTargetAt(
                       venue.targetDb,
                       bandCenterHz(b, freqHz),
@@ -809,10 +818,10 @@ export function useSpace(initialBand: CoverageBand = "mid") {
                 ];
           })
         : [],
-    [placed, atReference, venue.targetDb, freqHz, gain, crossovers, balance],
+    [placed, atReference, venue.targetDb, freqHz, crossovers, balance],
   );
   /** every driver band's headroom at the space's System gain */
-  const headrooms = useMemo(() => bandHeadrooms(model, gain), [model, gain]);
+  const headrooms = useMemo(() => bandHeadrooms(model), [model]);
   /** each driver band past its limit, by name, with how far, dB: once for a band a mirrored pair plays twice */
   const overLimit = useMemo(() => {
     const out = new Map<string, NamedBand & { overDb: number }>();
@@ -825,16 +834,12 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     }
     return [...out.values()];
   }, [headrooms, model]);
-  const responseAtLimit = useMemo(
+  const response = useMemo(
     () => (placed ? spaceResponse(settledModel, venue, venue.listener) : []),
     // the response reads the model, the listener and the ear
     [placed, settledModel, venue.listener, venue.earFt],
   );
-  const response = useMemo(
-    () => responseAtLimit.map((o) => ({ f: o.f, spl: o.spl + gain })),
-    [responseAtLimit, gain],
-  );
-  /** the target across the response chart's frequencies, under the music balance */
+  /** the target across the response chart's frequencies, under the Band balance */
   const targetCurve = useMemo(
     () =>
       response.map((o) => ({
@@ -910,7 +915,6 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     arrivals,
     view,
     stats,
-    gain,
     band,
     setBand,
     freqHz,
@@ -918,10 +922,11 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     isPending: placed && !(failed && failed.req === req) && (!shown || shown.req !== req),
     error: failed ? failed.message : "",
     /** the listener's level in the lowest band at System gain: the same in every band on show */
-    listenerDb: listenerAtLimit !== null ? listenerAtLimit + gain : null,
+    listenerDb: listenerLevel,
     /** the audience's average at the space's level (null until a grid arrives) */
-    audienceDb: audienceAtLimit !== null ? audienceAtLimit + gain : null,
-    audienceAtLimit,
+    audienceDb: audienceLevel,
+    /** the audience's average at full power: with System gain at 0 dB */
+    audienceAtLimit: audienceLevel !== null ? audienceLevel - venue.systemDb : null,
     /** the target in the band on show, and where it is measured */
     target,
     levelRef,

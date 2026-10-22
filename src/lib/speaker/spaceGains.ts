@@ -110,11 +110,8 @@ export interface BandHeadroom {
   headroomDb: number;
 }
 
-/** Every driver band's headroom in the space at System gain `systemDb`; a box with no limit known has none. */
-export function bandHeadrooms(
-  model: Pick<SpaceModel, "placements">,
-  systemDb: number,
-): BandHeadroom[] {
+/** Every driver band's headroom in the space at the model's System gain; a box with no limit known has none. */
+export function bandHeadrooms(model: Pick<SpaceModel, "placements" | "systemDb">): BandHeadroom[] {
   return model.placements.flatMap((p, box) =>
     p.limits && p.headroomDb !== null
       ? p.limits.bands.map((b) => ({
@@ -123,7 +120,7 @@ export function bandHeadrooms(
           member: b.member,
           band: b.band,
           // its room over the box's own limit (the box's first band: 0), less the gains
-          headroomDb: b.roomDb - p.fullDb - p.item.placement.levelDb - systemDb,
+          headroomDb: b.roomDb - p.fullDb - p.item.placement.levelDb - model.systemDb,
         }))
       : [],
   );

@@ -16,7 +16,8 @@ const row = (member: number, box: string, band: string): AlignmentRow => ({
   bands: [{ id: band.toLowerCase(), name: band }],
   highpass: { hz: 130, type: "LR24" },
   lowpass: null,
-  levelDb: -3,
+  gainDb: -3,
+  pads: [],
   delayMs: 0.5,
   crossoverDelayMs: 0,
 });

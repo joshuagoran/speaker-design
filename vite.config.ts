@@ -56,12 +56,10 @@ export default defineConfig({
     testTimeout: 30_000,
   },
   fmt: {
-    // the optimizer snapshots, the slot inner-end table, the PA presets' band Levels
-    // and the meshes are generated
+    // the optimizer snapshots, the slot inner-end table and the meshes are generated
     ignorePatterns: [
       "dist/**",
       "src/data/acoustics/slot-inner-end.ts",
-      "src/data/presets/pa-band-levels.ts",
       "src/data/meshes/diy_os90x50.ts",
       "src/data/meshes/diy_os90x70.ts",
       "src/data/meshes/diy_rosse110x50.ts",

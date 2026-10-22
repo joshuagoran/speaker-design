@@ -47,6 +47,7 @@ import { NO_FILTERS } from "./specParts";
 import { chamberCones, hfBandOf, passbandDb, type SpeakerResponseOptions } from "./speakerResponse";
 import { tracedHorn } from "./foldHorn";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
+import { bandLevelDb, isPassive } from "./bandLevel";
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
@@ -76,9 +77,7 @@ export interface SpeakerLimitsOptions extends SpeakerResponseOptions {
 export const bandDriveVolts = (
   band: Pick<SpeakerBand, "ampW" | "drive" | "levelDb">,
   load: NominalImpedance,
-) =>
-  ampVoltage(band.ampW, load) *
-  (band.drive === HIFI_DRIVE.passive ? Math.pow(10, Math.min(0, band.levelDb) / 20) : 1);
+) => ampVoltage(band.ampW, load) * (isPassive(band) ? Math.pow(10, bandLevelDb(band) / 20) : 1);
 
 /**
  * Each band's amp load: the first driver that feeds it (a cone's T/S, a datasheet driver's HF section), since the model
@@ -326,7 +325,7 @@ export function speakerLimits(
     if (!band) return [];
     const sc = scales.get(rb.id) ?? null;
     // the response's band at 2.83 V (its level in it) moved to the amp's full drive
-    const toFull = 20 * Math.log10(driveOf(band) / volts) - band.levelDb;
+    const toFull = 20 * Math.log10(driveOf(band) / volts) - bandLevelDb(band);
     const sAt = (i: number) => (sc ? sc.s[i] : 1);
     const whoAt = (i: number): LimitId => sc?.who[i] ?? LIMIT_NAMES.amp;
     const room = Float64Array.from(freqs, (_, i) => toFull + 20 * Math.log10(sAt(i)));

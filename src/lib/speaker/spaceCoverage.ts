@@ -153,6 +153,8 @@ export interface SpaceModel {
   missing: boolean;
   /** what each box stands right against, in `placements`' order, with the marks the plan draws */
   coupling: ReturnType<typeof spaceCoupling>;
+  /** System gain, dB: in every feed's gain, as each placement's own Gain is */
+  systemDb: SpaceVenue["systemDb"];
 }
 
 /** Milliseconds in a second. */
@@ -234,6 +236,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
     fullDb: p.headroomDb ?? fallbackDb,
   }));
   const feeds = new Map<string, VoiceFeed>();
+  const { systemDb } = design.space.venue;
   const boxes = placements.map(({ item, response, fullDb }, k): SceneDriver[] => {
     if (!response) return [];
     const { placement } = item;
@@ -261,6 +264,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
           gainDb:
             (item.stack ? item.stack.stack.members[d.member].levelDb : 0) +
             placement.levelDb +
+            systemDb +
             fullDb,
           delayMs: member.delayMs + placement.delayMs,
           sign:
@@ -298,6 +302,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
     ),
     feeds: list,
     missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
+    systemDb,
     coupling,
   };
 }

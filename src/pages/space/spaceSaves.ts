@@ -15,7 +15,7 @@ import { homeVenue } from "../../lib/speaker/specParts";
 import { usedParts } from "../../lib/speaker/usedParts";
 import { AUTO_DELAY, SPACE_ITEM } from "../../constants/speakerSpec";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
-import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
+import { BAND_BALANCE } from "../../constants/space";
 import { SEATED_EAR_FT, SPACE_HOME_SEAT, SPACE_TEXT } from "../../constants/space";
 import { isStageList } from "../../lib/io/shareChecks";
 import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS } from "../../constants/pageDrafts";
@@ -138,7 +138,7 @@ const isVenue = (value: unknown): value is SavedVenue =>
     balance: "string",
   }) &&
   isOneOf(COVERAGE_LEVEL_REF, Reflect.get(value, "levelRef")) &&
-  isOneOf(AUTO_BALANCE_MODE, Reflect.get(value, "balance")) &&
+  isOneOf(BAND_BALANCE, Reflect.get(value, "balance")) &&
   (Reflect.get(value, "stages") === undefined || isStageList(Reflect.get(value, "stages")));
 
 /**

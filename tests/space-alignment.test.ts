@@ -13,6 +13,7 @@ import { spacePlacement } from "../src/lib/speaker/specParts";
 import { DEFAULT_FILL } from "../src/lib/defaults";
 import { SPACE_ITEM, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { NO_DELAY_MS, SPACE_TEXT } from "../src/constants/space";
+import { HIFI_DRIVE } from "../src/constants/hifiEngine";
 import type { SpaceDesign } from "../src/types";
 
 /** The PA design's space: one mirrored placement (0) of one stack, nothing set on it. */
@@ -85,8 +86,8 @@ function assertListMatchesModel(design: SpaceDesign) {
     // the feed's gain holds its box's level at a gain of 0 too: the settings leave it out
     const gainDb = feed.gainDb - (model.placements[feed.box]?.fullDb ?? 0);
     assert.ok(
-      Math.abs(row.levelDb - (gainDb + (band?.levelDb ?? 0))) < 1e-9,
-      `${feed.id}: ${row.levelDb} vs ${gainDb}`,
+      Math.abs(row.gainDb - (gainDb + (band?.levelDb ?? 0))) < 1e-9,
+      `${feed.id}: ${row.gainDb} vs ${gainDb}`,
     );
   }
   return rows;
@@ -125,7 +126,7 @@ test("space alignment: a mirrored pair's two boxes share one delay and level: on
   assert.ok(rows.every((r) => r.placement === 0));
   rows.forEach((r, i) => {
     assert.ok(Math.abs(r.delayMs - 0.5 - same[i].delayMs) < 1e-9);
-    assert.ok(Math.abs(r.levelDb + 2 - same[i].levelDb) < 1e-9);
+    assert.ok(Math.abs(r.gainDb + 2 - same[i].gainDb) < 1e-9);
     assert.ok(Math.abs(r.delayMs - r.crossoverDelayMs - 0.5) < 1e-9);
   });
   // the feeds of both boxes carry the shared settings
@@ -195,4 +196,37 @@ test("space alignment: a delay as the distance sound travels in it, and as words
   assert.equal(delayText(2), SPACE_TEXT.delayIs("2.0", String(Math.round(delayDistanceIn(2)))));
   assert.equal(delayText(2), SPACE_TEXT.delayIs("2.0", "27"));
   assert.notEqual(delayText(NO_DELAY_MS), SPACE_TEXT.noDelay);
+});
+
+test("DSP sheet: each row's Gain holds System gain; a box's passive bands are one row with their Pads", () => {
+  const base = paSpace();
+  const quiet = { ...base, space: { ...base.space, venue: { ...base.space.venue, systemDb: -4 } } };
+  const full = spaceAlignment(spaceModel(base));
+  spaceAlignment(spaceModel(quiet)).forEach((r, i) =>
+    assert.ok(Math.abs(r.gainDb + 4 - (full[i]?.gainDb ?? 0)) < 1e-9),
+  );
+  // the top's two bands made passive, one set above 0 dB: one row, its Pads 0 dB or less
+  const topId = base.speakers[1]?.id;
+  const passive: SpaceDesign = {
+    ...base,
+    speakers: base.speakers.map((s) =>
+      s.id === topId
+        ? {
+            ...s,
+            bands: s.bands.map((b, i) => ({
+              ...b,
+              drive: HIFI_DRIVE.passive,
+              levelDb: i ? -4 : 3,
+            })),
+          }
+        : s,
+    ),
+  };
+  const rows = spaceAlignment(spaceModel(passive)).filter((r) => r.member === 1);
+  assert.equal(rows.length, 1);
+  assert.deepEqual(
+    rows[0]?.pads.map((p) => p.padDb),
+    [0, -4],
+  );
+  assert.ok(full.filter((r) => r.member === 1).every((r) => r.pads.length === 0));
 });

@@ -115,7 +115,7 @@ export function crossingPairs(filters: readonly Pick<StackMember, "crossover">[]
 
 /**
  * A stack's crossovers, Hz, low to high: every pair of bands in a member's speaker, or of members, whose lowpass and
- * highpass meet (`crossoverHz`), once each (rounded to 1 Hz). The dispersion maps mark them; the Space's music balance
+ * highpass meet (`crossoverHz`), once each (rounded to 1 Hz). The dispersion maps mark them; the Space's Band balance
  * steps at them.
  */
 export function stackCrossoversHz(

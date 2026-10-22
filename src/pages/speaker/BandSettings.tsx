@@ -1,4 +1,5 @@
 import { Tooltip } from "../../components/ui/Tooltip";
+import { MarkedText } from "../../components/ui/MarkedText";
 import { AMP_POWER_TIP } from "../../constants/ampPower";
 import type { SpeakerBand } from "../../types";
 import { Button } from "../../components/ui/Button";
@@ -16,6 +17,7 @@ import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 import { TRIO_ROW } from "../../styles/layout";
 import { bandSummary } from "./settingsSummaries";
+import { PAD_MAX_DB, isPassive, withPadCapped } from "../../lib/speaker/bandLevel";
 
 /** The crossover choices, as the band's picker lists them. */
 const DRIVE_OPTIONS = entriesOf(DRIVE_NAMES).map(([id, name]) => ({ id, name }));
@@ -61,15 +63,32 @@ export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove
         onEdit={(edit) => onEdit((b) => ({ ...b, ...edit(b) }))}
       />
       <div className={TRIO_ROW}>
-        <NumberField
-          label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Gain</Tooltip>}
-          // shown to 0.1 dB (the Hi-fi level match is exact)
-          value={Math.round(band.levelDb * 10) / 10}
-          step={SPEAKER_STEPS.levelDb}
-          unit="dB"
-          fill
-          onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
-        />
+        {isPassive(band) ? (
+          <NumberField
+            label={
+              <Tooltip tip={<MarkedText text={SPEAKER_TEXT.padTip} />}>{SPEAKER_TEXT.pad}</Tooltip>
+            }
+            // shown to 0.1 dB (the Hi-fi level match is exact)
+            value={Math.round(band.levelDb * 10) / 10}
+            max={PAD_MAX_DB}
+            step={SPEAKER_STEPS.levelDb}
+            unit="dB"
+            fill
+            onChange={(levelDb) =>
+              onEdit((b) => ({ ...b, levelDb: Math.min(PAD_MAX_DB, levelDb) }))
+            }
+          />
+        ) : (
+          <NumberField
+            label={<Tooltip tip={SPEAKER_TEXT.levelTip}>{SPEAKER_TEXT.gain}</Tooltip>}
+            // shown to 0.1 dB (the Hi-fi level match is exact)
+            value={Math.round(band.levelDb * 10) / 10}
+            step={SPEAKER_STEPS.levelDb}
+            unit="dB"
+            fill
+            onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
+          />
+        )}
         <SelectField
           label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Crossover</Tooltip>}
           options={DRIVE_OPTIONS}
@@ -77,7 +96,8 @@ export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove
           onChange={(o) => {
             // the picker lists exactly the drives (DRIVE_OPTIONS)
             const drive = keysOf(DRIVE_NAMES).find((k) => k === o.id);
-            if (drive) onEdit((b) => ({ ...b, drive }));
+            // a band made passive keeps its level only as a Pad: never above 0 dB
+            if (drive) onEdit((b) => withPadCapped({ ...b, drive }));
           }}
         />
         <NumberField

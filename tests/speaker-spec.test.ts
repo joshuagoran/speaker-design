@@ -1,6 +1,6 @@
 // The speaker spec (lib/speaker): every saved and synthetic PA design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
-import { AUTO_BALANCE_MODE } from "../src/constants/autoBalance";
+import { BAND_BALANCE } from "../src/constants/space";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
@@ -17,7 +17,15 @@ import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { hornModel } from "../src/lib/acoustics/hornModel";
 import { hornGrid } from "./helpers";
-import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WAVEGUIDES, HORN_OPTIONS } from "../src/lib/data";
+import {
+  HIFI_COAXES,
+  HIFI_TWEETERS,
+  HIFI_WAVEGUIDES,
+  HIFI_WOOFERS,
+  HORN_OPTIONS,
+} from "../src/lib/data";
+import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { crossoverSlopeName } from "../src/constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../src/constants/hifiEngine";
@@ -48,6 +56,7 @@ import {
 } from "../src/constants/speakerSpec";
 import type {
   BandId,
+  HifiDesignState,
   DesignLayers,
   DriverKind,
   PaLayout,
@@ -189,7 +198,7 @@ test("speaker spec: every saved and synthetic PA design reads into a stack with 
       const topMember = stack.members.find((m) => m.speakerId === topBox.id);
       assert.deepEqual(subMember?.crossover.lowpass, lo, c.name);
       assert.deepEqual(topMember?.crossover.highpass, lo, c.name);
-      assert.equal(topMember?.levelDb, -cfg.tilt, c.name);
+      assert.equal(topMember?.levelDb, 0, c.name);
       assert.equal(subMember?.delayMs, AUTO_DELAY, `${c.name}: the sub aligned to the top`);
     }
     assert.deepEqual(bandOf(topBox, SPEAKER_BAND.mid).lowpass, hi, c.name);
@@ -199,18 +208,12 @@ test("speaker spec: every saved and synthetic PA design reads into a stack with 
       c.name,
     );
 
-    // every placement starts at a gain of 0; satellite's tilt is the venue's More bass, the others keep it in their levels
+    // every placement starts at a gain of 0, the band balance Flat
     assert.ok(
       space.placements.every((p) => p.levelDb === 0),
       c.name,
     );
-    assert.equal(
-      space.venue.balance,
-      cfg.layout === "satellite" && cfg.tilt > 0
-        ? AUTO_BALANCE_MODE.moreBass
-        : AUTO_BALANCE_MODE.flat,
-      c.name,
-    );
+    assert.equal(space.venue.balance, BAND_BALANCE.flat, c.name);
 
     // the stacks (and satellite's sub) stand on the plinth; the amp power as the design powers each band
     for (const p of space.placements)
@@ -520,4 +523,24 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
     gapOf(chamberOf(speakerOf(read, SPEAKER_PART.top), DRIVER_KIND.mid)),
     HORN_ENGINE_GAP.driver,
   );
+});
+
+test("hifi adapter: a passive tweeter's Pad is never above 0 dB, where the active level match lifts it", () => {
+  const id = { id: "hifi", name: "Hi-fi" };
+  const highOf = (state: HifiDesignState) =>
+    speakerFromHifi(state, DEFAULT_HIFI_LOOK, id).bands.find((b) => b.id === SPEAKER_BAND.high)
+      ?.levelDb ?? 0;
+  let lifted = 0;
+  for (const woofer of HIFI_WOOFERS)
+    for (const tweeter of HIFI_TWEETERS) {
+      const state = { ...DEFAULT_HIFI, woofer, tweeter };
+      if (highOf({ ...state, drive: HIFI_DRIVE.active }) <= 0) continue;
+      lifted++;
+      assert.equal(
+        highOf({ ...state, drive: HIFI_DRIVE.passive }),
+        0,
+        `${woofer.id} + ${tweeter.id}`,
+      );
+    }
+  assert.ok(lifted > 0, "no pair where the level match lifts the tweeter");
 });
