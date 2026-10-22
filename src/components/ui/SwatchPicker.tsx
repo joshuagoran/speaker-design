@@ -1,4 +1,5 @@
 import { ON_DATA } from "../../styles/palette";
+import { FINISH_ID } from "../../constants/finishes";
 import { useId } from "react";
 import type { PaintSwatch } from "../../types";
 
@@ -43,7 +44,7 @@ export function SwatchPicker({
               className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
               style={{
                 background: f.swatch,
-                color: f.ink ?? (k === "walnut" ? ON_DATA.white : ON_DATA.ink),
+                color: f.ink ?? (k === FINISH_ID.walnut ? ON_DATA.white : ON_DATA.ink),
               }}
             >
               {f.name}
