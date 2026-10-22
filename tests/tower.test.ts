@@ -1,5 +1,6 @@
 // The tower layout's cabinet: the cutlist, the weight and the cards' front view all built from towerSpec, the same
 // geometry the 3D view builds the tower from.
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { towerMidDims, towerSpec } from "../src/lib/speaker/tower";
@@ -15,11 +16,10 @@ import {
 import { HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { close, vent } from "./helpers";
 import { paMidBuild, paSubBox, paSubBuild } from "./pa-build";
-import { SHELL_CUT_BOX, chamberCutBox } from "../src/constants/cutParts";
+import { SHELL_CUT_BOX, chamberCutBox, CORNER_JOINT } from "../src/constants/cutParts";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { HORN_MESHES } from "../src/data/meshes";
 import { MESHED_HORN_IDS } from "../src/data/meshes/meshedHorns";
-import { MM_IN } from "../src/components/stack-view/geometry";
 import type {
   BackJointId,
   CornerJoint,
@@ -31,6 +31,7 @@ import type {
   PortStyle,
   VentSpec,
 } from "../src/types";
+import { IN_PER_MM } from "../src/constants/units";
 
 const horn = (id: string): Horn => {
   const h = HORN_OPTIONS.find((o) => o.id === id);
@@ -51,8 +52,8 @@ const SLOTS = vent({ slotH: 3.5, len: 17, nt: 2, dia: 6, throat: 3.25 });
 const parts = (
   layout: "tower" | "stack",
   h: Horn,
-  joint: CornerJoint = "butt",
-  portStyle: PortStyle = "slots",
+  joint: CornerJoint = CORNER_JOINT.butt,
+  portStyle: PortStyle = PORT_STYLE.slot,
   cVent: VentSpec = SLOTS,
   backJoint?: BackJointId,
 ) =>
@@ -157,7 +158,7 @@ test("tower cutlist: the shell at the full height, two partitions, the sub's bra
 });
 
 test("tower cutlist: the arched top is a bent strip, the sides stop at the springline, and the curves aren't guillotine cuts", (t) => {
-  const P = parts("tower", ROUND, "rabbet");
+  const P = parts("tower", ROUND, CORNER_JOINT.rabbet);
   const spec = towerSpec(BOX, T, ROUND),
     R = BOX.w / 2;
   assert.ok(!P.some((p) => p.part === "topBottom"), "no flat top");
@@ -183,7 +184,7 @@ test("tower cutlist: the arched top is a bent strip, the sides stop at the sprin
 
 test("tower cutlist: the back, its rabbets and the partitions follow the back setting", () => {
   for (const back of [DEFAULT_BACK_JOINT, GLUED_BACK] as const) {
-    const P = parts("tower", ROUND, "rabbet", "slots", SLOTS, back);
+    const P = parts("tower", ROUND, CORNER_JOINT.rabbet, PORT_STYLE.slot, SLOTS, back);
     const rabbet = `on rear edge for the ${BACK_JOINT_SUMMARY[back]}`;
     assert.ok(one(P, "back").note.startsWith(BACK_JOINT_CUT_NOTES[back]), back);
     assert.ok(one(P, "archTop").note.includes(`${rabbet}'s arch`), back);
@@ -237,7 +238,7 @@ test("a stack's cutlist has no partitions or arched top, and the tower's sub cha
   for (const p of parts("stack", ROUND)) assert.ok(p.part !== "partition" && p.part !== "archTop");
   const at = (layout: "tower" | "stack") =>
     paSubBuild(
-      paSubBox(BOX, "slots", SLOTS, {
+      paSubBox(BOX, PORT_STYLE.slot, SLOTS, {
         layout,
         sub: SUB.id,
         mid: MID.id,
@@ -260,8 +261,8 @@ test("the meshed horns' light list matches the meshes, and each mesh is its horn
     const m = HORN_MESHES[id],
       h = horn(id);
     assert.ok(m, id);
-    close(t, (m.max[0] - m.min[0]) * MM_IN, h.size.w, 0.01);
-    close(t, (m.max[1] - m.min[1]) * MM_IN, h.size.h, 0.01);
+    close(t, (m.max[0] - m.min[0]) * IN_PER_MM, h.size.w, 0.01);
+    close(t, (m.max[1] - m.min[1]) * IN_PER_MM, h.size.h, 0.01);
   }
 });
 

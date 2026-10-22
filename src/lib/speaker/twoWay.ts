@@ -23,6 +23,7 @@ import {
   voltsToWatts,
   wattsToVolts,
 } from "../power";
+import { GRAMS_PER_LB } from "../../constants/units";
 /** Whether a tweeter is a planar ribbon on its own waveguide (a square plate with a slot). */
 export const isRibbon = (t: Pick<HifiTweeter, "type">): boolean => t.type === RIBBON_TWEETER_TYPE;
 
@@ -141,8 +142,6 @@ export function tweeterLevelInBox(
 export const HIFI_FALLBACK_LB = { woofer: 5, tweeter: 1.5, radiator: 0.75 } as const;
 /** A Hi-fi speaker's hardware besides its drivers, lb: the screws, the terminals and the damping. */
 export const HIFI_FIXINGS_LB = 1;
-/** Grams in a pound, as the radiators' added mass is weighed. */
-const GRAMS_PER_LB = 454;
 /** The radiators' weight, lb: each one's listed weight (or the fallback) and its added mass. */
 export const radiatorsLb = (pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">) =>
   pr.n * ((pr.drv.lb || HIFI_FALLBACK_LB.radiator) + (pr.addG || 0) / GRAMS_PER_LB);

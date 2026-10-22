@@ -15,7 +15,6 @@ import {
 } from "../src/components/stack-view/buildPlate";
 import { BOLT_TURNS, driverBolts, type XY } from "../src/components/stack-view/throatFit";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
-import { MM_IN } from "../src/components/stack-view/geometry";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { N314T } from "../src/data/catalog/compression-drivers";
 import { DIY_OS90X70, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
@@ -43,6 +42,7 @@ import {
   worldVertices,
 } from "./mount-helpers";
 import type { Horn, PaLayout } from "../src/types";
+import { IN_PER_MM } from "../src/constants/units";
 
 const fitOf = (horn: Horn, cd: Props["cd"]) => plateFit(horn, cd, base.mid.box.w);
 const hornOf = (id: string) => {
@@ -223,8 +223,8 @@ describe("the aluminum plate on the DIY horns with the N314T", () => {
                 `${at}: slot bottom clears the neck at ${x}, ${y}`,
               ).toBeLessThanOrEqual(1 + 1e-9);
           }
-          expect(fit.slotW - neckW, at).toBeGreaterThanOrEqual(PLATE.slotGap - 0.2 * MM_IN);
-          expect(fit.slotD - neckD, at).toBeGreaterThanOrEqual(PLATE.slotGap - 0.2 * MM_IN);
+          expect(fit.slotW - neckW, at).toBeGreaterThanOrEqual(PLATE.slotGap - 0.2 * IN_PER_MM);
+          expect(fit.slotD - neckD, at).toBeGreaterThanOrEqual(PLATE.slotGap - 0.2 * IN_PER_MM);
           // the slot in the plate's own outline: its vertices at the top edge stand at ±slotW
           const topVerts = worldVertices(plate).filter((v) => Math.abs(v.y - pb.max.y) < 1e-6);
           expect(
@@ -279,8 +279,8 @@ describe("the aluminum plate on the DIY horns with the N314T", () => {
           );
           if (!foot) throw new Error(`${at}: no foot`);
           const fb = boxOf(foot);
-          expect((pb.min.z - fb.min.z) / MM_IN, `${at}: foot length`).toBeCloseTo(
-            PLATE.foot / MM_IN,
+          expect((pb.min.z - fb.min.z) / IN_PER_MM, `${at}: foot length`).toBeCloseTo(
+            PLATE.foot / IN_PER_MM,
             3,
           );
           expect(Math.abs(fb.max.z - pb.max.z), `${at}: bend at the plate's front`).toBeLessThan(

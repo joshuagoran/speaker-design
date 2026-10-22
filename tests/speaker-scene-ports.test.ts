@@ -11,7 +11,6 @@ import {
 } from "../src/components/stack-view/buildSpeakerScene";
 import { HIFI_MESH_NAMES } from "../src/components/stack-view/buildHifiScene";
 import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
-import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
 import { subVentHoles } from "../src/components/stack-view/buildSubwoofer";
 import { subVentPlan } from "../src/lib/build/ventPlan";
 import {
@@ -28,6 +27,7 @@ import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speaker
 import { PANEL } from "../src/constants/cutParts";
 import { CABINET_CONSTRUCTION, PORT_SHAPE, VENT_KIND } from "../src/constants/speakerSpec";
 import type { SpeakerPort, SpeakerSpec, VentPanel } from "../src/types";
+import { BAFFLE_PLY_IN } from "../src/constants/panelSizes";
 
 /** How far past a panel's face a ray's first hit must be to count as through it, in. */
 const PAST_IN = 1e-3;
@@ -180,8 +180,7 @@ describe("each port kind in the Speaker page's 3D view", () => {
         }
         // each opening open through its panel: a ray through its center first meets something behind the panel
         const frame = cabinet.construction === CABINET_CONSTRUCTION.frameInset;
-        const baffleInner =
-          front - (frame ? baffleInsetIn(cabinet) + BAFFLE_THICKNESS_IN : t) - PAST_IN;
+        const baffleInner = front - (frame ? baffleInsetIn(cabinet) + BAFFLE_PLY_IN : t) - PAST_IN;
         const backInner = back + t + PAST_IN;
         const at = openings(spec, placed);
         expect(at.length, label).toBeGreaterThan(0);

@@ -30,7 +30,6 @@ import { byId } from "../../lib/tables";
 import { entriesOf } from "../../lib/records";
 import { PANEL_NOMINAL_OPTIONS, formatThickness } from "../../lib/build/panel";
 import { withWallPanel } from "../../lib/speaker/cabinetPanels";
-import { BAFFLE_PLY_IN } from "../../lib/acoustics/boxModels";
 import { DEFAULT_HARDWARE } from "../../lib/build/hardware";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
 import { HANDLES } from "../../data/catalog/cabinet-hardware";
@@ -54,6 +53,7 @@ import { FilterFields } from "./FilterFields";
 import { SpeakerOptimizerSettings, optimizerSummary } from "./SpeakerOptimizerSettings";
 import { allBox, bandRange, chamberSummary, constructionSummary } from "./settingsSummaries";
 import type { SpeakerPageState } from "./useSpeakerPage";
+import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
 
 /** The Handles choices: none, or handles. */
 const HANDLES_OPTIONS = [

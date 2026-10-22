@@ -1,5 +1,6 @@
 // A woofer in its box: sealed, vented (a round port or a slot) or with passive radiators, the vent's end corrections
 // and fold, the radiator box's response, and the Hi-fi box's subsonic and level. Pure functions, no DOM.
+import { VENT_KIND } from "../../constants/speakerSpec";
 import { ampVoltage, slotMouthCorrection, unwrapRawPhase } from "./boxModels";
 import { highpassGain } from "../speaker/bandFilter";
 import { rectangleEndCorrection } from "./radiation";
@@ -194,7 +195,7 @@ export interface HifiBox {
 export const hifiVentPort = (
   cfg: Pick<HifiConfig, "box" | "port" | "dim" | "wall">,
 ): RoundPort | SizedSlotPort | null =>
-  cfg.box !== "vented"
+  cfg.box !== VENT_KIND.vented
     ? null
     : cfg.port.shape === "slot"
       ? { ...cfg.port, n: 1, w: slotWidth(cfg.dim, cfg.wall || 0.75) }
@@ -215,7 +216,7 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig): HifiBox | null {
   const gross = grossVolumeLiters(dim, wall);
   // the port the model uses, and the radiators, each only for its box
   const ventPort = hifiVentPort(cfg);
-  const pr = cfg.box === "radiator" && cfg.pr && cfg.pr.drv ? cfg.pr : null;
+  const pr = cfg.box === VENT_KIND.radiator && cfg.pr && cfg.pr.drv ? cfg.pr : null;
   const pA = ventPort ? portArea(ventPort) : 0;
   // a slot's inner end reads the box; a round port's elbows shorten it acoustically (the fewest that fit; a port too
   // long for any is modeled with the most)

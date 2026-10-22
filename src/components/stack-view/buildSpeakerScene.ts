@@ -8,7 +8,7 @@
 // the Hi-fi box with its baffle over the whole front and its roundover (its top drawn flat for now).
 import * as THREE from "three";
 import { createSceneContext, type SceneContext } from "./sceneContext";
-import { BAFFLE_CORNER_IN, BAFFLE_THICKNESS_IN, buildCabinet } from "./buildCabinet";
+import { BAFFLE_CORNER_IN, buildCabinet } from "./buildCabinet";
 import { buildHifiCabinet } from "./buildHifiCabinet";
 import { buildCone, paConeRadius } from "./buildCone";
 import { buildHorn } from "./buildHorn";
@@ -96,6 +96,7 @@ import {
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import type { BoxRegion, Horn, RadiatorPanel, SpeakerDriver, SpeakerSpec } from "../../types";
+import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
 
 /** The speaker scene's own meshes (every reused part keeps its builder's names). */
 export const SPEAKER_MESH_NAMES = {
@@ -408,7 +409,7 @@ export function buildSpeakerScene({
           baffleBottom,
         },
       ).baffleZ;
-      at = { zf, innerZ: zf - BAFFLE_THICKNESS_IN, banded: band !== undefined };
+      at = { zf, innerZ: zf - BAFFLE_PLY_IN, banded: band !== undefined };
     } else {
       const built = buildHifiCabinet(
         { ...faceCtx, group },
@@ -507,7 +508,7 @@ function buildSteppedPanels(
     y: r.y + r.h / 2 - placed.y0,
   });
   const { clear } = placed;
-  const innerAt = d / 2 - ctx.inset - (frame ? BAFFLE_THICKNESS_IN : T);
+  const innerAt = d / 2 - ctx.inset - (frame ? BAFFLE_PLY_IN : T);
   for (const w of placed.walls) {
     const at = local(w);
     // a level wall of its own above or below the clear face takes that side's openings
@@ -558,7 +559,7 @@ function buildSteppedPanels(
     ctx.group.add(m);
   };
   panel(holes.back, T, -d / 2 + T, [ctx.materials.shell]);
-  const thick = frame ? BAFFLE_THICKNESS_IN : T;
+  const thick = frame ? BAFFLE_PLY_IN : T;
   const zf = d / 2 - ctx.inset;
   // its faces painted, its cut edges bare ply (as the PA's baffle)
   panel(

@@ -2,6 +2,7 @@
 // (path lengths, offset, box size, cutouts), the weight and price counted once, and the optimizer offering coaxials only
 // to a coaxial design. The parity with the Fills model is in hifi-coax-parity.test.ts, the 3D view in
 // hifi-scene.test.ts.
+import { VENT_KIND } from "../src/constants/speakerSpec";
 import { describe, expect, test } from "vite-plus/test";
 import {
   FILL_OPTIONS,
@@ -104,7 +105,7 @@ describe("the coincident layout", () => {
       woofer: B10.woofer,
       tweeter: B10.tweeter,
       onTop: false,
-      cfg: { box: "sealed", port: DEFAULT_HIFI.portSpec },
+      cfg: { box: VENT_KIND.sealed, port: DEFAULT_HIFI.portSpec },
       wall: 0.75,
       radiatorPanel: "back",
     });

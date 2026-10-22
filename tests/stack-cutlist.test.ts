@@ -9,7 +9,7 @@ import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { paSpeakers } from "./pa-build";
 import { STACK_PRESET } from "../src/constants/stackPresets";
-import { cutBoxName, cutBoxTag } from "../src/constants/cutParts";
+import { cutBoxName, cutBoxTag, CORNER_JOINT } from "../src/constants/cutParts";
 import type { CornerJoint, CutPart, CutlistSettings, PaLayout } from "../src/types";
 
 /** The PA presets of separate boxes: a sub and a mid/high box each. */
@@ -29,11 +29,20 @@ function pieces(parts: readonly CutPart[]) {
   return out;
 }
 
-const SETTINGS: CutlistSettings = { ...CUTLIST_DEFAULTS, joint: "butt", sheet: "4x8", stacks: 1 };
+const SETTINGS: CutlistSettings = {
+  ...CUTLIST_DEFAULTS,
+  joint: CORNER_JOINT.butt,
+  sheet: "4x8",
+  stacks: 1,
+};
 
 describe("Stack cutlist: the PA presets cut as the Speaker page cuts their boxes", () => {
   for (const [preset, layout] of PRESETS)
-    for (const joint of ["butt", "rabbet", "miter"] as const satisfies readonly CornerJoint[])
+    for (const joint of [
+      CORNER_JOINT.butt,
+      CORNER_JOINT.rabbet,
+      CORNER_JOINT.miter,
+    ] as const satisfies readonly CornerJoint[])
       test(`${preset} (${joint})`, () => {
         const cfg = defaultPaDesign(layout);
         const { stack, speakers } = presetLayers(preset, { id: "test", name: "test" });

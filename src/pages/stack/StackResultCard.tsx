@@ -8,7 +8,7 @@ import { CardFrame } from "../../components/optimizer/CardFrame";
 import { CardTile, CardTiles } from "../../components/optimizer/CardTile";
 import { Delta } from "../../components/optimizer/Delta";
 import { STATS } from "../../components/stats/StatLabel";
-import { formatDims } from "../../lib/format";
+import { formatDims, formatDb } from "../../lib/format";
 import { stackListenHeightIn } from "../../lib/speaker/stackResponse";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
@@ -88,7 +88,7 @@ export function StackResultCard({ card, index, total, current, onLoad }: Props) 
         />
         <CardTile
           label={T.tile.level}
-          value={m.musicDb === null ? "—" : `${m.musicDb.toFixed(1)} dB`}
+          value={m.musicDb === null ? "—" : `${formatDb(m.musicDb)} dB`}
           delta={<Delta v={d?.musicDb} unit=" dB" digits={1} />}
         />
         <CardTile

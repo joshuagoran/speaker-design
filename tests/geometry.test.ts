@@ -1,8 +1,8 @@
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
   internalWoodLiters,
-  plywoodLbPerSqFt,
   maxFoldedRearWallIn,
   maxFoldedSlotIn,
   foldedRearWallIn,
@@ -21,6 +21,8 @@ import { chamberCutBox } from "../src/constants/cutParts";
 import { close, vent, DRV18 } from "./helpers";
 import { paSubBox, paSubBuild, paSubVent } from "./pa-build";
 import type { CutPart } from "../src/types";
+import { panelLbPerSqFt } from "../src/lib/build/panel";
+import { PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
 
 const IN3_L = 16.387 / 1000;
 /** The sub chamber's rows in the Speaker page's cutlist. */
@@ -33,7 +35,7 @@ test("clear volume: inner width/height lose two walls, depth loses inset + 3/4 b
   close(t, clearL(0.5, 1.5), 19 * 23 * 13.25 * IN3_L, 1e-9);
 });
 test("vent: letterbox area = slot height x inner width less two fins", (t) => {
-  const g = paSubVent({ w: 22, h: 30, d: 20 }, "slots", { slotH: 3, len: 14 });
+  const g = paSubVent({ w: 22, h: 30, d: 20 }, PORT_STYLE.slot, { slotH: 3, len: 14 });
   close(t, g.areaIn2, 3 * (22 - 1.5 - 1.5), 1e-9);
   assert.equal(g.openings, 1);
 });
@@ -55,7 +57,7 @@ test("wood inside: duct shelf + fins + brace rails + cleats, by hand", (t) => {
   const sub = paSubBuild(
     paSubBox(
       box,
-      "slots",
+      PORT_STYLE.slot,
       { slotH: 3, len: 14 },
       { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 },
     ),
@@ -98,13 +100,18 @@ test("folded slot: the longest fold leaves a slot height under the lid, in the f
   close(t, maxFoldedRearWallIn(box, slotH, t0), 22.5, 1e-12);
   const longest = maxFoldedSlotIn(box, slotH, t0);
   close(t, longest, 20 - 0.75 + 22.5, 1e-12);
-  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0, 0.75, DRV18).maxFold, longest, 1e-12);
+  close(
+    t,
+    ductFit(box, PORT_STYLE.slot, vent({ slotH, len: 0 }), t0, 0.75, DRV18).maxFold,
+    longest,
+    1e-12,
+  );
   for (const len of [longest, longest + 5]) {
     const v = vent({ slotH, len });
     close(t, foldedRearWallIn(box, v, t0), 22.5, 1e-12);
     close(t, foldedLidGapIn(box, v, t0), slotH, 1e-12);
     const parts = paSubBuild(
-      paSubBox(box, "slots", v, { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 }),
+      paSubBox(box, PORT_STYLE.slot, v, { sub: SUB_OPTIONS[0].id, wall: t0, inset: 0.75 }),
     ).parts();
     close(t, parts.find((p) => p.part === "ductRearWall")?.b ?? NaN, 22.5, 1e-12);
   }
@@ -127,8 +134,10 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
     const area = (p: CutPart) =>
       p.part === "windowBrace" ? p.a * p.b - (p.a - 4) * (p.b - 4) : p.a * p.b;
     const lb =
-      parts.reduce((a, p) => a + ((area(p) * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) +
-      SUB_FIXINGS_LB;
+      parts.reduce(
+        (a, p) => a + ((area(p) * p.qty) / 144) * panelLbPerSqFt(p.t, PLYWOOD_MATERIAL),
+        0,
+      ) + SUB_FIXINGS_LB;
     const w = sub.build.lb.wood;
     assert.ok(
       w >= lb * 0.98 && w <= lb * 1.12,
@@ -137,14 +146,14 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
   }
 });
 test("plyLb: the catalog's sizes, and measured thicknesses between and beyond them", (t) => {
-  assert.equal(plywoodLbPerSqFt(0.75), 2.3);
-  assert.equal(plywoodLbPerSqFt(0.625), 1.95);
-  assert.equal(plywoodLbPerSqFt(0.5), 1.6);
+  assert.equal(panelLbPerSqFt(0.75, PLYWOOD_MATERIAL), 2.3);
+  assert.equal(panelLbPerSqFt(0.625, PLYWOOD_MATERIAL), 1.95);
+  assert.equal(panelLbPerSqFt(0.5, PLYWOOD_MATERIAL), 1.6);
   // 18 mm birch measured at 0.689″: between the 5/8″ and 3/4″ weights
-  close(t, plywoodLbPerSqFt(0.689), 1.95 + (0.35 * (0.689 - 0.625)) / 0.125, 1e-9);
+  close(t, panelLbPerSqFt(0.689, PLYWOOD_MATERIAL), 1.95 + (0.35 * (0.689 - 0.625)) / 0.125, 1e-9);
   // beyond the thinnest and thickest sizes: in proportion to the nearest
-  close(t, plywoodLbPerSqFt(0.45), (1.6 * 0.45) / 0.5, 1e-9);
-  close(t, plywoodLbPerSqFt(0.8), (2.3 * 0.8) / 0.75, 1e-9);
+  close(t, panelLbPerSqFt(0.45, PLYWOOD_MATERIAL), (1.6 * 0.45) / 0.5, 1e-9);
+  close(t, panelLbPerSqFt(0.8, PLYWOOD_MATERIAL), (2.3 * 0.8) / 0.75, 1e-9);
 });
 test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap from the back wall", (t) => {
   // tubes run from the baffle front (`inset` behind the frame front); bottom slots and side ducts run from the frame
@@ -193,11 +202,11 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
     const inD = back - inset - baffle; // the box's inside depth, behind the baffle
     // a straight bottom slot's mouth is a slot height from the back wall; its shelf runs the rest of the inside depth
     const slot = vent({ slotH: 3, len: 0 });
-    const slotLen = ductFit(box, "slots", slot, wall, inset, DRV18).maxStraight;
+    const slotLen = ductFit(box, PORT_STYLE.slot, slot, wall, inset, DRV18).maxStraight;
     close(t, back - slotLen, slot.slotH, 1e-12, `slots ${at}`);
     close(
       t,
-      paSubVent(box, "slots", { ...slot, len: slotLen }, { wall, inset }).endCorrectionIn,
+      paSubVent(box, PORT_STYLE.slot, { ...slot, len: slotLen }, { wall, inset }).endCorrectionIn,
       rectangleEndCorrection(2 * slot.slotH, box.w - 4 * wall) +
         slotMouthCorrection(slot.slotH, box.h - 2 * wall, slot.slotH, wall, inD - slot.slotH),
       1e-12,

@@ -178,7 +178,7 @@ export const stageId = (n: number) => `stage-${n}`;
 /** The DOM id of a stage's item in the Stages list, so a pick on the map can scroll it into view. */
 export const stageDomId = (id: string) => `space-stage-${id}`;
 
-/** The Target level a new space starts with (and the empty start, and a fill or Hi-fi preset that names none), dB SPL: as the default coverage layout. */
+/** The Target level a new space starts with (and the empty start, the PA floor's layout, and a fill or Hi-fi preset that names none), dB SPL. */
 export const SPACE_HOME_TARGET_DB = 105;
 
 /** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
@@ -238,7 +238,10 @@ export const ARRIVAL_MAIN_CLOSE_MS = 3;
 
 /** A band at the reference within this of its target is on it: the readout shows its level, not the gap, dB. */
 export const BAND_ON_TARGET_DB = 0.5;
-/** A band within this of its target is close (green); within `BAND_NEAR_DB`, near (orange); past it, off (red), dB. */
+/**
+ * A band within this of its target is close (green); within `BAND_NEAR_DB`, near (orange); past it, off (red), dB. A
+ * tolerance on the target, not a passband's edge (`PASSBAND_EDGE_DB`).
+ */
 export const BAND_CLOSE_DB = 3;
 export const BAND_NEAR_DB = 6;
 
@@ -336,23 +339,23 @@ export const SPACE_TEXT = {
     "Adds a copy on the other side of the center line. It mirrors this box's position and rotation.",
   /** a mirrored placement's folded row says it stands twice */
   pairSummary: "pair",
-  fromCenter: "From the center line, ft",
+  fromCenter: "From the center line",
   fromCenterTip:
     "Its front center from the room's center line. + is to the right, seen from the listener.",
-  down: "From the front wall, ft",
-  height: "Height above floor, ft",
+  down: "From the front wall",
+  height: "Height above floor",
   /** the height field of a placement that stands on a stage */
-  heightOnStage: "Height above stage, ft",
+  heightOnStage: "Height above stage",
   /** where a placement on a stage stands: the stages, joined */
   standsOn: (where: string) => `On ${where}.`,
   heightTip: "The gap under it: a plinth, a stand, a fly bar.",
-  yaw: "Rotation, °",
+  yaw: "Rotation",
   yawTip: "Its rotation on the floor from straight down the room. + rotates toward the right side.",
-  pitch: "Tilt, °",
+  pitch: "Tilt",
   pitchTip: "+ tilts it up. A box's tilt in the stack and the box's kick-back add to it.",
   upsideDown: "Upside down",
-  gain: `${GAIN}, dB`,
-  delay: `${DELAY}, ms`,
+  gain: GAIN,
+  delay: DELAY,
   delayTip: `The delay on this Source's signal. **${CALCULATE_DELAYS}** sets it.`,
   /** the Main / Fill choice's label and tooltip */
   role: "Main / Fill",
@@ -369,7 +372,7 @@ export const SPACE_TEXT = {
   ampPowerTip:
     "The Space finds each speaker's limit from it. Every Source with the same Speaker shares one figure.",
   /** a band's amp power field: the band (or a passive network's bands) it is for */
-  ampPowerFor: (bands: string) => `${bands}: amp power, W`,
+  ampPowerFor: (bands: string) => `${bands} amp power`,
   alignment: "Alignment",
   alignmentHint: "The settings for each amp channel.",
   alignmentTip: "A delay, an all-pass filter, or moving the box can give a time offset.",
@@ -396,7 +399,7 @@ export const SPACE_TEXT = {
   coupledNothing: "nothing",
   coupledTip:
     "Contact changes the load on this box. The low end and its maximum output can change.",
-  ear: "Ear height, ft",
+  ear: "Ear height",
   target: TARGET_LEVEL,
   bandBalance: "Band balance",
   /** the band balance's tooltip: the steps of More bass, dB, and the highest crossover that takes the first, Hz */
@@ -405,7 +408,7 @@ export const SPACE_TEXT = {
   /** the Target level's tooltip */
   targetTip: `The level to compare with below the lowest crossover, at the **${MEASURED_AT}** location. With **${BAND_BALANCE_LABEL[BAND_BALANCE.moreBass]}**, the level is quieter above each crossover.`,
   measuredAt: MEASURED_AT,
-  systemGain: `${SYSTEM_GAIN}, dB`,
+  systemGain: SYSTEM_GAIN,
   systemGainTip: `The gain on all Sources together. A box plays at its limit when its **${GAIN}** and this add to 0.`,
   calculateGains: CALCULATE_GAINS,
   calculateGainsTip: `Sets each main's **${GAIN}** so the bands it plays most meet their target at the **${MEASURED_AT}** location. Then it lowers **${SYSTEM_GAIN}** until no band is past its limit. Each fill gets the level of the nearest main.`,
@@ -464,9 +467,9 @@ export const SPACE_TEXT = {
   stageFromCenterTip:
     "Its middle from the room's center line. + is to the right, seen from the listener.",
   stageFromFrontTip: "Its back edge from the front wall.",
-  width: "Width, ft",
-  depth: "Depth, ft",
-  stageHeight: "Height, ft",
+  width: "Width",
+  depth: "Depth",
+  stageHeight: "Height",
   stageHeightTip: "A riser's height is above its stage.",
   /** a stage's face, as a placement's "Coupled with" line names it */
   stageFace: (stage: string, face: StageFace) => `${stage} ${STAGE_FACE_NAMES[face]}`,

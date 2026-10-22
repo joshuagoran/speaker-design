@@ -7,6 +7,7 @@
 // over the traced width at the leg's place on the traced path. Then it moves the best fold's settings, one at a time
 // and in the groups each family gives (coordinate descent, halving its steps down to the editor's 0.25 in snap), and
 // keeps a move when the traced fold scores better. It stops at `FOLD_LAYOUT_MAX_TRACES` traces.
+import { clamp } from "../clamp";
 import type {
   FoldBoard,
   FoldTrace,
@@ -110,8 +111,6 @@ interface Candidate {
 const snap = (v: number) => Math.round(v / FOLD_SNAP_IN) * FOLD_SNAP_IN;
 /** A length snapped up to the grid. */
 const snapUp = (v: number) => Math.ceil(v / FOLD_SNAP_IN - 1e-9) * FOLD_SNAP_IN;
-/** `v` held between `lo` and `hi`. */
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 /** The values added up. */
 const sum = (values: readonly number[]) => values.reduce((total, v) => total + v, 0);
 

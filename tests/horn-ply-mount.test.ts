@@ -16,7 +16,6 @@ import { BOLT_TURNS, driverBolts } from "../src/components/stack-view/throatFit"
 import { PLATE_MESH_NAMES, plateFit } from "../src/components/stack-view/buildPlate";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
 import { ROUNDOVER_IN } from "../src/components/stack-view/stackHeights";
-import { MM_IN } from "../src/components/stack-view/geometry";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { DIY_ROSSE110X50 } from "../src/data/catalog/horns";
 import { N314T } from "../src/data/catalog/compression-drivers";
@@ -41,6 +40,7 @@ import {
   worldVertices,
 } from "./mount-helpers";
 import type { Horn, PaLayout } from "../src/types";
+import { IN_PER_MM } from "../src/constants/units";
 
 const PLY_IN = PANEL_STOCK[HORN_MOUNT_PANEL].in;
 
@@ -90,8 +90,8 @@ describe("the plywood horn mount on the DIY horns", () => {
       expect(takesHornMount(horn, "tower"), horn.id).toBe(false);
       // the flange the mount is sized for: ⌀130 mm, 12 mm thick
       const flange = meshFlange(mesh);
-      expect(2 * flange.rim, horn.id).toBeCloseTo(130 * MM_IN, 1);
-      expect(flange.front, horn.id).toBeCloseTo(12 * MM_IN, 3);
+      expect(2 * flange.rim, horn.id).toBeCloseTo(130 * IN_PER_MM, 1);
+      expect(flange.front, horn.id).toBeCloseTo(12 * IN_PER_MM, 3);
     }
   });
 
@@ -114,8 +114,8 @@ describe("the plywood horn mount on the DIY horns", () => {
           expect(u.top, at).toBeCloseTo(-PLY_MOUNT.belowAxis, 6);
           // the R-OSSE's neck is about R31 there: the saddle is the neck's widest point over the ply's depth + 1.5 mm
           if (horn.id === DIY_ROSSE110X50.id) {
-            expect(u.saddleR / MM_IN, at).toBeGreaterThan(30);
-            expect(u.saddleR / MM_IN, at).toBeLessThan(34);
+            expect(u.saddleR / IN_PER_MM, at).toBeGreaterThan(30);
+            expect(u.saddleR / IN_PER_MM, at).toBeLessThan(34);
           }
           // the horn's surface over the ply's depth: inside the saddle (clear by about 1.5 mm), and nowhere in the ply
           const slab = new THREE.Box3(
@@ -141,7 +141,7 @@ describe("the plywood horn mount on the DIY horns", () => {
           }
           expect(inSlab, `${at}: the neck passes through the saddle`).toBeGreaterThan(100);
           expect(u.saddleR - widest, `${at}: saddle clears the neck`).toBeGreaterThan(
-            PLY_MOUNT.saddleGap - 0.1 * MM_IN,
+            PLY_MOUNT.saddleGap - 0.1 * IN_PER_MM,
           );
           // behind the flare: in front of the ply's front face, the horn's surface reaches out past the saddle
           const ahead = hornSamples(
@@ -244,8 +244,8 @@ describe("the plywood horn mount on the DIY horns", () => {
           if (!bb || !gb) throw new Error(`${at}: no base or gusset on the axis`);
           // about 130 × 102 mm of ½″ ply, butted to the upright's back face, on the lid's roundover like the upright
           const size = bb.getSize(new THREE.Vector3());
-          expect(size.x / MM_IN, at).toBeCloseTo(130.4, 0);
-          expect(size.z / MM_IN, at).toBeCloseTo(101.6, 0);
+          expect(size.x / IN_PER_MM, at).toBeCloseTo(130.4, 0);
+          expect(size.z / IN_PER_MM, at).toBeCloseTo(101.6, 0);
           expect(size.y, at).toBeCloseTo(PLY_IN, 6);
           expect(Math.abs(bb.max.z - ub.min.z), `${at}: base against the upright`).toBeLessThan(
             CONTACT_IN,
@@ -268,7 +268,7 @@ describe("the plywood horn mount on the DIY horns", () => {
           // the gusset: ½″ thick on the center line, 90 mm along the base, on the base and against the upright
           expect(gb.max.x - gb.min.x, at).toBeCloseTo(PLY_IN, 6);
           expect(gb.getCenter(new THREE.Vector3()).x, at).toBeCloseTo(axis.x, 6);
-          expect((gb.max.z - gb.min.z) / MM_IN, at).toBeCloseTo(90, 3);
+          expect((gb.max.z - gb.min.z) / IN_PER_MM, at).toBeCloseTo(90, 3);
           expect(Math.abs(gb.min.y - bb.max.y), `${at}: gusset on the base`).toBeLessThan(
             CONTACT_IN,
           );
@@ -477,7 +477,7 @@ describe("two-bolt drivers on the plywood mount", () => {
     // a made-up six-bolt driver on a 100 mm circle: its bolt at 345° sits 12.9 mm under the axis
     const cd = {
       ...base.cd,
-      body: { ...base.cd.body, bolts: { n: 6, thread: "M6", circle: 100 * MM_IN } },
+      body: { ...base.cd.body, bolts: { n: 6, thread: "M6", circle: 100 * IN_PER_MM } },
     };
     const fit = plyMountFit(rx28, cd, base.mid.box.w);
     if (!fit) throw new Error("no fit");
@@ -489,7 +489,7 @@ describe("two-bolt drivers on the plywood mount", () => {
         `${b.x}, ${b.y}`,
       ).toBe(true);
     const straddler = driverBolts(cd, BOLT_TURNS.diagonal).find(
-      (b) => Math.abs(b.y + 50 * MM_IN * Math.sin(Math.PI / 12)) < 1e-9,
+      (b) => Math.abs(b.y + 50 * IN_PER_MM * Math.sin(Math.PI / 12)) < 1e-9,
     );
     expect(straddler).toBeDefined();
     expect(fit.top).toBeCloseTo((straddler?.y ?? 0) - washerR, 9);

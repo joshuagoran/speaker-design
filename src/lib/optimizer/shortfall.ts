@@ -1,6 +1,7 @@
 // How far a design falls short of what a goal keeps from your design, and the notice both optimizers show when the
 // first card only comes closest. Each engine keeps its own level (PA output, Hi-fi level at the seat) and wording.
 import { OUT_OF_REACH_LEAD } from "../../constants/optimizerText";
+import { formatDb } from "../format";
 
 /** What a goal keeps from your design: the level it has to reach, dB, and the F3 it can't pass, Hz. */
 export interface Keep {
@@ -24,10 +25,10 @@ export function outOfReachNotice(
   const needDb = Math.max(...keeps.map((k) => k.db)),
     maxF3 = Math.min(...keeps.map((k) => k.f3));
   const missed = [
-    got.db < needDb ? `${needDb.toFixed(1)} dB ${words.level}` : null,
+    got.db < needDb ? `${formatDb(needDb)} dB ${words.level}` : null,
     got.f3 > maxF3 ? `${words.f3} of ${maxF3.toFixed(0)} Hz or lower` : null,
   ].filter((x) => x != null);
-  const reached = `${got.db.toFixed(1)} dB, F3 ${got.f3.toFixed(0)} Hz`;
+  const reached = `${formatDb(got.db)} dB, F3 ${got.f3.toFixed(0)} Hz`;
   return missed.length
     ? `${OUT_OF_REACH_LEAD}: ${missed.join(" with ")}. Closest (first card): ${reached}.`
     : `No passing design keeps your ${words.both}. Closest (first card): ${reached}.`;

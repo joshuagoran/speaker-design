@@ -3,6 +3,7 @@
 // board's face; an end marked `square` is held at 90° to what it meets. Dragging needs the fold as it was when the drag
 // began, so `startEndDrag` and `startBoardDrag` return a record that `dragEnd` and `dragBoard` read each time the
 // pointer moves.
+import { clamp } from "../clamp";
 import {
   FOLD_EDGE_TOL_IN,
   FOLD_END,
@@ -46,7 +47,6 @@ export type FoldPartner =
   | { kind: typeof FOLD_END.wall; wall: FoldWall; dir: SidePoint }
   | { kind: typeof FOLD_END.butt; board: number; dir: SidePoint };
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const snapStep = (v: number) => Math.round(v / FOLD_SNAP_IN) * FOLD_SNAP_IN;
 const otherEnd = (end: BoardEnd["end"]): BoardEnd["end"] => (end === "a" ? "b" : "a");
 const inBox = (box: FoldBox, q: SidePoint): SidePoint => ({

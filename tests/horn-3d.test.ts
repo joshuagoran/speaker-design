@@ -15,7 +15,7 @@ import {
   DIY_ROSSE110X50,
   ST260,
 } from "../src/data/catalog/horns";
-import { MM_IN } from "../src/components/stack-view/geometry";
+import { IN_PER_MM } from "../src/constants/units";
 
 describe("catalog sizes", () => {
   test("each driver body has its published size, and its steps add up to it", () => {
@@ -73,7 +73,7 @@ describe("horns drawn from their CAD mesh", () => {
 
   test("each mesh's size is the horn's catalog size, from the flange's back face at z = 0", () => {
     for (const { horn, mesh } of meshed) {
-      const size = [0, 1, 2].map((k) => (mesh.max[k] - mesh.min[k]) * MM_IN);
+      const size = [0, 1, 2].map((k) => (mesh.max[k] - mesh.min[k]) * IN_PER_MM);
       expect(size[0], horn.id).toBeCloseTo(horn.size.w, 3);
       expect(size[1], horn.id).toBeCloseTo(horn.size.h, 3);
       expect(size[2], horn.id).toBeCloseTo(horn.size.d, 3);

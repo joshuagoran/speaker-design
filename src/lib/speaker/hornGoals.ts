@@ -23,7 +23,7 @@ import { hornDesignOf, type HornDesignRoom } from "./hornDesign";
 import { hornLayoutModel } from "./hornLayoutModel";
 import { logSpacedFrequencies } from "../acoustics/directivity";
 import { thermalVoltageLimit } from "../acoustics/boxModels";
-import { SPEED_OF_SOUND } from "../../constants/acoustics";
+import { SPEED_OF_SOUND, PASSBAND_EDGE_DB } from "../../constants/acoustics";
 import { CM_PER_M } from "../../constants/units";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import {
@@ -35,7 +35,6 @@ import {
 import {
   FOLD_AIR_SHARE,
   HORN_GOAL_LIMIT,
-  LOW_EDGE_DB,
   MIN_SECTION_SHARE,
   SEARCH_FLARES,
   SEARCH_PATH_SHARES,
@@ -98,7 +97,7 @@ export function hornGoalFit(
 /** A fit's score: lower is better. The spread, a low edge under the usual corner, and a shortfall from the target. */
 const scoreOf = (fit: HornGoalFit, goals: HornGoals) =>
   fit.spreadDb +
-  2 * Math.max(0, -LOW_EDGE_DB - fit.lowEdgeDb) +
+  2 * Math.max(0, -PASSBAND_EDGE_DB - fit.lowEdgeDb) +
   2 * Math.max(0, goals.targetDb - fit.maxOutDb);
 
 /** What the search reads of the chamber: its drivers, vent and stuffing, and its place in the box. */

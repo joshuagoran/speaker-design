@@ -12,7 +12,7 @@ import { SPEAKER_PART } from "../src/constants/speakerSpec";
 import { internalWoodLiters, subHardwarePlan } from "../src/lib/acoustics/boxModels";
 import { SUB_OPTIONS } from "../src/lib/data";
 import { byIdOrThrow } from "../src/lib/tables";
-import { chamberCutBox } from "../src/constants/cutParts";
+import { chamberCutBox, CORNER_JOINT } from "../src/constants/cutParts";
 import { LITERS_PER_CUBIC_IN } from "../src/constants/units";
 import { PA_FLOOR, speakerAndFeed } from "./speaker-cases";
 import type { CornerJoint, Dims3, PaDesign, PortStyle, SpeakerSpec, VentSpec } from "../src/types";
@@ -38,7 +38,7 @@ const withoutHardware = (spec: SpeakerSpec): SpeakerSpec => ({
  */
 export function paStackParts(
   cfg: PaDesign,
-  joint: CornerJoint = "butt",
+  joint: CornerJoint = CORNER_JOINT.butt,
   hardware: PaBuildHardware = "none",
 ) {
   const read = layersFromPa(cfg, { id: "pa", name: "pa" }, PA_FLOOR);
@@ -68,7 +68,7 @@ export function paSubBuild(cfg: PaDesign, hardware: PaBuildHardware = "none") {
     build,
     vent: chamberVentModel(spec.cabinet, chamber),
     netL: speakerResponse(spec).chambers[0].netLiters,
-    parts: (joint: CornerJoint = "butt") => speakerCutParts(spec.cabinet, joint).parts,
+    parts: (joint: CornerJoint = CORNER_JOINT.butt) => speakerCutParts(spec.cabinet, joint).parts,
   };
 }
 
@@ -80,7 +80,7 @@ export function paMidBuild(cfg: PaDesign, hardware: PaBuildHardware = "none") {
   return {
     spec,
     build,
-    parts: (joint: CornerJoint = "butt") => speakerCutParts(spec.cabinet, joint).parts,
+    parts: (joint: CornerJoint = CORNER_JOINT.butt) => speakerCutParts(spec.cabinet, joint).parts,
   };
 }
 

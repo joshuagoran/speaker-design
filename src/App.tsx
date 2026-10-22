@@ -102,7 +102,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
     >
       {/* the same scrollbar space as the page below, so the header lines up with it */}
       <div className="md:flex-none md:overflow-hidden md:[scrollbar-gutter:stable]">
-        <header className={`${PAGE_WIDTH} pt-6 md:pt-8 pb-4`}>
+        <header className={`${PAGE_WIDTH} pt-6 md:pt-8 pb-4 flex flex-col gap-3`}>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">
               SpeakNow

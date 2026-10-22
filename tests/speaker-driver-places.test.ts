@@ -32,6 +32,7 @@ import {
 } from "../src/lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, DRIVER_KIND, HORN_DRIVE, VENT_KIND } from "../src/constants/speakerSpec";
 import type { SpeakerCabinet, SpeakerChamber, SpeakerDriver } from "../src/types";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 /** How far two boxes may overlap before a test counts it, in. */
 const EPS = 1e-6;
@@ -485,7 +486,7 @@ describe("a back-loaded horn's drivers are on its baffle, with no driver board",
 
   test("no driver board row in the cutlist", () => {
     const rows = (cabinet: SpeakerCabinet) =>
-      speakerCutParts(cabinet, "butt").parts.filter((p) => p.part === "driverBoard");
+      speakerCutParts(cabinet, CORNER_JOINT.butt).parts.filter((p) => p.part === "driverBoard");
     expect(rows(bin(false).cabinet)).toHaveLength(1);
     expect(rows(bin(true).cabinet)).toHaveLength(0);
   });

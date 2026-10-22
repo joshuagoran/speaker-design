@@ -6,7 +6,6 @@
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { describe, expect, test, vi } from "vite-plus/test";
 import * as THREE from "three";
-import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
 import {
   buildSpeakerScene,
   speakerSceneKey,
@@ -55,6 +54,7 @@ import {
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { configs, type PaConfig } from "./pa-configs";
 import type { HifiDesignState, SpeakerChamber, SpeakerPart, SpeakerSpec } from "../src/types";
+import { BAFFLE_PLY_IN } from "../src/constants/panelSizes";
 
 const EPS = 1e-6;
 
@@ -134,7 +134,7 @@ const CASES: { name: string; spec: SpeakerSpec }[] = [
       hifiSpeaker({
         tweeter: byIdOrThrow(HIFI_TWEETERS, "de250", "tweeters"),
         selectedWaveguide: byIdOrThrow(HIFI_WAVEGUIDES, "diy_os90x70", "waveguides"),
-        boxType: "vented",
+        boxType: VENT_KIND.vented,
         boxDims: { w: 10, h: 20, d: 11 },
       }),
     ),
@@ -355,7 +355,7 @@ describe("horns", () => {
       expect(drawn?.path.legs.length).toBe(1);
       const box = boxOf(...flare);
       // the mouth is at the baffle's inside face, the path inside the walls
-      expect(box.max.z).toBeCloseTo(frontZ(spec) - spec.cabinet.insetIn - BAFFLE_THICKNESS_IN, 6);
+      expect(box.max.z).toBeCloseTo(frontZ(spec) - spec.cabinet.insetIn - BAFFLE_PLY_IN, 6);
       expect(box.min.z).toBeGreaterThan(-base.dims.d / 2);
       expect(drawn?.path.fits).toBe(true);
       // the front-loaded horn's driver sits at its throat, inside: drawn only in the cutaway

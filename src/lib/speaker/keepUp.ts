@@ -14,7 +14,7 @@ import type {
 } from "../../types";
 import { curveLevelAt } from "../acoustics/coverage";
 import { KEEP_UP_SLACK_DB, type ChipBody } from "./chips";
-import { formatHz } from "../format";
+import { formatHz, formatDb } from "../format";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { crossingPairs, type CrossingPair } from "./stackResponse";
 
@@ -118,5 +118,5 @@ export function keepUpChip(
         KEEP_UP_TEXT.shortTitle(upper),
         KEEP_UP_TEXT.shortDetail((-k.gapDb).toFixed(1), hz, upper, lower),
       ]
-    : ["ok", KEEP_UP_TEXT.okTitle(lower), KEEP_UP_TEXT.okDetail(k.gapDb.toFixed(1), hz, lower)];
+    : ["ok", KEEP_UP_TEXT.okTitle(lower), KEEP_UP_TEXT.okDetail(formatDb(k.gapDb), hz, lower)];
 }

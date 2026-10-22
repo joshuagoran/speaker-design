@@ -63,8 +63,9 @@ export function SettingsColumn<Id extends string>({
           </div>
         </div>
       )}
+      {/* the body pads its children, and its fold sections bleed back to the panel edges, so their heading bars span it */}
       <div
-        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 ${folds ? (foldsAt === "desktop" ? SECTION_GAP_Y_MD_UP : SECTION_GAP_Y) : `md:pt-3 ${gapY}`} ${bodyClassName}`}
+        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 md:[&>[data-fold-section]]:-mx-4 ${folds ? (foldsAt === "desktop" ? SECTION_GAP_Y_MD_UP : SECTION_GAP_Y) : `md:pt-3 ${gapY}`} ${bodyClassName}`}
       >
         {children}
       </div>
@@ -96,8 +97,8 @@ export function SettingsSection<Id extends string>({
   children,
 }: SectionProps<Id>) {
   return (
-    // the section bleeds to the panel edges (the column pads its body), so the heading bar spans the panel; the body pads itself
-    <section className={`md:-mx-4 ${FLEX_GAP_Y} ${className}`}>
+    // the column bleeds the section to the panel edges (data-fold-section marks it); the body pads itself
+    <section data-fold-section className={`${FLEX_GAP_Y} ${className}`}>
       <FoldHeading
         id={id}
         title={title}

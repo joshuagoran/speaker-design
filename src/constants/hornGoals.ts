@@ -51,8 +51,5 @@ export const SEARCH_POINTS = 16;
 /** How many times the search halves its steps around the best design of the first pass. */
 export const SEARCH_REFINE_ROUNDS = 5;
 
-/** A level at the low goal this far under the band's mean, dB, counts as flat: the usual −3 dB corner. */
-export const LOW_EDGE_DB = 3;
-
 /** The shortest section the search makes, as a share of the path. */
 export const MIN_SECTION_SHARE = 0.05;

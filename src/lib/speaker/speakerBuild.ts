@@ -16,6 +16,7 @@
 // - Weight: the PA's rule on a frame (its box weights: the 3/4″ baffle and the walls by their outside faces, the braces,
 //   the fixings; a chamber over another adds what it builds, as the tower's cabinet over its sub box), the Hi-fi's on a
 //   flush box; the drivers with their horns, the radiators and the hardware.
+import { PORT_STYLE } from "../../constants/portStyles";
 import type {
   PurchasedPart,
   BraceStyleId,
@@ -47,7 +48,6 @@ import type {
 } from "../../types";
 import type { HardwareDriver } from "../build/hardware";
 import {
-  BAFFLE_PLY_IN,
   MID_FIXINGS_LB,
   SUB_FIXINGS_LB,
   archStripIn,
@@ -144,8 +144,20 @@ import {
 } from "../../data/catalog/driver-cutouts";
 import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
-import { CM2_PER_IN2, KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
-import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
+import {
+  CM2_PER_IN2,
+  KG_PER_LB,
+  LITERS_PER_CUBIC_IN,
+  SQ_IN_PER_SQ_FT,
+  MM_PER_IN,
+} from "../../constants/units";
+import {
+  PANEL,
+  SHELL_CUT_BOX,
+  chamberCutBox,
+  cutBoxName,
+  CORNER_JOINT,
+} from "../../constants/cutParts";
 import { SPEAKER_TEXT, DRIVER_KIND_NAMES, FOLD_WALL_NAMES } from "../../constants/speakerPage";
 import { FOLD_END, FOLD_SQUARE_TOL_DEG } from "../../constants/foldHorn";
 import { HARDWARE_BOX } from "../../constants/hardware";
@@ -166,13 +178,12 @@ import {
   SLOT_PLACE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
+import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
 
 /** The least air the build gives a chamber, L (the Hi-fi box model's floor). */
 export const MIN_NET_L = 1;
 /** The joint the build cuts a chamber with to count the wood inside it (the joint doesn't move the inside). */
-const COUNT_JOINT: CornerJoint = "butt";
-/** in² to ft² */
-const SQ_IN_PER_SQ_FT = 144;
+const COUNT_JOINT: CornerJoint = CORNER_JOINT.butt;
 
 /** A chamber's inside behind the baffle, in: its clear width and height, its depth, and a bottom slot's band. */
 export interface ChamberInside {
@@ -285,7 +296,7 @@ function chamberFrames(cabinet: SpeakerCabinet, layout: SpeakerLayout): ChamberF
         inD: isFrame(cabinet)
           ? chamber.dims.d - baffleInsetIn(cabinet) - BAFFLE_PLY_IN - t
           : chamber.dims.d - 2 * t,
-        band: paSub?.style === "slots" ? paSub.vent.slotH + t : 0,
+        band: paSub?.style === PORT_STYLE.slot ? paSub.vent.slotH + t : 0,
       },
       shared,
       paSub,
@@ -453,7 +464,7 @@ function chamberDrivers(f: ChamberFrame, baffleT: number) {
 const isVentPanel = (panel: RadiatorPanel): panel is VentPanel => panel !== PANEL.side;
 
 /** How far a passive radiator takes room behind its panel, in: its travel both ways and an inch of frame. */
-const radiatorRoomIn = (xmaxMm: number) => 1 + (2 * xmaxMm) / 25.4;
+const radiatorRoomIn = (xmaxMm: number) => 1 + (2 * xmaxMm) / MM_PER_IN;
 
 /**
  * The room the chamber's vent takes, which no brace or rib may enter: a PA port's parts and air as the PA sub box
@@ -675,10 +686,23 @@ function chamberBracingAs(
         handles ?? undefined,
         back,
         targetHz,
+        cabinet.panel.material,
       ),
       hardware: fitted(
         handles &&
-          subHardwarePlan(f.box, t, inset, portStyle, vent, sub, style, handles, back, targetHz),
+          subHardwarePlan(
+            f.box,
+            t,
+            inset,
+            portStyle,
+            vent,
+            sub,
+            style,
+            handles,
+            back,
+            targetHz,
+            cabinet.panel.material,
+          ),
       ),
     };
   }
@@ -708,6 +732,7 @@ function chamberBracingAs(
           },
           bracing,
           keepOut,
+          material: cabinet.panel.material,
         }),
     );
   const placed = plan(null);
@@ -1395,7 +1420,7 @@ function withoutGivenWalls(
   frame: boolean,
 ): CutPart[] {
   const topCut = { butt: 0, rabbet: t / 2, miter: t }[joint];
-  const faceCut = !frame && joint === "butt" ? t : t / 2;
+  const faceCut = !frame && joint === CORNER_JOINT.butt ? t : t / 2;
   const left = shared.left ? 1 : 0,
     below = shared.below ? 1 : 0;
   /** a side's joint words without the bottom edge it no longer has (a frame's and a flush box's wording) */

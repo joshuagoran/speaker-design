@@ -34,8 +34,13 @@ export const STUFFING_MAX_PCT = 25;
 /** How much a chamber's fiber fill makes it act larger, %, by how full it is: none, lined walls, half full, full. */
 export const FILL_LEVEL_PCT = { none: 0, lined: 10, half: 15, full: STUFFING_MAX_PCT } as const;
 
+/** How many decimals every delay shows, ms: 0.1 ms is 72° of phase at 2 kHz, too coarse for a crossover. */
+export const DELAY_DECIMALS = 2;
+/** Every delay field's step, ms: one unit of the last decimal shown. */
+export const DELAY_STEP_MS = 10 ** -DELAY_DECIMALS;
+
 /** The Stack page's member field steps: a member's level, dB, and its set delay, ms. The Stack optimizer builds on them. */
 export const STACK_STEPS = {
   levelDb: 0.5,
-  delayMs: 0.1,
+  delayMs: DELAY_STEP_MS,
 } as const;

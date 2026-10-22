@@ -3,7 +3,7 @@
 // level, polarity and delay, and each band's path to the listening point; the members summed with their phase. Its
 // limits take each member's own (lib/speaker/speakerLimits) on one input. Pure.
 //
-// The listening point is STACK_LISTEN_DISTANCE_M in front of the stack's front, on its center line, level with the
+// The sum point is STACK_SUM_POINT_M in front of the stack's front, on its center line, level with the
 // highest band's center (on the horn's or tweeter's axis). A band's path there sets its delay and its level against the
 // distance (1/r); the levels are moved back to 1 m, so a stack reads on the same axes as a speaker.
 //
@@ -36,7 +36,7 @@ import { speakerLimits } from "./speakerLimits";
 import { stackLayout, type StackPoint } from "./stackLayout";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { METERS_PER_INCH, MS_PER_S } from "../../constants/units";
-import { AUTO_DELAY, STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
+import { AUTO_DELAY, STACK_SUM_POINT_M } from "../../constants/speakerSpec";
 
 /** A level, dB, from a pressure. */
 
@@ -191,12 +191,12 @@ function alignMs(
       null,
     );
     if (!band || abs(band.pressure[near]) === 0) return null;
-    const path = model.paths.get(band.id) ?? STACK_LISTEN_DISTANCE_M;
+    const path = model.paths.get(band.id) ?? STACK_SUM_POINT_M;
     return {
       crossover: angleOf(filtersTransfer(f0, member.crossover)),
       rest:
         atFrequency(ownPhase(band, member.crossover), f0) -
-        (2 * Math.PI * f0 * (path - STACK_LISTEN_DISTANCE_M)) / SPEED_OF_SOUND,
+        (2 * Math.PI * f0 * (path - STACK_SUM_POINT_M)) / SPEED_OF_SOUND,
     };
   };
   const pa = phase(a),
@@ -249,7 +249,7 @@ function memberDelays(
 
 /** A point's path to the listening point, m. */
 const pathM = (p: StackPoint, listenHeightIn: number) => {
-  const d = STACK_LISTEN_DISTANCE_M / METERS_PER_INCH;
+  const d = STACK_SUM_POINT_M / METERS_PER_INCH;
   return Math.hypot(p.x, p.y - listenHeightIn, d + p.z) * METERS_PER_INCH;
 };
 
@@ -293,19 +293,12 @@ export function stackResponse(
     const gain = memberGain(stack.members[k]);
     let pressure = freqs.map(() => complex(0));
     for (const band of m.response.bands) {
-      const path = m.paths.get(band.id) ?? STACK_LISTEN_DISTANCE_M;
+      const path = m.paths.get(band.id) ?? STACK_SUM_POINT_M;
       // the spreading against the listening distance, and the time: the path's and the delay's
       pressure = pressure.map((p, i) =>
         add(
           p,
-          arrival(
-            band.pressure[i],
-            freqs[i],
-            gain,
-            path,
-            STACK_LISTEN_DISTANCE_M,
-            delayMs / MS_PER_S,
-          ),
+          arrival(band.pressure[i], freqs[i], gain, path, STACK_SUM_POINT_M, delayMs / MS_PER_S),
         ),
       );
     }

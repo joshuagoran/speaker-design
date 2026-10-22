@@ -2,6 +2,7 @@
 // for, inches or ratios. Every part's position and front size comes from the design (lib/speaker/twoWay, lib/build/boxLayout); these only give it a
 // body.
 import type { CompressionDriver } from "../types";
+import { MM_PER_IN } from "./units";
 
 /**
  * GENERIC bodies, for parts the catalogue gives no body for: typical proportions so each reads as what it is, not its
@@ -14,7 +15,7 @@ export const HIFI_GENERIC_BODIES = {
    */
   compressionDriver: {
     depthPerDia: 62 / 120,
-    bolts: { n: 2, thread: "M6", circle: 76 / 25.4 },
+    bolts: { n: 2, thread: "M6", circle: 76 / MM_PER_IN },
   } satisfies { depthPerDia: number; bolts: CompressionDriver["body"]["bolts"] },
   /** a woofer's body behind the baffle, drawn in the cutaway, per inch of its nominal size: basket depth, magnet */
   woofer: { depthPerSize: 0.45, magnetDiaPerSize: 0.55, magnetDepthPerSize: 0.2 },
