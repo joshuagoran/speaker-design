@@ -1,6 +1,7 @@
 // The Stack page's optimizer UI state (src/pages/stack/useStackOptimizer, stackKeeps): loading a card replaces the stack as
 // one edit under its id and name, Undo brings it back, the cards go stale when the stack changes after the search, and
-// the Keep list's locks never move to another member or driver.
+// the locks never move to another member or driver; the box locks reach the search, the Locked line names them, and Clear
+// locks removes them.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { createElement } from "react";
@@ -20,8 +21,6 @@ import {
   type StackOptimizer,
 } from "../src/pages/stack/useStackOptimizer";
 import {
-  MEMBER_LOCKS,
-  allStackKept,
   countStackKept,
   heldKey,
   isMemberKept,
@@ -29,7 +28,6 @@ import {
   locksOfSpeaker,
   reconcileHeldStack,
   stackKeepItems,
-  stackLockMax,
   toggleMemberKept,
   toggleSpeakerKept,
   withSpeakerLocks,
@@ -43,6 +41,7 @@ import {
   STACK_PROBLEM_TEXT,
 } from "../src/constants/stackOptimizer";
 import { stackNearMissText } from "../src/pages/stack/StackOptimizerResults";
+import { LOCK_TEXT } from "../src/constants/uiText";
 import type { StackDesign } from "../src/types";
 
 const read = presetLayers(STACK_PRESET.paStack, { id: "saved-stack", name: "My stack" });
@@ -201,16 +200,13 @@ test("the limits start at your stack's price, heaviest box and height", () => {
   ]);
 });
 
-test("Keep list: each speaker the members name once, with its parts; the lock count and the lock all state", () => {
+test("lock items: each speaker the members name once, with its parts; the lock count", () => {
   const shared = stackKeepItems(satellites);
   const ids = new Set(satellites.stack.members.map((m) => m.speakerId));
   assert.ok(ids.size < satellites.stack.members.length, "two members name one speaker");
   assert.equal(shared.length, ids.size, "a speaker two members name shows once");
   const keeps = stackKeepItems(design);
   assert.ok(keeps.every((k) => k.items.length > 0));
-  const all = allStackKept(design);
-  assert.equal(countStackKept(all), stackLockMax(design), "every lock set");
-  assert.equal(stackLockMax(design) >= design.stack.members.length * MEMBER_LOCKS.length, true);
   assert.equal(countStackKept({}), 0);
   const [{ speaker, items }] = keeps;
   const one = toggleSpeakerKept({}, speaker.id);
@@ -359,13 +355,12 @@ test("speaker locks hold their speaker and its drivers: a speaker or a driver ad
   assert.ok(!isSpeakerKept(reconcileHeldStack(gone, design, 0).locks, other.id));
 });
 
-test("the fold's words: the limits, the keep hint and the summary name a stack", () => {
+test("the fold's words: the limits and the summary name a stack", () => {
   const T = STACK_OPTIMIZER_TEXT;
   assert.equal(T.summaryHeight(null), "no height limit");
   assert.equal(T.summaryHeight(72), "up to 72 in tall");
   assert.equal(T.summaryWeight(null), "no weight limit");
   assert.equal(T.summaryWeight(60), "up to 60 lb a box");
-  assert.match(T.targetYours("113"), /Stack/);
 });
 
 test("the near miss's weight is per box: the option, and the heaviest box where the weight limit blocks", () => {
@@ -384,4 +379,39 @@ test("the near miss's weight is per box: the option, and the heaviest box where 
   assert.ok(!blocked.includes(`${closest.metrics.lb.toFixed(0)} lb`), blocked);
   const short = stackNearMissText({ closest, closestIsYours: false, blocking: [] });
   assert.ok(short.includes(`${closest.metrics.lb.toFixed(0)} lb`), short);
+});
+
+test("a box lock reaches the search, the Locked line names it in the order of the page, and Clear locks removes every lock", () => {
+  const T = STACK_OPTIMIZER_TEXT;
+  const [first, second] = design.stack.members;
+  assert.ok(first && second, "two boxes");
+  const speakerName = design.speakers.find((s) => s.id === second.speakerId)?.name;
+  runSteps([
+    (h) => {
+      assert.equal(LOCK_TEXT.locked(h.lockedNames), "Locked: nothing");
+      // the crossover lock is in the section after the boxes' own settings
+      h.memberLock("crossovers", 0).onClick();
+    },
+    (h) => h.memberLock("levels", 1).onClick(),
+    (h) => h.speakerLock(second.speakerId).onClick(),
+    (h) => {
+      // the search takes the hook's locks
+      assert.deepEqual(h.locks.crossovers, [0]);
+      assert.deepEqual(h.locks.levels, [1]);
+      assert.deepEqual(h.locks.keep, [second.speakerId]);
+      assert.equal(h.memberLock("levels", 1).locked, true);
+      assert.equal(h.memberLock("levels", 1).unlocks, true);
+      assert.deepEqual(h.lockedNames, [
+        speakerName,
+        `2. ${speakerName} ${T.memberLock.levels}`,
+        `1. ${design.speakers.find((s) => s.id === first.speakerId)?.name} ${T.memberLock.crossovers}`,
+      ]);
+      assert.equal(h.nLocks, 3);
+      h.clearLocks();
+    },
+    (h) => {
+      assert.equal(h.nLocks, 0);
+      assert.deepEqual(h.lockedNames, []);
+    },
+  ]);
 });

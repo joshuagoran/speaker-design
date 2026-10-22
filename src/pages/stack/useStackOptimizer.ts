@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { runStackOptimizer } from "../../lib/speaker/optimize/runStackOptimizer";
 import {
   budgetStart,
@@ -6,26 +6,22 @@ import {
   useDesignOptimizer,
   weightStart,
 } from "../../hooks/useDesignOptimizer";
-import { isKept, toggleKeep, type KeepItem } from "../speaker/speakerKeeps";
 import {
-  allStackKept,
   countStackKept,
   heldKey,
-  reconcileHeldStack,
   isMemberKept,
   isSpeakerKept,
-  locksOfSpeaker,
-  stackKeepItems,
-  stackLockMax,
+  lockedStackNames,
+  memberNames,
+  reconcileHeldStack,
   toggleMemberKept,
   toggleSpeakerKept,
-  withSpeakerLocks,
   type HeldStackLocks,
   type MemberLockKind,
 } from "./stackKeeps";
+import { STACK_OPTIMIZER_TEXT } from "../../constants/stackOptimizer";
+import type { LockControl } from "../../components/ui/LockButton";
 import type {
-  DimensionLockMode,
-  Dims3,
   SpeakerSpec,
   StackDesign,
   StackOptimizerCard,
@@ -87,7 +83,6 @@ export function useStackOptimizer({ design, loadDesign, round, current }: Props)
   // the locks name members by their place and a speaker's drivers by theirs: they belong to the stack they were set on
   const key = heldKey(design, round);
   const [held, setHeld] = useState<HeldStackLocks>({ ...key, locks: {} });
-  const keeps = useMemo(() => stackKeepItems(design), [design]);
   // a lock that no longer holds is dropped for good, not only hidden: a member or driver added back must not bring it
   // back onto another one
   const now = reconcileHeldStack(held, design, round);
@@ -111,11 +106,6 @@ export function useStackOptimizer({ design, loadDesign, round, current }: Props)
     },
     run: (goals, limits, options) => runStackOptimizer({ design, goals, limits, locks }, options),
   });
-  /** the speaker's own locks, changed by `edit` */
-  const editSpeaker = (
-    id: SpeakerSpec["id"],
-    edit: (locks: ReturnType<typeof locksOfSpeaker>) => ReturnType<typeof locksOfSpeaker>,
-  ) => setLocks(withSpeakerLocks(locks, id, edit(locksOfSpeaker(locks, id))));
   return {
     ...shared,
     budget: limits.budget,
@@ -128,26 +118,30 @@ export function useStackOptimizer({ design, loadDesign, round, current }: Props)
     setMaxHeightIn: (maxHeightIn: number | null) => setLimit("maxHeightIn", maxHeightIn),
     heightStart: heightStart(current.heightIn),
     locks,
-    /** each speaker the members name, with the parts of it a lock can hold */
-    keeps,
-    isSpeakerKept: (id: SpeakerSpec["id"]) => isSpeakerKept(locks, id),
-    toggleSpeakerKept: (id: SpeakerSpec["id"]) => setLocks(toggleSpeakerKept(locks, id)),
-    isKept: (id: SpeakerSpec["id"], item: KeepItem) => isKept(locksOfSpeaker(locks, id), item),
-    toggleKeep: (id: SpeakerSpec["id"], item: KeepItem) =>
-      editSpeaker(id, (l) => toggleKeep(l, item)),
-    sizeLock: (id: SpeakerSpec["id"], axis: keyof Dims3): DimensionLockMode =>
-      locksOfSpeaker(locks, id).size?.[axis] ?? "free",
-    setSizeLock: (id: SpeakerSpec["id"], axis: keyof Dims3, mode: DimensionLockMode) =>
-      editSpeaker(id, (l) => ({ ...l, size: { ...l.size, [axis]: mode } })),
-    isMemberKept: (kind: MemberLockKind, member: number) => isMemberKept(locks, kind, member),
-    toggleMemberKept: (kind: MemberLockKind, member: number) =>
-      setLocks(toggleMemberKept(locks, kind, member)),
-    lockBar: {
-      nLocks: countStackKept(locks),
-      lockMax: stackLockMax(design),
-      onLockAll: () => setLocks(allStackKept(design)),
-      onClear: () => setLocks({}),
+    /** the lock beside a box's Edit: its whole Speaker stays as it is */
+    speakerLock: (id: SpeakerSpec["id"]): LockControl => {
+      const locked = isSpeakerKept(locks, id);
+      return {
+        name: design.speakers.find((s) => s.id === id)?.name ?? id,
+        locked,
+        unlocks: locked,
+        onClick: () => setLocks(toggleSpeakerKept(locks, id)),
+      };
     },
+    /** the lock beside a box's crossover, gain or delay */
+    memberLock: (kind: MemberLockKind, member: number): LockControl => {
+      const locked = isMemberKept(locks, kind, member);
+      return {
+        name: `${memberNames(design)[member]} ${STACK_OPTIMIZER_TEXT.memberLock[kind]}`,
+        locked,
+        unlocks: locked,
+        onClick: () => setLocks(toggleMemberKept(locks, kind, member)),
+      };
+    },
+    /** how many locks are set, and their names in the order of the page */
+    nLocks: countStackKept(locks),
+    lockedNames: lockedStackNames(locks, design, STACK_OPTIMIZER_TEXT.memberLock),
+    clearLocks: () => setLocks({}),
   };
 }
 

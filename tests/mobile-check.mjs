@@ -154,7 +154,7 @@ for (const width of [1024, 1600]) {
   await ctx.close();
 }
 
-// An optimizer page (Speaker, Stack) started from one of its starts, every fold open and the Locks list open: pick a goal,
+// An optimizer page (Speaker, Stack) started from one of its starts, every fold open: pick a goal,
 // find designs, wait for the cards (the results block shows its heading). Nothing past the settings pane's edge and no
 // sideways page scroll, on a 360 px phone, a tablet (the two panes from md up) and a desktop.
 async function optimizerPageCheck({ name, hash, width, phone, startName, fallbackStart }) {
@@ -195,13 +195,8 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => fallbackStart.test(o));
   if (many) await start.selectOption({ label: many });
-  // the Locks list (a closed fold inside the Optimizer fold) open too: its long lines must wrap inside the pane
   const goal = p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper });
   await reveal(goal);
-  const keep = p.locator("aside details:not([open]) > summary", {
-    hasText: SPEAKER_OPTIMIZER_TEXT.keep,
-  });
-  if (await keep.count()) await keep.first().click();
   // the Optimizer fold: pick a goal, find designs, and wait for the cards
   await goal.click();
   await p.getByRole("button", { name: SPEAKER_OPTIMIZER_TEXT.run }).click();

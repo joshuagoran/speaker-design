@@ -542,7 +542,7 @@ export const SPEAKER_TEXT = {
   hornGoalLowTip: "Lowest flat frequency goal.",
   hornGoalHigh: "Highest",
   hornGoalHighTip: "Highest flat frequency goal. Usually the crossover.",
-  hornGoalTarget: "Loudness at 1 m",
+  hornGoalTarget: "Level at 1 m",
   hornGoalTargetTip: "Level at full power goal.",
   hornDesign: START_FROM_GOALS,
   hornDesigning: "Starting…",

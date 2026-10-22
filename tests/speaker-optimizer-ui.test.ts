@@ -1,8 +1,9 @@
 // The Speaker page's optimizer UI state (src/pages/speaker/useSpeakerOptimizer, speakerKeeps): loading a card replaces
-// the spec as one edit and Undo brings it back; the Keep list names the parts and its locks reach the search.
+// the spec as one edit and Undo brings it back; the locks beside the settings reach the search, the fold's Locked line
+// names them, and Clear locks removes them; the goal level follows your design until you change it.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { createElement } from "react";
+import { createElement, useState } from "react";
 import { renderToString } from "react-dom/server";
 import { optimizeSpeaker } from "../src/lib/speaker/optimize/optimizeSpeaker";
 import { evaluateSpeaker } from "../src/lib/speaker/optimize/evaluate";
@@ -13,17 +14,20 @@ import {
   type SpeakerOptimizer,
 } from "../src/pages/speaker/useSpeakerOptimizer";
 import {
-  allKept,
   countKept,
   driverLayout,
   heldLocks,
   isKept,
   keepItems,
+  lockedNames,
   pruneKept,
   reconcileHeld,
   toggleKeep,
 } from "../src/pages/speaker/speakerKeeps";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
+import { LOCK_TEXT } from "../src/constants/uiText";
+import { BandSettings } from "../src/pages/speaker/BandSettings";
+import type { LockControl } from "../src/components/ui/LockButton";
 import { SPEAKER_GOAL } from "../src/constants/speakerOptimizer";
 import type { SpeakerSpec } from "../src/types";
 
@@ -103,7 +107,7 @@ test("the target starts at your design's level, rounded; a goal tap adds and rem
   ]);
 });
 
-test("Keep list: one item per driver, horn, vent, filter and amp the spec has", () => {
+test("lock items: one per driver, horn, vent, filter and amp the spec has", () => {
   const items = keepItems(spec);
   const drivers = spec.cabinet.chambers.flatMap((c) => c.drivers);
   assert.equal(items.filter((i) => i.kind === "drivers").length, drivers.length);
@@ -123,16 +127,17 @@ test("Keep list: one item per driver, horn, vent, filter and amp the spec has", 
   assert.ok(new Set(items.map((i) => i.label + i.kind)).size === items.length, "labels differ");
 });
 
-test("Keep list: toggling, locking all, counting and pruning", () => {
+test("locks: toggling, counting and pruning", () => {
   const items = keepItems(spec);
   const first = items[0];
   const one = toggleKeep({}, first);
   assert.ok(isKept(one, first));
   assert.equal(countKept(one), 1);
   assert.equal(countKept(toggleKeep(one, first)), 0, "a second toggle unlocks it");
-  const all = allKept(items);
+  const all = items.reduce(toggleKeep, {
+    size: { w: "exact", h: "exact", d: "exact" },
+  } as const);
   assert.equal(countKept(all), items.length + 3, "every item and the three box axes");
-  assert.deepEqual(all.size, { w: "exact", h: "exact", d: "exact" });
   // a lock on a part the spec no longer has is dropped
   const stale = { drivers: [driverRef(9, 9)], vents: [7], amps: ["gone"] };
   assert.equal(countKept(pruneKept(stale, items)), 0);
@@ -218,4 +223,117 @@ test("a driver lock that stopped holding stays dropped when the driver comes bac
   // the entry removed again: the layout is yours again, and nothing comes back
   const back = reconcileHeld(now, { round: 0, layout: driverLayout(spec) }, items);
   assert.equal(countKept(back.locks), 0, "it stays dropped");
+});
+
+test("a lock beside a setting reaches the search, the Locked line names it, and Clear locks removes every lock", () => {
+  const amp = keepItems(spec).find((i) => i.kind === "amps");
+  assert.ok(amp && amp.kind === "amps", "a band's amp lock");
+  let pressed: LockControl | null = null;
+  runSteps([
+    (h) => {
+      assert.deepEqual(h.lockedNames, []);
+      assert.equal(LOCK_TEXT.locked(h.lockedNames), "Locked: nothing");
+      const lock = h.partLock("amps", amp.ref);
+      assert.ok(lock && !lock.locked);
+      lock.onClick();
+    },
+    (h) => {
+      // the search takes the hook's locks
+      assert.deepEqual(h.locks.amps, [amp.ref]);
+      assert.equal(h.partLock("amps", amp.ref)?.locked, true);
+      pressed = h.partLock("amps", amp.ref);
+      h.sizeLock("w").onClick();
+    },
+    (h) => {
+      assert.equal(h.sizeLock("w").mark, "≤");
+      assert.deepEqual(h.lockedNames, lockedNames(h.locks, keepItems(spec)));
+      assert.equal(h.lockedNames[0], "width ≤", "the size first, as the page shows it");
+      assert.equal(h.lockedNames[1], amp.label);
+      assert.equal(h.nLocks, 2);
+      h.clearLocks();
+    },
+    (h) => {
+      assert.equal(h.nLocks, 0);
+      assert.deepEqual(h.locks, {});
+    },
+  ]);
+  // the band's settings draw the pressed lock beside its amp power
+  const band = spec.bands.find((b) => b.id === amp.ref);
+  assert.ok(band && pressed);
+  const lock: LockControl = pressed;
+  const markup = renderToString(
+    createElement(BandSettings, {
+      band,
+      index: 0,
+      count: 1,
+      newCornerHz: 100,
+      onEdit: () => {},
+      locks: { partLock: (kind) => (kind === "amps" ? lock : null), sizeLock: () => lock },
+    }),
+  );
+  assert.ok(
+    markup.includes(`aria-label="${LOCK_TEXT.unlock(amp.label)}"`),
+    "the amp lock, pressed",
+  );
+  assert.ok(markup.includes('aria-pressed="true"'));
+});
+
+test("a size lock cycles free, up to this size, exactly this size", () => {
+  runSteps([
+    (h) => {
+      const free = h.sizeLock("d");
+      assert.equal(free.locked, false);
+      assert.equal(free.unlocks, false);
+      free.onClick();
+    },
+    (h) => {
+      assert.equal(h.locks.size?.d, "max");
+      h.sizeLock("d").onClick();
+    },
+    (h) => {
+      const exact = h.sizeLock("d");
+      assert.equal(h.locks.size?.d, "exact");
+      assert.equal(exact.mark, "=");
+      assert.equal(exact.unlocks, true, "the next tap frees it");
+      exact.onClick();
+    },
+    (h) => assert.equal(h.locks.size?.d, "free"),
+  ]);
+});
+
+test("the goal level follows your design until you change it", () => {
+  let musicDb = 100.4;
+  let done = 0;
+  const steps: ((h: SpeakerOptimizer) => void)[] = [
+    (h) => {
+      assert.equal(h.targetDb, 100);
+      musicDb = 103.2;
+    },
+    (h) => {
+      assert.equal(h.targetDb, 103, "it follows the design");
+      h.setTarget(110);
+    },
+    (h) => {
+      assert.equal(h.targetDb, 110);
+      musicDb = 90;
+    },
+    (h) => assert.equal(h.targetDb, 110, "it keeps your value"),
+  ];
+  function Probe() {
+    // a render-time update renders the probe again, for the next step to read the new level
+    const [tick, setTick] = useState(0);
+    const hook = useSpeakerOptimizer({
+      spec,
+      loadSpec: () => {},
+      round: 0,
+      current: { musicDb, price: yours.price, lb: yours.lb },
+    });
+    if (done < steps.length) {
+      steps[done++](hook);
+      setTick(tick + 1);
+    }
+    return null;
+  }
+  renderToString(createElement(Probe));
+  assert.equal(done, steps.length, "every step ran");
 });

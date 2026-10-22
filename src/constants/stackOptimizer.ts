@@ -8,6 +8,7 @@ import {
   SPEAKER_PROBLEM,
 } from "./speakerOptimizer";
 import { SPEAKER_OPTIMIZER_TEXT } from "./speakerOptimizerText";
+import { STACK_TEXT } from "./stack";
 
 /** Each goal's words for the first card, where the stack's differ from a speaker's (a lighter stack, smaller boxes). */
 export const STACK_GOAL_TEXT = {
@@ -59,25 +60,20 @@ export const STACK_UNMODELED = "Cannot calculate your Stack: it has no box that 
  */
 export const STACK_OPTIMIZER_TEXT = {
   ...SPEAKER_OPTIMIZER_TEXT,
-  targetYours: (db: string) => `Your Stack plays ${db} dB at 1 m.`,
   budgetField: "Most all the parts cost",
   weight: "Weight per box",
   weightField: "Most a box weighs",
   height: "Stack height",
   heightField: "Tallest the stack may stand",
-  keepHint:
-    "The optimizer does not change a locked part. Size: free, up to this size (≤), or exactly this size (=).",
   curveLabel: "Maximum output with one input, this Stack against yours",
   failing: (problems: string) =>
     `Your Stack fails: ${problems}. Fixes may cost more, weigh more, or stand taller.`,
-  /** a speaker's lock on the whole speaker, and the label of a lock on a box axis */
-  keepWhole: "Lock the whole speaker",
-  boxAxis: { w: "Box width", h: "Box height", d: "Box depth" },
-  /** the Locks list's group of the boxes' own settings, and each lock in it */
-  members: "Boxes",
-  membersTip:
-    "These locks stay on their boxes. When you add or remove a box, the app clears a lock if it cannot find its box.",
-  memberLock: { crossovers: "crossover", levels: "level", delays: "delay" },
+  /** a box's locks, after its name: its crossover, its gain and its delay */
+  memberLock: {
+    crossovers: "crossover",
+    levels: STACK_TEXT.gain.toLowerCase(),
+    delays: STACK_TEXT.delay.toLowerCase(),
+  },
   /** the card's line of box sizes */
   boxes: "Boxes",
   summaryHeight: (inches: number | null) =>

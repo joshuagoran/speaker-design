@@ -266,6 +266,7 @@ export function SpeakerSettings({
                   onEdit={(edit) => speakerPage.editChamber(i, edit)}
                   onRemove={one ? undefined : () => speakerPage.removeChamber(i)}
                   onCompare={(entry) => onCompare(i, entry)}
+                  locks={optimizer}
                 />
               ))}
               <div>
@@ -315,6 +316,7 @@ export function SpeakerSettings({
                   onRemove={
                     spec.bands.length > 1 ? () => speakerPage.removeBand(band.id) : undefined
                   }
+                  locks={optimizer}
                 />
               ))}
               <div className="flex flex-wrap gap-1">

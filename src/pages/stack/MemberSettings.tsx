@@ -6,6 +6,7 @@ import { SelectField, type SelectOption } from "../../components/ui/SelectField"
 import { AutoNumberField } from "../../components/ui/AutoNumberField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
+import { LockButton, WithLock, type LockControl } from "../../components/ui/LockButton";
 import { byId } from "../../lib/tables";
 import { AUTO_DELAY } from "../../constants/speakerSpec";
 import { STACK_STEPS } from "../../constants/speakerSteps";
@@ -27,6 +28,8 @@ interface Props {
   onRemove: () => void;
   /** opens its speaker on the Speaker page for an edit; absent when the stack holds no copy of it */
   onEditSpeaker?: () => void;
+  /** the optimizer's locks: its whole Speaker, its gain and its delay */
+  locks: { speaker: LockControl; gain: LockControl; delay: LockControl };
 }
 
 /** The picker's id for the stack's base (a member's index for one under it). */
@@ -41,6 +44,7 @@ export function MemberSettings({
   onEdit,
   onRemove,
   onEditSpeaker,
+  locks,
 }: Props) {
   const { pose } = member;
   const base: SelectOption = { id: BASE_ID, name: STACK_TEXT.base };
@@ -53,7 +57,8 @@ export function MemberSettings({
     <Card>
       <div className="flex items-center justify-between gap-2">
         <h4 className="font-semibold min-w-0 truncate">{names[index]}</h4>
-        <div className="flex flex-none gap-2">
+        <div className="flex flex-none items-center gap-2">
+          <LockButton {...locks.speaker} />
           <Button
             size="xs"
             aria-label={STACK_EDIT_TEXT.editLabel(names[index])}
@@ -104,13 +109,15 @@ export function MemberSettings({
       <ToggleButton on={member.mirror} onClick={() => onEdit((m) => ({ ...m, mirror: !m.mirror }))}>
         {STACK_TEXT.mirror}
       </ToggleButton>
-      <NumberField
-        label={STACK_TEXT.gain}
-        value={Math.round(member.levelDb * 10) / 10}
-        step={STACK_STEPS.levelDb}
-        unit="dB"
-        onChange={(levelDb) => onEdit((m) => ({ ...m, levelDb }))}
-      />
+      <WithLock lock={locks.gain}>
+        <NumberField
+          label={STACK_TEXT.gain}
+          value={Math.round(member.levelDb * 10) / 10}
+          step={STACK_STEPS.levelDb}
+          unit="dB"
+          onChange={(levelDb) => onEdit((m) => ({ ...m, levelDb }))}
+        />
+      </WithLock>
       <AutoNumberField
         label={STACK_TEXT.delay}
         auto={auto}
@@ -128,6 +135,7 @@ export function MemberSettings({
           }))
         }
         onChange={(ms) => onEdit((m) => ({ ...m, delayMs: ms }))}
+        lock={locks.delay}
       />
       <ToggleButton
         on={member.invertPolarity}

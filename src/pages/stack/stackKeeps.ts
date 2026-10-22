@@ -1,5 +1,5 @@
-// The Stack optimizer's Keep list: the parts of a stack a lock can hold, and the locks as the stack's search takes them.
-// A speaker's locks are the Speaker optimizer's (../speaker/speakerKeeps), by speaker id; a member's crossover, level and
+// The Stack optimizer's locks: the parts of a stack a lock can hold, and the locks as the stack's search takes them. A
+// speaker's locks are the Speaker optimizer's (../speaker/speakerKeeps), by speaker id; a member's crossover, gain and
 // delay locks name the member by its place in the stack. Pure functions on `StackOptimizerLocks`.
 import type {
   SpeakerOptimizerLocks,
@@ -8,7 +8,6 @@ import type {
   StackOptimizerLocks,
 } from "../../types";
 import {
-  allKept,
   countKept,
   driverLayout,
   heldLocks,
@@ -16,9 +15,15 @@ import {
   type KeepItem,
 } from "../speaker/speakerKeeps";
 
-/** The locks a member has: its crossover, its level and its delay (keys of `StackOptimizerLocks`). */
+/** The locks a member has: its crossover, its gain and its delay (keys of `StackOptimizerLocks`). */
 export const MEMBER_LOCKS = ["crossovers", "levels", "delays"] as const;
 export type MemberLockKind = (typeof MEMBER_LOCKS)[number];
+
+/** Each member's name: its speaker's, numbered ("1. Sub"). */
+export const memberNames = (design: Pick<StackDesign, "stack" | "speakers">): string[] =>
+  design.stack.members.map(
+    (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
+  );
 
 /** The speakers the members name, each once, in the order the members first name them. */
 export function stackSpeakers(design: Pick<StackDesign, "stack" | "speakers">): SpeakerSpec[] {
@@ -94,26 +99,6 @@ export const countStackKept = (locks: StackOptimizerLocks): number =>
   (locks.keep?.length ?? 0) +
   Object.values(locks.speakers ?? {}).reduce((n, l) => n + countKept(l), 0) +
   MEMBER_LOCKS.reduce((n, kind) => n + (locks[kind]?.length ?? 0), 0);
-
-/** How many locks there can be: a lock per speaker, per part and per box axis, and three per member. */
-export const stackLockMax = (design: Pick<StackDesign, "stack" | "speakers">): number =>
-  stackKeepItems(design).reduce((n, { items }) => n + 1 + items.length + 3, 0) +
-  MEMBER_LOCKS.length * design.stack.members.length;
-
-/** Every speaker kept, with every part held and every box axis exact, and every member's crossover, level and delay: the "lock all" state. */
-export function allStackKept(design: Pick<StackDesign, "stack" | "speakers">): StackOptimizerLocks {
-  const members = design.stack.members.map((_, k) => k);
-  const speakers = stackKeepItems(design);
-  return {
-    keep: speakers.map(({ speaker }) => speaker.id),
-    speakers: Object.fromEntries(
-      speakers.map(({ speaker, items }) => [speaker.id, allKept(items)]),
-    ),
-    crossovers: members,
-    levels: members,
-    delays: members,
-  };
-}
 
 /**
  * Locks as they were set: on which stack (the page's round), which members (each member's speaker id, in order: the
@@ -219,4 +204,30 @@ export function reconcileHeldStack(
     JSON.stringify([now.round, now.members, now.layouts, locks])
     ? held
     : { ...now, locks };
+}
+
+/**
+ * The names of what is locked, in the order of the page: for each box its whole Speaker (at the first box on it), its
+ * gain and its delay; then each box's crossover. (A speaker's own part locks have no setting on the Stack page.)
+ */
+export function lockedStackNames(
+  locks: StackOptimizerLocks,
+  design: Pick<StackDesign, "stack" | "speakers">,
+  words: Record<MemberLockKind, string>,
+): string[] {
+  const names = memberNames(design);
+  const { members } = design.stack;
+  const memberName = (kind: MemberLockKind, k: number) =>
+    isMemberKept(locks, kind, k) ? [`${names[k]} ${words[kind]}`] : [];
+  return [
+    ...members.flatMap((m, k) => [
+      ...(isSpeakerKept(locks, m.speakerId) &&
+      members.findIndex((n) => n.speakerId === m.speakerId) === k
+        ? [design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId]
+        : []),
+      ...memberName("levels", k),
+      ...memberName("delays", k),
+    ]),
+    ...members.flatMap((_, k) => memberName("crossovers", k)),
+  ];
 }

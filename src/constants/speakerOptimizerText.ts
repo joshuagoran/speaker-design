@@ -5,10 +5,10 @@
 export const SPEAKER_OPTIMIZER_TEXT = {
   /** the results block's heading */
   results: "Optimizer",
-  target: "Target level at 1 m",
-  targetUnit: "dB",
-  targetYours: (db: string) => `Your design plays ${db} dB at 1 m.`,
-  targetUseYours: "Use yours",
+  target: "Goal level at 1 m",
+  targetUnit: "dB SPL",
+  /** under the goal level while it is louder than the design now, by the whole dB between them */
+  goalAbove: (db: number) => `${db} dB above the current design.`,
   /** the limits' two choices, and the name of each number's box */
   noLimit: "No limit",
   limit: "Limit",
@@ -16,9 +16,6 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   budgetField: "Most the parts cost",
   weight: "Weight",
   weightField: "Most the box weighs",
-  keep: "Locks",
-  keepHint:
-    "A locked part stays as it is. Size: free, up to this size (≤) or exactly this size (=).",
   run: "Find designs",
   load: "Load",
   /** the notice over cards searched for a design edited since (their Load is off) */
@@ -30,19 +27,10 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   changes: "Changes",
   changesNone: "none",
   failing: (problems: string) => `Your design fails: ${problems}. Fixes may cost or weigh more.`,
-  groups: {
-    drivers: "Drivers",
-    horns: "Horns",
-    vents: "Vents",
-    bands: "Filters and amps",
-    size: "Box size",
-  },
   chamber: (n: number) => `Chamber ${n}`,
-  highpass: "highpass",
-  lowpass: "lowpass",
-  amp: "amp power",
-  vent: "vent",
   axis: { w: "Width", h: "Height", d: "Depth" },
+  /** a box axis's size lock beside its padlock and after its name in the Locked line: up to this size, exactly it */
+  sizeMark: { max: "≤", exact: "=" },
   summaryNoGoal: "no goal picked",
   summaryKeeps: (n: number) => `${n} locked`,
   summaryTarget: (db: number) => `target ${db} dB`,

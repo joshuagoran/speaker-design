@@ -157,7 +157,6 @@ export function useDesignOptimizer<
     targetIsYours: target === null,
     yoursDb: musicDb,
     setTarget: (db: number) => setTarget(db),
-    useYoursForTarget: () => setTarget(null),
     limits,
     setLimit: (key: keyof Stored, value: number | null) =>
       setLimits((l) => ({ ...l, [key]: value })),

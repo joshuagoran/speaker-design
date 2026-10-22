@@ -7,16 +7,19 @@ import {
   weightStart,
 } from "../../hooks/useDesignOptimizer";
 import {
-  allKept,
+  NEXT_SIZE_LOCK,
   countKept,
   driverLayout,
-  reconcileHeld,
   isKept,
   keepItems,
+  lockedNames,
+  reconcileHeld,
   toggleKeep,
   type HeldLocks,
   type KeepItem,
 } from "./speakerKeeps";
+import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
+import type { LockControl } from "../../components/ui/LockButton";
 import type {
   DimensionLockMode,
   Dims3,
@@ -94,20 +97,39 @@ export function useSpeakerOptimizer({ spec, loadSpec, round, current }: Props) {
     setMaxLb: (maxLb: number | null) => setLimit("maxLb", maxLb),
     weightStart: weightStart(current.lb),
     locks,
-    items,
-    isKept: (item: KeepItem) => isKept(locks, item),
-    toggleKeep: (item: KeepItem) => setLocks(toggleKeep(locks, item)),
-    sizeLock: (axis: keyof Dims3): DimensionLockMode => locks.size?.[axis] ?? "free",
-    setSizeLock: (axis: keyof Dims3, mode: DimensionLockMode) =>
-      setLocks({ ...locks, size: { ...locks.size, [axis]: mode } }),
-    lockBar: {
-      nLocks: countKept(locks),
-      lockMax: items.length + 3,
-      onLockAll: () => setLocks(allKept(items)),
-      onClear: () => setLocks({}),
+    /** the lock beside a part's setting; null when the optimizer can't change that part (a sealed vent, no filter) */
+    partLock: (kind: KeepItem["kind"], ref: KeepItem["ref"]): LockControl | null => {
+      const item = items.find((i) => i.kind === kind && i.ref === ref);
+      if (!item) return null;
+      const locked = isKept(locks, item);
+      return {
+        name: item.label,
+        locked,
+        unlocks: locked,
+        onClick: () => setLocks(toggleKeep(locks, item)),
+      };
     },
+    /** the lock beside a box axis's size: free, up to this size (≤), exactly this size (=) */
+    sizeLock: (axis: keyof Dims3): LockControl => {
+      const mode: DimensionLockMode = locks.size?.[axis] ?? "free";
+      return {
+        name: SPEAKER_OPTIMIZER_TEXT.axis[axis].toLowerCase(),
+        locked: mode !== "free",
+        mark: mode === "free" ? undefined : SPEAKER_OPTIMIZER_TEXT.sizeMark[mode],
+        unlocks: NEXT_SIZE_LOCK[mode] === "free",
+        onClick: () =>
+          setLocks({ ...locks, size: { ...locks.size, [axis]: NEXT_SIZE_LOCK[mode] } }),
+      };
+    },
+    /** how many locks are set, and their names in the order of the page */
+    nLocks: countKept(locks),
+    lockedNames: lockedNames(locks, items),
+    clearLocks: () => setLocks({}),
   };
 }
+
+/** The locks the Speaker page's settings draw beside their fields. */
+export type SpeakerLocks = Pick<SpeakerOptimizer, "partLock" | "sizeLock">;
 
 /** What `useSpeakerOptimizer` returns. */
 export type SpeakerOptimizer = ReturnType<typeof useSpeakerOptimizer>;
