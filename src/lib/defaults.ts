@@ -5,6 +5,7 @@ import {
   BC10CXN64,
   BC18NBX,
   CABINETS,
+  CD_OPTIONS,
   F12PR300,
   FILL_OPTIONS,
   FORMATS,
@@ -82,7 +83,6 @@ import {
 } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
-import { PANEL } from "../constants/cutParts";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
@@ -485,25 +485,19 @@ export const GENERIC_SUB = {
 
 /**
  * The generic tops: an approximation of the common commercial 12″ and 15″ powered tops (QSC, EV, JBL,
- * Mackie, RCF), not one product. A cone and the Eminence N314T (1.4″) on a cast constant-directivity horn in the
- * baffle, in a vented box with a letterbox slot.
+ * Mackie, RCF), not one product. A cone and a 1″-exit driver with a 1.75″ coil (the B&C DE250) on a 90° horn in the
+ * baffle, crossed at about 1.7–1.8 kHz as the makers do, in a vented box with a letterbox slot along the floor.
  */
 export const GENERIC_TOPS = {
-  cd: N314T,
+  cd: byIdOrThrow(CD_OPTIONS, "de250", CATALOG_TABLE_NAMES.compressionDrivers),
   twelve: {
     mid: byIdOrThrow(MID_OPTIONS, "by12lex1300nd", CATALOG_TABLE_NAMES.mids),
-    horn: byIdOrThrow(HORN_OPTIONS, "td385", CATALOG_TABLE_NAMES.horns),
+    horn: byIdOrThrow(HORN_OPTIONS, "me45", CATALOG_TABLE_NAMES.horns),
     box: {
       dims: { w: 14.5, h: 24, d: 14 },
-      port: {
-        shape: PORT_SHAPE.round,
-        n: 2,
-        dia: 5,
-        len: 12,
-        position: { panel: PANEL.back, xIn: 0, yIn: 17 },
-      },
+      port: { shape: PORT_SHAPE.slot, n: 1, h: 2.25, len: 9, fins: 1 },
     },
-    crossoverHz: 1200,
+    crossoverHz: 1800,
     highpass: { hz: 48, type: "BW24" },
     ampW: 800,
     hfAmpW: 100,
@@ -512,18 +506,12 @@ export const GENERIC_TOPS = {
   },
   fifteen: {
     mid: byIdOrThrow(MID_OPTIONS, "by15g40", CATALOG_TABLE_NAMES.mids),
-    horn: byIdOrThrow(HORN_OPTIONS, "hd1403", CATALOG_TABLE_NAMES.horns),
+    horn: byIdOrThrow(HORN_OPTIONS, "me45", CATALOG_TABLE_NAMES.horns),
     box: {
       dims: { w: 17, h: 28, d: 15.5 },
-      port: {
-        shape: PORT_SHAPE.round,
-        n: 2,
-        dia: 4,
-        len: 10,
-        position: { panel: PANEL.back, xIn: 0, yIn: 20 },
-      },
+      port: { shape: PORT_SHAPE.slot, n: 1, h: 2, len: 9, fins: 1 },
     },
-    crossoverHz: 1200,
+    crossoverHz: 1700,
     highpass: { hz: 42, type: "BW24" },
     ampW: 1000,
     hfAmpW: 100,

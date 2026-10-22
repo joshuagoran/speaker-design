@@ -57,9 +57,11 @@ interface Targets {
  * EL-36. Measured when the templates were set (Oct 2026):
  * - 18″ sub: 22 × 25 × 28 in, −3/−6/−10 dB at 35.8/33.6/31.2 Hz, music 127.0 dB (133.0 peak);
  * - dual 18″ sub: 46 × 25 × 27 in, −3 dB at 34.9 Hz, music 132.6 dB (138.6 peak);
- * - 12″ top: 14.5 × 24 × 14 in, −6 dB at 52.9 Hz to 20 kHz, music 124.2 dB (130.2 peak), 80° × 50°;
- * - 15″ top: 17 × 28 × 15.5 in, −6 dB at 45.5 Hz to 20 kHz, music 125.2 dB (131.2 peak), 80° × 60°;
- * - 18″ horn sub: 24 × 36 × 36 in, −6 dB from 36.4 to 136 Hz, music 130.1 dB (136.1 peak).
+ * - 12″ top: 14.5 × 24 × 14 in, −6 dB at 47.9 Hz to 20 kHz, music 123.1 dB (129.1 peak), 90° × 40°;
+ * - 15″ top: 17 × 28 × 15.5 in, −6 dB at 43.7 Hz to 20 kHz, music 124.4 dB (130.4 peak), 90° × 40°;
+ * - 18″ horn sub: 24 × 36 × 36 in, −6 dB from 35.3 to 136 Hz, music 129.6 dB (135.6 peak).
+ * The makers' 15″ tops are 90° × 50–60° on their own molded horns. No 1″ horn on sale holds 60° at their 1.6–1.8 kHz
+ * crossovers, so the 15″ top's vertical target starts at the 1″ horn's 40°.
  */
 const TARGETS = {
   [SPEAKER_TEMPLATE.genericSub18]: {
@@ -84,7 +86,7 @@ const TARGETS = {
     low: { 6: [45, 45] },
     high6: [20000, 20000],
     peakDb: [133, 133],
-    coverage: { h: [90, 90], v: [60, 60] },
+    coverage: { h: [90, 90], v: [40, 60] },
   },
   [SPEAKER_TEMPLATE.genericHornSub18]: {
     size: { w: [24, 24], h: [36, 36], d: [36, 36] },
