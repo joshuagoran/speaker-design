@@ -610,12 +610,12 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 />
               </div>
               <div className="flex flex-wrap gap-2">
-                <Tooltip control tip={SPACE_TEXT.calculateDelaysTip}>
-                  <Button onClick={space.calculateDelays}>{SPACE_TEXT.calculateDelays}</Button>
-                </Tooltip>
-                <Tooltip control tip={SPACE_TEXT.calculateGainsTip}>
-                  <Button onClick={space.calculateGains}>{SPACE_TEXT.calculateGains}</Button>
-                </Tooltip>
+                <Button tip={SPACE_TEXT.calculateDelaysTip} onClick={space.calculateDelays}>
+                  {SPACE_TEXT.calculateDelays}
+                </Button>
+                <Button tip={SPACE_TEXT.calculateGainsTip} onClick={space.calculateGains}>
+                  {SPACE_TEXT.calculateGains}
+                </Button>
               </div>
               {space.delayNotes.flatMap((note, k) =>
                 note === null

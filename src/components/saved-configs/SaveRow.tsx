@@ -171,7 +171,7 @@ export function SaveRow<T extends SelectOption>({
         )}
         <RowSelect
           ariaLabel={SAVE_ROW_TEXT.newFrom}
-          title={words.newFromTip}
+          tip={words.newFromTip}
           options={starts}
           value=""
           onChange={(start) => {
@@ -195,28 +195,24 @@ export function SaveRow<T extends SelectOption>({
         <div className="flex flex-wrap items-center gap-2">
           {confirming ? (
             <>
-              <span className="text-sm">{SAVE_ROW_TEXT.confirmDelete(cur.name)}</span>
-              <Button
-                size="xs"
-                variant="primary"
-                onClick={() => void doDelete(cur)}
-                disabled={busy}
-              >
-                {SAVE_ROW_TEXT.yes}
+              <span className="text-sm">{words.confirmDelete}</span>
+              <Button size="xs" variant="danger" onClick={() => void doDelete(cur)} disabled={busy}>
+                {SAVE_ROW_TEXT.delete}
               </Button>
               <Button size="xs" onClick={() => setConfirming(false)}>
                 {SAVE_ROW_TEXT.cancel}
               </Button>
             </>
           ) : (
-            <button
+            <Button
+              size="xs"
+              variant="danger"
               onClick={() => setConfirming(true)}
               disabled={busy}
               aria-label={SAVE_ROW_TEXT.deleteLabel(cur.name)}
-              className="text-xs text-stone-500 hover:text-red-700 px-1"
             >
               {SAVE_ROW_TEXT.delete}
-            </button>
+            </Button>
           )}
           {cur.summary && (
             <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>

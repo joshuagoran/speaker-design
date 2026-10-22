@@ -286,7 +286,7 @@ export function ChamberSettings({
       {vent.kind === VENT_KIND.vented && (
         <>
           <ToggleGroup
-            label="Port"
+            label={SETTINGS_TEXT.ventShape}
             value={vent.port.shape ?? PORT_SHAPE.round}
             onChange={(shape) =>
               setPort(
@@ -374,7 +374,7 @@ export function ChamberSettings({
       <CardHeading
         action={
           onRemove && (
-            <Button size="xs" onClick={onRemove}>
+            <Button size="xs" variant="danger" onClick={onRemove}>
               {SETTINGS_TEXT.removeChamber}
             </Button>
           )
@@ -1037,7 +1037,12 @@ function DriverFields({
               {DRIVER_COMPARE_TEXT.compare}
             </Button>
           )}
-          <IconButton size="sm" label={SETTINGS_TEXT.deleteDriver(index + 1)} onClick={onRemove}>
+          <IconButton
+            size="sm"
+            danger
+            label={SETTINGS_TEXT.deleteDriver(index + 1)}
+            onClick={onRemove}
+          >
             <TrashIcon />
           </IconButton>
         </>

@@ -107,6 +107,7 @@ export function StageSettings({
             actions={
               <IconButton
                 size="sm"
+                danger
                 label={SPACE_TEXT.removeStage(name)}
                 onClick={() => actions.remove(stage.id)}
               >

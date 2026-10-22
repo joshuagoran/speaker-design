@@ -398,8 +398,8 @@ export function CutlistPage({
               <th className={`${th} pr-3 text-right`}>Qty</th>
               <th className={`${th} pr-3 text-right`}>L, in</th>
               <th className={`${th} text-right`}>W, in</th>
-              <th className={`${th} px-2 text-center`} title="Grain direction">
-                Grain
+              <th className={`${th} px-2 text-center`}>
+                <Tooltip tip="Grain direction">Grain</Tooltip>
               </th>
               <th className={`${th} text-right`}>{mat.column}</th>
             </tr>
@@ -462,11 +462,10 @@ export function CutlistPage({
                     <td className={`${td} pr-3 text-right`}>{p.qty * boxSetCount}</td>
                     <td className={`${td} pr-3 text-right whitespace-nowrap`}>{first}</td>
                     <td className={`${td} text-right whitespace-nowrap`}>{second}</td>
-                    <td
-                      className={`${td} px-2 text-center`}
-                      title={p.grain ? "L runs along the grain" : "either way"}
-                    >
-                      {p.grain ? "↕" : "·"}
+                    <td className={`${td} px-2 text-center`}>
+                      <Tooltip tip={p.grain ? "L runs along the grain" : "either way"}>
+                        {p.grain ? "↕" : "·"}
+                      </Tooltip>
                     </td>
                     <td className={`${td} text-right whitespace-nowrap`}>{formatThickness(p.t)}</td>
                   </tr>

@@ -1,4 +1,5 @@
 import { LockIcon } from "./LockIcon";
+import { Tooltip } from "../ui/Tooltip";
 import { PRESSED_CLASSES } from "../ui/buttonStyles";
 
 /** Tailwind classes for a lock button in its on or off state. */
@@ -18,15 +19,17 @@ export function LockButton({ on, onClick, what }: Props) {
     ? `Locked: the optimizer keeps ${what}`
     : `Unlocked: the optimizer can change ${what}`;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={on}
-      aria-label={tip}
-      title={tip}
-      className={lockButtonClass(on)}
-    >
-      <LockIcon locked={on} />
-    </button>
+    // the aria-label names it with the same words
+    <Tooltip control tip={tip}>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={on}
+        aria-label={tip}
+        className={lockButtonClass(on)}
+      >
+        <LockIcon locked={on} />
+      </button>
+    </Tooltip>
   );
 }

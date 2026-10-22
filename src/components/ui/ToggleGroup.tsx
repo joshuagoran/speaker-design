@@ -1,5 +1,4 @@
 import { ToggleButton } from "./ToggleButton";
-import { plainText } from "./MarkedText";
 import type { ButtonSize } from "./buttonStyles";
 
 /** One choice of a `ToggleGroup`: its value, its label, and optionally a tooltip. */
@@ -12,7 +11,7 @@ interface Props<T extends string | number | boolean> {
   value: T | null;
   onChange: (v: T) => void;
   options: readonly ToggleOption<T>[];
-  /** choices that can't be picked now, and why (shown as their tooltip) when one reason covers them */
+  /** choices that can't be picked now, and why (their tooltip) when one reason covers them */
   disabled?: { values: readonly T[]; why?: string };
   size?: ButtonSize;
   /** whether the buttons wrap onto more lines when they don't fit (default); false keeps them on one */
@@ -37,7 +36,7 @@ export function ToggleGroup<T extends string | number | boolean>({
       <div className={wrap ? "flex flex-wrap gap-1" : "flex gap-1"}>
         {options.map(([v, l, tip]) => {
           const off = disabled?.values.includes(v) ?? false;
-          const title = off ? (disabled?.why ?? tip) : tip;
+          const shown = off ? (disabled?.why ?? tip) : tip;
           return (
             <ToggleButton
               key={String(v)}
@@ -45,7 +44,7 @@ export function ToggleGroup<T extends string | number | boolean>({
               on={value === v}
               onClick={() => onChange(v)}
               disabled={off}
-              title={title && plainText(title)}
+              tip={shown}
             >
               {l}
             </ToggleButton>

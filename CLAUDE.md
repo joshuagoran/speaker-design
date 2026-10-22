@@ -27,6 +27,8 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 - While you build, show the owner each new or changed UI string, where it appears, and get an OK before the commit.
   Propose one short wording, not a list of options.
 - App terms are defined once in `docs/terms.md`. Check new UI text against it.
+- A source goes in parentheses at the end of its line (ISO 9613-1); a method stays in the text as part of its term
+  (Sabine decay).
 - Writing: US spelling (a key that saved data or links carry keeps its spelling, with a comment). Oxford comma.
   Louder/quieter for dB, higher/lower for Hz. One short sentence per line on a page; more goes in a Tooltip or the
   Details fold. Speaker, Stack, Space, and Source start with a capital when they mean the design item or the page (a

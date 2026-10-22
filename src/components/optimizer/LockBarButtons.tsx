@@ -18,7 +18,7 @@ export function LockBarButtons({ nLocks, lockMax, onLockAll, onClear }: Props) {
         onClick={onLockAll}
         disabled={nLocks >= lockMax}
         aria-label="Lock everything"
-        title="Lock all, then unlock what the optimizer can change"
+        tip="Lock all, then unlock what the optimizer can change"
         className="inline-flex items-center gap-1"
       >
         <LockIcon locked={true} />
@@ -28,7 +28,7 @@ export function LockBarButtons({ nLocks, lockMax, onLockAll, onClear }: Props) {
         onClick={onClear}
         disabled={!nLocks}
         aria-label={clear}
-        title={clear}
+        tip={clear}
         className="inline-flex items-center gap-1"
       >
         <LockIcon locked={false} />

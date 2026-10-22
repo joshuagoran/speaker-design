@@ -45,7 +45,7 @@ export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove
       lead={<BandDot index={index} count={count} />}
       actions={
         onRemove && (
-          <Button size="xs" onClick={onRemove}>
+          <Button size="xs" variant="danger" onClick={onRemove}>
             {SETTINGS_TEXT.removeBand}
           </Button>
         )

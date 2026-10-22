@@ -531,6 +531,7 @@ export const SPACE_SAVE_WORDS = {
   pick: (n: number) => `Saved Spaces (${n})`,
   noSaved: "No saved Spaces yet",
   newFromTip: SAVE_ROW_TEXT.newFromTip(PROJECT_NAMES.space),
+  confirmDelete: SAVE_ROW_TEXT.confirmDelete(PROJECT_NAMES.space),
 } as const satisfies SaveRowWords;
 
 /** The name of each wall's and the ceiling's mesh in the 3D view (stack-view/buildSpaceScene), so a check can find them. */

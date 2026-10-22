@@ -22,7 +22,7 @@ export function LooseLimits<S>({ options, onPick, lead }: Props<S>) {
     <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500">
       {lead}
       {options.map((o) => (
-        <ToggleButton key={o.text} on={false} title={o.tip} onClick={() => onPick(o.set)}>
+        <ToggleButton key={o.text} on={false} tip={o.tip} onClick={() => onPick(o.set)}>
           {o.text}
         </ToggleButton>
       ))}

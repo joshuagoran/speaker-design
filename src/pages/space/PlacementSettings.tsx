@@ -81,7 +81,7 @@ export function PlacementSettings({
       onOpenChange={onOpenChange}
     >
       <div className="flex justify-end">
-        <Button size="xs" onClick={onRemove}>
+        <Button size="xs" variant="danger" onClick={onRemove}>
           {SPACE_TEXT.remove}
         </Button>
       </div>
@@ -163,7 +163,7 @@ export function PlacementSettings({
       <div className="flex flex-wrap gap-2">
         <ToggleButton
           on={placement.mirrored}
-          title={SPACE_TEXT.mirroredTip}
+          tip={SPACE_TEXT.mirroredTip}
           onClick={() => onEdit((p) => ({ ...p, mirrored: !p.mirrored }))}
         >
           {SPACE_TEXT.mirrored}

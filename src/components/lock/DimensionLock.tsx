@@ -1,4 +1,5 @@
 import { LockIcon } from "./LockIcon";
+import { Tooltip } from "../ui/Tooltip";
 import { lockButtonClass } from "./LockButton";
 import type { DimensionLockMode } from "../../types";
 
@@ -20,15 +21,17 @@ interface Props {
 export function DimensionLock({ mode = "free", onChange, what }: Props) {
   const tip = `${what}: ${mode === "free" ? "unlocked, the optimizer can change it" : mode === "max" ? "up to this value" : "locked at exactly this value"} (tap to change)`;
   return (
-    <button
-      type="button"
-      onClick={() => onChange(NEXT_DIMENSION_LOCK_MODE[mode])}
-      aria-label={tip}
-      title={tip}
-      className={lockButtonClass(mode !== "free")}
-    >
-      <LockIcon locked={mode !== "free"} />
-      {mode === "max" ? <span>≤</span> : mode === "exact" ? <span>=</span> : null}
-    </button>
+    // the aria-label names it with the same words
+    <Tooltip control tip={tip}>
+      <button
+        type="button"
+        onClick={() => onChange(NEXT_DIMENSION_LOCK_MODE[mode])}
+        aria-label={tip}
+        className={lockButtonClass(mode !== "free")}
+      >
+        <LockIcon locked={mode !== "free"} />
+        {mode === "max" ? <span>≤</span> : mode === "exact" ? <span>=</span> : null}
+      </button>
+    </Tooltip>
   );
 }

@@ -115,9 +115,9 @@ describe("a drawn horn in the 3D view", () => {
     expect(box.max.y - box.min.y).toBeCloseTo(drawn.cabinet.panel.thicknessIn, 6);
   });
 
-  test("the drivers are drawn in the cutaway only, as the other horn drivers are", () => {
+  test("the drivers are drawn with Cutaway off too, as the other horn drivers are", () => {
     const scene = buildSpeakerScene({ spec: drawn, cutaway: false });
-    expect(meshes(scene, SPEAKER_MESH_NAMES.foldDriver)).toHaveLength(0);
+    expect(meshes(scene, SPEAKER_MESH_NAMES.foldDriver)).toHaveLength(1);
     expect(meshes(scene, SPEAKER_MESH_NAMES.foldBoard)).toHaveLength(2);
   });
 

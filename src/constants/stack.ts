@@ -70,4 +70,5 @@ export const STACK_SAVE_WORDS = {
   pick: (n: number) => `Saved Stacks (${n})`,
   noSaved: "No saved Stacks yet",
   newFromTip: SAVE_ROW_TEXT.newFromTip(PROJECT_NAMES.stack),
+  confirmDelete: SAVE_ROW_TEXT.confirmDelete(PROJECT_NAMES.stack),
 } as const satisfies SaveRowWords;
