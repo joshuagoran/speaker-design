@@ -1,22 +1,20 @@
-// The dispersion check at a crossover between two of a speaker's bands, on the speaker's own parts: the lower band's cone is as wide as it gets until its beam narrows (ka, its circumference over the
-// wavelength, past DISPERSION_NARROW_KA), and below the upper band's coverage the off-axis response dips at the
-// crossover. One check per crossing (`crossingPairs`), on the lower band. Pure.
+// The dispersion check at a crossover between two of a speaker's bands, on the speaker's own parts: each band's −6 dB
+// beam width there, from the directivity every page shares (lib/acoustics/coverage `beamWidthDeg`); where the lower
+// band's is narrower than the upper band's, the off-axis response dips at the crossover. One check per crossing
+// (`crossingPairs`), on the lower band. Pure.
 import type { BandId, SpeakerDriver, SpeakerSpec } from "../../types";
 import type { ChipBody } from "./chips";
-import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
   DISPERSION_COVERAGE,
-  DISPERSION_DOME_COVERAGE_DEG,
-  DISPERSION_FULL_BEAM_DEG,
   DISPERSION_MATCH_SHARE,
-  DISPERSION_NARROW_KA,
   DISPERSION_TEXT,
 } from "../../constants/dispersionCheck";
 import { CHAMBER_LOAD, DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
-import { RAD, SQ_CM_PER_SQ_M } from "../../constants/units";
-import { coneParts, isConeKind } from "./driverParts";
+import { beamWidthDeg, directivityAt, type CoveragePattern } from "../acoustics/coverage";
+import { isConeKind } from "./driverParts";
 import { driverPattern } from "./spaceCoverage";
+import { speakerLayout } from "./speakerLayout";
 import { hfBandOf } from "./speakerResponse";
 import { crossingPairs } from "./stackResponse";
 
@@ -28,28 +26,25 @@ export interface DispersionCheck {
   chip: ChipBody;
 }
 
-/** How wide a cone of area `sdCm2` (cm²) beams at `hz`, degrees: all of `DISPERSION_FULL_BEAM_DEG` until it narrows. */
-function beamDeg(sdCm2: number, hz: number): number {
-  const radiusM = Math.sqrt(sdCm2 / SQ_CM_PER_SQ_M / Math.PI);
-  const ka = ((2 * Math.PI * hz) / SPEED_OF_SOUND) * radiusM;
-  return ka <= DISPERSION_NARROW_KA
-    ? DISPERSION_FULL_BEAM_DEG
-    : (2 * Math.asin(DISPERSION_NARROW_KA / ka)) / RAD;
+/** How wide `pattern` beams at `hz` from a box `boxWIn` wide, degrees (rounded), as the dispersion map shows it. */
+const beamDeg = (pattern: CoveragePattern, hz: number, boxWIn: number) =>
+  Math.round(beamWidthDeg(directivityAt(pattern, hz, boxWIn)));
+
+/** What the check knows of the upper band's coverage: its beam, and how the tip says it (a figure, or a coaxial's or dome's words). */
+interface UpperCoverage {
+  kind: (typeof DISPERSION_COVERAGE)[keyof typeof DISPERSION_COVERAGE];
+  deg: number;
 }
 
-/** What the check knows of the upper band's coverage: a rated horn's, a cone's beam, a coaxial's unpublished one, or a dome. */
-type UpperCoverage =
-  | { kind: typeof DISPERSION_COVERAGE.rated | typeof DISPERSION_COVERAGE.cone; deg: number }
-  | { kind: typeof DISPERSION_COVERAGE.unpublished | typeof DISPERSION_COVERAGE.dome };
-
 /**
- * The band's coverage at `hz`: its first HF driver's (else its first cone's), from its horn or own waveguide; a cone with
- * neither covers its own beam there; an HF driver with neither is a dome (or a coaxial's unpublished coverage).
+ * The band's coverage at `hz`: its first HF driver's (else its first cone's), from its horn or own waveguide, or as a
+ * piston (a cone, a dome, or a coaxial's unpublished coverage).
  */
 function upperCoverage(
   chambers: SpeakerSpec["cabinet"]["chambers"],
   band: BandId,
   hz: number,
+  boxWIn: number,
 ): UpperCoverage | null {
   const placed = chambers.flatMap((c) => c.drivers.map((d) => ({ c, d })));
   const hf = placed.find(({ d }) => hfBandOf(d) === band)?.d;
@@ -58,32 +53,37 @@ function upperCoverage(
   if (!hf && coneAt?.c.load.kind === CHAMBER_LOAD.horn) return null;
   const driver: SpeakerDriver | undefined = hf ?? coneAt?.d;
   if (!driver) return null;
-  const part = hf ? DRIVER_PART.hf : DRIVER_PART.cone;
-  const pattern = driverPattern({ driver, part, mouth: null });
-  if (pattern.horn) return { kind: DISPERSION_COVERAGE.rated, deg: Math.round(pattern.horn.covH) };
-  const sd = hf ? 0 : (coneParts(driver)?.ts.Sd ?? 0);
-  if (sd > 0) return { kind: DISPERSION_COVERAGE.cone, deg: Math.round(beamDeg(sd, hz)) };
+  const pattern = driverPattern({
+    driver,
+    part: hf ? DRIVER_PART.hf : DRIVER_PART.cone,
+    mouth: null,
+  });
+  const deg = beamDeg(pattern, hz, boxWIn);
+  if (pattern.horn) return { kind: DISPERSION_COVERAGE.rated, deg };
+  if (!hf) return (pattern.a ?? 0) > 0 ? { kind: DISPERSION_COVERAGE.cone, deg } : null;
   // a compression driver with no horn has no coverage to compare
   if (driver.kind === DRIVER_KIND.compression) return null;
   return {
     kind:
-      hf && driver.kind === DRIVER_KIND.coaxial
+      driver.kind === DRIVER_KIND.coaxial
         ? DISPERSION_COVERAGE.unpublished
         : DISPERSION_COVERAGE.dome,
+    deg,
   };
 }
 
-/** The largest cone area on the band, cm², among chambers that are not horn-loaded; null with no such cone (or a horn's). */
-function lowerSdCm2(chambers: SpeakerSpec["cabinet"]["chambers"], band: BandId): number | null {
-  const cones = chambers.flatMap((c) =>
-    c.drivers.filter((d) => isConeKind(d.kind) && d.bands[0] === band).map((d) => ({ c, d })),
-  );
+/** The band's widest cone, as a piston, among chambers that are not horn-loaded; null with no such cone (or a horn's). */
+function lowerPattern(
+  chambers: SpeakerSpec["cabinet"]["chambers"],
+  band: BandId,
+): CoveragePattern | null {
   // a horn-loaded chamber's cones radiate from its mouth, which the check does not model: only direct cones count
-  const sds = cones
-    .filter(({ c }) => c.load.kind !== CHAMBER_LOAD.horn)
-    .map(({ d }) => coneParts(d)?.ts.Sd ?? 0)
-    .filter((sd) => sd > 0);
-  return sds.length ? Math.max(...sds) : null;
+  const radii = chambers
+    .filter((c) => c.load.kind !== CHAMBER_LOAD.horn)
+    .flatMap((c) => c.drivers.filter((d) => isConeKind(d.kind) && d.bands[0] === band))
+    .map((driver) => driverPattern({ driver, part: DRIVER_PART.cone, mouth: null }).a ?? 0)
+    .filter((a) => a > 0);
+  return radii.length ? { a: Math.max(...radii) } : null;
 }
 
 /**
@@ -93,27 +93,27 @@ function lowerSdCm2(chambers: SpeakerSpec["cabinet"]["chambers"], band: BandId):
  */
 export function dispersionChecks(spec: Pick<SpeakerSpec, "bands" | "cabinet">): DispersionCheck[] {
   const { bands, cabinet } = spec;
+  const boxWIn = speakerLayout(cabinet).size.w;
   const nameOf = (id: BandId) => bands.find((b) => b.id === id)?.name ?? id;
   const filters = bands.map((b) => ({ crossover: { highpass: b.highpass, lowpass: b.lowpass } }));
   const all = crossingPairs(filters).flatMap((c): DispersionCheck[] => {
     const lower = bands[c.lower].id,
       upper = bands[c.upper].id;
     const xo = Math.round(c.hz);
-    const sd = lowerSdCm2(cabinet.chambers, lower);
-    const coverage = upperCoverage(cabinet.chambers, upper, xo);
-    if (sd === null || !coverage) return [];
-    const deg = Math.round(beamDeg(sd, xo));
+    const pattern = lowerPattern(cabinet.chambers, lower);
+    const coverage = upperCoverage(cabinet.chambers, upper, xo, boxWIn);
+    if (!pattern || !coverage) return [];
+    const deg = beamDeg(pattern, xo, boxWIn);
     const high = nameOf(upper);
-    const covered = "deg" in coverage ? coverage.deg : DISPERSION_DOME_COVERAGE_DEG;
     // the rounded angles, as the tip shows them, so the words never contradict the verdict
-    const narrower = deg < Math.min(covered, DISPERSION_FULL_BEAM_DEG) * DISPERSION_MATCH_SHARE;
+    const narrower = deg < coverage.deg * DISPERSION_MATCH_SHARE;
     const words = DISPERSION_TEXT.coverage;
     const said =
-      "deg" in coverage
-        ? words.degrees(coverage.deg)
-        : coverage.kind === DISPERSION_COVERAGE.unpublished
-          ? words.unpublished
-          : words.dome;
+      coverage.kind === DISPERSION_COVERAGE.unpublished
+        ? words.unpublished
+        : coverage.kind === DISPERSION_COVERAGE.dome
+          ? words.dome
+          : words.degrees(coverage.deg);
     const chip: ChipBody = narrower
       ? ["warn", DISPERSION_TEXT.warnTitle(high), DISPERSION_TEXT.warnTip(deg, high, said, xo)]
       : ["ok", DISPERSION_TEXT.okTitle(high), DISPERSION_TEXT.okTip(deg, xo)];

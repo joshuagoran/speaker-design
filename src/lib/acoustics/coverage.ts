@@ -212,6 +212,27 @@ export function directivityGain(d: SourceDirectivity, th: number, tv: number): n
   return behind ? front * d.shadow : front;
 }
 
+/** The angle step, radians, at which `beamWidthDeg` looks for the −6 dB point: a quarter degree. */
+const BEAM_STEP = Math.PI / 720;
+
+/**
+ * A source's −6 dB beam width across (its level off its axis, `directivityGain`, at half its on-axis pressure),
+ * degrees, within the dispersion map's ±90°: 180 when it is wider. The Speaker and Stack pages' crossover check reads it.
+ */
+export function beamWidthDeg(d: SourceDirectivity): number {
+  let before = 1;
+  for (let th = BEAM_STEP; th <= Math.PI / 2 + 1e-9; th += BEAM_STEP) {
+    const gain = directivityGain(d, th, 0);
+    if (gain < 0.5) {
+      // between the two steps, where the level is half its on-axis value
+      const at = th - BEAM_STEP * ((0.5 - gain) / (before - gain));
+      return (2 * at * 180) / Math.PI;
+    }
+    before = gain;
+  }
+  return 180;
+}
+
 /** A source's axis: its yaw from straight ahead (+y, + toward +x) and its pitch (+ up), as cosines and sines. */
 export interface SourceAxis {
   cy: number;
