@@ -16,7 +16,7 @@ import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { SETTINGS_TEXT } from "../../constants/speakerSettings";
 import { driverName } from "./speakerParts";
 
-/** The three box axes, in the order the size locks list them. */
+/** The three chamber axes, in the order the size locks list them. */
 export const SIZE_AXES = ["w", "h", "d"] as const;
 
 /** Order in which a size lock cycles: free, up to this size, exactly this size. */
@@ -69,19 +69,57 @@ export function keepItems(spec: Pick<SpeakerSpec, "cabinet" | "bands">): KeepIte
   return items;
 }
 
-/** A box axis's name with its size lock's mark ("width ≤"); null while it is free. */
-export function sizeLockName(axis: keyof Dims3, mode: DimensionLockMode): string | null {
+/** A chamber axis's name: "Chamber 2 width", or only "width" in a box with one chamber. */
+export function sizeAxisName(chamber: number, axis: keyof Dims3, nChambers: number): string {
   const T = SPEAKER_OPTIMIZER_TEXT;
-  return mode === "free" ? null : `${T.axis[axis].toLowerCase()} ${T.sizeMark[mode]}`;
+  const name = T.axis[axis].toLowerCase();
+  return nChambers > 1 ? `${T.chamber(chamber + 1)} ${name}` : name;
 }
+
+/** A chamber's size lock on an axis (free when none is set). */
+export const sizeLockMode = (
+  locks: SpeakerOptimizerLocks,
+  chamber: number,
+  axis: keyof Dims3,
+): DimensionLockMode => locks.size?.[chamber]?.[axis] ?? "free";
+
+/** The locks with a chamber's size lock on an axis set to `mode`. */
+export const withSizeLock = (
+  locks: SpeakerOptimizerLocks,
+  chamber: number,
+  axis: keyof Dims3,
+  mode: DimensionLockMode,
+): SpeakerOptimizerLocks => ({
+  ...locks,
+  size: { ...locks.size, [chamber]: { ...locks.size?.[chamber], [axis]: mode } },
+});
+
+/** Each chamber's size locks that are set, in chamber and axis order. */
+const sizeLocksSet = (locks: SpeakerOptimizerLocks, nChambers: number) =>
+  Array.from({ length: nChambers }, (_, k) => k).flatMap((k) =>
+    SIZE_AXES.flatMap((axis) => {
+      const mode = sizeLockMode(locks, k, axis);
+      return mode === "free" ? [] : [{ chamber: k, axis, mode }];
+    }),
+  );
 
 /** Whether the locks hold this part. */
 export const isKept = (locks: SpeakerOptimizerLocks, item: KeepItem): boolean =>
   (locks[item.kind] ?? []).some((r) => r === item.ref);
 
-/** The names of what is locked, in the order of the page: the box size (the first chamber's fields), then the parts. */
-export const lockedNames = (locks: SpeakerOptimizerLocks, items: readonly KeepItem[]): string[] => [
-  ...SIZE_AXES.flatMap((a) => sizeLockName(a, locks.size?.[a] ?? "free") ?? []),
+/**
+ * The names of what is locked: each chamber's size locks with their marks ("Chamber 2 width ≤"), then the parts in the
+ * order of the page.
+ */
+export const lockedNames = (
+  locks: SpeakerOptimizerLocks,
+  items: readonly KeepItem[],
+  nChambers: number,
+): string[] => [
+  ...sizeLocksSet(locks, nChambers).map(
+    ({ chamber, axis, mode }) =>
+      `${sizeAxisName(chamber, axis, nChambers)} ${SPEAKER_OPTIMIZER_TEXT.sizeMark[mode]}`,
+  ),
   ...items.filter((item) => isKept(locks, item)).map((item) => item.label),
 ];
 
@@ -103,7 +141,7 @@ export function toggleKeep(locks: SpeakerOptimizerLocks, item: KeepItem): Speake
   }
 }
 
-/** How many locks are set: each part held, and each box axis that is not free. */
+/** How many locks are set: each part held, and each chamber axis that is not free. */
 export const countKept = (locks: SpeakerOptimizerLocks): number =>
   (locks.drivers?.length ?? 0) +
   (locks.horns?.length ?? 0) +
@@ -111,7 +149,10 @@ export const countKept = (locks: SpeakerOptimizerLocks): number =>
   (locks.highpass?.length ?? 0) +
   (locks.lowpass?.length ?? 0) +
   (locks.amps?.length ?? 0) +
-  SIZE_AXES.filter((a) => (locks.size?.[a] ?? "free") !== "free").length;
+  Object.values(locks.size ?? {}).reduce(
+    (n, axes) => n + SIZE_AXES.filter((a) => (axes[a] ?? "free") !== "free").length,
+    0,
+  );
 
 /** The locks that name a part this spec has (an edit may have removed a chamber, driver or band since they were set). */
 export function pruneKept(

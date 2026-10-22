@@ -135,9 +135,9 @@ test("locks: toggling, counting and pruning", () => {
   assert.equal(countKept(one), 1);
   assert.equal(countKept(toggleKeep(one, first)), 0, "a second toggle unlocks it");
   const all = items.reduce(toggleKeep, {
-    size: { w: "exact", h: "exact", d: "exact" },
+    size: { 0: { w: "exact", h: "exact", d: "exact" } },
   } as const);
-  assert.equal(countKept(all), items.length + 3, "every item and the three box axes");
+  assert.equal(countKept(all), items.length + 3, "every item and the chamber's three axes");
   // a lock on a part the spec no longer has is dropped
   const stale = { drivers: [driverRef(9, 9)], vents: [7], amps: ["gone"] };
   assert.equal(countKept(pruneKept(stale, items)), 0);
@@ -242,12 +242,12 @@ test("a lock beside a setting reaches the search, the Locked line names it, and 
       assert.deepEqual(h.locks.amps, [amp.ref]);
       assert.equal(h.partLock("amps", amp.ref)?.locked, true);
       pressed = h.partLock("amps", amp.ref);
-      h.sizeLock("w").onClick();
+      h.sizeLock(0, "w").onClick();
     },
     (h) => {
-      assert.equal(h.sizeLock("w").mark, "≤");
-      assert.deepEqual(h.lockedNames, lockedNames(h.locks, keepItems(spec)));
-      assert.equal(h.lockedNames[0], "width ≤", "the size first, as the page shows it");
+      assert.equal(h.sizeLock(0, "w").mark, "≤");
+      assert.deepEqual(h.lockedNames, lockedNames(h.locks, keepItems(spec), 1));
+      assert.equal(h.lockedNames[0], "width ≤", "the size first; one chamber: no chamber name");
       assert.equal(h.lockedNames[1], amp.label);
       assert.equal(h.nLocks, 2);
       h.clearLocks();
@@ -281,24 +281,42 @@ test("a lock beside a setting reaches the search, the Locked line names it, and 
 test("a size lock cycles free, up to this size, exactly this size", () => {
   runSteps([
     (h) => {
-      const free = h.sizeLock("d");
+      const free = h.sizeLock(0, "d");
       assert.equal(free.locked, false);
       assert.equal(free.unlocks, false);
       free.onClick();
     },
     (h) => {
-      assert.equal(h.locks.size?.d, "max");
-      h.sizeLock("d").onClick();
+      assert.equal(h.locks.size?.[0]?.d, "max");
+      h.sizeLock(0, "d").onClick();
     },
     (h) => {
-      const exact = h.sizeLock("d");
-      assert.equal(h.locks.size?.d, "exact");
+      const exact = h.sizeLock(0, "d");
+      assert.equal(h.locks.size?.[0]?.d, "exact");
       assert.equal(exact.mark, "=");
       assert.equal(exact.unlocks, true, "the next tap frees it");
       exact.onClick();
     },
-    (h) => assert.equal(h.locks.size?.d, "free"),
+    (h) => assert.equal(h.locks.size?.[0]?.d, "free"),
   ]);
+});
+
+test("each chamber has its own size locks, named by the chamber", () => {
+  const tower = templateSpeaker(SPEAKER_TEMPLATE.paTowerBaffleHorn);
+  assert.ok(tower.cabinet.chambers.length > 1, "a box with more chambers");
+  runSteps(
+    [
+      (h) => h.sizeLock(1, "w").onClick(),
+      (h) => {
+        assert.equal(h.locks.size?.[1]?.w, "max");
+        assert.equal(h.sizeLock(0, "w").locked, false, "the other chambers stay free");
+        assert.equal(h.sizeLock(1, "w").name, "Chamber 2 width");
+        assert.deepEqual(h.lockedNames, ["Chamber 2 width ≤"]);
+        assert.equal(h.nLocks, 1);
+      },
+    ],
+    tower,
+  );
 });
 
 test("the goal level follows your design until you change it", () => {

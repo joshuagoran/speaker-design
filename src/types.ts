@@ -2487,7 +2487,7 @@ export interface StackLimits {
 /** A goal, by id (`SPEAKER_GOAL`): cheaper, lighter, smaller, lower, louder. */
 export type SpeakerGoal = (typeof SPEAKER_GOAL)[keyof typeof SPEAKER_GOAL];
 
-/** The search's limits. The size limit is a lock per axis (`SpeakerOptimizerLocks.size`). */
+/** The search's limits. The size limit is a lock per chamber and axis (`SpeakerOptimizerLocks.size`). */
 export interface SpeakerOptimizerLimits {
   /** the level the speaker has to reach for music, dB at 1 m, against `SpeakerLimits.musicDb` */
   targetDb: number;
@@ -2513,8 +2513,8 @@ export interface SpeakerOptimizerLocks {
   lowpass?: readonly BandId[];
   /** bands whose amp power stays */
   amps?: readonly BandId[];
-  /** each axis of the box: free, exact, or no larger than now */
-  size?: Partial<Record<keyof Dims3, DimensionLockMode>>;
+  /** each chamber's size, by the chamber's index, per axis: free, exact, or no larger than now */
+  size?: Readonly<Record<number, Partial<Record<keyof Dims3, DimensionLockMode>>>>;
 }
 
 /** The candidate parts: each driver kind's table, and the horns. The model reads every part by id from the app tables. */

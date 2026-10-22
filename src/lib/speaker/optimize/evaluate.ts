@@ -8,6 +8,7 @@ import type {
   SpeakerLimits,
   SpeakerOptimizerLimits,
   SpeakerOptimizerLocks,
+  SpeakerChamber,
   SpeakerOptimizerMetrics,
   SpeakerResponse,
   SpeakerSpec,
@@ -67,6 +68,8 @@ export interface SpeakerFacts {
   vents: readonly boolean[];
   /** each chamber: none of its fit chips is bad (`chamberFitChips`) */
   chips: readonly boolean[];
+  /** each chamber's size, in (the size locks hold it) */
+  dims: readonly Dims3[];
 }
 
 /** A design through the page's code: the runs, the numbers, the facts the checks compare, and its warnings. */
@@ -196,6 +199,7 @@ export function evaluateSpeaker(spec: SpeakerSpec): SpeakerEval {
       drivers: driverFits(spec),
       vents: spec.cabinet.chambers.map((c) => hifiVentFits(spec.cabinet, c)),
       chips: fitChips.map((list) => list.every(([severity]) => severity !== "bad")),
+      dims: spec.cabinet.chambers.map((c) => c.dims),
     },
     warnings: keepUpWarnings(spec, response, limits),
     unpriced: [
@@ -227,32 +231,43 @@ export function withAmps(ev: SpeakerEval, spec: SpeakerSpec): SpeakerEval {
 }
 
 /**
- * The size locks as the checks take them, per axis: the size, in, and whether the box must measure exactly that (an
- * "exact" axis) or at most that (a "max" axis); absent: the axis is free.
+ * The size locks as the checks take them: for each chamber with a lock, by its index, per axis, the size, in, and
+ * whether the chamber must measure exactly that (an "exact" axis) or at most that (a "max" axis); absent: free.
  */
-export type SizeCaps = Partial<Record<keyof Dims3, { in: number; exact: boolean }>>;
+export type SizeCaps = ReadonlyMap<
+  number,
+  Partial<Record<keyof Dims3, { in: number; exact: boolean }>>
+>;
 
-/** The box's size caps from the size locks: your size, as a most on a "max" axis and exactly on an "exact" one. */
+/** The chambers' size caps from the size locks: each chamber's size, as a most on a "max" axis and exactly on an "exact" one. */
 export const capsOf = (
-  outer: SpeakerOptimizerMetrics["sizeIn"],
+  chambers: readonly Pick<SpeakerChamber, "dims">[],
   size: SpeakerOptimizerLocks["size"] = {},
 ): SizeCaps =>
-  Object.fromEntries(
-    (["w", "h", "d"] as const).flatMap((k) =>
-      size[k] === "max" || size[k] === "exact"
-        ? [[k, { in: outer[k], exact: size[k] === "exact" }]]
-        : [],
-    ),
+  new Map(
+    chambers.flatMap((c, k) => {
+      const axes = Object.fromEntries(
+        (["w", "h", "d"] as const).flatMap((a) => {
+          const mode = size[k]?.[a];
+          return mode === "max" || mode === "exact"
+            ? [[a, { in: c.dims[a], exact: mode === "exact" }]]
+            : [];
+        }),
+      );
+      return Object.keys(axes).length ? [[k, axes]] : [];
+    }),
   );
 
-/** Whether an outer size holds the size locks: within SIZE_SLACK_IN of an exact axis, no larger than a max one. */
-export const holdsSizeCaps = (sizeIn: Dims3, caps: SizeCaps): boolean =>
-  (["w", "h", "d"] as const).every((k) => {
-    const cap = caps[k];
-    if (!cap) return true;
-    const off = sizeIn[k] - cap.in;
-    return cap.exact ? Math.abs(off) <= SIZE_SLACK_IN : off <= SIZE_SLACK_IN;
-  });
+/** Whether each chamber holds its size locks: within SIZE_SLACK_IN of an exact axis, no larger than a max one. */
+export const holdsSizeCaps = (dims: readonly Dims3[], caps: SizeCaps): boolean =>
+  [...caps].every(([k, axes]) =>
+    (["w", "h", "d"] as const).every((a) => {
+      const cap = axes[a];
+      if (!cap) return true;
+      const off = (dims[k]?.[a] ?? 0) - cap.in;
+      return cap.exact ? Math.abs(off) <= SIZE_SLACK_IN : off <= SIZE_SLACK_IN;
+    }),
+  );
 
 /** A fact your design has that this design lost: true when `now` is false where `then` is true. */
 const lost = (then: readonly boolean[], now: readonly boolean[]) =>
@@ -281,7 +296,7 @@ export function problemsOf(
   const m = ev.metrics;
   if (limits.budget !== null && m.price > limits.budget + 1e-9) out.push(SPEAKER_PROBLEM.budget);
   if (limits.maxLb !== null && m.lb > limits.maxLb + 1e-9) out.push(SPEAKER_PROBLEM.weight);
-  if (!holdsSizeCaps(m.sizeIn, caps)) out.push(SPEAKER_PROBLEM.size);
+  if (!holdsSizeCaps(facts.dims, caps)) out.push(SPEAKER_PROBLEM.size);
   return out;
 }
 

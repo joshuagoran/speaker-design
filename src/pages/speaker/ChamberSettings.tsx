@@ -189,7 +189,7 @@ interface Props {
   onRemove?: () => void;
   /** opens the driver comparison for one of its driver entries */
   onCompare: (entry: number) => void;
-  /** the optimizer's locks beside its size (the first chamber's: the box's size), its vent and its drivers */
+  /** the optimizer's locks beside its size, its vent and its drivers */
   locks: SpeakerLocks;
 }
 
@@ -429,9 +429,9 @@ export function ChamberSettings({
           )}
         </div>
         <div className={TRIO_ROW}>
-          {/* the box's size locks beside the first chamber's size (the optimizer locks the whole box's) */}
+          {/* each size's lock: the optimizer keeps this chamber's size on that axis */}
           {(["w", "h", "d"] as const).map((k) => (
-            <WithLock key={k} lock={index === 0 ? locks.sizeLock(k) : null}>
+            <WithLock key={k} lock={locks.sizeLock(index, k)}>
               <NumberField
                 label={{ w: "Width", h: "Height", d: "Depth" }[k]}
                 value={shownIn(chamber.dims[k])}

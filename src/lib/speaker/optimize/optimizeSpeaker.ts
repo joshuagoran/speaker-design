@@ -1,7 +1,7 @@
-// The Speaker optimizer: any speaker spec, the goals
-// in tap order, a target level at 1 m, a budget, a weight and size per axis, and locks in; up to three cards and a near
-// miss out. It changes only the unlocked parts and sizes: drivers of the same kind and size, chamber sizes, vents,
-// crossovers in the box, amps. Never the chamber kind, the band count or the input range.
+// The Speaker optimizer: any speaker spec, the goals in tap order, a target level at 1 m, a budget, a weight, each
+// chamber's size per axis, and locks in; up to three cards and a near miss out. It changes only the unlocked parts and
+// sizes: drivers of the same kind and size, chamber sizes, vents, crossovers in the box, amps. Never the chamber kind,
+// the band count or the input range.
 //
 // Search: each unit screened alone on a coarse grid of the page's model (./screen); the units' options combined with
 // the box shapes, estimated (calibrated on your design); the finalists built on the page's field steps and run in full
@@ -193,7 +193,7 @@ export function optimizeSpeaker(
   const goals = goalsIn.filter((g, i, a) => keysOf(SPEAKER_GOAL).includes(g) && a.indexOf(g) === i);
   const start = evaluateSpeaker(spec);
   let evaluated = 1;
-  const caps = capsOf(start.metrics.sizeIn, locks.size);
+  const caps = capsOf(spec.cabinet.chambers, locks.size);
   const problemText = (ev: SpeakerEval, L: Pick<SpeakerOptimizerLimits, "budget" | "maxLb">) =>
     problemsOf(ev, start, L, caps).map((p) => SPEAKER_PROBLEM_TEXT[p]);
   const curProblems = problemText(start, limits);
@@ -356,8 +356,10 @@ export function optimizeSpeaker(
       const est = shapeEstimate(spec, model, shape);
       // the estimate only bounds the size from above (a part swap can still move an exact axis): the built design's
       // check (problemsOf) holds an exact axis
-      const inside = (["w", "h", "d"] as const).every(
-        (k) => est.outer[k] <= (caps[k]?.in ?? Infinity) + SIZE_SLACK_IN,
+      const inside = [...caps].every(([k, axes]) =>
+        (["w", "h", "d"] as const).every(
+          (a) => est.chambers[k][a] <= (axes[a]?.in ?? Infinity) + SIZE_SLACK_IN,
+        ),
       );
       return inside ? [{ shape, outer: est.outer, ratio: est.surfaceRatio }] : [];
     });

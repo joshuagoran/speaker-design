@@ -14,6 +14,9 @@ import {
   keepItems,
   lockedNames,
   reconcileHeld,
+  sizeAxisName,
+  sizeLockMode,
+  withSizeLock,
   toggleKeep,
   type HeldLocks,
   type KeepItem,
@@ -21,7 +24,6 @@ import {
 import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import type { LockControl } from "../../components/ui/LockButton";
 import type {
-  DimensionLockMode,
   Dims3,
   SpeakerOptimizerCard,
   SpeakerOptimizerLimits,
@@ -67,6 +69,7 @@ export function useSpeakerOptimizer({ spec, loadSpec, round, current }: Props) {
   const layout = driverLayout(spec);
   const [held, setHeld] = useState<HeldLocks>({ round, layout, locks: {} });
   const items = useMemo(() => keepItems(spec), [spec]);
+  const nChambers = spec.cabinet.chambers.length;
   // a lock that no longer holds is dropped for good, not only hidden: a driver added back must not bring it back
   const now = reconcileHeld(held, { round, layout }, items);
   if (now !== held) setHeld(now);
@@ -109,21 +112,20 @@ export function useSpeakerOptimizer({ spec, loadSpec, round, current }: Props) {
         onClick: () => setLocks(toggleKeep(locks, item)),
       };
     },
-    /** the lock beside a box axis's size: free, up to this size (≤), exactly this size (=) */
-    sizeLock: (axis: keyof Dims3): LockControl => {
-      const mode: DimensionLockMode = locks.size?.[axis] ?? "free";
+    /** the lock beside a chamber's size on an axis: free, up to this size (≤), exactly this size (=) */
+    sizeLock: (chamber: number, axis: keyof Dims3): LockControl => {
+      const mode = sizeLockMode(locks, chamber, axis);
       return {
-        name: SPEAKER_OPTIMIZER_TEXT.axis[axis].toLowerCase(),
+        name: sizeAxisName(chamber, axis, nChambers),
         locked: mode !== "free",
         mark: mode === "free" ? undefined : SPEAKER_OPTIMIZER_TEXT.sizeMark[mode],
         unlocks: NEXT_SIZE_LOCK[mode] === "free",
-        onClick: () =>
-          setLocks({ ...locks, size: { ...locks.size, [axis]: NEXT_SIZE_LOCK[mode] } }),
+        onClick: () => setLocks(withSizeLock(locks, chamber, axis, NEXT_SIZE_LOCK[mode])),
       };
     },
-    /** how many locks are set, and their names in the order of the page */
+    /** how many locks are set, and their names */
     nLocks: countKept(locks),
-    lockedNames: lockedNames(locks, items),
+    lockedNames: lockedNames(locks, items, nChambers),
     clearLocks: () => setLocks({}),
   };
 }
