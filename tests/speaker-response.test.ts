@@ -11,7 +11,7 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { flushBracing } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
-import { highpassGain, STUFFING_VOLUME_GAIN } from "../src/lib/acoustics/boxModels";
+import { STUFFING_VOLUME_GAIN } from "../src/lib/acoustics/boxModels";
 import { abs, add, complex, multiply, phasor, scale } from "../src/lib/acoustics/complex";
 import { chamberHornPort } from "../src/lib/speaker/chamberAir";
 import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
@@ -43,12 +43,18 @@ import {
 } from "../src/constants/speakerSpec";
 import type { BandId, Complex, SpeakerChamber, SpeakerSpec } from "../src/types";
 
-test("speaker model: a band filter's magnitude is the highpass gain and the Linkwitz-Riley closed form", () => {
+/** A highpass's closed-form magnitude: Butterworth n xⁿ/√(1 + x²ⁿ), Linkwitz-Riley n xⁿ/(1 + xⁿ), x = f/fc. */
+const closedFormHighpass = (f: number, fc: number, type: "BW24" | "LR24" | "BW48" | "LR48") => {
+  const xn = Math.pow(f / fc, type.endsWith("48") ? 8 : 4);
+  return type.startsWith("BW") ? xn / Math.sqrt(1 + xn * xn) : xn / (1 + xn);
+};
+
+test("speaker model: a band filter's magnitude is the Butterworth and Linkwitz-Riley closed forms", () => {
   for (const f of [20, 63, 120, 400, 2500]) {
     for (const type of ["BW24", "LR24", "BW48", "LR48"] as const)
       assert.ok(
         Math.abs(
-          abs(filterTransfer(f, { hz: 100, type }, "highpass")) - highpassGain(f, 100, type),
+          abs(filterTransfer(f, { hz: 100, type }, "highpass")) - closedFormHighpass(f, 100, type),
         ) < 1e-12,
         `${type} highpass at ${f} Hz`,
       );

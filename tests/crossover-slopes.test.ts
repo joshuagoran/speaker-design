@@ -1,7 +1,6 @@
 // PA crossover slopes: LR24 or LR48 at each crossover (issue #27). LR24 reads as before.
 import { test } from "vite-plus/test";
-import { highpassGain } from "../src/lib/acoustics/boxModels";
-import { filterTransfer } from "../src/lib/speaker/bandFilter";
+import { filterTransfer, highpassGain } from "../src/lib/speaker/bandFilter";
 import { abs } from "../src/lib/acoustics/complex";
 import { close, db } from "./helpers";
 

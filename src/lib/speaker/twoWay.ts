@@ -17,8 +17,8 @@ import { ownGuideCfg, waveguideSpecOf } from "../data";
 import { HIFI_DRIVE, RIBBON_TWEETER_TYPE, AMT_TWEETER_TYPE } from "../../constants/hifiEngine";
 import {
   aesDerate,
+  hfProgramWatts,
   ohmsOf,
-  programWatts,
   sensitivityAt283,
   voltsToWatts,
   wattsToVolts,
@@ -93,7 +93,7 @@ export function tweeterMaxLevel(
   // the amp power is the watts into the tweeter's impedance (lib/power)
   const pAmp = cfg.tAmpW || 50;
   const derate = aesDerate(cfg.xo, hf.aesXo);
-  const pProg = hf.aes ? programWatts(hf.aes) * derate : Infinity;
+  const pProg = hf.aes ? hfProgramWatts({ aes: hf.aes, aesXo: hf.aesXo }, cfg.xo) : Infinity;
   const pMax = Math.min(pAmp, pProg);
   const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
   const who: Extract<LimitId, "amp" | "thermal"> = pMax === pAmp ? "amp" : "thermal";

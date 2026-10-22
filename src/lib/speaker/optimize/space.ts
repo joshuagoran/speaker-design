@@ -47,7 +47,7 @@ import { byId } from "../../tables";
 import { CHAMBER_LOAD, DRIVER_KIND, VENT_KIND } from "../../../constants/speakerSpec";
 import { HIFI_DRIVE } from "../../../constants/hifiEngine";
 import { SPEAKER_STEPS } from "../../../constants/speakerSteps";
-import { programWatts } from "../../power";
+import { hfProgramWatts, programWatts } from "../../power";
 
 /** The app catalog as the optimizer's candidates (`SpeakerOptimizerInput.catalog` absent). */
 export const SPEAKER_OPTIMIZER_CATALOG: SpeakerOptimizerCatalog = {
@@ -772,6 +772,8 @@ export function topAmps(
 ): Map<BandId, number> {
   const rating = new Map<BandId, number>();
   const raise = (band: BandId, w: number) => rating.set(band, Math.max(rating.get(band) ?? 0, w));
+  /** a band's crossover, as the limits derate an HF driver's rating at it (none: the rating as published) */
+  const xoOf = (band: BandId) => spec.bands.find((b) => b.id === band)?.highpass?.hz ?? Infinity;
   for (const u of units) {
     if (u.kind === "cone") {
       for (const id of u.drivers) {
@@ -786,7 +788,11 @@ export function topAmps(
         // the program rating, 2 × AES: the amp power is the watts into the driver
         if (ts) raise(u.bands[0], programWatts(ts.aes));
         const coaxHf = u.driverKind === DRIVER_KIND.coaxial ? byId(FILL_OPTIONS, id)?.hf : null;
-        if (coaxHf && u.bands[1]) raise(u.bands[1], programWatts(coaxHf.aes));
+        if (coaxHf && u.bands[1])
+          raise(
+            u.bands[1],
+            hfProgramWatts({ aes: coaxHf.aes, aesXo: coaxHf.xo }, xoOf(u.bands[1])),
+          );
       }
     } else {
       for (const p of u.parts) {
@@ -794,7 +800,7 @@ export function topAmps(
           spec.cabinet.chambers[u.chamber].drivers[u.entry].kind === DRIVER_KIND.compression
             ? byId(CD_OPTIONS, p.driverId)?.hf
             : byId(HIFI_TWEETERS, p.driverId)?.hf;
-        if (hf) raise(u.band, programWatts(hf.aes));
+        if (hf) raise(u.band, hfProgramWatts(hf, xoOf(u.band)));
       }
     }
   }

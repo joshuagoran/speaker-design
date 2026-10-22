@@ -1,6 +1,7 @@
 // A woofer in its box: sealed, vented (a round port or a slot) or with passive radiators, the vent's end corrections
 // and fold, the radiator box's response, and the Hi-fi box's subsonic and level. Pure functions, no DOM.
-import { ampVoltage, highpassGain, slotMouthCorrection, unwrapRawPhase } from "./boxModels";
+import { ampVoltage, slotMouthCorrection, unwrapRawPhase } from "./boxModels";
+import { highpassGain } from "../speaker/bandFilter";
 import { rectangleEndCorrection } from "./radiation";
 import { coilFactor, driverCircuit, midbandLevelDb } from "./driverCircuit";
 import { portOfEffectiveLength, sourcePressureFactor, ventTuningHz } from "./hornModel";

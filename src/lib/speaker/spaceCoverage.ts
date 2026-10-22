@@ -34,6 +34,7 @@ import {
   levelAtPoint,
   QUICK_BAND_POINTS,
   RESPONSE_FREQS,
+  arrival,
   sceneOf,
   sceneSlots,
   slotResponse,
@@ -47,7 +48,7 @@ import { baffleStepShelf } from "../acoustics/directivity";
 import { abs, multiply } from "../acoustics/complex";
 import { coaxParts, FILL_OPTIONS, hifiDriverById } from "../data";
 import { byId } from "../tables";
-import { polaritySign, stackLimits, stackResponse } from "./stackResponse";
+import { memberGain, stackLimits, stackResponse } from "./stackResponse";
 import {
   chamberCones,
   hfBandOf,
@@ -135,12 +136,13 @@ interface VoiceFeed extends CoverageVoice {
   member: number;
   band: BandId;
   pressure: readonly Complex[];
-  /** the member's level, the placement's gain and its box's level at a gain of 0 (`fullDb`), dB */
-  gainDb: number;
+  /**
+   * its gain, as a factor: the member's level and polarity (`memberGain`, as the Stack page sums it), the placement's,
+   * and its box's level at a gain of 0 (`fullDb`)
+   */
+  gain: number;
   /** the member's delay (the stack's own alignment) and the placement's, ms */
   delayMs: number;
-  /** its sign: −1 where the member's polarity or the placement's (not both) is inverted */
-  sign: number;
   /** the baffle's width for a cone band's baffle step, in; null for an HF section */
   baffleWIn: number | null;
   /** the band's share each of its spots plays: one over their count */
@@ -279,15 +281,11 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
           id,
           pattern,
           pressure: band.pressure,
-          gainDb:
-            (item.stack ? item.stack.stack.members[d.member].levelDb : 0) +
-            placement.levelDb +
-            systemDb +
-            fullDb,
+          gain:
+            (item.stack ? memberGain(item.stack.stack.members[d.member]) : 1) *
+            memberGain(placement) *
+            Math.pow(10, (systemDb + fullDb) / 20),
           delayMs: member.delayMs + placement.delayMs,
-          sign:
-            polaritySign(placement) *
-            (item.stack ? polaritySign(item.stack.stack.members[d.member]) : 1),
           baffleWIn: spotBaffleWIn(d),
           boxWIn: spotBoxWIn(d),
           share: 1 / (spots.get(`${d.member}/${d.band}`) ?? 1),
@@ -333,9 +331,8 @@ export function spaceOutputs(model: Pick<SpaceModel, "feeds">, f: number): Cover
   const out: CoverageSlot["out"] = {};
   for (const v of model.feeds) {
     const p = radiatedAt(v.pressure, f, v.baffleWIn);
-    const mag = v.sign * abs(p) * Math.pow(10, v.gainDb / 20) * v.share,
-      ph = Math.atan2(p.im, p.re) - (2 * Math.PI * f * v.delayMs) / MS_PER_S;
-    out[v.id] = { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
+    // at 1 m, no path to add: its gain, its share and its delay
+    out[v.id] = arrival(p, f, v.gain * v.share, 1, 1, v.delayMs / MS_PER_S);
   }
   return out;
 }

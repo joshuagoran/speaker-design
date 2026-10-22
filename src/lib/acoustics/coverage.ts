@@ -214,9 +214,26 @@ export function directivityGain(d: SourceDirectivity, th: number, tv: number): n
 }
 
 /**
+ * How much of a source's pressure at `refM`, m, is left along a path `pathM` long, m: spread 1/r, less `lossNepers`
+ * (the air's absorption, `airNepers`, and anything else in the way). Every path's level comes from here: `arrival` and
+ * the Space page's map (`levelAtPoint`).
+ */
+export const pathAmplitude = (pathM: number, refM: number, lossNepers = 0) =>
+  (refM * Math.exp(-lossNepers)) / pathM;
+
+/** What the air takes off a path `pathM` long, m, at `nepersPerM` (pressure), nepers. */
+export const airNepers = (nepersPerM: number, pathM: number) => nepersPerM * pathM;
+
+/** A path's phase at wavenumber `k` (2πf/c), radians: late by its length `pathM` past `refM`, m. */
+export const pathPhase = (k: number, pathM: number, refM: number) => -k * (pathM - refM);
+
+/** A delay's phase at `f`, Hz, radians: late by `delayS`, s. */
+export const delayPhase = (f: number, delayS: number) => -2 * Math.PI * f * delayS;
+
+/**
  * A source's pressure `p` (at `refM`, m) where it arrives along a path `pathM` long, m, at `f`, Hz: times `gain`,
- * spread 1/r against `refM`, and late by the path's extra length and by `delayS`, s. The Speaker and Stack pages' sum
- * and their dispersion maps share it.
+ * spread (`pathAmplitude`), and late by the path (`pathPhase`) and by `delayS`, s (`delayPhase`). The Speaker, Stack,
+ * and Space pages' sums and the dispersion maps share it; the Space page's map (`levelAtPoint`) uses the same parts.
  */
 export const arrival = (
   p: Complex,
@@ -227,8 +244,8 @@ export const arrival = (
   delayS: number,
 ): Complex =>
   multiply(
-    scale(p, (gain * refM) / pathM),
-    phasor(-2 * Math.PI * f * ((pathM - refM) / C + delayS)),
+    scale(p, gain * pathAmplitude(pathM, refM)),
+    phasor(pathPhase((2 * Math.PI * f) / C, pathM, refM) + delayPhase(f, delayS)),
   );
 
 /** A source's axis: its yaw from straight ahead (+y, + toward +x) and its pitch (+ up), as cosines and sines. */
@@ -936,7 +953,7 @@ export function levelAtPoint(
       const r = geo[g];
       // what the air takes off, and a stage in the way: its barrier loss at this path's Fresnel number, N = 2δ/λ = δk/π
       // (nepers)
-      let loss = sl.air * r;
+      let loss = airNepers(sl.air, r);
       const detourK = geo[g + 4] * sl.k;
       if (detourK > BRIGHT_DETOUR_K)
         loss +=
@@ -944,9 +961,9 @@ export function levelAtPoint(
           (geo[g + 11] ? BARRIER_CAP_NEPERS : barrierNepers(detourK / Math.PI));
       const dir = sl.directivity[s.voice];
       const d = dir ? directivityGain(dir, geo[g + 1], geo[g + 2]) : 0;
-      const mag = (d * gain * Math.exp(-loss)) / r,
-        // less the alignment, so the box's drivers arrive together at its alignment point
-        ph = -sl.k * (r - s.alignM),
+      // from its level at 1 m; less the alignment, so the box's drivers arrive together at its alignment point
+      const mag = d * gain * pathAmplitude(r, 1, loss),
+        ph = pathPhase(sl.k, r, s.alignM),
         c = Math.cos(ph),
         sn = Math.sin(ph);
       pre[s.path] += mag * (v.re * c - v.im * sn);

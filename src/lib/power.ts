@@ -28,6 +28,10 @@ export const programWatts = (aes: number): number => 2 * aes;
 export const aesDerate = (xo: number, aesXo: number | null | undefined): number =>
   aesXo && xo < aesXo ? Math.pow(xo / aesXo, 2) : 1;
 
+/** An HF driver's program rating crossed at `xo`, Hz, W: `programWatts` times its `aesDerate` there. */
+export const hfProgramWatts = (hf: { aes: number; aesXo: number | null | undefined }, xo: number) =>
+  programWatts(hf.aes) * aesDerate(xo, hf.aesXo);
+
 /** A part's nominal impedance, Ω: its own, or `FALLBACK_OHMS` where it isn't entered. */
 export const ohmsOf = (part: NominalImpedance): number =>
   part.imp !== undefined && part.imp > 0 ? part.imp : FALLBACK_OHMS;

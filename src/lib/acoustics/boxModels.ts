@@ -87,6 +87,7 @@ import { towerHornCutout } from "../speaker/tower";
 import { KG_PER_LB } from "../../constants/units";
 import {
   aesDerate,
+  hfProgramWatts,
   ohmsOf,
   programWatts,
   sensitivityAt283,
@@ -222,8 +223,8 @@ interface Complex {
   re: number;
   im: number;
 }
-// Filter magnitudes. Butterworth order n: x^n / sqrt(1 + x^2n). Linkwitz-Riley 2m: a
-// Butterworth m squared, x^2m / (1 + x^2m). LR24 is -6 dB at the corner, BW24 -3 dB.
+// Each highpass type's alignment and order (lib/speaker/bandFilter `filterTransfer`): Butterworth n, or a
+// Linkwitz-Riley 2m, a Butterworth m squared. LR24 is -6 dB at the corner, BW24 -3 dB.
 export const HIGHPASS_ALIGNMENTS: Record<
   HighpassType,
   readonly [kind: "bw" | "lr", order: number]
@@ -232,12 +233,6 @@ export const HIGHPASS_ALIGNMENTS: Record<
   LR24: ["lr", 4],
   BW48: ["bw", 8],
   LR48: ["lr", 8],
-};
-export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24") => {
-  const [kind, n] = HIGHPASS_ALIGNMENTS[type] || HIGHPASS_ALIGNMENTS.BW24,
-    x = f / fc;
-  const xn = Math.pow(x, n);
-  return kind === "bw" ? xn / Math.sqrt(1 + xn * xn) : xn / (1 + xn);
 };
 // The normalized Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2.
 // Kept per order: the hi-fi crossover calls for them at every frequency of every design the optimizer tries.
@@ -1455,7 +1450,7 @@ export function hornPower(
   const imp = ohmsOf(hf);
   const pAmp = hfAmpW;
   const derate = aesDerate(xoHi, hf.aesXo);
-  const pProg = programWatts(hf.aes) * derate;
+  const pProg = hfProgramWatts(hf, xoHi);
   const P = Math.min(pAmp, pProg);
   return { P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "thermal" };
 }

@@ -3,7 +3,7 @@
 // boxes share it; an old save reads as not inverted; a share link keeps it.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { stackResponse } from "../src/lib/speaker/stackResponse";
+import { memberGain, stackResponse } from "../src/lib/speaker/stackResponse";
 import { spaceResponse } from "../src/lib/speaker/spaceCoverage";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { spacePlacement, stackMember } from "../src/lib/speaker/specParts";
@@ -101,7 +101,7 @@ test("space: a mirrored pair's image carries the placement's polarity", () => {
   );
   const model = spaceModel(spaceOf([placed(true, true)]));
   assert.ok(model.feeds.length > 0);
-  for (const f of model.feeds) assert.equal(f.sign, -1);
+  for (const f of model.feeds) assert.ok(f.gain < 0, f.id);
 });
 
 /** A saved document of `data`, as the store gives it back. */
@@ -169,4 +169,16 @@ test("share links keep polarity", async () => {
     spaceLink.envelope.spaces[0]?.placements.map((p) => p.invertPolarity),
     [true, false],
   );
+});
+
+test("space: a feed's gain is the placement's level and polarity as the Stack page's member gain reads them", () => {
+  const placement = { ...placed(true), levelDb: -3 };
+  const model = spaceModel(spaceOf([placement]));
+  const { systemDb } = BASE.space.venue;
+  assert.ok(model.feeds.length > 0);
+  for (const f of model.feeds) {
+    const fullDb = model.placements[f.box]?.fullDb ?? 0;
+    const expected = memberGain(placement) * Math.pow(10, (systemDb + fullDb) / 20);
+    assert.ok(Math.abs(f.gain - expected) < 1e-12 * Math.abs(expected), f.id);
+  }
 });

@@ -1,6 +1,5 @@
 import { test } from "vite-plus/test";
-import { highpassGain } from "../src/lib/acoustics/boxModels";
-import { filterTransfer } from "../src/lib/speaker/bandFilter";
+import { filterTransfer, highpassGain } from "../src/lib/speaker/bandFilter";
 import { abs } from "../src/lib/acoustics/complex";
 import { db, close } from "./helpers";
 
