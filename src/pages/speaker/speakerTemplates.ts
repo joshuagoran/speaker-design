@@ -24,6 +24,7 @@ import type {
   SpecIdentity,
 } from "../../types";
 import { layersFromPa } from "../../lib/speaker/paSpec";
+import { withCalculatedBandGains } from "../../lib/speaker/autoBalance";
 import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerFromFill } from "../../lib/speaker/fillSpec";
 import {
@@ -130,7 +131,7 @@ function paSpeaker(layout: PaLayout, part: SpeakerPart, identity: SpecIdentity):
   const id = speakerIdentity(identity, part).id;
   const found = read.speakers.find((s) => s.id === id);
   if (!found) throw new Error(`The PA ${layout} layout has no ${part} speaker`);
-  return { ...found, ...identity };
+  return withCalculatedBandGains({ ...found, ...identity });
 }
 
 /**

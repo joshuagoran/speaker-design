@@ -34,6 +34,7 @@ import {
   levelAtPoint,
   QUICK_BAND_POINTS,
   RESPONSE_FREQS,
+  arrival,
   sceneOf,
   sceneSlots,
   slotResponse,
@@ -44,10 +45,10 @@ import {
   type SceneDriver,
 } from "../acoustics/coverage";
 import { baffleStepShelf } from "../acoustics/directivity";
-import { abs } from "../acoustics/complex";
+import { abs, multiply } from "../acoustics/complex";
 import { coaxParts, FILL_OPTIONS, hifiDriverById } from "../data";
 import { byId } from "../tables";
-import { polaritySign, stackLimits, stackResponse } from "./stackResponse";
+import { memberGain, stackLimits, stackResponse } from "./stackResponse";
 import {
   chamberCones,
   hfBandOf,
@@ -63,7 +64,7 @@ import { stageSolids } from "./spaceStages";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 import { DRIVER_PART } from "../../constants/space";
 import { COAX_HF_EXIT_IN } from "../../constants/coax";
-import { METERS_PER_FOOT, METERS_PER_INCH, SQ_CM_PER_SQ_M } from "../../constants/units";
+import { METERS_PER_FOOT, METERS_PER_INCH, MS_PER_S, SQ_CM_PER_SQ_M } from "../../constants/units";
 
 /** The band a driver part feeds, as the speaker model feeds it: a cone its chamber's first cone's first band. */
 export const bandOfPart: BandOfPart = (chamber, driver, part) =>
@@ -77,13 +78,17 @@ export const bandOfPart: BandOfPart = (chamber, driver, part) =>
 const piston = (diaIn: number): CoveragePattern => ({ a: (diaIn / 2) * METERS_PER_INCH });
 
 /**
- * How a driver spot spreads its sound: a horn-loaded chamber's mouth or a cone as a piston of its area; an HF section
- * on a horn or waveguide (its own, as a ribbon's plate or a coaxial's cone) by that horn's coverage and mouth, or else a
- * piston of its exit (a bare 1″ exit where the catalog gives none).
+ * How a driver spot spreads its sound: a horn-loaded chamber's mouth plane by plane, by its size and its walls' angles
+ * (lib/acoustics/directivity `mouthPlane`); a cone as a piston of its area; an HF section on a horn or waveguide (its
+ * own, as a ribbon's plate or a coaxial's cone) by that horn's coverage and mouth, or else a piston of its exit (a bare
+ * 1″ exit where the catalog gives none).
  */
 export function driverPattern(d: Pick<PlacedDriver, "driver" | "part" | "mouth">): CoveragePattern {
   const { driver } = d;
-  if (d.mouth) return { a: Math.sqrt((d.mouth.w * d.mouth.h) / Math.PI) * METERS_PER_INCH };
+  if (d.mouth)
+    return {
+      mouth: { wIn: d.mouth.w, hIn: d.mouth.h, wallH: d.mouth.wallDeg.h, wallV: d.mouth.wallDeg.v },
+    };
   if (d.part === DRIVER_PART.cone) {
     const parts = coneParts(driver);
     return { a: parts ? Math.sqrt(parts.ts.Sd / SQ_CM_PER_SQ_M / Math.PI) : 0 };
@@ -131,12 +136,13 @@ interface VoiceFeed extends CoverageVoice {
   member: number;
   band: BandId;
   pressure: readonly Complex[];
-  /** the member's level, the placement's gain and its box's level at a gain of 0 (`fullDb`), dB */
-  gainDb: number;
+  /**
+   * its gain, as a factor: the member's level and polarity (`memberGain`, as the Stack page sums it), the placement's,
+   * and its box's level at a gain of 0 (`fullDb`)
+   */
+  gain: number;
   /** the member's delay (the stack's own alignment) and the placement's, ms */
   delayMs: number;
-  /** its sign: −1 where the member's polarity or the placement's (not both) is inverted */
-  sign: number;
   /** the baffle's width for a cone band's baffle step, in; null for an HF section */
   baffleWIn: number | null;
   /** the band's share each of its spots plays: one over their count */
@@ -153,13 +159,29 @@ export interface SpaceModel {
   missing: boolean;
   /** what each box stands right against, in `placements`' order, with the marks the plan draws */
   coupling: ReturnType<typeof spaceCoupling>;
+  /** System gain, dB: in every feed's gain, as each placement's own Gain is */
+  systemDb: SpaceVenue["systemDb"];
 }
-
-/** Milliseconds in a second. */
-const MS_PER_S = 1000;
 
 /** An angle wrapped to ±π. */
 const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
+/** The width of the box a spot plays from, in: how much of its sound reaches behind the box (`boxShadow`). */
+export const spotBoxWIn = (d: Pick<PlacedDriver, "speaker">) =>
+  speakerLayout(d.speaker.cabinet).size.w;
+
+/** The baffle a spot's sound steps up on (`baffleStepShelf`): a cone's box width, in; null for any other spot. */
+export const spotBaffleWIn = (d: Pick<PlacedDriver, "part" | "speaker">) =>
+  d.part === DRIVER_PART.cone ? spotBoxWIn(d) : null;
+
+/**
+ * A spot's pressure at 1 m at `f`, from its band's curve (`pressureAt`), with its baffle step where it has a baffle
+ * (`spotBaffleWIn`). The Space page's coverage and the Speaker and Stack pages' dispersion maps share it.
+ */
+export function radiatedAt(ps: readonly Complex[], f: number, baffleWIn: number | null): Complex {
+  const p = pressureAt(ps, f);
+  return baffleWIn === null ? p : multiply(p, baffleStepShelf(f, baffleWIn));
+}
 
 /** A pressure on the speaker model's frequencies read at `f`: its level and phase between grid points on log frequency. */
 export function pressureAt(ps: readonly Complex[], f: number): Complex {
@@ -234,6 +256,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
     fullDb: p.headroomDb ?? fallbackDb,
   }));
   const feeds = new Map<string, VoiceFeed>();
+  const { systemDb } = design.space.venue;
   const boxes = placements.map(({ item, response, fullDb }, k): SceneDriver[] => {
     if (!response) return [];
     const { placement } = item;
@@ -258,15 +281,13 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
           id,
           pattern,
           pressure: band.pressure,
-          gainDb:
-            (item.stack ? item.stack.stack.members[d.member].levelDb : 0) +
-            placement.levelDb +
-            fullDb,
+          gain:
+            (item.stack ? memberGain(item.stack.stack.members[d.member]) : 1) *
+            memberGain(placement) *
+            Math.pow(10, (systemDb + fullDb) / 20),
           delayMs: member.delayMs + placement.delayMs,
-          sign:
-            polaritySign(placement) *
-            (item.stack ? polaritySign(item.stack.stack.members[d.member]) : 1),
-          baffleWIn: d.part === DRIVER_PART.cone ? speakerLayout(d.speaker.cabinet).size.w : null,
+          baffleWIn: spotBaffleWIn(d),
+          boxWIn: spotBoxWIn(d),
           share: 1 / (spots.get(`${d.member}/${d.band}`) ?? 1),
         });
       return [
@@ -288,7 +309,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
     placements,
     scene: sceneOf(
       design.space.venue.room,
-      list.map(({ id, pattern }) => ({ id, pattern })),
+      list.map(({ id, pattern, boxWIn }) => ({ id, pattern, boxWIn })),
       boxes,
       stageSolids(design.space.venue.stages).map((s) => ({
         corners: s.corners.map((p) => ({ x: p.x * METERS_PER_FOOT, y: p.y * METERS_PER_FOOT })),
@@ -298,6 +319,7 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
     ),
     feeds: list,
     missing: placements.some((p) => !p.item.stack || p.response?.members.some((m) => m === null)),
+    systemDb,
     coupling,
   };
 }
@@ -308,15 +330,9 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
 export function spaceOutputs(model: Pick<SpaceModel, "feeds">, f: number): CoverageSlot["out"] {
   const out: CoverageSlot["out"] = {};
   for (const v of model.feeds) {
-    const p = pressureAt(v.pressure, f);
-    let mag = v.sign * abs(p) * Math.pow(10, v.gainDb / 20) * v.share,
-      ph = Math.atan2(p.im, p.re) - (2 * Math.PI * f * v.delayMs) / MS_PER_S;
-    if (v.baffleWIn !== null) {
-      const shelf = baffleStepShelf(f, v.baffleWIn);
-      mag *= abs(shelf);
-      ph += Math.atan2(shelf.im, shelf.re);
-    }
-    out[v.id] = { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
+    const p = radiatedAt(v.pressure, f, v.baffleWIn);
+    // at 1 m, no path to add: its gain, its share and its delay
+    out[v.id] = arrival(p, f, v.gain * v.share, 1, 1, v.delayMs / MS_PER_S);
   }
   return out;
 }

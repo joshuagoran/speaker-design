@@ -91,10 +91,10 @@ const SYSTEM_DB = -6;
 for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks]) {
   test(`${levelRef}: switching the band changes neither the level nor the band line`, () => {
     const sub = figures(levelRef, "sub", 105, { systemDb: SYSTEM_DB });
-    expect(sub.gain).toBe(SYSTEM_DB);
+    expect(sub.design.space.venue.systemDb).toBe(SYSTEM_DB);
     for (const band of BANDS) {
       const s = figures(levelRef, band, 105, { systemDb: SYSTEM_DB });
-      expect(s.gain, `${band}: gain`).toBe(sub.gain);
+      expect(s.design.space.venue.systemDb, `${band}: gain`).toBe(SYSTEM_DB);
       expect(s.bandLevels, `${band}: each band at the listener`).toEqual(sub.bandLevels);
       expect(s.listenerDb, `${band}: listener`).toBe(sub.listenerDb);
       expect(s.response, `${band}: response`).toEqual(sub.response);
@@ -113,9 +113,9 @@ for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks])
       const targets = bandTargets(design);
       const rel = keysOf(COVERAGE_BANDS).flatMap((b) => {
         const db = levels[b];
-        return db === undefined ? [] : [db + systemDb - targets[b]];
+        return db === undefined ? [] : [db - targets[b]];
       });
-      const least = Math.min(...bandHeadrooms(model, systemDb).map((h) => h.headroomDb));
+      const least = Math.min(...bandHeadrooms(model).map((h) => h.headroomDb));
       return { rel, least, limit, systemDb };
     };
     // a quiet target: a band meets it, none goes past it, and nothing holds System gain down
@@ -133,10 +133,29 @@ for (const levelRef of [COVERAGE_LEVEL_REF.listener, COVERAGE_LEVEL_REF.stacks])
   });
 }
 
-test("the Target level alone does not change the gain", () => {
-  expect(figures(COVERAGE_LEVEL_REF.listener, "sub", 95).gain).toBe(
-    figures(COVERAGE_LEVEL_REF.listener, "sub", 115).gain,
+test("the Target level alone does not change the level", () => {
+  expect(figures(COVERAGE_LEVEL_REF.listener, "sub", 95).listenerDb).toBe(
+    figures(COVERAGE_LEVEL_REF.listener, "sub", 115).listenerDb,
   );
+});
+
+test("System gain is in the model: the readouts, the response, and the headroom move by it", () => {
+  const full = figures(COVERAGE_LEVEL_REF.listener, "sub");
+  const down = figures(COVERAGE_LEVEL_REF.listener, "sub", 105, { systemDb: SYSTEM_DB });
+  expect(full.listenerDb).not.toBeNull();
+  expect((down.listenerDb ?? 0) - (full.listenerDb ?? 0)).toBeCloseTo(SYSTEM_DB, 6);
+  down.response.forEach((o, i) =>
+    expect(o.spl - (full.response[i]?.spl ?? 0)).toBeCloseTo(SYSTEM_DB, 6),
+  );
+  const design = placedSpace(COVERAGE_LEVEL_REF.listener, 105);
+  const at = (systemDb: number) =>
+    bandHeadrooms(
+      spaceModelLaidOut({
+        ...design,
+        space: { ...design.space, venue: { ...design.space.venue, systemDb } },
+      }),
+    ).map((h) => h.headroomDb);
+  at(SYSTEM_DB).forEach((db, i) => expect(db - (at(0)[i] ?? 0)).toBeCloseTo(-SYSTEM_DB, 6));
 });
 
 test("the lowest band is the lowest band", () => {
@@ -156,6 +175,6 @@ test("moving the listener changes only its readouts", () => {
   const listenerMoved = figures(COVERAGE_LEVEL_REF.listener, "sub", 105, {
     listener: { x: 4, y: 20 },
   });
-  expect(listenerMoved.gain).toBe(start.gain);
+  expect(listenerMoved.design.space.venue.systemDb).toBe(start.design.space.venue.systemDb);
   expect(listenerMoved.listenerDb).not.toBe(start.listenerDb);
 });

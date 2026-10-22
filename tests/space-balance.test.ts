@@ -8,7 +8,7 @@ import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import { oneMeterSpots, spaceCrossoversHz, spaceTargetAt } from "../src/lib/speaker/spaceBalance";
 import { expandPlacements } from "../src/lib/speaker/spaceLayout";
 import { STACK_PRESET } from "../src/constants/stackPresets";
-import { AUTO_BALANCE_MODE } from "../src/constants/autoBalance";
+import { BAND_BALANCE } from "../src/constants/space";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { RAD } from "../src/constants/units";
 import type { PaLayout, SpaceDesign } from "../src/types";
@@ -30,7 +30,7 @@ test("Space target: flat, the same target in every band", () => {
   const design = presetSpace(STACK_PRESET.paStack);
   const crossovers = spaceCrossoversHz(design);
   for (const f of RESPONSE_FREQS)
-    expect(spaceTargetAt(100, f, crossovers, AUTO_BALANCE_MODE.flat)).toBe(100);
+    expect(spaceTargetAt(100, f, crossovers, BAND_BALANCE.flat)).toBe(100);
 });
 
 test("Space levels: a design with no room of its own measures at the audience average, flat", () => {
@@ -39,7 +39,7 @@ test("Space levels: a design with no room of its own measures at the audience av
     name: "Hi-fi",
   }).space;
   expect(venue.levelRef).toBe(COVERAGE_LEVEL_REF.audience);
-  expect(venue.balance).toBe(AUTO_BALANCE_MODE.flat);
+  expect(venue.balance).toBe(BAND_BALANCE.flat);
 });
 
 test("Space levels: 1 m from each box, along its aim (a mirrored pair's boxes mirrored)", () => {

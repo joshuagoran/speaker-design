@@ -17,6 +17,7 @@ import { HIFI_STUFFING_GAIN, hifiBox, hifiPortElbows } from "../acoustics/woofer
 import { hifiBoxFit } from "../build/boxLayout";
 import { MAX_ELBOWS } from "../build/tubeFold";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
+import { PAD_MAX_DB } from "./bandLevel";
 import {
   DRIVER_KIND,
   HORN_PLACEMENT,
@@ -219,7 +220,8 @@ export function speakerFromHifi(
       band(
         SPEAKER_BAND.high,
         { highpass: lrFilter(crossoverHz, crossoverOrder), lowpass: null },
-        trimDb,
+        // passive: a Pad, which can't lift a tweeter quieter than its woofer
+        drive === HIFI_DRIVE.passive ? Math.min(PAD_MAX_DB, trimDb) : trimDb,
         // passive: the woofer's channel, which it shares
         drive === HIFI_DRIVE.passive ? state.wooferAmpWatts : state.tweeterAmpWatts,
       ),

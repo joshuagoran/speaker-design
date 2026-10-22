@@ -50,7 +50,7 @@ import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
-import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
+import { BAND_BALANCE } from "../../constants/space";
 import {
   AUTO_DELAY,
   CABINET_CONSTRUCTION,
@@ -255,15 +255,12 @@ const subBand = (cfg: PaDesign, lowpass: SpeakerBand["lowpass"]) =>
     cfg.ampW,
   );
 
-/**
- * The horn band: above the mid-to-horn crossover, `hfTilt` below the mid band, which is `midDb` below the box's top; on
- * the HF amp.
- */
-const hornBand = (cfg: PaDesign, midDb: number) =>
+/** The horn band: above the mid-to-horn crossover, on the HF amp. Its Gain comes from Calculate gains. */
+const hornBand = (cfg: PaDesign) =>
   activeBand(
     SPEAKER_BAND.high,
     { highpass: lrFilter(cfg.xoHi, cfg.xoHiOrder), lowpass: null },
-    -(midDb + cfg.hfTilt),
+    0,
     cfg.hfAmpW,
   );
 
@@ -329,7 +326,7 @@ const topSpeaker = (cfg: PaDesign, design: SpecIdentity) =>
         0,
         cfg.mAmpW,
       ),
-      hornBand(cfg, 0),
+      hornBand(cfg),
     ],
     topInput(cfg),
   );
@@ -375,10 +372,10 @@ function towerSpeaker(cfg: PaDesign, design: SpecIdentity): SpeakerSpec {
           highpass: lrFilter(cfg.xoLo, cfg.xoLoOrder),
           lowpass: lrFilter(cfg.xoHi, cfg.xoHiOrder),
         },
-        -cfg.tilt,
+        0,
         cfg.mAmpW,
       ),
-      hornBand(cfg, cfg.tilt),
+      hornBand(cfg),
     ],
     // every crossover is inside the tower
     NO_FILTERS,
@@ -389,7 +386,7 @@ function towerSpeaker(cfg: PaDesign, design: SpecIdentity): SpeakerSpec {
  * The PA design's stack: the sub with the top on it (a gap, or the pole's spacer), the top on its stand beside the sub
  * (satellite), or the tower alone. The crossover between the sub and the top is each member's. The sub's delay is
  * auto (`AUTO_DELAY`): in phase with the top's mid at the crossover, the top waiting
- * where the sub has to play early. The top sits `tilt` below the sub, as the tower's mid band does.
+ * where the sub has to play early.
  */
 function paStack(cfg: PaDesign, design: SpecIdentity): StackSpec {
   const idOf = (part: SpeakerPart) => speakerIdentity(design, part).id;
@@ -397,10 +394,8 @@ function paStack(cfg: PaDesign, design: SpecIdentity): StackSpec {
     ...stackMember(idOf(SPEAKER_PART.sub), subInput(cfg)),
     delayMs: AUTO_DELAY,
   };
-  const top = (pose: StackPose): StackMember => ({
-    ...stackMember(idOf(SPEAKER_PART.top), topInput(cfg), pose),
-    levelDb: -cfg.tilt,
-  });
+  const top = (pose: StackPose): StackMember =>
+    stackMember(idOf(SPEAKER_PART.top), topInput(cfg), pose);
   /** the top `yIn` above the sub's top */
   const onSub = (yIn: number): StackMember[] => [sub, top({ ...BASE_POSE, yIn, on: 0 })];
   const MEMBERS: Record<PaLayout, () => StackMember[]> = {
@@ -427,10 +422,10 @@ export type PaFloor = Pick<
 >;
 
 /**
- * The PA floor as a venue: its room, listener, ear height and target, where the target is measured, and its band
- * balance.
+ * The PA floor as a venue: its room, listener, ear height and target, and where the target is measured; the band
+ * balance Flat.
  */
-export function paVenue(floor: PaFloor, balance: AutoBalanceMode): SpaceVenue {
+function paVenue(floor: PaFloor): SpaceVenue {
   const { room } = floor;
   return {
     room,
@@ -441,7 +436,7 @@ export function paVenue(floor: PaFloor, balance: AutoBalanceMode): SpaceVenue {
     systemDb: 0,
     // its target in the sub band, measured where the floor says
     levelRef: floor.levelRef,
-    balance,
+    balance: BAND_BALANCE.flat,
   };
 }
 
@@ -449,9 +444,8 @@ export function paVenue(floor: PaFloor, balance: AutoBalanceMode): SpaceVenue {
  * The PA design read in: its speakers, its stack (`paStack`) and its space on the PA floor: the stacks at
  * its spots (`stacks`: one mirrored placement at the left spot stands for both)
  * on their plinths. Satellite places no stack: one sub on its plinth midway, and the tops on their stands at the spots,
- * each on its own input range at a gain of 0. Its tilt is the venue's More bass band balance; the stack and the tower
- * keep the tilt in their levels, with a Flat balance, so it counts once. Each band's amp power is the design's; the
- * venue is the floor's room and listener (`paVenue`).
+ * each on its own input range at a gain of 0. Every band and member starts at a Gain of 0 (Calculate gains sets the
+ * bands). Each band's amp power is the design's; the venue is the floor's room and listener (`paVenue`).
  */
 export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor): DesignLayers {
   const stack = paStack(cfg, design);
@@ -484,10 +478,7 @@ export function layersFromPa(cfg: PaDesign, design: SpecIdentity, floor: PaFloor
     space: {
       ...design,
       placements,
-      venue: paVenue(
-        floor,
-        satellite && cfg.tilt > 0 ? AUTO_BALANCE_MODE.moreBass : AUTO_BALANCE_MODE.flat,
-      ),
+      venue: paVenue(floor),
     },
   };
 }

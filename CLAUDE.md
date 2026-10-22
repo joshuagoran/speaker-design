@@ -26,6 +26,7 @@ Vite+ docs: `node_modules/vite-plus/docs`.
   it `**…**`; the app shows it in semibold. Replies and docs show app names in **bold**.
 - While you build, show the owner each new or changed UI string, where it appears, and get an OK before the commit.
   Propose one short wording, not a list of options.
+- App terms are defined once in `docs/terms.md`. Check new UI text against it.
 - Writing: US spelling (a key that saved data or links carry keeps its spelling, with a comment). Oxford comma.
   Louder/quieter for dB, higher/lower for Hz. One short sentence per line on a page; more goes in a Tooltip or the
   Details fold. Speaker, Stack, Space, and Source start with a capital when they mean the design item or the page (a
@@ -54,6 +55,8 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 - The catalog and acoustics tables are typed data in `src/data/`; adding a part is a data edit. Mark missing specs;
   don't drop the part. UI text that names parts or defaults reads them from the data.
 - Every setting a template or preset can set is also a setting on its page.
+- The same physics uses one shared calculation on every page; the Speaker, Stack, and Space pages never compute it two
+  ways.
 - When an optimizer change is meant to change its snapshot test, rewrite it with `vp run speaker-optimizer-snapshot` or
   `vp run stack-optimizer-snapshot`.
 - Delete code a change makes obsolete. `vp run dead-exports` must list nothing before each push.
@@ -79,6 +82,8 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 - Hand editing before automation. Physical checks before scores; a score never decides what is buildable.
 - A rule reused from another page gets checked on the new page.
 - Three bugs reported in one area: stop, check the model, and tell the owner before the next fix.
+- When the owner finds a concept confusing twice, write its model as a table (inputs, controls, results) before any
+  wording.
 
 ## Agents and usage
 
@@ -92,3 +97,4 @@ Keep token use low, in every session and subagent.
 - Take screenshots only when the owner asks, or for a taste decision.
 - Never wait in the foreground. Ask the owner before a job that takes minutes.
 - Answer the owner's batched notes in one message, with questions in one short list.
+- Every agent report lists any change outside its brief.

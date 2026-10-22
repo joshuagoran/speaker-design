@@ -22,7 +22,7 @@ import type {
 import { hornDesignOf, type HornDesignRoom } from "./hornDesign";
 import { hornLayoutModel } from "./hornLayoutModel";
 import { logSpacedFrequencies } from "../acoustics/directivity";
-import { wattsToVolts } from "../power";
+import { thermalVoltageLimit } from "../acoustics/boxModels";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { CM_PER_M } from "../../constants/units";
 import { HORN_PROFILE } from "../../constants/hornEngine";
@@ -50,7 +50,7 @@ import { MIN_NET_L } from "./speakerBuild";
 /** The drives a starting layout can be sized for: every drive the engines model. */
 export type GoalDrive = Exclude<SpeakerHorn["drive"]["kind"], typeof HORN_DRIVE.back>;
 
-/** A driver's power rating as the maximum output reads it: its watts (`aes`) and its nominal impedance. */
+/** A driver's power rating as the maximum output reads it: its AES watts (its program rating is twice that) and its nominal impedance. */
 export type DriverPower = Pick<ThieleSmall, "aes" | "imp">;
 
 /**
@@ -71,8 +71,8 @@ export function hornGoalFit(
   if (!model || !model.curve.every((p) => Number.isFinite(p.spl) && p.xmm > 0)) return null;
   const spl = model.curve.map((p) => p.spl);
   const mean = spl.reduce((sum, x) => sum + x, 0) / spl.length;
-  /** the most the drivers' power rating lifts the level from the model's drive, dB */
-  const powerDb = 20 * Math.log10(wattsToVolts(power.aes, power) / SPEAKER_RESPONSE_VOLTS);
+  /** the most the drivers' program rating (as the Speaker page's limits) lifts the level from the model's drive, dB */
+  const powerDb = 20 * Math.log10(thermalVoltageLimit(power) / SPEAKER_RESPONSE_VOLTS);
   let maxOutDb = Infinity,
     maxOutHz = goals.lowHz,
     limit: HornGoalFit["limit"] = HORN_GOAL_LIMIT.power;

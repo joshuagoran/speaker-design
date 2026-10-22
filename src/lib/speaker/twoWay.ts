@@ -15,7 +15,14 @@ import type {
 } from "../../types";
 import { ownGuideCfg, waveguideSpecOf } from "../data";
 import { HIFI_DRIVE, RIBBON_TWEETER_TYPE, AMT_TWEETER_TYPE } from "../../constants/hifiEngine";
-import { SENSITIVITY_REFERENCE_OHMS, ohmsOf, voltsToWatts, wattsToVolts } from "../power";
+import {
+  aesDerate,
+  hfProgramWatts,
+  ohmsOf,
+  sensitivityAt283,
+  voltsToWatts,
+  wattsToVolts,
+} from "../power";
 /** Whether a tweeter is a planar ribbon on its own waveguide (a square plate with a slot). */
 export const isRibbon = (t: Pick<HifiTweeter, "type">): boolean => t.type === RIBBON_TWEETER_TYPE;
 
@@ -85,8 +92,8 @@ export function tweeterMaxLevel(
   const imp = ohmsOf(hf);
   // the amp power is the watts into the tweeter's impedance (lib/power)
   const pAmp = cfg.tAmpW || 50;
-  const derate = hf.aesXo && cfg.xo < hf.aesXo ? Math.pow(cfg.xo / hf.aesXo, 2) : 1;
-  const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
+  const derate = aesDerate(cfg.xo, hf.aesXo);
+  const pProg = hf.aes ? hfProgramWatts({ aes: hf.aes, aesXo: hf.aesXo }, cfg.xo) : Infinity;
   const pMax = Math.min(pAmp, pProg);
   const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
   const who: Extract<LimitId, "amp" | "thermal"> = pMax === pAmp ? "amp" : "thermal";
@@ -122,7 +129,7 @@ export function tweeterLevelInBox(
   woofer: NominalImpedance,
 ) {
   const own = tweeterMaxLevel(t, cfg);
-  const tSens283 = own.tSens + 10 * Math.log10(SENSITIVITY_REFERENCE_OHMS / own.imp);
+  const tSens283 = sensitivityAt283(own.tSens, { imp: own.imp });
   const trim = refW - tSens283;
   const level =
     cfg.drive === HIFI_DRIVE.passive

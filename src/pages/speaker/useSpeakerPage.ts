@@ -11,16 +11,8 @@ import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import { settledCabinet } from "../../lib/speaker/speakerLayout";
-import {
-  AUTO_BALANCE_TILT,
-  autoBalanceSpeaker,
-  withSpeakerLevels,
-} from "../../lib/speaker/autoBalance";
-import {
-  AUTO_BALANCE_MODE,
-  AUTO_BALANCE_STATUS,
-  type AutoBalanceMode,
-} from "../../constants/autoBalance";
+import { autoBalanceSpeaker, withSpeakerLevels } from "../../lib/speaker/autoBalance";
+import { AUTO_BALANCE_STATUS } from "../../constants/autoBalance";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { CABINET_TOP, SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
@@ -236,12 +228,10 @@ export function useSpeakerPage() {
     () => speakerLimits({ cabinet, bands }, response, { feed }),
     [cabinet, bands, feed, response],
   );
-  // the band Levels auto balance sets, flat or with the PA music tilt, from the same response (lib/speaker/autoBalance)
-  const [balanceMode, setBalanceMode] = useState<AutoBalanceMode>(AUTO_BALANCE_MODE.flat);
+  // the band Gains and Pads Calculate gains sets, flat, from the same response (lib/speaker/autoBalance)
   const balance = useMemo(
-    () =>
-      autoBalanceSpeaker({ cabinet, bands, input: feed }, response, AUTO_BALANCE_TILT[balanceMode]),
-    [cabinet, bands, feed, response, balanceMode],
+    () => autoBalanceSpeaker({ cabinet, bands, input: feed }, response),
+    [cabinet, bands, feed, response],
   );
   // each chamber's braces, hardware and weight (the response's net air reads the same build)
   const build = useMemo(() => cabinetBuild(cabinet), [cabinet]);
@@ -320,10 +310,8 @@ export function useSpeakerPage() {
     response,
     limits,
     balance,
-    balanceMode,
-    setBalanceMode,
     /**
-     * sets the band Levels auto balance gives: one band edit, as any other. Worked out from the spec as it is now, since
+     * sets the band Gains and Pads Calculate gains gives: one band edit, as any other. Worked out from the spec as it is now, since
      * `balance` reads the deferred values, which can lag a step behind an edit.
      */
     applyBalance: () => {
@@ -331,11 +319,7 @@ export function useSpeakerPage() {
       const now =
         current.cabinet === cabinet && current.bands === bands && current.input === feed
           ? balance
-          : autoBalanceSpeaker(
-              current,
-              speakerResponse(current, { feed: current.input }),
-              AUTO_BALANCE_TILT[balanceMode],
-            );
+          : autoBalanceSpeaker(current, speakerResponse(current, { feed: current.input }));
       if (now.status === AUTO_BALANCE_STATUS.balanced)
         setSpec((s) => withSpeakerLevels(s, now.levels));
     },

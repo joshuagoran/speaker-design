@@ -27,6 +27,7 @@ import {
 import { HORN_PROFILE_NAMES } from "./hornEngine";
 import { CUTLIST_TAB_NAME } from "./pages";
 import { UI_TEXT } from "./uiText";
+import { GAIN_LABEL, PAD_LABEL } from "./controlLabels";
 import { FOLD_DRIVERS_REASON, FOLD_MAGNET_CLEAR_IN } from "./foldHorn";
 
 // Settings that a tip in the same table names (`**name**`): each name once, before the tables use it.
@@ -588,6 +589,10 @@ export const SPEAKER_TEXT = {
   hornPathSectionsTip: "The horn is a row of sections, from the throat to the mouth.",
   driverHornTip: `A horn or waveguide on this compression driver or tweeter. **${NO_HORN_NAME}**: the driver has no horn.`,
   hornMountTip: `**${HORN_PLACEMENT_NAMES.baffle}**: the mouth is cut into the baffle. **${HORN_PLACEMENT_NAMES.top}**: the horn stands on the chamber.`,
+  /** an active band's level field, and a passive band's (its tooltip is `padTip`) */
+  gain: GAIN_LABEL,
+  pad: PAD_LABEL,
+  padTip: `Cuts this band against the other bands on its amp channel, in dB. An **${DRIVE_NAMES.passive}** crossover can only cut, so the highest value is 0 dB.`,
   levelTip:
     "Sets the gain of this band against the other bands, in dB. A negative value makes the band quieter. The default is 0 dB: no change, so each driver plays at its own sensitivity.",
   driveTip: `**${DRIVE_NAMES.active}**: a crossover or DSP splits the signal before the amps. Each band has its own amp channel. **${DRIVE_NAMES.passive}**: a passive crossover in the box splits the amplified signal. One amp channel drives these bands.`,

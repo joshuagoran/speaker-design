@@ -1,10 +1,12 @@
 // A woofer in its box: sealed, vented (a round port or a slot) or with passive radiators, the vent's end corrections
 // and fold, the radiator box's response, and the Hi-fi box's subsonic and level. Pure functions, no DOM.
-import { ampVoltage, highpassGain, slotMouthCorrection, unwrapRawPhase } from "./boxModels";
+import { ampVoltage, slotMouthCorrection, unwrapRawPhase } from "./boxModels";
+import { highpassGain } from "../speaker/bandFilter";
 import { rectangleEndCorrection } from "./radiation";
 import { coilFactor, driverCircuit, midbandLevelDb } from "./driverCircuit";
-import { portOfEffectiveLength, ventTuningHz } from "./hornModel";
+import { portOfEffectiveLength, sourcePressureFactor, ventTuningHz } from "./hornModel";
 import { CM2_PER_IN2, CM_PER_IN } from "../../constants/units";
+import { AIR_DENSITY, SPEED_OF_SOUND, SPL_REFERENCE_PA } from "../../constants/acoustics";
 import { MAX_ELBOWS, tubeElbows, type TubeRoom } from "../build/tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import type {
@@ -61,8 +63,8 @@ export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h"
 // the radiator mass against the box and suspension stiffness together; the radiator's own resonance Fp, below
 // Fb, puts a notch in the output. pr: { drv, n, addG }.
 export function passiveRadiatorTuning(drv: PassiveRadiator, n: number, addG: number, VbL: number) {
-  const rho = 1.18,
-    c = 343,
+  const rho = AIR_DENSITY,
+    c = SPEED_OF_SOUND,
     Sp = drv.Sd / 1e4;
   const Map = (drv.Mms + (addG || 0)) / 1000 / (Sp * Sp) / n,
     Cap = (drv.Cms / 1000) * Sp * Sp * n,
@@ -102,7 +104,6 @@ export function passiveRadiatorBox(
   const { QL = 7, N = 420, fmin = 12, fmax = 300, phase } = opts;
   const { drv, n } = pr;
   if (!ts || !VbL || !drv || !n) return null;
-  const rho = 1.18;
   // the driver's circuit (lib/acoustics/driverCircuit, shared with the horn engine)
   const { Sd, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
   const { Map, Cap, Cab, Fb, Fp } = passiveRadiatorTuning(drv, n, pr.addG, VbL);
@@ -148,7 +149,8 @@ export function passiveRadiatorBox(
       Up = pv / Math.sqrt(pM), // |Ud Zbox / Zp|
       Ut = pv * w * Cab; // radiated = cone - radiators - leak: |Ud Zbox / Zc|
     const hp = highpassGain(f, hpf, hpType);
-    const raw = 20 * Math.log10((rho * w * Ut) / (2 * Math.PI) / 2e-5);
+    // one box in half space (2π sr)
+    const raw = 20 * Math.log10((sourcePressureFactor(w, 2 * Math.PI, 1) * Ut) / SPL_REFERENCE_PA);
     out.push({
       f,
       raw,

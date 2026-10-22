@@ -45,12 +45,8 @@ import {
 } from "../../styles/layout";
 import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB, COVERAGE_TARGET_DB } from "../../constants/coverageLevel";
-import {
-  AUTO_BALANCE_MODE,
-  AUTO_BALANCE_MODE_LABEL,
-  AUTO_BALANCE_TEXT,
-} from "../../constants/autoBalance";
-import { BAND_BALANCE_TIP } from "../../lib/speaker/autoBalance";
+import { BAND_BALANCE, BAND_BALANCE_LABEL } from "../../constants/space";
+import { BAND_BALANCE_TIP } from "../../lib/speaker/spaceBalance";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
@@ -597,10 +593,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 options={SPACE_LEVEL_REFS}
               />
               <ToggleGroup
-                label={<Tooltip tip={BAND_BALANCE_TIP}>{AUTO_BALANCE_TEXT.label}</Tooltip>}
+                label={<Tooltip tip={BAND_BALANCE_TIP}>{SPACE_TEXT.bandBalance}</Tooltip>}
                 value={space.balance}
                 onChange={(balance) => space.editVenue((v) => ({ ...v, balance }))}
-                options={entriesOf(AUTO_BALANCE_MODE_LABEL)}
+                options={entriesOf(BAND_BALANCE_LABEL)}
               />
               <div className={FIELD_ROW}>
                 <NumberField
@@ -648,7 +644,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     );
                     return (
                       <span key={b.band} className={bandClass(rel)}>
-                        {space.balance === AUTO_BALANCE_MODE.moreBass ? (
+                        {space.balance === BAND_BALANCE.moreBass ? (
                           <Tooltip tip={SPACE_TEXT.bandTarget(b.target.toFixed(0))}>{text}</Tooltip>
                         ) : (
                           text

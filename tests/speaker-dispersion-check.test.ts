@@ -10,9 +10,11 @@ import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { bandChips } from "../src/pages/speaker/speakerChips";
 import { stackDispersionChips } from "../src/pages/stack/stackChips";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { SPEAKER_BAND } from "../src/constants/speakerSpec";
+import { DRIVER_KIND, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { DISPERSION_TEXT } from "../src/constants/dispersionCheck";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
+import { speakerDispersionMap } from "../src/lib/speaker/stackDispersion";
+import { dispersionGrid } from "../src/lib/acoustics/directivity";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import type { HifiDesignState, SpeakerSpec } from "../src/types";
 
@@ -148,4 +150,35 @@ test("a horn-loaded cone beside a direct woofer on the same band leaves the chec
     dispersionChecks(mixed).map((k) => k.chip[1]),
     dispersionChecks(spec).map((k) => k.chip[1]),
   );
+});
+
+test("a cone's beam in the chip is the width the dispersion map shows for that cone at that frequency", () => {
+  const { freqs } = dispersionGrid();
+  const i = freqs.findIndex((f) => f >= 4000);
+  const spec = hifiSpec({ ...DEFAULT_HIFI, crossoverHz: freqs[i] });
+  const [check] = dispersionChecks(spec);
+  const chipDeg = Number(/^About (\d+)°/.exec(check.chip[2])?.[1]);
+  // the same speaker with its woofer alone, so the map shows that cone's own beam
+  const woofer: SpeakerSpec = {
+    ...spec,
+    cabinet: {
+      ...spec.cabinet,
+      chambers: spec.cabinet.chambers.map((c) => ({
+        ...c,
+        drivers: c.drivers.filter(
+          (d) => d.bands[0] === SPEAKER_BAND.low && d.kind !== DRIVER_KIND.tweeter,
+        ),
+      })),
+    },
+  };
+  const map = speakerDispersionMap(woofer, speakerResponse(woofer, { feed: woofer.input }), "h");
+  // the first angle off the axis where the map falls 6 dB, between its grid angles in pressure
+  const pressure = (row: number) => 10 ** (map.rows[row][i] / 20);
+  const zero = map.angles.indexOf(0);
+  const past = map.angles.findIndex((deg, row) => deg > 0 && pressure(row) < 0.5);
+  assert.ok(past > zero, "the map narrows past 6 dB inside 90°");
+  const share = (pressure(past - 1) - 0.5) / (pressure(past - 1) - pressure(past));
+  const mapDeg = 2 * (map.angles[past - 1] + share * (map.angles[past] - map.angles[past - 1]));
+  assert.ok(chipDeg < 180, `the cone narrows at ${freqs[i]} Hz`);
+  assert.ok(Math.abs(chipDeg - mapDeg) <= 2, `chip ${chipDeg}°, map ${mapDeg.toFixed(1)}°`);
 });

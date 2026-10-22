@@ -19,7 +19,7 @@ import {
 } from "./spaceCoverage";
 import type { RoomPoint } from "./spaceLayout";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
-import { METERS_PER_FOOT } from "../../constants/units";
+import { METERS_PER_FOOT, MS_PER_S } from "../../constants/units";
 import {
   ARRIVAL_MAIN_CLOSE_MS,
   ARRIVAL_MAIN_ON_TIME_MS,
@@ -29,9 +29,6 @@ import {
   FILL_PRECEDENCE_MAX_MS,
   FILL_PRECEDENCE_MS,
 } from "../../constants/space";
-
-/** Milliseconds in a second. */
-const MS_PER_S = 1000;
 
 /** Why a solved delay is not what its rule asks (`DELAY_NOTE`). */
 export type DelayNote = (typeof DELAY_NOTE)[keyof typeof DELAY_NOTE];

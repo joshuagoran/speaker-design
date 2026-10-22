@@ -3,17 +3,8 @@ import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { stackLimits, stackResponse } from "../../lib/speaker/stackResponse";
 import { stackTotals } from "../../lib/speaker/speakerTotals";
 import { BASE_POSE } from "../../lib/speaker/specParts";
-import {
-  AUTO_BALANCE_TILT,
-  autoBalanceStack,
-  sharedCrossovers,
-  withStackLevels,
-} from "../../lib/speaker/autoBalance";
-import {
-  AUTO_BALANCE_MODE,
-  AUTO_BALANCE_STATUS,
-  type AutoBalanceMode,
-} from "../../constants/autoBalance";
+import { autoBalanceStack, withStackLevels } from "../../lib/speaker/autoBalance";
+import { AUTO_BALANCE_STATUS } from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { DRAFT_STACK_ID, stackDraft, stackFromSaved, stackSnapshot } from "./stackSaves";
 import { usePageDraft, type SharedMode } from "../../hooks/usePageDraft";
@@ -101,16 +92,11 @@ export function useStack() {
   const limits = useMemo(() => stackLimits({ members }, response), [members, response]);
   // the members' price, weight and the stack's height
   const totals = useMemo(() => stackTotals({ members }, speakers), [members, speakers]);
-  // the band Levels auto balance sets across the members, flat or with the PA music tilt, from the same response
-  // (lib/speaker/autoBalance)
-  const [balanceMode, setBalanceMode] = useState<AutoBalanceMode>(AUTO_BALANCE_MODE.flat);
+  // the member Gains Calculate gains sets, box against box, flat, from the same response (lib/speaker/autoBalance)
   const balance = useMemo(
-    () =>
-      autoBalanceStack({ stack: { members }, speakers }, response, AUTO_BALANCE_TILT[balanceMode]),
-    [members, speakers, response, balanceMode],
+    () => autoBalanceStack({ stack: { members } }, response),
+    [members, response],
   );
-  // the members that share a speaker with different crossovers: auto balance takes the first one's
-  const shared = useMemo(() => sharedCrossovers(members), [members]);
   const store = useConfigStore(STACKS_COLLECTION);
   // the optimizer reads and loads the whole design (a card keeps the stack's id, name and notes); its cards, locks and
   // Undo start over when the whole stack is replaced (replaceDesign)
@@ -141,22 +127,15 @@ export function useStack() {
     limits,
     totals,
     balance,
-    shared,
-    balanceMode,
-    setBalanceMode,
     /**
-     * sets the band Levels auto balance gives in the stack's speakers, every member's level 0 dB: one edit. Worked out
+     * sets the member Gains Calculate gains gives (the speakers' bands stay): one edit. Worked out
      * from the design as it is now, since `balance` reads the deferred values, which can lag a step behind an edit.
      */
     applyBalance: () => {
       const now =
         design.stack.members === members && design.speakers === speakers
           ? balance
-          : autoBalanceStack(
-              design,
-              stackResponse(design.stack, design.speakers),
-              AUTO_BALANCE_TILT[balanceMode],
-            );
+          : autoBalanceStack(design, stackResponse(design.stack, design.speakers));
       if (now.status === AUTO_BALANCE_STATUS.balanced)
         setDesign((d) => withStackLevels(d, now.levels));
     },

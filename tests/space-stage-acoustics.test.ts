@@ -14,7 +14,8 @@ import {
   type SceneStage,
 } from "../src/lib/acoustics/stageAcoustics";
 import { SPEED_OF_SOUND } from "../src/constants/acoustics";
-import { levelAtPoint, sceneOf, sceneSlots } from "../src/lib/acoustics/coverage";
+import { boxShadow, levelAtPoint, sceneOf, sceneSlots } from "../src/lib/acoustics/coverage";
+import { baffleStepF3 } from "../src/lib/acoustics/directivity";
 import {
   spaceGridRequest,
   spaceLevelAt,
@@ -28,7 +29,7 @@ import { speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { SPACE_ITEM } from "../src/constants/speakerSpec";
 import { STAGE_SHAPE } from "../src/constants/space";
-import { INCHES_PER_FOOT } from "../src/constants/units";
+import { INCHES_PER_FOOT, METERS_PER_FOOT } from "../src/constants/units";
 import type { CoverageBand, CoverageRoom, FloorPoint, SpaceDesign, SpaceStage } from "../src/types";
 
 /** A standing listener's ear, ft. */
@@ -83,7 +84,7 @@ test("stage face: a reflection point past the face's end gives no image there; o
     base: 0,
     top: 0.9,
   };
-  const voices = [{ id: "v", pattern: { a: 0.1 } }];
+  const voices = [{ id: "v", pattern: { a: 0.1 }, boxWIn: 24 }];
   const box = [[{ voice: "v", x: 0, y: 1.5, z: 0.5, yaw: 0, pitch: 0, alignM: 0 }]];
   const level = (stages: SceneStage[], x: number, y: number) => {
     const scene = sceneOf(OUTDOORS, voices, box, stages);
@@ -122,7 +123,7 @@ test("stage face: its reflection fades out smoothly past the face's end, full we
     base: 0,
     top: 1.5,
   });
-  const voices = [{ id: "v", pattern: { a: 0.1 } }];
+  const voices = [{ id: "v", pattern: { a: 0.1 }, boxWIn: 24 }];
   const box = [[{ voice: "v", x: 0, y: 1.5, z: 0.5, yaw: Math.PI, pitch: 0, alignM: 0 }]];
   const level = (stages: SceneStage[], x: number) => {
     const scene = sceneOf(OUTDOORS, voices, box, stages);
@@ -170,7 +171,7 @@ test("riser face: its reflection fades out smoothly across the face's bottom edg
   // a riser's face at y = 1 m from 0.9 to 1.5 m up; a driver 0.5 m in front of it just over its bottom edge, aimed at
   // it; the listener 5 m down the room, lower and lower: the reflection point goes down past the bottom edge
   const riser: SceneStage = { corners: rect(-5, 0, 5, 1), base: 0.9, top: 1.5 };
-  const voices = [{ id: "v", pattern: { a: 0.1 } }];
+  const voices = [{ id: "v", pattern: { a: 0.1 }, boxWIn: 24 }];
   const box = [[{ voice: "v", x: 0, y: 1.5, z: 0.95, yaw: Math.PI, pitch: 0, alignM: 0 }]];
   const level = (stages: SceneStage[], z: number) => {
     const scene = sceneOf(OUTDOORS, voices, box, stages);
@@ -295,4 +296,24 @@ test("indoors at 40 Hz the room's modes carry the sound: a stage changes nothing
     ["top", 12, 20],
   ];
   assert.ok(Math.abs(gainDb(false, stages, spots, "one", 40)) < 1e-9);
+});
+
+test("box shadow: a small box's sound behind it starts to fall at a higher frequency than a large box's", () => {
+  const small = 12,
+    large = 30;
+  // each falls 3 dB at its own baffle step's corner
+  assert.ok(Math.abs(boxShadow(baffleStepF3(small), small) - Math.SQRT1_2) < 1e-12);
+  assert.ok(baffleStepF3(small) > baffleStepF3(large));
+  // behind the box at 300 Hz: the small box lets more through
+  const behind = (boxWIn: number) => {
+    const voices = [{ id: "v", pattern: { a: 0.1 }, boxWIn }];
+    const box = [
+      [{ voice: "v", x: 0, y: 40 * METERS_PER_FOOT, z: 1, yaw: 0, pitch: 0, alignM: 0 }],
+    ];
+    const scene = sceneOf(OUTDOORS, voices, box, []);
+    const slots = sceneSlots(scene, [300], false, () => ({ v: { re: 1, im: 0 } }));
+    const at = (yFt: number) => levelAtPoint(scene, slots, 0, yFt * METERS_PER_FOOT, 1);
+    return at(30) - at(50);
+  };
+  assert.ok(behind(small) > behind(large) + 3, `${behind(small)} vs ${behind(large)}`);
 });

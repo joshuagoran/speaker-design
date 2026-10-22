@@ -111,13 +111,10 @@ export const PA_FLOOR: PaFloor = DEFAULT_COVERAGE_LAYOUT;
 /** A saved or synthetic PA design with every field set (as tests/speaker-spec.test.ts reads it). */
 export function paDesign(c: PaConfig): PaDesign {
   // older saved configs can lack some fields; they fall back to the default PA design
-  const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
-    DEFAULT_PA;
+  const { xoLo, xoHi, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } = DEFAULT_PA;
   const cfg = {
     xoLo,
     xoHi,
-    tilt,
-    hfTilt,
     ampW,
     mAmpW,
     hfAmpW,

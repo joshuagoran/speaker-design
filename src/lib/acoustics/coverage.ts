@@ -19,12 +19,18 @@ import {
   SPEED_OF_SOUND,
 } from "../../constants/acoustics";
 import {
+  baffleStepF3,
   logSpacedFrequencies,
+  mouthGain,
+  mouthPlane,
+  mouthPlaneHalf,
   pistonPattern,
   waveguideGain,
   waveguideHalfAngles,
+  type MouthPlane,
 } from "./directivity";
-import { METERS_PER_FOOT as FT } from "../../constants/units";
+import { METERS_PER_FOOT as FT, METERS_PER_INCH } from "../../constants/units";
+import { multiply, phasor, scale } from "./complex";
 import {
   BARRIER_BRIGHT_N,
   BARRIER_CAP_NEPERS,
@@ -103,8 +109,16 @@ export const QUICK_BAND_POINTS = 4;
 export const COHERENT_BELOW_HZ = 500;
 /** the single-frequency view's range, Hz: above `COHERENT_BELOW_HZ` it adds by power, as the bands do */
 export const SINGLE_FREQ_RANGE: [number, number] = [20, 16000];
-/** A box shadows what's behind its cone: rule of thumb, −3 dB here and 6 dB/oct above. */
-export const BOX_SHADOW_HZ = 150;
+/**
+ * How much of a cone's or a mouth's sound a box `boxWIn` inches wide lets reach behind it at `f`, pressure: −3 dB at
+ * its baffle step's corner (`baffleStepF3`, from `BAFFLE_STEP_HZ_M`) and 6 dB/octave above. Below the corner the box is
+ * small against the wavelength and the sound wraps round it; above it the front gains the baffle step's 6 dB and the
+ * back keeps the level it had, so the back falls against the front from the same corner. Source for the step: Olson
+ * (1951), see `BAFFLE_STEP_HZ_M`. Our approximation: the first-order fall above the corner. Shortcomings: one width
+ * for the whole box (not its height, its depth, or where the driver sits on it); the fall is smooth, with no lobes
+ * from the box's edges; the box's back is no reflector.
+ */
+export const boxShadow = (f: number, boxWIn: number) => 1 / Math.hypot(1, f / baffleStepF3(boxWIn));
 /**
  * The modal sum takes modes up to this many times the highest wavenumber it is evaluated at, so the direct sound near
  * a box isn't smoothed away by the cutoff.
@@ -118,6 +132,8 @@ export const RESPONSE_FREQS = logSpacedFrequencies(15, 20000, 120);
 const SILENT = 1e-4;
 /** pressure → nepers per meter from dB per meter */
 const NEPER_PER_DB = Math.LN10 / 20;
+/** What the air absorbs at `f`, Hz, nepers per meter (pressure): a slot's `air`, and the Space page's beam reach. */
+export const airNepersPerM = (f: number) => airDbPerM(f) * NEPER_PER_DB;
 
 /**
  * The reflections a path has taken, as an index into a slot's `refl`: 2 × the surface (0 none, then 1 + its place in
@@ -132,10 +148,141 @@ const stageReflIndex = (reflector: number, floor: boolean) =>
 /** A horn's coverage, as the map radiates it: its −6 dB angles, degrees, and its mouth, inches. */
 export type HornCoverage = Omit<PaStackGeometry["horn"], "zIn">;
 
-/** How a radiator spreads its sound: a piston of radius `a`, m (a cone), or a horn of its coverage. */
+/**
+ * A horn's mouth, as the map radiates it (lib/acoustics/directivity `mouthPlane`): its size, in, across (`wIn`) and the
+ * other way (`hIn`), and its walls' included angle in each of those planes, degrees (null: parallel walls).
+ */
+export interface MouthCoverage {
+  wIn: number;
+  hIn: number;
+  wallH: number | null;
+  wallV: number | null;
+}
+
+/**
+ * How a radiator spreads its sound: a piston of radius `a`, m (a cone), a horn of its rated coverage, or a horn's
+ * mouth by its size and walls.
+ */
 export type CoveragePattern =
-  | { a: number; horn?: undefined }
-  | { horn: HornCoverage; a?: undefined };
+  | { a: number; horn?: undefined; mouth?: undefined }
+  | { horn: HornCoverage; a?: undefined; mouth?: undefined }
+  | { mouth: MouthCoverage; a?: undefined; horn?: undefined };
+
+/**
+ * A source's directivity at one frequency, ready for any angle (`directivityGain`): a horn's −6 dB half angles, a
+ * mouth's planes (lib/acoustics/directivity `mouthPlane`), or a piston's ka; and how much of its sound its box lets
+ * through behind it (`boxShadow`; 1 for a horn, whose own pattern falls behind it). Every page's directivity comes
+ * from here: the Space page's coverage and beams, and the Speaker and Stack pages' dispersion maps.
+ */
+export type SourceDirectivity = (
+  | { hornHalf: [h: number, v: number]; mouthPlanes?: undefined; ka?: undefined }
+  | { mouthPlanes: [MouthPlane, MouthPlane]; hornHalf?: undefined; ka?: undefined }
+  | { ka: number; hornHalf?: undefined; mouthPlanes?: undefined }
+) & { shadow: number };
+
+/** A pattern's directivity at `f`, from a box `boxWIn` inches wide. */
+export function directivityAt(
+  pattern: CoveragePattern,
+  f: number,
+  boxWIn: number,
+): SourceDirectivity {
+  if (pattern.horn) {
+    const { covH, covV, wIn, hIn } = pattern.horn;
+    return { hornHalf: waveguideHalfAngles(f, covH, covV, wIn, hIn), shadow: 1 };
+  }
+  const shadow = boxShadow(f, boxWIn);
+  if (pattern.mouth) {
+    const { wIn, hIn, wallH, wallV } = pattern.mouth;
+    return { mouthPlanes: [mouthPlane(f, wIn, wallH), mouthPlane(f, hIn, wallV)], shadow };
+  }
+  return { ka: ((2 * Math.PI * f) / C) * pattern.a, shadow };
+}
+
+/**
+ * A source's level (pressure, 1 on axis) at `th` radians off its axis across and `tv` up, in its own frame
+ * (`offAxis`): a horn as a waveguide (`waveguideGain`), a mouth plane by plane (`mouthGain`), a piston by its total
+ * angle off its axis (its pattern at ka·sin θ, a quarter turn at most). Behind the box (`th` past a quarter turn) a
+ * mouth or a piston keeps its quarter-turn value less its box's shadow.
+ */
+export function directivityGain(d: SourceDirectivity, th: number, tv: number): number {
+  if (d.hornHalf) return waveguideGain(th, tv, d.hornHalf);
+  const behind = Math.abs(th) > Math.PI / 2;
+  // the cosine of the total angle off the axis is cos th · cos tv; behind, the pattern keeps its quarter-turn value
+  const cosOff = behind ? 0 : Math.cos(th) * Math.cos(tv);
+  const front = d.mouthPlanes
+    ? mouthGain(th, tv, d.mouthPlanes)
+    : pistonPattern(d.ka * Math.sqrt(Math.max(0, 1 - cosOff * cosOff)));
+  return behind ? front * d.shadow : front;
+}
+
+/**
+ * How much of a source's pressure at `refM`, m, is left along a path `pathM` long, m: spread 1/r, less `lossNepers`
+ * (the air's absorption, `airNepers`, and anything else in the way). Every path's level comes from here: `arrival` and
+ * the Space page's map (`levelAtPoint`).
+ */
+export const pathAmplitude = (pathM: number, refM: number, lossNepers = 0) =>
+  (refM * Math.exp(-lossNepers)) / pathM;
+
+/** What the air takes off a path `pathM` long, m, at `nepersPerM` (pressure), nepers. */
+export const airNepers = (nepersPerM: number, pathM: number) => nepersPerM * pathM;
+
+/** A path's phase at wavenumber `k` (2πf/c), radians: late by its length `pathM` past `refM`, m. */
+export const pathPhase = (k: number, pathM: number, refM: number) => -k * (pathM - refM);
+
+/** A delay's phase at `f`, Hz, radians: late by `delayS`, s. */
+export const delayPhase = (f: number, delayS: number) => -2 * Math.PI * f * delayS;
+
+/**
+ * A source's pressure `p` (at `refM`, m) where it arrives along a path `pathM` long, m, at `f`, Hz: times `gain`,
+ * spread (`pathAmplitude`), and late by the path (`pathPhase`) and by `delayS`, s (`delayPhase`). The Speaker, Stack,
+ * and Space pages' sums and the dispersion maps share it; the Space page's map (`levelAtPoint`) uses the same parts.
+ */
+export const arrival = (
+  p: Complex,
+  f: number,
+  gain: number,
+  pathM: number,
+  refM: number,
+  delayS: number,
+): Complex =>
+  multiply(
+    scale(p, gain * pathAmplitude(pathM, refM)),
+    phasor(pathPhase((2 * Math.PI * f) / C, pathM, refM) + delayPhase(f, delayS)),
+  );
+
+/** A source's axis: its yaw from straight ahead (+y, + toward +x) and its pitch (+ up), as cosines and sines. */
+export interface SourceAxis {
+  cy: number;
+  sy: number;
+  cp: number;
+  sp: number;
+}
+
+/** The axis at `yaw` and `pitch`, radians. */
+export const sourceAxis = (yaw: number, pitch: number): SourceAxis => ({
+  cy: Math.cos(yaw),
+  sy: Math.sin(yaw),
+  cp: Math.cos(pitch),
+  sp: Math.sin(pitch),
+});
+
+/**
+ * Where a point is off a source's axis, from the source to the point (`dx` across, `dy` forward, `dz` up, any unit):
+ * the point in the source's frame (forward along its axis, right, up), then `th` across (−π to π, behind past a
+ * quarter turn) and `tv` up (−π/2 to π/2).
+ */
+export function offAxis(
+  dx: number,
+  dy: number,
+  dz: number,
+  axis: SourceAxis,
+): { th: number; tv: number } {
+  const ahead = dx * axis.sy + dy * axis.cy,
+    fwd = ahead * axis.cp + dz * axis.sp,
+    right = dx * axis.cy - dy * axis.sy,
+    up = dz * axis.cp - ahead * axis.sp;
+  return { th: Math.atan2(right, fwd), tv: Math.atan2(up, Math.hypot(fwd, right)) };
+}
 
 /**
  * What radiates in a scene, by id: one kind of driver of one box (the PA stack's sub, mid or horn; a band of a placed
@@ -144,6 +291,8 @@ export type CoveragePattern =
 export interface CoverageVoice {
   id: string;
   pattern: CoveragePattern;
+  /** the width of the box it plays from, in: it sets how much of its sound reaches behind the box (`boxShadow`) */
+  boxWIn: number;
 }
 
 /** A driver as a scene places it: its voice, where it is (m: x across from the center line, y down the room, z up), its aim. */
@@ -163,16 +312,9 @@ export interface SceneDriver {
 }
 
 /** One radiator in the sum: a box's driver, or its image in the floor, a side or the ceiling. Meters and radians. */
-interface SceneSource extends Pick<SceneDriver, "voice" | "x" | "y" | "z" | "alignM"> {
+interface SceneSource extends Pick<SceneDriver, "voice" | "x" | "y" | "z" | "alignM">, SourceAxis {
   /** the path it belongs to: one box, or one image of it */
   path: number;
-  /** its axis's yaw and pitch, as cosines and sines */
-  cy: number;
-  sy: number;
-  cp: number;
-  sp: number;
-  /** a horn (its voice's pattern), not a piston */
-  horn: boolean;
   /** the reflections along this path (see reflIndex): the slot has what they keep at its frequency */
   refl: number;
   /** it bounces off the room's floor */
@@ -199,8 +341,8 @@ export interface CoverageScene {
 }
 
 /**
- * One frequency of a sum: each voice's complex output at 1 m, whether the paths add with phase, what the directivity
- * needs at this frequency (each piston's ka, each horn's half angles, the box's rear shadow), and the room there: what
+ * One frequency of a sum: each voice's complex output at 1 m, whether the paths add with phase, each voice's
+ * directivity at this frequency (`directivityAt`), and the room there: what
  * each reflection keeps, the air's absorption, the diffuse field and the modal sum.
  */
 export interface CoverageSlot {
@@ -210,9 +352,7 @@ export interface CoverageSlot {
   k: number;
   coherent: boolean;
   out: Partial<Record<CoverageVoice["id"], Complex>>;
-  ka: Partial<Record<CoverageVoice["id"], number>>;
-  hornHalf: Partial<Record<CoverageVoice["id"], [h: number, v: number]>>;
-  shadow: number;
+  directivity: Partial<Record<CoverageVoice["id"], SourceDirectivity>>;
   /** pressure each kind of path keeps after its reflections, by SceneSource.refl */
   refl: Float64Array;
   /** how much of each stage's barrier loss (dB) holds here: none where the stage is small against the wavelength */
@@ -272,7 +412,6 @@ export function sceneOf(
     : null;
   const modalSources: ModalSource[] = [];
   const reflects = (i: number) => indoors && room.materials[ROOM_SURFACES[i]] !== "open";
-  const horns = new Set(voices.filter((v) => v.pattern.horn).map((v) => v.id));
   const sources: SceneSource[] = [];
   const source = (
     d: SceneDriver,
@@ -288,11 +427,7 @@ export function sceneOf(
     z: at.z,
     alignM: d.alignM,
     path,
-    cy: Math.cos(at.yaw),
-    sy: Math.sin(at.yaw),
-    cp: Math.cos(at.pitch),
-    sp: Math.sin(at.pitch),
-    horn: horns.has(d.voice),
+    ...sourceAxis(at.yaw, at.pitch),
     refl,
     floor,
     reflector,
@@ -468,20 +603,15 @@ export function sceneSlots(
   return freqs.map((f, i) => {
     const k = (2 * Math.PI * f) / C;
     const out = { ...outputs(f, i) },
-      ka: CoverageSlot["ka"] = {},
-      hornHalf: CoverageSlot["hornHalf"] = {};
-    for (const { id, pattern } of voices)
-      if (pattern.horn) {
-        const { covH, covV, wIn, hIn } = pattern.horn;
-        hornHalf[id] = waveguideHalfAngles(f, covH, covV, wIn, hIn);
-      } else ka[id] = k * pattern.a;
+      directivity: CoverageSlot["directivity"] = {};
+    for (const { id, pattern, boxWIn } of voices)
+      directivity[id] = directivityAt(pattern, f, boxWIn);
     // a voice more than SILENT_DB under the loudest adds nothing the map can show: leave it out of the sums
     const loudest = Math.max(0, ...Object.values(out).map((v) => (v ? Math.hypot(v.re, v.im) : 0)));
     for (const { id } of voices) {
       const v = out[id];
       if (v && Math.hypot(v.re, v.im) < loudest * SILENT) delete out[id];
     }
-    const shadow = 1 / Math.hypot(1, f / BOX_SHADOW_HZ);
     // what each kind of path keeps: its side or ceiling's reflection, times the floor's when it bounces off it too
     const floor = floorReflection(room, f),
       refl = new Float64Array(REFL_ROOM + 2 * scene.reflectors.length);
@@ -515,11 +645,25 @@ export function sceneSlots(
       // factor (1 − ᾱ): p² = 16π·p²(1 m)·(1 − ᾱ)² / (Q·A). (The floor-and-side images are second order, counted twice;
       // they are a small part of it.) ρc cancels: levels here are in the curves' own units.
       if (weight < 1)
-        for (const { id } of voices) {
+        for (const { id, pattern } of voices) {
           const v = out[id],
-            half = hornHalf[id];
-          if (!v) continue;
-          const q = half ? hornQ(half) : pistonQ(ka[id] ?? 0, shadow);
+            dir = directivity[id];
+          if (!v || !dir) continue;
+          // a mouth's Q: a held plane by Molloy's estimate from the −6 dB angles (`hornQ`), else as a round piston of
+          // its area (our approximation: a strip's own Q is not modeled)
+          const planes = dir.mouthPlanes;
+          const q = dir.hornHalf
+            ? hornQ(dir.hornHalf)
+            : planes && planes.some((p) => p.half !== undefined)
+              ? hornQ([mouthPlaneHalf(planes[0]), mouthPlaneHalf(planes[1])])
+              : pistonQ(
+                  pattern.mouth
+                    ? k *
+                        Math.sqrt((pattern.mouth.wIn * pattern.mouth.hIn) / Math.PI) *
+                        METERS_PER_INCH
+                    : (dir.ka ?? 0),
+                  dir.shadow,
+                );
           diffuse +=
             ((count[id] ?? 0) * 16 * Math.PI * (v.re * v.re + v.im * v.im) * (1 - abs.alpha) ** 2) /
             (q * abs.area);
@@ -546,12 +690,10 @@ export function sceneSlots(
       k,
       coherent: allCoherent || f < COHERENT_BELOW_HZ,
       out,
-      ka,
-      hornHalf,
-      shadow,
+      directivity,
       refl,
       stageFade,
-      air: airDbPerM(f) * NEPER_PER_DB,
+      air: airNepersPerM(f),
       diffuse,
       modal: ms,
     };
@@ -605,7 +747,7 @@ export function coverageFrequencies(
 }
 
 // scratch space for the sum: per source geometry (GEO values each), per path pressure, the detour over the stages
-const GEO = 15;
+const GEO = 13;
 /** A detour's δk past which no slot's barrier takes anything off (N = δk/π at its bright-side end). */
 const BRIGHT_DETOUR_K = BARRIER_BRIGHT_N * Math.PI;
 let geo = new Float64Array(0),
@@ -748,11 +890,9 @@ export function levelAtPoint(
         modalPressure2(modal.modes, modal.sources, sl.modal, px + modal.modes.size[0] / 2, py, pz);
     if (w >= 1) continue;
     if (!geoReady) {
-      // distance, angles off the source's axis (horizontal, vertical), sine of the total angle (a piston's pattern
-      // stops at 90°), whether the point is behind the box, whether the path is there (a stage image's reflection on
-      // or near its face), its detour over the stages (and which), and a stage image's Fresnel zone scale and how far
-      // inside its surface's edges it reflects. The point in the source's own frame: forward along its axis (its yaw,
-      // then its pitch), right, and up.
+      // distance, angles off the source's axis (horizontal, vertical; `offAxis`), whether the path is there (a stage
+      // image's reflection on or near its face), its detour over the stages (and which), and a stage image's Fresnel
+      // zone scale and how far inside its surface's edges it reflects.
       for (let i = 0; i < n; i++) {
         const s = sources[i],
           g = GEO * i;
@@ -760,43 +900,35 @@ export function levelAtPoint(
           dy = py - s.y,
           dz = pz - s.z,
           r = Math.hypot(dx, dy, dz);
-        geo[g + 5] = 1;
-        geo[g + 6] = -Infinity;
+        geo[g + 3] = 1;
+        geo[g + 4] = -Infinity;
         if (staged) {
           const reflector = s.reflector < 0 ? null : reflectors[s.reflector],
             reflects =
               !!reflector &&
               stageReflection(s, reflector, blocks[reflector.stage], px, py, pz, r, kMin);
           if (reflector && !reflects) {
-            geo[g + 5] = 0;
+            geo[g + 3] = 0;
             continue;
           }
           sourceDetour(scene, s, reflects, px, py, pz);
           // none at any slot: well on the bright side at the lowest wavenumber; all at the cap from it up
-          geo[g + 6] = detour.delta * kMin > BRIGHT_DETOUR_K ? detour.delta : -Infinity;
-          geo[g + 7] = detour.stage;
-          geo[g + 13] = barrierCapped((detour.delta * kMin) / Math.PI) ? 1 : 0;
+          geo[g + 4] = detour.delta * kMin > BRIGHT_DETOUR_K ? detour.delta : -Infinity;
+          geo[g + 5] = detour.stage;
+          geo[g + 11] = barrierCapped((detour.delta * kMin) / Math.PI) ? 1 : 0;
           if (reflects) {
-            geo[g + 8] = hit.zone;
-            geo[g + 9] = hit.in1;
-            geo[g + 10] = hit.in2;
-            geo[g + 11] = hit.in3;
-            geo[g + 12] = Math.min(hit.in1, hit.in2, hit.in3, hit.in4);
-            geo[g + 14] = hit.in4;
+            geo[g + 6] = hit.zone;
+            geo[g + 7] = hit.in1;
+            geo[g + 8] = hit.in2;
+            geo[g + 9] = hit.in3;
+            geo[g + 10] = Math.min(hit.in1, hit.in2, hit.in3, hit.in4);
+            geo[g + 12] = hit.in4;
           }
         }
-        const ahead = dx * s.sy + dy * s.cy,
-          fwd = ahead * s.cp + dz * s.sp,
-          right = dx * s.cy - dy * s.sy,
-          up = dz * s.cp - ahead * s.sp,
-          th = Math.atan2(right, fwd),
-          tv = Math.atan2(up, Math.hypot(fwd, right)),
-          c = r > 0 ? fwd / r : 1;
+        const { th, tv } = offAxis(dx, dy, dz, s);
         geo[g] = Math.max(0.3, r);
         geo[g + 1] = th;
         geo[g + 2] = tv;
-        geo[g + 3] = c <= 0 ? 1 : Math.sqrt(Math.max(0, 1 - c * c));
-        geo[g + 4] = fwd < 0 ? 1 : 0;
       }
       geoReady = true;
     }
@@ -807,38 +939,33 @@ export function levelAtPoint(
         v = sl.out[s.voice],
         g = GEO * i;
       let gain = sl.refl[s.refl];
-      if (!v || !gain || !geo[g + 5]) continue;
+      if (!v || !gain || !geo[g + 3]) continue;
       // a stage image fades out across its surface's edges, over the first Fresnel zone (nearer than one zone's
       // radius to an edge: m·|m| < radius²)
-      const nearest = geo[g + 12];
-      if (s.reflector >= 0 && nearest * Math.abs(nearest) < geo[g + 8] / sl.k) {
-        const zone = Math.sqrt(geo[g + 8] / sl.k);
+      const nearest = geo[g + 10];
+      if (s.reflector >= 0 && nearest * Math.abs(nearest) < geo[g + 6] / sl.k) {
+        const zone = Math.sqrt(geo[g + 6] / sl.k);
         gain *=
+          edgeFade(geo[g + 7], zone) *
+          edgeFade(geo[g + 8], zone) *
           edgeFade(geo[g + 9], zone) *
-          edgeFade(geo[g + 10], zone) *
-          edgeFade(geo[g + 11], zone) *
-          edgeFade(geo[g + 14], zone);
+          edgeFade(geo[g + 12], zone);
         if (!gain) continue;
       }
       const r = geo[g];
       // what the air takes off, and a stage in the way: its barrier loss at this path's Fresnel number, N = 2δ/λ = δk/π
       // (nepers)
-      let loss = sl.air * r;
-      const detourK = geo[g + 6] * sl.k;
+      let loss = airNepers(sl.air, r);
+      const detourK = geo[g + 4] * sl.k;
       if (detourK > BRIGHT_DETOUR_K)
         loss +=
-          sl.stageFade[geo[g + 7]] *
-          (geo[g + 13] ? BARRIER_CAP_NEPERS : barrierNepers(detourK / Math.PI));
-      const half = s.horn ? sl.hornHalf[s.voice] : undefined;
-      let d: number;
-      if (half) d = waveguideGain(geo[g + 1], geo[g + 2], half);
-      else {
-        d = pistonPattern((sl.ka[s.voice] ?? 0) * geo[g + 3]);
-        if (geo[g + 4]) d *= sl.shadow;
-      }
-      const mag = (d * gain * Math.exp(-loss)) / r,
-        // less the alignment, so the box's drivers arrive together at its alignment point
-        ph = -sl.k * (r - s.alignM),
+          sl.stageFade[geo[g + 5]] *
+          (geo[g + 11] ? BARRIER_CAP_NEPERS : barrierNepers(detourK / Math.PI));
+      const dir = sl.directivity[s.voice];
+      const d = dir ? directivityGain(dir, geo[g + 1], geo[g + 2]) : 0;
+      // from its level at 1 m; less the alignment, so the box's drivers arrive together at its alignment point
+      const mag = d * gain * pathAmplitude(r, 1, loss),
+        ph = pathPhase(sl.k, r, s.alignM),
         c = Math.cos(ph),
         sn = Math.sin(ph);
       pre[s.path] += mag * (v.re * c - v.im * sn);

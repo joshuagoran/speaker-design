@@ -55,7 +55,7 @@ import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
-import type { AutoBalanceMode } from "./constants/autoBalance";
+import type { BandBalance } from "./constants/space";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
   HARDWARE_KIND_NAMES,
@@ -965,11 +965,7 @@ export interface PaDesignConfig {
   xoLoOrder: CrossoverOrder;
   xoHiOrder: CrossoverOrder;
   mAmpW: number;
-  /** the music balance: how far the mid band's level sits below the sub's, dB (a level, not an angle; the saved key keeps its old name) */
-  tilt: number;
   hfAmpW: number;
-  /** the music balance: how far the horn band's level sits below the mid's, dB (a level, not an angle; the saved key keeps its old name) */
-  hfTilt: number;
   layout: PaLayout;
   /** each box's handles and their offsets (lib/build/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
   hardware?: PaHardware;
@@ -2234,7 +2230,7 @@ export interface SpaceVenue {
   /** the ear's height above the floor, ft: the map and the levels are worked out there */
   earFt: CoverageLayout["earFt"];
   /**
-   * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
+   * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the Band balance
    * (`balance`) less: what the map and the readouts compare with, and what Calculate gains aims the Gains at
    */
   targetDb: CoverageLayout["targetDb"];
@@ -2249,10 +2245,10 @@ export interface SpaceVenue {
    */
   levelRef: CoverageLevelRef;
   /**
-   * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
-   * or the PA music tilt (lib/speaker/autoBalance).
+   * the band balance the target follows across the bands: Flat (the same in every band) or More bass, lower above each
+   * crossover (lib/speaker/spaceBalance)
    */
-  balance: AutoBalanceMode;
+  balance: BandBalance;
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them. */
@@ -3278,16 +3274,13 @@ export interface CoverageLayout {
   mirror: boolean;
   band: CoverageBand;
   freqHz: number;
-  /** the target level in the sub band, dB SPL (the other bands follow the music balance) */
+  /** the target level in the sub band, dB SPL (the other bands follow the Band balance) */
   targetDb: number;
   /** where the target is measured: the system is turned down until it gets the target there, never past its limit */
   levelRef: CoverageLevelRef;
   earFt: number;
   listener: FloorPoint;
 }
-
-/** A PA design's music balance: its crossovers, and how much less the mid band needs than the sub and the horn than the mid. */
-export type MusicBalance = Pick<PaDesignConfig, "xoLo" | "xoHi" | "tilt" | "hfTilt">;
 
 /** The stack the map places: the dispersion model's stack, its footprint and the mid box's width, inches. */
 export interface CoverageStack extends PaStackGeometry {
@@ -3312,10 +3305,8 @@ export interface CoverageGrid {
 export interface CoverageGridView {
   grid: CoverageGrid;
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">;
-  /** what a grid level is compared against: the grid's band target less the gain (the grid is at the limit), dB */
+  /** what a grid level is compared against: the grid's band target, dB (the grid is at System gain) */
   target: number;
-  /** System gain, dB, added to a grid level for the absolute level */
-  gain: number;
 }
 
 /** How much of the floor reaches the target, leaving out the space right in front of the boxes. */
@@ -3359,8 +3350,6 @@ export type PaDefaultedField =
   | "xoHi"
   | "xoLoOrder"
   | "xoHiOrder"
-  | "tilt"
-  | "hfTilt"
   | "ampW"
   | "mAmpW"
   | "hfAmpW"

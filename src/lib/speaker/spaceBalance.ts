@@ -1,17 +1,40 @@
-// The Space page's target across the bands and where it is measured ("Measured at" and the music balance). Pure.
+// The Space page's target across the bands and where it is measured ("Measured at" and the Band balance). Pure.
 //
-// The target is the venue's level in the lowest band. Each band above a crossover of the space's stacks is the music
-// balance's step lower there (lib/speaker/autoBalance tiltAt: flat 0 dB; the PA music tilt the mid below the sub at a
-// sub crossover, the horn below the mid above it), so the PA presets' targets follow the PA music balance. A band's target is the
-// target at its center (or at the one frequency). The reference Calculate gains reads: the audience's
+// The target is the venue's level in the lowest band. Each band above a crossover of the space's stacks is the band
+// balance's step lower there (Flat: 0 dB; More bass: `MORE_BASS_STEP_DB`, a larger step at a sub crossover). A band's
+// target is the target at its center (or at the one frequency). The reference Calculate gains reads: the audience's
 // average (the floor but the space in front of each box), the listener, or the mean of the levels 1 m in front of each placement, on its aim.
 import type { FloorPoint, SpaceDesign, SpaceVenue, SpeakerBand, SpeakerSpec } from "../../types";
 import { oneMeterSpot, type COVERAGE_BANDS } from "../acoustics/coverage";
-import { AUTO_BALANCE_TILT, tiltAt } from "./autoBalance";
+import { PA_SLIDERS } from "../../constants/paSliders";
 import { expandPlacements, placementStack } from "./spaceLayout";
 import { stackCrossoversHz } from "./stackResponse";
 import type { SpaceModel } from "./spaceCoverage";
-import type { AutoBalanceMode } from "../../constants/autoBalance";
+import { BAND_BALANCE, SPACE_TEXT, type BandBalance } from "../../constants/space";
+
+/**
+ * More bass: how far the target steps down at a crossover, dB: at a sub crossover (at or below
+ * `SUB_CROSSOVER_MAX_HZ`), and above it.
+ */
+export const MORE_BASS_STEP_DB = { sub: 6, high: 3 } as const;
+
+/** The highest crossover that takes More bass's sub step, Hz: the PA designs' highest sub-to-mid crossover. */
+export const SUB_CROSSOVER_MAX_HZ = PA_SLIDERS.xoLo.max;
+
+/** The Band balance tooltip: what each option does, with the steps of More bass. */
+export const BAND_BALANCE_TIP = SPACE_TEXT.bandBalanceTip(
+  MORE_BASS_STEP_DB.sub,
+  MORE_BASS_STEP_DB.high,
+  SUB_CROSSOVER_MAX_HZ,
+);
+
+/** How far the target steps down at a crossover at `hz` under the band balance, dB. */
+const balanceStepAt = (hz: number, balance: BandBalance) =>
+  balance === BAND_BALANCE.flat
+    ? 0
+    : hz <= SUB_CROSSOVER_MAX_HZ
+      ? MORE_BASS_STEP_DB.sub
+      : MORE_BASS_STEP_DB.high;
 
 /**
  * Every crossover the space plays, Hz, low to high, once each: of its stacks' members and their speakers' bands, and
@@ -24,17 +47,13 @@ export function spaceCrossoversHz(design: Pick<SpaceDesign, "space" | "stacks" |
   return stackCrossoversHz({ members }, design.speakers);
 }
 
-/** The target at `f`, dB: the lowest band's, less the music balance's step at each crossover at or below `f`. */
+/** The target at `f`, dB: the lowest band's, less the band balance's step at each crossover at or below `f`. */
 export const spaceTargetAt = (
   targetDb: number,
   f: number,
   crossovers: readonly number[],
-  balance: AutoBalanceMode,
-) =>
-  crossovers.reduce(
-    (t, hz) => (hz <= f ? t - tiltAt(hz, AUTO_BALANCE_TILT[balance]) : t),
-    targetDb,
-  );
+  balance: BandBalance,
+) => crossovers.reduce((t, hz) => (hz <= f ? t - balanceStepAt(hz, balance) : t), targetDb);
 
 /** A placement's footprint as `oneMeterSpot` takes it: none, its spot is already its front. */
 const FRONT_SPOT = { w: 0, d: 0 };

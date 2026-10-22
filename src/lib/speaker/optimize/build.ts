@@ -6,7 +6,7 @@ import type { BandId, ChangeName, SpeakerBand, SpeakerChamber, SpeakerSpec } fro
 import { passbandDb, speakerResponse } from "../speakerResponse";
 import { chamberNetLiters } from "../speakerBuild";
 import { coneParts } from "../driverParts";
-import { HIFI_DRIVE } from "../../../constants/hifiEngine";
+import { PAD_MAX_DB, bandLevelDb, isPassive } from "../bandLevel";
 import { SPEAKER_RESPONSE_VOLTS, VENT_KIND } from "../../../constants/speakerSpec";
 import { SPEAKER_STEPS } from "../../../constants/speakerSteps";
 import { CHANGE_NAMES } from "../../../constants/optimizerText";
@@ -149,7 +149,7 @@ export function buildChoice(input: BuildInput, choice: Choice): SpeakerSpec | nu
       const level = onStep(b.levelDb + was - is, SPEAKER_STEPS.levelDb);
       return {
         ...b,
-        levelDb: b.drive === HIFI_DRIVE.passive ? Math.min(Math.max(0, b.levelDb), level) : level,
+        levelDb: isPassive(b) ? Math.min(PAD_MAX_DB, level) : level,
       };
     }),
   };
@@ -189,14 +189,14 @@ export function trimAmps(
       }
       /** the drive at the band's first limit, and the drive that gives it the headroom the level needs, V */
       const vLimit =
-        SPEAKER_RESPONSE_VOLTS * Math.pow(10, (lim.musicDb - rb.passbandDb + band.levelDb) / 20);
-      const vNeed = SPEAKER_RESPONSE_VOLTS * Math.pow(10, (room + band.levelDb) / 20);
+        SPEAKER_RESPONSE_VOLTS *
+        Math.pow(10, (lim.musicDb - rb.passbandDb + bandLevelDb(band)) / 20);
+      const vNeed = SPEAKER_RESPONSE_VOLTS * Math.pow(10, (room + bandLevelDb(band)) / 20);
       if (vNeed > vLimit) {
         w = Math.max(w, band.ampW);
         continue;
       }
-      const pad =
-        band.drive === HIFI_DRIVE.passive ? Math.pow(10, Math.min(0, band.levelDb) / 20) : 1;
+      const pad = isPassive(band) ? Math.pow(10, bandLevelDb(band) / 20) : 1;
       const need = ampWatts(vNeed / pad, loads.get(id) ?? {});
       w = Math.max(
         w,

@@ -413,7 +413,7 @@ export function CoverageMap({
         </span>
         <span className="tabular-nums text-stone-900">
           {readout != null && hover && view
-            ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${(readout + view.gain).toFixed(1)} dB (${formatSigned(readout - view.target)})`
+            ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${readout.toFixed(1)} dB (${formatSigned(readout - view.target)})`
             : `Color: ${SCALE_UNIT}`}
         </span>
       </div>
@@ -737,7 +737,7 @@ export function CoverageMap({
         </span>
         <span>
           Thick line: target
-          {view ? ` (${(view.target + view.gain).toFixed(0)} dB)` : ""}. Medium line:{" "}
+          {view ? ` (${view.target.toFixed(0)} dB)` : ""}. Medium line:{" "}
           {formatSigned(COVERAGE_EDGE_DB, 0)} dB. Thin lines: every {CONTOUR_STEP_DB} dB.
         </span>
       </div>

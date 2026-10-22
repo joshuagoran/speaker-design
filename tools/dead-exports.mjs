@@ -15,7 +15,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = path.join(ROOT, "src");
 /**
  * The page entry, the files outside src/ that the build or CI loads, and the package.json scripts that write or audit
- * the shipped data (preset-levels, slot-inner-end, xmax-audit); all their code is live.
+ * the shipped data (slot-inner-end, xmax-audit); all their code is live.
  */
 const ROOTS = [
   "src/main.tsx",
@@ -23,7 +23,6 @@ const ROOTS = [
   "tailwind.config.js",
   "tests/mobile-check.mjs",
   "tests/three-memory-check.mjs",
-  "tests/preset-levels.ts",
   "tests/update-slot-inner-end.ts",
   "tests/xmax-audit.ts",
 ].map((file) => path.join(ROOT, file));

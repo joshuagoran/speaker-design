@@ -5,6 +5,7 @@ import { CUTLIST_TAB_NAME, PROJECT_NAMES } from "./pages";
 import { SET_BY_NAMES, SPEAKER_TEXT } from "./speakerPage";
 import { SETTINGS_TEXT } from "./speakerSettings";
 import { UI_TEXT } from "./uiText";
+import { GAIN_LABEL } from "./controlLabels";
 
 /** The listening height's tile, which the front view's note names. */
 const LISTEN_AXIS_NAME = "Listening axis";
@@ -54,7 +55,7 @@ export const STACK_TEXT = {
   tilt: "Tilt, °",
   tiltTip: "Tilts the box up (+) or down (−) on the box below it.",
   mirror: "Mirror image",
-  gain: "Gain",
+  gain: GAIN_LABEL,
   delay: "Delay",
   crossoverHint: `The filters ahead of this box, between boxes. In the Stack they are the Speaker's **${SETTINGS_TEXT.externalCrossover}**.`,
   noFilter: "None",

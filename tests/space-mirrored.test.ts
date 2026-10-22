@@ -183,7 +183,7 @@ test("alignment: a pair is one placement; its two boxes share the delay and leve
     assert.ok(was);
     const [ms, db] = f.placement === 0 ? [pairMs, pairDb] : [0, 0];
     assert.ok(Math.abs(f.delayMs - was.delayMs - ms) < 1e-9, f.id);
-    assert.ok(Math.abs(f.gainDb - was.gainDb - db) < 1e-9, f.id);
+    assert.ok(Math.abs(20 * Math.log10(f.gain / was.gain) - db) < 1e-9, f.id);
   });
 });
 
