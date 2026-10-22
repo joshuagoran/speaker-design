@@ -36,6 +36,7 @@ import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { CM_PER_IN } from "../src/constants/units";
 import type { HornSegment, SpeakerHorn, SpeakerSpec } from "../src/types";
 import type * as THREE from "three";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 /** How many sections the tests cut the bin's flare into. */
 const BIN_SECTIONS = 4;
@@ -97,7 +98,7 @@ function flareMeshes(spec: SpeakerSpec) {
 
 /** The cutlist's horn mouth note. */
 const mouthNote = (spec: SpeakerSpec) =>
-  speakerCutParts(spec.cabinet, "butt")
+  speakerCutParts(spec.cabinet, CORNER_JOINT.butt)
     .parts.map((p) => p.note)
     .find((n) => n.includes("horn mouth"));
 

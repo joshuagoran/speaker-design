@@ -3,7 +3,6 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
   internalWoodLiters,
-  plywoodLbPerSqFt,
   maxFoldedRearWallIn,
   maxFoldedSlotIn,
   foldedRearWallIn,
@@ -22,6 +21,8 @@ import { chamberCutBox } from "../src/constants/cutParts";
 import { close, vent, DRV18 } from "./helpers";
 import { paSubBox, paSubBuild, paSubVent } from "./pa-build";
 import type { CutPart } from "../src/types";
+import { panelLbPerSqFt } from "../src/lib/build/panel";
+import { PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
 
 const IN3_L = 16.387 / 1000;
 /** The sub chamber's rows in the Speaker page's cutlist. */
@@ -133,8 +134,10 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
     const area = (p: CutPart) =>
       p.part === "windowBrace" ? p.a * p.b - (p.a - 4) * (p.b - 4) : p.a * p.b;
     const lb =
-      parts.reduce((a, p) => a + ((area(p) * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) +
-      SUB_FIXINGS_LB;
+      parts.reduce(
+        (a, p) => a + ((area(p) * p.qty) / 144) * panelLbPerSqFt(p.t, PLYWOOD_MATERIAL),
+        0,
+      ) + SUB_FIXINGS_LB;
     const w = sub.build.lb.wood;
     assert.ok(
       w >= lb * 0.98 && w <= lb * 1.12,
@@ -143,14 +146,14 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
   }
 });
 test("plyLb: the catalog's sizes, and measured thicknesses between and beyond them", (t) => {
-  assert.equal(plywoodLbPerSqFt(0.75), 2.3);
-  assert.equal(plywoodLbPerSqFt(0.625), 1.95);
-  assert.equal(plywoodLbPerSqFt(0.5), 1.6);
+  assert.equal(panelLbPerSqFt(0.75, PLYWOOD_MATERIAL), 2.3);
+  assert.equal(panelLbPerSqFt(0.625, PLYWOOD_MATERIAL), 1.95);
+  assert.equal(panelLbPerSqFt(0.5, PLYWOOD_MATERIAL), 1.6);
   // 18 mm birch measured at 0.689″: between the 5/8″ and 3/4″ weights
-  close(t, plywoodLbPerSqFt(0.689), 1.95 + (0.35 * (0.689 - 0.625)) / 0.125, 1e-9);
+  close(t, panelLbPerSqFt(0.689, PLYWOOD_MATERIAL), 1.95 + (0.35 * (0.689 - 0.625)) / 0.125, 1e-9);
   // beyond the thinnest and thickest sizes: in proportion to the nearest
-  close(t, plywoodLbPerSqFt(0.45), (1.6 * 0.45) / 0.5, 1e-9);
-  close(t, plywoodLbPerSqFt(0.8), (2.3 * 0.8) / 0.75, 1e-9);
+  close(t, panelLbPerSqFt(0.45, PLYWOOD_MATERIAL), (1.6 * 0.45) / 0.5, 1e-9);
+  close(t, panelLbPerSqFt(0.8, PLYWOOD_MATERIAL), (2.3 * 0.8) / 0.75, 1e-9);
 });
 test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap from the back wall", (t) => {
   // tubes run from the baffle front (`inset` behind the frame front); bottom slots and side ducts run from the frame

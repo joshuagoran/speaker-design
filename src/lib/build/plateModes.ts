@@ -18,9 +18,8 @@
 // A plate with a round hole (the driver's cutout) takes the full Ritz series: the whole plate's integrals exactly (by
 // Gauss's rule along each span), less the hole's (by Gauss's rule along its radius and evenly round it).
 import type { PlateHole, PlateStock } from "../../types";
-import { LB_FT2_KG_M2 } from "../../constants/units";
+import { LB_FT2_KG_M2, METERS_PER_INCH } from "../../constants/units";
 
-const IN_M = 0.0254;
 /** A spring stiff enough to stand for a fixed edge (ψ = kL / EI). */
 const PSI_FIXED = 1e7;
 /** Terms per span in the series: the beams' and the holed plate's (each holed plate solves BASIS_HOLE² of them). */
@@ -179,7 +178,7 @@ export function beamModeParams(psi0: number, psi1: number) {
 
 /** A beam's first mode, Hz: EI (N·m²), μ (kg/m), span (in), its ends held by springs k₀, k₁ (N·m/rad; 0 hinged). */
 export function beamHz(EI: number, mu: number, span: number, k0: number, k1: number) {
-  const L = span * IN_M;
+  const L = span * METERS_PER_INCH;
   const { Lam } = beamModeParams((k0 * L) / EI, (k1 * L) / EI);
   return Math.sqrt((Lam * EI) / (mu * L ** 4)) / (2 * Math.PI);
 }
@@ -193,7 +192,7 @@ export interface EdgeSprings {
 }
 /** The plate's bending stiffnesses (N·m) and mass (kg/m²): the weaker modulus across the shorter span. */
 function plateStiffness(a: number, b: number, s: PlateStock) {
-  const h = s.t * IN_M,
+  const h = s.t * METERS_PER_INCH,
     k = h ** 3 / (12 * (1 - s.nu * s.nu));
   const Dx = (a <= b ? s.eWeak : s.eStrong) * k,
     Dy = (a <= b ? s.eStrong : s.eWeak) * k;
@@ -207,8 +206,8 @@ function plateStiffness(a: number, b: number, s: PlateStock) {
 /** The first mode of an `a` × `b` in plate, its edges held by `k` (header: Warburton's shape), Hz. */
 export function restrainedPlateHz(a: number, b: number, s: PlateStock, k: EdgeSprings) {
   const { Dx, Dy, H, rhoH } = plateStiffness(a, b, s);
-  const A = a * IN_M,
-    B = b * IN_M;
+  const A = a * METERS_PER_INCH,
+    B = b * METERS_PER_INCH;
   const X = beamModeParams((k.x0 * A) / Dx, (k.x1 * A) / Dx),
     Y = beamModeParams((k.y0 * B) / Dy, (k.y1 * B) / Dy);
   const w2 =
@@ -257,8 +256,8 @@ export function holedPlateHz(
   const n = BASIS_HOLE,
     nb = n * n,
     S = SPAN_HOLE;
-  const A = a * IN_M,
-    B = b * IN_M;
+  const A = a * METERS_PER_INCH,
+    B = b * METERS_PER_INCH;
   const K = zeros(nb),
     M = zeros(nb);
   // the whole plate: each integral a product of the spans' (x = Aξ, y = Bη)
@@ -289,7 +288,7 @@ export function holedPlateHz(
       const x = hole.cx + rho * Math.cos(th),
         y = hole.cy + rho * Math.sin(th);
       if (x <= 0 || x >= a || y <= 0 || y >= b) continue;
-      const dA = wr * rho * ((2 * Math.PI) / HOLE_ROUND) * IN_M * IN_M;
+      const dA = wr * rho * ((2 * Math.PI) / HOLE_ROUND) * METERS_PER_INCH * METERS_PER_INCH;
       const X = basisAt(n, x / a),
         Y = basisAt(n, y / b);
       for (let i = 0; i < n; i++)

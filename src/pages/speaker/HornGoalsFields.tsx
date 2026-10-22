@@ -5,7 +5,8 @@ import { NumberField } from "../../components/ui/NumberField";
 import { Notice } from "../../components/ui/Notice";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SPEAKER_TEXT, HORN_GOAL_LIMIT_NAMES } from "../../constants/speakerPage";
-import { HORN_GOAL_FIELDS, LOW_EDGE_DB } from "../../constants/hornGoals";
+import { HORN_GOAL_FIELDS } from "../../constants/hornGoals";
+import { PASSBAND_EDGE_DB } from "../../constants/acoustics";
 import { GAP_Y_TIGHT, TRIO_ROW } from "../../styles/layout";
 import { SETTINGS_TEXT } from "../../constants/speakerSettings";
 import { shownTenth } from "./speakerFields";
@@ -114,7 +115,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
               String(goals.highHz),
             )}
           </p>
-          {fit.lowEdgeDb < -LOW_EDGE_DB && (
+          {fit.lowEdgeDb < -PASSBAND_EDGE_DB && (
             <Notice>{SPEAKER_TEXT.hornFitLowEdge(String(shownTenth(-fit.lowEdgeDb)))}</Notice>
           )}
           <p className="text-xs text-stone-500">

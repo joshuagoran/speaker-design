@@ -4,9 +4,10 @@ import { boxParts, formatInches, PLYWOOD_SHEETS } from "../src/lib/acoustics/box
 import { packSheets } from "../src/lib/build/cutlist";
 import type { CutPart, CutPartId } from "../src/types";
 import { close } from "./helpers";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 const get = (P: CutPart[], id: CutPartId) => P.find((p) => p.part === id)!;
-for (const joint of ["butt", "rabbet", "miter"] as const) {
+for (const joint of [CORNER_JOINT.butt, CORNER_JOINT.rabbet, CORNER_JOINT.miter] as const) {
   test(`boxParts ${joint}: panels reassemble to the outer box`, (t) => {
     const W = 22,
       H = 30,
@@ -18,7 +19,7 @@ for (const joint of ["butt", "rabbet", "miter"] as const) {
       back = get(P, "back");
     close(t, Math.max(side.a, side.b), H, 1e-9);
     close(t, Math.min(side.a, side.b), D, 1e-9);
-    const overlap = joint === "butt" ? 2 * tt : joint === "rabbet" ? tt : 0; // how much of W the sides supply
+    const overlap = joint === CORNER_JOINT.butt ? 2 * tt : joint === CORNER_JOINT.rabbet ? tt : 0; // how much of W the sides supply
     close(t, top.b + overlap, W, 1e-9, "width");
     close(t, back.a, W - tt, 1e-9);
     close(t, back.b, H - tt, 1e-9); // inner opening + two t/2 rabbets

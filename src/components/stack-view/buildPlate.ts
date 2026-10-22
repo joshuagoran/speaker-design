@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
-import { MM_IN } from "./geometry";
 import { BRACKET } from "./buildBracket";
 import {
   MOUNT_FIT,
@@ -18,6 +17,7 @@ import type { SceneContext } from "./sceneContext";
 import type { HornAxis } from "./buildHorn";
 import { PLATE_BOLT_HEADS, type PlateBoltHead } from "../../constants/boltHeads";
 import type { CompressionDriver, Horn } from "../../types";
+import { IN_PER_MM } from "../../constants/units";
 
 /** The aluminum plate's meshes, by part. */
 export const PLATE_MESH_NAMES = {
@@ -38,18 +38,18 @@ export const PLATE_MESH_NAMES = {
 export const PLATE = {
   ...MOUNT_FIT,
   /** the slot's clearance round the neck, across and under it */
-  slotGap: 1.5 * MM_IN,
+  slotGap: 1.5 * IN_PER_MM,
   /**
    * the top edge stands this far above the highest bolt's head, and at least `minTop` above the axis (lower only to
    * clear a bolt left out of the plate)
    */
-  aboveWasher: 3 * MM_IN,
-  minTop: 20 * MM_IN,
+  aboveWasher: 3 * IN_PER_MM,
+  minTop: 20 * IN_PER_MM,
   /** a flangeless drawing's plate: this far past the bolts' washers on each side */
-  sideMargin: 3 * MM_IN,
+  sideMargin: 3 * IN_PER_MM,
   /** the bend's inside radius, and the foot's length back from the plate's back face (bend included) */
-  bendR: 4 * MM_IN,
-  foot: 80 * MM_IN,
+  bendR: 4 * IN_PER_MM,
+  foot: 80 * IN_PER_MM,
   /** a thread without a head in `PLATE_BOLT_HEADS`: the mounts' generic washer, and a 1/4 in button head on it */
   head: { flangeR: WASHER_R_IN, flange: 0.065, domeR: 0.437 / 2, dome: 0.132 },
 } as const;

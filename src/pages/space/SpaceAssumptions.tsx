@@ -7,7 +7,7 @@ import {
 } from "../../lib/acoustics/coverage";
 import { SPACE_DETAILS, SPACE_LEVEL_REF_PLACE } from "../../constants/space";
 import { BAND_BALANCE, type BandBalance } from "../../constants/space";
-import { STACK_LISTEN_DISTANCE_M } from "../../constants/speakerSpec";
+import { STACK_SUM_POINT_M } from "../../constants/speakerSpec";
 import { sharedAssumptionGroups, stageSoundLines, type AssumptionGroup } from "./assumptionGroups";
 import type { CoverageLevelRef, SpaceVenue } from "../../types";
 import { BAFFLE_STEP_HZ_M } from "../../constants/acoustics";
@@ -53,7 +53,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
     [
       SPACE_DETAILS.boxes,
       [
-        ...SPACE_DETAILS.boxLines(STACK_LISTEN_DISTANCE_M),
+        ...SPACE_DETAILS.boxLines(STACK_SUM_POINT_M),
         "Cones: rigid pistons.",
         "Horn mouths: strips that narrow as pitch rises, until the walls hold the angle.",
         `Behind the box, the level is −3 dB at ${BAFFLE_STEP_HZ_M} Hz divided by the box width in meters (a ${SHADOW_EXAMPLE_IN} in box: ${Math.round(baffleStepF3(SHADOW_EXAMPLE_IN))} Hz), then falls 6 dB per octave.`,

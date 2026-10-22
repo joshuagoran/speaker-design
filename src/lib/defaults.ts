@@ -86,6 +86,7 @@ import {
 } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
+import { CORNER_JOINT } from "../constants/cutParts";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
@@ -152,7 +153,7 @@ export const DEFAULT_PA = {
   baffleColor: DEEP_GREEN_PAINT,
   cabFinish: FINISH_ID.birch,
   spacerH: 20,
-  joint: "butt",
+  joint: CORNER_JOINT.butt,
   ...CUTLIST_DEFAULTS,
   exactIn: {},
   midSize: 12,

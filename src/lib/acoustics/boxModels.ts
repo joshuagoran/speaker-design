@@ -101,6 +101,7 @@ import {
   wattsToVolts,
 } from "../power";
 import { PA_SLOT_FINS } from "../../constants/speakerSpec";
+import { CORNER_JOINT } from "../../constants/cutParts";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -275,8 +276,6 @@ export function unwrapRawPhase(curve: { rawPhase?: number }[]) {
     curve[i].rawPhase = p - 2 * Math.PI * Math.round((p - up) / (2 * Math.PI));
   }
 }
-// Plywood weight, lb/ft², at the wall's exact thickness (lib/build/panel).
-export const plywoodLbPerSqFt = (t: number) => panelLbPerSqFt(t, PLYWOOD_MATERIAL);
 
 // ---------------------------------------------------------------
 // Bracing by rule (lib/build/bracing): each panel's first plate resonance, and the window braces or ribs that lift every
@@ -762,9 +761,9 @@ const rearRabbetNote = (t: number, back: BackJointId) =>
   `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the ${BACK_JOINT_SUMMARY[back]}`;
 /** A side's joint at the `edges` it meets the top and bottom on, and its rear rabbet. */
 const sideJointNote = (joint: CornerJoint, t: number, edges: string, back: BackJointId) =>
-  joint === "rabbet"
+  joint === CORNER_JOINT.rabbet
     ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} ${edges}; ${rearRabbetNote(t, back)}`
-    : joint === "miter"
+    : joint === CORNER_JOINT.miter
       ? `45° on ${edges}; ${rearRabbetNote(t, back)}`
       : rearRabbetNote(t, back);
 
@@ -791,10 +790,10 @@ export function boxParts(
   const BT = BAFFLE_PLY_IN,
     P: CutPart[] = [];
   const back = extra.back ?? DEFAULT_BACK_JOINT;
-  const topW = joint === "butt" ? W - 2 * t : joint === "rabbet" ? W - t : W;
+  const topW = joint === CORNER_JOINT.butt ? W - 2 * t : joint === CORNER_JOINT.rabbet ? W - t : W;
   const rearNote = rearRabbetNote(t, back);
   const sideNote = sideJointNote(joint, t, "top and bottom edges", back);
-  const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
+  const topNote = joint === CORNER_JOINT.miter ? `45° on both ends; ${rearNote}` : rearNote;
   const hw = extra.hardware ?? {};
   const withNote = (note: string, more: string | undefined) => (more ? `${note}; ${more}` : note);
   P.push({ box: label, part: "side", qty: 2, a: D, b: H, t, note: withNote(sideNote, hw.side) });

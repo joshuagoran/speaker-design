@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
 import { HORN_LIFT_IN } from "../../constants/paLayouts";
-import { MM_IN } from "./geometry";
 import { BRACKET, addBoltHead } from "./buildBracket";
 import {
   MOUNT_FIT,
@@ -20,6 +19,7 @@ import { HORN_MOUNT_PANEL } from "../../constants/hornMount";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { defaultPanelIn } from "../../lib/build/panel";
 import type { CompressionDriver, Horn } from "../../types";
+import { IN_PER_MM } from "../../constants/units";
 
 /** The plywood mount's meshes, by part. */
 export const PLY_MOUNT_MESH_NAMES = {
@@ -38,15 +38,15 @@ export const PLY_MOUNT_MESH_NAMES = {
 export const PLY_MOUNT = {
   ...MOUNT_FIT,
   /** the upright's top edge below the horn's axis */
-  belowAxis: 4 * MM_IN,
+  belowAxis: 4 * IN_PER_MM,
   /** the saddle's clearance round the neck */
-  saddleGap: 1.5 * MM_IN,
+  saddleGap: 1.5 * IN_PER_MM,
   /** the base's depth behind the upright (about 102 mm) */
   baseDepth: 4,
   /** the gusset's legs, along the upright and along the base */
-  gussetLeg: 90 * MM_IN,
+  gussetLeg: 90 * IN_PER_MM,
   /** the gusset's top, cut flat, stays this far under the throat flange and the driver */
-  gussetGap: 1.5 * MM_IN,
+  gussetGap: 1.5 * IN_PER_MM,
 } as const;
 
 /**

@@ -9,6 +9,9 @@ import type {
   SpeakerCutBoxId,
 } from "../types";
 
+/** The corner joints a box's walls meet with, by id (saved cutlist settings carry the ids). */
+export const CORNER_JOINT = { butt: "butt", rabbet: "rabbet", miter: "miter" } as const;
+
 /**
  * Every cutlist part's id and the name the cutlist shows for it. Parts carry the id (`CutPart.part`), so code decides
  * on the id and never on the name; pages look the name up here.

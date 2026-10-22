@@ -84,6 +84,10 @@ import { THIN_FACTORS } from "./screen";
 import {
   ALT_LEVEL_DB,
   BEATS,
+  ESTIMATE_SLACK,
+  EXTRA_BATCH,
+  EXTRA_BATCHES,
+  FINALISTS_PER_GOAL,
   OBJECTIVE,
   SAME_LEVEL_DB,
   SAME_VOLUME,
@@ -94,17 +98,12 @@ import {
   type Metric,
 } from "./goals";
 
-/** How many finalists each goal sends to the full run (see the plan's search method), and the cap on them all. */
-const FINALISTS = { cards: 8, outside: 2, looser: 3, closest: 5, single: 1, cap: 64 } as const;
-/** While no first card is found, this many more designs by the estimate are built, up to BATCHES times. */
-const BATCH = 12;
-const BATCHES = 2;
+/** How many finalists each goal sends to the full run, and the cap on them all. */
+const FINALISTS = { ...FINALISTS_PER_GOAL, cap: 64 } as const;
 /** The most crossover settings; past it each pair tries THIN_FACTORS, then the later pairs only yours. */
 const SETTINGS_CAP = 9;
 /** On each other crossover setting, the most designs of a speaker that run again, and how they are picked. */
 const RERUN = { cap: 8, perGoal: 2, closest: 1 } as const;
-/** How far a design's estimate may miss a goal's keep and still run again on another setting (the estimate's error). */
-const ESTIMATE_SLACK = 0.3;
 /** The combine step's most combinations per setting; past it each speaker keeps fewer designs. */
 const COMBO_CAP = 20_000;
 /** Progress: each speaker's search counts as this many runs, each finalist as FINALIST_RUNS. */
@@ -904,7 +903,7 @@ export function optimizeStack(
   };
   let chosen = chooseFrom(limits);
   // no first card yet: more designs by the estimate join the pool, a batch at a time
-  for (let b = 0; b < BATCHES && chosen.cards[0]?.slot.kind !== "first"; b++) {
+  for (let b = 0; b < EXTRA_BATCHES && chosen.cards[0]?.slot.kind !== "first"; b++) {
     const next = combos
       .filter(
         (c) =>
@@ -914,7 +913,7 @@ export function optimizeStack(
           inLimits(c, limits),
       )
       .sort((a, b2) => OBJECTIVE[goal](a.m) - OBJECTIVE[goal](b2.m))
-      .slice(0, BATCH);
+      .slice(0, EXTRA_BATCH);
     if (!next.length) break;
     total += next.length * FINALIST_RUNS;
     buildAll(next);

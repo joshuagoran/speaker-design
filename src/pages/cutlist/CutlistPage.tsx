@@ -90,12 +90,14 @@ import {
   type GrainLook,
   OFFCUT_SHAPE,
   PANEL_MATERIAL_NAMES,
+  CORNER_JOINT,
 } from "../../constants/cutParts";
 import {
   CUTLIST_SETTINGS_SECTIONS,
   type CutlistSettingsSection,
 } from "../../constants/settingsSections";
 import { CUTLIST_PROJECTS, type CutlistProjectId } from "../../constants/cutlistProjects";
+import { MM_PER_IN } from "../../constants/units";
 
 interface Props {
   /** whose boxes these are: the page's words and set choices follow it */
@@ -614,7 +616,8 @@ export function CutlistPage({
                 value={cornerJoint}
                 onChange={(k) => {
                   // mitered boxes get waterfall strips by default; other changes keep your choice
-                  if ((k === "miter") !== (cornerJoint === "miter")) setWaterfall(k === "miter");
+                  if ((k === CORNER_JOINT.miter) !== (cornerJoint === CORNER_JOINT.miter))
+                    setWaterfall(k === CORNER_JOINT.miter);
                   setCornerJoint(k);
                 }}
                 options={entriesOf(JOINT_NAMES)}
@@ -646,7 +649,7 @@ export function CutlistPage({
                 unit={
                   <>
                     <span className="text-stone-500">
-                      ″ = {(wall * 25.4).toFixed(1)} mm ({wallRange.min}–{wallRange.max}″)
+                      ″ = {(wall * MM_PER_IN).toFixed(1)} mm ({wallRange.min}–{wallRange.max}″)
                     </span>
                     {wall !== wallDefault && (
                       <Button onClick={() => setWallExact(null)}>

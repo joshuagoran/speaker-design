@@ -3,9 +3,7 @@
 // design's floor; the Space page's saves (pages/space/spaceSaves) pass it to `paVenue`.
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import type { CoverageLayout } from "../../types";
-
-/** The level the PA floor aims for at the listener, dB SPL. */
-export const LISTENER_TARGET_DB = 105;
+import { SPACE_HOME_TARGET_DB } from "../../constants/space";
 
 /**
  * A dance floor about 1500 sq ft with a 14 ft drywall ceiling, block walls all round, an empty floor; the stacks a
@@ -35,7 +33,7 @@ export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
   mirror: true,
   band: "sub",
   freqHz: 50,
-  targetDb: LISTENER_TARGET_DB,
+  targetDb: SPACE_HOME_TARGET_DB,
   levelRef: COVERAGE_LEVEL_REF.audience,
   earFt: 5.3,
   listener: { x: 3, y: 24 },

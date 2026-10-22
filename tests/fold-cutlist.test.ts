@@ -12,6 +12,7 @@ import { LITERS_PER_CUBIC_IN } from "../src/constants/units";
 import { cabinetBuild, chamberNetLiters, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import type { CutPart, FoldBoard, HornFold, SidePoint, SpeakerSpec } from "../src/types";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 const pt = (zIn: number, yIn: number): SidePoint => ({ zIn, yIn });
 const board = (a: SidePoint, b: SidePoint): FoldBoard => ({ a, b });
@@ -40,7 +41,7 @@ function folded(fold?: HornFold): SpeakerSpec {
   };
 }
 
-const partsOf = (spec: SpeakerSpec) => speakerCutParts(spec.cabinet, "butt").parts;
+const partsOf = (spec: SpeakerSpec) => speakerCutParts(spec.cabinet, CORNER_JOINT.butt).parts;
 const hornBoards = (spec: SpeakerSpec) => partsOf(spec).filter((p) => p.part === "hornBoard");
 const areaOf = (parts: CutPart[]) => parts.reduce((sum, p) => sum + p.qty * p.a * p.b, 0);
 

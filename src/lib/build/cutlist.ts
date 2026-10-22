@@ -30,6 +30,7 @@ import {
   cutBoxTag,
   GRAIN_DIR,
   OFFCUT_SHAPE,
+  CORNER_JOINT,
 } from "../../constants/cutParts";
 
 type SheetSize = Pick<PlywoodSheet, "w" | "h">;
@@ -171,7 +172,7 @@ export const savedCutlist = (
   kerf: KERF_OPTIONS.find((k) => k.v === c.kerf)?.v ?? CUTLIST_DEFAULTS.kerf,
   trim: TRIM_OPTIONS.find((v) => v === c.trim) ?? CUTLIST_DEFAULTS.trim,
   grain: savedGrain(c.grain),
-  waterfall: typeof c.waterfall === "boolean" ? c.waterfall : c.joint === "miter",
+  waterfall: typeof c.waterfall === "boolean" ? c.waterfall : c.joint === CORNER_JOINT.miter,
   offcut: c.offcut === OFFCUT_SHAPE.panel ? OFFCUT_SHAPE.panel : CUTLIST_DEFAULTS.offcut,
   cuts: c.cuts === CUT_STYLE.rips ? CUT_STYLE.rips : CUTLIST_DEFAULTS.cuts,
 });
@@ -663,7 +664,7 @@ export function waterfallStrips(
     const side = out.find((p) => p.box === box && p.part === "side"),
       top = out.find((p) => p.box === box && p.part === "topBottom");
     if (!side || !top || side.qty < 2 || top.qty < 1) continue;
-    const gap = s.joint === "miter" ? s.kerf * Math.SQRT2 : s.kerf;
+    const gap = s.joint === CORNER_JOINT.miter ? s.kerf * Math.SQRT2 : s.kerf;
     const len = 2 * side.b + top.b + 2 * gap,
       wide = Math.max(side.a, top.a);
     if (len > usable.h + EPS || wide > usable.w + EPS) {

@@ -176,7 +176,7 @@ export const stageId = (n: number) => `stage-${n}`;
 /** The DOM id of a stage's item in the Stages list, so a pick on the map can scroll it into view. */
 export const stageDomId = (id: string) => `space-stage-${id}`;
 
-/** The Target level a new space starts with (and the empty start, and a fill or Hi-fi preset that names none), dB SPL: as the default coverage layout. */
+/** The Target level a new space starts with (and the empty start, the PA floor's layout, and a fill or Hi-fi preset that names none), dB SPL. */
 export const SPACE_HOME_TARGET_DB = 105;
 
 /** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
@@ -236,7 +236,10 @@ export const ARRIVAL_MAIN_CLOSE_MS = 3;
 
 /** A band at the reference within this of its target is on it: the readout shows its level, not the gap, dB. */
 export const BAND_ON_TARGET_DB = 0.5;
-/** A band within this of its target is close (green); within `BAND_NEAR_DB`, near (orange); past it, off (red), dB. */
+/**
+ * A band within this of its target is close (green); within `BAND_NEAR_DB`, near (orange); past it, off (red), dB. A
+ * tolerance on the target, not a passband's edge (`PASSBAND_EDGE_DB`).
+ */
 export const BAND_CLOSE_DB = 3;
 export const BAND_NEAR_DB = 6;
 

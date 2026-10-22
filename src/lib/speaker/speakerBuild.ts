@@ -149,8 +149,15 @@ import {
   KG_PER_LB,
   LITERS_PER_CUBIC_IN,
   SQ_IN_PER_SQ_FT,
+  MM_PER_IN,
 } from "../../constants/units";
-import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
+import {
+  PANEL,
+  SHELL_CUT_BOX,
+  chamberCutBox,
+  cutBoxName,
+  CORNER_JOINT,
+} from "../../constants/cutParts";
 import { SPEAKER_TEXT, DRIVER_KIND_NAMES, FOLD_WALL_NAMES } from "../../constants/speakerPage";
 import { FOLD_END, FOLD_SQUARE_TOL_DEG } from "../../constants/foldHorn";
 import { HARDWARE_BOX } from "../../constants/hardware";
@@ -176,7 +183,7 @@ import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
 /** The least air the build gives a chamber, L (the Hi-fi box model's floor). */
 export const MIN_NET_L = 1;
 /** The joint the build cuts a chamber with to count the wood inside it (the joint doesn't move the inside). */
-const COUNT_JOINT: CornerJoint = "butt";
+const COUNT_JOINT: CornerJoint = CORNER_JOINT.butt;
 
 /** A chamber's inside behind the baffle, in: its clear width and height, its depth, and a bottom slot's band. */
 export interface ChamberInside {
@@ -457,7 +464,7 @@ function chamberDrivers(f: ChamberFrame, baffleT: number) {
 const isVentPanel = (panel: RadiatorPanel): panel is VentPanel => panel !== PANEL.side;
 
 /** How far a passive radiator takes room behind its panel, in: its travel both ways and an inch of frame. */
-const radiatorRoomIn = (xmaxMm: number) => 1 + (2 * xmaxMm) / 25.4;
+const radiatorRoomIn = (xmaxMm: number) => 1 + (2 * xmaxMm) / MM_PER_IN;
 
 /**
  * The room the chamber's vent takes, which no brace or rib may enter: a PA port's parts and air as the PA sub box
@@ -1413,7 +1420,7 @@ function withoutGivenWalls(
   frame: boolean,
 ): CutPart[] {
   const topCut = { butt: 0, rabbet: t / 2, miter: t }[joint];
-  const faceCut = !frame && joint === "butt" ? t : t / 2;
+  const faceCut = !frame && joint === CORNER_JOINT.butt ? t : t / 2;
   const left = shared.left ? 1 : 0,
     below = shared.below ? 1 : 0;
   /** a side's joint words without the bottom edge it no longer has (a frame's and a flush box's wording) */

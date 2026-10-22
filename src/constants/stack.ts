@@ -1,5 +1,5 @@
 // The Stack page's words (src/pages/stack).
-import { STACK_LISTEN_DISTANCE_M } from "./speakerSpec";
+import { STACK_SUM_POINT_M } from "./speakerSpec";
 import type { SaveRowWords } from "./saveRow";
 import { GAIN_LABEL } from "./controlLabels";
 
@@ -19,7 +19,7 @@ export const STACK_TEXT = {
   totalsNote:
     "The price is the total of the boxes' purchased parts on the Cutlist tab, without the plywood. The weight is the total of the boxes' weights, each as the Speaker page shows it. The height is from the stack's base to its highest point, with each box's tilt. The weight and the height do not include the plinth or a stand. These go under the stack on the Space page.",
   listenHeight: "Listening axis",
-  modelNote: `Each box plays as its speaker does on the Speaker page, fed through its crossover, then its level and delay. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay puts a box in phase with the box it crosses, at their crossover. If that box would have to play early, the others wait instead, so no delay is less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
+  modelNote: `Each box plays as its speaker does on the Speaker page, fed through its crossover, then its level and delay. The sum is ${STACK_SUM_POINT_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay puts a box in phase with the box it crosses, at their crossover. If that box would have to play early, the others wait instead, so no delay is less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
   maxNote:
     "One input drives the whole stack. At each frequency, the box with the least headroom sets the level, and every box plays at that input. The crossovers are in the front end, ahead of the amps.",
   noMembers: "Add a saved speaker, or start from a preset.",

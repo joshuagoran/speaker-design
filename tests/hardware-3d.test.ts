@@ -6,7 +6,7 @@ import { H1105_MESH } from "../src/data/meshes/h1105";
 import { HARDWARE_MESHES } from "../src/data/meshes";
 import { HANDLES } from "../src/data/catalog/cabinet-hardware";
 import { mountedFlange } from "../src/lib/build/hardware";
-const MM_IN = 1 / 25.4;
+import { IN_PER_MM } from "../src/constants/units";
 test("the committed H1105 mesh matches the catalog: flange 220 × 162 × 5 mm, recess to its depth, within the weld grid", () => {
   const [w, h, z0, z1] = [
     H1105_MESH.max[0] - H1105_MESH.min[0],
@@ -23,7 +23,7 @@ test("the committed H1105 mesh matches the catalog: flange 220 × 162 × 5 mm, r
   assert.ok(part && HARDWARE_MESHES[part.id] === H1105_MESH);
   const f = mountedFlange(part);
   assert.ok(f);
-  assert.ok(Math.abs(f.up - h * MM_IN) < 0.05 && Math.abs(f.across - w * MM_IN) < 0.05);
+  assert.ok(Math.abs(f.up - h * IN_PER_MM) < 0.05 && Math.abs(f.across - w * IN_PER_MM) < 0.05);
   // and its recess reaches the catalog's depth from the panel's face (z = 0)
-  assert.ok(part.depthIn && Math.abs(-z0 * MM_IN - part.depthIn) < 0.05, `recess ${-z0} mm`);
+  assert.ok(part.depthIn && Math.abs(-z0 * IN_PER_MM - part.depthIn) < 0.05, `recess ${-z0} mm`);
 });

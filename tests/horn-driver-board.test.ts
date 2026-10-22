@@ -27,6 +27,7 @@ import { panelLbPerSqFt } from "../src/lib/build/panel";
 import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
 import { frontLoadedOf, roomOf } from "./horn-room";
 import type { SpeakerChamber, SpeakerSpec } from "../src/types";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 /** The spec with its one horn chamber's driver board doubled, or not. */
 function withBoard(spec: SpeakerSpec, doubleBoard: boolean): SpeakerSpec {
@@ -49,7 +50,7 @@ const bin = (doubleBoard = false) =>
 
 /** The driver board's cutlist rows of a spec. */
 const boardRows = (spec: SpeakerSpec) =>
-  speakerCutParts(spec.cabinet, "butt").parts.filter((p) => p.part === "driverBoard");
+  speakerCutParts(spec.cabinet, CORNER_JOINT.butt).parts.filter((p) => p.part === "driverBoard");
 
 /** The bay of a spec's one horn chamber. */
 function bayOf(spec: SpeakerSpec) {

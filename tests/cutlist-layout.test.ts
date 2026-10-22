@@ -15,7 +15,13 @@ import {
   waterfallStrips,
 } from "../src/lib/build/cutlist";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { CUT_STYLE, cutBoxName, GRAIN_DIR, OFFCUT_SHAPE } from "../src/constants/cutParts";
+import {
+  CUT_STYLE,
+  cutBoxName,
+  GRAIN_DIR,
+  OFFCUT_SHAPE,
+  CORNER_JOINT,
+} from "../src/constants/cutParts";
 import type { CutPart, CutlistSettings, PortStyle } from "../src/types";
 import { close } from "./helpers";
 import { checkSheet } from "./guillotine";
@@ -24,7 +30,7 @@ import { paDesignWith, paStackParts } from "./pa-build";
 const EPS = 1e-6;
 /** One stack of the starting design's parts, as the Stack page cuts them (no handles or input dish). */
 const parts = (
-  joint: CutlistSettings["joint"] = "butt",
+  joint: CutlistSettings["joint"] = CORNER_JOINT.butt,
   portStyle: PortStyle = DEFAULT_PA.portStyle,
 ) => paStackParts(paDesignWith({ portStyle }), joint);
 /** The boxes of a cutlist with a shell of their own (a side panel each): the sub's, then the mid's. */
@@ -38,7 +44,7 @@ const settings = (o: Partial<CutlistSettings> = {}): CutlistSettings => ({
   trim: 0,
   grain: GRAIN_PRESETS.wrap,
   waterfall: false,
-  joint: "butt",
+  joint: CORNER_JOINT.butt,
   offcut: OFFCUT_SHAPE.strip,
   cuts: CUT_STYLE.sheets,
   ...o,
@@ -80,7 +86,7 @@ describe("layoutCutlist", () => {
   });
 
   test("cleats and dividers come from offcuts, not the sheet count", () => {
-    const L = layoutCutlist(parts("butt", "vslots"), settings());
+    const L = layoutCutlist(parts(CORNER_JOINT.butt, "vslots"), settings());
     assert.ok(L.fromOffcut.some((p) => p.part === "baffleCleat"));
     assert.ok(L.fromOffcut.some((p) => p.part === "ductDivider"));
     for (const g of L.groups)
@@ -101,9 +107,13 @@ describe("layoutCutlist", () => {
   test("the quick search tries every sorted order: the rabbeted pair fits on 3 sheets of 4 × 8", () => {
     // regression: keeping half the quick search's runs for the rip-first search cut its sorted orders to the first
     // three, and this pair took a 4th sheet
-    const L = layoutCutlist(parts("rabbet"), settings({ joint: "rabbet", stacks: 2 }), {
-      countsOnly: true,
-    });
+    const L = layoutCutlist(
+      parts(CORNER_JOINT.rabbet),
+      settings({ joint: CORNER_JOINT.rabbet, stacks: 2 }),
+      {
+        countsOnly: true,
+      },
+    );
     assert.equal(
       L.groups.reduce((a, g) => a + g.sheets.length, 0),
       3,
@@ -184,10 +194,10 @@ describe("offcut", () => {
 
 describe("waterfall", () => {
   test("butt: one side-top-side strip per box replaces the sides and top", () => {
-    const P = parts("butt");
+    const P = parts(CORNER_JOINT.butt);
     const { parts: out, notes } = waterfallStrips(
       P,
-      { kerf: 0.125, joint: "butt" },
+      { kerf: 0.125, joint: CORNER_JOINT.butt },
       { w: 48, h: 96 },
     );
     assert.deepEqual(notes, []);
@@ -208,11 +218,11 @@ describe("waterfall", () => {
   });
 
   test("a strip longer than the sheet falls back to separate panels, with a note", () => {
-    const P = parts("miter");
+    const P = parts(CORNER_JOINT.miter);
     const [sub] = shellBoxes(P);
     const { parts: out, notes } = waterfallStrips(
       P,
-      { kerf: 0.125, joint: "miter" },
+      { kerf: 0.125, joint: CORNER_JOINT.miter },
       {
         w: 60,
         h: 60,
@@ -223,7 +233,10 @@ describe("waterfall", () => {
   });
 
   test("the laid-out strip is grain-locked along the sheet and drawn with its pieces", () => {
-    const L = layoutCutlist(parts("miter"), settings({ waterfall: true, joint: "miter" }));
+    const L = layoutCutlist(
+      parts(CORNER_JOINT.miter),
+      settings({ waterfall: true, joint: CORNER_JOINT.miter }),
+    );
     const strips = L.groups
       .flatMap((g) => g.sheets.flatMap((s) => s.items))
       .filter((it) => it.pieces);
@@ -292,9 +305,9 @@ describe("review fixes", () => {
               stacks,
               grain: GRAIN_PRESETS[grain],
               waterfall: true,
-              joint: "miter",
+              joint: CORNER_JOINT.miter,
             });
-            const P = parts("miter");
+            const P = parts(CORNER_JOINT.miter);
             assert.ok(
               crossed(layoutCutlist(P, s)) <= crossed(layoutCutlist(P, s, { countsOnly: true })),
             );
@@ -313,11 +326,11 @@ describe("review fixes", () => {
   });
 
   test("savedCutlist: unknown values fall back, older designs get waterfall with miters", () => {
-    const c = savedCutlist({ kerf: 0.2, trim: 0.3, joint: "miter" });
+    const c = savedCutlist({ kerf: 0.2, trim: 0.3, joint: CORNER_JOINT.miter });
     assert.equal(c.kerf, 0.125);
     assert.equal(c.trim, 0);
     assert.equal(c.waterfall, true);
-    assert.equal(savedCutlist({ joint: "miter", waterfall: false }).waterfall, false);
+    assert.equal(savedCutlist({ joint: CORNER_JOINT.miter, waterfall: false }).waterfall, false);
     assert.equal(savedCutlist({ kerf: 0.25 }).kerf, 0.25);
   });
 });
