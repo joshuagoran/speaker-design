@@ -11,6 +11,7 @@ import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { NO_DELAY_MS, SPACE_TEXT } from "../../constants/space";
 import { METERS_PER_INCH, MS_PER_S } from "../../constants/units";
+import { formatDelayMs } from "../format";
 
 /** How far a sound travels in `ms` milliseconds, in: the distance a delay equals (move the box back by it). */
 export const delayDistanceIn = (ms: number) => ((ms / MS_PER_S) * SPEED_OF_SOUND) / METERS_PER_INCH;
@@ -19,7 +20,7 @@ export const delayDistanceIn = (ms: number) => ((ms / MS_PER_S) * SPEED_OF_SOUND
 export const delayText = (ms: number) =>
   ms < NO_DELAY_MS
     ? SPACE_TEXT.noDelay
-    : SPACE_TEXT.delayIs(ms.toFixed(1), String(Math.round(delayDistanceIn(ms))));
+    : SPACE_TEXT.delayIs(formatDelayMs(ms), String(Math.round(delayDistanceIn(ms))));
 
 /** One DSP output (an active band, or a box's passive bands on their shared amp): what to set for it. */
 export interface AlignmentRow {

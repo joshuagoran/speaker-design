@@ -123,6 +123,7 @@ import type {
   StackDesign,
   StackSpec,
 } from "../../types";
+import { roundDelayMs } from "../../lib/format";
 
 /** What the library's row says when a document holds no space. */
 const MISSING_SPACE_TEXT = "That save holds no space";
@@ -362,7 +363,10 @@ export function withCalculatedDelays(d: SpaceDesign): {
   design: SpaceDesign;
   notes: (DelayNote | null)[];
 } {
-  const { design, solved } = withSolvedFeeds(d, (p, s) => ({ ...p, delayMs: tenth(s.delayMs) }));
+  const { design, solved } = withSolvedFeeds(d, (p, s) => ({
+    ...p,
+    delayMs: roundDelayMs(s.delayMs),
+  }));
   return { design, notes: solved.map((s) => s.delayNote) };
 }
 

@@ -162,7 +162,7 @@ export function slotFinLayout(iw: number, t: number, fins: number) {
   };
 }
 // The least the rear channel's wall rises from the floor leg's roof's underside, so the folded duct has a mouth to open
-// into.
+// into. This is a folded bottom slot vent's wall, not a folded horn's room or board (constants/foldHorn).
 const FOLD_MIN_WALL_IN = 1;
 /**
  * The most a folded bottom slot's rear channel wall rises from the floor leg's roof's underside: up to one slot height

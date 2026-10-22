@@ -39,15 +39,15 @@ export const STACK_TEXT = {
   remove: "Remove",
   standsOn: "Stands on",
   base: "The base",
-  across: "Across, in",
+  across: "Across",
   acrossTip:
     "Its center line from the stack's, or from the box under it. + is to the right, seen from the front.",
-  up: "Up, in",
+  up: "Up",
   upTip:
     "Its bottom above the base, or above the top of the box under it (a gap, a spacer, a stand).",
-  back: "Back, in",
+  back: "Back",
   backTip: "Its front behind the stack's front, or behind the front of the box under it.",
-  tilt: "Tilt, °",
+  tilt: "Tilt",
   tiltTip:
     "Its tilt in the stack, + up, about its bottom front edge: a top angled down on its sub. The Space page's coverage uses it; the response here is on axis.",
   mirror: "Mirror image",

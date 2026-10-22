@@ -92,13 +92,16 @@ export const FOLD_END = {
 /** The step a board end moves in while drawing or dragging, in. */
 export const FOLD_SNAP_IN = 0.25;
 
-/** The least clear depth or height a wall drag leaves the folded horn's room, in. */
-export const FOLD_MIN_ROOM_IN = 6;
+/**
+ * The least clear depth and height a folded horn's room has, in: the sound model traces no passage in a smaller room,
+ * and a wall drag leaves at least this much. It is the whole room; `FOLD_MIN_BOARD_IN` is one board.
+ */
+export const FOLD_MIN_ROOM_IN = 2;
 
 /** An end this close to a wall, another board's end or another board's face snaps onto it, in. */
 export const FOLD_SNAP_TO_IN = 0.6;
 
-/** The shortest board that can be drawn, in. */
+/** The shortest board that can be drawn, in: one board's length, not the room's or a leg's size. */
 export const FOLD_MIN_BOARD_IN = 2;
 
 /** How far past half a board's thickness an end may sit from another board's center line and still butt it, in. */
@@ -146,7 +149,10 @@ export const FOLD_LAYOUT_CALIBRATE_SEEDS = 3;
 export const FOLD_LAYOUT_CALIBRATE_ROUNDS = 2;
 /** The most one sizing changes a leg by, as a ratio either way. */
 export const FOLD_LAYOUT_RATIO_MAX = 2;
-/** The least leg height (or channel width) a layout's seed gives, in: above the thin check's `FOLD_THIN_IN`. */
+/**
+ * The least leg height (or channel width) a layout's seed gives, in: above the thin check's `FOLD_THIN_IN`. It is the
+ * gap between two boards of a generated layout, not a board's length (`FOLD_MIN_BOARD_IN`) or the room (`FOLD_MIN_ROOM_IN`).
+ */
 export const FOLD_LAYOUT_MIN_LEG_IN = 2;
 /** The room a seed leaves past a motor's clearance and a cutout's spare, in. */
 export const FOLD_LAYOUT_MARGIN_IN = 0.5;

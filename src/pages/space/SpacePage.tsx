@@ -31,7 +31,7 @@ import { COHERENT_BELOW_HZ, COVERAGE_BANDS } from "../../lib/acoustics/coverage"
 import { driverPattern } from "../../lib/speaker/spaceCoverage";
 import { speakerLayout } from "../../lib/speaker/speakerLayout";
 import { entriesOf, keysOf } from "../../lib/records";
-import { formatHz, formatSigned } from "../../lib/format";
+import { formatHz, formatSigned, formatDb } from "../../lib/format";
 import {
   FIELD_ROW,
   HEADING_GROUP,
@@ -302,19 +302,19 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const { audienceDb, audienceAtLimit } = space;
   const tiles: StatTileItem[] = [
     ...(audienceDb !== null
-      ? [[SPACE_TEXT.audienceAverage, audienceDb.toFixed(1), "dB"] satisfies StatTileItem]
+      ? [[SPACE_TEXT.audienceAverage, formatDb(audienceDb), "dB"] satisfies StatTileItem]
       : []),
     ...(audienceAtLimit !== null
-      ? [[SPACE_TEXT.audienceMax, audienceAtLimit.toFixed(1), "dB"] satisfies StatTileItem]
+      ? [[SPACE_TEXT.audienceMax, formatDb(audienceAtLimit), "dB"] satisfies StatTileItem]
       : []),
     ...(space.listenerDb !== null
-      ? [[SPACE_TEXT.listener, space.listenerDb.toFixed(1), "dB"] satisfies StatTileItem]
+      ? [[SPACE_TEXT.listener, formatDb(space.listenerDb), "dB"] satisfies StatTileItem]
       : []),
     ...(stats
       ? ([
           [SPACE_TEXT.floorAtLeast(formatSigned(-3, 0)), pct(stats.within3)],
           [SPACE_TEXT.floorAtLeast(formatSigned(COVERAGE_EDGE_DB, 0)), pct(stats.within6)],
-          [SPACE_TEXT.spread, stats.spread.toFixed(1), "dB"],
+          [SPACE_TEXT.spread, formatDb(stats.spread), "dB"],
         ] satisfies StatTileItem[])
       : []),
   ];
@@ -548,6 +548,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   // the ear stays under a low ceiling
                   max={venue.room.outdoors ? 8 : Math.min(8, venue.room.ceilingFt)}
                   step={0.1}
+                  unit="ft"
                   onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
                 />
               </div>
@@ -605,6 +606,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   value={venue.systemDb}
                   max={0}
                   step={0.5}
+                  unit="dB"
                   onChange={(systemDb) =>
                     space.editVenue((v) => ({ ...v, systemDb: Math.min(0, systemDb) }))
                   }
@@ -641,7 +643,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     const rel = b.db - b.target;
                     const text = SPACE_TEXT.bandLevel(
                       COVERAGE_BANDS[b.band].name,
-                      Math.abs(rel) < BAND_ON_TARGET_DB ? b.db.toFixed(0) : formatSigned(rel),
+                      Math.abs(rel) < BAND_ON_TARGET_DB ? formatDb(b.db) : formatSigned(rel),
                     );
                     return (
                       <span key={b.band} className={bandClass(rel)}>
@@ -658,7 +660,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               )}
               {space.gainLimit && (
                 <div className="text-sm">
-                  <p>{SPACE_TEXT.belowTarget(space.gainLimit.belowDb.toFixed(1))}</p>
+                  <p>{SPACE_TEXT.belowTarget(formatDb(space.gainLimit.belowDb))}</p>
                   {space.gainLimit.limit && (
                     <p>
                       <MarkedText
@@ -673,7 +675,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               )}
               {space.overLimit.map((o) => (
                 <p key={`${o.box}/${o.band}`} className="text-sm text-red-700">
-                  <MarkedText text={SPACE_TEXT.overLimit(o.band, o.box, o.overDb.toFixed(1))} />
+                  <MarkedText text={SPACE_TEXT.overLimit(o.band, o.box, formatDb(o.overDb))} />
                 </p>
               ))}
               <SelectField
