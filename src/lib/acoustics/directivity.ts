@@ -53,11 +53,6 @@ function j1(x: number) {
 /** A rigid piston's pattern, 2·J1(x)/x, at x = ka·sin θ. */
 export const pistonPattern = (x: number) => (x < 1e-6 ? 1 : Math.abs((2 * j1(x)) / x));
 // rigid piston of radius a (m) in a baffle, off-axis by theta (rad): 2·J1(x)/x, x = ka·sin θ
-export function pistonDirectivity(f: number, a: number, theta: number) {
-  return pistonPattern(
-    ((2 * Math.PI * f) / C) * a * Math.sin(Math.min(Math.abs(theta), Math.PI / 2)),
-  );
-}
 // ---- a horn's mouth: one plane at a time ----
 /**
  * Where a line piston's pattern |sin x / x| falls to half (−6 dB): x = 1.8955. With x = (kW/2)·sin θ, its −6 dB full
@@ -74,18 +69,6 @@ const LINE_PISTON_HALF_X = 1.8955;
  */
 export const linePistonPattern = (x: number) =>
   Math.abs(x) < 1e-6 ? 1 : Math.abs(Math.sin(x) / x);
-/** Where a line piston's pattern first falls `fallDb` (0 up to the first null), x = (kW/2)·sin θ. */
-export function linePistonX(fallDb: number): number {
-  const target = Math.pow(10, -fallDb / 20);
-  let lo = 0,
-    hi = Math.PI;
-  for (let i = 0; i < 40; i++) {
-    const mid = (lo + hi) / 2;
-    if (linePistonPattern(mid) > target) lo = mid;
-    else hi = mid;
-  }
-  return (lo + hi) / 2;
-}
 /**
  * One plane of a horn mouth's pattern at one frequency: a line piston as wide as the mouth in that plane (`kHalfW`,
  * its kW/2), or held at the walls' half angle (`half`, radians).
@@ -159,18 +142,6 @@ export function waveguideHalfAngles(
 export function waveguideGain(th: number, tv: number, [h, v]: [h: number, v: number]) {
   const db = -6 * ((th / h) ** 2 + (tv / v) ** 2);
   return Math.pow(10, Math.max(-40, db) / 20);
-}
-// waveguide: constant coverage (−6 dB at the edges) above the mouth's control frequency, wider below it
-export function waveguideDirectivity(
-  f: number,
-  covH: number,
-  covV: number,
-  mouthWIn: number,
-  mouthHIn: number,
-  th: number,
-  tv: number,
-) {
-  return waveguideGain(th, tv, waveguideHalfAngles(f, covH, covV, mouthWIn, mouthHIn));
 }
 
 export const logSpacedFrequencies = (a: number, b: number, n: number) =>

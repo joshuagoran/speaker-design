@@ -2,15 +2,16 @@
 // against angle and frequency, relative to on axis, on the shared grid (−90 to +90°, 50 Hz to 20 kHz). Pure.
 //
 // Each driver spot radiates its band's share as the stack model plays it (lib/speaker/stackResponse: each member's
-// speaker through its crossover, its level, polarity and delay), with its own coverage (lib/speaker/spaceCoverage
-// driverPattern: a cone as a piston, a horn-loaded chamber's mouth by its size and walls, a horn or waveguide by its
-// rated coverage), at its place in the stack and along its axis (lib/speaker/spaceLayout: its member's aim, turned for
-// a mouth that opens in the back, top or bottom). A horn-loaded chamber radiates from its mouth alone; where the arc is
-// behind a mouth, its box lets through what the Space page's model does (lib/acoustics/coverage `boxShadow`). The arc
+// speaker through its crossover, its level, polarity and delay), with a cone's baffle step as the Space page has it
+// (lib/speaker/spaceCoverage `radiatedAt`), with its own coverage (spaceCoverage driverPattern: a cone as a piston, a
+// horn-loaded chamber's mouth by its size and walls, a horn or waveguide by its rated coverage), at its place in the
+// stack and along its axis (lib/speaker/spaceLayout: its member's aim, turned for a mouth that opens in the back, top or
+// bottom). A horn-loaded chamber radiates from its mouth alone. Its level off its axis, behind its box too, is the
+// Space page's (lib/acoustics/coverage `directivityAt`, `directivityGain`, `offAxis`). The arc
 // is DISPERSION_DISTANCE_M out from the middle of the stack's front at its listening height (the highest band's
 // center, as the stack model's listening point): horizontal at that height, vertical below (−) to above (+) it. Each
 // spot's path sets its level (1/r) and its time against the arc's radius, as the stack model does at its listening
-// point. Not modeled: the room, the baffle step, diffraction.
+// point. Not modeled: the room, diffraction.
 import type {
   BandId,
   DispersionPlane,
@@ -21,11 +22,10 @@ import type {
   StackSpec,
 } from "../../types";
 import { dispersionGrid } from "../acoustics/directivity";
-import { boxShadow } from "../acoustics/coverage";
+import { directivityAt, directivityGain, offAxis, sourceAxis } from "../acoustics/coverage";
 import { CHAMBER_LOAD } from "../../constants/speakerSpec";
-import { patternDirectivity } from "../acoustics/dispersion";
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
-import { bandOfPart, driverPattern, pressureAt } from "./spaceCoverage";
+import { bandOfPart, driverPattern, radiatedAt, spotBaffleWIn, spotBoxWIn } from "./spaceCoverage";
 import { layStack } from "./spaceLayout";
 import { memberGain, stackCrossoversHz } from "./stackResponse";
 import { bandCenters } from "./stackLayout";
@@ -82,11 +82,10 @@ export function stackDispersionMap(
         x: d.at.x * METERS_PER_FOOT,
         y: d.at.y * METERS_PER_FOOT,
         z: d.at.z * METERS_PER_FOOT,
-        yaw: d.yaw,
-        pitch: d.pitch,
+        axis: sourceAxis(d.yaw, d.pitch),
         pattern: driverPattern(d),
-        /** a mouth's box width, in: what reaches behind the mouth (`boxShadow`); null for any other spot */
-        shadowWIn: d.mouth ? speakerLayout(d.speaker.cabinet).size.w : null,
+        boxWIn: spotBoxWIn(d),
+        baffleWIn: spotBaffleWIn(d),
         gain: gain / (spots.get(key(d.member, d.band)) ?? 1),
         delayS: m.delayMs / MS_PER_S,
         pressure: band.pressure,
@@ -100,33 +99,23 @@ export function stackDispersionMap(
     plane === "h"
       ? { x: D * Math.sin(deg * RAD), y: D * Math.cos(deg * RAD), z: axisZ }
       : { x: 0, y: D * Math.cos(deg * RAD), z: axisZ + D * Math.sin(deg * RAD) };
-  /** each source's pressure at each frequency */
-  const feeds = sources.map((s) => freqs.map((f) => pressureAt(s.pressure, f)));
+  /** each source's pressure and directivity at each frequency */
+  const feeds = sources.map((s) => freqs.map((f) => radiatedAt(s.pressure, f, s.baffleWIn)));
+  const directivity = sources.map((s) => freqs.map((f) => directivityAt(s.pattern, f, s.boxWIn)));
   const levelsAt = (deg: number) => {
     const p = arcPoint(deg);
     const paths = sources.map((s) => {
       const dx = p.x - s.x,
         dy = p.y - s.y,
         dz = p.z - s.z;
-      const r = Math.hypot(dx, dy, dz);
-      const th = Math.atan2(dx, dy) - s.yaw;
-      // behind the spot: the point's distance along its axis (its yaw, then its pitch) is negative
-      const ahead =
-        Math.cos(s.pitch) * (dx * Math.sin(s.yaw) + dy * Math.cos(s.yaw)) + dz * Math.sin(s.pitch);
-      return {
-        r,
-        behind: ahead < 0,
-        th: th - 2 * Math.PI * Math.round(th / (2 * Math.PI)),
-        tv: Math.atan2(dz, Math.hypot(dx, dy)) - s.pitch,
-      };
+      return { r: Math.hypot(dx, dy, dz), ...offAxis(dx, dy, dz, s.axis) };
     });
     return freqs.map((f, i) => {
       let sum = complex(0);
       sources.forEach((s, k) => {
-        const { r, th, tv, behind } = paths[k];
+        const { r, th, tv } = paths[k];
         const seconds = (r - D) / SPEED_OF_SOUND + s.delayS;
-        const shadow = behind && s.shadowWIn !== null ? boxShadow(f, s.shadowWIn) : 1;
-        const amp = (s.gain * patternDirectivity(s.pattern, f, th, tv) * shadow * D) / r;
+        const amp = (s.gain * directivityGain(directivity[k][i], th, tv) * D) / r;
         sum = add(sum, multiply(scale(feeds[k][i], amp), phasor(-2 * Math.PI * f * seconds)));
       });
       return 20 * Math.log10(Math.max(1e-9, abs(sum)));

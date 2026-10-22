@@ -1,88 +1,60 @@
 // Each driver's beam in the map's band, for the Space page's 3D view: from each driver that plays that band, where it
-// sits, where it points, the angles where it falls 6 dB and 3 dB, wide and high, by the coverage model's driver pattern
-// (spaceCoverage), and how far its direct level falls `BEAM_FALL_DB` below its level at 1 m. Pure.
+// sits, where it points, the angles where it falls 6 dB and 3 dB, wide and high, by the coverage model's directivity
+// (lib/acoustics/coverage `directivityGain`), and how far its direct level falls `BEAM_FALL_DB` below its level at 1 m. Pure.
 import type { CoverageBand } from "../../types";
 import {
   bandCenterHz,
   bandRangeHz,
   coverageFrequencies,
-  type CoveragePattern,
+  directivityAt,
+  directivityGain,
+  type SourceDirectivity,
 } from "../acoustics/coverage";
-import {
-  linePistonX,
-  mouthPlane,
-  pistonPattern,
-  waveguideHalfAngles,
-  type MouthPlane,
-} from "../acoustics/directivity";
 import { abs } from "../acoustics/complex";
 import { airDbPerM } from "../acoustics/roomAcoustics";
-import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import { BEAM_EDGE_DB, BEAM_FALL_DB, BEAM_INNER_EDGE_DB } from "../../constants/space";
 import { METERS_PER_FOOT } from "../../constants/units";
-import { driverPattern, spaceOutputs, voiceId, type SpaceModel } from "./spaceCoverage";
+import { spaceOutputs, voiceId, type SpaceModel } from "./spaceCoverage";
 import { bandPassband, playsInBand } from "./spaceBalance";
 import type { RoomPoint } from "./spaceLayout";
 
-/** Where a piston's pattern, 2·J1(x)/x, falls `fallDb`, by bisection on its first lobe (6 dB: x ≈ 2.215). */
-function pistonX(fallDb: number): number {
-  const floor = 10 ** (-fallDb / 20);
-  let lo = 0,
-    hi = 3.8;
-  for (let i = 0; i < 60; i++) {
-    const mid = (lo + hi) / 2;
-    if (pistonPattern(mid) > floor) lo = mid;
-    else hi = mid;
-  }
-  return (lo + hi) / 2;
-}
-/** x where a piston falls each edge's fall, worked out once */
-const PISTON_X: Record<number, number> = {
-  [BEAM_EDGE_DB]: pistonX(BEAM_EDGE_DB),
-  [BEAM_INNER_EDGE_DB]: pistonX(BEAM_INNER_EDGE_DB),
-};
+/** The bisection steps for an edge: a quarter turn in 50 halvings is far finer than a draw needs. */
+const EDGE_STEPS = 50;
 
 /**
- * A pattern's half angles at `f`, radians, wide and high: where it falls `fallDb` off its axis. A horn's are its own
- * −6 dB angles (wider below its mouth's control), scaled by its −6·(θ/half)² dB fall; a piston's are where ka·sin θ
- * reaches that fall. A horn mouth's are each plane's own (lib/acoustics/directivity `mouthPlane`): where its walls hold
- * it, the held half angle scaled by the same fall; else where its strip's (kW/2)·sin θ reaches that fall. Each is a
- * quarter turn at most: where it never falls that far in front.
+ * A source's half angles, radians, wide and high: where its directivity (lib/acoustics/coverage `directivityGain`, as
+ * the coverage map radiates it) first falls `fallDb` off its axis in each plane. Each is a quarter turn at most: where
+ * it never falls that far in front. Every pattern's side lobes are quieter than the falls drawn, so the angles where
+ * it is louder than the fall are one span from the axis, and a bisection finds its edge.
  */
 export function beamHalfAngles(
-  pattern: CoveragePattern,
-  f: number,
+  directivity: SourceDirectivity,
   fallDb: number,
 ): [h: number, v: number] {
-  if (pattern.horn) {
-    const { covH, covV, wIn, hIn } = pattern.horn;
-    const scale = Math.sqrt(fallDb / BEAM_EDGE_DB);
-    const [h, v] = waveguideHalfAngles(f, covH, covV, wIn, hIn);
-    return [Math.min(h * scale, Math.PI / 2), Math.min(v * scale, Math.PI / 2)];
-  }
-  if (pattern.mouth) {
-    const { wIn, hIn, wallH, wallV } = pattern.mouth;
-    const x = linePistonX(fallDb);
-    const half = (plane: MouthPlane) =>
-      plane.half !== undefined
-        ? Math.min(plane.half * Math.sqrt(fallDb / BEAM_EDGE_DB), Math.PI / 2)
-        : plane.kHalfW > x
-          ? Math.asin(x / plane.kHalfW)
-          : Math.PI / 2;
-    return [half(mouthPlane(f, wIn, wallH)), half(mouthPlane(f, hIn, wallV))];
-  }
-  const x = PISTON_X[fallDb] ?? pistonX(fallDb);
-  const ka = ((2 * Math.PI * f) / SPEED_OF_SOUND) * pattern.a;
-  const half = ka > x ? Math.asin(x / ka) : Math.PI / 2;
-  return [half, half];
+  const floor = 10 ** (-fallDb / 20);
+  const edge = (gain: (angle: number) => number) => {
+    if (gain(Math.PI / 2) > floor) return Math.PI / 2;
+    let lo = 0,
+      hi = Math.PI / 2;
+    for (let i = 0; i < EDGE_STEPS; i++) {
+      const mid = (lo + hi) / 2;
+      if (gain(mid) > floor) lo = mid;
+      else hi = mid;
+    }
+    return (lo + hi) / 2;
+  };
+  return [
+    edge((angle) => directivityGain(directivity, angle, 0)),
+    edge((angle) => directivityGain(directivity, 0, angle)),
+  ];
 }
 
 /** A beam's edges at one fall, wide and high, radians: null where it never falls that far inside a quarter turn. */
 type BeamEdges = [h: number | null, v: number | null];
 
 /** A pattern's edges at `f` where it falls `fallDb`, each inside a quarter turn or null. */
-const beamEdges = (pattern: CoveragePattern, f: number, fallDb: number): BeamEdges => {
-  const [h, v] = beamHalfAngles(pattern, f, fallDb);
+const beamEdges = (directivity: SourceDirectivity, fallDb: number): BeamEdges => {
+  const [h, v] = beamHalfAngles(directivity, fallDb);
   return [h < Math.PI / 2 ? h : null, v < Math.PI / 2 ? v : null];
 };
 
@@ -160,16 +132,18 @@ export function spaceBeams(
       // in a band, a driver beams when its passband overlaps it; at one frequency, its level there decides
       if (band !== "one" && !playsInBand([bandPassband(speakerBand, member.crossover)], range))
         return [];
-      const meanSquares = power.get(voiceId(box, d));
-      if (!meanSquares) return [];
-      const pattern = driverPattern(d);
+      const id = voiceId(box, d);
+      const meanSquares = power.get(id);
+      const voice = model.scene.voices.find((v) => v.id === id);
+      if (!meanSquares || !voice) return [];
+      const directivity = directivityAt(voice.pattern, f, voice.boxWIn);
       return [
         {
           at: d.at,
           yaw: d.yaw,
           pitch: d.pitch,
-          edges6: beamEdges(pattern, f, BEAM_EDGE_DB),
-          edges3: beamEdges(pattern, f, BEAM_INNER_EDGE_DB),
+          edges6: beamEdges(directivity, BEAM_EDGE_DB),
+          edges3: beamEdges(directivity, BEAM_INNER_EDGE_DB),
           reachFt: reachM(meanSquares) / METERS_PER_FOOT,
         },
       ];

@@ -44,7 +44,7 @@ import {
   type SceneDriver,
 } from "../acoustics/coverage";
 import { baffleStepShelf } from "../acoustics/directivity";
-import { abs } from "../acoustics/complex";
+import { abs, multiply } from "../acoustics/complex";
 import { coaxParts, FILL_OPTIONS, hifiDriverById } from "../data";
 import { byId } from "../tables";
 import { polaritySign, stackLimits, stackResponse } from "./stackResponse";
@@ -167,6 +167,23 @@ const MS_PER_S = 1000;
 /** An angle wrapped to ±π. */
 const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 
+/** The width of the box a spot plays from, in: how much of its sound reaches behind the box (`boxShadow`). */
+export const spotBoxWIn = (d: Pick<PlacedDriver, "speaker">) =>
+  speakerLayout(d.speaker.cabinet).size.w;
+
+/** The baffle a spot's sound steps up on (`baffleStepShelf`): a cone's box width, in; null for any other spot. */
+export const spotBaffleWIn = (d: Pick<PlacedDriver, "part" | "speaker">) =>
+  d.part === DRIVER_PART.cone ? spotBoxWIn(d) : null;
+
+/**
+ * A spot's pressure at 1 m at `f`, from its band's curve (`pressureAt`), with its baffle step where it has a baffle
+ * (`spotBaffleWIn`). The Space page's coverage and the Speaker and Stack pages' dispersion maps share it.
+ */
+export function radiatedAt(ps: readonly Complex[], f: number, baffleWIn: number | null): Complex {
+  const p = pressureAt(ps, f);
+  return baffleWIn === null ? p : multiply(p, baffleStepShelf(f, baffleWIn));
+}
+
 /** A pressure on the speaker model's frequencies read at `f`: its level and phase between grid points on log frequency. */
 export function pressureAt(ps: readonly Complex[], f: number): Complex {
   const freqs = SPEAKER_RESPONSE_FREQUENCIES;
@@ -274,8 +291,8 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
           sign:
             polaritySign(placement) *
             (item.stack ? polaritySign(item.stack.stack.members[d.member]) : 1),
-          baffleWIn: d.part === DRIVER_PART.cone ? speakerLayout(d.speaker.cabinet).size.w : null,
-          boxWIn: speakerLayout(d.speaker.cabinet).size.w,
+          baffleWIn: spotBaffleWIn(d),
+          boxWIn: spotBoxWIn(d),
           share: 1 / (spots.get(`${d.member}/${d.band}`) ?? 1),
         });
       return [
@@ -318,14 +335,9 @@ export function spaceModelLaidOut(design: SpaceDesign): SpaceModel {
 export function spaceOutputs(model: Pick<SpaceModel, "feeds">, f: number): CoverageSlot["out"] {
   const out: CoverageSlot["out"] = {};
   for (const v of model.feeds) {
-    const p = pressureAt(v.pressure, f);
-    let mag = v.sign * abs(p) * Math.pow(10, v.gainDb / 20) * v.share,
+    const p = radiatedAt(v.pressure, f, v.baffleWIn);
+    const mag = v.sign * abs(p) * Math.pow(10, v.gainDb / 20) * v.share,
       ph = Math.atan2(p.im, p.re) - (2 * Math.PI * f * v.delayMs) / MS_PER_S;
-    if (v.baffleWIn !== null) {
-      const shelf = baffleStepShelf(f, v.baffleWIn);
-      mag *= abs(shelf);
-      ph += Math.atan2(shelf.im, shelf.re);
-    }
     out[v.id] = { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
   }
   return out;

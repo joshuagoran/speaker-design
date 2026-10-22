@@ -20,11 +20,14 @@ import {
 } from "../src/constants/speakerSpec";
 import { BEAM_EDGE_DB, DRIVER_PART } from "../src/constants/space";
 import { RAD } from "../src/constants/units";
-import type { CoveragePattern } from "../src/lib/acoustics/coverage";
+import { directivityAt, type CoveragePattern } from "../src/lib/acoustics/coverage";
+
+/** A box's width, in: only what reaches behind it, which a beam's edges in front never see. */
+const BOX_W_IN = 20;
 
 /** A pattern's −6 dB half angles at `f`, degrees: across and up. */
 const halfDeg = (pattern: CoveragePattern, f: number) =>
-  beamHalfAngles(pattern, f, BEAM_EDGE_DB).map((a) => a / RAD);
+  beamHalfAngles(directivityAt(pattern, f, BOX_W_IN), BEAM_EDGE_DB).map((a) => a / RAD);
 
 /** The one mouth spot of a template's horn, and its pattern. */
 function mouthOf(template: (typeof SPEAKER_TEMPLATE)[keyof typeof SPEAKER_TEMPLATE]) {
