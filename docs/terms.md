@@ -4,7 +4,7 @@ Each term has one meaning in the app. Check new UI text against this table.
 
 | Term             | Meaning                                                                                                                                   |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Gain             | A level change in dB on a DSP output: an active band, a box in a Stack, or a placement in a Space.                                        |
+| Gain             | A level change in dB on one amp channel: an active band, a box in a Stack, or a placement in a Space.                                     |
 | Pad              | A cut in dB on a passive band, in the box. It is 0 dB or less.                                                                            |
 | System gain      | One gain in dB on all placements of a Space. It is 0 dB or less.                                                                          |
 | Level            | A sound level in dB SPL that the app calculates.                                                                                          |
