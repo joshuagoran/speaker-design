@@ -1419,8 +1419,8 @@ function withoutGivenWalls(
           qty: p.qty - left,
           b: p.b - below * t,
           note: joinNotes([
-            shared.left && "right side only: its left side is the chamber beside it's right side",
-            shared.below && "stands on the chamber below's top",
+            shared.left && "right side only: the chamber beside it shares its left side",
+            shared.below && "stands on the top of the chamber below",
             sideNote(p.note),
           ]),
         };
@@ -1430,7 +1430,7 @@ function withoutGivenWalls(
           qty: p.qty - below,
           b: p.b - left * topCut,
           note: joinNotes([
-            shared.below && "top only: its floor is the chamber below's top",
+            shared.below && "top only: its floor is the top of the chamber below",
             shared.left && "left end square on the chamber beside it",
             topNote(p.note),
           ]),

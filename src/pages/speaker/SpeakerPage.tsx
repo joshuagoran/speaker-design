@@ -132,7 +132,8 @@ export function SpeakerPage(props: Props) {
 /** The page inside its position focus (`SpeakerPage`). */
 function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) {
   const pal = usePalette();
-  const { spec, response, limits, build, price, optimizer, store, snapshot, restore } = speakerPage;
+  const { spec, response, limits, build, price, optimizer, store, snapshot, holds, restore } =
+    speakerPage;
   const folds = useFolds(
     "speaker.settingsFolds",
     keysOf(SPEAKER_SETTINGS_SECTIONS),
@@ -160,10 +161,14 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
     ...response.chambers.flatMap((c, i): StatTileItem[] => {
       const which = one ? "" : ` ${i + 1}`;
       return [
-        [`Net air${which}`, c.netLiters.toFixed(1), "L"],
+        [`${SPEAKER_TEXT.netAir}${which}`, c.netLiters.toFixed(1), "L"],
         c.qtc !== null
           ? [`Qtc${which}`, c.qtc.toFixed(2), ""]
-          : [`Fb${which}`, c.fb !== null ? c.fb.toFixed(1) : "—", c.fb !== null ? "Hz" : ""],
+          : [
+              `${SPEAKER_TEXT.fb}${which}`,
+              c.fb !== null ? c.fb.toFixed(1) : "—",
+              c.fb !== null ? "Hz" : "",
+            ],
       ];
     }),
     ...response.bands.map((b): StatTileItem => [
@@ -424,6 +429,7 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
             <SaveRow
               store={store}
               snapshot={snapshot}
+              holds={holds}
               restore={restore}
               name={spec.name}
               onName={speakerPage.setName}
@@ -508,16 +514,10 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
               .filter((f) => !f.path.fits)
               .map((f, i) => (
                 <Notice key={i}>
-                  {SPEAKER_TEXT.hornNoRoom(
-                    {
-                      depth: formatInches(f.path.needs.depthIn),
-                      height: formatInches(f.path.needs.heightIn),
-                    },
-                    {
-                      depth: formatInches(f.path.room.depthIn),
-                      height: formatInches(f.path.room.heightIn),
-                    },
-                  )}
+                  {SPEAKER_TEXT.hornNoRoom({
+                    depth: formatInches(f.path.needs.depthIn),
+                    height: formatInches(f.path.needs.heightIn),
+                  })}
                 </Notice>
               ))}
             {flares.some((f) => f.mouthClipped) && <Notice>{SPEAKER_TEXT.hornMouthClipped}</Notice>}

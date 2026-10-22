@@ -54,9 +54,6 @@ export const emptySpeaker = (): SpeakerSpec => ({
   ...EMPTY_SPEAKER,
 });
 
-/** What the library's row says when a document holds no speaker. */
-const MISSING_SPEAKER_TEXT = "That save holds no speaker";
-
 /** What the library saves: the spec without its id and name, undefined fields dropped (the stores reject them). */
 export function speakerSnapshot(spec: SpeakerSpec): SavedSpeakerData {
   const { id: _id, name: _name, ...speaker } = spec;
@@ -300,12 +297,8 @@ export function useSpeakerPage() {
   /** opens a saved speaker: the document's id and name, and its spec */
   const restore = (c: SavedConfig) => {
     const saved = speakerFromSaved(c);
-    // a document without a speaker (written elsewhere): left closed, with a word on the library's row
-    if (!saved) {
-      store.flash(MISSING_SPEAKER_TEXT);
-      return;
-    }
-    replaceSpec(saved);
+    // the library lists only saves that hold a speaker (`holds`)
+    if (saved) replaceSpec(saved);
   };
   return {
     spec,
@@ -335,6 +328,8 @@ export function useSpeakerPage() {
     optimizer,
     store,
     snapshot,
+    /** whether a save holds a speaker: the library lists only those */
+    holds: (c: SavedConfig) => speakerFromSaved(c) !== null,
     restore,
     setName: (name: string) => setSpec((s) => ({ ...s, name })),
     /** sets the save the speaker is open in, as its id; null: none (a new speaker's draft id) */

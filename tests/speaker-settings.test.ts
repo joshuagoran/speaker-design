@@ -216,7 +216,7 @@ describe("the fold summaries keep to the key facts", () => {
         port: { shape: "round", n: 2, dia: 3, len: 6 },
         maxSpeedMs: 17,
       }),
-    ).toBe("Ported · 2 × 3 in round, 6 in long");
+    ).toBe("Vented · 2 × 3 in round, 6 in long");
     expect(
       fillBracingSummary({
         stuffingPct: 10,

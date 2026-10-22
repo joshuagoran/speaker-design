@@ -28,6 +28,7 @@ import {
 import { HIFI_TWEETERS_BY_TYPE, HIFI_WOOFERS_BY_SIZE } from "../../lib/speaker/driverLists";
 import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
+import { NO_HORN_NAME } from "../../constants/speakerPage";
 
 /** Each driver kind's catalog, as its picker lists it. */
 export const DRIVER_OPTIONS: Record<DriverKind, readonly SelectOption[]> = {
@@ -40,7 +41,7 @@ export const DRIVER_OPTIONS: Record<DriverKind, readonly SelectOption[]> = {
 };
 
 /** The horn picker's first choice: no horn. */
-export const NO_HORN: SelectOption = { id: "", name: "None" };
+export const NO_HORN: SelectOption = { id: "", name: NO_HORN_NAME };
 
 /** The PA horns, then the Hi-fi-only waveguides: every catalog horn once. */
 const ALL_HORNS: readonly Horn[] = [

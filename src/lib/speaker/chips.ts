@@ -116,8 +116,8 @@ export function ductFitChip(
     return [
       "bad",
       DUCT_TOO_LONG,
-      `${cVent.len.toFixed(1)}″ is past the ${(below?.span[1] ?? 0).toFixed(1)}″ ${below?.what ?? "the duct"} holds ` +
-        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs.`,
+      `${cVent.len.toFixed(1)}″ is past the ${(below?.span[1] ?? 0).toFixed(1)}″ ${below?.what ?? "the vent"} holds ` +
+        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the vent"} needs.`,
     ];
   }
   return null;
@@ -144,9 +144,9 @@ export function tubeFitChip(
 export const KEEP_UP_SLACK_DB = 0.5;
 
 /** The title of the sub's tube-layout chip, when the round tubes' flares don't fit the baffle round the driver. */
-const TUBES_WONT_FIT = "Tubes won't fit";
+const TUBES_WONT_FIT = "Tubes do not fit";
 /** The title of the sub's duct-fit chip, past the layout's room or in the lengths a bottom slot can't take either way. */
-const DUCT_TOO_LONG = "Duct too long";
+const DUCT_TOO_LONG = "Vent too long";
 /**
  * An HF section through a passive pad `pad` dB on the amp it shares: the amp power at which it reaches its program
  * rating `ratingW` (`hfLimW`, W into the channel's load) against the amp's `ampW`. The Speaker page's check.

@@ -24,11 +24,14 @@ Vite+ docs: `node_modules/vite-plus/docs`.
   ring, and the cabinet finishes. `tests/contrast.test.ts` checks contrast.
 - UI text uses STE, as the docs do. A string that names a control builds the name from that label's constant and marks
   it `**…**`; the app shows it in semibold. Replies and docs show app names in **bold**.
+- While you build, show the owner each new or changed UI string, where it appears, and get an OK before the commit.
+  Propose one short wording, not a list of options.
 - App terms are defined once in `docs/terms.md`. Check new UI text against it.
 - Writing: US spelling (a key that saved data or links carry keeps its spelling, with a comment). Oxford comma.
   Louder/quieter for dB, higher/lower for Hz. One short sentence per line on a page; more goes in a Tooltip or the
-  Details fold. Speaker, Stack, and Space start with a capital when they mean the design item or the page; the plain
-  words (a speaker on a stand, the space of a room) stay lower case.
+  Details fold. Speaker, Stack, Space, and Source start with a capital when they mean the design item or the page (a
+  Source is a Speaker or Stack placed in a Space); the plain words (a speaker on a stand, the space of a room) stay lower
+  case. The audio to a Source is its signal, not its feed.
 - Position labels name the sign's side (`POSITION_LABELS`); the tooltip says where it is measured from. Field labels
   carry no unit (inches); readouts do.
 - Font Inconsolata. Corners 4 px (6 px on large boxes).

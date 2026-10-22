@@ -22,8 +22,8 @@ export const AUTO_BALANCE_TEXT = {
   stackTip: `Sets each box's **${GAIN_LABEL}**, so that the boxes play at the same level at each crossover. The bands of each Speaker do not change.`,
   /** the bands that stop it: bands a driver feeds that the model cannot calculate */
   unmodeled: (names: readonly string[]) =>
-    `**${CALCULATE_GAINS_LABEL}** did not change the levels. The app cannot calculate: ${names.join(", ")}.`,
+    `**${CALCULATE_GAINS_LABEL}** did not change the gains. The app cannot calculate: ${names.join(", ")}.`,
   /** a crossover outside the model's frequency range (the frequency charts' axis), Hz */
   outOfRange: (minHz: number, maxHz: number) =>
-    `**${CALCULATE_GAINS_LABEL}** did not change the levels. A crossover is outside the range the app calculates: ${minHz} Hz to ${maxHz} Hz.`,
+    `**${CALCULATE_GAINS_LABEL}** did not change the gains. A crossover is outside the range the app calculates: ${minHz} Hz to ${maxHz} Hz.`,
 } as const;

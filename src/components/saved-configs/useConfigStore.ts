@@ -164,7 +164,7 @@ export function useConfigStore(collection: string) {
       flash(
         // the error is a Firebase or artifact-database error carrying a `code`
         e && WRITE_DENIED_CODES.has((e as { code?: string }).code ?? "")
-          ? "You don't have write access here"
+          ? "You do not have write access here"
           : UI_TEXT.saveFailed,
       );
       return false;
@@ -195,7 +195,7 @@ export function useConfigStore(collection: string) {
       await db.collection(collection).doc(id).delete();
       return true;
     } catch {
-      flash("Couldn't delete");
+      flash("The delete failed");
       return false;
     }
   };

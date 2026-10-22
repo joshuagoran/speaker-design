@@ -41,7 +41,7 @@ export const PURCHASED_COLUMNS = {
   count: "Count",
   unit: "Unit price",
   total: "Total",
-  source: "Source",
+  vendor: "Vendor",
 } as const;
 
 /** Under the purchased parts' total, and as the CSV's row after it, when some part has no price. */

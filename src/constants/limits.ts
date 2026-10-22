@@ -34,18 +34,18 @@ export const PER_FREQUENCY_LIMITS: ReadonlySet<LimitId> = new Set<LimitId>([
 
 /** What stops a level, in words: a Speaker-page band's limit (and, without the radiator, the sub's). */
 export const DRIVER_LIMIT_NAMES: Record<LimitId, string> = {
-  port: "port air speed",
+  port: "vent air speed",
   Xmax: "cone travel (Xmax)",
   radiator: "radiator travel",
   thermal: "driver program rating",
-  amp: "amplifier power",
+  amp: "amp power",
   throat: "horn throat air speed",
 };
 
 /** What stops a Hi-fi woofer's level, as a Hi-fi optimizer card's "Limited by" line says it. */
 export const WOOFER_LIMITED_BY: Record<WooferLimit, string> = {
   Xmax: "cone travel",
-  port: "port air speed",
+  port: "vent air speed",
   radiator: "radiator travel",
   thermal: "the woofer's power rating",
   amp: "the amp",

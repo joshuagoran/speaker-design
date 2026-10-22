@@ -51,7 +51,7 @@ export function bandChips(
     const mechanical = PER_FREQUENCY_LIMITS.has(b.who);
     const where =
       b.whoHz !== null
-        ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` Add a high-pass to the band, or set the ${SPEAKER_TEXT.inputRange}, to protect the cone.`}`
+        ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` No high-pass or **${SPEAKER_TEXT.inputRange}** protects the cone.`}`
         : "";
     const bandText = `The band plays clean up to ${b.musicDb.toFixed(0)} dB at 1 m, with one drive for the whole band${amp}.${where}`;
     // the band's first datasheet driver (a compression driver, a tweeter, a coaxial's HF section)
@@ -61,7 +61,7 @@ export function bandChips(
       const name = driverName(hf.driver);
       const derated =
         hf.derate < 1 && band?.highpass
-          ? `, derated ${(-10 * Math.log10(hf.derate)).toFixed(1)} dB for the ${formatHz(band.highpass.hz)} highpass`
+          ? `, derated ${(-10 * Math.log10(hf.derate)).toFixed(1)} dB for the ${formatHz(band.highpass.hz)} high-pass`
           : "";
       return hf.who === LIMIT_NAMES.amp
         ? [
@@ -149,13 +149,13 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
       port.peak > port.limit
         ? [
             "warn",
-            "Port too fast at full power",
-            `${port.peak.toFixed(1)} m/s at ${formatHz(port.hz)}, over the ${port.limit.toFixed(1)} m/s it takes. Use a larger port.`,
+            "Vent too fast at full power",
+            `${port.peak.toFixed(1)} m/s at ${formatHz(port.hz)}, over the ${port.limit.toFixed(1)} m/s limit.`,
             "speakerPortSpeed",
           ]
         : [
             "ok",
-            "Port speed inside its limit",
+            "Vent speed inside its limit",
             `At most ${port.peak.toFixed(1)} m/s (${formatHz(port.hz)}), under the ${port.limit.toFixed(1)} m/s it takes.`,
             "speakerPortSpeed",
           ],
@@ -174,7 +174,7 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
         ? [
             "warn",
             "Radiators pass Xmax at full power",
-            `${pctOf(radiator)}% of their ${radiator.limit.toFixed(1)} mm Xmax at ${formatHz(radiator.hz)}. Use more or larger radiators.`,
+            `${pctOf(radiator)}% of their ${radiator.limit.toFixed(1)} mm Xmax at ${formatHz(radiator.hz)}.`,
             "speakerRadiatorTravel",
           ]
         : [

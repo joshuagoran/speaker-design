@@ -123,9 +123,6 @@ import type {
   StackSpec,
 } from "../../types";
 
-/** What the library's row says when a document holds no space. */
-const MISSING_SPACE_TEXT = "That save holds no space";
-
 /** The band the Listener readout is in: the lowest, whatever band is on show. */
 const LEVEL_BAND = "sub" satisfies CoverageBand;
 
@@ -939,11 +936,13 @@ export function useSpace(initialBand: CoverageBand = "mid") {
     targetCurve,
     store,
     snapshot: () => spaceSnapshot(design),
+    /** whether a save holds a space: the library lists only those */
+    holds: (c: SavedConfig) => spaceFromSaved(c) !== null,
     /** opens a saved space: the document's id and name, its placements, venue, stacks and speakers */
     restore: (c: SavedConfig) => {
       const saved = spaceFromSaved(c);
+      // the library lists only saves that hold a space (`holds`)
       if (saved) replaceDesign(saved);
-      else store.flash(MISSING_SPACE_TEXT);
     },
     setName: (name: string) => editSpace((s) => ({ ...s, name })),
     /** sets the save the space is open in, as its id; null: none (a new space's draft id) */

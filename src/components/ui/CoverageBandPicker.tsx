@@ -2,6 +2,7 @@ import { useId } from "react";
 import { ToggleGroup } from "./ToggleGroup";
 import { NumberField } from "./NumberField";
 import { UI_TEXT } from "../../constants/uiText";
+import { MarkedText } from "./MarkedText";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/acoustics/coverage";
 import { formatHz } from "../../lib/format";
 import { GAP_Y } from "../../styles/layout";
@@ -52,7 +53,7 @@ export function CoverageBandPicker({ band, freqHz, onBand, onFreqHz, oneNote }: 
                 </>,
               ] as const,
           ),
-          ["one", "One frequency"] as const,
+          ["one", UI_TEXT.oneFrequency] as const,
         ]}
       />
       {band === "one" && (
@@ -84,7 +85,9 @@ export function CoverageBandPicker({ band, freqHz, onBand, onFreqHz, oneNote }: 
               onChange={(f) => onFreqHz(Math.round(f))}
             />
           </div>
-          <p className="text-xs text-stone-500 mt-1">{oneNote}</p>
+          <p className="text-xs text-stone-500 mt-1">
+            <MarkedText text={oneNote} />
+          </p>
         </div>
       )}
     </div>

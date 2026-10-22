@@ -158,7 +158,7 @@ describe("a chamber the model leaves out is named", () => {
     expect(gaps).toEqual(["segment"]);
     const note = SPEAKER_TEXT.chamberGap(1, MODEL_GAP_TEXT.segment);
     expect(note).toBe(
-      "Chamber 1: a horn section has an area or a length that is not above zero. Set each section's start area, end area and length above zero.",
+      "Chamber 1: a horn section has an area or a length that is not above zero. Set each section's **Start area**, **End area**, and **Length** above zero.",
     );
   });
 

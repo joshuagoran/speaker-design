@@ -35,7 +35,7 @@ export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;
 export const SPACE_SETTINGS_SECTIONS = {
   room: "Room",
   stages: "Stages",
-  placements: "Placements",
+  placements: "Sources",
   hardware: "Amp power and alignment",
 } as const;
 export type SpaceSettingsSection = keyof typeof SPACE_SETTINGS_SECTIONS;

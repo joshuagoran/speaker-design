@@ -1,4 +1,4 @@
-import type { ProjectId } from "./pages";
+import { PROJECT_NAMES, type ProjectId } from "./pages";
 
 /** What one project's Cutlist page says: what one set of boxes is called, the set-count choices and their label, and where the boxes come from. */
 export interface CutlistProject {
@@ -14,13 +14,13 @@ export const CUTLIST_PROJECTS = {
     set: "speaker",
     setsLabel: "Speakers",
     sets: [1, 2, 4],
-    source: "the speaker on the Speaker page",
+    source: `the speaker on the **${PROJECT_NAMES.speaker}** page`,
   },
   stack: {
     set: "stack",
     setsLabel: "Stacks",
     sets: [1, 2, 4],
-    source: "the boxes on the Stack page",
+    source: `the boxes on the **${PROJECT_NAMES.stack}** page`,
   },
 } as const satisfies Record<Exclude<ProjectId, "space">, CutlistProject>;
 
