@@ -178,39 +178,17 @@ function emptyResult(
 }
 
 /**
- * What the search leaves besides its result: your design's run, every design it built and ran in full (on the field
- * steps), each band's top amp power and the amp groups it trims. The Stack optimizer combines these.
- */
-export interface SpeakerSearch {
-  result: SpeakerOptimizerResult;
-  start: SpeakerEval;
-  pool: SpeakerEval[];
-  amps: ReadonlyMap<BandId, number>;
-  groups: readonly BandId[][];
-}
-
-/**
  * The search. `catalog` names the candidate parts (default: the app catalog); `onProgress` hears how far it has got
  * (screen runs, then the finalists' builds).
  */
-export const optimizeSpeaker = (
-  spec: SpeakerSpec,
-  goals: readonly SpeakerGoal[],
-  limits: SpeakerOptimizerLimits,
-  locks: SpeakerOptimizerLocks = {},
-  catalog: SpeakerOptimizerCatalog = SPEAKER_OPTIMIZER_CATALOG,
-  onProgress?: OptimizerProgressCallback,
-): SpeakerOptimizerResult => searchSpeaker(spec, goals, limits, locks, catalog, onProgress).result;
-
-/** The search, with what it leaves besides its result (`SpeakerSearch`). */
-export function searchSpeaker(
+export function optimizeSpeaker(
   spec: SpeakerSpec,
   goalsIn: readonly SpeakerGoal[],
   limits: SpeakerOptimizerLimits,
   locks: SpeakerOptimizerLocks = {},
   catalog: SpeakerOptimizerCatalog = SPEAKER_OPTIMIZER_CATALOG,
   onProgress?: OptimizerProgressCallback,
-): SpeakerSearch {
+): SpeakerOptimizerResult {
   const t0 = Date.now();
   const goals = goalsIn.filter((g, i, a) => keysOf(SPEAKER_GOAL).includes(g) && a.indexOf(g) === i);
   const start = evaluateSpeaker(spec);
@@ -219,13 +197,8 @@ export function searchSpeaker(
   const problemText = (ev: SpeakerEval, L: Pick<SpeakerOptimizerLimits, "budget" | "maxLb">) =>
     problemsOf(ev, start, L, caps).map((p) => SPEAKER_PROBLEM_TEXT[p]);
   const curProblems = problemText(start, limits);
-  const empty = (goalMissing: string): SpeakerSearch => ({
-    result: emptyResult(goals, limits, start, curProblems, goalMissing, t0),
-    start,
-    pool: [],
-    amps: new Map(),
-    groups: [],
-  });
+  const empty = (goalMissing: string): SpeakerOptimizerResult =>
+    emptyResult(goals, limits, start, curProblems, goalMissing, t0);
   if (!goals.length) return empty(SPEAKER_NO_GOAL);
   if (start.metrics.musicDb === null) return empty(SPEAKER_UNMODELED);
   const goal = goals[0],
@@ -729,7 +702,7 @@ export function searchSpeaker(
         ? nothingBeatsText(goals)
         : null;
   report(total, total, true);
-  const result: SpeakerOptimizerResult = {
+  return {
     goals,
     target,
     current: { metrics: start.metrics, problems: curProblems, maxCurve: maxCurveOf(start.limits) },
@@ -744,7 +717,6 @@ export function searchSpeaker(
       ms: Date.now() - t0,
     },
   };
-  return { result, start, pool: pool.map((p) => p.ev), amps, groups };
 }
 
 /** A choice's identity: each unit's option and the shape. */

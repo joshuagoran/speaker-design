@@ -1,6 +1,6 @@
 /**
- * Top of every maximum-output chart, dB SPL: the Speaker and Stack pages' maximum-output charts and the optimizer
- * cards. A PA horn on its amp reaches about 131 dB at 1 m on the saved PA designs, a Hi-fi compression driver on a
+ * Top of every maximum-output chart, dB SPL: the Speaker and Stack pages' maximum-output charts and the Speaker
+ * optimizer's cards. A PA horn on its amp reaches about 131 dB at 1 m on the saved PA designs, a Hi-fi compression driver on a
  * waveguide about 126 dB.
  */
 export const MAX_OUTPUT_TOP = 140;

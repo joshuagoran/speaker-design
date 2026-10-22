@@ -58,12 +58,8 @@ import { inputText } from "../speaker/speakerText";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { MemberSettings } from "./MemberSettings";
-import { memberNames } from "./stackKeeps";
-import { LockButton } from "../../components/ui/LockButton";
 import { stackDispersionChips, stackKeepUpChips } from "./stackChips";
 import { stackSummary } from "./stackSummary";
-import { StackOptimizerResults } from "./StackOptimizerResults";
-import { StackOptimizerSettings, stackOptimizerSummary } from "./StackOptimizerSettings";
 import { SummaryStrip } from "../../components/ui/SummaryStrip";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { designStartOptions, stackFromStart } from "./stackPresets";
@@ -98,8 +94,10 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  */
 export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: Props) {
   const pal = usePalette();
-  const { design, response, limits, totals, optimizer, store, snapshot, holds, restore } = stack;
+  const { design, response, limits, totals, store, snapshot, holds, restore } = stack;
   const { members, name, notes } = design.stack;
+  // a viewer's stored folds from when the page had an Optimizer fold still name it: the page ignores that entry, as it
+  // ignores the optimizer's stored limits ("stack.optimizerLimits")
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<StackSettingsSection>("stack", "stack");
   /** the library's speakers, as the picker lists them */
@@ -111,7 +109,9 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   const [pick, setPick] = useState<string>("");
   const picked = library.find((o) => o.id === pick) ?? library[0];
   /** each member's name: its speaker's, numbered */
-  const names = memberNames(design);
+  const names = members.map(
+    (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
+  );
   const lineOf = (k: number) => bandLine(pal, k, members.length);
   const summaries: Record<StackSettingsSection, string> = {
     stack: `${name} · ${members.length} box${members.length === 1 ? "" : "es"}`,
@@ -120,7 +120,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
       members
         .map((m, k) => `${k + 1}. ${inputText(m.crossover) ?? STACK_TEXT.fullRange}`)
         .join(" · ") || STACK_TEXT.noMembers,
-    optimizer: stackOptimizerSummary(optimizer),
   };
   const section = (id: StackSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -195,7 +194,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
             />
           )}
           {summary && <SummaryStrip items={summary} />}
-          <StackOptimizerResults optimizer={optimizer} />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
             <SectionHeading>{STACK_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
@@ -361,11 +359,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
                   member={member}
                   names={names}
                   delayMs={response.members[k]?.delayMs ?? null}
-                  locks={{
-                    speaker: optimizer.speakerLock(member.speakerId),
-                    gain: optimizer.memberLock("levels", k),
-                    delay: optimizer.memberLock("delays", k),
-                  }}
                   onEdit={(edit) => stack.editMember(k, edit)}
                   onRemove={() => stack.removeMember(k)}
                   onEditSpeaker={
@@ -417,10 +410,7 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
               </p>
               {members.map((member, k) => (
                 <Card key={k}>
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-semibold min-w-0 truncate">{names[k]}</h4>
-                    <LockButton {...optimizer.memberLock("crossovers", k)} />
-                  </div>
+                  <h4 className="font-semibold min-w-0 truncate">{names[k]}</h4>
                   <FilterFields
                     filters={member.crossover}
                     // a new corner at the PA's crossover to its subs
@@ -437,7 +427,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
               )}
             </>,
           )}
-          {section("optimizer", <StackOptimizerSettings optimizer={optimizer} />)}
         </SettingsColumn>
       }
     />

@@ -34,7 +34,7 @@ export const STUFFING_MAX_PCT = 25;
 /** How much a chamber's fiber fill makes it act larger, %, by how full it is: none, lined walls, half full, full. */
 export const FILL_LEVEL_PCT = { none: 0, lined: 10, half: 15, full: STUFFING_MAX_PCT } as const;
 
-/** The Stack page's member field steps: a member's level, dB, and its set delay, ms. The Stack optimizer builds on them. */
+/** The Stack page's member field steps: a member's level, dB, and its set delay, ms. */
 export const STACK_STEPS = {
   levelDb: 0.5,
   delayMs: 0.1,

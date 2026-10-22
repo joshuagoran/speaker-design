@@ -7,7 +7,6 @@
     "build": "sh build/build.sh pages",
     "test": "vp test",
     "speaker-optimizer-snapshot": "vp test --run --config tests/speaker-optimizer-snapshot.config.ts",
-    "stack-optimizer-snapshot": "vp test --run --config tests/stack-optimizer-snapshot.config.ts",
     "slot-inner-end": "vp test --run --config tests/update-slot-inner-end.config.ts",
     "handle-mesh": "node build/handle-mesh.mjs",
     "horn-mesh": "node build/horn-mesh.mjs",

@@ -59,8 +59,7 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 - Every setting a template or preset can set is also a setting on its page.
 - The same physics uses one shared calculation on every page; the Speaker, Stack, and Space pages never compute it two
   ways.
-- When an optimizer change is meant to change its snapshot test, rewrite it with `vp run speaker-optimizer-snapshot` or
-  `vp run stack-optimizer-snapshot`.
+- When an optimizer change is meant to change its snapshot test, rewrite it with `vp run speaker-optimizer-snapshot`.
 - Delete code a change makes obsolete. `vp run dead-exports` must list nothing before each push.
 - The README stays short and current: what the app does, how to run, build, and deploy it, saving, and tests. It names
   no code that may change. A PR that changes these updates it.

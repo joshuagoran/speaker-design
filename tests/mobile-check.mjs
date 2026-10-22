@@ -3,7 +3,8 @@
 // Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary).
 // Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors, and any
 // request outside the page: everything is bundled in, so the page must work with the network blocked.
-// On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open and the optimizer's cards showing: nothing past the settings pane's edge.
+// On the Speaker and Stack pages (360 px, a tablet, a desktop), every fold open (and the Speaker optimizer's cards showing):
+// nothing past the settings pane's edge.
 // On a phone, every page's settings sheet is checked closed and open on each tab (with its heading), and closes again.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -154,10 +155,18 @@ for (const width of [1024, 1600]) {
   await ctx.close();
 }
 
-// An optimizer page (Speaker, Stack) started from one of its starts, every fold open: pick a goal,
-// find designs, wait for the cards (the results block shows its heading). Nothing past the settings pane's edge and no
+// A settings page (Speaker, Stack) started from one of its starts, every fold open; with `optimizer`, pick a goal, find
+// designs, and wait for the cards (the results block shows its heading). Nothing past the settings pane's edge and no
 // sideways page scroll, on a 360 px phone, a tablet (the two panes from md up) and a desktop.
-async function optimizerPageCheck({ name, hash, width, phone, startName, fallbackStart }) {
+async function settingsPageCheck({
+  name,
+  hash,
+  width,
+  phone,
+  startName,
+  fallbackStart,
+  optimizer,
+}) {
   const ctx = await browser.newContext({
     viewport: { width, height: 900 },
     isMobile: phone,
@@ -195,17 +204,19 @@ async function optimizerPageCheck({ name, hash, width, phone, startName, fallbac
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => fallbackStart.test(o));
   if (many) await start.selectOption({ label: many });
-  const goal = p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper });
-  await reveal(goal);
-  // the Optimizer fold: pick a goal, find designs, and wait for the cards
-  await goal.click();
-  await p.getByRole("button", { name: SPEAKER_OPTIMIZER_TEXT.run }).click();
-  try {
-    await p
-      .getByRole("heading", { name: SPEAKER_OPTIMIZER_TEXT.results, exact: true, level: 2 })
-      .waitFor({ timeout: 60000 });
-  } catch {
-    failures.push(`${name}: the optimizer showed no results`);
+  if (optimizer) {
+    const goal = p.getByRole("button", { name: GOAL_SHORT_NAMES.cheaper });
+    await reveal(goal);
+    // the Optimizer fold: pick a goal, find designs, and wait for the cards
+    await goal.click();
+    await p.getByRole("button", { name: SPEAKER_OPTIMIZER_TEXT.run }).click();
+    try {
+      await p
+        .getByRole("heading", { name: SPEAKER_OPTIMIZER_TEXT.results, exact: true, level: 2 })
+        .waitFor({ timeout: 60000 });
+    } catch {
+      failures.push(`${name}: the optimizer showed no results`);
+    }
   }
   await p.waitForTimeout(600);
   const m = await p.evaluate(() => {
@@ -239,13 +250,14 @@ for (const [width, phone, startName] of [
   [360, true, SPEAKER_START_NAMES.paV2SubBinTwo],
   [1024, false, SPEAKER_START_NAMES.paV2SubBinTwo],
 ])
-  await optimizerPageCheck({
+  await settingsPageCheck({
     name: `speaker ${width}${startName ? ` (${startName})` : ""}`,
     hash: "#speaker",
     width,
     phone,
     startName,
     fallbackStart: /tower|mid\/high/i,
+    optimizer: true,
   });
 
 // The Stack page started from the PA stack (sub and top) and from the PA tower (one speaker).
@@ -256,13 +268,14 @@ for (const [width, phone, start] of [
   [360, true, /PA tower/],
   [1024, false, /PA tower/],
 ])
-  await optimizerPageCheck({
+  await settingsPageCheck({
     name: `stack ${width} (${start.source})`,
     hash: "#stack",
     width,
     phone,
     startName: null,
     fallbackStart: start,
+    optimizer: false,
   });
 
 await browser.close();

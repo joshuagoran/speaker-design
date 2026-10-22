@@ -65,7 +65,6 @@ export default defineConfig({
       "src/data/meshes/diy_rosse110x50.ts",
       "src/data/meshes/h1105.ts",
       "tests/speaker-optimizer-snapshot.json",
-      "tests/stack-optimizer-snapshot.json",
     ],
   },
   lint: {
