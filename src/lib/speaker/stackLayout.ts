@@ -98,15 +98,15 @@ interface DriverSpots {
  * Each driver entry's spots in its speaker, in (x from the cabinet's center line, y up from its bottom, z back from its
  * front), and the way they face: where its drivers are on the baffle (a horn on the top at its mouth's middle, half
  * its height above the lid). A horn whose drivers stand inside it radiates from its mouth alone (lib/speaker/hornMouth):
- * one spot, given with its first driver inside it, at the mouth's middle and facing out of its wall (`mouth`, its size
- * and walls; null for a spot on the baffle); its other drivers inside it give none. A folded horn with no drawing yet
- * has no mouth: its cones stand in for it on the baffle.
+ * each driver inside it gives one spot, at the mouth's middle and facing out of its wall (`mouth`, its size and walls;
+ * null for a spot on the baffle), so every band that plays through the horn plays from its mouth. A band's spots each
+ * play its share (one over their count), so drivers of one band at one mouth add up to the band once. A folded horn
+ * with no drawing yet has no mouth: its cones stand in for it on the baffle.
  */
 export function driverSpotsIn(spec: Pick<SpeakerSpec, "cabinet">): DriverSpots[] {
   const layout = speakerLayout(spec.cabinet);
   return layout.chambers.flatMap((placed) => {
     const mouth = hornMouth(spec.cabinet, placed);
-    const inHorn = placed.chamber.drivers.filter((d) => !onTop(d));
     return placed.chamber.drivers.flatMap((driver): DriverSpots[] => {
       const horn = driverHorn(driver);
       if (!mouth || onTop(driver))
@@ -123,7 +123,6 @@ export function driverSpotsIn(spec: Pick<SpeakerSpec, "cabinet">): DriverSpots[]
             mouth: null,
           },
         ];
-      if (driver !== inHorn[0]) return [];
       return [
         {
           chamber: placed.chamber,

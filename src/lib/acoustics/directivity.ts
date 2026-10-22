@@ -74,7 +74,7 @@ const LINE_PISTON_HALF_X = 1.8955;
  */
 export const linePistonPattern = (x: number) =>
   Math.abs(x) < 1e-6 ? 1 : Math.abs(Math.sin(x) / x);
-/** Where a line piston's pattern first falls `fallDb` (0 to just under 13 dB, its first side lobe), x = (kW/2)·sin θ. */
+/** Where a line piston's pattern first falls `fallDb` (0 up to the first null), x = (kW/2)·sin θ. */
 export function linePistonX(fallDb: number): number {
   const target = Math.pow(10, -fallDb / 20);
   let lo = 0,
@@ -121,13 +121,15 @@ export const mouthPlaneHalf = (plane: MouthPlane) =>
 /**
  * A mouth plane's level (pressure) at `angle` radians off its axis in that plane: the piston's pattern, or where the
  * walls hold it the same −6·(θ/half)² dB fall as a waveguide's (`waveguideGain`; our approximation of a horn's beam,
- * not a measured shape), −40 dB at most. Past a quarter turn
- * the piston keeps its value at a quarter turn (the box's shadow is the caller's).
+ * not a measured shape), −40 dB at most. Behind the mouth (past a quarter turn) both kinds keep their value at a
+ * quarter turn; what the box lets through behind it is the caller's (lib/acoustics/coverage `boxShadow`), one rule for
+ * both planes. Shortcoming: the sound behind a mouth is its edge value less the box's shadow, not a modeled rear lobe.
  */
 export function mouthPlaneGain(angle: number, plane: MouthPlane): number {
+  const off = Math.min(Math.abs(angle), Math.PI / 2);
   if (plane.half !== undefined)
-    return Math.pow(10, Math.max(-40, -6 * (angle / plane.half) ** 2) / 20);
-  return linePistonPattern(plane.kHalfW * Math.sin(Math.min(Math.abs(angle), Math.PI / 2)));
+    return Math.pow(10, Math.max(-40, -6 * (off / plane.half) ** 2) / 20);
+  return linePistonPattern(plane.kHalfW * Math.sin(off));
 }
 /**
  * A horn mouth's level (pressure) at `th` radians off its axis across and `tv` up: one plane's times the other's.

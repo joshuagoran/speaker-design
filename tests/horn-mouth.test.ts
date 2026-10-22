@@ -2,13 +2,22 @@
 import { expect, test } from "vite-plus/test";
 import assert from "node:assert";
 import { driverSpotsIn } from "../src/lib/speaker/stackLayout";
-import { driverPattern } from "../src/lib/speaker/spaceCoverage";
+import { bandOfPart, driverPattern } from "../src/lib/speaker/spaceCoverage";
+import { layStack } from "../src/lib/speaker/spaceLayout";
+import { stackMember } from "../src/lib/speaker/specParts";
+import { mouthPlane, mouthPlaneGain } from "../src/lib/acoustics/directivity";
 import { beamHalfAngles } from "../src/lib/speaker/spaceBeams";
 import { dispersionModeled } from "../src/lib/speaker/stackDispersion";
 import { keeleFrequency } from "../src/lib/acoustics/boxModels";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { CHAMBER_LOAD, FOLD_WALL } from "../src/constants/speakerSpec";
+import {
+  CHAMBER_LOAD,
+  DRIVER_KIND,
+  FOLD_WALL,
+  HORN_PLACEMENT,
+  SPEAKER_BAND,
+} from "../src/constants/speakerSpec";
 import { BEAM_EDGE_DB, DRIVER_PART } from "../src/constants/space";
 import { RAD } from "../src/constants/units";
 import type { CoveragePattern } from "../src/lib/acoustics/coverage";
@@ -84,4 +93,48 @@ test("a folded horn with no drawing keeps its cones as sources, and the map stay
   };
   expect(driverSpotsIn(undrawn).every((s) => s.mouth === null)).toBe(true);
   expect(dispersionModeled([undrawn])).toBe(false);
+});
+
+test("a horn with a cone and a compression driver inside plays both bands from its mouth, each once", () => {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne);
+  const hf = templateSpeaker(SPEAKER_TEMPLATE.paTowerBaffleHorn)
+    .cabinet.chambers.flatMap((c) => c.drivers)
+    .find((d) => d.kind === DRIVER_KIND.compression);
+  assert(hf, "the tower has a compression driver");
+  const [chamber] = spec.cabinet.chambers;
+  const both = {
+    ...spec,
+    cabinet: {
+      ...spec.cabinet,
+      chambers: [
+        {
+          ...chamber,
+          drivers: [
+            ...chamber.drivers,
+            {
+              ...hf,
+              horn: hf.horn && { ...hf.horn, placement: HORN_PLACEMENT.baffle },
+              bands: [SPEAKER_BAND.high],
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const { drivers } = layStack(
+    { stack: { members: [stackMember(both.id, both.input)] }, speakers: [both] },
+    { x: 0, y: 0, liftIn: 0, aim: { yawDeg: 0, pitchDeg: 0 }, image: false, upsideDown: false },
+    bandOfPart,
+  );
+  const bands = drivers.map((d) => d.band);
+  expect(new Set(bands)).toEqual(new Set([chamber.drivers[0].bands[0], SPEAKER_BAND.high]));
+  // one spot per band, every one at the mouth
+  expect(bands).toHaveLength(2);
+  expect(drivers.every((d) => d.mouth !== null)).toBe(true);
+});
+
+test("behind a mouth, a piston plane and a held plane both keep their value at a quarter turn", () => {
+  for (const plane of [mouthPlane(2000, 20, null), mouthPlane(2000, 20, 60)])
+    for (const angle of [2, Math.PI, -2.5])
+      expect(mouthPlaneGain(angle, plane)).toBe(mouthPlaneGain(Math.PI / 2, plane));
 });
