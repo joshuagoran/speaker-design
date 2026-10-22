@@ -1,4 +1,5 @@
 import { CardHeading } from "../../components/ui/CardHeading";
+import { MarkedText } from "../../components/ui/MarkedText";
 import { useRef, useState } from "react";
 import { FoldBox } from "../../components/ui/FoldBox";
 import { InsetGroup } from "../../components/ui/InsetGroup";
@@ -286,7 +287,7 @@ export function HornSettings({
   const manualRow = (
     <div className="flex items-center justify-between gap-2">
       <p className="text-xs text-stone-500">
-        {folded ? SETTINGS_TEXT.setByDesign : SETTINGS_TEXT.setByImport}
+        <MarkedText text={folded ? SETTINGS_TEXT.setByDesign : SETTINGS_TEXT.setByImport} />
       </p>
       <ToggleButton size="xs" on={manual} className="shrink-0" onClick={() => setManual((m) => !m)}>
         {SETTINGS_TEXT.editManually}
@@ -317,7 +318,7 @@ export function HornSettings({
       <InsetGroup title={SETTINGS_TEXT.horn}>
         <div className={offsetTap ? PAIR_ROW : ""}>
           <SelectField
-            label={<Tooltip tip={SPEAKER_TEXT.hornDriveTip}>{SPEAKER_TEXT.hornDrive}</Tooltip>}
+            label={SPEAKER_TEXT.hornDrive}
             options={DRIVE_OPTIONS}
             value={byId(DRIVE_OPTIONS, drive.kind)}
             onChange={(o) => {
@@ -410,7 +411,7 @@ export function HornSettings({
         )}
         {!folded && (
           <ToggleGroup
-            label={<Tooltip tip={SPEAKER_TEXT.hornBoardTip}>{SPEAKER_TEXT.hornBoard}</Tooltip>}
+            label={SPEAKER_TEXT.hornBoard}
             value={horn.doubleBoard === true}
             onChange={(doubleBoard) => onEdit((h) => ({ ...h, doubleBoard }))}
             options={BOARD_OPTIONS}

@@ -2,9 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HOVER_TRANSITION, PRESSED_CLASSES } from "./buttonStyles";
 import { TIP_CLASS, TIP_EDGE_PX } from "./Tooltip";
+import { MarkedText, plainText } from "./MarkedText";
 
 interface Props {
-  /** what it does, as screen readers hear it and its tooltip shows it */
+  /** what it does, as screen readers hear it and its tooltip shows it (control names `**name**` in semibold) */
   label: string;
   onClick: () => void;
   /** a toggle's state (shown dark while on); absent: a plain action */
@@ -51,7 +52,7 @@ export function IconButton({ label, onClick, pressed, size = "md", children }: P
       ref={button}
       type="button"
       onClick={onClick}
-      aria-label={label}
+      aria-label={plainText(label)}
       aria-pressed={pressed}
       // a mouse only: after a tap the tip would stay open
       onPointerEnter={(e) => setTip(e.pointerType === "mouse")}
@@ -65,7 +66,7 @@ export function IconButton({ label, onClick, pressed, size = "md", children }: P
         createPortal(
           // the button's aria-label names it already
           <span ref={box} aria-hidden="true" className={TIP_CLASS} style={{ visibility: "hidden" }}>
-            {label}
+            <MarkedText text={label} />
           </span>,
           document.body,
         )}

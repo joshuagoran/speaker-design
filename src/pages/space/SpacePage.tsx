@@ -50,7 +50,7 @@ import { BAND_BALANCE_TIP } from "../../lib/speaker/spaceBalance";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
-import { MarkedText } from "../../components/ui/MarkedText";
+import { literal, MarkedText } from "../../components/ui/MarkedText";
 import {
   SPACE_SETTINGS_SECTIONS,
   SPACE_SETTINGS_TABS,
@@ -321,7 +321,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
   const alignment = spaceAlignment(model);
   const powers = ampPowerGroups(design).reduce((n, s) => n + s.groups.length, 0);
   const delays = alignment.filter((r) => r.delayMs >= NO_DELAY_MS).length;
-  const summaries: Record<SpaceSettingsSection, string> = {
+  const summaries: Record<SpaceSettingsSection, React.ReactNode> = {
     stages:
       listedStages(venue.stages)
         .map((st) => stageNameOf.get(st.id))
@@ -329,7 +329,11 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
     room: venue.room.outdoors
       ? SPACE_TEXT.outdoors
       : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`,
-    placements: `${venue.targetDb} dB target · ${names.join(" · ") || SPACE_TEXT.noPlacements}`,
+    placements: (
+      <MarkedText
+        text={`${venue.targetDb} dB target · ${names.map(literal).join(" · ") || SPACE_TEXT.noPlacements}`}
+      />
+    ),
     hardware:
       `${powers} amp power${powers === 1 ? "" : "s"} · ` +
       `${delays} delay${delays === 1 ? "" : "s"}`,
@@ -359,6 +363,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
             <SaveRow
               store={space.store}
               snapshot={space.snapshot}
+              holds={space.holds}
               restore={space.restore}
               name={name}
               onName={space.setName}
@@ -374,7 +379,9 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
             <div className={HEADING_GROUP}>
               <SectionHeading>{SPACE_TEXT.coverage}</SectionHeading>
               <p className="text-sm text-stone-500">
-                {SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
+                <MarkedText
+                  text={SPACE_TEXT.mapCaption(bandName, space.target.toFixed(0), refPlace)}
+                />
               </p>
             </div>
             <div ref={coverageGrid} className={resultsGridClass(wide)}>
@@ -572,11 +579,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
             "placements",
             <>
               <NumberField
-                label={
-                  <Tooltip tip={<MarkedText text={SPACE_TEXT.targetTip} />}>
-                    {SPACE_TEXT.target}
-                  </Tooltip>
-                }
+                label={<Tooltip tip={SPACE_TEXT.targetTip}>{SPACE_TEXT.target}</Tooltip>}
                 value={venue.targetDb}
                 min={COVERAGE_TARGET_DB[0]}
                 max={COVERAGE_TARGET_DB[1]}
@@ -598,11 +601,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               />
               <div className={FIELD_ROW}>
                 <NumberField
-                  label={
-                    <Tooltip tip={<MarkedText text={SPACE_TEXT.systemGainTip} />}>
-                      {SPACE_TEXT.systemGain}
-                    </Tooltip>
-                  }
+                  label={<Tooltip tip={SPACE_TEXT.systemGainTip}>{SPACE_TEXT.systemGain}</Tooltip>}
                   value={venue.systemDb}
                   max={0}
                   step={0.5}
@@ -613,10 +612,10 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                 />
               </div>
               <div className="flex flex-wrap gap-2">
-                <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateDelaysTip} />}>
+                <Tooltip control tip={SPACE_TEXT.calculateDelaysTip}>
                   <Button onClick={space.calculateDelays}>{SPACE_TEXT.calculateDelays}</Button>
                 </Tooltip>
-                <Tooltip control tip={<MarkedText text={SPACE_TEXT.calculateGainsTip} />}>
+                <Tooltip control tip={SPACE_TEXT.calculateGainsTip}>
                   <Button onClick={space.calculateGains}>{SPACE_TEXT.calculateGains}</Button>
                 </Tooltip>
               </div>
@@ -665,8 +664,8 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                     <p>
                       <MarkedText
                         text={SPACE_TEXT.limitsSystem(
-                          space.gainLimit.limit.band,
-                          space.gainLimit.limit.box,
+                          literal(space.gainLimit.limit.band),
+                          literal(space.gainLimit.limit.box),
                         )}
                       />
                     </p>
@@ -675,7 +674,9 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               )}
               {space.overLimit.map((o) => (
                 <p key={`${o.box}/${o.band}`} className="text-sm text-red-700">
-                  <MarkedText text={SPACE_TEXT.overLimit(o.band, o.box, formatDb(o.overDb))} />
+                  <MarkedText
+                    text={SPACE_TEXT.overLimit(literal(o.band), literal(o.box), formatDb(o.overDb))}
+                  />
                 </p>
               ))}
               <SelectField

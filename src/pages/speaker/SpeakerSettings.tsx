@@ -202,9 +202,7 @@ export function SpeakerSettings({
                 />
               )}
               {boxOnly && top === CABINET_TOP.arched && arch !== null && (
-                <Notice>
-                  {SPEAKER_TEXT.archFlat} {ARCH_BLOCK_TEXT[arch]}
-                </Notice>
+                <Notice>{`${SPEAKER_TEXT.archFlat} ${ARCH_BLOCK_TEXT[arch]}`}</Notice>
               )}
               <ToggleGroup
                 label={<Tooltip tip={SETTINGS_TEXT.handlesTip}>{SETTINGS_TEXT.handles}</Tooltip>}

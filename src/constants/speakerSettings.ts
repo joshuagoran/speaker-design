@@ -2,6 +2,18 @@
 // labels and the tooltips. One short sentence per line; longer help goes in a tooltip.
 import type { CabinetConstruction } from "../types";
 import type { FILL_LEVEL_PCT } from "./speakerSteps";
+import { CABINET_TOP_NAMES } from "./speakerSpec";
+import { SPEAKER_SETTINGS_SECTIONS } from "./settingsSections";
+
+// Names that tips here and on the Speaker page (constants/speakerPage) both use (`**name**`): each name once.
+/** The horn's goals button. */
+export const START_FROM_GOALS = "Start from goals";
+/** The horn import's fold. */
+export const HORN_IMPORT_NAME = "Import a Hornresp record";
+/** The horn's type setting. */
+export const HORN_TYPE_NAME = "Horn type";
+/** A chamber's Type choice for drivers on the baffle, sealed or ported (`CHAMBER_LOAD_NAMES.direct`). */
+export const BOX_LOAD_NAME = "Box";
 
 /** A fill level's id (`FILL_LEVEL_PCT`). */
 type FillLevel = keyof typeof FILL_LEVEL_PCT;
@@ -21,10 +33,10 @@ export const POSITION_TIPS = {
   partX: "From the chamber's center, seen from the front.",
   partY: "From the chamber's bottom.",
   partZ: "From the chamber's front edge, seen from the side.",
-  chamberX: "From the cabinet's center, seen from the front.",
-  chamberY: "From the cabinet's bottom.",
+  chamberX: "From the box's center, seen from the front.",
+  chamberY: "From the box's bottom.",
   /** a cabinet of one chamber: the chamber is the cabinet, so it has no position of its own */
-  oneChamber: "With one chamber, the chamber is the cabinet. It has no position of its own.",
+  oneChamber: "With one chamber, the chamber is the box. It has no position of its own.",
 } as const;
 
 /** Each fill level as its button names it. */
@@ -57,20 +69,24 @@ export const CONSTRUCTION_SHORT = {
   flushBox: "Flush",
 } as const satisfies Record<CabinetConstruction, string>;
 
+/** The chamber card's sub-sections that the horn's tips name. */
+const SIZE_NAME = "Size";
+const DRIVERS_NAME = "Drivers";
+
 /** The settings column's words. */
 export const SETTINGS_TEXT = {
   // the chamber card's sub-sections
-  size: "Size",
+  size: SIZE_NAME,
   vent: "Vent",
   fillBracing: "Fill and bracing",
   horn: "Horn",
   hornSettings: "Horn settings",
-  drivers: "Drivers",
+  drivers: DRIVERS_NAME,
   removeChamber: "Remove",
   addChamber: "Add chamber",
   addDriver: "Add driver",
   /** a driver's trash icon: what it does, by the driver's place */
-  deleteDriver: (n: number) => `Delete driver ${n}`,
+  deleteDriver: (n: number) => `Remove driver ${n}`,
   noDrivers: "No drivers yet.",
   ventType: "Vent type",
   advanced: "Advanced",
@@ -94,13 +110,13 @@ export const SETTINGS_TEXT = {
   goalLow: "Low",
   goalHigh: "High",
   goalLevel: "Level",
-  designTip: "Sets initial horn layout using your goals, drivers, size, and horn type.",
+  designTip: `Sets initial horn layout using your goals, **${DRIVERS_NAME}**, **${SIZE_NAME}**, and **${HORN_TYPE_NAME}**.`,
   rearChamber: "Rear chamber",
   rearChamberTip: "The closed air behind the cones.",
   editManually: "Edit manually",
-  setByDesign: "Set by Start from goals or a Hornresp import.",
-  setByImport: "Set to initial value or via Hornresp import.",
-  hornImport: "Import a Hornresp record",
+  setByDesign: `Set by **${START_FROM_GOALS}** or **${HORN_IMPORT_NAME}**.`,
+  setByImport: `Set to the initial value or by **${HORN_IMPORT_NAME}**.`,
+  hornImport: HORN_IMPORT_NAME,
   frontTap: "Front tap after section",
   backTap: "Back tap after section",
   tap: "Tap after section",
@@ -114,10 +130,10 @@ export const SETTINGS_TEXT = {
   hornTapAt: (at: string) => `tap ${at} in`,
   // drivers
   band: "Band",
-  bandTip: "The band from Bands and filters that plays this driver.",
+  bandTip: `The band from **${SPEAKER_SETTINGS_SECTIONS.bands}** that plays this driver.`,
   coneBand: "Cone's band",
   hfBand: "HF's band",
-  hfBandTip: "The band from Bands and filters that plays the HF section of this driver.",
+  hfBandTip: `The band from **${SPEAKER_SETTINGS_SECTIONS.bands}** that plays the HF section of this driver.`,
   /** a driver's summary: its band by name */
   bandName: (name: string) => `${name} band`,
   /** a coaxial driver's summary: its HF section's band */
@@ -148,8 +164,7 @@ export const SETTINGS_TEXT = {
   fullRange: "full range",
   // construction
   top: "Top",
-  topTip:
-    "Flat, or a semicircle the full width of the cabinet. Only for speakers where every chamber is a Box.",
+  topTip: `**${CABINET_TOP_NAMES.flat}**, or a semicircle the full width of the box. Only for speakers where every chamber is a **${BOX_LOAD_NAME}**.`,
   handles: "Handles",
   handlesTip: "Two handles, one on each side. They go on the lowest chamber of each shell.",
   handlesNone: "None",
@@ -157,7 +172,7 @@ export const SETTINGS_TEXT = {
   handleType: "Handle type",
   dish: "Input dish",
   dishTip:
-    "An input dish with two jacks on the back and, under a horn on the top, binding posts for the horn. It goes on the lowest chamber of each shell.",
+    "An input dish with two jacks on the back. With a horn on the top, it also has binding posts for the horn. It goes on the lowest chamber of each box.",
   dishNone: "None",
   dishOn: "On the back",
   /** the Construction summary's walls, top and hardware */

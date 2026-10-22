@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { MarkedText } from "../../components/ui/MarkedText";
 import type {
   CornerJoint,
   CutBoxId,
@@ -298,8 +299,9 @@ export function CutlistPage({
           {CSV_SECTIONS.purchased}
         </h3>
         <p className="text-sm text-stone-500 mb-2">
-          Counts for {plural(boxSetCount, proj.set)}. Prices in US dollars. Source shows where each
-          price comes from. A dash shows a part with no known price.
+          Counts for {plural(boxSetCount, proj.set)}. Prices in US dollars.{" "}
+          <MarkedText text={`**${PURCHASED_COLUMNS.vendor}** shows where each price comes from.`} />{" "}
+          A dash shows a part with no known price.
         </p>
         <div className="overflow-x-auto">
           <table className="text-sm w-full border-collapse tabular-nums">
@@ -312,7 +314,7 @@ export function CutlistPage({
                   {PURCHASED_COLUMNS.unit}
                 </th>
                 <th className={`${th} pr-3 text-right`}>{PURCHASED_COLUMNS.total}</th>
-                <th className={`${th}`}>{PURCHASED_COLUMNS.source}</th>
+                <th className={`${th}`}>{PURCHASED_COLUMNS.vendor}</th>
               </tr>
             </thead>
             <tbody>
@@ -385,7 +387,7 @@ export function CutlistPage({
         Panels
       </h3>
       <p className="text-sm text-stone-500 mb-2">
-        Finished sizes in inches. L is the length and W the width.{" "}
+        Finished sizes in inches.{" "}
         {grainless
           ? `L is the long side (${mat.word} has no grain).`
           : "L runs along the grain (↕) on a grain-locked part, else L is the long side."}{" "}
@@ -513,12 +515,17 @@ export function CutlistPage({
               {plural(g.cuts.rips, "full-length rip")},{" "}
               {plural(g.cuts.crosscuts, "full-width crosscut")}
               {g.cuts.widestCrosscut > 0 &&
-                `; widest crosscut ${formatInches(g.cuts.widestCrosscut)}″`}
+                `. Widest crosscut ${formatInches(g.cuts.widestCrosscut)}″`}
               {g.offcut &&
                 `; keeps a ${formatInches(g.offcut.w)} × ${formatInches(g.offcut.h)}″ offcut on sheet ${g.offcut.sheet + 1}`}
-              {g.fewestSheets !== null &&
-                g.fewestSheets < g.sheets.length &&
-                `. Rip first uses ${plural(g.sheets.length - g.fewestSheets, "sheet")} more`}
+              {g.fewestSheets !== null && g.fewestSheets < g.sheets.length && (
+                <>
+                  .{" "}
+                  <MarkedText
+                    text={`**${CUT_STYLE_NAMES.rips}** adds ${plural(g.sheets.length - g.fewestSheets, "sheet")}`}
+                  />
+                </>
+              )}
               .
             </p>
             {g.tooBig.length > 0 && (
@@ -568,7 +575,7 @@ export function CutlistPage({
               </Button>
             </div>
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>
-              The {mat.word} parts of {proj.source}, {wallName} walls, for{" "}
+              The {mat.word} parts of <MarkedText text={proj.source} />, {wallName} walls, for{" "}
               {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
             </p>
           </div>
@@ -635,7 +642,7 @@ export function CutlistPage({
             <>
               <NumberField
                 label={
-                  <Tooltip tip="18 mm birch is often 0.689″; ¾″ plywood, 23/32″. Measure yours.">
+                  <Tooltip tip="18 mm birch is often 0.689″. ¾″ plywood is often 23/32″. Enter your measured thickness for accuracy.">
                     {`Measured ${PANEL_NOMINAL_NAMES[panel].name}`}
                   </Tooltip>
                 }
@@ -695,7 +702,9 @@ export function CutlistPage({
                 <div className={GAP_Y_TIGHT}>
                   <ToggleGroup
                     label={
-                      <Tooltip tip="Locked: along the sheet's length. Any: the layout can turn it.">
+                      <Tooltip
+                        tip={`Locked: along the sheet's length. **${GRAIN_LOOK_NAMES.any}**: the layout can turn the panel.`}
+                      >
                         Grain
                       </Tooltip>
                     }
@@ -740,7 +749,9 @@ export function CutlistPage({
             <>
               <ToggleGroup
                 label={
-                  <Tooltip tip="Rip first: full-length strips before any crosscut. Can use more sheets.">
+                  <Tooltip
+                    tip={`**${CUT_STYLE_NAMES.rips}**: full-length strips before any crosscut. May use more sheets.`}
+                  >
                     Cut style
                   </Tooltip>
                 }

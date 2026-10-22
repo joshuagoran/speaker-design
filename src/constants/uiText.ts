@@ -1,7 +1,7 @@
 /** UI copy more than one page shows the same way. */
 export const UI_TEXT = {
   /** the toast when a save to the saved-designs store fails */
-  saveFailed: "Couldn't save — try again",
+  saveFailed: "The save failed. Try again.",
   /** a Stack member's or a Space placement's toggle: its feed turned over (its pressure times −1) */
   invertPolarity: "Invert polarity",
   /** the settings column's title, and its name (and the phone sheet's bar's) for screen readers */
@@ -13,7 +13,7 @@ export const UI_TEXT = {
   partialPriceMark: "+",
   /** an optimizer card's line when some part has no price, and its tip */
   partialPrices: "Partial prices",
-  partialPricesTip: "Some drivers have no price; the real total is higher.",
+  partialPricesTip: "Some drivers have no price. The real total is higher.",
   /** the conditions a sensitivity figure is quoted at */
   splConditions: "2.83 V, half space, 1 m",
   /** the PA stack's sub, as its results section and the system response chart name it */
@@ -28,8 +28,13 @@ export const UI_TEXT = {
   outdoors: "Outdoors",
   /** the coverage map's one-frequency slider and field */
   frequency: "Frequency",
+  /** the coverage map's band choice that shows one frequency */
+  oneFrequency: "One frequency",
   /** a room's width field (indoors) */
   roomWidth: "Width",
+  /** the totals tiles: the purchased parts' price, and a Stack's height */
+  price: "Price",
+  height: "Height",
   /** the summary line of the Details drop-downs (each page's written details, the optimizer's goal notes) */
   details: "Details",
   /** the 3D view's buttons: full screen and back, and the cutaway (the cabinet as a ghost, the parts inside showing) */

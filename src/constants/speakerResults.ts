@@ -1,5 +1,9 @@
 // The Speaker page's results pane (src/pages/speaker): the saving row's nouns, the 2D views' ids and words, the checks' row
-// labels and the Details fold's bullets. It imports nothing, so the Node checks (tests/mobile-check.mjs) can read it.
+// labels and the Details fold's bullets.
+import { CUTLIST_TAB_NAME, PROJECT_NAMES } from "./pages";
+import { SPEAKER_TEXT } from "./speakerPage";
+import { UI_TEXT } from "./uiText";
+import { SAVE_ROW_TEXT } from "./saveRow";
 
 /**
  * The 2D drawing's views, by id: the speaker seen from the front, cut through its center from the side, or cut through
@@ -35,7 +39,7 @@ export const SPEAKER_SAVE_WORDS = {
   savedList: "Saved Speakers",
   pick: (n: number) => `Saved Speakers (${n})`,
   noSaved: "No saved Speakers yet",
-  newFromTip: "Starts a new Speaker from a template. It replaces the current design.",
+  newFromTip: SAVE_ROW_TEXT.newFromTip(PROJECT_NAMES.speaker),
 } as const;
 
 /** The checks' row labels: a band's, by its name, and a chamber's, by its place. */
@@ -60,7 +64,7 @@ export const BRACING_CHIP_TEXT = {
   meetsTip: (target: string) => `Every panel is above ${target}.`,
   under: "Under bracing target",
   underTip: (target: string) =>
-    `Not enough braces fit round the drivers, the vent and the horn. Some panels stay under ${target}, or over a strength limit. Details lists them.`,
+    `Not enough braces fit around the drivers, the vent, and the horn. Some panels stay under ${target}, or over a strength limit. **${UI_TEXT.details}** lists them.`,
 } as const;
 
 /** The Details fold's groups, by chart, and their bullets: short sentences, one fact each. */
@@ -69,25 +73,25 @@ export const SPEAKER_DETAILS_TEXT = {
   responseLines: [
     "On axis, at 1 m, in half space.",
     "Every band gets 2.83 V.",
-    "It does not include the baffle step, the room or the driver positions yet.",
-    "The Space page adds them.",
+    "It does not include the baffle step, the room, or the driver positions yet.",
+    `The **${PROJECT_NAMES.space}** page adds them.`,
   ],
-  fbLine: "Fb marks the tuning of each ported chamber.",
+  fbLine: `**${SPEAKER_TEXT.fb}** marks the tuning of each vented chamber.`,
   maxOutput: "Maximum output",
   maxOutputLines: [
     "On axis, at 1 m.",
     "Each band gets the full power of its amp, up to its first limit.",
-    "The limits are cone travel, port air speed, radiator travel, the program rating (2 × AES) and the amp.",
-    "You set the port air speed limit in the chamber.",
-    "The max of a band is for music, with one drive for the whole band.",
+    "The limits are cone travel, vent air speed, radiator travel, the program rating (2 × AES), and the amp.",
+    `You set the vent **${SPEAKER_TEXT.airSpeed}** in the chamber.`,
+    "The maximum output of a band is for music, with one drive for the whole band.",
     "The sum uses one input for all bands.",
     "A band limits the sum only where the band has signal.",
   ],
   price: "Price",
   priceLines: [
-    "The total of the purchased parts: drivers, horns, radiators, port tubes and hardware.",
+    "The total of the purchased parts: drivers, horns, radiators, port tubes, and hardware.",
     "It does not include the plywood.",
-    "The Cutlist tab lists every part.",
+    `The **${CUTLIST_TAB_NAME}** tab lists every part.`,
   ],
   partialLine: "Some parts have no price. The real total is higher (+).",
   bracing: "Bracing and weight",
@@ -97,28 +101,27 @@ export const SPEAKER_DETAILS_TEXT = {
   /** a braced chamber's braces, by its place and the braces in words */
   bracesLine: (n: number, braces: string) => `Chamber ${n}: ${braces}.`,
   unbracedLine: (n: number) =>
-    `Chamber ${n} has no bracing: no braces in the cutlist, the weight or the net air.`,
+    `Chamber ${n} has no bracing: no braces in the **${CUTLIST_TAB_NAME}**, the weight, or the net air.`,
   underLine: (n: number, target: string) =>
     `Chamber ${n} does not get to ${target}. Not enough braces fit.`,
-  netAirLine:
-    "The net air subtracts the braces, the vent walls, the baffle cleats and the hardware.",
-  weightLine: "The weight includes the panels, braces, drivers, horns, radiators and hardware.",
+  netAirLine: `The **${SPEAKER_TEXT.netAir}** subtracts the braces, the vent walls, the baffle cleats, and the hardware.`,
+  weightLine: `The **${SPEAKER_TEXT.weight}** includes the panels, braces, drivers, horns, radiators, and hardware.`,
   views: "Views",
   viewsLines: [
-    "Front: the speaker seen from the front.",
-    "Side: cut through the center, the front at the left.",
-    "Top: each chamber cut through its middle height, the front at the bottom.",
-    "Top: stacked chambers show one above the other, the highest at the top.",
-    "Top: a drawn fold shows the boards where the cut crosses them.",
-    "Top: a dashed vent or horn is below or above the cut.",
+    `**${SPEAKER_VIEW_NAMES.front}**: the speaker seen from the front.`,
+    `**${SPEAKER_VIEW_NAMES.side}**: cut through the center, the front at the left.`,
+    `**${SPEAKER_VIEW_NAMES.top}**: each chamber cut through its middle height, the front at the bottom.`,
+    `**${SPEAKER_VIEW_NAMES.top}**: stacked chambers show one above the other, the highest at the top.`,
+    `**${SPEAKER_VIEW_NAMES.top}**: a folded horn shows its boards at the height of the cut.`,
+    `**${SPEAKER_VIEW_NAMES.top}**: a dashed vent or horn is below or above the cut.`,
     "Each driver shows in the color of its band.",
   ],
   /** a straight horn in the Side and Top views */
   hornLines: [
-    "Side and Top show a straight horn cut through its center.",
+    `**${SPEAKER_VIEW_NAMES.side}** and **${SPEAKER_VIEW_NAMES.top}** show a straight horn cut through its center.`,
     "The walls of a horn follow its flare sections.",
     "They start just in front of the cones and cover their outer parts.",
-    "In Top, the dashed box is the front chamber, between the cones and the back edges of the walls.",
+    `In **${SPEAKER_VIEW_NAMES.top}**, the dashed box is the front chamber, between the cones and the back edges of the walls.`,
     "A folded path turns at the walls.",
     "A slot on a front side runs back along the side wall.",
   ],

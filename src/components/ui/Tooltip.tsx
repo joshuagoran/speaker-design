@@ -1,7 +1,9 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { MarkedText } from "./MarkedText";
 
 interface Props {
+  /** a string's control names (`**name**`) show in semibold */
   tip: React.ReactNode;
   children: React.ReactNode;
   className?: string;
@@ -90,7 +92,7 @@ export function Tooltip({ tip, children, className = "", control = false }: Prop
         typeof document !== "undefined" &&
         createPortal(
           <span role="tooltip" id={id} style={{ left: at.left, top: at.top }} className={TIP_CLASS}>
-            {tip}
+            {typeof tip === "string" ? <MarkedText text={tip} /> : tip}
           </span>,
           document.body,
         )}

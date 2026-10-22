@@ -12,6 +12,7 @@ import {
   useSettingsSheet,
 } from "../../components/ui/SettingsSheetTabs";
 import { SectionHeading } from "../../components/ui/SectionHeading";
+import { MarkedText } from "../../components/ui/MarkedText";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
@@ -95,7 +96,7 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  */
 export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: Props) {
   const pal = usePalette();
-  const { design, response, limits, totals, optimizer, store, snapshot, restore } = stack;
+  const { design, response, limits, totals, optimizer, store, snapshot, holds, restore } = stack;
   const { members, name, notes } = design.stack;
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<StackSettingsSection>("stack", "stack");
@@ -185,6 +186,7 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
             <SaveRow
               store={store}
               snapshot={snapshot}
+              holds={holds}
               restore={restore}
               name={name}
               onName={stack.setName}
@@ -218,14 +220,18 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
                     listenHeightIn={response.listenHeightIn}
                   />
                 </div>
-                <p className="text-xs text-stone-500 mt-2">{STACK_TEXT.front}</p>
+                <p className="text-xs text-stone-500 mt-2">
+                  <MarkedText text={STACK_TEXT.front} />
+                </p>
               </Card>
             </div>
             {members.length > 0 && (
               <>
                 <StatTileGrid tiles={totalTiles} />
                 {totals.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
-                <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.totalsNote}</p>
+                <p className={`${READING_WIDTH} text-sm text-stone-500`}>
+                  <MarkedText text={STACK_TEXT.totalsNote} />
+                </p>
               </>
             )}
             {members.length === 0 && <Notice>{STACK_TEXT.noMembers}</Notice>}
@@ -266,7 +272,9 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
             />
             {gaps && <Notice>{STACK_TEXT.gaps}</Notice>}
             <StatTileGrid tiles={tiles} />
-            <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.modelNote}</p>
+            <p className={`${READING_WIDTH} text-sm text-stone-500`}>
+              <MarkedText text={STACK_TEXT.modelNote} />
+            </p>
           </section>
           {limits.sum.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
@@ -403,7 +411,9 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
           {section(
             "crossovers",
             <>
-              <p className="text-xs text-stone-500">{STACK_TEXT.crossoverHint}</p>
+              <p className="text-xs text-stone-500">
+                <MarkedText text={STACK_TEXT.crossoverHint} />
+              </p>
               {members.map((member, k) => (
                 <Card key={k}>
                   <h4 className="font-semibold min-w-0 truncate">{names[k]}</h4>

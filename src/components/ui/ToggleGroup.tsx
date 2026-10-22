@@ -1,4 +1,5 @@
 import { ToggleButton } from "./ToggleButton";
+import { plainText } from "./MarkedText";
 import type { ButtonSize } from "./buttonStyles";
 
 /** One choice of a `ToggleGroup`: its value, its label, and optionally a tooltip. */
@@ -36,6 +37,7 @@ export function ToggleGroup<T extends string | number | boolean>({
       <div className={wrap ? "flex flex-wrap gap-1" : "flex gap-1"}>
         {options.map(([v, l, tip]) => {
           const off = disabled?.values.includes(v) ?? false;
+          const title = off ? (disabled?.why ?? tip) : tip;
           return (
             <ToggleButton
               key={String(v)}
@@ -43,7 +45,7 @@ export function ToggleGroup<T extends string | number | boolean>({
               on={value === v}
               onClick={() => onChange(v)}
               disabled={off}
-              title={off ? (disabled?.why ?? tip) : tip}
+              title={title && plainText(title)}
             >
               {l}
             </ToggleButton>

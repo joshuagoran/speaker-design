@@ -365,7 +365,7 @@ test("the fold's words: the limits, the keep hint and the summary name a stack",
   assert.equal(T.summaryHeight(72), "up to 72 in tall");
   assert.equal(T.summaryWeight(null), "no weight limit");
   assert.equal(T.summaryWeight(60), "up to 60 lb a box");
-  assert.match(T.targetYours("113"), /stack/);
+  assert.match(T.targetYours("113"), /Stack/);
 });
 
 test("the near miss's weight is per box: the option, and the heaviest box where the weight limit blocks", () => {

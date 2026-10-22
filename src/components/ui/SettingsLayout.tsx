@@ -85,7 +85,7 @@ export function SettingsLayout({ results, settings, sheet }: Props) {
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Settings width (drag or arrow keys; double-click resets)"
+        aria-label="Settings width. Drag, use the arrow keys, or double-click to reset."
         aria-valuemin={SETTINGS_MIN_PX}
         aria-valuemax={size.max}
         aria-valuenow={size.now}

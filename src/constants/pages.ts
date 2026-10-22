@@ -31,15 +31,18 @@ export const PROJECT_NAV_LABELS: Record<ProjectId, string> = {
   space: "Space pages",
 };
 
+/** The name of a project's Cutlist tab. */
+export const CUTLIST_TAB_NAME = "Cutlist";
+
 /** Each project's pages, in the order its sub-tab row shows them, with the tab's label; the first is the project's home. */
 export const PROJECT_PAGES = {
   speaker: [
     ["speaker", "Design"],
-    ["speakerCutlist", "Cutlist"],
+    ["speakerCutlist", CUTLIST_TAB_NAME],
   ],
   stack: [
     ["stack", "Design"],
-    ["stackCutlist", "Cutlist"],
+    ["stackCutlist", CUTLIST_TAB_NAME],
   ],
   space: [["space", "Design"]],
 } as const satisfies Record<ProjectId, readonly (readonly [AppPage, string])[]>;

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { MarkedText } from "../../components/ui/MarkedText";
 import type {
   BandId,
   ChamberBracing,
@@ -162,7 +163,7 @@ const BRACING_TIP = (
   <>
     {keysOf(SPEAKER_BRACE_STYLE_NAMES).map((k) => (
       <span key={k} className="block">
-        {SPEAKER_BRACE_STYLE_NAMES[k]}: {SPEAKER_BRACE_STYLE_TIPS[k]}
+        <MarkedText text={`**${SPEAKER_BRACE_STYLE_NAMES[k]}**: ${SPEAKER_BRACE_STYLE_TIPS[k]}`} />
       </span>
     ))}
   </>
@@ -303,7 +304,7 @@ export function ChamberSettings({
           />
           {!vents && <p className="text-xs text-stone-500">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
-            label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
+            label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>{SPEAKER_TEXT.airSpeed}</Tooltip>}
             value={vent.maxSpeedMs}
             min={1}
             step={0.5}
@@ -401,7 +402,7 @@ export function ChamberSettings({
           />
           {chamber.load.kind === CHAMBER_LOAD.horn && (
             <ToggleGroup
-              label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
+              label={SPEAKER_TEXT.hornPath}
               value={chamber.load.horn.path}
               onChange={(path) =>
                 onEdit((c) =>
@@ -774,7 +775,11 @@ function SlotFields({
       options={entriesOf(SLOT_KIND_NAMES).map(([k, name]) => [k, name, SLOT_KIND_TIPS[k]] as const)}
     />
   );
-  const resets = <p className="text-xs text-stone-500">{SPEAKER_TEXT.slotKindResets}</p>;
+  const resets = (
+    <p className="text-xs text-stone-500">
+      <MarkedText text={SPEAKER_TEXT.slotKindResets} />
+    </p>
+  );
   if (letterbox)
     return (
       <>
@@ -817,7 +822,7 @@ function SlotFields({
       {resets}
       <div className={FIELD_ROW}>
         <NumberField
-          label="Count"
+          label={SPEAKER_TEXT.slotCount}
           {...onFieldStep(port.n, SPEAKER_STEPS.count)}
           min={1}
           onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
@@ -898,7 +903,9 @@ function RoundFields({
         }
       />
       {port.flared && !flaredFits && (
-        <p className="text-xs text-stone-500">{SPEAKER_TEXT.tubeEndsNoSub}</p>
+        <p className="text-xs text-stone-500">
+          <MarkedText text={SPEAKER_TEXT.tubeEndsNoSub} />
+        </p>
       )}
       {port.flared && (
         <ToggleGroup

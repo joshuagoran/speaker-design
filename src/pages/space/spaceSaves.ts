@@ -1,5 +1,6 @@
 // The Space page's saves (the `spaces` collection under users/{uid}): what a save stores and how a document opens.
 // Pure.
+import { plainText } from "../../components/ui/MarkedText";
 import type {
   SavedConfig,
   SavedSpaceData,
@@ -53,7 +54,7 @@ export const itemName = (
 /** The space in one line, as the library lists it: what it places. */
 export const spaceSummary = (design: SpaceDesign) =>
   design.space.placements.map((p) => itemName(design, p.item)).join(" + ") ||
-  SPACE_TEXT.noPlacements;
+  plainText(SPACE_TEXT.noPlacements);
 
 /**
  * What a save stores: the space without its id and name, and the stacks and speakers it places; undefined fields

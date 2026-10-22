@@ -4,7 +4,6 @@ import { Button } from "../../components/ui/Button";
 import { CardFold } from "../../components/ui/CardFold";
 import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
-import { MarkedText } from "../../components/ui/MarkedText";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { wrapYawDeg } from "../../lib/speaker/spaceLayout";
@@ -175,7 +174,7 @@ export function PlacementSettings({
         </ToggleButton>
       </div>
       <ToggleGroup
-        label={<Tooltip tip={<MarkedText text={SPACE_TEXT.roleTip} />}>{SPACE_TEXT.role}</Tooltip>}
+        label={<Tooltip tip={SPACE_TEXT.roleTip}>{SPACE_TEXT.role}</Tooltip>}
         value={placement.fill}
         onChange={(fill) => onEdit((p) => ({ ...p, fill }))}
         options={PLACEMENT_ROLES}
@@ -189,9 +188,7 @@ export function PlacementSettings({
           onChange={(db) => onEdit((p) => ({ ...p, levelDb: db }))}
         />
         <NumberField
-          label={
-            <Tooltip tip={<MarkedText text={SPACE_TEXT.delayTip} />}>{SPACE_TEXT.delay}</Tooltip>
-          }
+          label={<Tooltip tip={SPACE_TEXT.delayTip}>{SPACE_TEXT.delay}</Tooltip>}
           value={roundDelayMs(delayMs)}
           min={0}
           step={DELAY_STEP_MS}

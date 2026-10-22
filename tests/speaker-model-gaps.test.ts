@@ -34,14 +34,15 @@ function render(spec: SpeakerSpec): string {
   return renderToString(createElement(Probe));
 }
 
-/** The text as the markup holds it (React escapes these five). */
+/** The text as the markup holds it (React escapes these five; a marked name, `**name**`, is a semibold span). */
 const markup = (text: string) =>
   text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/'/g, "&#x27;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/\*\*(.+?)\*\*/g, '<span class="font-semibold">$1</span>');
 
 const base = speakerFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, { id: "gaps", name: "gaps" });
 const [baseChamber] = base.cabinet.chambers;

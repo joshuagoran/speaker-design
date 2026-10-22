@@ -73,5 +73,5 @@ export const SPEAKER_START_SPEAKER_NAMES = {
 
 /** The groups "New from…" lists the starts under: the templates. */
 export const SPEAKER_START_GROUPS = {
-  templates: "Templates",
+  templates: "Presets",
 } as const;

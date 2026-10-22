@@ -41,7 +41,7 @@ export const HORN_MOUNT_TIPS: Record<HornMountId, string> = {
 };
 
 /** The plate's tooltip when no driver bolt can pass through it (`plateFit` finds none), and what holds the driver. */
-export const HORN_MOUNT_PLATE_FALLBACK = `No driver bolt has room for its washer on the plate beside this horn's neck, so a clamped ${aluminumIn} ${CLAMPED_BRACKET_NAME} holds the driver instead.`;
+export const HORN_MOUNT_PLATE_FALLBACK = `No driver bolt has room for its washer on the plate beside this horn's neck. A clamped ${aluminumIn} ${CLAMPED_BRACKET_NAME} holds the driver instead.`;
 
 /** Why the plywood mount can't be picked for a horn and driver (`plyMountFit` finds no room), as its tooltip. */
 export const HORN_MOUNT_PLY_UNAVAILABLE =

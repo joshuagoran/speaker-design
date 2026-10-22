@@ -1,6 +1,7 @@
 import { Tooltip } from "../ui/Tooltip";
 import { SUB_BASS_BAND_HZ } from "../../lib/acoustics/boxModels";
 import { UI_TEXT } from "../../constants/uiText";
+import { CUTLIST_TAB_NAME } from "../../constants/pages";
 
 /** A statistic with plain-language help: its label, and the tooltip shown on it. */
 export interface StatDef {
@@ -23,7 +24,7 @@ export const STATS = {
   },
   hydraulicDiameter: {
     label: "Hydraulic diameter",
-    tip: "4 × area ÷ perimeter. Small values mean turbulence; flared mouths help.",
+    tip: "4 × area ÷ perimeter. Small values mean turbulence.",
   },
   midbandSensitivity: {
     label: "Midband sensitivity",
@@ -31,7 +32,7 @@ export const STATS = {
   },
   firstLimit: {
     label: "First limit, music",
-    tip: "What limits first with music: Xmax, port air speed or other.",
+    tip: "What limits first with music: Xmax, port air speed, or other.",
   },
   peakPortVelocity: {
     label: "Peak port velocity",
@@ -43,7 +44,7 @@ export const STATS = {
   },
   qtc: {
     label: "Qtc",
-    tip: "Sealed-box damping. 0.7 is flat; higher is boomy, lower dry.",
+    tip: "Sealed-box damping. 0.7 is flat. Higher is boomy, lower is dry.",
   },
   tuningFb: {
     label: "Tuning Fb",
@@ -51,11 +52,11 @@ export const STATS = {
   },
   systemF3: {
     label: "System F3",
-    tip: "−3 dB point against this driver's midband, with the highpass. Shape, not level.",
+    tip: "−3 dB point against this driver's midband, with the high-pass.",
   },
   subBass: {
     label: `Sub-bass ${SUB_BASS_BAND_HZ[0]}–${SUB_BASS_BAND_HZ[1]} Hz`,
-    tip: `Average of the max SPL curve from ${SUB_BASS_BAND_HZ[0]} to ${SUB_BASS_BAND_HZ[1]} Hz, with the highpass: steady sine level at the first limit.`,
+    tip: `Average of the max SPL curve from ${SUB_BASS_BAND_HZ[0]} to ${SUB_BASS_BAND_HZ[1]} Hz, with the high-pass. It is the steady sine level at the first limit.`,
   },
   f3InRoom: {
     label: "F3 in room",
@@ -70,11 +71,11 @@ export const STATS = {
     tip: "Driver cost for both speakers.",
   },
   partsPrice: {
-    label: "Price",
-    tip: `The purchased parts on the Cutlist tab, without the plywood. A ${UI_TEXT.partialPriceMark} shows that some parts have no price.`,
+    label: UI_TEXT.price,
+    tip: `The purchased parts on the **${CUTLIST_TAB_NAME}** tab, without the plywood. A ${UI_TEXT.partialPriceMark} shows that some parts have no price.`,
   },
   stackHeight: {
-    label: "Height",
+    label: UI_TEXT.height,
     tip: "From the stack's base to its highest point, with a horn on a top. A plinth or stand under the stack is not included.",
   },
 } as const satisfies Record<string, StatDef>;
