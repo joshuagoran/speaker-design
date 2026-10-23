@@ -1,13 +1,32 @@
-import { useEffect, useState } from "react";
-import { DRIVER_ICON_PATH, Icon, IconButton, STRIKE_ICON_PATH } from "../ui/IconButton";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { Icon, IconButton } from "../ui/IconButton";
+import {
+  CloseIcon,
+  EXPANDED_PANEL_CLASS,
+  ExpandBackdrop,
+  ExpandIcon,
+  useExpanded,
+} from "../ui/ExpandPanel";
+import { ToggleMenu, type ToggleMenuItem } from "../ui/ToggleMenu";
 import { UI_TEXT } from "../../constants/uiText";
 import { ViewResetContext } from "./viewReset";
-
-/** A wedge opening from a point on the left to an edge on the right: a driver's aim and coverage (a 16 px icon's path). */
-const BEAM_ICON_PATH = "M2.5 8L13.5 3.5M2.5 8l11 4.5M13.5 3.5v9";
+import { ViewOutlinesContext } from "./outlineScene";
 
 /** A circle open at the top right, its arrowhead at the open end: back to the start (a 16 px icon's path). */
 const RESET_ICON_PATH = "M13 8a5 5 0 1 1-1.46-3.54M13 2.5v3h-3";
+
+/** Three sliders, each with its knob: the view's settings (a 16 px icon). */
+function SettingsIcon() {
+  return (
+    <Icon>
+      <path d="M2 4h5M10 4h4M2 8h2M7 8h7M2 12h7M12 12h2" />
+      <circle cx="8.5" cy="4" r="1.5" />
+      <circle cx="5.5" cy="8" r="1.5" />
+      <circle cx="10.5" cy="12" r="1.5" />
+    </Icon>
+  );
+}
 
 /** What the card's buttons set: how the view draws the design. */
 export interface ViewerLook {
@@ -20,13 +39,13 @@ export interface ViewerLook {
 }
 
 interface Props {
-  /** the card's size and position while it isn't full screen */
+  /** the card's size and position while it isn't expanded */
   boxClassName: string;
   /** whether it opens in the cutaway (default: finished; the render tool sets it) */
   startCutaway?: boolean;
-  /** a button that shows or hides the drivers (the Speaker page's view) */
+  /** an option that shows or hides the drivers (the Speaker page's view) */
   driversButton?: boolean;
-  /** a button that shows or hides the drivers' beams (the Space page's view) */
+  /** an option that shows or hides the drivers' beams (the Space page's view) */
   beamsButton?: boolean;
   /** the 3D view, drawn finished or in the cutaway, with or without its drivers */
   children: (cutaway: boolean, look: ViewerLook) => React.ReactNode;
@@ -34,8 +53,9 @@ interface Props {
 
 /**
  * A 3D view's card, the Speaker page's, the Stack page's and the Space page's alike: the view with its buttons laid over
- * it, the cutaway, the drivers or the beams (where the page asks for them), the camera's reset, and full screen. They are how you look at
- * the design, not part of it, so they live here and are never saved.
+ * it. The settings menu turns on Outlines only, the cutaway, and the drivers or the beams (where the page asks for
+ * them); then the camera's reset, and expand (the whole screen on a phone, a large box from md up). They are how you
+ * look at the design, not part of it, so they live here and are never saved.
  */
 export function Viewer3DCard({
   boxClassName,
@@ -44,82 +64,56 @@ export function Viewer3DCard({
   beamsButton = false,
   children,
 }: Props) {
-  const [isFull, setIsFull] = useState(false);
+  const [expanded, setExpanded] = useExpanded();
+  const [outlines, setOutlines] = useState(false);
   const [cutaway, setCutaway] = useState(startCutaway);
   const [drivers, setDrivers] = useState(true);
   const [beams, setBeams] = useState(true);
   /** how many times the reset button was pressed: each press puts the camera back where it started */
   const [resets, setResets] = useState(0);
-  useEffect(() => {
-    if (!isFull) return;
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsFull(false);
-    };
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [isFull]);
+  const options: ToggleMenuItem[] = [
+    { label: UI_TEXT.outlinesOnly, on: outlines, onToggle: () => setOutlines((v) => !v) },
+    { label: UI_TEXT.cutaway, on: cutaway, onToggle: () => setCutaway((v) => !v) },
+    ...(driversButton
+      ? [{ label: UI_TEXT.showDrivers, on: drivers, onToggle: () => setDrivers((v) => !v) }]
+      : []),
+    ...(beamsButton
+      ? [{ label: UI_TEXT.showAimCoverage, on: beams, onToggle: () => setBeams((v) => !v) }]
+      : []),
+  ];
   return (
-    <section
-      className={
-        isFull
-          ? "fixed inset-0 z-50 bg-stone-50"
-          : `rounded-lg overflow-hidden border border-stone-300 bg-stone-50 ${boxClassName}`
-      }
-    >
-      <div className="absolute top-2 right-2 z-10 flex gap-2">
-        <IconButton label={UI_TEXT.cutaway} pressed={cutaway} onClick={() => setCutaway((v) => !v)}>
-          {/* a box with its front corner cut away */}
-          <Icon>
-            <path d="M8 1.5l5.5 3v7L8 14.5l-5.5-3v-7z" />
-            <path d="M2.5 4.5L8 7.5l5.5-3M8 7.5v3" strokeDasharray="1.5 1.5" />
-          </Icon>
-        </IconButton>
-        {driversButton && (
-          <IconButton
-            label={drivers ? UI_TEXT.hideDrivers : UI_TEXT.showDrivers}
-            onClick={() => setDrivers((v) => !v)}
-          >
-            {/* a speaker seen from the side, struck through while the drivers are hidden */}
+    <>
+      {/* the same element on the page and expanded, so the view keeps its renderer and camera */}
+      <section
+        className={
+          expanded
+            ? `${EXPANDED_PANEL_CLASS} overflow-hidden bg-stone-50`
+            : `rounded-lg overflow-hidden border border-stone-300 bg-stone-50 ${boxClassName}`
+        }
+      >
+        <div className="absolute top-2 right-2 z-10 flex gap-2">
+          <ToggleMenu label={UI_TEXT.settings3d} icon={<SettingsIcon />} items={options} />
+          <IconButton label={UI_TEXT.resetView} onClick={() => setResets((n) => n + 1)}>
+            {/* a circular arrow */}
             <Icon>
-              <path d={DRIVER_ICON_PATH} />
-              {!drivers && <path d={STRIKE_ICON_PATH} />}
+              <path d={RESET_ICON_PATH} />
             </Icon>
           </IconButton>
-        )}
-        {beamsButton && (
           <IconButton
-            label={beams ? UI_TEXT.hideAimCoverage : UI_TEXT.showAimCoverage}
-            onClick={() => setBeams((v) => !v)}
+            label={expanded ? UI_TEXT.close : UI_TEXT.expand3dView}
+            onClick={() => setExpanded(!expanded)}
           >
-            {/* a wedge opening from a point, struck through while the beams are hidden */}
-            <Icon>
-              <path d={BEAM_ICON_PATH} />
-              {!beams && <path d={STRIKE_ICON_PATH} />}
-            </Icon>
+            {expanded ? <CloseIcon /> : <ExpandIcon />}
           </IconButton>
-        )}
-        <IconButton label={UI_TEXT.resetView} onClick={() => setResets((n) => n + 1)}>
-          {/* a circular arrow */}
-          <Icon>
-            <path d={RESET_ICON_PATH} />
-          </Icon>
-        </IconButton>
-        <IconButton
-          label={isFull ? UI_TEXT.closeFullScreen : UI_TEXT.fullScreen}
-          onClick={() => setIsFull((v) => !v)}
-        >
-          <Icon>
-            {isFull ? (
-              <path d="M4 4l8 8M12 4l-8 8" />
-            ) : (
-              <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />
-            )}
-          </Icon>
-        </IconButton>
-      </div>
-      <ViewResetContext.Provider value={resets}>
-        {children(cutaway, { cutaway, drivers, beams })}
-      </ViewResetContext.Provider>
-    </section>
+        </div>
+        <ViewResetContext.Provider value={resets}>
+          <ViewOutlinesContext.Provider value={outlines}>
+            {children(cutaway, { cutaway, drivers, beams })}
+          </ViewOutlinesContext.Provider>
+        </ViewResetContext.Provider>
+      </section>
+      {expanded &&
+        createPortal(<ExpandBackdrop onClose={() => setExpanded(false)} />, document.body)}
+    </>
   );
 }

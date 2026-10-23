@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useThemeName } from "../../hooks/useTheme";
-import { STAGE } from "../../styles/palette";
+import { PALETTES, STAGE } from "../../styles/palette";
 import { FRAME_BOX_KEY, VIEW_FOV_DEG, fitFootprint, type SceneFit } from "./sceneFraming";
 import { ViewResetContext } from "./viewReset";
+import { ViewOutlinesContext, outlineScene } from "./outlineScene";
 
 interface Props {
   /** changes exactly when the scene does (the JSON of the builder's inputs) */
@@ -85,6 +86,8 @@ export function SceneView3D({
   latest.current = { build, fit, withStage, start };
   // the card's reset button: the camera back to where it started, unpanned (the render loop draws it next frame)
   const resets = useContext(ViewResetContext);
+  // the card's Outlines only: the scene is rebuilt when it changes
+  const outlines = useContext(ViewOutlinesContext);
   useEffect(() => {
     if (!resets) return;
     Object.assign(state.current, START, latest.current.start);
@@ -303,6 +306,7 @@ export function SceneView3D({
     scene.add(key);
 
     const group = latest.current.build();
+    if (outlines) outlineScene(group, PALETTES[theme].ink);
     scene.add(group);
 
     if (latest.current.withStage) {
@@ -341,7 +345,7 @@ export function SceneView3D({
     el.dataset.geometries = String(geometries);
     el.dataset.textures = String(textures);
     el.dataset.rebuilds = String(Number(el.dataset.rebuilds ?? 0) + 1);
-  }, [builtKey, theme]);
+  }, [builtKey, theme, outlines]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }

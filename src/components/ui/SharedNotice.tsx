@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "./Button";
 import { Notice } from "./Notice";
 import { SHARE_TEXT } from "../../constants/share";
+import { UI_TEXT } from "../../constants/uiText";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /** What the shared view's notice shows and does. */
@@ -65,7 +66,7 @@ export function SharedNotice({
               <>
                 <span>{SHARE_TEXT.closeAsk}</span>
                 <Button size="xs" onClick={onClose}>
-                  {SHARE_TEXT.close}
+                  {UI_TEXT.close}
                 </Button>
                 <Button size="xs" onClick={() => setAsking(false)}>
                   {SHARE_TEXT.closeKeep}
@@ -73,7 +74,7 @@ export function SharedNotice({
               </>
             ) : (
               <Button size="xs" onClick={() => (changed() ? setAsking(true) : onClose())}>
-                {SHARE_TEXT.close}
+                {UI_TEXT.close}
               </Button>
             )}
             {status && <span>{status}</span>}

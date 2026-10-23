@@ -8,6 +8,7 @@ import { SVG_FONT, FONT } from "../../styles/fonts";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 import { HOVER_TRANSITION } from "../ui/buttonStyles";
 import { BandSwatch } from "../ui/BandSwatch";
+import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
 
 /**
  * One curve on the chart: its points, legend label, line color and fill color. `band` shades the curve at the low and
@@ -89,6 +90,8 @@ export function ResponseChart({
   H = 300,
 }: Props) {
   const pal = usePalette();
+  // in an expanded dialog: the dialog's height and its full width
+  const expandedH = useExpandedChartHeight();
   // drawn in real pixels so text stays 11 px at any width
   const [box, cw] = useElementWidth(760);
   const narrow = cw < 500;
@@ -97,7 +100,8 @@ export function ResponseChart({
     R = narrow ? 8 : 14,
     TT = 16,
     B = 36;
-  if (narrow && H >= 300) H = Math.round(H * 0.8);
+  if (expandedH !== null) H = expandedH;
+  else if (narrow && H >= 300) H = Math.round(H * 0.8);
   const x0 = L,
     x1 = W - R,
     y0 = TT,
@@ -233,7 +237,7 @@ export function ResponseChart({
       );
   }
   return (
-    <div ref={box} className={RESULT_MAX_WIDTH}>
+    <div ref={box} className={expandedH === null ? RESULT_MAX_WIDTH : undefined}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
@@ -352,7 +356,8 @@ export function ResponseChart({
               );
             })()}
             <text
-              x={x1}
+              // on the page, clear of the expand button on the chart's top-right corner
+              x={expandedH === null ? W - EXPAND_BUTTON_ROOM_PX : x1}
               y={y0 - 4}
               textAnchor="end"
               fontSize="12"

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { ExpandableChart } from "../../components/ui/ExpandPanel";
 import { SpaceView3D } from "../../components/stack-view/SpaceView3D";
 import { spaceBeams } from "../../lib/speaker/spaceBeams";
 import { alpha, TARGET_DASH } from "../../styles/palette";
@@ -388,43 +389,45 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
               {/* two columns: the map's cell sets the first row's height, and the 3D view fills it */}
               <div className={wide ? "contents" : `min-w-0 ${GAP_Y}`}>
                 <div className={resultsCellClass(wide, "col-start-1 row-start-1")}>
-                  <CoverageMap
-                    view={view}
-                    room={venue.room}
-                    listener={venue.listener}
-                    boxes={boxes}
-                    coupling={space.coupling.marks}
-                    stages={listedStages(venue.stages).map((st) => ({
-                      id: st.id,
-                      corners: st.corners,
-                      polygon: st.shape === STAGE_SHAPE.polygon,
-                      riser: st.on !== null,
-                      label: SPACE_TEXT.stageLabel(
-                        stageNameOf.get(st.id) ?? "",
-                        `${shownIn(stageTopFt(venue.stages, st))}`,
-                      ),
-                    }))}
-                    selectedStage={selectedStage}
-                    onSelectStage={(id) => pickStage(id, window.matchMedia(MD_UP).matches)}
-                    selected={space.items.flatMap((item, i) =>
-                      item.placement.source === selected ? [i] : [],
-                    )}
-                    onSelect={(i) => {
-                      const item = space.items[i];
-                      if (item) pickOnMap(item.placement.source);
-                    }}
-                    actions={{
-                      moveBox: space.moveBox,
-                      aimBox: space.aimBox,
-                      moveListener: space.moveListener,
-                      beginStageDrag: space.stages.beginDrag,
-                      dragStage: space.stages.drag,
-                      setDragging: space.setDragging,
-                    }}
-                    busy={space.isPending}
-                    maxHeight={maxHeight}
-                    quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
-                  />
+                  <ExpandableChart title={SPACE_TEXT.coverage}>
+                    <CoverageMap
+                      view={view}
+                      room={venue.room}
+                      listener={venue.listener}
+                      boxes={boxes}
+                      coupling={space.coupling.marks}
+                      stages={listedStages(venue.stages).map((st) => ({
+                        id: st.id,
+                        corners: st.corners,
+                        polygon: st.shape === STAGE_SHAPE.polygon,
+                        riser: st.on !== null,
+                        label: SPACE_TEXT.stageLabel(
+                          stageNameOf.get(st.id) ?? "",
+                          `${shownIn(stageTopFt(venue.stages, st))}`,
+                        ),
+                      }))}
+                      selectedStage={selectedStage}
+                      onSelectStage={(id) => pickStage(id, window.matchMedia(MD_UP).matches)}
+                      selected={space.items.flatMap((item, i) =>
+                        item.placement.source === selected ? [i] : [],
+                      )}
+                      onSelect={(i) => {
+                        const item = space.items[i];
+                        if (item) pickOnMap(item.placement.source);
+                      }}
+                      actions={{
+                        moveBox: space.moveBox,
+                        aimBox: space.aimBox,
+                        moveListener: space.moveListener,
+                        beginStageDrag: space.stages.beginDrag,
+                        dragStage: space.stages.drag,
+                        setDragging: space.setDragging,
+                      }}
+                      busy={space.isPending}
+                      maxHeight={maxHeight}
+                      quiet={placements.length === 0 ? SPACE_TEXT.quietRoom : undefined}
+                    />
+                  </ExpandableChart>
                 </div>
                 <div className={`${resultsCellClass(wide, "col-start-1 row-start-2")} ${GAP_Y}`}>
                   {space.error && <Notice>Map failed: {space.error}</Notice>}
@@ -484,34 +487,36 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
           {space.response.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
               <SectionHeading>{SPACE_TEXT.response}</SectionHeading>
-              <ResponseChart
-                fmax={FREQ_AXIS_MAX_HZ}
-                H={240}
-                yLabel={SPACE_TEXT.responseY}
-                series={[
-                  {
-                    curve: space.response,
-                    label: SPACE_TEXT.listener,
-                    stroke: pal.ink,
-                    tint: alpha(pal.ink, 0.05),
-                  },
-                  {
-                    curve: space.targetCurve,
-                    label: SPACE_TEXT.targetCurve,
-                    stroke: pal.ink,
-                    tint: alpha(pal.ink, 0),
-                    dash: TARGET_DASH,
-                  },
-                ]}
-                span={
-                  space.band === "one"
-                    ? undefined
-                    : { lo: COVERAGE_BANDS[space.band].lo, hi: COVERAGE_BANDS[space.band].hi }
-                }
-                marks={
-                  space.band === "one" ? [{ f: space.freqHz, label: formatHz(space.freqHz) }] : []
-                }
-              />
+              <ExpandableChart title={SPACE_TEXT.response}>
+                <ResponseChart
+                  fmax={FREQ_AXIS_MAX_HZ}
+                  H={240}
+                  yLabel={SPACE_TEXT.responseY}
+                  series={[
+                    {
+                      curve: space.response,
+                      label: SPACE_TEXT.listener,
+                      stroke: pal.ink,
+                      tint: alpha(pal.ink, 0.05),
+                    },
+                    {
+                      curve: space.targetCurve,
+                      label: SPACE_TEXT.targetCurve,
+                      stroke: pal.ink,
+                      tint: alpha(pal.ink, 0),
+                      dash: TARGET_DASH,
+                    },
+                  ]}
+                  span={
+                    space.band === "one"
+                      ? undefined
+                      : { lo: COVERAGE_BANDS[space.band].lo, hi: COVERAGE_BANDS[space.band].hi }
+                  }
+                  marks={
+                    space.band === "one" ? [{ f: space.freqHz, label: formatHz(space.freqHz) }] : []
+                  }
+                />
+              </ExpandableChart>
             </section>
           )}
           <div className={`${READING_WIDTH} mt-5`}>
