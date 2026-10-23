@@ -37,6 +37,7 @@ import { KEEP_UP_SLACK_DB } from "../chips";
 import { LITERS_PER_CUBIC_IN } from "../../../constants/units";
 import { SPEAKER_PROBLEM } from "../../../constants/speakerOptimizer";
 import { PURCHASED_PART } from "../../../constants/purchasedParts";
+import { PASSBAND_EDGE_DB } from "../../../constants/acoustics";
 
 /** What a design fails, by id (`SPEAKER_PROBLEM`). */
 export type SpeakerProblem = (typeof SPEAKER_PROBLEM)[keyof typeof SPEAKER_PROBLEM];
@@ -53,8 +54,6 @@ const FIT_SLACK_IN = 1e-6;
 export const SIZE_SLACK_IN = 0.01;
 /** The maximum-output curve a card carries: every this many points of the response's grid. */
 const CURVE_EVERY = 4;
-/** A level, dB, below the passband that sets the F3. */
-const F3_DB = 3;
 
 /** What a design must keep to fail nothing new against your design: what is modeled, what fits. */
 export interface SpeakerFacts {
@@ -87,12 +86,12 @@ export interface SpeakerEval {
 }
 
 /**
- * The F3: the lowest frequency where the curve first reaches its passband (`passbandDb`) less F3_DB, Hz, between grid
+ * The F3: the lowest frequency where the curve first reaches its passband (`passbandDb`) less PASSBAND_EDGE_DB, Hz, between grid
  * points on a log scale; null for an empty curve.
  */
 export function f3Of(curve: readonly FrequencyPoint[]): number | null {
   if (!curve.length) return null;
-  const edge = passbandDb(curve) - F3_DB;
+  const edge = passbandDb(curve) - PASSBAND_EDGE_DB;
   const i = curve.findIndex((o) => o.spl >= edge);
   if (i < 0) return null;
   if (i === 0) return curve[0].f;

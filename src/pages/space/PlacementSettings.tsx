@@ -1,3 +1,4 @@
+import { clamp } from "../../lib/clamp";
 import type { SpacePlacement, SpaceVenue } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { CardFold } from "../../components/ui/CardFold";
@@ -14,10 +15,11 @@ import {
   SPACE_TEXT,
 } from "../../constants/space";
 import { UI_TEXT } from "../../constants/uiText";
-import { formatSigned } from "../../lib/format";
+import { formatSigned, roundDelayMs } from "../../lib/format";
 import { INCHES_PER_FOOT } from "../../constants/units";
 import { shownIn } from "../speaker/speakerFields";
 import { FIELD_ROW } from "../../styles/layout";
+import { DELAY_STEP_MS } from "../../constants/speakerSteps";
 
 interface Props {
   index: number;
@@ -36,9 +38,6 @@ interface Props {
   /** the stages its boxes stand on, by name; none: the floor */
   standsOn: readonly string[];
 }
-
-/** A value kept between `lo` and `hi`. */
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** A value rounded to a tenth, as a field shows it. */
 const tenth = (v: number) => Math.round(v * 10) / 10;
@@ -92,6 +91,7 @@ export function PlacementSettings({
           min={-half}
           max={half}
           step={0.5}
+          unit="ft"
           onChange={(x) => onEdit((p) => ({ ...p, x: clamp(x, -half, half) }))}
         />
         <NumberField
@@ -100,6 +100,7 @@ export function PlacementSettings({
           min={0}
           max={room.lengthFt}
           step={0.5}
+          unit="ft"
           onChange={(y) => onEdit((p) => ({ ...p, y: clamp(y, 0, room.lengthFt) }))}
         />
         <NumberField
@@ -112,6 +113,7 @@ export function PlacementSettings({
           min={0}
           max={heightMaxFt}
           step={0.5}
+          unit="ft"
           onChange={(heightFt) =>
             onEdit((p) => ({
               ...p,
@@ -140,6 +142,7 @@ export function PlacementSettings({
           label={<Tooltip tip={SPACE_TEXT.yawTip}>{SPACE_TEXT.yaw}</Tooltip>}
           value={placement.aim.yawDeg}
           step={1}
+          unit="°"
           onChange={(yawDeg) =>
             onEdit((p) => ({ ...p, aim: { ...p.aim, yawDeg: wrapYawDeg(yawDeg) } }))
           }
@@ -150,6 +153,7 @@ export function PlacementSettings({
           min={-SPACE_PITCH_DEG}
           max={SPACE_PITCH_DEG}
           step={1}
+          unit="°"
           onChange={(pitchDeg) => onEdit((p) => ({ ...p, aim: { ...p.aim, pitchDeg } }))}
         />
         <ToggleButton
@@ -180,13 +184,15 @@ export function PlacementSettings({
           label={<Tooltip tip={SPACE_TEXT.feedTip}>{SPACE_TEXT.gain}</Tooltip>}
           value={tenth(levelDb)}
           step={0.5}
+          unit="dB"
           onChange={(db) => onEdit((p) => ({ ...p, levelDb: db }))}
         />
         <NumberField
           label={<Tooltip tip={SPACE_TEXT.delayTip}>{SPACE_TEXT.delay}</Tooltip>}
-          value={tenth(delayMs)}
+          value={roundDelayMs(delayMs)}
           min={0}
-          step={0.1}
+          step={DELAY_STEP_MS}
+          unit="ms"
           onChange={(ms) => onEdit((p) => ({ ...p, delayMs: ms }))}
         />
       </div>

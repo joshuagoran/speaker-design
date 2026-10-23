@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { bracingRegions } from "../../lib/build/bracing";
-import { BAFFLE_THICKNESS_IN } from "./buildCabinet";
 import type { SceneContext } from "./sceneContext";
 import type { BoxAxis, BoxBracing, BoxKeepOut, BoxRegion, Dims3 } from "../../types";
+import { BAFFLE_PLY_IN } from "../../constants/panelSizes";
 
 /** The name the brace and rib meshes carry, so a check can find them in the scene. */
 export const BRACE_MESH_NAME = "brace";
@@ -18,7 +18,7 @@ export const VENT_MESH_NAME = "vent";
 export function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: number) {
   const T = ctx.wall;
   const iw = box.w - 2 * T,
-    zFront = box.d / 2 - ctx.inset - BAFFLE_THICKNESS_IN;
+    zFront = box.d / 2 - ctx.inset - BAFFLE_PLY_IN;
   return (r: BoxRegion) => ({
     size: [r.x[1] - r.x[0], r.y[1] - r.y[0], r.z[1] - r.z[0]] as const,
     at: new THREE.Vector3(

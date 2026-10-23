@@ -40,7 +40,7 @@ import { StackFront } from "../../components/drawings/StackFront";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { MembersView3D } from "../../components/stack-view/MembersView3D";
 import { keysOf } from "../../lib/records";
-import { formatHz } from "../../lib/format";
+import { formatHz, formatDelayMs, formatDb } from "../../lib/format";
 import { DEFAULT_PA } from "../../lib/defaults";
 import {
   RESULTS_TWO_COLUMN_PX,
@@ -149,9 +149,13 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   ].map((f) => ({ f, label: formatHz(f) }));
   const tiles: StatTileItem[] = [
     [STACK_TEXT.listenHeight, response.listenHeightIn.toFixed(0), "in"],
-    ...modeled.map(({ m, k }): StatTileItem => [`${names[k]} delay`, m.delayMs.toFixed(2), "ms"]),
+    ...modeled.map(({ m, k }): StatTileItem => [
+      `${names[k]} delay`,
+      formatDelayMs(m.delayMs),
+      "ms",
+    ]),
     ...(limits.musicDb !== null
-      ? [[STACK_TEXT.stackMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
+      ? [[STACK_TEXT.stackMax, formatDb(limits.musicDb), "dB"] satisfies StatTileItem]
       : []),
   ];
   const totalTiles: StatTileItem[] = [

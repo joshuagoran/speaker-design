@@ -1,3 +1,4 @@
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
@@ -103,7 +104,7 @@ test("tube end correction: flanged and free ends less the flares, the wall, the 
 
 test("flared tubes run faster than sharp-edged vents", () => {
   close(null, ventSpeedLimit("round2", 23.5), 30, 1e-12);
-  assert.equal(ventSpeedLimit("slots", 23.5), 23.5);
+  assert.equal(ventSpeedLimit(PORT_STYLE.slot, 23.5), 23.5);
   assert.equal(ventSpeedLimit("vslots", 20), 20);
   assert.ok(FLARED_PORT_SPEED_RATIO > 1);
 });

@@ -15,6 +15,7 @@ import { STACK_EDIT_TEXT } from "../../constants/stackSpeakerEdit";
 import { SPACE_PITCH_DEG } from "../../constants/space";
 import { shownIn } from "../speaker/speakerFields";
 import { FIELD_ROW } from "../../styles/layout";
+import { formatDelayMs, roundDelayMs } from "../../lib/format";
 
 interface Props {
   index: number;
@@ -78,18 +79,21 @@ export function MemberSettings({
           label={<Tooltip tip={STACK_TEXT.acrossTip}>{STACK_TEXT.across}</Tooltip>}
           value={shownIn(pose.xIn)}
           step={0.5}
+          unit="in"
           onChange={(xIn) => setPose({ xIn })}
         />
         <NumberField
           label={<Tooltip tip={STACK_TEXT.upTip}>{STACK_TEXT.up}</Tooltip>}
           value={shownIn(pose.yIn)}
           step={0.5}
+          unit="in"
           onChange={(yIn) => setPose({ yIn })}
         />
         <NumberField
           label={<Tooltip tip={STACK_TEXT.backTip}>{STACK_TEXT.back}</Tooltip>}
           value={shownIn(pose.zIn)}
           step={0.5}
+          unit="in"
           onChange={(zIn) => setPose({ zIn })}
         />
         <NumberField
@@ -98,6 +102,7 @@ export function MemberSettings({
           min={-SPACE_PITCH_DEG}
           max={SPACE_PITCH_DEG}
           step={1}
+          unit="°"
           onChange={(pitchDeg) => setPose({ pitchDeg })}
         />
       </div>
@@ -114,7 +119,7 @@ export function MemberSettings({
       <AutoNumberField
         label={STACK_TEXT.delay}
         auto={auto}
-        autoText={delayMs === null ? "—" : `${delayMs.toFixed(2)} ms`}
+        autoText={delayMs === null ? "—" : `${formatDelayMs(delayMs)} ms`}
         value={member.delayMs === AUTO_DELAY ? 0 : member.delayMs}
         fieldLabel={STACK_TEXT.delay}
         min={0}
@@ -124,7 +129,7 @@ export function MemberSettings({
           onEdit((m) => ({
             ...m,
             // a set delay starts from the one auto works out
-            delayMs: on ? AUTO_DELAY : Math.round((delayMs ?? 0) * 100) / 100,
+            delayMs: on ? AUTO_DELAY : roundDelayMs(delayMs ?? 0),
           }))
         }
         onChange={(ms) => onEdit((m) => ({ ...m, delayMs: ms }))}

@@ -43,7 +43,7 @@ import {
   hornFitsWhereSet,
 } from "../../lib/speaker/speakerLayout";
 import { keysOf } from "../../lib/records";
-import { formatInches } from "../../lib/format";
+import { formatInches, formatDb } from "../../lib/format";
 import {
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
@@ -168,7 +168,7 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
     }),
     ...response.bands.map((b): StatTileItem => [
       `${nameOf(b.id)} band`,
-      b.passbandDb.toFixed(1),
+      formatDb(b.passbandDb),
       "dB",
       `band:${b.id}`,
     ]),
@@ -176,12 +176,12 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
   const maxTiles: StatTileItem[] = [
     ...limits.bands.map((b): StatTileItem => [
       `${nameOf(b.id)} max`,
-      b.musicDb.toFixed(0),
+      formatDb(b.musicDb),
       "dB",
       `max:${b.id}`,
     ]),
     ...(limits.musicDb !== null && limits.bands.length > 1
-      ? [[SPEAKER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
+      ? [[SPEAKER_TEXT.speakerMax, formatDb(limits.musicDb), "dB"] satisfies StatTileItem]
       : []),
   ];
   const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);

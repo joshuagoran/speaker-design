@@ -1,7 +1,8 @@
 // A Stack's speaker edited on the Speaker page, in the browser, at a phone's and a desktop's width. Not part of
 // `vp test`. It uses the stand-in database of tests/save-row-check.mjs (tests/stand-in-db.mjs).
 //   node tests/stack-edit-check.mjs [page]        default: dist/stack-planner.html
-// Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary).
+// Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary), CPU_SLOWDOWN
+// (a factor the browser's CPU is slowed by, as on a slow machine; default 1).
 // Fails on: Edit, Save & return to Stack, or Cancel not doing what the notice says; the Speaker page's own design (or
 // a link's speaker open before) not back after each; a reload that loses the edit; page errors; and horizontal page
 // scroll.
@@ -51,6 +52,9 @@ for (const size of WIDTHS) {
       keep(await (await item.getType("text/plain")).text());
   });
   const p = await ctx.newPage();
+  const slowdown = Number(process.env.CPU_SLOWDOWN || 1);
+  if (slowdown > 1)
+    await (await ctx.newCDPSession(p)).send("Emulation.setCPUThrottlingRate", { rate: slowdown });
   const errs = [];
   p.on("pageerror", (e) => errs.push(e.message));
   const fail = (m) => failures.push(`${label}: ${m}`);

@@ -24,7 +24,14 @@ import type {
 } from "../../types";
 import { PLYWOOD_SHEETS, formatInches } from "../acoustics/boxModels";
 import { keysOf } from "../records";
-import { cutBoxName, cutBoxTag } from "../../constants/cutParts";
+import {
+  CUT_STYLE,
+  cutBoxName,
+  cutBoxTag,
+  GRAIN_DIR,
+  OFFCUT_SHAPE,
+  CORNER_JOINT,
+} from "../../constants/cutParts";
 
 type SheetSize = Pick<PlywoodSheet, "w" | "h">;
 type Rect = Pick<PlacedPart<PackRect>, "x" | "y" | "w" | "h">;
@@ -39,9 +46,14 @@ export const KERF_OPTIONS = [
 export const TRIM_OPTIONS = [0, 0.25] as const;
 
 export const GRAIN_PRESETS: Record<GrainPreset, GrainSettings> = {
-  wrap: { side: "b", topBottom: "b", baffle: "b", back: "b" },
-  horizontal: { side: "a", topBottom: "a", baffle: "a", back: "a" },
-  none: { side: "any", topBottom: "any", baffle: "any", back: "any" },
+  wrap: { side: GRAIN_DIR.b, topBottom: GRAIN_DIR.b, baffle: GRAIN_DIR.b, back: GRAIN_DIR.b },
+  horizontal: { side: GRAIN_DIR.a, topBottom: GRAIN_DIR.a, baffle: GRAIN_DIR.a, back: GRAIN_DIR.a },
+  none: {
+    side: GRAIN_DIR.any,
+    topBottom: GRAIN_DIR.any,
+    baffle: GRAIN_DIR.any,
+    back: GRAIN_DIR.any,
+  },
 };
 /** The preset these settings match, or null when they are mixed. */
 export const grainPresetOf = (g: GrainSettings): GrainPreset | null =>
@@ -135,7 +147,7 @@ const savedGrain = (g: Partial<Record<GrainPanel, unknown>> | undefined): GrainS
   if (g)
     for (const p of keysOf(out)) {
       const v = g[p];
-      if (v === "a" || v === "b" || v === "any") out[p] = v;
+      if (v === GRAIN_DIR.a || v === GRAIN_DIR.b || v === GRAIN_DIR.any) out[p] = v;
     }
   return out;
 };
@@ -146,8 +158,8 @@ export const CUTLIST_DEFAULTS: CutlistChoices = {
   trim: 0,
   grain: GRAIN_PRESETS.wrap,
   waterfall: false,
-  offcut: "strip",
-  cuts: "sheets",
+  offcut: OFFCUT_SHAPE.strip,
+  cuts: CUT_STYLE.sheets,
 };
 
 /**
@@ -160,9 +172,9 @@ export const savedCutlist = (
   kerf: KERF_OPTIONS.find((k) => k.v === c.kerf)?.v ?? CUTLIST_DEFAULTS.kerf,
   trim: TRIM_OPTIONS.find((v) => v === c.trim) ?? CUTLIST_DEFAULTS.trim,
   grain: savedGrain(c.grain),
-  waterfall: typeof c.waterfall === "boolean" ? c.waterfall : c.joint === "miter",
-  offcut: c.offcut === "panel" ? "panel" : CUTLIST_DEFAULTS.offcut,
-  cuts: c.cuts === "rips" ? "rips" : CUTLIST_DEFAULTS.cuts,
+  waterfall: typeof c.waterfall === "boolean" ? c.waterfall : c.joint === CORNER_JOINT.miter,
+  offcut: c.offcut === OFFCUT_SHAPE.panel ? OFFCUT_SHAPE.panel : CUTLIST_DEFAULTS.offcut,
+  cuts: c.cuts === CUT_STYLE.rips ? CUT_STYLE.rips : CUTLIST_DEFAULTS.cuts,
 });
 
 // ---------------------------------------------------------------
@@ -226,8 +238,8 @@ const mulberry32 = (seed: number) => () => {
 function orient<R extends PackRect>(r: R, W: number, H: number): Item<R> | null {
   const fits = ([w, h]: [number, number]) => w <= W + EPS && h <= H + EPS;
   const area = r.a * r.b;
-  if (r.grain === "a" || r.grain === "b") {
-    const along: [number, number] = r.grain === "b" ? [r.a, r.b] : [r.b, r.a];
+  if (r.grain === GRAIN_DIR.a || r.grain === GRAIN_DIR.b) {
+    const along: [number, number] = r.grain === GRAIN_DIR.b ? [r.a, r.b] : [r.b, r.a];
     if (fits(along)) return { r, opts: [along], crossed: false, area };
     const across: [number, number] = [along[1], along[0]];
     return fits(across) ? { r, opts: [across], crossed: true, area } : null;
@@ -549,7 +561,7 @@ export function offcutOf(
   trim: number,
   shape: OffcutShape,
 ): Offcut | null {
-  const strip = shape === "strip",
+  const strip = shape === OFFCUT_SHAPE.strip,
     lo = trim,
     hi = (strip ? S.w : S.h) - trim;
   const spans = sheet.items
@@ -592,19 +604,24 @@ function repackForOffcut<R extends PackRect>(
   shape: OffcutShape,
   ripFirst: boolean,
 ): { sheet: PackedSheet<R>; offcut: Offcut | null } {
-  const size = (o: Offcut | null) => (o ? (shape === "strip" ? o.w : o.h) : 0);
+  const size = (o: Offcut | null) => (o ? (shape === OFFCUT_SHAPE.strip ? o.w : o.h) : 0);
   let bestSheet = sheet,
     bestOff = offcutOf(sheet, idx, S, kerf, trim, shape);
   // placed parts repack as they are: a new placement overwrites the position, size and grain flag
   const parts = sheet.items;
-  const full = shape === "strip" ? S.w : S.h;
+  const full = shape === OFFCUT_SHAPE.strip ? S.w : S.h;
   const crossed = (sh: PackedSheet<R>) => sh.items.filter((it) => it.crossed).length;
   // a smaller sheet only counts as a fit if no part has to turn across the grain to get on it
   const fitsIn = (len: number) => {
-    const p = packSheets(parts, shape === "strip" ? { w: len, h: S.h } : { w: S.w, h: len }, kerf, {
-      trim,
-      ripFirst,
-    });
+    const p = packSheets(
+      parts,
+      shape === OFFCUT_SHAPE.strip ? { w: len, h: S.h } : { w: S.w, h: len },
+      kerf,
+      {
+        trim,
+        ripFirst,
+      },
+    );
     const sh = p.sheets.length === 1 && !p.tooBig.length ? p.sheets[0] : null;
     return sh && crossed(sh) <= crossed(sheet) ? sh : null;
   };
@@ -647,7 +664,7 @@ export function waterfallStrips(
     const side = out.find((p) => p.box === box && p.part === "side"),
       top = out.find((p) => p.box === box && p.part === "topBottom");
     if (!side || !top || side.qty < 2 || top.qty < 1) continue;
-    const gap = s.joint === "miter" ? s.kerf * Math.SQRT2 : s.kerf;
+    const gap = s.joint === CORNER_JOINT.miter ? s.kerf * Math.SQRT2 : s.kerf;
     const len = 2 * side.b + top.b + 2 * gap,
       wide = Math.max(side.a, top.a);
     if (len > usable.h + EPS || wide > usable.w + EPS) {
@@ -664,7 +681,7 @@ export function waterfallStrips(
       b: len,
       t: side.t,
       note: `side ${formatInches(side.b)}, top ${formatInches(top.b)}, side ${formatInches(side.b)}, in that order, for continuous grain; ${side.note}`,
-      grain: "b",
+      grain: GRAIN_DIR.b,
       pieces: [side.b, top.b, side.b],
     };
     out = out.flatMap((p) =>
@@ -678,8 +695,8 @@ export function waterfallStrips(
 export const withGrain = (parts: CutPart[], grain: GrainSettings): CutPart[] =>
   parts.map((p) => {
     const panel = GRAIN_PANEL_OF[p.part];
-    const g: GrainDir = p.grain ?? (panel ? grain[panel] : "any");
-    return g === "any" ? { ...p, grain: undefined } : { ...p, grain: g };
+    const g: GrainDir = p.grain ?? (panel ? grain[panel] : GRAIN_DIR.any);
+    return g === GRAIN_DIR.any ? { ...p, grain: undefined } : { ...p, grain: g };
   });
 
 export interface LayoutOptions extends Pick<PackOptions, "runs" | "capMs"> {
@@ -708,7 +725,7 @@ export function layoutCutlist(
   const groups: CutlistGroup[] = [...byT]
     .sort(([a], [b]) => b - a)
     .map(([t, list]) => {
-      const ripFirst = s.cuts === "rips";
+      const ripFirst = s.cuts === CUT_STYLE.rips;
       const packed = packSheets(list, S, s.kerf, { trim: s.trim, runs, capMs, ripFirst });
       let sheets = packed.sheets,
         off: Offcut | null = null;
@@ -719,7 +736,7 @@ export function layoutCutlist(
         sheets = [...sheets.slice(0, k), ...sheets.slice(k + 1), sheets[k]];
         const last = sheets.length - 1;
         // keeping a full-width panel takes a full-width crosscut, which rip first rules out
-        const shape = ripFirst ? "strip" : s.offcut;
+        const shape = ripFirst ? OFFCUT_SHAPE.strip : s.offcut;
         const r = repackForOffcut(sheets[last], last, S, s.kerf, s.trim, shape, ripFirst);
         sheets[last] = r.sheet;
         // a sliver isn't worth keeping

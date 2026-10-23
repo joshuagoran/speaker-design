@@ -119,7 +119,7 @@ export function DriverCompareTable({ rows, kind, previewId, onPreview, onUse, ro
         columns={COLUMNS}
         rows={sorted}
         onUse={use}
-        bg="bg-white"
+        bg="bg-panel"
         compact
         rowUse={rowUse}
         useColumn={false}

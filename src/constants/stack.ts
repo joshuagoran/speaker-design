@@ -1,5 +1,5 @@
 // The Stack page's words (src/pages/stack).
-import { STACK_LISTEN_DISTANCE_M } from "./speakerSpec";
+import { STACK_SUM_POINT_M } from "./speakerSpec";
 import { SAVE_ROW_TEXT, type SaveRowWords } from "./saveRow";
 import { CUTLIST_TAB_NAME, PROJECT_NAMES } from "./pages";
 import { SET_BY_NAMES, SPEAKER_TEXT } from "./speakerPage";
@@ -24,7 +24,7 @@ export const STACK_TEXT = {
   /** under the stack's price, weight and height */
   totalsNote: `The **${UI_TEXT.price}** is the total of the boxes' purchased parts on the **${CUTLIST_TAB_NAME}** tab, without the plywood. The **${SPEAKER_TEXT.weight}** is the total of the boxes' weights, each as the **${PROJECT_NAMES.speaker}** page shows it. The **${UI_TEXT.height}** is from the stack's base to its highest point, with each box's tilt. The **${SPEAKER_TEXT.weight}** and the **${UI_TEXT.height}** do not include the plinth or a stand. These go under the stack on the **${PROJECT_NAMES.space}** page.`,
   listenHeight: LISTEN_AXIS_NAME,
-  modelNote: `Each box plays as its speaker does on the **${PROJECT_NAMES.speaker}** page. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, moved back to 1 m. An **${SET_BY_NAMES.auto}** delay puts a box in phase with the box it crosses. Not modeled: the room, the baffle step, and coverage off axis.`,
+  modelNote: `Each box plays as its speaker does on the **${PROJECT_NAMES.speaker}** page. The sum is ${STACK_SUM_POINT_M} m in front of the stack, moved back to 1 m. An **${SET_BY_NAMES.auto}** delay puts a box in phase with the box it crosses. Not modeled: the room, the baffle step, and coverage off axis.`,
   maxNote:
     "One input drives the whole stack. At each frequency, the box with the least headroom sets the level, and every box plays at that input. The crossovers are in the front end, ahead of the amps.",
   noMembers: "Add a saved Speaker or a preset.",
@@ -44,15 +44,15 @@ export const STACK_TEXT = {
   remove: "Remove",
   standsOn: "Stands on",
   base: "The base",
-  across: "Across, in",
+  across: "Across",
   acrossTip:
     "Its center line from the stack's, or from the box under it. + is to the right, seen from the front.",
-  up: "Up, in",
+  up: "Up",
   upTip:
     "Its bottom above the base, or above the top of the box under it (a gap, a spacer, a stand).",
-  back: "Back, in",
+  back: "Back",
   backTip: "Its front behind the stack's front, or behind the front of the box under it.",
-  tilt: "Tilt, °",
+  tilt: "Tilt",
   tiltTip: "Tilts the box up (+) or down (−) on the box below it.",
   mirror: "Mirror image",
   gain: GAIN_LABEL,

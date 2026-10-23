@@ -46,7 +46,7 @@ import {
 import { FOLD_CHECK } from "../../constants/foldHorn";
 import { StatTileGrid, type StatTileItem } from "../stats/StatTileGrid";
 import { Notice } from "../ui/Notice";
-import { formatInches } from "../../lib/format";
+import { formatInches, formatDb } from "../../lib/format";
 import { tracedFold } from "../../lib/speaker/foldHorn";
 import { FoldPathChart } from "../charts/FoldPathChart";
 import { offTargetDb } from "../../lib/speaker/foldMatch";
@@ -977,7 +977,7 @@ function foldTiles(
         ]
       : []),
     ...(off !== null
-      ? [[FOLD_STAT_TEXT.match, `±${off.toFixed(1)}`, "dB"] satisfies StatTileItem]
+      ? [[FOLD_STAT_TEXT.match, `±${formatDb(off)}`, "dB"] satisfies StatTileItem]
       : []),
   ];
 }

@@ -15,6 +15,7 @@ import { DEFAULT_PA } from "../src/lib/defaults";
 import { HANDLES } from "../src/data/catalog/cabinet-hardware";
 import { HARDWARE_MESHES } from "../src/data/meshes";
 import type { BoxHandles, SpeakerCabinet, SpeakerSpec } from "../src/types";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 /** The speaker's meshes named for hardware (the flange and its hole's mask, the plate or the studs), in the scene. */
 function hardwareMeshes(spec: Pick<SpeakerSpec, "cabinet" | "look">, cutaway = false) {
@@ -131,14 +132,16 @@ describe("the Speaker page's 3D view draws the hardware", () => {
       9,
     );
     // the cutlist's hardware line lists the parts bought, the same as the plan's
-    const cut = speakerCutParts(sub.cabinet, "butt");
+    const cut = speakerCutParts(sub.cabinet, CORNER_JOINT.butt);
     const line = cut.also.find((l) => /hardware/i.test(l));
     expect(line).toBeTruthy();
     for (const { part } of plan?.bought ?? []) expect(line).toContain(part.name);
     // no hardware: none in the weight, none in the cutlist
     const bare = withHardware(sub.cabinet, null);
     expect(cabinetBuild(bare).chambers[0].lb.hardware).toBe(0);
-    expect(speakerCutParts(bare, "butt").also.some((l) => /hardware/i.test(l))).toBe(false);
+    expect(speakerCutParts(bare, CORNER_JOINT.butt).also.some((l) => /hardware/i.test(l))).toBe(
+      false,
+    );
   });
 
   test("the PA hardware's default handle is the one the template draws", () => {

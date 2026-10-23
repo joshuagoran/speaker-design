@@ -1,9 +1,10 @@
+import { FINISH_ID } from "../src/constants/finishes";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { CABINET_FINISHES, cabinetFinishOf } from "../src/lib/data";
 
 test("cabinetFinishOf: named finishes by id, anything else (a paint color) is undefined", () => {
-  assert.equal(cabinetFinishOf("birch"), CABINET_FINISHES.birch);
+  assert.equal(cabinetFinishOf(FINISH_ID.birch), CABINET_FINISHES.birch);
   assert.equal(cabinetFinishOf("walnut"), CABINET_FINISHES.walnut);
   assert.equal(cabinetFinishOf("#4a5d4e"), undefined);
   assert.equal(cabinetFinishOf(""), undefined);

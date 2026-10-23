@@ -40,6 +40,10 @@ import {
   firstCardRole,
   nothingBeatsText,
   type Metric,
+  ESTIMATE_SLACK,
+  EXTRA_BATCH,
+  EXTRA_BATCHES,
+  FINALISTS_PER_GOAL,
 } from "./goals";
 import { CARD_LABELS, CARD_WHY } from "../../../constants/optimizerText";
 import {
@@ -84,13 +88,8 @@ import { buildChoice, changesOf, trimAmps, type BuildInput, type Choice } from "
 
 /** The volume steps a sized chamber tries. */
 const VOLUME_STEPS = 7;
-/** How many finalists each goal sends to the full run (see the plan's search method), and the cap on them all. */
-const FINALISTS = { cards: 8, outside: 2, looser: 3, closest: 5, single: 1, cap: 48 } as const;
-/** While no first card is found, this many more designs by the estimate are built, up to BATCHES times. */
-const BATCH = 12;
-const BATCHES = 2;
-/** How far an option's estimate may miss a goal's keep and still be kept for the combine step (the screen's error). */
-const SCREEN_SLACK = 0.3;
+/** How many finalists each goal sends to the full run, and the cap on them all. */
+const FINALISTS = { ...FINALISTS_PER_GOAL, cap: 48 } as const;
 /** The options closest to every goal each unit keeps besides (for the near miss). */
 const CLOSEST_PER_UNIT = 2;
 /** The combine step's most combinations; past it each unit keeps fewer options. */
@@ -308,7 +307,7 @@ export function optimizeSpeaker(
     for (const g of keysOf(SPEAKER_GOAL))
       take(
         opts
-          .filter((o) => gapOf(keep, g, at(o)) <= SCREEN_SLACK)
+          .filter((o) => gapOf(keep, g, at(o)) <= ESTIMATE_SLACK)
           .sort((a, b) => OBJECTIVE[g](at(a)) - OBJECTIVE[g](at(b))),
         perGoal,
       );
@@ -605,7 +604,7 @@ export function optimizeSpeaker(
   };
   let chosen = chooseFrom(limits);
   // no first card yet: more designs by the estimate join the pool, a batch at a time
-  for (let b = 0; b < BATCHES && chosen.cards[0]?.slot.kind !== "first"; b++) {
+  for (let b = 0; b < EXTRA_BATCHES && chosen.cards[0]?.slot.kind !== "first"; b++) {
     const next = combos
       .filter(
         (c) =>
@@ -615,7 +614,7 @@ export function optimizeSpeaker(
           beatsAllEst(c.m),
       )
       .sort((a, b2) => OBJECTIVE[goal](a.m) - OBJECTIVE[goal](b2.m))
-      .slice(0, BATCH);
+      .slice(0, EXTRA_BATCH);
     if (!next.length) break;
     total += next.length * FINALIST_RUNS;
     buildAll(next);

@@ -195,7 +195,7 @@ export function ResponseChart({
     setHf(X >= x0 && X <= x1 ? fmin * Math.pow(fmax / fmin, (X - x0) / (x1 - x0)) : null);
   };
   const hits = hf
-    ? (paths
+    ? paths
         .filter((p) => !p.hidden)
         .map((p) => {
           // a curve clipped at the floor reads nothing where it is not drawn
@@ -209,8 +209,7 @@ export function ResponseChart({
             : null;
           return o && Math.abs(Math.log(o.f / hf)) < 0.1 ? { ...p, o } : null;
         })
-        // `as`: filter(Boolean) drops the nulls, which TypeScript doesn't track
-        .filter(Boolean) as (Series & { o: FrequencyPoint })[])
+        .filter((hit): hit is NonNullable<typeof hit> => hit !== null)
     : [];
   const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1; // thin the labels when rows get tight
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {

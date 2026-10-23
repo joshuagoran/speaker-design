@@ -17,14 +17,12 @@ import { coneShapeOf } from "./speakerBuild";
 import { CHAMBER_LOAD, FOLD_WALL, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
-import { FOLD_DRIVER_GAP_IN } from "../../constants/foldHorn";
+import { FOLD_DRIVER_GAP_IN, FOLD_MIN_ROOM_IN } from "../../constants/foldHorn";
 
 /** The longest section the sound model gets from a trace, in: shorter where a tap falls. */
 const SECTION_IN = 2;
 /** The least area a traced section gets, in²: the closed end's last cells can read narrower. */
 const MIN_AREA_IN2 = 1;
-/** The least clear depth and height a fold is traced in, in: smaller rooms hold no passage. */
-const MIN_ROOM_IN = 2;
 
 /** A chamber's drawn horn: its trace (`FoldTrace`) and what the sound model reads of it. */
 export interface TracedHorn extends TracedHornModel {
@@ -75,9 +73,9 @@ export const startFold = (heightIn: number): HornFold => ({
 /** Whether a fold is drawn: it has a board. Before that the response shows the straight horn. */
 export const isDrawn = (fold: HornFold | undefined): fold is HornFold => !!fold?.boards.length;
 
-/** Whether a room holds a fold: its clear depth and height at least `MIN_ROOM_IN`, its width more than 0. */
+/** Whether a room holds a fold: its clear depth and height at least `FOLD_MIN_ROOM_IN`, its width more than 0. */
 export const roomFits = (room: Pick<TraceRoom, "depthIn" | "heightIn" | "widthIn">) =>
-  room.depthIn >= MIN_ROOM_IN && room.heightIn >= MIN_ROOM_IN && room.widthIn > 0;
+  room.depthIn >= FOLD_MIN_ROOM_IN && room.heightIn >= FOLD_MIN_ROOM_IN && room.widthIn > 0;
 
 /** A chamber's drawn horn as the views draw it: the fold, its drivers' rows, and the room it is drawn in. */
 export interface FoldDrawing {

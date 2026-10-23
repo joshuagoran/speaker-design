@@ -1,6 +1,7 @@
 // Where a Hi-fi speaker's vent and passive radiators sit, inches: x across from the box's center line (+ to the right
 // seen from the front: the left speaker's inside), y up from the box bottom. The 2D front drawing and the 3D view both
 // read these.
+import { VENT_KIND } from "../../constants/speakerSpec";
 import { HIFI_BOX_LAYOUT, HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { isCoax, tweeterOnGuide, waveguideFor } from "../speaker/twoWay";
@@ -131,13 +132,13 @@ export function hifiBoxMin({
   const L = HIFI_BOX_LAYOUT;
   // a tweeter on the box top, or a coaxial's HF at its woofer's center, takes no room of its own on the baffle
   const face = onTop || isCoax(woofer, tweeter) ? null : tweeter.faceplate;
-  const pr = cfg.box === "radiator" && cfg.pr ? cfg.pr : null;
+  const pr = cfg.box === VENT_KIND.radiator && cfg.pr ? cfg.pr : null;
   const prShape = pr && passiveRadiatorShape(pr.drv);
   const prStack = pr && prShape ? pr.n * (prShape.h + L.radiatorGapIn) : 0;
   const prAcross =
     prShape && radiatorPanel !== "side" ? prShape.w + L.radiatorWidthIn + 2 * wall : 0;
   // what the woofer's bottom stands on: the slot and its shelf, round ports, or radiators stacked on the baffle
-  const port = cfg.box === "vented" ? cfg.port : null;
+  const port = cfg.box === VENT_KIND.vented ? cfg.port : null;
   // the round ports' row: from the first spot's left edge to the last one's right, each cut to its tube's outside
   const ports = port && port.shape !== "slot" ? roundPortSpots(port) : [];
   const portRow = ports.length

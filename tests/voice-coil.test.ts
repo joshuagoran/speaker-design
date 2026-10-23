@@ -1,6 +1,7 @@
 // The voice coil's inductance in the box models (lib/acoustics/driverCircuit coilFactor): a driver that lists Le rolls
 // off at the top in a sealed and a vented box (the horn engine with no horn) and the passive-radiator model; one
 // without Le reads exactly as with the coil as Re alone.
+import { VENT_KIND } from "../src/constants/speakerSpec";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { passiveRadiatorBox } from "../src/lib/acoustics/wooferBox";
@@ -54,7 +55,7 @@ test("voice coil: a driver without Le reads exactly as Le 0 (the coil as Re alon
 test("voice coil: with Le the box models roll off at the top and keep the bass", () => {
   const without = models(zero),
     withLe = models(coil);
-  for (const kind of ["sealed", "vented", "radiator"] as const) {
+  for (const kind of [VENT_KIND.sealed, VENT_KIND.vented, VENT_KIND.radiator] as const) {
     const a = without[kind],
       b = withLe[kind];
     assert.ok(a && b, kind);
@@ -159,8 +160,8 @@ test("voice coil: well above the coil's resonance with the motional capacitance 
   const sealed = (ts: BoxModelTS) => engineCurve(directBox(ts, VbL), WIDE, 2.83);
   const vented = (ts: BoxModelTS) => engineCurve(directBox(ts, VbL, roundVent(60, 12)), WIDE, 2.83);
   for (const [kind, run] of [
-    ["sealed", sealed],
-    ["vented", vented],
+    [VENT_KIND.sealed, sealed],
+    [VENT_KIND.vented, vented],
   ] as const) {
     const withLe = run(fh500),
       without = run(fh500Bare);

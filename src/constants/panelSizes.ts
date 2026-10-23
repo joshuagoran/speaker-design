@@ -12,6 +12,9 @@ export const PANEL_NOMINAL_NAMES = {
   "1/2": { name: "½″ / 12 mm", short: "½″" },
 } as const;
 
+/** The frame's baffle ply, in: 3/4″ whatever the walls or their material. Its cleats are square sticks of it. */
+export const BAFFLE_PLY_IN = 0.75;
+
 /** Plywood's material id: the PA stack's boxes are always plywood, and so is a Hi-fi config that names no material. */
 export const PLYWOOD_MATERIAL = "ply" satisfies PanelMaterial;
 

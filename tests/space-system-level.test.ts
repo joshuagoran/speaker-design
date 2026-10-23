@@ -22,7 +22,7 @@ import { PAGE_DRAFT_KEYS } from "../src/constants/pageDrafts";
 import { COVERAGE_LEVEL_REF } from "../src/constants/coverageLevel";
 import { SPACE_HOME_TARGET_DB } from "../src/constants/space";
 import { COVERAGE_BANDS } from "../src/lib/acoustics/coverage";
-import { LISTENER_TARGET_DB } from "../src/lib/acoustics/coverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/acoustics/coverageLayout";
 import type { CoverageBand, CoverageLevelRef, SpaceVenue } from "../src/types";
 
 afterEach(() => {
@@ -167,7 +167,7 @@ test("a new space starts at the default coverage layout's 105 dB target, at full
   expect(SPACE_HOME_TARGET_DB).toBe(105);
   expect(emptySpace().space.venue.targetDb).toBe(SPACE_HOME_TARGET_DB);
   expect(emptySpace().space.venue.systemDb).toBe(0);
-  expect(SPACE_HOME_TARGET_DB).toBe(LISTENER_TARGET_DB);
+  expect(DEFAULT_COVERAGE_LAYOUT.targetDb).toBe(SPACE_HOME_TARGET_DB);
 });
 
 test("moving the listener changes only its readouts", () => {

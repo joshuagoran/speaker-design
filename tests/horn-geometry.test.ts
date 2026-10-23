@@ -8,7 +8,13 @@ import { hornPath, type HornPath, type HornPathInput } from "../src/lib/speaker/
 import { hornFlare, slotOpeningsAt, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
-import { CHAMBER_LOAD, HORN_PATH, PORT_SHAPE, SLOT_PLACE } from "../src/constants/speakerSpec";
+import {
+  CHAMBER_LOAD,
+  HORN_PATH,
+  PORT_SHAPE,
+  SLOT_PLACE,
+  VENT_KIND,
+} from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { CM_PER_IN, CM2_PER_IN2, MM_PER_IN } from "../src/constants/units";
 import { CONE_TRAVEL_MARGIN } from "../src/constants/hornThroat";
@@ -413,7 +419,7 @@ test("horn geometry: the PA v2 boxes draw their settings' areas, with the side s
     );
     assert.ok(flare.path.fits, `${template}: the horn fits`);
     // the slots: one up each front side, on the baffle beside the mouth, never over it
-    assert.ok(vent.kind === "vented" && vent.port.shape === PORT_SHAPE.slot, template);
+    assert.ok(vent.kind === VENT_KIND.vented && vent.port.shape === PORT_SHAPE.slot, template);
     assert.equal(vent.port.place, SLOT_PLACE.sides, template);
     const t = spec.cabinet.panel.thicknessIn;
     const openings = slotOpeningsAt(placed, vent.port, t).map((o) => ({

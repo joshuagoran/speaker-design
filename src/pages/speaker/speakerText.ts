@@ -9,7 +9,7 @@ import type {
   SpeakerHorn,
   SpeakerSpec,
 } from "../../types";
-import { formatDims, formatDollars, formatHz, formatWatts } from "../../lib/format";
+import { formatDims, formatDollars, formatHz, formatWatts, formatDb } from "../../lib/format";
 import {
   SPEAKER_TEXT,
   HORN_DRIVE_NAMES,
@@ -85,7 +85,7 @@ export function bandText(band: SpeakerBand) {
   ]
     .filter(Boolean)
     .join(", ");
-  return `${band.name}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${band.levelDb.toFixed(1)} dB` : ""} ${formatWatts(band.ampW)}`;
+  return `${band.name}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${formatDb(band.levelDb)} dB` : ""} ${formatWatts(band.ampW)}`;
 }
 
 /** The speaker in one line, as the library lists it: its chambers and bands. */
@@ -126,7 +126,7 @@ export const nearMissFacts = (
 ): string[] => [
   weight,
   `${formatDollars(m.price)}${m.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
-  ...(m.musicDb === null ? [] : [`${m.musicDb.toFixed(1)} dB at 1 m`]),
+  ...(m.musicDb === null ? [] : [`${formatDb(m.musicDb)} dB at 1 m`]),
 ];
 
 /**

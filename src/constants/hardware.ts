@@ -2,7 +2,7 @@
  * Cabinet hardware ids and the words the pages use for them (lib/build/hardware places the parts; their names come from
  * data/catalog/cabinet-hardware). Code decides on the ids, the pages look the words up here.
  */
-import type { HardwareBoxId } from "../types";
+import type { HardwareBoxId, HardwarePanel } from "../types";
 
 /**
  * The hardware presets by box (lib/build/hardware planBoxHardware): the sub box's (two handles, the input dish and its
@@ -21,6 +21,14 @@ export const HARDWARE_KIND_NAMES = {
   plate: "input dish",
   posts: "horn binding posts",
 } as const;
+
+/** The panels a part can go on, by id. */
+export const HARDWARE_PANEL = {
+  sideL: "sideL",
+  sideR: "sideR",
+  back: "back",
+  top: "top",
+} as const satisfies { [K in HardwarePanel]: K };
 
 /** Each panel a part goes on, in a sentence ("left side"). */
 export const HARDWARE_PANEL_WORDS = {

@@ -1,5 +1,5 @@
 // The panel sizes the Speaker page sets on a spec: the walls' size (the baffle of a frame box stays ¾″,
-// lib/acoustics/boxModels BAFFLE_PLY_IN) and the side ducts' dividers' size. Dividers of the walls'
+// constants/panelSizes BAFFLE_PLY_IN) and the side ducts' dividers' size. Dividers of the walls'
 // size follow the walls' thickness, and dividers of another size keep their default (only the walls are measured). Pure.
 import type { PanelNominal, SideDuctPort, SpeakerCabinet, SpeakerPanel } from "../../types";
 import { defaultPanelIn } from "../build/panel";

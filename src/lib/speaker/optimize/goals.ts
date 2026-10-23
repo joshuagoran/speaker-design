@@ -10,6 +10,20 @@ import {
   SPEAKER_GOAL_THAN,
 } from "../../../constants/speakerOptimizer";
 
+/** How many finalists each goal sends to the full run (see the plan's search method); each optimizer adds its cap. */
+export const FINALISTS_PER_GOAL = {
+  cards: 8,
+  outside: 2,
+  looser: 3,
+  closest: 5,
+  single: 1,
+} as const;
+/** While no first card is found, this many more designs by the estimate are built, up to EXTRA_BATCHES times. */
+export const EXTRA_BATCH = 12;
+export const EXTRA_BATCHES = 2;
+/** How far an estimate may miss a goal's keep and still be kept for a full run (the estimate's error). */
+export const ESTIMATE_SLACK = 0.3;
+
 /** A target within this of your design's level is your level, dB: the first card's heading says "Same level". */
 export const SAME_LEVEL_DB = 0.05;
 /** Alternatives stay within this of the target level, dB (as the PA optimizer's). */

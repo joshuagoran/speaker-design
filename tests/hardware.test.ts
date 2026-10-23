@@ -1,5 +1,6 @@
 // Handles and input plates (lib/build/hardware): the presets' fit checks, the liters their recesses take off the boxes,
 // the cutlist's cutout notes and the defaults older saves load with.
+import { PORT_STYLE } from "../src/constants/portStyles";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { DEFAULT_PA } from "../src/lib/defaults";
@@ -13,7 +14,8 @@ import {
 } from "../src/lib/acoustics/boxModels";
 import { subDriverDepthIn } from "../src/lib/build/tubes";
 import { portOfEffectiveLength, ventTuningHz } from "../src/lib/acoustics/hornModel";
-import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
+import { CM2_PER_IN2, CM_PER_IN, LITERS_PER_CUBIC_IN } from "../src/constants/units";
+import { PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
 import {
   boxCenterOfGravity,
   DEFAULT_HARDWARE,
@@ -31,7 +33,6 @@ import { paDesignWith, paMidBuild, paSubBuild, type PaBuildHardware } from "./pa
 const d = DEFAULT_PA;
 const t = d.wall;
 const vent: VentSpec = { ...d.cVent, div: 0.5 };
-const IN3_TO_L = 16.387 / 1000;
 const subPlan = (
   handles: BoxHandles = DEFAULT_HARDWARE.sub,
   style: PortStyle = d.portStyle,
@@ -59,6 +60,7 @@ test("handles sit at the center-of-gravity height and move with the offsets", ()
       lb: d.sub.lb,
       depthIn: subDriverDepthIn(d.sub),
     },
+    PLYWOOD_MATERIAL,
     subVentMasses(d.cDim, t, d.portStyle, vent),
   );
   close(null, base.parts[0].v, cog.y, 1e-9);
@@ -71,7 +73,7 @@ test("each recess's liters come off the box's net volume, and the tuning follows
   close(
     null,
     partRecessLiters(h1105, t),
-    ((175 * 115) / 25.4 ** 2) * (58 / 25.4 - t) * IN3_TO_L,
+    ((175 * 115) / 25.4 ** 2) * (58 / 25.4 - t) * LITERS_PER_CUBIC_IN,
     1e-12,
   );
   // the dish is shallower than the wall, and the posts' depth isn't listed: neither takes room
@@ -204,24 +206,25 @@ test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles do
       inset: d.inset,
       handles: DEFAULT_HARDWARE.sub,
       driver: {
-        center: subDriverCenter(d.cDim, t, "slots", v, d.sub.size),
+        center: subDriverCenter(d.cDim, t, PORT_STYLE.slot, v, d.sub.size),
         lb: d.sub.lb,
         depthIn: subDriverDepthIn(d.sub),
       },
-      bracing: subBoxBracing(d.cDim, t, d.inset, "slots", v, d.sub, undefined),
-      keepOut: subKeepOut(d.cDim, t, d.inset, "slots", v, d.sub, undefined, true),
-      ventMasses: masses ? subVentMasses(d.cDim, t, "slots", v) : [],
+      bracing: subBoxBracing(d.cDim, t, d.inset, PORT_STYLE.slot, v, d.sub, undefined),
+      keepOut: subKeepOut(d.cDim, t, d.inset, PORT_STYLE.slot, v, d.sub, undefined, true),
+      ventMasses: masses ? subVentMasses(d.cDim, t, PORT_STYLE.slot, v) : [],
+      material: PLYWOOD_MATERIAL,
     });
   const slot = { ...vent, len: 12 };
   // the box's hardware plan counts the vent: the same as the plan given its panels
-  assert.deepStrictEqual(subPlan(DEFAULT_HARDWARE.sub, "slots", slot), plan(true, slot));
+  assert.deepStrictEqual(subPlan(DEFAULT_HARDWARE.sub, PORT_STYLE.slot, slot), plan(true, slot));
   assert.ok(
     plan(true, slot).parts[0].v < plan(false, slot).parts[0].v,
     "lower with the shelf and fins",
   );
   // a folded slot adds its rear wall: three panels, and the handles still sit lower than without the vent
   const folded = { ...vent, len: d.cDim.d + 4 };
-  assert.equal(subVentMasses(d.cDim, t, "slots", folded).length, 3);
+  assert.equal(subVentMasses(d.cDim, t, PORT_STYLE.slot, folded).length, 3);
   assert.ok(plan(true, folded).parts[0].v < plan(false, folded).parts[0].v);
   // a side duct's wall and dividers sit at mid-height; round tubes count none
   assert.equal(subVentMasses(d.cDim, t, "vslots", vent).length, 2);
@@ -248,6 +251,7 @@ test("the horn posts' fit check takes an assumed depth, their volume none", () =
     t,
     inset: d.inset,
     handles: { ...DEFAULT_HARDWARE.mid, model: NO_HANDLES },
+    material: PLYWOOD_MATERIAL,
     driver: { center: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
     bracing: null,
     keepOut: { driver: [block], vent: [] },

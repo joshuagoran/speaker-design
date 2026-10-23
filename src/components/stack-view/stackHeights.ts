@@ -2,7 +2,7 @@
 // heights from `stackHeights`, so the two cannot drift apart.
 import type { Horn } from "../../types";
 import { HORN_MESHES } from "../../data/meshes";
-import { MM_IN } from "./geometry";
+import { IN_PER_MM } from "../../constants/units";
 /** Roundover on the cabinet frame's edges; it also pushes the frame's outline out by this much. */
 export const ROUNDOVER_IN = 0.25;
 /**
@@ -11,5 +11,5 @@ export const ROUNDOVER_IN = 0.25;
  */
 export const hornAxisUp = (horn: Horn) => {
   const model = HORN_MESHES[horn.id];
-  return model ? -model.min[1] * MM_IN : horn.size.h / 2;
+  return model ? -model.min[1] * IN_PER_MM : horn.size.h / 2;
 };

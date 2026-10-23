@@ -1,5 +1,6 @@
 // A horn's flare sections as the Speaker page's Horn settings show and edit them: areas in in² and lengths in in, the
 // spec's own cm² and cm (the horn engine's, Hornresp's) converted here only. Pure.
+import { clamp } from "../../lib/clamp";
 import type { HornSegment, SpeakerHorn } from "../../types";
 import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import { shownIn, shownTenth } from "./speakerFields";
@@ -197,9 +198,6 @@ export function withDriveKind(horn: SpeakerHorn, kind: SpeakerHorn["drive"]["kin
         : { kind };
   return { ...horn, segments, drive };
 }
-
-/** `x` kept from `lo` to `hi`. */
-const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
 /**
  * The drive with its taps moved back one where they came after removed section `i`, so they stay on their sections,

@@ -12,7 +12,7 @@ import type {
   SpeakerResponse,
   SpeakerSpec,
 } from "../../types";
-import { formatHz, formatWatts } from "../format";
+import { formatHz, formatWatts, formatDb } from "../format";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./driverLists";
@@ -57,7 +57,7 @@ export function bandChips(
       b.whoHz !== null
         ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` No high-pass or **${SPEAKER_TEXT.inputRange}** protects the cone.`}`
         : "";
-    const bandText = `The band plays clean up to ${b.musicDb.toFixed(0)} dB at 1 m, with one drive for the whole band${amp}.${where}`;
+    const bandText = `The band plays clean up to ${formatDb(b.musicDb)} dB at 1 m, with one drive for the whole band${amp}.${where}`;
     // the band's first datasheet driver (a compression driver, a tweeter, a coaxial's HF section)
     const hf = limits.drivers.find((d) => d.band === b.id);
     const hfChip = ((): SpeakerChip | null => {
@@ -65,7 +65,7 @@ export function bandChips(
       const name = driverName(hf.driver);
       const derated =
         hf.derate < 1 && band?.highpass
-          ? `, derated ${(-10 * Math.log10(hf.derate)).toFixed(1)} dB for the ${formatHz(band.highpass.hz)} high-pass`
+          ? `, derated ${formatDb(-10 * Math.log10(hf.derate))} dB for the ${formatHz(band.highpass.hz)} high-pass`
           : "";
       return hf.who === LIMIT_NAMES.amp
         ? [

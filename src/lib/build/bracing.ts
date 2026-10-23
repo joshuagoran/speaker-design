@@ -63,13 +63,11 @@ import type {
   PanelStrength,
   PlateStock,
 } from "../../types";
-import { LB_FT2_KG_M2 } from "../../constants/units";
+import { LB_FT2_KG_M2, METERS_PER_INCH } from "../../constants/units";
 import { BACK_RAIL_SCREW_DIAMETER_MM, BACK_RAIL_SCREW_SPACING_IN } from "../../constants/bracing";
 import { panelLbPerSqFt, panelNominalNear } from "./panel";
 import { beamHz, holedPlateHz, restrainedPlateHz } from "./plateModes";
 import { plateStressFactor } from "./strength";
-
-const IN_M = 0.0254;
 
 /**
  * Birch plywood's bending moduli, Pa: the mean values UPM gives for 18 mm, 13-ply WISA birch plywood at 10 ± 2 %
@@ -185,20 +183,21 @@ export function teeBeam(
   web: PlateStock,
   depth: number,
 ) {
-  const w = web.t * IN_M,
-    d = depth * IN_M,
-    b = ribFlangeIn(span, tributary, panel.t) * IN_M;
-  const h = panel.t * IN_M,
+  const w = web.t * METERS_PER_INCH,
+    d = depth * METERS_PER_INCH,
+    b = ribFlangeIn(span, tributary, panel.t) * METERS_PER_INCH;
+  const h = panel.t * METERS_PER_INCH,
     I = teeSecondMoment(b, h, w, d);
   const EI = Math.min(panel.eWeak, web.eWeak) * I;
-  const mu = web.lbPerSqFt * LB_FT2_KG_M2 * d + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * IN_M;
+  const mu =
+    web.lbPerSqFt * LB_FT2_KG_M2 * d + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * METERS_PER_INCH;
   // the section modulus to the fiber farthest from the centroid (the rib's edge, mostly), m³
   const y = (b * h * (h / 2) + w * d * (h + d / 2)) / (b * h + w * d);
   return { EI, mu, Z: I / Math.max(y, h + d - y) };
 }
 /** A stock's mean density, kg/m³: its weight per area (the catalog's) over its thickness. */
 const densityOf = (s: Pick<PlateStock, "lbPerSqFt" | "t">) =>
-  (s.lbPerSqFt * LB_FT2_KG_M2) / (s.t * IN_M);
+  (s.lbPerSqFt * LB_FT2_KG_M2) / (s.t * METERS_PER_INCH);
 /**
  * A screw's slip modulus in a timber-to-timber joint, N/m per screw: EN 1995-1-1 §7.1, Table 7.1,
  * K_ser = ρm^1.5 · d / 23 N/mm (ρm in kg/m³, d in mm), with ρm = √(ρm,1 ρm,2) for two members of different densities
@@ -234,17 +233,17 @@ export function jointedTeeBeam(
   web: PlateStock,
   depth: number,
 ) {
-  const b = ribFlangeIn(span, tributary, panel.t) * IN_M,
-    h1 = panel.t * IN_M,
-    w = web.t * IN_M,
-    h2 = depth * IN_M,
-    L = span * IN_M;
+  const b = ribFlangeIn(span, tributary, panel.t) * METERS_PER_INCH,
+    h1 = panel.t * METERS_PER_INCH,
+    w = web.t * METERS_PER_INCH,
+    h2 = depth * METERS_PER_INCH,
+    L = span * METERS_PER_INCH;
   const E1 = panel.eWeak,
     E2 = web.eWeak,
     A1 = b * h1,
     A2 = w * h2;
   const K = screwSlipModulus(densityOf(panel), densityOf(web), BACK_RAIL_SCREW_DIAMETER_MM);
-  const gamma = gammaFactor(E1 * A1, BACK_RAIL_SCREW_SPACING_IN * IN_M, K, L);
+  const gamma = gammaFactor(E1 * A1, BACK_RAIL_SCREW_SPACING_IN * METERS_PER_INCH, K, L);
   const a2 = (gamma * E1 * A1 * (h1 + h2)) / 2 / (gamma * E1 * A1 + E2 * A2),
     a1 = (h1 + h2) / 2 - a2;
   const EI =
@@ -252,7 +251,9 @@ export function jointedTeeBeam(
     gamma * E1 * A1 * a1 ** 2 +
     E2 * ((w * h2 ** 3) / 12) +
     E2 * A2 * a2 ** 2;
-  const mu = web.lbPerSqFt * LB_FT2_KG_M2 * h2 + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * IN_M;
+  const mu =
+    web.lbPerSqFt * LB_FT2_KG_M2 * h2 +
+    panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * METERS_PER_INCH;
   return { EI, mu, Z: EI / (E2 * (a2 + h2 / 2)), gamma };
 }
 /**
@@ -451,7 +452,9 @@ export const EDGE_FIXITY = 3;
 /** The spring a glued neighbor gives a panel's edge, N·m/rad per m of edge; 0 where nothing holds it. */
 export const edgeSpring = (hold: EdgeHold | undefined) =>
   hold
-    ? (EDGE_FIXITY * hold.stock.eWeak * (hold.stock.t * IN_M) ** 3) / 12 / (hold.span * IN_M)
+    ? (EDGE_FIXITY * hold.stock.eWeak * (hold.stock.t * METERS_PER_INCH) ** 3) /
+      12 /
+      (hold.span * METERS_PER_INCH)
     : 0;
 /** The lines dividing a span: its ends and the supports inside it, in order. */
 const spanLines = (span: number, pts: readonly number[]) => [
@@ -860,7 +863,9 @@ export function braceBox({
       supportsAcross(q, otherAxis(q, a), w),
     ).len;
     const trib = widestGap(spanAcross(q, a), [...supportsAcross(q, a, w), ...placed.at]);
-    return (RING_FIXITY * teeBeam(span, trib, q.stock, q.stock, depth).EI) / (span * IN_M);
+    return (
+      (RING_FIXITY * teeBeam(span, trib, q.stock, q.stock, depth).EI) / (span * METERS_PER_INCH)
+    );
   };
   // the spring at one end of `p`'s rib at `x` (panel coordinates) running from `run`: the next panel's rib on the same
   // line, glued to it in the corner (layRibs butts one into the other), else none
@@ -890,7 +895,7 @@ export function braceBox({
       const span = spanAcross(q, otherAxis(q, a));
       const trib = widestGap(spanAcross(q, a), supportsAcross(q, a, w));
       const { EI } = teeBeam(span, trib, q.stock, q.stock, q.fins.height);
-      return (RING_FIXITY * EI) / (span * IN_M);
+      return (RING_FIXITY * EI) / (span * METERS_PER_INCH);
     }
     const s = q && r[q.id];
     if (!q || !s || s.across !== a) return 0;
@@ -921,7 +926,7 @@ export function braceBox({
       braceStock,
       WINDOW_RAIL_IN,
     );
-    return (RING_FIXITY * EI) / (span * IN_M);
+    return (RING_FIXITY * EI) / (span * METERS_PER_INCH);
   };
 
   // a panel's resonance and strength depend on the window braces, its own ribs and the ribs of the panels its ribs run
@@ -1015,20 +1020,20 @@ export function braceBox({
     let strength: PanelStrength | null = null;
     const loadsOn = panelLoads(p);
     if (loadsOn.length) {
-      const h = p.stock.t * IN_M;
+      const h = p.stock.t * METERS_PER_INCH;
       const bays = panelBays(p, [...supU, ...ribU], [...supV, ...ribV]);
       for (const l of loadsOn) {
         let stress = 0;
         for (const bay of bays) {
-          const b = Math.min(bay.u.len, bay.v.len) * IN_M;
+          const b = Math.min(bay.u.len, bay.v.len) * METERS_PER_INCH;
           stress = Math.max(
             stress,
             (plateStressFactor(bay.u.len, bay.v.len) * l.pa * b * b) / (h * h),
           );
         }
         for (const st of strips) {
-          const L = st.span * IN_M;
-          stress = Math.max(stress, (l.pa * st.trib * IN_M * L * L) / 8 / st.Z);
+          const L = st.span * METERS_PER_INCH;
+          stress = Math.max(stress, (l.pa * st.trib * METERS_PER_INCH * L * L) / 8 / st.Z);
         }
         if (!strength || stress / l.limitPa > strength.stressPa / strength.limitPa)
           strength = { load: l.load, stressPa: stress, limitPa: l.limitPa };

@@ -1,11 +1,12 @@
 import * as THREE from "three";
 import { ROUNDOVER_IN } from "./stackHeights";
-import { MM_IN, partMeshGeometry } from "./geometry";
+import { partMeshGeometry } from "./geometry";
 import type { SceneContext } from "./sceneContext";
 import type { BoxHardwarePlan, Dims3, PlacedHardware } from "../../types";
 import { mountedCutout, mountedFlange } from "../../lib/build/hardware";
 import { HARDWARE_MESHES } from "../../data/meshes";
 import type { HardwareMesh } from "../../types";
+import { IN_PER_MM } from "../../constants/units";
 
 /** The name the handles, dishes and posts carry, so a check can find them in the scene. */
 export const HARDWARE_MESH_NAME = "hardware";
@@ -82,7 +83,7 @@ export function hardwareFrontMarks(
     const flange = mountedFlange(p.part);
     if (!flange || p.panel === "back") return [];
     const model = HARDWARE_MESHES[p.part.id];
-    const standoff = model ? model.max[2] * MM_IN : PLAIN_STANDOFF_IN;
+    const standoff = model ? model.max[2] * IN_PER_MM : PLAIN_STANDOFF_IN;
     const face = faceOf(p, box, y, x).at;
     switch (p.panel) {
       case "sideL":
@@ -133,9 +134,9 @@ function modelPart(
   part.name = HARDWARE_MESH_NAME;
   part.renderOrder = MODEL_RENDER_ORDER;
   // the hole: the recess body's outline, placed on the flange's center as the geometry is
-  const [w, h] = [0, 1].map((k) => (m.hole.max[k] - m.hole.min[k] - 2 * HOLE_INSET_MM) * MM_IN);
+  const [w, h] = [0, 1].map((k) => (m.hole.max[k] - m.hole.min[k] - 2 * HOLE_INSET_MM) * IN_PER_MM);
   const off = [0, 1].map(
-    (k) => ((m.hole.min[k] + m.hole.max[k]) / 2 - (m.min[k] + m.max[k]) / 2) * MM_IN,
+    (k) => ((m.hole.min[k] + m.hole.max[k]) / 2 - (m.min[k] + m.max[k]) / 2) * IN_PER_MM,
   );
   const plane = new THREE.PlaneGeometry(w, h).translate(off[0], off[1], 0);
   const hole = new THREE.Mesh(plane, mask);

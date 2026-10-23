@@ -18,12 +18,7 @@ import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { CABINET_TOP, SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { allBox } from "./settingsSummaries";
 import { speakerSummary } from "./speakerText";
-import {
-  useDelayedWrite,
-  usePageDraft,
-  type PageDraft,
-  type SharedMode,
-} from "../../hooks/usePageDraft";
+import { usePageDraft, type PageDraft, type SharedMode } from "../../hooks/usePageDraft";
 import { PAGE_DRAFT_KEYS, PAGE_SHARED_KEYS, STACK_EDIT_KEY } from "../../constants/pageDrafts";
 import { readSessionJson, removeSession, writeSessionJson } from "../../lib/storage";
 import { DRAFT_ID } from "../../constants/saveRow";
@@ -140,21 +135,33 @@ export function useSpeakerPage() {
    * the edit for a Stack: a Stack's speaker shows in place of the page's design (its own, or a link's), which stays as
    * it is. It has its own slot, kept in session storage, so a reload keeps it.
    */
-  const [stackEdit, setStackEdit] = useState(readStackEdit);
-  /** the edit open now, read by the setter below (stable) and after a save resolves */
-  const openEdit = useRef(stackEdit?.edit ?? null);
-  useDelayedWrite(stackEdit, (slot) => {
-    if (slot)
-      writeSessionJson(STACK_EDIT_KEY, { ...slot.edit, design: speakerDraft.toDraft(slot.design) });
-    else removeSession(STACK_EDIT_KEY);
-  });
+  const [stackEdit, setStackEditState] = useState(readStackEdit);
+  /** the edit open now (its Stack and design), read by the setters below (stable) and after a save resolves */
+  const openEdit = useRef(stackEdit);
+  /**
+   * opens, changes or ends the edit for a Stack. Session storage takes it in the same step, so a reload never finds a
+   * page that has moved on from the edit it kept.
+   */
+  const setStackEdit = useCallback((slot: StackEditSlot | null) => {
+    openEdit.current = slot;
+    try {
+      if (slot)
+        writeSessionJson(STACK_EDIT_KEY, {
+          ...slot.edit,
+          design: speakerDraft.toDraft(slot.design),
+        });
+      else removeSession(STACK_EDIT_KEY);
+    } catch {
+      // an edit that cannot be kept stays on the page; a reload then loses it
+    }
+    setStackEditState(slot);
+  }, []);
   const spec = stackEdit ? stackEdit.design : pageSpec;
   /** edits the design shown: the edit for a Stack while one is open */
   const setSpec = useCallback((next: SetStateAction<SpeakerSpec>) => {
-    if (!openEdit.current) return setPageSpec(next);
-    setStackEdit(
-      (slot) => slot && { ...slot, design: typeof next === "function" ? next(slot.design) : next },
-    );
+    const slot = openEdit.current;
+    if (!slot) return setPageSpec(next);
+    setStackEdit({ ...slot, design: typeof next === "function" ? next(slot.design) : next });
   }, []);
   /**
    * how many times the chamber list was replaced (a start, a saved speaker opened) or lost a chamber: each chamber's
@@ -174,7 +181,6 @@ export function useSpeakerPage() {
   /** ends the edit for a Stack: the page shows its design again */
   const endStackEdit = () => {
     if (!openEdit.current) return;
-    openEdit.current = null;
     setStackEdit(null);
     restart();
   };
@@ -197,10 +203,9 @@ export function useSpeakerPage() {
     /** the Stack it is for; null while the page shows its own design or a link's */
     edit: stackEdit?.edit ?? null,
     /** whether `edit` is still the edit open */
-    isOpen: (edit: StackSpeakerEdit) => openEdit.current === edit,
+    isOpen: (edit: StackSpeakerEdit) => openEdit.current?.edit === edit,
     /** shows a Stack's `speaker` for an edit */
     open: (speaker: SpeakerSpec, edit: StackSpeakerEdit) => {
-      openEdit.current = edit;
       setStackEdit({ edit, design: settledSpec(speaker) });
       restart();
     },

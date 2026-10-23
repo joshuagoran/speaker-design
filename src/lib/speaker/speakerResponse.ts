@@ -51,6 +51,7 @@ import {
   SPEAKER_RESPONSE_VOLTS,
   VENT_KIND,
 } from "../../constants/speakerSpec";
+import { PASSBAND_EDGE_DB } from "../../constants/acoustics";
 
 /** How many points the model works out, log-spaced over the charts' 15 Hz–20 kHz (as the Hi-fi responses). */
 const POINTS = 220;
@@ -84,9 +85,6 @@ function gridOf(points: number): ResponseGrid {
   }
   return grid;
 }
-
-/** A band's level, dB: the mean of its curve where it is within this much of its highest point. */
-const PASSBAND_DB = 3;
 
 /** A pressure as a complex number from its level, dB, and its phase, radians. */
 const pressureOf = (db: number, phase = 0): Complex => scale(phasor(phase), Math.pow(10, db / 20));
@@ -298,20 +296,20 @@ function addTo(sums: Map<BandId, Complex[]>, band: BandId, pressure: readonly Co
   sums.set(band, sum ? sum.map((p, i) => add(p, pressure[i])) : [...pressure]);
 }
 
-/** The mean of a curve's levels where they are within PASSBAND_DB of its highest. */
+/** The mean of a curve's levels where they are within PASSBAND_EDGE_DB of its highest. */
 export function passbandDb(curve: readonly FrequencyPoint[]) {
   const top = Math.max(...curve.map((o) => o.spl));
-  const pass = curve.filter((o) => o.spl >= top - PASSBAND_DB);
+  const pass = curve.filter((o) => o.spl >= top - PASSBAND_EDGE_DB);
   return pass.reduce((sum, o) => sum + o.spl, 0) / pass.length;
 }
 
 /**
- * The edges of a curve's passband, Hz: the lowest and the highest frequency where it is within PASSBAND_DB of its
+ * The edges of a curve's passband, Hz: the lowest and the highest frequency where it is within PASSBAND_EDGE_DB of its
  * highest point; null for an empty curve.
  */
 export function passbandEdgesHz(curve: readonly FrequencyPoint[]) {
   const top = Math.max(...curve.map((o) => o.spl));
-  const pass = curve.filter((o) => o.spl >= top - PASSBAND_DB);
+  const pass = curve.filter((o) => o.spl >= top - PASSBAND_EDGE_DB);
   return pass.length ? { lowHz: pass[0].f, highHz: pass[pass.length - 1].f } : null;
 }
 

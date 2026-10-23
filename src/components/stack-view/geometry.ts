@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Dims2, PartMesh } from "../../types";
+import { IN_PER_MM } from "../../constants/units";
 /** Rounded rectangle outline centered on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
@@ -161,9 +162,6 @@ export function flareGeometry({
   return geo;
 }
 
-/** Millimeters to the scene's inches. */
-export const MM_IN = 1 / 25.4;
-
 /**
  * How a part's mesh is drawn (partMeshGeometry). Shading flat: every triangle its own vertices, so a part's edges and
  * corners stay crisp; smooth: the vertices shared, so a curved face shades smooth (a mesh split at its sharp edges,
@@ -183,10 +181,10 @@ export function partMeshGeometry(m: PartMesh, { shading, place }: PartMeshDrawin
   const key = `${shading} ${place}`;
   const hit = built.get(key);
   if (hit) return hit;
-  const k = m.unitMm * MM_IN;
+  const k = m.unitMm * IN_PER_MM;
   const center =
     place === "bounds"
-      ? [(m.min[0] + m.max[0]) / 2, (m.min[1] + m.max[1]) / 2, 0].map((c) => c * MM_IN)
+      ? [(m.min[0] + m.max[0]) / 2, (m.min[1] + m.max[1]) / 2, 0].map((c) => c * IN_PER_MM)
       : [0, 0, 0];
   const at = (v: number, axis: number) => m.positions[3 * v + axis] * k - center[axis];
   const g = new THREE.BufferGeometry();
@@ -219,7 +217,7 @@ const SILHOUETTE_RAYS = 180;
 export function partMeshSilhouette(m: PartMesh): THREE.Vector2[] {
   const hit = SILHOUETTES.get(m);
   if (hit) return hit;
-  const k = m.unitMm * MM_IN;
+  const k = m.unitMm * IN_PER_MM;
   const out: THREE.Vector2[] = [];
   for (let i = 0; i < SILHOUETTE_RAYS; i++) {
     const a = (2 * Math.PI * i) / SILHOUETTE_RAYS;

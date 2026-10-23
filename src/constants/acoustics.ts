@@ -2,6 +2,13 @@
 export const SPEED_OF_SOUND = 343;
 
 /**
+ * A passband's edge, dB under its level: the usual −3 dB (half-power) corner. A band's level is its curve's mean within
+ * this of its highest point, its F3 is where it first comes within this of that level, and a horn's low goal is met
+ * within this of its mean.
+ */
+export const PASSBAND_EDGE_DB = 3;
+
+/**
  * How many frequencies a band average takes in place of each band point in the room-mode range (below the top of the
  * modal crossfade), so that one point near a mode doesn't draw a lobe pattern of its own. Each weighs 1/M of the
  * point's weight.

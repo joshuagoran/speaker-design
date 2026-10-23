@@ -10,7 +10,6 @@ import {
   SPEAKER_MESH_NAMES,
 } from "../src/components/stack-view/buildSpeakerScene";
 import { SpeakerFront } from "../src/components/drawings/SpeakerFront";
-import { BAFFLE_THICKNESS_IN } from "../src/components/stack-view/buildCabinet";
 import { panelPieces } from "../src/components/stack-view/wallCuts";
 import { baffleInsetIn } from "../src/lib/speaker/chamberAir";
 import { foldRoom } from "../src/lib/speaker/foldHorn";
@@ -26,6 +25,7 @@ import {
   VENT_KIND,
 } from "../src/constants/speakerSpec";
 import type { HornFold, SpeakerSpec } from "../src/types";
+import { BAFFLE_PLY_IN } from "../src/constants/panelSizes";
 
 /** the sub bin's one chamber */
 const bin = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne);
@@ -139,7 +139,7 @@ describe("a drawn horn in the 3D view", () => {
     const [placed] = speakerLayout(s.cabinet).chambers;
     return {
       placed,
-      innerZ: placed.dims.d / 2 - baffleInsetIn(s.cabinet) - BAFFLE_THICKNESS_IN,
+      innerZ: placed.dims.d / 2 - baffleInsetIn(s.cabinet) - BAFFLE_PLY_IN,
       frontZ: placed.dims.d / 2 - baffleInsetIn(s.cabinet),
     };
   }

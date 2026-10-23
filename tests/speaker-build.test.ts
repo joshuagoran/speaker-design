@@ -25,11 +25,13 @@ import {
   subBoxBracing,
   subHardwarePlan,
   braceWoodIn3,
-  plywoodLbPerSqFt,
   SUB_FIXINGS_LB,
 } from "../src/lib/acoustics/boxModels";
+import { panelLbPerSqFt } from "../src/lib/build/panel";
+import { BAFFLE_PLY_IN, PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
+import { close } from "./helpers";
 import { towerHornCutout } from "../src/lib/speaker/tower";
-import { DEFAULT_HARDWARE } from "../src/lib/build/hardware";
+import { DEFAULT_HARDWARE, boxCenterOfGravity } from "../src/lib/build/hardware";
 import { PA_PANEL_TARGET_HZ } from "../src/lib/build/boxBracing";
 import {
   BACK_JOINT_FLUSH_NOTES,
@@ -40,7 +42,7 @@ import {
 } from "../src/constants/bracing";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, EMPTY_SPEAKER } from "../src/lib/defaults";
-import { SHELL_CUT_BOX, chamberCutBox } from "../src/constants/cutParts";
+import { SHELL_CUT_BOX, chamberCutBox, CORNER_JOINT } from "../src/constants/cutParts";
 import { keysOf } from "../src/lib/records";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import {
@@ -54,11 +56,18 @@ import {
   SPEAKER_PART,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
-import type { CutPart, PaDesign, SpeakerCabinet, SpeakerChamber, SpeakerSpec } from "../src/types";
+import type {
+  CutPart,
+  PaDesign,
+  PanelMaterial,
+  SpeakerCabinet,
+  SpeakerChamber,
+  SpeakerSpec,
+} from "../src/types";
 
 /**
- * The PA sub rules' loaded weight, lb, worked out here as an independent check: a 3/4″ baffle at 2.3 lb/ft², the other
- * panels at the wall ply, the braces' wood, the driver, the hardware, and the fixings.
+ * The PA sub rules' loaded weight, lb, worked out here as an independent check: a 3/4″ baffle (2.3 lb/ft² in plywood),
+ * the other panels at the wall's thickness, the braces' wood, the driver, the hardware, and the fixings.
  */
 const subWeightLb = (
   b: { w: number; h: number; d: number },
@@ -66,25 +75,29 @@ const subWeightLb = (
   drvLb: number,
   bracing: Parameters<typeof braceWoodIn3>[0],
   hardwareLb: number,
+  material: PanelMaterial = PLYWOOD_MATERIAL,
 ) =>
-  (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
-  (braceWoodIn3(bracing) * plywoodLbPerSqFt(wall)) / 144 / wall +
+  (b.w * b.h * panelLbPerSqFt(BAFFLE_PLY_IN, material) +
+    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * panelLbPerSqFt(wall, material)) /
+    144 +
+  (braceWoodIn3(bracing) * panelLbPerSqFt(wall, material)) / 144 / wall +
   drvLb +
   hardwareLb +
   SUB_FIXINGS_LB;
 
 /** The PA sub rules' numbers for a design (with the design's back joint and handles): its bracing and loaded weight. */
-function paSubRules(cfg: PaDesign) {
+function paSubRules(cfg: PaDesign, material: PanelMaterial = PLYWOOD_MATERIAL) {
   const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
   assert.ok(sub);
   const { hardware, braceStyle, backJoint, wall, inset } = cfg;
   const vent = [cfg.cDim, wall, inset, cfg.portStyle, cfg.cVent, sub, braceStyle] as const;
-  const subBracing = subBoxBracing(...vent, hardware.sub, backJoint);
-  const subHw = subHardwarePlan(...vent, hardware.sub, backJoint);
+  const target = PA_PANEL_TARGET_HZ;
+  const subBracing = subBoxBracing(...vent, hardware.sub, backJoint, target, material);
+  const subHw = subHardwarePlan(...vent, hardware.sub, backJoint, target, material);
   return {
     subBracing,
     /** the loaded sub box */
-    subLb: subWeightLb(cfg.cDim, wall, sub.lb, subBracing, subHw.lb),
+    subLb: subWeightLb(cfg.cDim, wall, sub.lb, subBracing, subHw.lb, material),
   };
 }
 
@@ -106,6 +119,25 @@ test("speaker build: the PA designs' subs take the PA sub rules (bracing, net ai
     assert.ok(Math.abs(subNet - netL) < 1e-9 * netL, `${c.name}: sub net air`);
     assert.ok(Math.abs(subBuild.chambers[0].lb.total - rules.subLb) < LB, `${c.name}: sub lb`);
   }
+});
+
+test("an MDF box weighs what its cutlist weighs, and its handles find its center of gravity by that weight", () => {
+  const cfg = paDesign(configs[0]);
+  const read = layersFromPa(cfg, { id: "pa", name: configs[0].name }, PA_FLOOR);
+  const { cabinet } = speakerAndFeed(read, SPEAKER_PART.sub).spec;
+  const mdf = "mdf" satisfies PanelMaterial;
+  const build = cabinetBuild({ ...cabinet, panel: { ...cabinet.panel, material: mdf } });
+  assert.ok(Math.abs(build.chambers[0].lb.total - paSubRules(cfg, mdf).subLb) < LB, "MDF sub lb");
+  // the center of gravity weighs the walls and the inset baffle at the same rates
+  const { w, h, d } = cfg.cDim;
+  const t = cfg.wall;
+  const bare = { center: { x: 0, y: 0 }, lb: 0, depthIn: 0 };
+  const shellLb = (material: PanelMaterial) =>
+    ((2 * d * h + 2 * w * d + w * h) * panelLbPerSqFt(t, material) +
+      (w - 2 * t) * (h - 2 * t) * panelLbPerSqFt(BAFFLE_PLY_IN, material)) /
+    144;
+  close(null, boxCenterOfGravity(cfg.cDim, t, cfg.inset, bare, mdf).lb, shellLb(mdf), 1e-9);
+  assert.ok(shellLb(mdf) > shellLb(PLYWOOD_MATERIAL) * 1.3, "MDF is heavier than plywood");
 });
 
 /** The empty speaker's spec with a cabinet edit. */
@@ -132,7 +164,7 @@ test("speaker build: chambers that fill one box share one shell; a stepped one b
   const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 16, h: 20, d: 14 });
   const upper = chamberAt({ xIn: 0, yIn: 20 }, { w: 16, h: 12, d: 14 });
   const one = withCabinet({ chambers: [lower, upper] });
-  const shell = speakerCutParts(one.cabinet, "butt").parts;
+  const shell = speakerCutParts(one.cabinet, CORNER_JOINT.butt).parts;
   assert.ok(
     shell.some((p) => p.box === SHELL_CUT_BOX && p.part === "baffle"),
     "one baffle",
@@ -146,7 +178,7 @@ test("speaker build: chambers that fill one box share one shell; a stepped one b
   const stepped = withCabinet({
     chambers: [lower, chamberAt({ xIn: 2, yIn: 20 }, { w: 12, h: 12, d: 14 })],
   });
-  const own = speakerCutParts(stepped.cabinet, "butt").parts;
+  const own = speakerCutParts(stepped.cabinet, CORNER_JOINT.butt).parts;
   assert.ok(!own.some((p) => p.box === SHELL_CUT_BOX));
   const tops = (i: number) =>
     own
@@ -168,7 +200,7 @@ test("speaker build: a chamber beside or on another is sized to itself, for ever
   const left = chamberAt({ xIn: 0, yIn: 0 }, { w: 10, h: 20, d: 14 });
   const right = chamberAt({ xIn: 10, yIn: 0 }, { w: 12, h: 16, d: 14 });
   for (const construction of [CABINET_CONSTRUCTION.flushBox, CABINET_CONSTRUCTION.frameInset])
-    for (const joint of ["butt", "rabbet", "miter"] as const) {
+    for (const joint of [CORNER_JOINT.butt, CORNER_JOINT.rabbet, CORNER_JOINT.miter] as const) {
       const at = `${construction}, ${joint}`;
       const stepped = withCabinet({ chambers: [lower, upper], construction, insetIn: 0.75 });
       const stack = speakerCutParts(stepped.cabinet, joint).parts;
@@ -191,7 +223,7 @@ test("speaker build: a chamber beside or on another is sized to itself, for ever
           assert.equal(side.b, c.dims.h, `${at}: side ${i}`);
       for (const top of rowsOf(row, 1, "topBottom"))
         assert.ok(!/both ends/.test(top.note), `${at}: ${top.note}`);
-      if (construction === CABINET_CONSTRUCTION.flushBox && joint === "butt") {
+      if (construction === CABINET_CONSTRUCTION.flushBox && joint === CORNER_JOINT.butt) {
         // a butt-jointed flush box's fronts cover the cabinet's front, edge to edge, and no more
         const front = (parts: readonly CutPart[], i: number) => rowsOf(parts, i, "baffle")[0];
         assert.equal(front(stack, 0).b + front(stack, 1).b, 32, "the fronts stack to the cabinet");
@@ -227,13 +259,15 @@ test("speaker build: every slot of a chamber is cut and takes its air", () => {
       ],
     });
   const [one, two] = [1, 2].map((n) => slotted(n));
-  const shelves = speakerCutParts(two.cabinet, "butt").parts.filter((p) => p.part === "slotShelf");
+  const shelves = speakerCutParts(two.cabinet, CORNER_JOINT.butt).parts.filter(
+    (p) => p.part === "slotShelf",
+  );
   assert.deepEqual(
     shelves.map((p) => p.qty),
     [2],
   );
   assert.ok(
-    speakerCutParts(two.cabinet, "butt").parts.some(
+    speakerCutParts(two.cabinet, CORNER_JOINT.butt).parts.some(
       (p) => p.part === "baffle" && /2 × slot/.test(p.note),
     ),
   );
@@ -301,7 +335,7 @@ test("speaker build: a horn that no longer fits where it is mounted is left out,
   const [low] = speakerLayout(stacked).chambers;
   const hornDriver = mid.drivers.find((d) => d.horn);
   assert.ok(hornDriver && !hornFitsWhereSet(low, hornDriver));
-  const baffle = speakerCutParts(stacked, "butt").parts.find((p) => p.part === "baffle");
+  const baffle = speakerCutParts(stacked, CORNER_JOINT.butt).parts.find((p) => p.part === "baffle");
   assert.ok(baffle && baffle.note.includes(SPEAKER_TEXT.hornNoFitNote));
   // no binding posts for a horn that isn't there
   const plan = cabinetBuild(stacked).chambers[0].hardware;
@@ -333,7 +367,7 @@ test("speaker build: a baffle horn's cutout is one size in the cutlist, the weig
   // the chamber beside another cuts within its own clear face (one wall off its width, not two)
   assert.equal(hornCutoutBox(placed, t).w, right.dims.w - t + 2 * t);
   const cut = towerHornCutout(hornCutoutBox(placed, t), t, rect);
-  const baffle = speakerCutParts(spec.cabinet, "butt").parts.find(
+  const baffle = speakerCutParts(spec.cabinet, CORNER_JOINT.butt).parts.find(
     (p) => p.box === chamberCutBox(1) && p.part === "baffle",
   );
   assert.ok(baffle, "a baffle");
@@ -356,7 +390,7 @@ test("speaker build: one shell's cutlist notes the hardware of the chamber that 
     build.chambers.map((c) => c.hardware !== null),
     [false, true],
   );
-  const parts = speakerCutParts(spec.cabinet, "butt").parts;
+  const parts = speakerCutParts(spec.cabinet, CORNER_JOINT.butt).parts;
   const side = parts.find((p) => p.box === SHELL_CUT_BOX && p.part === "side");
   const back = parts.find((p) => p.box === SHELL_CUT_BOX && p.part === "back");
   assert.ok(side && /handle/.test(side.note), "the handles' cutouts on the sides");
@@ -373,8 +407,12 @@ test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamb
     insetIn: 0.75,
   });
   const flush = withCabinet({ ...arched, construction: CABINET_CONSTRUCTION.flushBox });
-  assert.ok(speakerCutParts(frame.cabinet, "butt").parts.some((p) => p.part === "archTop"));
-  assert.ok(!speakerCutParts(flush.cabinet, "butt").parts.some((p) => p.part === "archTop"));
+  assert.ok(
+    speakerCutParts(frame.cabinet, CORNER_JOINT.butt).parts.some((p) => p.part === "archTop"),
+  );
+  assert.ok(
+    !speakerCutParts(flush.cabinet, CORNER_JOINT.butt).parts.some((p) => p.part === "archTop"),
+  );
   // the arch takes the top chamber's square corners off its weight's panels
   const flat = withCabinet({
     chambers: [lower, top],
@@ -419,7 +457,7 @@ test("speaker build: the back joint sets the bracing and the back's and partitio
   assert.equal(ONE.bracing.backJoint, GLUED_BACK, "a flush box starts glued");
   for (const backJoint of keysOf(BACK_JOINT_NAMES)) {
     const spec = withCabinet({ chambers: bracedAs([lower, upper], { backJoint }) });
-    const parts = speakerCutParts(spec.cabinet, "butt").parts;
+    const parts = speakerCutParts(spec.cabinet, CORNER_JOINT.butt).parts;
     const back = parts.find((p) => p.part === "back");
     const partition = parts.find((p) => p.part === "partition");
     assert.ok(back && partition);
@@ -470,7 +508,7 @@ test("speaker build: no bracing leaves the braces and ribs out of the cutlist, t
   const braced = withCabinet({ chambers: [big] });
   const bare = withCabinet({ chambers: bracedAs([big], { braceStyle: NO_BRACING }) });
   const braceRows = (spec: SpeakerSpec) =>
-    speakerCutParts(spec.cabinet, "butt").parts.filter(
+    speakerCutParts(spec.cabinet, CORNER_JOINT.butt).parts.filter(
       (p) => p.part === "windowBrace" || p.part === "rib",
     );
   assert.ok(braceRows(braced).length > 0, "the braced box takes braces");

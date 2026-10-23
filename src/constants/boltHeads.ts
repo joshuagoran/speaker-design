@@ -6,7 +6,7 @@
 //   1/4-20: a button head, ASME B18.3 (head 0.437 in across, 0.132 in high), on a 1/4 in SAE flat washer, ASME B18.22.1
 //   type A narrow (0.625 in outside).
 
-const MM = 1 / 25.4;
+import { IN_PER_MM } from "./units";
 
 /** A bolt head on the plate: its flange's (or washer's) radius and thickness, and its dome's radius and height, in. */
 export interface PlateBoltHead {
@@ -18,7 +18,17 @@ export interface PlateBoltHead {
 
 /** Each thread's head on the plate. */
 export const PLATE_BOLT_HEADS: Partial<Record<string, PlateBoltHead>> = {
-  M5: { flangeR: (11.2 / 2) * MM, flange: 1 * MM, domeR: (9.5 / 2) * MM, dome: 2.75 * MM },
-  M6: { flangeR: (13 / 2) * MM, flange: 1.1 * MM, domeR: (10.5 / 2) * MM, dome: 3.3 * MM },
+  M5: {
+    flangeR: (11.2 / 2) * IN_PER_MM,
+    flange: 1 * IN_PER_MM,
+    domeR: (9.5 / 2) * IN_PER_MM,
+    dome: 2.75 * IN_PER_MM,
+  },
+  M6: {
+    flangeR: (13 / 2) * IN_PER_MM,
+    flange: 1.1 * IN_PER_MM,
+    domeR: (10.5 / 2) * IN_PER_MM,
+    dome: 3.3 * IN_PER_MM,
+  },
   "1/4-20": { flangeR: 0.625 / 2, flange: 0.065, domeR: 0.437 / 2, dome: 0.132 },
 };

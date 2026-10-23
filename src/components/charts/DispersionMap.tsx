@@ -1,5 +1,5 @@
 import type { HifiDispersionMap } from "../../types";
-import { formatHz } from "../../lib/format";
+import { formatHz, formatDb } from "../../lib/format";
 import {
   DISPERSION_SCALE,
   dispersionColor,
@@ -174,7 +174,7 @@ export function DispersionMap({ map, title }: Props) {
         <span>{title}</span>
         <span className="tabular-nums text-stone-900 shrink-0">
           {hover
-            ? `${signed(map.angles[hover.j])}° · ${formatHz(map.freqs[hover.i])} ·${map.rows[hover.j][hover.i].toFixed(1)} dB`
+            ? `${signed(map.angles[hover.j])}° · ${formatHz(map.freqs[hover.i])} ·${formatDb(map.rows[hover.j][hover.i])} dB`
             : "dB vs on-axis"}
         </span>
       </div>

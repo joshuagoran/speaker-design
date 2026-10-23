@@ -31,6 +31,7 @@ import type {
   SpeakerDriver,
   SpeakerSpec,
 } from "../src/types";
+import { CORNER_JOINT } from "../src/constants/cutParts";
 
 /** The default PA design at a wall size, its bracing style set (else it follows the walls). */
 const paAt = (panel: PanelNominal, more: Partial<PaDesign> = {}): PaDesign => ({
@@ -83,7 +84,10 @@ test("build settings: a PA design's speaker uses its wall panels, as the Speaker
   const set = { ...thick.cabinet, panel: withWallPanel(thick.cabinet.panel, "1/2") };
   assert.deepStrictEqual(set.panel, thin.cabinet.panel);
   assert.deepStrictEqual(cabinetBuild(set), cabinetBuild(thin.cabinet));
-  assert.deepStrictEqual(speakerCutParts(set, "butt"), speakerCutParts(thin.cabinet, "butt"));
+  assert.deepStrictEqual(
+    speakerCutParts(set, CORNER_JOINT.butt),
+    speakerCutParts(thin.cabinet, CORNER_JOINT.butt),
+  );
   // the same size keeps a measured thickness
   const measured = { ...thin.cabinet.panel, thicknessIn: 0.47 };
   assert.equal(withWallPanel(measured, "1/2"), measured);
