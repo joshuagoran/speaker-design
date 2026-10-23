@@ -15,8 +15,10 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 - Charts use fixed axes, never autoscaled (exception: the folded horn's path chart). Charts in one view share x and y
   scales: frequency 15 Hz–20 kHz; maximum output 80–140 dB (`MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`); sensitivity and
   response 50–120 dB (`HIFI_TOP` / `HIFI_BOT`); coverage map −12 to +6 dB (`COVERAGE_MAP_DB`).
-- Dispersion maps (exception): the VituixCAD-style scale `DISPERSION_SCALE` (+6 to −36 dB, a contour every 3 dB), axes
-  ±90° and 50 Hz–20 kHz, one `DispersionMap` with the crossovers marked.
+- Dispersion maps: the VituixCAD-style scale `DISPERSION_SCALE` (+6 to −36 dB, a contour every 3 dB), axes ±90° and
+  the shared frequency axis, one `DispersionMap` with the crossovers marked.
+- Charts share one frame, axis, legend, and text style (`src/components/charts/chartFrame.tsx`); never set chart text
+  or margins per chart.
 - Colors come only from the palette tokens (`src/styles/palette.ts`): CMYK brand (cyan actions and horn/tweeter,
   magenta mid-bass/woofer, yellow accents), black, white, and grays; status green, orange, and red. Both themes switch
   through CSS variables: no `dark:` variants, no `bg-white`, cards use `bg-panel`, and code reads `usePalette()`. Data

@@ -6,8 +6,8 @@ import {
   DISPERSION_ANGLE_MAX_DEG,
   DISPERSION_ANGLE_STEP_DEG,
   DISPERSION_FREQ_POINTS,
-  DISPERSION_FREQ_MAX_HZ,
-  DISPERSION_FREQ_MIN_HZ,
+  FREQ_AXIS_MAX_HZ,
+  FREQ_AXIS_MIN_HZ,
 } from "../src/constants/chartScales";
 import { DISPERSION_SCALE, dispersionColor, dispersionRgb } from "../src/styles/palette";
 import type { HifiDispersionMap } from "../src/types";
@@ -16,18 +16,14 @@ const ANGLES = Array.from(
   { length: (2 * DISPERSION_ANGLE_MAX_DEG) / DISPERSION_ANGLE_STEP_DEG + 1 },
   (_, i) => -90 + i * DISPERSION_ANGLE_STEP_DEG,
 );
-const FREQS = logSpacedFrequencies(
-  DISPERSION_FREQ_MIN_HZ,
-  DISPERSION_FREQ_MAX_HZ,
-  DISPERSION_FREQ_POINTS,
-);
+const FREQS = logSpacedFrequencies(FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ, DISPERSION_FREQ_POINTS);
 
 const onGrid = (name: string, m: HifiDispersionMap) => {
   assert.strictEqual(DISPERSION_ANGLE_MAX_DEG, 90);
   assert.strictEqual(DISPERSION_ANGLE_STEP_DEG, 5);
   assert.deepStrictEqual(m.angles, ANGLES, `${name}: angles −90..90 every 5°`);
   assert.deepStrictEqual(m.freqs, FREQS, `${name}: the shared frequency grid`);
-  assert.strictEqual(m.freqs[0], 50, `${name}: from 50 Hz`);
+  assert.strictEqual(m.freqs[0], 15, `${name}: from 15 Hz`);
   assert.ok(Math.abs(m.freqs[m.freqs.length - 1] - 20000) < 1e-6, `${name}: to 20 kHz`);
   assert.strictEqual(m.rows.length, m.angles.length, `${name}: a row per angle`);
   for (const r of m.rows) {
@@ -36,7 +32,7 @@ const onGrid = (name: string, m: HifiDispersionMap) => {
   }
 };
 
-test("dispersion grid: −90..90° at the shared step on the 50 Hz-20 kHz axis", () => {
+test("dispersion grid: −90..90° at the shared step on the 15 Hz-20 kHz axis", () => {
   onGrid("grid", {
     ...dispersionGrid(),
     rows: ANGLES.map(() => FREQS.map(() => 0)),

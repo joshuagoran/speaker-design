@@ -1,5 +1,5 @@
 // The dispersion map of a speaker or a stack (the Speaker and Stack pages): level
-// against angle and frequency, relative to on axis, on the shared grid (−90 to +90°, 50 Hz to 20 kHz). Pure.
+// against angle and frequency, relative to on axis, on the shared grid (−90 to +90°, 15 Hz to 20 kHz). Pure.
 //
 // Each driver spot radiates its band's share as the stack model plays it (lib/speaker/stackResponse: each member's
 // speaker through its crossover, its level, polarity and delay), with a cone's baffle step as the Space page has it

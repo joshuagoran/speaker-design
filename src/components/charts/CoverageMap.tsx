@@ -4,6 +4,7 @@ import { alpha, ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
+import { CHART_LABEL_WEIGHT, CHART_LEGEND_CLASS, CHART_TEXT } from "./chartFrame";
 import { formatSigned, formatDb } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/acoustics/coverage";
 import { materialAlpha } from "../../lib/acoustics/roomAcoustics";
@@ -17,7 +18,6 @@ import type {
 } from "../../types";
 import type { CouplingMark } from "../../lib/speaker/spaceCoupling";
 import { boundsOf, strictlyInside } from "../../lib/speaker/spaceStages";
-import { SVG_FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
 import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
 import { CONTOUR_STEP_DB, COVERAGE_MAP_DB } from "../../constants/chartScales";
@@ -61,8 +61,7 @@ const RESIZE_CURSORS = [
   "ew-resize",
 ] as const;
 
-/** The quiet line's font size and the width of one of its characters, px (the map's font). */
-const QUIET_FONT_PX = 12;
+/** The width of one character of the quiet line, px (the charts' font, at their one size). */
 const QUIET_CHAR_PX = 7;
 
 /** The quiet line as one line, or as two at the space nearest its middle when the floor is too narrow for one. */
@@ -407,7 +406,6 @@ export function CoverageMap({
     yTicks: number[] = [];
   for (let f = -Math.floor(room.widthFt / 20) * 10; f <= room.widthFt / 2; f += 10) xTicks.push(f);
   for (let f = 10; f <= room.lengthFt; f += 10) yTicks.push(f);
-  const font = { fontSize: 11, fontFamily: SVG_FONT };
 
   return (
     <div ref={box}>
@@ -500,7 +498,7 @@ export function CoverageMap({
                 x={px(b.x0) + 4}
                 y={st.riser ? py(b.y0) + 13 : py(b.y1) - 5}
                 fill={ON_DATA.ink}
-                {...font}
+                {...CHART_TEXT}
               >
                 {st.label}
               </text>
@@ -568,8 +566,7 @@ export function CoverageMap({
             y={PAD.t + h / 2}
             textAnchor="middle"
             fill={pal.muted}
-            {...font}
-            fontSize={QUIET_FONT_PX}
+            {...CHART_TEXT}
             pointerEvents="none"
           >
             {quietLines(quiet, w).map((line, i, all) => (
@@ -601,7 +598,7 @@ export function CoverageMap({
             y={PAD.t - 8}
             textAnchor="middle"
             fill={pal.muted}
-            {...font}
+            {...CHART_TEXT}
           >
             {Math.abs(f)}
           </text>
@@ -613,7 +610,7 @@ export function CoverageMap({
             y={py(f) + 4}
             textAnchor="end"
             fill={pal.muted}
-            {...font}
+            {...CHART_TEXT}
           >
             {f}
           </text>
@@ -664,8 +661,8 @@ export function CoverageMap({
                 y={py(m.y) + 4}
                 textAnchor="middle"
                 fill={ON_DATA.white}
-                {...font}
-                fontWeight="600"
+                {...CHART_TEXT}
+                fontWeight={CHART_LABEL_WEIGHT}
               >
                 {b.label}
               </text>
@@ -723,7 +720,7 @@ export function CoverageMap({
           strokeWidth="2"
         />
       </svg>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 mt-2 tabular-nums">
+      <div className={`${CHART_LEGEND_CLASS} tabular-nums`}>
         <span>{formatSigned(LO_DB, 0)} dB</span>
         <span
           className="relative h-2.5 flex-1 min-w-[120px] max-w-[240px] rounded border border-stone-300"
@@ -752,7 +749,7 @@ export function CoverageMap({
         </span>
       </div>
       {/* the key for the map's two marks, drawn as the map draws them */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 mt-1">
+      <div className={CHART_LEGEND_CLASS}>
         <span className="inline-flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="-9 -9 18 18" aria-hidden="true">
             <circle r="8" fill={ON_DATA.ink} />

@@ -4,11 +4,22 @@ import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
-import { SVG_FONT, FONT } from "../../styles/fonts";
+import { FONT } from "../../styles/fonts";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 import { HOVER_TRANSITION } from "../ui/buttonStyles";
 import { BandSwatch } from "../ui/BandSwatch";
 import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
+import {
+  CHART_FALLBACK_WIDTH_PX,
+  CHART_LEGEND_CLASS,
+  CHART_TEXT,
+  FrequencyAxis,
+  Y_TICK_GAP_PX,
+  YAxisTitle,
+  frequencyX,
+  isNarrowChart,
+  plotFrame,
+} from "./chartFrame";
 
 /**
  * One curve on the chart: its points, legend label, line color and fill color. `band` shades the curve at the low and
@@ -92,23 +103,15 @@ export function ResponseChart({
   const pal = usePalette();
   // in an expanded dialog: the dialog's height and its full width
   const expandedH = useExpandedChartHeight();
-  // drawn in real pixels so text stays 11 px at any width
-  const [box, cw] = useElementWidth(760);
-  const narrow = cw < 500;
-  const W = Math.max(280, cw),
-    L = narrow ? 44 : 52,
-    R = narrow ? 8 : 14,
-    TT = 16,
-    B = 36;
+  // drawn in real pixels so text stays one size at any width
+  const [box, cw] = useElementWidth(CHART_FALLBACK_WIDTH_PX);
   if (expandedH !== null) H = expandedH;
-  else if (narrow && H >= 300) H = Math.round(H * 0.8);
-  const x0 = L,
-    x1 = W - R,
-    y0 = TT,
-    y1 = H - B;
+  else if (isNarrowChart(cw) && H >= 300) H = Math.round(H * 0.8);
+  const frame = plotFrame(cw, H);
+  const { W, x0, x1, y0, y1 } = frame;
   const TOP = top,
     BOT = bot;
-  const px = (f: number) => x0 + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (x1 - x0);
+  const px = frequencyX(frame, fmin, fmax);
   const py = (v: number) =>
     y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
   const paths = series.map((sr) => {
@@ -160,31 +163,7 @@ export function ResponseChart({
         .join(""),
     };
   });
-  const ticks = (
-    narrow
-      ? [20, 50, 100, 200, 1000, 5000, 20000]
-      : [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-  ).filter((f) => f >= fmin && f <= fmax);
   const grid: React.ReactElement[] = [];
-  ticks.forEach((f) => {
-    const X = px(f);
-    grid.push(
-      <line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke={pal.edge} strokeWidth="1" />,
-    );
-    grid.push(
-      <text
-        key={"vt" + f}
-        x={X}
-        y={y1 + 18}
-        textAnchor={X > x1 - 12 ? "end" : "middle"}
-        fill={pal.muted}
-        fontSize="12"
-        fontFamily={SVG_FONT}
-      >
-        {f >= 1000 ? f / 1000 + "k" : f}
-      </text>,
-    );
-  });
   /** the curve whose legend item is under the pointer: the other curves fade back */
   const [hot, setHot] = useState<string | null>(null);
   const keyOf = (p: Pick<Series, "id" | "label">) => p.id ?? p.label;
@@ -225,12 +204,11 @@ export function ResponseChart({
       grid.push(
         <text
           key={"ht" + v}
-          x={x0 - 8}
+          x={x0 - Y_TICK_GAP_PX}
           y={Y + 3.5}
           textAnchor="end"
           fill={pal.muted}
-          fontSize="12"
-          fontFamily={SVG_FONT}
+          {...CHART_TEXT}
         >
           {v}
         </text>,
@@ -257,6 +235,7 @@ export function ResponseChart({
             fill={alpha(pal.cyan, 0.08)}
           />
         )}
+        <FrequencyAxis frame={frame} fmin={fmin} fmax={fmax} pal={pal} />
         {grid}
         {marks
           .filter((m) => m.f > fmin && m.f < fmax)
@@ -277,8 +256,7 @@ export function ResponseChart({
                   y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)
                 }
                 fill={pal.muted}
-                fontSize="12"
-                fontFamily={SVG_FONT}
+                {...CHART_TEXT}
               >
                 {m.label}
               </text>
@@ -342,14 +320,7 @@ export function ResponseChart({
               return (
                 <g>
                   <rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill={pal.ink} />
-                  <text
-                    x={X}
-                    y={y1 + 17.5}
-                    textAnchor="middle"
-                    fontSize="12"
-                    fontFamily={SVG_FONT}
-                    fill={pal.white}
-                  >
+                  <text x={X} y={y1 + 17.5} textAnchor="middle" {...CHART_TEXT} fill={pal.white}>
                     {t}
                   </text>
                 </g>
@@ -360,8 +331,7 @@ export function ResponseChart({
               x={expandedH === null ? W - EXPAND_BUTTON_ROOM_PX : x1}
               y={y0 - 4}
               textAnchor="end"
-              fontSize="12"
-              fontFamily={SVG_FONT}
+              {...CHART_TEXT}
               fill={pal.ink}
               stroke={pal.white}
               strokeWidth="3"
@@ -372,31 +342,10 @@ export function ResponseChart({
             </text>
           </g>
         )}
-        <text
-          x={W / 2}
-          y={H - 4}
-          textAnchor="middle"
-          fill={pal.muted}
-          fontSize="12"
-          fontFamily={SVG_FONT}
-        >
-          frequency, Hz
-        </text>
-        <text
-          transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`}
-          textAnchor="middle"
-          fill={pal.muted}
-          fontSize="12"
-          fontFamily={SVG_FONT}
-        >
-          {yLabel}
-        </text>
+        <YAxisTitle frame={frame} label={yLabel} pal={pal} />
       </svg>
       {paths.length > 0 && (
-        <div
-          className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-500"
-          style={{ fontFamily: FONT }}
-        >
+        <div className={`${CHART_LEGEND_CLASS} justify-center`} style={{ fontFamily: FONT }}>
           {paths.map((p) => (
             <span
               key={p.id ?? p.label}
