@@ -11,7 +11,10 @@ import type {
 import { driverRef } from "../../lib/speaker/optimize/space";
 import { hornById } from "../../lib/data";
 import { toggled } from "../../lib/lists";
-import { VENT_KIND } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, VENT_KIND } from "../../constants/speakerSpec";
+import { wooferSizeName } from "../../constants/speakerPage";
+import { isWooferKind } from "../../lib/speaker/driverParts";
+import { wooferSizeOf } from "./speakerParts";
 import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { SETTINGS_TEXT } from "../../constants/speakerSettings";
 import { driverName } from "../../lib/speaker/driverLists";
@@ -28,13 +31,13 @@ export const NEXT_SIZE_LOCK: Record<DimensionLockMode, DimensionLockMode> = {
 
 /** One part a lock can hold: what it locks, which part, and its name beside its setting and in the Locked line. */
 export type KeepItem =
-  | { kind: "drivers" | "horns"; ref: DriverRef; label: string }
+  | { kind: "drivers" | "horns" | "sizes"; ref: DriverRef; label: string }
   | { kind: "vents"; ref: number; label: string }
   | { kind: "highpass" | "lowpass" | "amps"; ref: BandId; label: string };
 
 /**
  * Every part of the spec a lock can hold, in the order of the page: each chamber's vent (a vented one), then each driver
- * entry and its horn; then each band's filters and amp.
+ * entry's size (a woofer on the baffle of a box), the entry, and its horn; then each band's filters and amp.
  */
 export function keepItems(spec: Pick<SpeakerSpec, "cabinet" | "bands">): KeepItem[] {
   const T = SPEAKER_OPTIMIZER_TEXT;
@@ -51,6 +54,9 @@ export function keepItems(spec: Pick<SpeakerSpec, "cabinet" | "bands">): KeepIte
       });
     chamber.drivers.forEach((d, j) => {
       const ref = driverRef(k, j);
+      const size = isWooferKind(d.kind) ? wooferSizeOf(d) : null;
+      if (size !== null && chamber.load.kind === CHAMBER_LOAD.direct)
+        items.push({ kind: "sizes", ref, label: `${where}${T.wooferSize(wooferSizeName(size))}` });
       items.push({ kind: "drivers", ref, label: `${where}${driverName(d)}` });
       if (d.horn)
         items.push({
@@ -107,6 +113,10 @@ const sizeLocksSet = (locks: SpeakerOptimizerLocks, nChambers: number) =>
 export const isKept = (locks: SpeakerOptimizerLocks, item: KeepItem): boolean =>
   (locks[item.kind] ?? []).some((r) => r === item.ref);
 
+/** Whether a woofer's size is held by its driver's lock (a locked part keeps its size). */
+export const sizeHeldByDriver = (locks: SpeakerOptimizerLocks, item: KeepItem): boolean =>
+  item.kind === "sizes" && (locks.drivers ?? []).some((r) => r === item.ref);
+
 /**
  * The names of what is locked: each chamber's size locks with their marks ("Chamber 2 width ≤"), then the parts in the
  * order of the page.
@@ -120,7 +130,9 @@ export const lockedNames = (
     ({ chamber, axis, mode }) =>
       `${sizeAxisName(chamber, axis, nChambers)} ${SPEAKER_OPTIMIZER_TEXT.sizeMark[mode]}`,
   ),
-  ...items.filter((item) => isKept(locks, item)).map((item) => item.label),
+  ...items
+    .filter((item) => isKept(locks, item) && !sizeHeldByDriver(locks, item))
+    .map((item) => item.label),
 ];
 
 /** The locks with this part's lock flipped. */
@@ -130,6 +142,8 @@ export function toggleKeep(locks: SpeakerOptimizerLocks, item: KeepItem): Speake
       return { ...locks, drivers: toggled(locks.drivers ?? [], item.ref) };
     case "horns":
       return { ...locks, horns: toggled(locks.horns ?? [], item.ref) };
+    case "sizes":
+      return { ...locks, sizes: toggled(locks.sizes ?? [], item.ref) };
     case "vents":
       return { ...locks, vents: toggled(locks.vents ?? [], item.ref) };
     case "highpass":
@@ -145,6 +159,7 @@ export function toggleKeep(locks: SpeakerOptimizerLocks, item: KeepItem): Speake
 export const countKept = (locks: SpeakerOptimizerLocks): number =>
   (locks.drivers?.length ?? 0) +
   (locks.horns?.length ?? 0) +
+  (locks.sizes ?? []).filter((r) => !(locks.drivers ?? []).includes(r)).length +
   (locks.vents?.length ?? 0) +
   (locks.highpass?.length ?? 0) +
   (locks.lowpass?.length ?? 0) +
@@ -165,7 +180,7 @@ export function pruneKept(
   );
 }
 
-/** Where the driver entries are: how many each chamber has. Driver and horn locks name an entry by its place. */
+/** Where the driver entries are: how many each chamber has. Driver, size, and horn locks name an entry by its place. */
 export const driverLayout = (spec: Pick<SpeakerSpec, "cabinet">): string =>
   spec.cabinet.chambers.map((c) => c.drivers.length).join(",");
 
@@ -177,7 +192,7 @@ export interface HeldLocks {
 }
 
 /**
- * The locks that hold on the spec as it is now: none once the chamber list was replaced; without the driver and horn
+ * The locks that hold on the spec as it is now: none once the chamber list was replaced; without the driver, size, and horn
  * locks once a driver entry was added or removed (the entries after it moved place, so a lock would move to another
  * driver); without the vent and size locks too once a chamber was added or removed (they name a chamber by its place);
  * and only the parts the spec still has.
@@ -189,7 +204,7 @@ export function heldLocks(
 ): SpeakerOptimizerLocks {
   if (held.round !== now.round) return {};
   if (held.layout === now.layout) return pruneKept(held.locks, items);
-  const { drivers: _drivers, horns: _horns, ...rest } = held.locks;
+  const { drivers: _drivers, horns: _horns, sizes: _sizes, ...rest } = held.locks;
   const chambersMoved = held.layout.split(",").length !== now.layout.split(",").length;
   const { vents: _vents, size: _size, ...parts } = rest;
   return pruneKept(chambersMoved ? parts : rest, items);

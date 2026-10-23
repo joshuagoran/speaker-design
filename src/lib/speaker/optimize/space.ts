@@ -19,7 +19,7 @@ import type {
 } from "../../../types";
 import { chamberClearFace, clearDepthIn } from "../chamberAir";
 import { hfBandOf } from "../speakerResponse";
-import { isConeKind } from "../driverParts";
+import { isConeKind, isWooferKind } from "../driverParts";
 import { crossingPairs } from "../stackResponse";
 import {
   driverAcrossIn,
@@ -120,15 +120,16 @@ const CROSSOVER_MIN_HZ = 20;
 const SIZE_FACTORS: [number, number] = [0.7, 1.5];
 
 /**
- * A cone kind's candidates: same kind and nominal size, with a US price and T/S, each driver once (`inSearchSpace`);
- * your part always. `ownSize` (in) is your part's nominal size where the catalog has it outside the search space (a
- * template's own driver, as the driver comparison lists its options); absent, such a part keeps only itself.
+ * A cone kind's candidates: same kind and nominal size (any size with `anySize`), with a US price and T/S, each driver
+ * once (`inSearchSpace`); your part always. `ownSize` (in) is your part's nominal size where the catalog has it outside
+ * the search space (a template's own driver, as the driver comparison lists its options); absent, such a part keeps
+ * only itself. A size that doesn't fit the box fails the fit check (`driverFits` in evaluate).
  */
 export function coneCandidates(
   kind: DriverKind,
   current: string,
   catalog: SpeakerOptimizerCatalog,
-  ownSize?: number,
+  { ownSize, anySize = false }: { ownSize?: number; anySize?: boolean } = {},
 ): string[] {
   const table: readonly { id: string; size: number; price: number | null; variantOf?: string }[] =
     kind === DRIVER_KIND.sub
@@ -142,8 +143,12 @@ export function coneCandidates(
             : [];
   const size = byId(table, current)?.size ?? ownSize;
   if (size === undefined) return [current];
+  // with `anySize`: your size and the next size up and down the table has
+  const sizes = [...new Set(table.filter(inSearchSpace).map((d) => d.size))].sort((a, b) => a - b);
+  const at = sizes.indexOf(size);
+  const near = new Set(anySize && at >= 0 ? sizes.slice(Math.max(0, at - 1), at + 2) : [size]);
   const ids = table
-    .filter((d) => d.id === current || (inSearchSpace(d) && d.size === size && d.price !== null))
+    .filter((d) => d.id === current || (inSearchSpace(d) && near.has(d.size) && d.price !== null))
     .map((d) => d.id);
   // a coaxial with an HF section keeps one (its HF band would lose its model)
   if (kind === DRIVER_KIND.coaxial && byId(catalog.coaxial, current)?.hf)
@@ -204,6 +209,7 @@ export function searchUnits(
 ): SearchUnit[] {
   const lockedDrivers = new Set(locks.drivers ?? []);
   const lockedHorns = new Set(locks.horns ?? []);
+  const lockedSizes = new Set(locks.sizes ?? []);
   const lockedVents = new Set(locks.vents ?? []);
   const units: SearchUnit[] = [];
   spec.cabinet.chambers.forEach((chamber, k) => {
@@ -222,13 +228,18 @@ export function searchUnits(
       );
       const locked = !alike || cones.some((j) => lockedDrivers.has(driverRef(k, j)));
       const direct = chamber.load.kind === CHAMBER_LOAD.direct;
+      // a woofer on the baffle may change size unless its size is locked (a horn's throat holds its driver's size)
+      const anySize =
+        direct && isWooferKind(first.kind) && !cones.some((j) => lockedSizes.has(driverRef(k, j)));
       units.push({
         kind: "cone",
         chamber: k,
         entries: cones,
         driverKind: first.kind,
         bands,
-        drivers: locked ? [first.driverId] : coneCandidates(first.kind, first.driverId, catalog),
+        drivers: locked
+          ? [first.driverId]
+          : coneCandidates(first.kind, first.driverId, catalog, { anySize }),
         sized: alike && direct,
         venting: alike && direct && !lockedVents.has(k) && chamber.vent.kind !== VENT_KIND.sealed,
       });
