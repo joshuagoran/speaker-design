@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BandId, DispersionPlane, FrequencyPoint } from "../../types";
 import { PREVIEW_DASH } from "../../styles/palette";
@@ -44,7 +45,7 @@ import {
   hornFitsWhereSet,
 } from "../../lib/speaker/speakerLayout";
 import { keysOf } from "../../lib/records";
-import { formatInches, formatDb } from "../../lib/format";
+import { formatDb } from "../../lib/format";
 import {
   RESULTS_TWO_COLUMN_PX,
   RESULT_MAX_WIDTH,
@@ -127,6 +128,7 @@ export function SpeakerPage(props: Props) {
 
 /** The page inside its position focus (`SpeakerPage`). */
 function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const { spec, response, limits, build, price, optimizer, store, snapshot, holds, restore } =
     speakerPage;
@@ -157,7 +159,11 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
     ...response.chambers.flatMap((c, i): StatTileItem[] => {
       const which = one ? "" : ` ${i + 1}`;
       return [
-        [`${SPEAKER_TEXT.netAir}${which}`, c.netLiters.toFixed(1), "L"],
+        [
+          `${SPEAKER_TEXT.netAir}${which}`,
+          units.amount("volume", c.netLiters, 1),
+          units.unit("volume"),
+        ],
         c.qtc !== null
           ? [`Qtc${which}`, c.qtc.toFixed(2), ""]
           : [
@@ -196,13 +202,13 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
   /** price, weight and bracing in one row of tiles */
   const buildTiles: StatTileItem[] = [
     [STATS.partsPrice, priceText(price), ""],
-    [SPEAKER_TEXT.weight, build.lb.toFixed(0), "lb"],
+    [SPEAKER_TEXT.weight, units.amount("mass", build.lb, 0), units.unit("mass")],
     ...(one
       ? []
       : build.chambers.map((c, i): StatTileItem => [
           SPEAKER_TEXT.chamberWeight(i + 1),
-          c.lb.total.toFixed(0),
-          "lb",
+          units.amount("mass", c.lb.total, 0),
+          units.unit("mass"),
         ])),
     ...build.chambers.map(({ bracing }, i): StatTileItem => {
       const label = BRACING_TILE_TEXT.label(one ? null : i + 1);
@@ -482,8 +488,8 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
               .map((f, i) => (
                 <Notice key={i}>
                   {SPEAKER_TEXT.hornNoRoom({
-                    depth: formatInches(f.path.needs.depthIn),
-                    height: formatInches(f.path.needs.heightIn),
+                    depth: units.size(f.path.needs.depthIn),
+                    height: units.size(f.path.needs.heightIn),
                   })}
                 </Notice>
               ))}

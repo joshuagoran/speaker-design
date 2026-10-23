@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import type { Chip, ChipId, ChipSeverity } from "../../types";
 import { Tooltip } from "../ui/Tooltip";
 import { MarkedText } from "../ui/MarkedText";
@@ -32,8 +33,15 @@ const CHIP_TITLE_CLASSES: Record<ChipSeverity, string> = {
   bad: "text-red-text",
 };
 
-/** Stack of warning chips, each `[status, heading, text, id]` as the pages' chip lists return them. */
-export function WarningChips({ chips, tips, row }: Props) {
+/**
+ * Stack of warning chips, each `[status, heading, text, id]` as the pages' chip lists return them. The model writes a
+ * chip's sizes in its own units; they show in the page's (`useUnits().text`).
+ */
+export function WarningChips({ chips: modelChips, tips, row }: Props) {
+  const units = useUnits();
+  const chips = modelChips.map(
+    ([kind, head, body, id]) => [kind, units.text(head), units.text(body), id] as const,
+  );
   if (row !== undefined)
     return (
       <div className={`${RESULT_MAX_WIDTH} flex flex-wrap items-center gap-1.5`}>

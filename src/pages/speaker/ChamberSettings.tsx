@@ -1,3 +1,5 @@
+import type { Units } from "../../lib/units";
+import { useUnits } from "../../hooks/useUnits";
 import { useMemo, useState } from "react";
 import { MarkedText } from "../../components/ui/MarkedText";
 import type {
@@ -61,7 +63,8 @@ import {
 } from "../../constants/speakerPage";
 import {
   FILL_NAMES,
-  FILL_TIPS,
+  FILL_LINING_IN,
+  fillTips,
   POSITION_LABELS,
   POSITION_TIPS,
   SETTINGS_TEXT,
@@ -107,7 +110,7 @@ import { PlaceFields } from "./PlaceFields";
 import { positionFocusProps, usePositionFocus } from "./positionFocus";
 import { POSITION_AXIS } from "../../constants/speakerResults";
 import { HornSettings } from "./HornSettings";
-import { onFieldStep, shownIn, shownTenth } from "./speakerFields";
+import { onFieldStep, shownIn } from "./speakerFields";
 import { FIELD_ROW, PAIR_ROW, PICK_ROW, TRIO_ROW } from "../../styles/layout";
 import {
   hornGoalCheck,
@@ -132,7 +135,7 @@ import { takesHornMountAt } from "../../lib/build/hornMount";
 import { HORN_MOUNT_DEFAULT } from "../../constants/hornMount";
 import { UI_TEXT } from "../../constants/uiText";
 import { Notice } from "../../components/ui/Notice";
-import { formatHz, formatInches } from "../../lib/format";
+import { formatHz } from "../../lib/format";
 import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/build/panel";
 import { withDuctDivider } from "../../lib/speaker/cabinetPanels";
@@ -173,7 +176,11 @@ const BRACING_TIP = (
 );
 
 /** The Fiber fill buttons: each level named, with what to do in its tooltip. */
-const FILL_OPTIONS = keysOf(FILL_LEVEL_PCT).map((k) => [k, FILL_NAMES[k], FILL_TIPS[k]] as const);
+/** The Fill buttons: each level's id, name and tip (the lining's thickness in the page's units). */
+const fillOptions = (units: Units) => {
+  const tips = fillTips(units.format("boxLength", FILL_LINING_IN));
+  return keysOf(FILL_LEVEL_PCT).map((k) => [k, FILL_NAMES[k], tips[k]] as const);
+};
 
 interface Props {
   index: number;
@@ -209,6 +216,7 @@ export function ChamberSettings({
   onCompare,
   locks,
 }: Props) {
+  const units = useUnits();
   const { vent } = chamber;
   const vents = placed ? ventPlace(cabinet, placed) : null;
   const mouth = placed ? mouthPlace(cabinet, placed) : null;
@@ -277,7 +285,7 @@ export function ChamberSettings({
     <FillField chamber={chamber} netLiters={result?.netLiters} onEdit={onEdit} />
   );
   const ventFold = !folded && (
-    <FoldBox title={SETTINGS_TEXT.vent} summary={ventSummary(vent)}>
+    <FoldBox title={SETTINGS_TEXT.vent} summary={ventSummary(vent, units)}>
       <WithLock lock={locks.partLock("vents", index)}>
         <ToggleGroup
           label={SETTINGS_TEXT.ventType}
@@ -312,11 +320,12 @@ export function ChamberSettings({
           />
           {!vents && <p className="text-xs text-stone-500">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
+            quantity="speed"
             label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>{SPEAKER_TEXT.airSpeed}</Tooltip>}
             value={vent.maxSpeedMs}
             min={1}
             step={0.5}
-            unit="m/s"
+            unit={units.unit("speed")}
             onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
           />
         </>
@@ -433,6 +442,7 @@ export function ChamberSettings({
           {(["w", "h", "d"] as const).map((k) => (
             <WithLock key={k} lock={locks.sizeLock(index, k)}>
               <NumberField
+                quantity="boxLength"
                 label={{ w: "Width", h: "Height", d: "Depth" }[k]}
                 value={shownIn(chamber.dims[k])}
                 min={1}
@@ -451,6 +461,7 @@ export function ChamberSettings({
           <div className={PAIR_ROW}>
             {/* its center from the cabinet's center line, its bottom from the cabinet's bottom (lib: `SpeakerChamber.at`) */}
             <NumberField
+              quantity="boxLength"
               label={
                 <Tooltip tip={alone ? POSITION_TIPS.oneChamber : POSITION_TIPS.chamberX}>
                   {POSITION_LABELS.x}
@@ -468,6 +479,7 @@ export function ChamberSettings({
               }
             />
             <NumberField
+              quantity="boxLength"
               label={
                 <Tooltip tip={alone ? POSITION_TIPS.oneChamber : POSITION_TIPS.chamberY}>
                   {POSITION_LABELS.y}
@@ -642,10 +654,6 @@ export function ChamberSettings({
   );
 }
 
-/** The air a chamber's fill makes it act as, L, in the readout: whole liters from 100 L, else to 0.1 L. */
-const actsAsLiters = (liters: number) =>
-  liters >= 100 ? String(Math.round(liters)) : String(shownTenth(liters));
-
 /**
  * A chamber's fiber fill: None, Lined, Half or Full (each button's tooltip says what to do), and beside it the air the
  * fill makes the box act as, from the model's net air, with its gain.
@@ -660,6 +668,7 @@ function FillField({
   netLiters: number | undefined;
   onEdit: (edit: (chamber: SpeakerChamber) => SpeakerChamber) => void;
 }) {
+  const units = useUnits();
   const acts = netLiters && netLiters > 0 ? stuffedLiters(chamber, netLiters) : null;
   return (
     <ToggleGroup
@@ -668,14 +677,17 @@ function FillField({
           <Tooltip tip={SETTINGS_TEXT.fillTip}>{SETTINGS_TEXT.fill}</Tooltip>
           {acts !== null && netLiters && (
             <span className="font-value text-stone-900 whitespace-nowrap">
-              {SETTINGS_TEXT.actsAs(actsAsLiters(acts), Math.round((acts / netLiters - 1) * 100))}
+              {SETTINGS_TEXT.actsAs(
+                units.format("volume", acts),
+                Math.round((acts / netLiters - 1) * 100),
+              )}
             </span>
           )}
         </span>
       }
       value={fillLevelOf(chamber.stuffingPct)}
       onChange={(level) => onEdit((c) => ({ ...c, stuffingPct: FILL_LEVEL_PCT[level] }))}
-      options={FILL_OPTIONS}
+      options={fillOptions(units)}
     />
   );
 }
@@ -725,6 +737,7 @@ export function PortFields({
         />
         <div className={FIELD_ROW}>
           <NumberField
+            quantity="boxLength"
             label="Throat"
             {...onFieldStep(port.throat, SPEAKER_STEPS.portSizeIn)}
             min={0.25}
@@ -753,6 +766,7 @@ function PortLengthField({
 }) {
   return (
     <NumberField
+      quantity="boxLength"
       label={SPEAKER_TEXT.portLength}
       {...onFieldStep(port.len, SPEAKER_STEPS.portLenIn)}
       min={0.5}
@@ -816,6 +830,7 @@ function SlotFields({
             }
           />
           <NumberField
+            quantity="boxLength"
             label={SPEAKER_TEXT.slotHeight}
             {...onFieldStep(h, SPEAKER_STEPS.slotHIn)}
             min={0.25}
@@ -842,6 +857,7 @@ function SlotFields({
           onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
         />
         <NumberField
+          quantity="boxLength"
           label={<Tooltip tip={SPEAKER_TEXT.slotNarrowTip}>{SPEAKER_TEXT.slotNarrow}</Tooltip>}
           {...onFieldStep(h, SPEAKER_STEPS.slotHIn)}
           min={0.25}
@@ -898,6 +914,7 @@ function RoundFields({
           onChange={(count) => onChange({ ...port, n: count })}
         />
         <NumberField
+          quantity="boxLength"
           label="Diameter"
           {...onFieldStep(dia, SPEAKER_STEPS.portSizeIn)}
           min={0.5}
@@ -984,6 +1001,7 @@ function DriverFields({
   onCompare,
   locks,
 }: DriverProps) {
+  const units = useUnits();
   const { setFocus, picked } = usePositionFocus();
   const woofer = isWooferKind(driver.kind);
   const type = isWooferKind(driver.kind) ? DRIVER_KIND.woofer : driver.kind;
@@ -1146,10 +1164,7 @@ function DriverFields({
       )}
       {exitGap && (
         <Notice>
-          {UI_TEXT.hornExitMismatch(
-            formatInches(exitGap.horn.exit),
-            formatInches(exitGap.driver.exit),
-          )}
+          {UI_TEXT.hornExitMismatch(units.size(exitGap.horn.exit), units.size(exitGap.driver.exit))}
         </Notice>
       )}
       {driver.horn && (
@@ -1196,6 +1211,7 @@ function DriverFields({
             })}
           >
             <NumberField
+              quantity="boxLength"
               label={<Tooltip tip={POSITION_TIPS.partX}>{POSITION_LABELS.x}</Tooltip>}
               value={shownIn(driver.position.xIn)}
               step={SPEAKER_STEPS.sizeIn}
@@ -1212,6 +1228,7 @@ function DriverFields({
             })}
           >
             <NumberField
+              quantity="boxLength"
               // a horn on the top: back from the chamber's front edge
               label={
                 top ? (

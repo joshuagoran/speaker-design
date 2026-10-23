@@ -331,9 +331,9 @@ export const SPACE_TEXT = {
   noLibrary: "Sign in to place your saved Stacks and Speakers here too.",
   noLibrarySaved: "Save a Stack or Speaker to place it here.",
   remove: "Remove",
-  /** a placement's folded row after its name: its spot from the center line and the front wall, ft, and its gain, dB */
+  /** a placement's folded row after its name: its spot from the center line and the front wall, and its gain, dB (already formatted, the distances with their unit) */
   placementSummary: (fromCenter: string, fromFront: string, level: string) =>
-    `${fromCenter} ft from the center line · ${fromFront} ft from the front wall · ${level} dB`,
+    `${fromCenter} from the center line · ${fromFront} from the front wall · ${level} dB`,
   mirrored: MIRRORED,
   mirroredTip:
     "Adds a copy on the other side of the center line. It mirrors this box's position and rotation.",
@@ -387,8 +387,8 @@ export const SPACE_TEXT = {
   /** one band's Pad, as `padsAre` lists it */
   padIs: (band: string, db: string) => `${band} ${db} dB`,
   noDelay: "No delay",
-  /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (in) */
-  delayIs: (ms: string, inches: string) => `Delay ${ms} ms, or move the box ${inches} in back`,
+  /** a delay as a time (ms) and as the distance it equals: how far back the box would stand (with its unit) */
+  delayIs: (ms: string, distance: string) => `Delay ${ms} ms, or move the box ${distance} back`,
   offsetNote: "Some boxes need a time offset to line up at their crossovers.",
   placementNote: "Some Sources play later, to line up with other Sources in the room.",
   outdoors: "Outdoors",
@@ -432,8 +432,8 @@ export const SPACE_TEXT = {
   targetCurve: "Target, band balance",
   arrivals: "Arrival at the listener",
   arrivalsTip: `Each box against the last main. Mains want 0 ms. A fill wants ${FILL_PRECEDENCE_MS} to ${FILL_PRECEDENCE_MAX_MS} ms.`,
-  /** one arrival row: the placement's name, then its time (ms) and distance (ft) after the last main, already formatted */
-  arrivalIs: (name: string, ms: string, ft: string) => `${name}: ${ms} ms (${ft} ft)`,
+  /** one arrival row: the placement's name, then its time (ms) and distance (with its unit) after the last main, already formatted */
+  arrivalIs: (name: string, ms: string, distance: string) => `${name}: ${ms} ms (${distance})`,
   /** under the one-frequency slider */
   /** under the single-frequency slider: where it still adds with phase */
   oneNote: (coherentHz: number) =>
@@ -454,13 +454,13 @@ export const SPACE_TEXT = {
   stageName: (n: number) => `Stage ${n}`,
   riserName: (n: number) => `Riser ${n}`,
   removeStage: (name: string) => `Remove ${name}`,
-  /** a stage's folded row: its size, height, and where it stands (already formatted, ft) */
+  /** a stage's folded row: its size, height, and where it stands (already formatted, with their unit) */
   stageSummary: (w: string, d: string, h: string, where: string) =>
-    `${w} ft × ${d} ft · ${h} ft high · ${where}`,
-  stageFromFront: (y: string) => `${y} ft from the front wall`,
+    `${w} × ${d} · ${h} high · ${where}`,
+  stageFromFront: (y: string) => `${y} from the front wall`,
   stageOn: (stage: string) => `on ${stage}`,
-  /** a stage on the map: its name and the height of its top, ft (already formatted) */
-  stageLabel: (name: string, topFt: string) => `${name}, ${topFt} ft`,
+  /** a stage on the map: its name and the height of its top (already formatted, with its unit) */
+  stageLabel: (name: string, top: string) => `${name}, ${top}`,
   shape: "Shape",
   rectangle: "Rectangle",
   polygon: "Polygon",
@@ -503,8 +503,8 @@ export const SPACE_DETAILS = {
   turnDown: `**${CALCULATE_GAINS}** lowers **${SYSTEM_GAIN}** until no band is past its limit.`,
   perBand: `The map, the audience figures, **${FLOOR}**, and **${SPACE_TEXT.spread}** are for the band on show. **${SPACE_TEXT.listener}** is in the lowest band.`,
   bandLevel: `Each band plays at its **${GAIN}** and its box's gain.`,
-  audience: (clearanceFt: number) =>
-    `**${SPACE_TEXT.audienceAverage}**: the mean over the floor (excluding ${clearanceFt} ft around each box).`,
+  audience: (clearance: string) =>
+    `**${SPACE_TEXT.audienceAverage}**: the mean over the floor (excluding ${clearance} around each box).`,
   oneMeter: (place: string) =>
     `${place}: the mean level at ear height, 1 m in front of each Source, on its aim.`,
   stages: "Stages",

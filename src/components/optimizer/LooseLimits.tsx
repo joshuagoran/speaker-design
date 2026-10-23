@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { ToggleButton } from "../ui/ToggleButton";
 
 /** A near miss's option: what the button says, and the limits it changes. */
@@ -18,11 +19,17 @@ interface Props<S> {
 
 /** The near miss's option buttons: each loosens one limit and runs the search again. */
 export function LooseLimits<S>({ options, onPick, lead }: Props<S>) {
+  const units = useUnits();
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500">
       {lead}
       {options.map((o) => (
-        <ToggleButton key={o.text} on={false} tip={o.tip} onClick={() => onPick(o.set)}>
+        <ToggleButton
+          key={o.text}
+          on={false}
+          tip={o.tip && units.text(o.tip)}
+          onClick={() => onPick(o.set)}
+        >
           {o.text}
         </ToggleButton>
       ))}

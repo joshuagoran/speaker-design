@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { Button } from "../../components/ui/Button";
 import { Notice } from "../../components/ui/Notice";
 import { Tooltip } from "../../components/ui/Tooltip";
@@ -7,7 +8,7 @@ import { CardFrame } from "../../components/optimizer/CardFrame";
 import { CardTile, CardTiles } from "../../components/optimizer/CardTile";
 import { Delta } from "../../components/optimizer/Delta";
 import { STATS } from "../../components/stats/StatLabel";
-import { formatDims, formatDb } from "../../lib/format";
+import { formatDb } from "../../lib/format";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
@@ -32,6 +33,7 @@ interface Props {
 
 /** One suggested design: what it is, its maximum output against yours, its numbers with their change, and Load. */
 export function SpeakerResultCard({ card, index, total, current, onLoad }: Props) {
+  const units = useUnits();
   const m = card.metrics;
   const d = card.delta;
   const limited = m.who && m.band ? card.spec.bands.find((b) => b.id === m.band) : null;
@@ -40,7 +42,7 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
       label={card.label}
       index={index}
       total={total}
-      title={`${driverSummary(card.spec.cabinet)} · ${formatDims(m.sizeIn)}`}
+      title={`${driverSummary(card.spec.cabinet)} · ${units.dims(m.sizeIn)}`}
     >
       <p className="text-xs text-stone-500">{card.why}</p>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
@@ -65,8 +67,8 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
         />
         <CardTile
           label={T.tile.weight}
-          value={`${m.lb.toFixed(0)} lb`}
-          delta={<Delta v={d?.lb} unit=" lb" lowerIsBetter digits={1} />}
+          value={units.format("mass", m.lb, 0)}
+          delta={<Delta v={d?.lb} quantity="mass" lowerIsBetter digits={1} />}
         />
         <CardTile
           label={T.tile.level}
@@ -80,8 +82,8 @@ export function SpeakerResultCard({ card, index, total, current, onLoad }: Props
         />
         <CardTile
           label={T.tile.volume}
-          value={`${m.volumeL.toFixed(0)} L`}
-          delta={<Delta v={d?.volumeL} unit=" L" lowerIsBetter />}
+          value={units.format("volume", m.volumeL)}
+          delta={<Delta v={d?.volumeL} quantity="volume" lowerIsBetter />}
         />
       </CardTiles>
       {m.who && (

@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import type { Folds } from "../../hooks/useFolds";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
 import {
@@ -96,6 +97,7 @@ export function SpeakerSettings({
   compareView,
   onCloseCompare,
 }: Props) {
+  const units = useUnits();
   const { spec, response, optimizer } = speakerPage;
   const { cabinet } = spec;
   const { chambers, construction, top, insetIn, panel, handles, inputDish } = cabinet;
@@ -110,8 +112,8 @@ export function SpeakerSettings({
   const firstHorn = chambers.flatMap((c) => c.drivers.map(driverHorn)).find((h) => h !== null);
   const one = chambers.length === 1;
   const summaries: Record<SpeakerSettingsSection, React.ReactNode> = {
-    construction: constructionSummary(cabinet),
-    chambers: chambers.map(chamberSummary).join("; "),
+    construction: constructionSummary(cabinet, units),
+    chambers: chambers.map((c) => chamberSummary(c, units)).join("; "),
     bands: spec.bands.map((b, i) => (
       <span key={b.id} className="whitespace-nowrap">
         {i > 0 && " · "}
@@ -129,7 +131,7 @@ export function SpeakerSettings({
     ]
       .filter(Boolean)
       .join(" · "),
-    optimizer: optimizerSummary(optimizer),
+    optimizer: optimizerSummary(optimizer, units),
   };
   const section = (id: SpeakerSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -173,6 +175,7 @@ export function SpeakerSettings({
               />
               {framed && (
                 <NumberField
+                  quantity="boxLength"
                   label={<Tooltip tip={SPEAKER_TEXT.insetTip}>{SPEAKER_TEXT.inset}</Tooltip>}
                   value={insetIn}
                   min={0}
@@ -182,7 +185,9 @@ export function SpeakerSettings({
               )}
               <ToggleGroup
                 label={
-                  <Tooltip tip={SPEAKER_TEXT.wallPanelTip(formatThickness(BAFFLE_PLY_IN))}>
+                  <Tooltip
+                    tip={SPEAKER_TEXT.wallPanelTip(formatThickness(BAFFLE_PLY_IN, units.system))}
+                  >
                     {SPEAKER_TEXT.wallPanel}
                   </Tooltip>
                 }

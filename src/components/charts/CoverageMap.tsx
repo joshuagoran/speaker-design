@@ -1,3 +1,7 @@
+import { UNIT_SYSTEM } from "../../constants/units";
+import { useUnits } from "../../hooks/useUnits";
+import { fromShown } from "../../lib/units";
+import type { UnitSystem } from "../../types";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { MAP_DRAG_UPDATE_MS } from "../../constants/space";
 import { alpha, ON_DATA } from "../../styles/palette";
@@ -34,6 +38,8 @@ import {
 const [LO_DB, HI_DB] = COVERAGE_MAP_DB;
 /** what the map's colors show */
 const SCALE_UNIT = "dB against the target";
+/** The floor map's tick spacing in the unit the page shows: 10 ft, or 5 m in metric. */
+const MAP_TICK_STEP: Record<UnitSystem, number> = { [UNIT_SYSTEM.us]: 10, [UNIT_SYSTEM.metric]: 5 };
 
 /** where the toe-in handle sits along a stack's axis, ft */
 const HANDLE_FT = 5;
@@ -174,6 +180,7 @@ export function CoverageMap({
   quiet,
 }: Props) {
   const pal = usePalette();
+  const units = useUnits();
   // the room's clip, its own id: an expanded map is drawn a second time, in a dialog
   const roomClip = useId();
   // in an expanded dialog, the dialog's height in place of the page's
@@ -405,8 +412,11 @@ export function CoverageMap({
   ];
   const xTicks: number[] = [],
     yTicks: number[] = [];
-  for (let f = -Math.floor(room.widthFt / 20) * 10; f <= room.widthFt / 2; f += 10) xTicks.push(f);
-  for (let f = 10; f <= room.lengthFt; f += 10) yTicks.push(f);
+  // a tick every 10 ft, or every 5 m in metric, from the center line across and from the front wall down
+  const tickFt = fromShown("roomLength", units.settings, MAP_TICK_STEP[units.system]);
+  for (let k = -Math.floor(room.widthFt / 2 / tickFt); k * tickFt <= room.widthFt / 2; k++)
+    xTicks.push(k * tickFt);
+  for (let k = 1; k * tickFt <= room.lengthFt; k++) yTicks.push(k * tickFt);
   const font = { fontSize: 11, fontFamily: SVG_FONT };
 
   return (
@@ -419,11 +429,11 @@ export function CoverageMap({
         <span>
           {room.outdoors
             ? UI_TEXT.outdoors
-            : `${room.widthFt} × ${room.lengthFt} ft room, ${room.ceilingFt} ft ceiling`}
+            : `${units.amount("roomLength", room.widthFt)} × ${units.format("roomLength", room.lengthFt)} room, ${units.format("roomLength", room.ceilingFt)} ceiling`}
         </span>
         <span className="tabular-nums text-stone-900">
           {readout != null && hover && view
-            ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${formatDb(readout)} dB (${formatSigned(readout - view.target)})`
+            ? `${units.amount("roomLength", hover.x, 1)}, ${units.format("roomLength", hover.y, 1)} · ${formatDb(readout)} dB (${formatSigned(readout - view.target)})`
             : `Color: ${SCALE_UNIT}`}
         </span>
       </div>
@@ -444,7 +454,7 @@ export function CoverageMap({
         role="img"
         aria-busy={busy}
         data-testid={COVERAGE_TEST_IDS.map}
-        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
+        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${units.format("roomLength", listener.x, 0)} across and ${units.format("roomLength", listener.y, 0)} down the room. Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -603,7 +613,7 @@ export function CoverageMap({
             fill={pal.muted}
             {...font}
           >
-            {Math.abs(f)}
+            {units.amount("roomLength", Math.abs(f))}
           </text>
         ))}
         {yTicks.map((f) => (
@@ -615,7 +625,7 @@ export function CoverageMap({
             fill={pal.muted}
             {...font}
           >
-            {f}
+            {units.amount("roomLength", f)}
           </text>
         ))}
         {boxes.map((b, i) => {

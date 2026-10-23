@@ -49,6 +49,7 @@ export function PlaceFields<P extends FacePoint>({
       {value && children}
       <div className={PAIR_ROW}>
         <NumberField
+          quantity="boxLength"
           label={<Tooltip tip={POSITION_TIPS.partX}>{POSITION_LABELS.x}</Tooltip>}
           value={shownIn(at.xIn)}
           disabled={!value}
@@ -57,6 +58,7 @@ export function PlaceFields<P extends FacePoint>({
           onChange={(xIn) => value && onChange({ ...value, xIn })}
         />
         <NumberField
+          quantity="boxLength"
           label={<Tooltip tip={POSITION_TIPS.partY}>{POSITION_LABELS.y}</Tooltip>}
           value={shownIn(at.yIn)}
           disabled={!value}

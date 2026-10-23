@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { DesignOptimizerResults } from "../../components/optimizer/DesignOptimizerResults";
 import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { SpeakerResultCard } from "./SpeakerResultCard";
@@ -10,11 +11,12 @@ interface Props {
 
 /** The Speaker page's optimizer results, at the top of the results pane (`DesignOptimizerResults`). */
 export function SpeakerOptimizerResults({ optimizer }: Props) {
+  const units = useUnits();
   return (
     <DesignOptimizerResults
       optimizer={optimizer}
       text={SPEAKER_OPTIMIZER_TEXT}
-      closestText={speakerNearMissText}
+      closestText={(nearMiss) => speakerNearMissText(nearMiss, units)}
       renderCard={(card, i, total, onLoad) => (
         <SpeakerResultCard
           card={card}

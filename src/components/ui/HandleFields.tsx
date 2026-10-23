@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { NumberField } from "./NumberField";
 import { Tooltip } from "./Tooltip";
 import {
@@ -22,6 +23,7 @@ interface Props {
  * Speaker page's Construction fold shows them under its Handle type.
  */
 export function HandleOffsetFields({ handles, onChange }: Pick<Props, "handles" | "onChange">) {
+  const units = useUnits();
   return (
     <div className={FIELD_ROW}>
       {keysOf(HANDLE_AXIS_NAMES).map((k) => (
@@ -32,7 +34,8 @@ export function HandleOffsetFields({ handles, onChange }: Pick<Props, "handles" 
           min={HANDLE_OFFSET_RANGE.min}
           max={HANDLE_OFFSET_RANGE.max}
           step={HANDLE_OFFSET_RANGE.step}
-          unit="in"
+          quantity="boxLength"
+          unit={units.unit("boxLength")}
           onChange={(v) => onChange({ [k]: v })}
         />
       ))}

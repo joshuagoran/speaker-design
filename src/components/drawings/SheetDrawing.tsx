@@ -6,7 +6,8 @@ import type {
   PanelMaterial,
   PlywoodSheet,
 } from "../../types";
-import { formatInches, formatThickness } from "../../lib/acoustics/boxModels";
+import { formatThickness } from "../../lib/acoustics/boxModels";
+import { useUnits } from "../../hooks/useUnits";
 import { cutRowKey } from "../../lib/build/cutlist";
 import { usePalette } from "../../hooks/useTheme";
 import {
@@ -60,6 +61,7 @@ export function SheetDrawing({
   hot,
   onHot,
 }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const sc = SHEET_PX_PER_IN,
     W = S.w * sc,
@@ -95,7 +97,7 @@ export function SheetDrawing({
           Sheet {idx + 1} of {count}
         </span>
         <span className="block text-xs text-stone-500">
-          {formatThickness(t)} {PANEL_MATERIAL_NAMES[material].short}, {S.name}
+          {formatThickness(t, units.system)} {PANEL_MATERIAL_NAMES[material].short}, {S.name}
           {material === "ply" && (
             <>
               {" · "}
@@ -135,7 +137,7 @@ export function SheetDrawing({
               >
                 <tspan x={(offcut.x + offcut.w / 2) * sc}>{OFFCUT_LABEL}</tspan>
                 <tspan x={(offcut.x + offcut.w / 2) * sc} dy={fs * 1.15}>
-                  {formatInches(offcut.w)}×{formatInches(offcut.h)}
+                  {units.cut(offcut.w)}×{units.cut(offcut.h)}
                 </tspan>
               </text>
             )}
@@ -180,7 +182,7 @@ export function SheetDrawing({
             <g
               key={i}
               tabIndex={0}
-              aria-label={`${tag}: ${cutBoxName(it.box)} ${CUT_PART_NAMES[it.part]}, ${formatInches(it.w)} × ${formatInches(it.h)}″`}
+              aria-label={`${tag}: ${cutBoxName(it.box)} ${CUT_PART_NAMES[it.part]}, ${units.cut(it.w)} × ${units.cut(it.h)}${units.cutMark}`}
               onMouseEnter={() => onHot(key)}
               onMouseLeave={() => onHot(null)}
               onFocus={() => onHot(key)}

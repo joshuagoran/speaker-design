@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { UI_TEXT } from "../../constants/uiText";
 import { AssumptionsList } from "../../components/ui/AssumptionsList";
 import {
@@ -29,6 +30,7 @@ interface Props {
  * sources the space plays, then the floor, room and summing both maps share. Folded away until opened.
  */
 export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
+  const units = useUnits();
   const groups: AssumptionGroup[] = [
     [SPACE_DETAILS.marks, [...SPACE_DETAILS.markLines]],
     [SPACE_DETAILS.map, [...SPACE_DETAILS.mapLines(SINGLE_FREQ_RANGE[1], COHERENT_BELOW_HZ)]],
@@ -45,7 +47,7 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
         SPACE_DETAILS.turnDown,
         SPACE_DETAILS.perBand,
         SPACE_DETAILS.bandLevel,
-        SPACE_DETAILS.audience(STATS_CLEARANCE_FT),
+        SPACE_DETAILS.audience(units.format("roomLength", STATS_CLEARANCE_FT)),
         SPACE_DETAILS.oneMeter(SPACE_LEVEL_REF_PLACE.stacks),
       ],
     ],
@@ -56,11 +58,11 @@ export function SpaceAssumptions({ venue, levelRef, balance, target }: Props) {
         ...SPACE_DETAILS.boxLines(STACK_SUM_POINT_M),
         "Cones: rigid pistons.",
         "Horn mouths: strips that narrow as the frequency gets higher, until the walls hold the angle.",
-        `Behind the box, the level is −3 dB at ${BAFFLE_STEP_HZ_M} Hz divided by the box width in meters (a ${SHADOW_EXAMPLE_IN} in box: ${Math.round(baffleStepF3(SHADOW_EXAMPLE_IN))} Hz), then falls 6 dB per octave.`,
+        `Behind the box, the level is −3 dB at ${BAFFLE_STEP_HZ_M} Hz divided by the box width in meters (a ${units.format("boxLength", SHADOW_EXAMPLE_IN)} box: ${Math.round(baffleStepF3(SHADOW_EXAMPLE_IN))} Hz), then falls 6 dB per octave.`,
         "Horns and waveguides: rated coverage (−6 dB at the edges) above their control frequency, wider below.",
       ],
     ],
-    ...sharedAssumptionGroups(venue.room),
+    ...sharedAssumptionGroups(venue.room, units),
   ];
   return <AssumptionsList groups={groups} summary={UI_TEXT.details} />;
 }
