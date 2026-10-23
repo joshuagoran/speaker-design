@@ -1,5 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
+import { UNIT_SYSTEM } from "../src/constants/units";
 import {
   PANEL_NOMINALS,
   formatThickness,
@@ -35,10 +36,12 @@ test("stored measurements: only known sizes in range are kept", () => {
 });
 
 test("names: the nominal size, with the measured thickness beside it when it differs", () => {
-  assert.equal(formatThickness(0.75), "¾″");
-  assert.equal(formatThickness(0.689), "0.689″");
-  assert.equal(panelThicknessName("3/4", 0.75), "¾″ / 18 mm");
-  assert.equal(panelThicknessName("3/4", 0.689), "¾″ / 18 mm at 0.689″");
+  assert.equal(formatThickness(0.75, UNIT_SYSTEM.us), "¾″");
+  assert.equal(formatThickness(0.689, UNIT_SYSTEM.us), "0.689″");
+  assert.equal(formatThickness(0.75, UNIT_SYSTEM.metric), "19.05 mm");
+  assert.equal(panelThicknessName("3/4", 0.75, UNIT_SYSTEM.us), "¾″ / 18 mm");
+  assert.equal(panelThicknessName("3/4", 0.689, UNIT_SYSTEM.us), "¾″ / 18 mm at 0.689″");
+  assert.equal(panelThicknessName("3/4", 0.689, UNIT_SYSTEM.metric), "¾″ / 18 mm at 17.5 mm");
 });
 
 test("a thickness reads as the nominal size nearest it (the bracing's default style)", () => {

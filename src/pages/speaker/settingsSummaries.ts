@@ -170,6 +170,7 @@ export function constructionSummary(
     SpeakerCabinet,
     "construction" | "panel" | "top" | "chambers" | "handles" | "inputDish"
   >,
+  units: Units,
 ): string {
   const hardware = [
     cabinet.handles && SETTINGS_TEXT.hardwareHandles,
@@ -177,7 +178,7 @@ export function constructionSummary(
   ].filter(Boolean);
   return [
     CONSTRUCTION_SHORT[cabinet.construction],
-    SETTINGS_TEXT.walls(formatThickness(cabinet.panel.thicknessIn)),
+    SETTINGS_TEXT.walls(formatThickness(cabinet.panel.thicknessIn, units.system)),
     allBox(cabinet.chambers) ? SETTINGS_TEXT.topSummary(CABINET_TOP_NAMES[cabinet.top]) : null,
     hardware.length ? hardware.join(", ") : SETTINGS_TEXT.noHardware,
   ]

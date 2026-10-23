@@ -3,7 +3,14 @@
 // depends on the walls (box volume, cutlist sizes and joints, the 3D view, weights) is worked out at `panelIn`.
 import { PANEL_STOCK } from "../../data/catalog/plywood";
 import { PANEL_NOMINAL_NAMES } from "../../constants/panelSizes";
-import type { PanelExactIn, PanelMaterial, PanelNominal, PanelStockMaterial } from "../../types";
+import { QUANTITIES, UNIT_SYSTEM } from "../../constants/units";
+import type {
+  PanelExactIn,
+  PanelMaterial,
+  PanelNominal,
+  PanelStockMaterial,
+  UnitSystem,
+} from "../../types";
 import { keysOf } from "../records";
 
 /** Every nominal size, thickest first, as the settings offer them. */
@@ -75,17 +82,25 @@ export function savedPanelExactIn(v: unknown): PanelExactIn {
   return out;
 }
 
-/** A thickness in a sentence or a column: a nominal size's imperial name (¾″), else three decimals (0.689″). */
-export const formatThickness = (t: number) => {
+/**
+ * A thickness in a sentence or a column. US: a nominal size's imperial name (¾″), else three decimals (0.689″). Metric:
+ * mm (19.05 mm).
+ */
+export const formatThickness = (t: number, system: UnitSystem) => {
+  if (system === UNIT_SYSTEM.metric) {
+    // lib/units reads this module (through boxModels), so the metric side reads its unit straight from QUANTITIES
+    const { unit, per, decimals } = QUANTITIES.panelThickness.metric;
+    return `${+(t * per).toFixed(decimals)} ${unit}`;
+  }
   const n = PANEL_NOMINALS.find((k) => PANEL_STOCK[k].in === t);
   return n ? PANEL_NOMINAL_NAMES[n].short : `${+t.toFixed(3)}″`;
 };
 
 /** A nominal size by name, with the thickness it is worked out at beside it when that isn't the size itself. */
-export const panelThicknessName = (n: PanelNominal, t: number) =>
+export const panelThicknessName = (n: PanelNominal, t: number, system: UnitSystem) =>
   t === PANEL_STOCK[n].in
     ? PANEL_NOMINAL_NAMES[n].name
-    : `${PANEL_NOMINAL_NAMES[n].name} at ${formatThickness(t)}`;
+    : `${PANEL_NOMINAL_NAMES[n].name} at ${formatThickness(t, system)}`;
 
 /** The nominal sizes as a settings toggle offers them: id and name, thickest first. */
 export const PANEL_NOMINAL_OPTIONS = PANEL_NOMINALS.map(

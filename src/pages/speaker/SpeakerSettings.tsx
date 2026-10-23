@@ -112,7 +112,7 @@ export function SpeakerSettings({
   const firstHorn = chambers.flatMap((c) => c.drivers.map(driverHorn)).find((h) => h !== null);
   const one = chambers.length === 1;
   const summaries: Record<SpeakerSettingsSection, React.ReactNode> = {
-    construction: constructionSummary(cabinet),
+    construction: constructionSummary(cabinet, units),
     chambers: chambers.map((c) => chamberSummary(c, units)).join("; "),
     bands: spec.bands.map((b, i) => (
       <span key={b.id} className="whitespace-nowrap">
@@ -185,7 +185,9 @@ export function SpeakerSettings({
               )}
               <ToggleGroup
                 label={
-                  <Tooltip tip={SPEAKER_TEXT.wallPanelTip(formatThickness(BAFFLE_PLY_IN))}>
+                  <Tooltip
+                    tip={SPEAKER_TEXT.wallPanelTip(formatThickness(BAFFLE_PLY_IN, units.system))}
+                  >
                     {SPEAKER_TEXT.wallPanel}
                   </Tooltip>
                 }

@@ -255,12 +255,12 @@ describe("the fold summaries keep to the key facts", () => {
     expect(bandSummary(band)).toBe("High · High-pass LR24 1200 Hz · Low-pass off · −3 dB · 100 W");
     expect(bandRange(band)).toBe("above 1200 Hz");
     expect(bandRange({ highpass: null, lowpass: null })).toBe("full range");
-    expect(constructionSummary(EMPTY_SPEAKER.cabinet)).toBe(
+    expect(constructionSummary(EMPTY_SPEAKER.cabinet, US)).toBe(
       "Flush · ¾″ walls · flat top · no hardware",
     );
-    expect(constructionSummary(paSub.cabinet)).toMatch(/^Frame · .+ · handles, input dish$/);
+    expect(constructionSummary(paSub.cabinet, US)).toMatch(/^Frame · .+ · handles, input dish$/);
     // a speaker with a horn chamber shows no top
-    expect(constructionSummary(th18.cabinet)).not.toMatch(/top/);
+    expect(constructionSummary(th18.cabinet, US)).not.toMatch(/top/);
   });
 });
 

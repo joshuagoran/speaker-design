@@ -97,7 +97,7 @@ export function SheetDrawing({
           Sheet {idx + 1} of {count}
         </span>
         <span className="block text-xs text-stone-500">
-          {formatThickness(t)} {PANEL_MATERIAL_NAMES[material].short}, {S.name}
+          {formatThickness(t, units.system)} {PANEL_MATERIAL_NAMES[material].short}, {S.name}
           {material === "ply" && (
             <>
               {" · "}

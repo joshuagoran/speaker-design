@@ -45,9 +45,14 @@ export function NumberField({
 }: Props) {
   const id = useId();
   const system = useUnitSystem();
+  /** a converted `n` (stored unit) at `min` or `max` when float error alone puts it just outside */
+  const snapToEnd = (n: number) =>
+    [min, max].find(
+      (end) => end !== undefined && Math.abs(n - end) <= 1e-9 * Math.max(1, Math.abs(end)),
+    ) ?? n;
   /** a stored amount as the box shows it, and a typed number in the stored unit */
   const show = (v: number) => (quantity ? toShown(quantity, system, v) : v);
-  const read = (n: number) => (quantity ? fromShown(quantity, system, n) : n);
+  const read = (n: number) => (quantity ? snapToEnd(fromShown(quantity, system, n)) : n);
   const shown = show(value);
   const [raw, setRaw] = useState(String(shown));
   /** `n` (stored unit) moved into `min`–`max` */

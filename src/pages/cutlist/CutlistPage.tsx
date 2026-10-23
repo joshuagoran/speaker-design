@@ -236,11 +236,11 @@ export function CutlistPage({
   const kerfLabel = KERF_OPTIONS.find((k) => k.v === kerfIn)?.label;
   const kerfName = kerfLabel ? units.text(kerfLabel) : `${units.cut(kerfIn)}${units.cutMark}`;
   // the walls' nominal size with its measured thickness beside it, and the range a measurement may take
-  const wallName = panelThicknessName(panel, wall);
+  const wallName = panelThicknessName(panel, wall, units.system);
   const wallRange = panelExactRange(panel);
   const wallDefault = defaultPanelIn(panel, material);
   /** a thickness as the page names it: the walls' with their nominal size, any other (the PA baffle) on its own */
-  const thicknessName = (t: number) => (t === wall ? wallName : formatThickness(t));
+  const thicknessName = (t: number) => (t === wall ? wallName : formatThickness(t, units.system));
   /** sets the walls' measured thickness; the default is kept as no measurement, so it follows the material */
   const setWallExact = (t: number | null) =>
     setPanelExactIn((prev) => {
@@ -476,7 +476,9 @@ export function CutlistPage({
                         {p.grain ? "↕" : "·"}
                       </Tooltip>
                     </td>
-                    <td className={`${td} text-right whitespace-nowrap`}>{formatThickness(p.t)}</td>
+                    <td className={`${td} text-right whitespace-nowrap`}>
+                      {formatThickness(p.t, units.system)}
+                    </td>
                   </tr>
                 );
               })}
@@ -661,12 +663,12 @@ export function CutlistPage({
                   <>
                     <span className="text-stone-500">
                       {units.system === UNIT_SYSTEM.metric
-                        ? `mm (${toShown("panelThickness", units.system, wallRange.min)}–${toShown("panelThickness", units.system, wallRange.max)} mm)`
+                        ? `${units.unit("panelThickness")} (${toShown("panelThickness", units.system, wallRange.min)}–${toShown("panelThickness", units.system, wallRange.max)} ${units.unit("panelThickness")})`
                         : `″ = ${(wall * MM_PER_IN).toFixed(1)} mm (${wallRange.min}–${wallRange.max}″)`}
                     </span>
                     {wall !== wallDefault && (
                       <Button onClick={() => setWallExact(null)}>
-                        {`Reset to ${formatThickness(wallDefault)}`}
+                        {`Reset to ${formatThickness(wallDefault, units.system)}`}
                       </Button>
                     )}
                   </>
