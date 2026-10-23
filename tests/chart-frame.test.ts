@@ -56,9 +56,17 @@ test("1 kHz sits at the same x on the response and dispersion charts", () => {
   const grid = dispersionGrid();
   const dispersion = renderToString(
     createElement(DispersionMap, {
-      map: { ...grid, rows: grid.angles.map(() => grid.freqs.map(() => 0)), crossovers: [] },
+      map: { ...grid, rows: grid.angles.map(() => grid.freqs.map(() => 0)), crossovers: [1000] },
       title: "Map",
     }),
   );
-  assert.strictEqual(oneKilohertzX(dispersion), oneKilohertzX(response));
+  const x = oneKilohertzX(dispersion);
+  assert.strictEqual(x, oneKilohertzX(response));
+  // the map's own marks sit on its axis: a 1 kHz crossover line is drawn at the 1k tick
+  const crossover = [...dispersion.matchAll(/<line x1="([\d.]+)" x2="\1"[^>]*stroke-width="3"/g)];
+  assert.ok(crossover.length > 0, "a crossover line");
+  assert.ok(
+    Math.abs(Number(crossover[0][1]) - x) < 0.01,
+    `crossover at ${crossover[0][1]}, tick at ${x}`,
+  );
 });

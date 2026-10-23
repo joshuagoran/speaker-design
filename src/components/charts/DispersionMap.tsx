@@ -149,7 +149,7 @@ export function DispersionMap({ map, title }: Props) {
   const { W, H } = frame;
   const L = frame.x0,
     T = frame.y0;
-  const pw = Math.round(frame.x1 - frame.x0),
+  const pw = frame.x1 - frame.x0,
     ph = frame.y1 - frame.y0;
   const href = useMemo(() => mapImage(map, pw, ph), [map, pw, ph]);
   const fx = frequencyX(frame, FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ);
