@@ -97,8 +97,8 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   const [units, setUnits] = useUnitChoice();
   return (
     <UnitsProvider system={units}>
-      // from md up the shell fills the window and doesn't scroll: the header stays, and the page
-      below scrolls in its own // panes (results and settings, see SettingsLayout)
+      {/* from md up the shell fills the window and doesn't scroll: the header stays, and the page below scrolls in its
+      own panes (results and settings, see SettingsLayout) */}
       <div
         className="min-h-screen bg-stone-50 text-stone-900 md:min-h-0 md:h-dvh md:flex md:flex-col md:overflow-hidden"
         style={{ fontFamily: FONT }}
