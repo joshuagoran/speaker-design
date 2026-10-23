@@ -376,11 +376,15 @@ export function CutlistPage({
             w,
             grainLocked: !!p.grain,
             t: p.t,
-            notes: [...(FROM_OFFCUT.has(p.part) ? [FROM_OFFCUT_NOTE] : []), ...noteLines(p.note)],
+            notes: [
+              ...(FROM_OFFCUT.has(p.part) ? [FROM_OFFCUT_NOTE] : []),
+              ...noteLines(p.note).map(units.text),
+            ],
           };
         }),
         purchased ?? [],
         boxSetCount,
+        units.system,
       ),
       CSV_TYPE,
     );

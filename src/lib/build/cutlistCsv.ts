@@ -1,7 +1,8 @@
 // The cutlist as one CSV file for spreadsheets and cutting tools: the panels (length and width in their own columns, in
-// decimal inches), then the purchased parts with a total. Not part of the .speaknow.json design file
+// decimal inches or mm as the Units setting shows), then the purchased parts with a total. Not part of the .speaknow.json design file
 // (docs/import-export-spec.md). Pure.
-import type { CutPart, PurchasedPart } from "../../types";
+import type { CutPart, PurchasedPart, UnitSystem } from "../../types";
+import { QUANTITIES, UNIT_SYSTEM } from "../../constants/units";
 import {
   PURCHASED_COLUMNS,
   PURCHASED_PARTIAL_NOTE,
@@ -15,18 +16,21 @@ export const CSV_TYPE = "text/csv;charset=utf-8";
 /** The UTF-8 byte order mark: Excel reads a CSV as UTF-8 only when the file starts with it. */
 export const CSV_BOM = "\uFEFF";
 
-/** The CSV's panel columns. */
-export const PANEL_CSV_COLUMNS = [
-  "Box",
-  "Tag",
-  "Part",
-  "Qty",
-  "L (in)",
-  "W (in)",
-  "Grain",
-  "Thickness (in)",
-  "Notes",
-] as const;
+/** The CSV's panel columns, the sizes' in the system's unit (in or mm). */
+export const panelCsvColumns = (system: UnitSystem) => {
+  const unit = QUANTITIES.boxLength[system].unit;
+  return [
+    "Box",
+    "Tag",
+    "Part",
+    "Qty",
+    `L (${unit})`,
+    `W (${unit})`,
+    "Grain",
+    `Thickness (${unit})`,
+    "Notes",
+  ];
+};
 
 /** The CSV's section headings, each on its own line above its columns. */
 export const CSV_SECTIONS = { panels: "Panels", purchased: "Purchased parts" } as const;
@@ -43,7 +47,7 @@ export interface PanelCsvRow {
   tag: string;
   part: string;
   qty: number;
-  /** length and width, in: L along the grain when the grain is locked, else the long side */
+  /** length and width, in (the CSV writes them in the system's unit): L along the grain when locked, else the long side */
   l: number;
   w: number;
   grainLocked: boolean;
@@ -57,8 +61,15 @@ const cell = (v: string | number | null) => {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 const line = (cells: readonly (string | number | null)[]) => cells.map(cell).join(",");
-/** Inches as a decimal, to the thousandth: what a spreadsheet or a cutting tool reads. */
-const inches = (v: number) => Math.round(v * 1000) / 1000;
+/**
+ * A size, inches, as a spreadsheet or a cutting tool reads it: inches to the thousandth in US; in metric, mm to the tenth,
+ * or to the page's decimals for a thickness.
+ */
+const csvSize = (system: UnitSystem, inches: number, thickness = false) => {
+  if (system !== UNIT_SYSTEM.metric) return Math.round(inches * 1000) / 1000;
+  const { per, decimals } = QUANTITIES.panelThickness.metric;
+  return +(inches * per).toFixed(thickness ? decimals : 1);
+};
 /** Dollars to the cent; empty when unknown. */
 const dollars = (v: number | null) => (v === null ? null : v.toFixed(2));
 
@@ -79,26 +90,27 @@ export const purchasedTotal = (rows: readonly PurchasedPart[], sets = 1) => ({
 /**
  * The cutlist as CSV text, after the UTF-8 byte order mark: the panels, a blank line, then the purchased parts and their
  * total (marked, with a note row, when some part has no price). `sets` multiplies the purchased counts as the panel
- * quantities already are (one set per speaker).
+ * quantities already are (one set per speaker). Sizes are in the system's unit; notes come as the page shows them.
  */
 export function cutlistCsv(
   panels: readonly PanelCsvRow[],
   purchased: readonly PurchasedPart[],
   sets: number,
+  system: UnitSystem,
 ): string {
   const out = [
     line([CSV_SECTIONS.panels]),
-    line(PANEL_CSV_COLUMNS),
+    line(panelCsvColumns(system)),
     ...panels.map((p) =>
       line([
         p.box,
         p.tag,
         p.part,
         p.qty,
-        inches(p.l),
-        inches(p.w),
+        csvSize(system, p.l),
+        csvSize(system, p.w),
         p.grainLocked ? CSV_GRAIN.along : CSV_GRAIN.any,
-        inches(p.t),
+        csvSize(system, p.t, true),
         p.notes.join("; "),
       ]),
     ),
