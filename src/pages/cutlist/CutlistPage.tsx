@@ -30,7 +30,9 @@ import {
 } from "../../components/ui/SettingsSheetTabs";
 import { StatTileGrid } from "../../components/stats/StatTileGrid";
 import { SheetDrawing } from "../../components/drawings/SheetDrawing";
-import { PLYWOOD_SHEETS, formatInches } from "../../lib/acoustics/boxModels";
+import { PLYWOOD_SHEETS } from "../../lib/acoustics/boxModels";
+import { useUnits } from "../../hooks/useUnits";
+import { toShown, type Units } from "../../lib/units";
 import {
   defaultPanelIn,
   formatThickness,
@@ -98,7 +100,7 @@ import {
   type CutlistSettingsSection,
 } from "../../constants/settingsSections";
 import { CUTLIST_PROJECTS, type CutlistProjectId } from "../../constants/cutlistProjects";
-import { MM_PER_IN } from "../../constants/units";
+import { CUT_SIZE_UNIT_WORDS, MM_PER_IN, UNIT_SYSTEM } from "../../constants/units";
 
 interface Props {
   /** whose boxes these are: the page's words and set choices follow it */
@@ -153,13 +155,13 @@ const partName = (p: Pick<CutPart, "box" | "part">) =>
   `${cutBoxName(p.box)} ${CUT_PART_NAMES[p.part]}`;
 
 /** A part's length and width as the table shows them: L along the grain when it is locked, else the long side. */
-const sizeOf = (p: CutPart): [string, string] => {
+const sizeOf = (p: CutPart, units: Units): [string, string] => {
   const [l, w] = partLengthWidth(p);
-  return [formatInches(l), formatInches(w)];
+  return [units.cut(l), units.cut(w)];
 };
 /** US dollars to the cent, as the purchased parts table shows a price. */
 const cents = (v: number) => `$${v.toFixed(2)}`;
-const trimName = (v: number) => (v ? `${formatInches(v)}″` : "None");
+const trimName = (v: number, units: Units) => (v ? `${units.cut(v)}${units.cutMark}` : "None");
 
 /**
  * Cutlist page, for either project: the settings beside the panels of each box and how they pack onto sheets. The
@@ -176,6 +178,7 @@ export function CutlistPage({
   panel,
   material,
 }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const {
     cornerJoint,
@@ -230,7 +233,8 @@ export function CutlistPage({
   const cut = useCutlistLayout({ parts, settings }) ?? quick;
   const sheetSize = PLYWOOD_SHEETS[plywoodSheetKind];
   const preset = grainPresetOf(grain);
-  const kerfName = KERF_OPTIONS.find((k) => k.v === kerfIn)?.label ?? `${formatInches(kerfIn)}″`;
+  const kerfLabel = KERF_OPTIONS.find((k) => k.v === kerfIn)?.label;
+  const kerfName = kerfLabel ? units.text(kerfLabel) : `${units.cut(kerfIn)}${units.cutMark}`;
   // the walls' nominal size with its measured thickness beside it, and the range a measurement may take
   const wallName = panelThicknessName(panel, wall);
   const wallRange = panelExactRange(panel);
@@ -269,7 +273,7 @@ export function CutlistPage({
 
   const summaries: Record<CutlistSettingsSection, string> = {
     boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, proj.set)}`,
-    sheets: `${wallName}, ${sheetSize.name}, ${kerfName} kerf, ${edgeTrimIn ? `${trimName(edgeTrimIn)} trim` : "no trim"}`,
+    sheets: `${wallName}, ${sheetSize.name}, ${kerfName} kerf, ${edgeTrimIn ? `${trimName(edgeTrimIn, units)} trim` : "no trim"}`,
     grain: grainless
       ? `${mat.word}: no grain`
       : `${preset ? PRESET_NAMES[preset] : "Custom"}${waterfall ? ", waterfall" : ""}`,
@@ -387,7 +391,7 @@ export function CutlistPage({
         Panels
       </h3>
       <p className="text-sm text-stone-500 mb-2">
-        Finished sizes in inches.{" "}
+        {`Finished sizes in ${CUT_SIZE_UNIT_WORDS[units.system]}.`}{" "}
         {grainless
           ? `L is the long side (${mat.word} has no grain).`
           : "L runs along the grain (↕) on a grain-locked part, else L is the long side."}{" "}
@@ -401,8 +405,8 @@ export function CutlistPage({
               <th className={`${th} pr-2`}>Tag</th>
               <th className={`${th} pr-3`}>Part</th>
               <th className={`${th} pr-3 text-right`}>Qty</th>
-              <th className={`${th} pr-3 text-right`}>L, in</th>
-              <th className={`${th} text-right`}>W, in</th>
+              <th className={`${th} pr-3 text-right`}>{`L, ${units.unit("boxLength")}`}</th>
+              <th className={`${th} text-right`}>{`W, ${units.unit("boxLength")}`}</th>
               <th className={`${th} px-2 text-center`}>
                 <Tooltip tip="Grain direction">Grain</Tooltip>
               </th>
@@ -431,9 +435,9 @@ export function CutlistPage({
                 // one short line per note (each cutout, joint or warning), so the list stays easy to scan
                 const notes = [
                   ...(FROM_OFFCUT.has(p.part) ? [FROM_OFFCUT_NOTE] : []),
-                  ...noteLines(p.note),
+                  ...noteLines(p.note).map(units.text),
                 ];
-                const [first, second] = sizeOf(p);
+                const [first, second] = sizeOf(p, units);
                 return (
                   <tr
                     key={i}
@@ -514,9 +518,9 @@ export function CutlistPage({
               {plural(g.cuts.rips, "full-length rip")},{" "}
               {plural(g.cuts.crosscuts, "full-width crosscut")}
               {g.cuts.widestCrosscut > 0 &&
-                `. Widest crosscut ${formatInches(g.cuts.widestCrosscut)}″`}
+                `. Widest crosscut ${units.cut(g.cuts.widestCrosscut)}${units.cutMark}`}
               {g.offcut &&
-                `; keeps a ${formatInches(g.offcut.w)} × ${formatInches(g.offcut.h)}″ offcut on sheet ${g.offcut.sheet + 1}`}
+                `; keeps a ${units.cut(g.offcut.w)} × ${units.cut(g.offcut.h)}${units.cutMark} offcut on sheet ${g.offcut.sheet + 1}`}
               {g.fewestSheets !== null && g.fewestSheets < g.sheets.length && (
                 <>
                   .{" "}
@@ -646,6 +650,7 @@ export function CutlistPage({
                   </Tooltip>
                 }
                 value={wall}
+                quantity="panelThickness"
                 min={wallRange.min}
                 max={wallRange.max}
                 step={0.001}
@@ -655,7 +660,9 @@ export function CutlistPage({
                 unit={
                   <>
                     <span className="text-stone-500">
-                      ″ = {(wall * MM_PER_IN).toFixed(1)} mm ({wallRange.min}–{wallRange.max}″)
+                      {units.system === UNIT_SYSTEM.metric
+                        ? `mm (${toShown("panelThickness", units.system, wallRange.min)}–${toShown("panelThickness", units.system, wallRange.max)} mm)`
+                        : `″ = ${(wall * MM_PER_IN).toFixed(1)} mm (${wallRange.min}–${wallRange.max}″)`}
                     </span>
                     {wall !== wallDefault && (
                       <Button onClick={() => setWallExact(null)}>
@@ -675,7 +682,9 @@ export function CutlistPage({
                 label="Kerf"
                 value={kerfIn}
                 onChange={setKerfIn}
-                options={KERF_OPTIONS.map((k) => [k.v, k.label, k.tip] as const)}
+                options={KERF_OPTIONS.map(
+                  (k) => [k.v, units.text(k.label), units.text(k.tip)] as const,
+                )}
               />
               <ToggleGroup
                 label={
@@ -685,7 +694,7 @@ export function CutlistPage({
                 }
                 value={edgeTrimIn}
                 onChange={setEdgeTrimIn}
-                options={TRIM_OPTIONS.map((v) => [v, trimName(v)] as const)}
+                options={TRIM_OPTIONS.map((v) => [v, trimName(v, units)] as const)}
               />
             </>,
           )}
