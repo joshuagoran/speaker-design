@@ -3,6 +3,7 @@ import { MAP_DRAG_UPDATE_MS } from "../../constants/space";
 import { alpha, ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
+import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
 import { formatSigned, formatDb } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/acoustics/coverage";
 import { materialAlpha } from "../../lib/acoustics/roomAcoustics";
@@ -173,10 +174,13 @@ export function CoverageMap({
   quiet,
 }: Props) {
   const pal = usePalette();
+  // in an expanded dialog, the dialog's height in place of the page's
+  const expandedH = useExpandedChartHeight();
+  const mapMaxHeight = expandedH ?? maxHeight;
   const [box, cw] = useElementWidth(560);
   const k = Math.max(
     2,
-    Math.min((cw - PAD.l - PAD.r) / room.widthFt, (maxHeight - PAD.t - PAD.b) / room.lengthFt),
+    Math.min((cw - PAD.l - PAD.r) / room.widthFt, (mapMaxHeight - PAD.t - PAD.b) / room.lengthFt),
   );
   const w = room.widthFt * k,
     h = room.lengthFt * k,
@@ -405,7 +409,11 @@ export function CoverageMap({
 
   return (
     <div ref={box}>
-      <div className="flex justify-between items-baseline gap-3 text-xs text-stone-500 mb-1 min-h-[1rem]">
+      <div
+        className="flex justify-between items-baseline gap-3 text-xs text-stone-500 mb-1 min-h-[1rem]"
+        // on the page, the readout clear of the expand button on the map's top-right corner
+        style={{ paddingRight: expandedH === null ? EXPAND_BUTTON_ROOM_PX : 0 }}
+      >
         <span>
           {room.outdoors
             ? UI_TEXT.outdoors

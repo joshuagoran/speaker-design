@@ -20,6 +20,7 @@ import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTile
 import { STATS } from "../../components/stats/StatLabel";
 import { priceText } from "../../lib/speaker/speakerTotals";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { ExpandableChart } from "../../components/ui/ExpandPanel";
 import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
 import { SpeakerFront } from "../../components/drawings/SpeakerFront";
 import { SpeakerSide } from "../../components/drawings/SpeakerSide";
@@ -499,7 +500,7 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} ${resultsGridClass(wide)}`}>
             <section ref={responseBlock} className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
               <SectionHeading>{SPEAKER_TEXT.response}</SectionHeading>
-              {responseChart}
+              <ExpandableChart title={SPEAKER_TEXT.response}>{responseChart}</ExpandableChart>
               {/* a chamber the model leaves out is named with its reason, never dropped silently */}
               {response.chambers.flatMap((c, i) =>
                 [...new Set(c.gaps)].map((g) => (
@@ -517,20 +518,22 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
             {limits.bands.length > 0 && (
               <section className={`${cell("col-start-2 row-start-1")} ${GAP_Y}`}>
                 <SectionHeading>{SPEAKER_TEXT.maxOutput}</SectionHeading>
-                <ResponseChart
-                  fmin={FREQ_AXIS_MIN_HZ}
-                  fmax={FREQ_AXIS_MAX_HZ}
-                  top={MAX_OUTPUT_TOP}
-                  bot={MAX_OUTPUT_BOT}
-                  step={10}
-                  yLabel={SPEAKER_TEXT.maxYLabel}
-                  series={[
-                    sum(limits.sum),
-                    ...bandSeries(limits.bands.map((b) => ({ id: b.id, curve: b.max }))),
-                    ...previewSeries("max"),
-                  ]}
-                  marks={fbMarks}
-                />
+                <ExpandableChart title={SPEAKER_TEXT.maxOutput}>
+                  <ResponseChart
+                    fmin={FREQ_AXIS_MIN_HZ}
+                    fmax={FREQ_AXIS_MAX_HZ}
+                    top={MAX_OUTPUT_TOP}
+                    bot={MAX_OUTPUT_BOT}
+                    step={10}
+                    yLabel={SPEAKER_TEXT.maxYLabel}
+                    series={[
+                      sum(limits.sum),
+                      ...bandSeries(limits.bands.map((b) => ({ id: b.id, curve: b.max }))),
+                      ...previewSeries("max"),
+                    ]}
+                    marks={fbMarks}
+                  />
+                </ExpandableChart>
                 <StatTileGrid tiles={maxTiles} />
               </section>
             )}

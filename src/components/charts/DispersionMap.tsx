@@ -20,6 +20,7 @@ import { useElementWidth } from "../../hooks/useElementWidth";
 import { SVG_FONT } from "../../styles/fonts";
 import { useMemo, useState } from "react";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
+import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
 
 interface Props {
   map: HifiDispersionMap;
@@ -129,11 +130,13 @@ export function DispersionKey() {
 export function DispersionMap({ map, title }: Props) {
   const pal = usePalette();
   const [hover, setHover] = useState<{ i: number; j: number } | null>(null);
+  // in an expanded dialog: the dialog's height and its full width
+  const expandedH = useExpandedChartHeight();
   // drawn in real pixels so text stays 11 px at any width
   const [box, cw] = useElementWidth(560);
   const narrow = cw < 500;
   const W = Math.max(280, cw),
-    H = narrow ? 260 : 320,
+    H = expandedH ?? (narrow ? 260 : 320),
     L = 40,
     R = 10,
     T = 8,
@@ -169,8 +172,12 @@ export function DispersionMap({ map, title }: Props) {
   );
   const gridStroke = alpha(ON_DATA.ink, 0.18);
   return (
-    <div ref={box} className={RESULT_MAX_WIDTH}>
-      <div className="flex justify-between items-baseline gap-2 text-xs text-stone-500 mb-1">
+    <div ref={box} className={expandedH === null ? RESULT_MAX_WIDTH : undefined}>
+      <div
+        className="flex justify-between items-baseline gap-2 text-xs text-stone-500 mb-1"
+        // on the page, the readout clear of the expand button on the chart's top-right corner
+        style={{ paddingRight: expandedH === null ? EXPAND_BUTTON_ROOM_PX : 0 }}
+      >
         <span>{title}</span>
         <span className="tabular-nums text-stone-900 shrink-0">
           {hover

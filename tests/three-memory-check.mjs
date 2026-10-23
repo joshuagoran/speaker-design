@@ -6,7 +6,8 @@
 // geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
 // canvas (one WebGL renderer for the component's life). The counts are read once the view has settled: the Space's
-// view also rebuilds when a new coverage grid arrives. Then it turns the view with a drag and presses "Reset 3D view":
+// view also rebuilds when a new coverage grid arrives. Each view runs with Outlines only on (3D settings), so the edge
+// lines it adds are counted too. Then it turns the view with a drag and presses "Reset 3D view":
 // the view must draw as it did before the drag.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -89,6 +90,10 @@ for (const { name, hash, control, up, down, prepare } of VIEWS) {
   const view = page.locator("[data-geometries]");
   await view.waitFor({ timeout: 60_000 });
   if (prepare) await prepare(page);
+  // Outlines only on: every rebuild below also builds and frees the parts' edge lines
+  await page.getByRole("button", { name: UI_TEXT.settings3d }).click();
+  await page.getByRole("menuitemcheckbox", { name: UI_TEXT.outlinesOnly }).click();
+  await page.keyboard.press("Escape");
   const read = () =>
     view.evaluate((el) => ({
       geometries: Number(el.dataset.geometries),

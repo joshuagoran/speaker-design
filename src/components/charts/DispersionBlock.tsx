@@ -1,5 +1,6 @@
 import { DispersionPlaneToggle } from "../ui/DispersionPlaneToggle";
 import { DispersionMap } from "./DispersionMap";
+import { ExpandableChart } from "../ui/ExpandPanel";
 import { DISPERSION_AXIS_NAMES, dispersionMapTitle } from "../../constants/dispersionPlanes";
 import type { DispersionPlane, HifiDispersionMap } from "../../types";
 
@@ -15,10 +16,13 @@ interface Props {
 
 /** A dispersion map with its Horizontal / Vertical buttons and its title: the PA, Speaker and Stack pages' alike. */
 export function DispersionBlock({ map, plane, onPlane, distM, axis }: Props) {
+  const title = dispersionMapTitle(plane, distM, axis);
   return (
     <>
       <DispersionPlaneToggle value={plane} onChange={onPlane} />
-      <DispersionMap map={map} title={dispersionMapTitle(plane, distM, axis)} />
+      <ExpandableChart title={title}>
+        <DispersionMap map={map} title={title} />
+      </ExpandableChart>
     </>
   );
 }
