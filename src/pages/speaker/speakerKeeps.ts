@@ -14,7 +14,7 @@ import { toggled } from "../../lib/lists";
 import { VENT_KIND } from "../../constants/speakerSpec";
 import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
 import { SETTINGS_TEXT } from "../../constants/speakerSettings";
-import { driverName } from "./speakerParts";
+import { driverName } from "../../lib/speaker/driverLists";
 
 /** The three chamber axes, in the order the size locks list them. */
 export const SIZE_AXES = ["w", "h", "d"] as const;

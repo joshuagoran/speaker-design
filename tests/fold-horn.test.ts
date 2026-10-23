@@ -3,7 +3,7 @@
 import { expect, test } from "vite-plus/test";
 import assert from "node:assert";
 import { withHornFold } from "../src/pages/speaker/chamberLoad";
-import { chamberChips } from "../src/pages/speaker/speakerChips";
+import { chamberChips } from "../src/lib/speaker/speakerChips";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { DEFAULT_VENTS } from "../src/pages/speaker/speakerParts";

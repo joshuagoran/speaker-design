@@ -10,7 +10,7 @@ import {
 import { runDriverCompare } from "../../lib/speaker/runDriverCompare";
 import { isOptimizerCancel } from "../../lib/makeOptimizerRunner";
 import { hornById } from "../../lib/data";
-import { driverName } from "./speakerParts";
+import { driverName } from "../../lib/speaker/driverLists";
 import type {
   DriverCompareOption,
   DriverCompareTarget,

@@ -87,10 +87,10 @@ import {
   TUBE_LAYOUT,
   VENT_KIND,
 } from "../../constants/speakerSpec";
+import { DRIVER_OPTIONS } from "../../lib/speaker/driverLists";
 import {
   DEFAULT_PORTS,
   DEFAULT_VENTS,
-  DRIVER_OPTIONS,
   NO_HORN,
   WOOFER_OPTIONS,
   WOOFER_SIZES,

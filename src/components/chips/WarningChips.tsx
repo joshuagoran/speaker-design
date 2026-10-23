@@ -1,13 +1,16 @@
-import type { Chip, ChipId } from "../../types";
+import type { Chip, ChipId, ChipSeverity } from "../../types";
 import { Tooltip } from "../ui/Tooltip";
 import { MarkedText } from "../ui/MarkedText";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
-/** Background and border classes for each warning-chip status: a light tint of the status color with a matching border. */
-export const CHIP_BACKGROUND_CLASSES = {
-  ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300",
-  warn: "bg-amber-50 border-amber-200 border-l-4 border-l-amber-300",
-  bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300",
+/**
+ * Background and border classes for each warning-chip status: the palette's status tint (green ok, orange warning, red
+ * problem) with its edge, and a bar in the status color.
+ */
+export const CHIP_BACKGROUND_CLASSES: Record<ChipSeverity, string> = {
+  ok: "bg-green-tint border-green-edge border-l-4 border-l-green-base",
+  warn: "bg-orange-tint border-orange-edge border-l-4 border-l-orange-base",
+  bad: "bg-red-tint border-red-edge border-l-4 border-l-red-base",
 };
 
 interface Props {
@@ -22,11 +25,11 @@ interface Props {
   row?: string;
 }
 
-/** Each status's title color. */
-const CHIP_TITLE_CLASSES = {
-  ok: "text-green-800",
-  warn: "text-amber-700",
-  bad: "text-red-700",
+/** Each status's title color: the palette's text shade of the status color. */
+const CHIP_TITLE_CLASSES: Record<ChipSeverity, string> = {
+  ok: "text-green-text",
+  warn: "text-orange-text",
+  bad: "text-red-text",
 };
 
 /** Stack of warning chips, each `[status, heading, text, id]` as the pages' chip lists return them. */
