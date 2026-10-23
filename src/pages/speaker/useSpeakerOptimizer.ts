@@ -110,7 +110,8 @@ export function useSpeakerOptimizer({ spec, loadSpec, round, current }: Props) {
       return {
         name: item.label,
         locked,
-        unlocks: locked,
+        // a size held by its model's lock: a tap does nothing, so it doesn't offer to unlock
+        unlocks: locked && !held,
         disabled: held,
         onClick: () => setLocks(toggleKeep(locks, item)),
       };

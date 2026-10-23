@@ -121,9 +121,9 @@ const SIZE_FACTORS: [number, number] = [0.7, 1.5];
 
 /**
  * A cone kind's candidates: same kind and nominal size (or the next size up or down with `nearSizes`), with a US price
- * and T/S, each driver once (`inSearchSpace`); your part always. `ownSize` (in) is your part's nominal size where the catalog has it outside
- * the search space (a template's own driver, as the driver comparison lists its options); absent, such a part keeps
- * only itself. A size that doesn't fit the box fails the fit check (`driverFits` in evaluate).
+ * and T/S, each driver once (`inSearchSpace`); your part always. `ownSize` (in) is your part's nominal size where the
+ * catalog has it outside the search space (a template's own driver, as the driver comparison lists its options);
+ * absent, such a part keeps only itself. A size that doesn't fit the box fails the fit check (evaluate `driverFits`).
  */
 export function coneCandidates(
   kind: DriverKind,
@@ -143,12 +143,15 @@ export function coneCandidates(
             : [];
   const size = byId(table, current)?.size ?? ownSize;
   if (size === undefined) return [current];
-  // with `nearSizes`: your size and the next size up and down the table has
-  const sizes = [...new Set(table.filter(inSearchSpace).map((d) => d.size))].sort((a, b) => a - b);
+  const searched = (d: (typeof table)[number]) => inSearchSpace(d) && d.price !== null;
+  // with `nearSizes`: your size and the next size up and down that has a part to try
+  const sizes = [...new Set([size, ...table.filter(searched).map((d) => d.size)])].sort(
+    (a, b) => a - b,
+  );
   const at = sizes.indexOf(size);
-  const near = new Set(nearSizes && at >= 0 ? sizes.slice(Math.max(0, at - 1), at + 2) : [size]);
+  const near = new Set(nearSizes ? sizes.slice(Math.max(0, at - 1), at + 2) : [size]);
   const ids = table
-    .filter((d) => d.id === current || (inSearchSpace(d) && near.has(d.size) && d.price !== null))
+    .filter((d) => d.id === current || (searched(d) && near.has(d.size)))
     .map((d) => d.id);
   // a coaxial with an HF section keeps one (its HF band would lose its model)
   if (kind === DRIVER_KIND.coaxial && byId(catalog.coaxial, current)?.hf)

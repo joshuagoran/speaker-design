@@ -36,8 +36,8 @@ export type KeepItem =
   | { kind: "highpass" | "lowpass" | "amps"; ref: BandId; label: string };
 
 /**
- * Every part of the spec a lock can hold, in the order of the page: each chamber's vent (a vented one), then each driver
- * entry's size (a woofer on the baffle of a box), the entry, and its horn; then each band's filters and amp.
+ * Every part of the spec a lock can hold, in the order of the page: each chamber's vent (a vented one), then each
+ * driver entry's size (a woofer on the baffle of a box), the entry, and its horn; then each band's filters and amp.
  */
 export function keepItems(spec: Pick<SpeakerSpec, "cabinet" | "bands">): KeepItem[] {
   const T = SPEAKER_OPTIMIZER_TEXT;
@@ -192,8 +192,8 @@ export interface HeldLocks {
 }
 
 /**
- * The locks that hold on the spec as it is now: none once the chamber list was replaced; without the driver, size, and horn
- * locks once a driver entry was added or removed (the entries after it moved place, so a lock would move to another
+ * The locks that hold on the spec as it is now: none once the chamber list was replaced; without the driver, size, and
+ * horn locks once a driver entry was added or removed (the entries after it moved, so a lock would move to another
  * driver); without the vent and size locks too once a chamber was added or removed (they name a chamber by its place);
  * and only the parts the spec still has.
  */
