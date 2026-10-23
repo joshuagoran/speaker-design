@@ -2507,6 +2507,8 @@ export interface SpeakerOptimizerLocks {
   drivers?: readonly DriverRef[];
   /** driver entries whose horn stays */
   horns?: readonly DriverRef[];
+  /** woofer entries whose nominal size stays: another woofer of that size may take their place */
+  sizes?: readonly DriverRef[];
   /** chambers, by index, whose vent stays */
   vents?: readonly number[];
   /** bands whose highpass stays, and whose lowpass stays (a crossover in the box moves only when both its sides are free) */

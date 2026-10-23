@@ -3,7 +3,7 @@ import type { Units } from "../../lib/units";
 import { useState } from "react";
 import { CompareChecks, CompareTable, type CompareColumn } from "../../components/ui/CompareTable";
 import { SORT_BEST, sortRows, type DriverCompareRow } from "../../lib/speaker/driverCompare";
-import { isWooferKind } from "./speakerParts";
+import { isWooferKind } from "../../lib/speaker/driverParts";
 import { formatDollars } from "../../lib/format";
 import { Button } from "../../components/ui/Button";
 import { DRIVER_TYPE_NAMES } from "../../constants/speakerPage";

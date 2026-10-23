@@ -17,6 +17,7 @@ import {
   SPEAKER_SUB_OPTIONS,
 } from "../../lib/data";
 import { byId } from "../../lib/tables";
+import type { WooferKind } from "../../lib/speaker/driverParts";
 import {
   DEFAULT_DRIVER_IDS,
   DEFAULT_HIFI,
@@ -85,13 +86,6 @@ export function driverOfKind(
       return { ...common, kind, driverId: DEFAULT_DRIVER_IDS.coaxial };
   }
 }
-
-/** The catalog kinds that are woofers: the PA subs, the PA mid-bass drivers and the Hi-fi woofers. */
-export type WooferKind = Extract<DriverKind, "sub" | "mid" | "woofer">;
-
-/** Whether a driver kind is a woofer: the driver picker shows the three in one list. */
-export const isWooferKind = (kind: DriverKind): kind is WooferKind =>
-  kind === DRIVER_KIND.sub || kind === DRIVER_KIND.mid || kind === DRIVER_KIND.woofer;
 
 /** A woofer as the one woofer list shows it: its catalog kind and its nominal size, in. */
 export interface WooferOption extends SelectOption {

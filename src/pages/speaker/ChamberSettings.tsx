@@ -35,6 +35,7 @@ import { SelectField, type SelectOption } from "../../components/ui/SelectField"
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { WithLock, type LockControl } from "../../components/ui/LockButton";
+import { isWooferKind } from "../../lib/speaker/driverParts";
 import { driverRef } from "../../lib/speaker/optimize/space";
 import type { SpeakerLocks } from "./useSpeakerOptimizer";
 import { byId } from "../../lib/tables";
@@ -99,7 +100,6 @@ import {
   WOOFER_SIZES,
   driverOfKind,
   hornOptions,
-  isWooferKind,
   withWoofer,
   wooferClearIn,
   wooferFor,
@@ -631,6 +631,7 @@ export function ChamberSettings({
             locks={{
               driver: locks.partLock("drivers", driverRef(index, i)),
               horn: locks.partLock("horns", driverRef(index, i)),
+              size: locks.partLock("sizes", driverRef(index, i)),
             }}
           />
         ))}
@@ -977,8 +978,8 @@ interface DriverProps {
   onRemove: () => void;
   /** opens the driver comparison for it */
   onCompare: () => void;
-  /** the optimizer's locks beside its model and its horn */
-  locks: { driver: LockControl | null; horn: LockControl | null };
+  /** the optimizer's locks beside its size, its model, and its horn */
+  locks: { driver: LockControl | null; horn: LockControl | null; size: LockControl | null };
 }
 
 /**
@@ -1100,18 +1101,20 @@ function DriverFields({
           }}
         />
         {woofer && (
-          <SelectField
-            label="Size"
-            options={SIZE_OPTIONS}
-            value={size === null ? ALL_SIZES_OPTION : byId(SIZE_OPTIONS, String(size))}
-            onChange={(o) => {
-              const picked = WOOFER_SIZES.find((s) => String(s) === o.id);
-              setAllSizes(picked === undefined);
-              // a size the woofer is not: the first woofer of that size
-              const first = WOOFER_OPTIONS.find((w) => w.size === picked);
-              if (first && picked !== wooferSizeOf(driver)) onEdit((d) => withWoofer(d, first));
-            }}
-          />
+          <WithLock lock={locks.size}>
+            <SelectField
+              label="Size"
+              options={SIZE_OPTIONS}
+              value={size === null ? ALL_SIZES_OPTION : byId(SIZE_OPTIONS, String(size))}
+              onChange={(o) => {
+                const picked = WOOFER_SIZES.find((s) => String(s) === o.id);
+                setAllSizes(picked === undefined);
+                // a size the woofer is not: the first woofer of that size
+                const first = WOOFER_OPTIONS.find((w) => w.size === picked);
+                if (first && picked !== wooferSizeOf(driver)) onEdit((d) => withWoofer(d, first));
+              }}
+            />
+          </WithLock>
         )}
       </div>
       <div className={PICK_ROW}>
