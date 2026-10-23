@@ -32,20 +32,27 @@ export function SettingsMenu({ units, onUnits, volume, onVolume }: Props) {
   /** where the menu opens: under the button, its right edge on the button's (fixed, so the header can't clip it) */
   const [at, setAt] = useState({ top: 0, right: 0 });
   useMenuClose(open, box, setOpen);
-  // a fixed menu would part from its button as the page scrolls or the window changes size, so either closes it
+  // a fixed menu would part from its button as the page scrolls or the window gets wider or narrower, so either closes
+  // it (a phone's address bar showing or hiding changes only the height)
   useEffect(() => {
     if (!open) return;
     const close = () => setOpen(false);
+    const width = window.innerWidth;
+    const resize = () => {
+      if (window.innerWidth !== width) close();
+    };
     window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
+    window.addEventListener("resize", resize);
     return () => {
       window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
+      window.removeEventListener("resize", resize);
     };
   }, [open]);
   const toggle = () => {
     const button = box.current?.getBoundingClientRect();
-    if (button) setAt({ top: button.bottom + 4, right: window.innerWidth - button.right });
+    // `right` is measured from the viewport's edge without its scrollbar
+    if (button)
+      setAt({ top: button.bottom + 4, right: document.documentElement.clientWidth - button.right });
     setOpen((o) => !o);
   };
   return (
