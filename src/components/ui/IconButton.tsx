@@ -1,7 +1,8 @@
+import { POINTER_MOUSE } from "../../constants/pointer";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { HOVER_TRANSITION, PRESSED_CLASSES } from "./buttonStyles";
-import { TIP_CLASS, TIP_EDGE_PX } from "./Tooltip";
+import { DANGER_ICON_CLASSES, HOVER_TRANSITION, PRESSED_CLASSES } from "./buttonStyles";
+import { TIP_CLASS, placeTip } from "./Tooltip";
 import { MarkedText, plainText } from "./MarkedText";
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   pressed?: boolean;
   /** "sm": a smaller button for a row of settings (a driver's trash icon); default the views' size */
   size?: "sm" | "md";
+  /** a Remove or Delete (a trash icon): the icon in the danger red */
+  danger?: boolean;
   /** the icon: a 16 px SVG drawn in `currentColor` */
   children: React.ReactNode;
 }
@@ -20,23 +23,14 @@ interface Props {
  * A square icon-only button, for the controls laid over a view (the 3D view's full screen and cutaway). Its name shows
  * in a tip under it while a mouse is over it or the keyboard puts focus on it, until Escape closes it.
  */
-export function IconButton({ label, onClick, pressed, size = "md", children }: Props) {
+export function IconButton({ label, onClick, pressed, size = "md", danger, children }: Props) {
   const [tip, setTip] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const box = useRef<HTMLSpanElement>(null);
   // the tip centered under the button, kept inside the window
   useLayoutEffect(() => {
     const b = button.current?.getBoundingClientRect();
-    const t = box.current;
-    if (!tip || !b || !t) return;
-    const w = t.offsetWidth;
-    const left = Math.max(
-      TIP_EDGE_PX,
-      Math.min(b.left + b.width / 2 - w / 2, window.innerWidth - w - TIP_EDGE_PX),
-    );
-    t.style.left = `${left}px`;
-    t.style.top = `${b.bottom + 4}px`;
-    t.style.visibility = "visible";
+    if (tip && b && box.current) placeTip(b, box.current, true);
   }, [tip, label]);
   // Escape closes the tip, whether a mouse or the keyboard opened it; the button keeps focus
   useEffect(() => {
@@ -55,11 +49,11 @@ export function IconButton({ label, onClick, pressed, size = "md", children }: P
       aria-label={plainText(label)}
       aria-pressed={pressed}
       // a mouse only: after a tap the tip would stay open
-      onPointerEnter={(e) => setTip(e.pointerType === "mouse")}
+      onPointerEnter={(e) => setTip(e.pointerType === POINTER_MOUSE)}
       onPointerLeave={() => setTip(false)}
       onFocus={(e) => setTip(e.currentTarget.matches(":focus-visible"))}
       onBlur={() => setTip(false)}
-      className={`${size === "sm" ? "w-[30px] h-[30px] shrink-0" : "w-9 h-9"} inline-flex items-center justify-center rounded border ${HOVER_TRANSITION} ${pressed ? PRESSED_CLASSES : "border-stone-300 bg-panel/90 hover:border-stone-500"}`}
+      className={`${size === "sm" ? "w-[30px] h-[30px] shrink-0" : "w-9 h-9"} inline-flex items-center justify-center rounded border ${HOVER_TRANSITION} ${pressed ? PRESSED_CLASSES : `border-stone-300 bg-panel/90 ${danger ? DANGER_ICON_CLASSES : "hover:border-stone-500"}`}`}
     >
       {children}
       {tip &&

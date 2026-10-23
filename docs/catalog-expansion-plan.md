@@ -75,6 +75,6 @@ US Speaker inventory, Oct 2026: 439 models not in the catalog. Model lists: `doc
 
 1. A Haiku agent downloads each maker's datasheets (`curl`, then `pdftotext -layout`). WebFetch cannot read PDFs.
 2. One fresh writer agent per table (subs, mids, compression drivers, coaxials) adds the entries. It checks each set: Vas from Fs, Mms and Sd, and Qes from Bl and Re, within about 10 %.
-3. Rewrite the optimizer snapshots (`vp run optimizer-snapshot`, `stack-optimizer-snapshot`, `speaker-optimizer-snapshot`).
+3. Rewrite the optimizer snapshots (`vp run optimizer-snapshot`, `speaker-optimizer-snapshot`).
 4. Run `vp check` and the driver, table, horn mount and optimizer tests.
 5. One Sonnet review checks every entry against its datasheet text.

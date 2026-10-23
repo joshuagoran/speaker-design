@@ -1,3 +1,4 @@
+import { POINTER_MOUSE } from "../../constants/pointer";
 import type { ReactNode } from "react";
 import { Button } from "./Button";
 import { Tooltip } from "./Tooltip";
@@ -148,7 +149,7 @@ export function CompareTable<R extends CompareRowBase>({
           onPointerLeave={
             onPreview &&
             ((e) => {
-              if (e.pointerType === "mouse") onPreview(null);
+              if (e.pointerType === POINTER_MOUSE) onPreview(null);
             })
           }
         >
@@ -166,7 +167,7 @@ export function CompareTable<R extends CompareRowBase>({
                 onPointerEnter={
                   onPreview &&
                   ((e) => {
-                    if (e.pointerType === "mouse") onPreview(r);
+                    if (e.pointerType === POINTER_MOUSE) onPreview(r);
                   })
                 }
                 onClick={

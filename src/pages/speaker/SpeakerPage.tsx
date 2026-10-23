@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BandId, DispersionPlane, FrequencyPoint } from "../../types";
-import { PREVIEW_DASH, alpha } from "../../styles/palette";
+import { PREVIEW_DASH } from "../../styles/palette";
 import { bandColor } from "../../lib/speaker/bandColor";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
@@ -12,6 +12,7 @@ import { Notice } from "../../components/ui/Notice";
 import { SharedNotice, type SharedNoticeProps } from "../../components/ui/SharedNotice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
+import { sumSeries } from "../../components/charts/sumSeries";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
 import { dispersionModeled, speakerDispersionMap } from "../../lib/speaker/stackDispersion";
 import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
@@ -80,8 +81,8 @@ import {
 } from "../../constants/speakerResults";
 import { SpeakerSettings } from "./SpeakerSettings";
 import { SpeakerOptimizerResults } from "./SpeakerOptimizerResults";
-import { bandChips, chamberChips } from "./speakerChips";
-import { chamberBraceChips, chamberFitChips, chamberUnbraced } from "../../lib/speaker/fitChips";
+import { speakerCheckRows } from "../../lib/speaker/speakerChips";
+import { chamberUnbraced } from "../../lib/speaker/fitChips";
 import { useSpeakerStart } from "./useSpeakerStart";
 import { SaveRow } from "../../components/saved-configs/SaveRow";
 import { speakerDetails } from "./speakerDetails";
@@ -101,12 +102,6 @@ interface Props {
   /** the notice while a Stack's speaker shows in place of the page's own, for an edit */
   stackEditNotice: StackEditNoticeProps | null;
 }
-
-/** The sum's key on the charts: no band id takes it (the adapters' are band words, the Speaker page's "band1"…). */
-const SUM_SERIES_ID = "sum";
-
-/** The sum's line width on the charts, px: it reads over its bands' (2 px). */
-const SUM_LINE_PX = 4;
 
 /** The 3D view's and the front drawing's height. */
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
@@ -217,9 +212,6 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
       return [label, windows + ribs, BRACING_TILE_TEXT.unit];
     }),
   ];
-  /** each chamber's fit and bracing checks */
-  const fitChips = chamberFitChips(spec.cabinet, build);
-  const braceChips = chamberBraceChips(spec.cabinet, build);
   const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   const cell = (place: string) => resultsCellClass(wide, place);
   /** the model left a chamber or a filter out: its notices say which and why (the empty-chart notice stays quiet) */
@@ -240,37 +232,11 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
       // faint while an option is previewed, so its curves stand out
       ghost: previewed !== undefined,
     }));
-  const sumSeries = (curve: FrequencyPoint[]) => ({
-    curve,
-    id: SUM_SERIES_ID,
-    label: SPEAKER_TEXT.sum,
-    stroke: pal.ink,
-    width: SUM_LINE_PX,
-    tint: alpha(pal.ink, 0.05),
-    // below the floor it would run along the axis as if it were data
-    clipAtFloor: true,
-    ghost: previewed !== undefined,
-  });
+  /** the sum's curve on a chart, in ink; faint while an option is previewed */
+  const sum = (curve: FrequencyPoint[]) =>
+    sumSeries(curve, SPEAKER_TEXT.sum, pal, previewed !== undefined);
   /** the checks, one compact row per band, then per chamber (its limits, fit and bracing checks) */
-  const checkRows = [
-    ...bandChips(spec, limits, response).map(({ id, chips }) => ({
-      key: `band:${id}`,
-      row: CHECK_ROW_TEXT.band(nameOf(id)),
-      chips,
-    })),
-    ...chambers.map((_, i) => {
-      const c = limits.chambers[i];
-      return {
-        key: `chamber:${i}`,
-        row: CHECK_ROW_TEXT.chamber(i + 1),
-        chips: [
-          ...(c ? chamberChips(c, nameOf(c.band)) : []),
-          ...(fitChips[i] ?? []),
-          ...(braceChips[i] ?? []),
-        ],
-      };
-    }),
-  ].filter((r) => r.chips.length > 0);
+  const checkRows = speakerCheckRows(spec, limits, response, build);
   const details = speakerDetails({
     bracing: build.chambers.map((c, i) => ({
       unbraced: chamberUnbraced(spec.cabinet, i),
@@ -376,7 +342,7 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
       step={10}
       yLabel={SPEAKER_TEXT.yLabel}
       series={[
-        ...(response.bands.length ? [sumSeries(response.sum)] : []),
+        ...(response.bands.length ? [sum(response.sum)] : []),
         ...bandSeries(response.bands),
         ...previewSeries("curve"),
       ]}
@@ -559,7 +525,7 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
                   step={10}
                   yLabel={SPEAKER_TEXT.maxYLabel}
                   series={[
-                    sumSeries(limits.sum),
+                    sum(limits.sum),
                     ...bandSeries(limits.bands.map((b) => ({ id: b.id, curve: b.max }))),
                     ...previewSeries("max"),
                   ]}

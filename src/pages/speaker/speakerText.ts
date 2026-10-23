@@ -20,7 +20,7 @@ import {
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { CARD_LABELS, NEAR_MISS_YOURS } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
-import { driverName } from "./speakerParts";
+import { driverName } from "../../lib/speaker/driverLists";
 import { pathIn } from "./hornSections";
 import { CM2_PER_IN2 } from "../../constants/units";
 

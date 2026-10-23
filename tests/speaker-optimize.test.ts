@@ -114,6 +114,7 @@ function checkedRun(
   const what = `${t} ${goals.join("+")}`;
   assert.equal(r.stats.dropped, 0, `${what}: the last check dropped a card`);
   const caps = locks?.size ?? {};
+  const chambers0 = spec.cabinet.chambers;
   for (const card of r.cards) {
     const name = `${what} [${card.label}]`;
     const ev = evaluateSpeaker(card.spec);
@@ -129,13 +130,19 @@ function checkedRun(
     // the limits hold on the final design
     if (L.budget !== null) assert.ok(ev.metrics.price <= L.budget + 1e-9, `${name}: over budget`);
     if (L.maxLb !== null) assert.ok(ev.metrics.lb <= L.maxLb + 1e-9, `${name}: over weight`);
-    // the size locks hold on the outer size: no larger on a "max" axis, the same on an "exact" one
-    for (const axis of ["w", "h", "d"] as const) {
-      const off = ev.metrics.sizeIn[axis] - m.sizeIn[axis];
-      if (caps[axis] === "max") assert.ok(off <= 0.01, `${name}: larger on ${axis}`);
-      if (caps[axis] === "exact")
-        assert.ok(Math.abs(off) <= 0.01, `${name}: ${axis} moved ${off.toFixed(2)} in`);
-    }
+    // the size locks hold on each chamber's size: no larger on a "max" axis, the same on an "exact" one
+    card.spec.cabinet.chambers.forEach((c, k) => {
+      for (const axis of ["w", "h", "d"] as const) {
+        const off = c.dims[axis] - chambers0[k].dims[axis];
+        const mode = caps[k]?.[axis];
+        if (mode === "max") assert.ok(off <= 0.01, `${name}: chamber ${k + 1} larger on ${axis}`);
+        if (mode === "exact")
+          assert.ok(
+            Math.abs(off) <= 0.01,
+            `${name}: chamber ${k + 1} ${axis} moved ${off.toFixed(2)} in`,
+          );
+      }
+    });
     assertSteps(card.spec, spec, name);
     // the structure stays: the chamber kinds and the band count
     assert.equal(card.spec.bands.length, spec.bands.length);
@@ -166,7 +173,7 @@ test("PA tower: cards for cheaper, louder and stacked goals; budget and weight l
 
 test("other templates: a sub, a mid/high box, a monitor and a fill keep their promises", () => {
   checkedRun(SPEAKER_TEMPLATE.paSubBox, ["lower"]);
-  checkedRun(SPEAKER_TEMPLATE.paMidHighBox, ["smaller"], undefined, { size: { h: "max" } });
+  checkedRun(SPEAKER_TEMPLATE.paMidHighBox, ["smaller"], undefined, { size: { 0: { h: "max" } } });
   checkedRun(SPEAKER_TEMPLATE.monitorHorn, ["cheaper", "louder"]);
   checkedRun(SPEAKER_TEMPLATE.fill, ["lighter"]);
 });
@@ -180,7 +187,7 @@ test("locks hold: a locked driver, horn, vent, filter, amp and size stay as they
     highpass: [spec.bands[2].id],
     lowpass: [spec.bands[1].id],
     amps: [spec.bands[0].id],
-    size: { w: "exact", h: "max" },
+    size: { 0: { w: "exact", h: "max" } },
   };
   for (const g of ["cheaper", "lighter", "louder"] as const) {
     const { r } = checkedRun(SPEAKER_TEMPLATE.paTowerBaffleHorn, [g], undefined, locks);
@@ -212,18 +219,32 @@ test("locks hold: a locked driver, horn, vent, filter, amp and size stay as they
     highpass: hifi.bands.map((b) => b.id),
     lowpass: hifi.bands.map((b) => b.id),
     amps: hifi.bands.map((b) => b.id),
-    size: { w: "exact", h: "exact", d: "exact" },
+    size: Object.fromEntries(
+      hifi.cabinet.chambers.map((_, k) => [k, { w: "exact", h: "exact", d: "exact" }] as const),
+    ),
   };
   const { r } = checkedRun(SPEAKER_TEMPLATE.hifiTwoWay, ["cheaper"], undefined, all);
   assert.equal(r.cards.length, 0);
 });
 
-test("an exact size lock holds the outer size, not only the chambers' (a part swap moves it)", () => {
-  // a smaller horn narrowed the mid/high box and shortened the tower before the exact lock held the outer size
+test("an exact size lock holds its chamber's size", () => {
   for (const g of ["cheaper", "smaller", "lighter"] as const) {
-    checkedRun(SPEAKER_TEMPLATE.paMidHighBox, [g], undefined, { size: { w: "exact" } });
-    checkedRun(SPEAKER_TEMPLATE.paTowerTopHorn, [g], undefined, { size: { h: "exact" } });
+    checkedRun(SPEAKER_TEMPLATE.paMidHighBox, [g], undefined, { size: { 0: { w: "exact" } } });
+    const tower = templateSpeaker(SPEAKER_TEMPLATE.paTowerTopHorn);
+    checkedRun(SPEAKER_TEMPLATE.paTowerTopHorn, [g], undefined, {
+      size: Object.fromEntries(tower.cabinet.chambers.map((_, k) => [k, { h: "exact" }] as const)),
+    });
   }
+});
+
+test("a size lock on one chamber holds that chamber only", () => {
+  const tower = templateSpeaker(SPEAKER_TEMPLATE.paTowerBaffleHorn);
+  const last = tower.cabinet.chambers.length - 1;
+  assert.ok(last > 0, "a box with more chambers");
+  for (const g of ["smaller", "louder"] as const)
+    checkedRun(SPEAKER_TEMPLATE.paTowerBaffleHorn, [g], undefined, {
+      size: { [last]: { h: "exact" } },
+    });
 });
 
 test("the first card says Same level only when the target is your level", () => {

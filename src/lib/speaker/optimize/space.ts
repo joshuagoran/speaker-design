@@ -329,6 +329,8 @@ export interface SizeGroup {
   chambers: readonly number[];
   /** the chamber whose clear volume sets the group's height (a sized cone unit's); null: the group keeps its height */
   lead: number | null;
+  /** the height factors its chambers' height locks allow (`rangeOf`, all of them at once); null: no height lock */
+  locked: [number, number] | null;
 }
 
 /** What the shapes are worked out from: your chambers' walls and clear sizes, the groups, the axes' freedom. */
@@ -337,9 +339,12 @@ export interface SizeModel {
   /** each chamber's walls on each axis (outside less clear), in, and its clear volume, in³ */
   walls: readonly Dims3[];
   clearIn3: readonly number[];
-  /** the factor range each axis may take, of your outer size (`rangeOf` under the size locks) */
+  /**
+   * the factor range each axis may take, of your outer size: the width and depth under every chamber's lock on them
+   * (`rangeOf`), the height of the whole box (each group's height locks are its own, `SizeGroup.locked`)
+   */
   range: Record<keyof Dims3, [number, number]>;
-  /** the axes that can change at all */
+  /** the axes that can change at all (the height: some group's, unless its locks hold it, `heightFixed`) */
   free: Record<keyof Dims3, boolean>;
   /** each chamber's smallest clear face its drivers and horns fit in, where they keep their places' shares, in */
   minClear: readonly { w: number; h: number }[];
@@ -354,7 +359,24 @@ export interface SizeModel {
 /** A chamber's outer surface, in². */
 const surfaceOf = (d: Dims3) => 2 * (d.w * d.h + d.w * d.d + d.h * d.d);
 
-/** The size model for a spec, its units and its size locks. */
+/** The intersection of factor ranges: the factors every range allows. */
+const within = (ranges: readonly [number, number][]): [number, number] => [
+  Math.max(...ranges.map((r) => r[0])),
+  Math.min(...ranges.map((r) => r[1])),
+];
+
+/** Whether a group's height locks hold its height exactly. */
+const exactRange = (r: [number, number] | null) => r !== null && r[1] - r[0] < 1e-9;
+
+/** Whether a group keeps its height: no chamber can change size, or its locks hold it exactly. */
+const heightFixed = (model: Pick<SizeModel, "free">, group: Pick<SizeGroup, "locked">) =>
+  !model.free.h || exactRange(group.locked);
+
+/** The height factors a group may take: its locks' range, else the whole box's. */
+const groupRange = (model: Pick<SizeModel, "range">, group: Pick<SizeGroup, "locked">) =>
+  group.locked ?? model.range.h;
+
+/** The size model for a spec, its units and its size locks (each chamber's, by its index). */
 export function sizeModel(
   spec: SpeakerSpec,
   units: readonly SearchUnit[],
@@ -391,21 +413,35 @@ export function sizeModel(
   const any = sized.size > 0;
   const axis = (mode: DimensionLockMode | undefined): [number, number] =>
     rangeOf(mode, 1, SIZE_FACTORS);
+  /** the modes the chambers lock an axis to (free ones left out) */
+  const modes = (a: keyof Dims3, list: readonly number[]) =>
+    list.flatMap((i) => {
+      const mode = size[i]?.[a];
+      return mode && mode !== "free" ? [mode] : [];
+    });
+  const all = chambers.map((_, i) => i);
+  // the width and depth scale the whole box: every chamber's lock on them holds them
+  const boxAxis = (a: "w" | "d"): [number, number] =>
+    within([axis(undefined), ...modes(a, all).map(axis)]);
   return {
-    groups: groups.map((g) => ({
-      ...g,
-      // a group with a horn-loaded chamber keeps its height; else its first sized chamber leads it
-      lead: g.chambers.some((i) => chambers[i].load.kind === CHAMBER_LOAD.horn)
-        ? null
-        : (g.chambers.find((i) => sized.has(i)) ?? null),
-    })),
+    groups: groups.map((g) => {
+      const heights = modes("h", g.chambers);
+      return {
+        ...g,
+        // a group with a horn-loaded chamber keeps its height; else its first sized chamber leads it
+        lead: g.chambers.some((i) => chambers[i].load.kind === CHAMBER_LOAD.horn)
+          ? null
+          : (g.chambers.find((i) => sized.has(i)) ?? null),
+        locked: heights.length ? within(heights.map(axis)) : null,
+      };
+    }),
     walls,
     clearIn3,
-    range: { w: axis(size.w), h: axis(size.h), d: axis(size.d) },
+    range: { w: boxAxis("w"), h: axis(undefined), d: boxAxis("d") },
     free: {
-      w: any && !horned && size.w !== "exact",
-      h: any && size.h !== "exact",
-      d: any && !horned && size.d !== "exact",
+      w: any && !horned && !modes("w", all).includes("exact"),
+      h: any,
+      d: any && !horned && !modes("d", all).includes("exact"),
     },
     minClear: minClearFaces(spec),
     clearFaces: chambers.map((c, i) => ({ w: c.dims.w - walls[i].w, h: c.dims.h - walls[i].h })),
@@ -453,8 +489,12 @@ function minClearFaces(spec: SpeakerSpec): { w: number; h: number }[] {
 
 /** The volume factors a sized chamber tries: from the smallest the axes allow to the largest, yours (1) among them. */
 export function volumeLadder(model: SizeModel, steps: number): number[] {
-  const lo = (k: keyof Dims3) => (model.free[k] ? model.range[k][0] : 1);
-  const hi = (k: keyof Dims3) => (model.free[k] ? model.range[k][1] : 1);
+  // the height: from the lowest any group may take to the highest
+  const heights = model.groups.map((g) => (heightFixed(model, g) ? [1, 1] : groupRange(model, g)));
+  const lo = (k: keyof Dims3) =>
+    k === "h" ? Math.min(...heights.map((r) => r[0])) : model.free[k] ? model.range[k][0] : 1;
+  const hi = (k: keyof Dims3) =>
+    k === "h" ? Math.max(...heights.map((r) => r[1])) : model.free[k] ? model.range[k][1] : 1;
   const vMin = lo("w") * lo("h") * lo("d"),
     vMax = hi("w") * hi("h") * hi("d");
   if (vMax - vMin < 1e-9) return [1];
@@ -478,7 +518,15 @@ export function volumeLadder(model: SizeModel, steps: number): number[] {
 export function chamberLadder(model: SizeModel, k: number, ladder: readonly number[]): number[] {
   const need = model.minClear[k],
     face = model.clearFaces[k];
-  const lo = (axis: keyof Dims3) => (model.free[axis] ? model.range[axis][0] : 1);
+  const group = model.groups.find((g) => g.chambers.includes(k));
+  const lo = (axis: keyof Dims3) =>
+    axis === "h"
+      ? !group || heightFixed(model, group)
+        ? 1
+        : groupRange(model, group)[0]
+      : model.free[axis]
+        ? model.range[axis][0]
+        : 1;
   // the clear width and height can shrink only to the room the drivers and horns need
   const minW = Math.max(lo("w"), face.w > 0 ? need.w / face.w : 0),
     minH = Math.max(lo("h"), face.h > 0 ? need.h / face.h : 0);
@@ -537,8 +585,11 @@ export function shapeFor(
       const ch = ((v.get(gi) ?? 1) * model.clearIn3[group.lead]) / (cw * cd);
       if (ch <= 0) return null;
       f = (ch + wall.h) / c.dims.h;
-      if (!model.free.h && Math.abs(f - 1) > 0.01) return null;
-      if (!model.free.h) f = 1;
+      const fixed = heightFixed(model, group);
+      if (fixed && Math.abs(f - 1) > 0.01) return null;
+      if (fixed) f = 1;
+      // its chambers' height locks
+      if (group.locked && (f < group.locked[0] - 1e-9 || f > group.locked[1] + 1e-9)) return null;
     }
     // every chamber of the group keeps the room its drivers and horns need
     for (const i of group.chambers) {
@@ -600,26 +651,24 @@ export function shapedChambers(
   });
 }
 
-/** The estimate of the box's outer size and its wood's share of the weight on a shape (before it is built). */
+/**
+ * The estimate of the box's outer size, each chamber's size and the wood's share of the weight on a shape (before it is
+ * built).
+ */
 export function shapeEstimate(
   spec: Pick<SpeakerSpec, "cabinet">,
   model: SizeModel,
   shape: BoxShape,
-): { outer: Dims3; surfaceRatio: number } {
-  const chambers = spec.cabinet.chambers;
-  let surface = 0,
-    top = 0;
-  chambers.forEach((c, i) => {
+): { outer: Dims3; chambers: Dims3[]; surfaceRatio: number } {
+  let top = 0;
+  const sized = spec.cabinet.chambers.map((c, i) => {
     const gi = model.groups.findIndex((gr) => gr.chambers.includes(i));
-    surface += surfaceOf({
-      w: c.dims.w * shape.sx,
-      h: c.dims.h * shape.g[gi],
-      d: c.dims.d * shape.sz,
-    });
+    return { w: c.dims.w * shape.sx, h: c.dims.h * shape.g[gi], d: c.dims.d * shape.sz };
   });
+  const surface = sized.reduce((sum, d) => sum + surfaceOf(d), 0);
   const height0 = model.groups.reduce((sum, gr) => sum + (gr.y1 - gr.y0), 0);
   model.groups.forEach((gr, gi) => (top += (gr.y1 - gr.y0) * shape.g[gi]));
-  const box0 = Math.max(...chambers.map((c) => c.at.yIn + c.dims.h));
+  const box0 = Math.max(...spec.cabinet.chambers.map((c) => c.at.yIn + c.dims.h));
   return {
     outer: {
       w: model.outer.w * shape.sx,
@@ -627,6 +676,7 @@ export function shapeEstimate(
       h: model.outer.h - box0 + box0 * (top / height0),
       d: model.outer.d * shape.sz,
     },
+    chambers: sized,
     surfaceRatio: surface / model.surfaceIn2,
   };
 }

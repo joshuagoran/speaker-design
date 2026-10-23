@@ -89,6 +89,7 @@ export const SETTINGS_TEXT = {
   deleteDriver: (n: number) => `Remove driver ${n}`,
   noDrivers: "No drivers yet.",
   ventType: "Vent type",
+  ventShape: "Vent shape",
   advanced: "Advanced",
   /** the chamber Advanced fold's summary: its position, as the fields show it */
   chamberAt: (x: number, y: number) => `at ${x}, ${y}`,

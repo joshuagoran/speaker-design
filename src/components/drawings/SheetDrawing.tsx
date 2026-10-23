@@ -17,6 +17,7 @@ import {
 } from "../../constants/cutParts";
 import { SHEET_LABEL_PX, SHEET_PX_PER_IN } from "../../constants/chartScales";
 import { SVG_FONT } from "../../styles/fonts";
+import { Tooltip } from "../ui/Tooltip";
 
 interface Props {
   sheet: PackedSheet;
@@ -98,7 +99,7 @@ export function SheetDrawing({
           {material === "ply" && (
             <>
               {" · "}
-              <span title="Face grain top to bottom. Load the sheet this way.">grain ↕</span>
+              <Tooltip tip="Face grain top to bottom. Load the sheet this way.">grain ↕</Tooltip>
             </>
           )}
         </span>

@@ -35,7 +35,7 @@ export const UI_TEXT = {
   /** the totals tiles: the purchased parts' price, and a Stack's height */
   price: "Price",
   height: "Height",
-  /** the summary line of the Details drop-downs (each page's written details, the optimizer's goal notes) */
+  /** the summary line of the Details drop-downs (each page's written details) */
   details: "Details",
   /** the 3D view's buttons: full screen and back, and the cutaway (the cabinet as a ghost, the parts inside showing) */
   fullScreen: "Full screen",
@@ -55,4 +55,13 @@ export const UI_TEXT = {
   /** under a compression driver's horn when the horn's throat and the driver's exit differ, by their sizes in words */
   hornExitMismatch: (horn: string, driver: string) =>
     `The horn throat (${horn}) and the driver exit (${driver}) are not the same size.`,
+} as const;
+
+/** An optimizer lock beside a setting (its screen-reader name), and the optimizer fold's line of what is locked. */
+export const LOCK_TEXT = {
+  lock: (name: string) => `Lock the ${name}`,
+  unlock: (name: string) => `Unlock the ${name}`,
+  /** the locked settings' names, in the order of the page */
+  locked: (names: readonly string[]) => `Locked: ${names.length ? names.join(", ") : "nothing"}`,
+  clear: "Clear locks",
 } as const;

@@ -154,7 +154,7 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
                     ))}
                   {shareKind && (
                     <Button
-                      title={SHARE_TEXT.tooltip(PROJECT_NAMES[shareKind])}
+                      tip={SHARE_TEXT.tooltip(PROJECT_NAMES[shareKind])}
                       className="inline-flex items-center gap-2"
                       onClick={sharing.copyLink}
                     >

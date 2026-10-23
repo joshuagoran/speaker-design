@@ -358,8 +358,8 @@ describe("horns", () => {
       expect(box.max.z).toBeCloseTo(frontZ(spec) - spec.cabinet.insetIn - BAFFLE_PLY_IN, 6);
       expect(box.min.z).toBeGreaterThan(-base.dims.d / 2);
       expect(drawn?.path.fits).toBe(true);
-      // the front-loaded horn's driver sits at its throat, inside: drawn only in the cutaway
-      expect(named(solid, SPEAKER_MESH_NAMES.hornDriver)).toHaveLength(0);
+      // the front-loaded horn's driver sits at its throat, inside: drawn in both views (the mouth looks onto it)
+      expect(named(solid, SPEAKER_MESH_NAMES.hornDriver)).toHaveLength(1);
       expect(
         named(buildSpeakerScene({ spec, cutaway: true }), SPEAKER_MESH_NAMES.hornDriver),
       ).toHaveLength(1);

@@ -112,11 +112,11 @@ export const SPEAKER_MESH_NAMES = {
   hornThroat: "chamberHornThroat",
   /** the driver board behind the bay, one mesh per piece of it: the baffle the drivers mount on (painted as one) */
   driverBoard: "chamberDriverBoard",
-  /** a front-loaded or tapped horn's driver inside the chamber, drawn in the cutaway */
+  /** a front-loaded or tapped horn's driver inside the chamber (seen through the mouth, so drawn in both views) */
   hornDriver: "chamberHornDriver",
   /** a board of a drawn (folded) horn's side section, one mesh per board */
   foldBoard: "chamberFoldBoard",
-  /** a drawn horn's driver behind its board, one mesh per driver, drawn in the cutaway */
+  /** a drawn horn's driver behind its board, one mesh per driver (drawn in both views) */
   foldDriver: "chamberFoldDriver",
   /** a chamber's own panel in a stepped shell: an outside wall, its back or its baffle */
   wall: "chamberWall",
@@ -1148,9 +1148,9 @@ function chamberParts(
 }
 
 /**
- * A front-loaded or tapped horn's driver inside its chamber, in the cutaway: a body of its cone's cutout at (x, y), its
- * cone at `front` (the cones' plane behind the walls' back edges, z in the group) and its body behind it to `back`,
- * kept off the back panel.
+ * A front-loaded or tapped horn's driver inside its chamber: a body of its cone's cutout at (x, y), its cone at `front`
+ * (the cones' plane behind the walls' back edges, z in the group) and its body behind it to `back`, kept off the back
+ * panel. Drawn in both views: the closed box shows its cone through the mouth and the throat.
  */
 function addHornDriver(
   ctx: SceneContext,
@@ -1160,7 +1160,7 @@ function addHornDriver(
   { front, back }: { front: number; back: number },
 ) {
   const size = coneSize(driver);
-  if (!ctx.cutaway || size === undefined) return;
+  if (size === undefined) return;
   const backZ = -placed.dims.d / 2 + ctx.wall;
   const r = wooferCutoutR(size);
   const depth = Math.abs(front - back);

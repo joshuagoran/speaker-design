@@ -195,6 +195,7 @@ export function HornSettings({
               segments.length > SECTIONS_NEEDED[drive.kind] && (
                 <Button
                   size="xs"
+                  variant="danger"
                   onClick={() =>
                     onEdit((h) => ({
                       ...h,

@@ -63,7 +63,7 @@ export function MemberSettings({
           >
             {STACK_EDIT_TEXT.edit}
           </Button>
-          <Button size="xs" onClick={onRemove}>
+          <Button size="xs" variant="danger" onClick={onRemove}>
             {STACK_TEXT.remove}
           </Button>
         </div>

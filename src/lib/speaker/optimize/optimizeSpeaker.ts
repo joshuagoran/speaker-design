@@ -1,7 +1,7 @@
-// The Speaker optimizer: any speaker spec, the goals
-// in tap order, a target level at 1 m, a budget, a weight and size per axis, and locks in; up to three cards and a near
-// miss out. It changes only the unlocked parts and sizes: drivers of the same kind and size, chamber sizes, vents,
-// crossovers in the box, amps. Never the chamber kind, the band count or the input range.
+// The Speaker optimizer: any speaker spec, the goals in tap order, a target level at 1 m, a budget, a weight, each
+// chamber's size per axis, and locks in; up to three cards and a near miss out. It changes only the unlocked parts and
+// sizes: drivers of the same kind and size, chamber sizes, vents, crossovers in the box, amps. Never the chamber kind,
+// the band count or the input range.
 //
 // Search: each unit screened alone on a coarse grid of the page's model (./screen); the units' options combined with
 // the box shapes, estimated (calibrated on your design); the finalists built on the page's field steps and run in full
@@ -177,54 +177,27 @@ function emptyResult(
 }
 
 /**
- * What the search leaves besides its result: your design's run, every design it built and ran in full (on the field
- * steps), each band's top amp power and the amp groups it trims. The Stack optimizer combines these.
- */
-export interface SpeakerSearch {
-  result: SpeakerOptimizerResult;
-  start: SpeakerEval;
-  pool: SpeakerEval[];
-  amps: ReadonlyMap<BandId, number>;
-  groups: readonly BandId[][];
-}
-
-/**
  * The search. `catalog` names the candidate parts (default: the app catalog); `onProgress` hears how far it has got
  * (screen runs, then the finalists' builds).
  */
-export const optimizeSpeaker = (
-  spec: SpeakerSpec,
-  goals: readonly SpeakerGoal[],
-  limits: SpeakerOptimizerLimits,
-  locks: SpeakerOptimizerLocks = {},
-  catalog: SpeakerOptimizerCatalog = SPEAKER_OPTIMIZER_CATALOG,
-  onProgress?: OptimizerProgressCallback,
-): SpeakerOptimizerResult => searchSpeaker(spec, goals, limits, locks, catalog, onProgress).result;
-
-/** The search, with what it leaves besides its result (`SpeakerSearch`). */
-export function searchSpeaker(
+export function optimizeSpeaker(
   spec: SpeakerSpec,
   goalsIn: readonly SpeakerGoal[],
   limits: SpeakerOptimizerLimits,
   locks: SpeakerOptimizerLocks = {},
   catalog: SpeakerOptimizerCatalog = SPEAKER_OPTIMIZER_CATALOG,
   onProgress?: OptimizerProgressCallback,
-): SpeakerSearch {
+): SpeakerOptimizerResult {
   const t0 = Date.now();
   const goals = goalsIn.filter((g, i, a) => keysOf(SPEAKER_GOAL).includes(g) && a.indexOf(g) === i);
   const start = evaluateSpeaker(spec);
   let evaluated = 1;
-  const caps = capsOf(start.metrics.sizeIn, locks.size);
+  const caps = capsOf(spec.cabinet.chambers, locks.size);
   const problemText = (ev: SpeakerEval, L: Pick<SpeakerOptimizerLimits, "budget" | "maxLb">) =>
     problemsOf(ev, start, L, caps).map((p) => SPEAKER_PROBLEM_TEXT[p]);
   const curProblems = problemText(start, limits);
-  const empty = (goalMissing: string): SpeakerSearch => ({
-    result: emptyResult(goals, limits, start, curProblems, goalMissing, t0),
-    start,
-    pool: [],
-    amps: new Map(),
-    groups: [],
-  });
+  const empty = (goalMissing: string): SpeakerOptimizerResult =>
+    emptyResult(goals, limits, start, curProblems, goalMissing, t0);
   if (!goals.length) return empty(SPEAKER_NO_GOAL);
   if (start.metrics.musicDb === null) return empty(SPEAKER_UNMODELED);
   const goal = goals[0],
@@ -382,8 +355,10 @@ export function searchSpeaker(
       const est = shapeEstimate(spec, model, shape);
       // the estimate only bounds the size from above (a part swap can still move an exact axis): the built design's
       // check (problemsOf) holds an exact axis
-      const inside = (["w", "h", "d"] as const).every(
-        (k) => est.outer[k] <= (caps[k]?.in ?? Infinity) + SIZE_SLACK_IN,
+      const inside = [...caps].every(([k, axes]) =>
+        (["w", "h", "d"] as const).every(
+          (a) => est.chambers[k][a] <= (axes[a]?.in ?? Infinity) + SIZE_SLACK_IN,
+        ),
       );
       return inside ? [{ shape, outer: est.outer, ratio: est.surfaceRatio }] : [];
     });
@@ -728,7 +703,7 @@ export function searchSpeaker(
         ? nothingBeatsText(goals)
         : null;
   report(total, total, true);
-  const result: SpeakerOptimizerResult = {
+  return {
     goals,
     target,
     current: { metrics: start.metrics, problems: curProblems, maxCurve: maxCurveOf(start.limits) },
@@ -743,7 +718,6 @@ export function searchSpeaker(
       ms: Date.now() - t0,
     },
   };
-  return { result, start, pool: pool.map((p) => p.ev), amps, groups };
 }
 
 /** A choice's identity: each unit's option and the shape. */

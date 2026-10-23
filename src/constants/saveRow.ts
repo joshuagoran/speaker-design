@@ -17,13 +17,12 @@ export const SAVE_ROW_TEXT = {
   signIn: "Sign in with Google to save",
   signOut: "Sign out",
   unavailable: "Saving is unavailable in this view.",
-  yes: "Yes",
   cancel: "Cancel",
   copyName: (name: string) => `${name} (copy)`,
   delete: "Delete",
   deleteLabel: (name: string) => `Delete ${name}`,
-  /** Delete's confirm step, inline (a browser dialog can be blocked in the artifact host) */
-  confirmDelete: (name: string) => `Delete “${name}”?`,
+  /** Delete's confirm step, inline (a browser dialog can be blocked in the artifact host): Delete again, or Cancel */
+  confirmDelete: (design: string) => `Permanently delete this ${design}?`,
   /** the start list's tip: what picking a start does, by the design's noun */
   newFromTip: (design: string) =>
     `Starts a new ${design}, empty or from a preset, replacing the current design.`,
@@ -39,4 +38,6 @@ export interface SaveRowWords {
   noSaved: string;
   /** what picking a start does */
   newFromTip: string;
+  /** Delete's confirm question */
+  confirmDelete: string;
 }

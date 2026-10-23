@@ -48,16 +48,18 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
       "Floor, air, and crowd",
       [
         `Floor reflection: ${FLOOR_REFLECTION.indoors} of the pressure indoors (hard floor), ${FLOOR_REFLECTION.outdoors} outdoors (ground).`,
-        `A full floor keeps the bounce below ${CROWD_BOUNCE.loHz} Hz, ${CROWD_BOUNCE.hi} of it from ${CROWD_BOUNCE.hiHz / 1000} kHz. Absorption: the seated-audience row.`,
-        `Air absorption on every path: ISO 9613-1, 20 °C, 50 % humidity. Speed of sound ${SPEED_OF_SOUND} m/s.`,
+        `A full floor keeps the bounce below ${CROWD_BOUNCE.loHz} Hz, ${CROWD_BOUNCE.hi} of it from ${CROWD_BOUNCE.hiHz / 1000} kHz.
+Absorption: the seated-audience row.`,
+        `Air absorption on every path: 20 °C, 50 % humidity (ISO 9613-1). Speed of sound ${SPEED_OF_SOUND} m/s.`,
       ],
     ],
     [
       "Room",
       [
-        "A rectangular box. Each side and the ceiling has its own absorption (Everest & Pohlmann, 125 Hz–4 kHz).",
-        `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `; here ${Math.round(crossover)} Hz` : ""}) the room modes sum, blended over ${MODAL_FADE_OCT} octave; Sabine decay, solid sides (rough if a side is open).`,
-        `Above: one reflection per wall and ceiling, each with a floor bounce, then a reverberant field (Hopkins–Stryker; Molloy horn directivity).${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
+        "A rectangular box. Each side and the ceiling has its own absorption, 125 Hz–4 kHz (Everest & Pohlmann).",
+        `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `, here ${Math.round(crossover)} Hz` : ""}) the room modes sum, blended over ${MODAL_FADE_OCT} octave.
+Sabine decay, solid sides (rough if a side is open).`,
+        `Above: one reflection per wall and ceiling, each with a floor bounce. Then a Hopkins–Stryker reverberant field, with Molloy horn directivity.${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
       ],
     ],
     [

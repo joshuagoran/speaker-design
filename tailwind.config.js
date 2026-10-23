@@ -28,8 +28,13 @@ const vars = (p) =>
   );
 const v = (name, a) =>
   a == null ? `rgb(var(--${name}) / <alpha-value>)` : `rgb(var(--${name}) / ${a})`;
-// a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the color, c: its dark text shade
+// a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the color, c: its dark text shade; under the
+// palette's own role names too (bg-green-tint, border-orange-edge, text-red-text)
 const scale = (s) => ({
+  tint: v(`${s}-tint`),
+  edge: v(`${s}-edge`),
+  base: v(`${s}-base`),
+  text: v(`${s}-text`),
   50: v(`${s}-tint`),
   200: v(`${s}-edge`),
   300: v(`${s}-base`),

@@ -18,6 +18,8 @@ import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 import { TRIO_ROW } from "../../styles/layout";
 import { bandSummary } from "./settingsSummaries";
 import { PAD_MAX_DB, isPassive, withPadCapped } from "../../lib/speaker/bandLevel";
+import { WithLock } from "../../components/ui/LockButton";
+import type { SpeakerLocks } from "./useSpeakerOptimizer";
 
 /** The crossover choices, as the band's picker lists them. */
 const DRIVE_OPTIONS = entriesOf(DRIVE_NAMES).map(([id, name]) => ({ id, name }));
@@ -32,20 +34,22 @@ interface Props {
   onEdit: (edit: (band: SpeakerBand) => SpeakerBand) => void;
   /** absent for the last band left */
   onRemove?: () => void;
+  /** the optimizer's locks beside its filters and its amp power */
+  locks: SpeakerLocks;
 }
 
 /**
  * One band, in a box that folds to its summary with its dot ("High · High-pass LR24 1200 Hz · Low-pass off · 100 W"):
  * its name, high-pass and low-pass, level, crossover and amp power.
  */
-export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove }: Props) {
+export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove, locks }: Props) {
   return (
     <FoldBox
       summary={bandSummary(band)}
       lead={<BandDot index={index} count={count} />}
       actions={
         onRemove && (
-          <Button size="xs" onClick={onRemove}>
+          <Button size="xs" variant="danger" onClick={onRemove}>
             {SETTINGS_TEXT.removeBand}
           </Button>
         )
@@ -61,6 +65,10 @@ export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove
         filters={band}
         newCornerHz={newCornerHz}
         onEdit={(edit) => onEdit((b) => ({ ...b, ...edit(b) }))}
+        locks={{
+          highpass: locks.partLock("highpass", band.id),
+          lowpass: locks.partLock("lowpass", band.id),
+        }}
       />
       <div className={TRIO_ROW}>
         {isPassive(band) ? (
@@ -100,20 +108,24 @@ export function BandSettings({ band, index, count, newCornerHz, onEdit, onRemove
             if (drive) onEdit((b) => withPadCapped({ ...b, drive }));
           }}
         />
-        <NumberField
-          // passive: the channel it shares
-          label={
-            <Tooltip tip={AMP_POWER_TIP}>
-              {band.drive === HIFI_DRIVE.passive ? SPEAKER_TEXT.sharedAmp : SETTINGS_TEXT.ampPower}
-            </Tooltip>
-          }
-          value={band.ampW}
-          min={1}
-          step={SPEAKER_STEPS.ampW}
-          unit="W"
-          fill
-          onChange={(ampW) => onEdit((b) => ({ ...b, ampW }))}
-        />
+        <WithLock lock={locks.partLock("amps", band.id)}>
+          <NumberField
+            // passive: the channel it shares
+            label={
+              <Tooltip tip={AMP_POWER_TIP}>
+                {band.drive === HIFI_DRIVE.passive
+                  ? SPEAKER_TEXT.sharedAmp
+                  : SETTINGS_TEXT.ampPower}
+              </Tooltip>
+            }
+            value={band.ampW}
+            min={1}
+            step={SPEAKER_STEPS.ampW}
+            unit="W"
+            fill
+            onChange={(ampW) => onEdit((b) => ({ ...b, ampW }))}
+          />
+        </WithLock>
       </div>
     </FoldBox>
   );

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import type { DispersionPlane, SpeakerSpec, StackMember } from "../../types";
-import { alpha, bandLine } from "../../styles/palette";
+import type { DispersionPlane, FrequencyPoint, SpeakerSpec, StackMember } from "../../types";
+import { bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
@@ -22,6 +22,11 @@ import { SharedNotice, type SharedNoticeProps } from "../../components/ui/Shared
 import { CalculateGainsButton } from "../../components/ui/CalculateGainsButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
+import { sumSeries } from "../../components/charts/sumSeries";
+import { AssumptionsList } from "../../components/ui/AssumptionsList";
+import { UI_TEXT } from "../../constants/uiText";
+import { CHECK_ROW_TEXT } from "../../constants/speakerResults";
+import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
 import { dispersionModeled, stackDispersionMap } from "../../lib/speaker/stackDispersion";
 import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
@@ -37,7 +42,13 @@ import { MembersView3D } from "../../components/stack-view/MembersView3D";
 import { keysOf } from "../../lib/records";
 import { formatHz, formatDelayMs, formatDb } from "../../lib/format";
 import { DEFAULT_PA } from "../../lib/defaults";
-import { READING_WIDTH, RESULT_MAX_WIDTH, GAP_Y } from "../../styles/layout";
+import {
+  RESULTS_TWO_COLUMN_PX,
+  RESULT_MAX_WIDTH,
+  GAP_Y,
+  resultsCellClass,
+  resultsGridClass,
+} from "../../styles/layout";
 import {
   FREQ_AXIS_MAX_HZ,
   FREQ_AXIS_MIN_HZ,
@@ -58,10 +69,8 @@ import { inputText } from "../speaker/speakerText";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { MemberSettings } from "./MemberSettings";
-import { stackDispersionChips, stackKeepUpChips } from "./stackChips";
+import { stackCheckRows } from "./stackChips";
 import { stackSummary } from "./stackSummary";
-import { StackOptimizerResults } from "./StackOptimizerResults";
-import { StackOptimizerSettings, stackOptimizerSummary } from "./StackOptimizerSettings";
 import { SummaryStrip } from "../../components/ui/SummaryStrip";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { designStartOptions, stackFromStart } from "./stackPresets";
@@ -77,12 +86,6 @@ interface Props {
   onEditSpeaker: (speakerId: StackMember["speakerId"]) => void;
 }
 
-/** The sum's key on the charts: no member's key ("m0", "m1"…) takes it. */
-const SUM_SERIES_ID = "sum";
-
-/** The sum's line width on the charts, px: it reads over its members' (2 px). */
-const SUM_LINE_PX = 4;
-
 /** The starts "New from…" lists: the empty stack, then the presets. */
 const START_OPTIONS = designStartOptions(STACK_TEXT.empty);
 
@@ -96,8 +99,9 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  */
 export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: Props) {
   const pal = usePalette();
-  const { design, response, limits, totals, optimizer, store, snapshot, holds, restore } = stack;
+  const { design, response, limits, totals, store, snapshot, holds, restore } = stack;
   const { members, name, notes } = design.stack;
+  // a viewer's stored folds from when the page had an Optimizer fold still name it: the page ignores that entry
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<StackSettingsSection>("stack", "stack");
   /** the library's speakers, as the picker lists them */
@@ -109,8 +113,13 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   const [pick, setPick] = useState<string>("");
   const picked = library.find((o) => o.id === pick) ?? library[0];
   /** each member's name: its speaker's, numbered */
-  const names = members.map(
-    (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
+  const names = useMemo(
+    () =>
+      members.map(
+        (m, k) =>
+          `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
+      ),
+    [members, design.speakers],
   );
   const lineOf = (k: number) => bandLine(pal, k, members.length);
   const summaries: Record<StackSettingsSection, string> = {
@@ -120,7 +129,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
       members
         .map((m, k) => `${k + 1}. ${inputText(m.crossover) ?? STACK_TEXT.fullRange}`)
         .join(" · ") || STACK_TEXT.noMembers,
-    optimizer: stackOptimizerSummary(optimizer),
   };
   const section = (id: StackSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -170,16 +178,35 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   );
   /** the phone strip's headline figures */
   const summary = stackSummary(response, limits, totals.lb);
-  /** keep-up at each crossover between members, then each box's dispersion check at its own crossovers */
-  const keepUps = [
-    ...stackKeepUpChips(design.stack, response, limits, names),
-    ...stackDispersionChips(design.stack, design.speakers, names),
+  /** the checks, one compact row per crossing between members, then per band and chamber of each member */
+  const checkRows = useMemo(
+    () => stackCheckRows(design.stack, response, limits, names),
+    [design.stack, response, limits, names],
+  );
+  /** each member's curve on a chart: its line, and its dot in the legend */
+  const memberSeries = (curves: readonly { k: number; curve: FrequencyPoint[] }[]) =>
+    curves.map(({ k, curve }) => ({
+      curve,
+      clipAtFloor: true,
+      id: `m${k}`,
+      label: names[k],
+      ...lineOf(k),
+      swatch: "dot" as const,
+      tint: "transparent",
+    }));
+  const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
+  const cell = (place: string) => resultsCellClass(wide, place);
+  /** the notes on the totals and the charts, in the results' order */
+  const details = [
+    ...(members.length > 0 ? [[STACK_TEXT.views, [STACK_TEXT.totalsNote]] as const] : []),
+    [STACK_TEXT.response, [STACK_TEXT.modelNote]] as const,
+    ...(limits.sum.length > 0 ? [[STACK_TEXT.maxOutput, [STACK_TEXT.maxNote]] as const] : []),
   ];
   return (
     <SettingsLayout
       sheet={sheet}
       results={
-        <>
+        <div className="flex flex-col gap-5">
           {sharedNotice ? (
             <SharedNotice {...sharedNotice} />
           ) : (
@@ -199,8 +226,7 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
             />
           )}
           {summary && <SummaryStrip items={summary} />}
-          <StackOptimizerResults optimizer={optimizer} />
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
             <SectionHeading>{STACK_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
               <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
@@ -229,103 +255,69 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
               <>
                 <StatTileGrid tiles={totalTiles} />
                 {totals.partial && <Notice>{PURCHASED_PARTIAL_NOTE}</Notice>}
-                <p className={`${READING_WIDTH} text-sm text-stone-500`}>
-                  <MarkedText text={STACK_TEXT.totalsNote} />
-                </p>
               </>
             )}
             {members.length === 0 && <Notice>{STACK_TEXT.noMembers}</Notice>}
             {response.members.some((m) => m === null) && <Notice>{STACK_TEXT.missing}</Notice>}
           </section>
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5 ${GAP_Y}`}>
-            <SectionHeading>{STACK_TEXT.response}</SectionHeading>
-            <ResponseChart
-              fmin={FREQ_AXIS_MIN_HZ}
-              fmax={FREQ_AXIS_MAX_HZ}
-              top={HIFI_TOP}
-              bot={HIFI_BOT}
-              step={10}
-              yLabel={STACK_TEXT.yLabel}
-              series={[
-                ...(modeled.length
-                  ? [
-                      {
-                        curve: response.sum,
-                        id: SUM_SERIES_ID,
-                        label: STACK_TEXT.sum,
-                        stroke: pal.ink,
-                        width: SUM_LINE_PX,
-                        tint: alpha(pal.ink, 0.05),
-                      },
-                    ]
-                  : []),
-                ...modeled.map(({ m, k }) => ({
-                  // a member drawn only where it is on the chart: below the floor it would run along the axis
-                  curve: m.curve.filter((o) => o.spl >= HIFI_BOT),
-                  id: `m${k}`,
-                  label: names[k],
-                  ...lineOf(k),
-                  tint: "transparent",
-                })),
-              ]}
-              marks={marks}
-            />
-            {gaps && <Notice>{STACK_TEXT.gaps}</Notice>}
-            <StatTileGrid tiles={tiles} />
-            <p className={`${READING_WIDTH} text-sm text-stone-500`}>
-              <MarkedText text={STACK_TEXT.modelNote} />
-            </p>
-          </section>
-          {limits.sum.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
-              <SectionHeading>{STACK_TEXT.maxOutput}</SectionHeading>
+          {/* Response beside Maximum output once the pane is wide enough, the tiles under each */}
+          <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} ${resultsGridClass(wide)}`}>
+            <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
+              <SectionHeading>{STACK_TEXT.response}</SectionHeading>
               <ResponseChart
                 fmin={FREQ_AXIS_MIN_HZ}
                 fmax={FREQ_AXIS_MAX_HZ}
-                top={MAX_OUTPUT_TOP}
-                bot={MAX_OUTPUT_BOT}
+                top={HIFI_TOP}
+                bot={HIFI_BOT}
                 step={10}
-                yLabel={STACK_TEXT.maxYLabel}
+                yLabel={STACK_TEXT.yLabel}
                 series={[
-                  {
-                    curve: limits.sum,
-                    id: SUM_SERIES_ID,
-                    label: STACK_TEXT.sum,
-                    stroke: pal.ink,
-                    width: SUM_LINE_PX,
-                    tint: alpha(pal.ink, 0.05),
-                  },
-                  ...limits.members.flatMap((m, k) =>
-                    m
-                      ? [
-                          {
-                            curve: m.atLimit.filter((o) => o.spl >= MAX_OUTPUT_BOT),
-                            id: `m${k}`,
-                            label: names[k],
-                            ...lineOf(k),
-                            tint: "transparent",
-                          },
-                        ]
-                      : [],
-                  ),
+                  ...(modeled.length ? [sumSeries(response.sum, STACK_TEXT.sum, pal)] : []),
+                  ...memberSeries(modeled.map(({ m, k }) => ({ k, curve: m.curve }))),
                 ]}
                 marks={marks}
               />
-              {keepUps.length > 0 && (
-                <div className={`${READING_WIDTH} flex flex-col gap-3`}>
-                  {keepUps.map(({ heading, chips }) => (
-                    <div key={heading}>
-                      <h4 className="text-xs font-semibold text-stone-500 mb-1">{heading}</h4>
-                      <WarningChips chips={chips} tips={{ stackKeepsUp: KEEP_UP_TEXT.tip }} />
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className={`${READING_WIDTH} text-sm text-stone-500`}>{STACK_TEXT.maxNote}</p>
+              {gaps && <Notice>{STACK_TEXT.gaps}</Notice>}
+              <StatTileGrid tiles={tiles} />
+            </section>
+            {limits.sum.length > 0 && (
+              <section className={`${cell("col-start-2 row-start-1")} ${GAP_Y}`}>
+                <SectionHeading>{STACK_TEXT.maxOutput}</SectionHeading>
+                <ResponseChart
+                  fmin={FREQ_AXIS_MIN_HZ}
+                  fmax={FREQ_AXIS_MAX_HZ}
+                  top={MAX_OUTPUT_TOP}
+                  bot={MAX_OUTPUT_BOT}
+                  step={10}
+                  yLabel={STACK_TEXT.maxYLabel}
+                  series={[
+                    sumSeries(limits.sum, STACK_TEXT.sum, pal),
+                    ...memberSeries(
+                      limits.members.flatMap((m, k) => (m ? [{ k, curve: m.atLimit }] : [])),
+                    ),
+                  ]}
+                  marks={marks}
+                />
+              </section>
+            )}
+          </div>
+          {checkRows.length > 0 && (
+            <section
+              aria-label={CHECK_ROW_TEXT.checks}
+              className={`${RESULT_MAX_WIDTH} flex flex-col gap-2`}
+            >
+              {checkRows.map(({ key, row, chips }) => (
+                <WarningChips
+                  key={key}
+                  row={row}
+                  chips={chips}
+                  tips={{ stackKeepsUp: KEEP_UP_TEXT.tip, speakerKeepsUp: KEEP_UP_TEXT.tip }}
+                />
+              ))}
             </section>
           )}
           {dispersion && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6 ${GAP_Y}`}>
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 ${GAP_Y}`}>
               <SectionHeading>{DISPERSION_HEADING}</SectionHeading>
               <DispersionBlock
                 map={dispersion}
@@ -336,7 +328,8 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
               />
             </section>
           )}
-        </>
+          <AssumptionsList groups={details} summary={UI_TEXT.details} columns />
+        </div>
       }
       settings={
         <SettingsColumn
@@ -433,7 +426,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
               )}
             </>,
           )}
-          {section("optimizer", <StackOptimizerSettings optimizer={optimizer} names={names} />)}
         </SettingsColumn>
       }
     />

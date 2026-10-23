@@ -8,6 +8,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { SAVE_ROW_TEXT } from "../src/constants/saveRow.ts";
+import { PROJECT_NAMES } from "../src/constants/pages.ts";
 import { PAGE_DRAFT_KEYS, DRAFT_WRITE_MS } from "../src/constants/pageDrafts.ts";
 import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { STACK_START_NAMES } from "../src/constants/stackPresets.ts";
@@ -194,22 +195,22 @@ for (const pageDef of PAGES)
       await pick("Design A renamed");
       await button(SAVE_ROW_TEXT.open).click();
       check(await openIs((id) => id === a?.id), "Open did not reopen the first save");
-      // delete asks first: Cancel keeps it, Yes deletes it
+      // delete asks first: Cancel keeps it, Delete deletes it
       await pick(dupName);
       await p.getByRole("button", { name: SAVE_ROW_TEXT.deleteLabel(dupName) }).click();
-      await p.getByText(SAVE_ROW_TEXT.confirmDelete(dupName)).waitFor();
+      await p.getByText(SAVE_ROW_TEXT.confirmDelete(PROJECT_NAMES[pageDef.name])).waitFor();
       await noScroll("while Delete asks");
       await button(SAVE_ROW_TEXT.cancel).click();
       await p.waitForTimeout(200);
       await waitCount(3);
       await p.getByRole("button", { name: SAVE_ROW_TEXT.deleteLabel(dupName) }).click();
-      await button(SAVE_ROW_TEXT.yes).click();
+      await button(SAVE_ROW_TEXT.delete).click();
       await waitCount(2);
       check(await openIs((id) => id === a?.id), "deleting another save closed the open one");
       // deleting the open save closes it; Save then makes a new one
       await pick("Design A renamed");
       await p.getByRole("button", { name: SAVE_ROW_TEXT.deleteLabel("Design A renamed") }).click();
-      await button(SAVE_ROW_TEXT.yes).click();
+      await button(SAVE_ROW_TEXT.delete).click();
       await waitCount(1);
       check(await openInNone(), "deleting the open save left it open");
       // New from a preset: the design is open in no save

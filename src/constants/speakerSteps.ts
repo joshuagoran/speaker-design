@@ -39,7 +39,7 @@ export const DELAY_DECIMALS = 2;
 /** Every delay field's step, ms: one unit of the last decimal shown. */
 export const DELAY_STEP_MS = 10 ** -DELAY_DECIMALS;
 
-/** The Stack page's member field steps: a member's level, dB, and its set delay, ms. The Stack optimizer builds on them. */
+/** The Stack page's member field steps: a member's level, dB, and its set delay, ms. */
 export const STACK_STEPS = {
   levelDb: 0.5,
   delayMs: DELAY_STEP_MS,

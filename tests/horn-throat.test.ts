@@ -13,7 +13,7 @@ import {
 } from "../src/lib/speaker/hornThroat";
 import { withCompressionRatio } from "../src/pages/speaker/hornSections";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
-import { chamberChips } from "../src/pages/speaker/speakerChips";
+import { chamberChips } from "../src/lib/speaker/speakerChips";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";

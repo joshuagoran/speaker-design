@@ -32,6 +32,9 @@ import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
+import { WithLock, type LockControl } from "../../components/ui/LockButton";
+import { driverRef } from "../../lib/speaker/optimize/space";
+import type { SpeakerLocks } from "./useSpeakerOptimizer";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HIFI_PASSIVES_BY_SIZE } from "../../lib/speaker/driverLists";
@@ -84,10 +87,10 @@ import {
   TUBE_LAYOUT,
   VENT_KIND,
 } from "../../constants/speakerSpec";
+import { DRIVER_OPTIONS } from "../../lib/speaker/driverLists";
 import {
   DEFAULT_PORTS,
   DEFAULT_VENTS,
-  DRIVER_OPTIONS,
   NO_HORN,
   WOOFER_OPTIONS,
   WOOFER_SIZES,
@@ -186,6 +189,8 @@ interface Props {
   onRemove?: () => void;
   /** opens the driver comparison for one of its driver entries */
   onCompare: (entry: number) => void;
+  /** the optimizer's locks beside its size, its vent and its drivers */
+  locks: SpeakerLocks;
 }
 
 /**
@@ -202,6 +207,7 @@ export function ChamberSettings({
   onEdit,
   onRemove,
   onCompare,
+  locks,
 }: Props) {
   const { vent } = chamber;
   const vents = placed ? ventPlace(cabinet, placed) : null;
@@ -272,21 +278,23 @@ export function ChamberSettings({
   );
   const ventFold = !folded && (
     <FoldBox title={SETTINGS_TEXT.vent} summary={ventSummary(vent)}>
-      <ToggleGroup
-        label={SETTINGS_TEXT.ventType}
-        value={vent.kind}
-        onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
-        options={entriesOf(VENT_KIND_NAMES)}
-        disabled={
-          tapped
-            ? { values: [VENT_KIND.vented, VENT_KIND.radiator], why: SPEAKER_TEXT.ventTapped }
-            : undefined
-        }
-      />
+      <WithLock lock={locks.partLock("vents", index)}>
+        <ToggleGroup
+          label={SETTINGS_TEXT.ventType}
+          value={vent.kind}
+          onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
+          options={entriesOf(VENT_KIND_NAMES)}
+          disabled={
+            tapped
+              ? { values: [VENT_KIND.vented, VENT_KIND.radiator], why: SPEAKER_TEXT.ventTapped }
+              : undefined
+          }
+        />
+      </WithLock>
       {vent.kind === VENT_KIND.vented && (
         <>
           <ToggleGroup
-            label="Port"
+            label={SETTINGS_TEXT.ventShape}
             value={vent.port.shape ?? PORT_SHAPE.round}
             onChange={(shape) =>
               setPort(
@@ -374,7 +382,7 @@ export function ChamberSettings({
       <CardHeading
         action={
           onRemove && (
-            <Button size="xs" onClick={onRemove}>
+            <Button size="xs" variant="danger" onClick={onRemove}>
               {SETTINGS_TEXT.removeChamber}
             </Button>
           )
@@ -421,16 +429,18 @@ export function ChamberSettings({
           )}
         </div>
         <div className={TRIO_ROW}>
+          {/* each size's lock: the optimizer keeps this chamber's size on that axis */}
           {(["w", "h", "d"] as const).map((k) => (
-            <NumberField
-              key={k}
-              label={{ w: "Width", h: "Height", d: "Depth" }[k]}
-              value={shownIn(chamber.dims[k])}
-              min={1}
-              step={SPEAKER_STEPS.sizeIn}
-              fill
-              onChange={(v) => setDim(k, v)}
-            />
+            <WithLock key={k} lock={locks.sizeLock(index, k)}>
+              <NumberField
+                label={{ w: "Width", h: "Height", d: "Depth" }[k]}
+                value={shownIn(chamber.dims[k])}
+                min={1}
+                step={SPEAKER_STEPS.sizeIn}
+                fill
+                onChange={(v) => setDim(k, v)}
+              />
+            </WithLock>
           ))}
         </div>
         {/* most designs never move a chamber: its position waits in a closed fold */}
@@ -606,6 +616,10 @@ export function ChamberSettings({
             onEdit={(edit) => editDriver(i, edit)}
             onRemove={() => removeDriver(i)}
             onCompare={() => onCompare(i)}
+            locks={{
+              driver: locks.partLock("drivers", driverRef(index, i)),
+              horn: locks.partLock("horns", driverRef(index, i)),
+            }}
           />
         ))}
         {newWoofer && (
@@ -946,6 +960,8 @@ interface DriverProps {
   onRemove: () => void;
   /** opens the driver comparison for it */
   onCompare: () => void;
+  /** the optimizer's locks beside its model and its horn */
+  locks: { driver: LockControl | null; horn: LockControl | null };
 }
 
 /**
@@ -966,6 +982,7 @@ function DriverFields({
   onEdit,
   onRemove,
   onCompare,
+  locks,
 }: DriverProps) {
   const { setFocus, picked } = usePositionFocus();
   const woofer = isWooferKind(driver.kind);
@@ -1037,7 +1054,12 @@ function DriverFields({
               {DRIVER_COMPARE_TEXT.compare}
             </Button>
           )}
-          <IconButton size="sm" label={SETTINGS_TEXT.deleteDriver(index + 1)} onClick={onRemove}>
+          <IconButton
+            size="sm"
+            danger
+            label={SETTINGS_TEXT.deleteDriver(index + 1)}
+            onClick={onRemove}
+          >
             <TrashIcon />
           </IconButton>
         </>
@@ -1075,22 +1097,24 @@ function DriverFields({
         )}
       </div>
       <div className={PICK_ROW}>
-        {woofer ? (
-          <SelectField
-            label="Model"
-            options={woofers}
-            value={byId(woofers, driver.driverId)}
-            onChange={(o) => onEdit((d) => withWoofer(d, o))}
-            group={size === null ? (o) => wooferSizeName(o.size) : undefined}
-          />
-        ) : (
-          <SelectField
-            label="Model"
-            options={DRIVER_OPTIONS[driver.kind]}
-            value={byId(DRIVER_OPTIONS[driver.kind], driver.driverId)}
-            onChange={(o) => onEdit((d) => ({ ...d, driverId: o.id }))}
-          />
-        )}
+        <WithLock lock={locks.driver}>
+          {woofer ? (
+            <SelectField
+              label="Model"
+              options={woofers}
+              value={byId(woofers, driver.driverId)}
+              onChange={(o) => onEdit((d) => withWoofer(d, o))}
+              group={size === null ? (o) => wooferSizeName(o.size) : undefined}
+            />
+          ) : (
+            <SelectField
+              label="Model"
+              options={DRIVER_OPTIONS[driver.kind]}
+              value={byId(DRIVER_OPTIONS[driver.kind], driver.driverId)}
+              onChange={(o) => onEdit((d) => ({ ...d, driverId: o.id }))}
+            />
+          )}
+        </WithLock>
         <NumberField
           label="Count"
           value={driver.count}
@@ -1101,22 +1125,24 @@ function DriverFields({
         />
       </div>
       {horns.length > 0 && (
-        <SelectField
-          label={<Tooltip tip={SPEAKER_TEXT.driverHornTip}>Horn or waveguide</Tooltip>}
-          options={horns}
-          value={driver.horn ? byId(horns, driver.horn.hornId) : NO_HORN}
-          onChange={(o) =>
-            onEdit((d) => {
-              const picked = hornById(o.id);
-              if (o.id === NO_HORN.id || !picked) return { ...d, horn: null };
-              // a new horn takes the place its catalog entry suggests, where it fits
-              const placement = placed
-                ? defaultHornPlacement(picked, placed)
-                : (d.horn?.placement ?? HORN_PLACEMENT.baffle);
-              return { ...d, horn: placedAt(o.id, placement, d.horn?.mount ?? null) };
-            })
-          }
-        />
+        <WithLock lock={locks.horn}>
+          <SelectField
+            label={<Tooltip tip={SPEAKER_TEXT.driverHornTip}>Horn or waveguide</Tooltip>}
+            options={horns}
+            value={driver.horn ? byId(horns, driver.horn.hornId) : NO_HORN}
+            onChange={(o) =>
+              onEdit((d) => {
+                const picked = hornById(o.id);
+                if (o.id === NO_HORN.id || !picked) return { ...d, horn: null };
+                // a new horn takes the place its catalog entry suggests, where it fits
+                const placement = placed
+                  ? defaultHornPlacement(picked, placed)
+                  : (d.horn?.placement ?? HORN_PLACEMENT.baffle);
+                return { ...d, horn: placedAt(o.id, placement, d.horn?.mount ?? null) };
+              })
+            }
+          />
+        </WithLock>
       )}
       {exitGap && (
         <Notice>

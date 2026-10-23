@@ -13,7 +13,7 @@ import { BandSwatch } from "../ui/BandSwatch";
  * One curve on the chart: its points, legend label, line color and fill color. `band` shades the curve at the low and
  * high ends of an estimated Xmax (see `lib/xmax`); null or absent when the driver's Xmax is exact.
  */
-interface Series {
+export interface Series {
   /** a stable key where labels can repeat (user-named bands); absent: the label */
   id?: string;
   curve: readonly FrequencyPoint[];
