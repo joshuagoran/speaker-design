@@ -13,7 +13,8 @@ import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
 import { Notice } from "./components/ui/Notice";
 import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
-import { ThemeSwitch } from "./components/ui/ThemeSwitch";
+import { SettingsMenu } from "./components/ui/SettingsMenu";
+import { UnitsProvider, useUnitChoice } from "./hooks/useUnits";
 import { PageTabs } from "./components/ui/PageTabs";
 import { ShareIcon } from "./components/ui/IconButton";
 import { Button } from "./components/ui/Button";
@@ -93,116 +94,119 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   };
   // a Stack's speaker, edited on the Speaker page
   const stackSpeakerEdit = useStackSpeakerEdit({ speakerPage, stack, goTo });
+  const [units, setUnits] = useUnitChoice();
   return (
-    // from md up the shell fills the window and doesn't scroll: the header stays, and the page below scrolls in its own
-    // panes (results and settings, see SettingsLayout)
-    <div
-      className="min-h-screen bg-stone-50 text-stone-900 md:min-h-0 md:h-dvh md:flex md:flex-col md:overflow-hidden"
-      style={{ fontFamily: FONT }}
-    >
-      {/* the same scrollbar space as the page below, so the header lines up with it */}
-      <div className="md:flex-none md:overflow-hidden md:[scrollbar-gutter:stable]">
-        <header className={`${PAGE_WIDTH} pt-6 md:pt-8 pb-4 flex flex-col gap-3`}>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">
-              SpeakNow
-            </h1>
-            <nav
-              className="flex flex-wrap gap-1"
-              style={{ fontFamily: FONT }}
-              aria-label="Projects"
-            >
-              {entriesOf(PROJECT_NAMES).map(([p, label]) => {
-                const home = PROJECT_PAGES[p][0][0],
-                  on = p === project;
-                return (
-                  <a
-                    key={p}
-                    href={PAGE_HASHES[home]}
-                    aria-current={on ? "page" : undefined}
-                    onClick={navigateTo(home, PAGE_HASHES[home])}
-                    className={`px-4 max-sm:px-2.5 py-2 whitespace-nowrap rounded border-2 text-base font-semibold ${on ? PRESSED_CLASSES : "border-stone-300 hover:border-stone-500"}`}
-                  >
-                    {label}
-                  </a>
-                );
-              })}
-            </nav>
-            <div className="ml-auto">
-              <ThemeSwitch />
-            </div>
-          </div>
-          <PageTabs
-            tabs={PROJECT_PAGES[project].map(([v, label]) => [v, label, PAGE_HASHES[v]] as const)}
-            current={view}
-            label={PROJECT_NAV_LABELS[project]}
-            onNavigate={navigateTo}
-            end={
-              (sharing.notice || shareKind) && (
-                <>
-                  {sharing.notice &&
-                    (sharing.notice.problem ? (
-                      <Notice>{sharing.notice.text}</Notice>
-                    ) : (
-                      <span
-                        key={sharing.notice.shownAt}
-                        className="fade-out-late text-xs text-green-700"
-                        style={{ animationDuration: `${SHARE_COPIED_SHOW_MS}ms` }}
-                      >
-                        {sharing.notice.text}
-                      </span>
-                    ))}
-                  {shareKind && (
-                    <Button
-                      tip={SHARE_TEXT.tooltip(PROJECT_NAMES[shareKind])}
-                      className="inline-flex items-center gap-2"
-                      onClick={sharing.copyLink}
-                    >
-                      {SHARE_TEXT.button}
-                      <ShareIcon />
-                    </Button>
-                  )}
-                </>
-              )
-            }
-          />
-        </header>
-      </div>
+    <UnitsProvider system={units}>
+      // from md up the shell fills the window and doesn't scroll: the header stays, and the page
+      below scrolls in its own // panes (results and settings, see SettingsLayout)
       <div
-        key={view}
-        className="md:flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable]"
+        className="min-h-screen bg-stone-50 text-stone-900 md:min-h-0 md:h-dvh md:flex md:flex-col md:overflow-hidden"
+        style={{ fontFamily: FONT }}
       >
-        {draftFailed && (
-          <div className={PAGE_WIDTH}>
-            <Notice>{DRAFT_FAILED_TEXT}</Notice>
-          </div>
-        )}
-        {view === "speakerCutlist" ? (
-          <SpeakerCutlistPage speakerPage={speakerPage} />
-        ) : view === "stack" ? (
-          <StackPage
-            stack={stack}
-            speakerPage={speakerPage}
-            sharedNotice={sharing.sharedNotice(SHARE_KIND.stack)}
-            onEditSpeaker={stackSpeakerEdit.edit}
-          />
-        ) : view === "stackCutlist" ? (
-          <StackCutlistPage stack={stack} />
-        ) : view === "space" ? (
-          <SpacePage
-            space={space}
-            stack={stack}
-            speakerPage={speakerPage}
-            sharedNotice={sharing.sharedNotice(SHARE_KIND.space)}
-          />
-        ) : (
-          <SpeakerPage
-            speakerPage={speakerPage}
-            sharedNotice={sharing.sharedNotice(SHARE_KIND.speaker)}
-            stackEditNotice={stackSpeakerEdit.notice}
-          />
-        )}
+        {/* the same scrollbar space as the page below, so the header lines up with it */}
+        <div className="md:flex-none md:overflow-hidden md:[scrollbar-gutter:stable]">
+          <header className={`${PAGE_WIDTH} pt-6 md:pt-8 pb-4 flex flex-col gap-3`}>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">
+                SpeakNow
+              </h1>
+              <nav
+                className="flex flex-wrap gap-1"
+                style={{ fontFamily: FONT }}
+                aria-label="Projects"
+              >
+                {entriesOf(PROJECT_NAMES).map(([p, label]) => {
+                  const home = PROJECT_PAGES[p][0][0],
+                    on = p === project;
+                  return (
+                    <a
+                      key={p}
+                      href={PAGE_HASHES[home]}
+                      aria-current={on ? "page" : undefined}
+                      onClick={navigateTo(home, PAGE_HASHES[home])}
+                      className={`px-4 max-sm:px-2.5 py-2 whitespace-nowrap rounded border-2 text-base font-semibold ${on ? PRESSED_CLASSES : "border-stone-300 hover:border-stone-500"}`}
+                    >
+                      {label}
+                    </a>
+                  );
+                })}
+              </nav>
+              <div className="ml-auto">
+                <SettingsMenu units={units} onUnits={setUnits} />
+              </div>
+            </div>
+            <PageTabs
+              tabs={PROJECT_PAGES[project].map(([v, label]) => [v, label, PAGE_HASHES[v]] as const)}
+              current={view}
+              label={PROJECT_NAV_LABELS[project]}
+              onNavigate={navigateTo}
+              end={
+                (sharing.notice || shareKind) && (
+                  <>
+                    {sharing.notice &&
+                      (sharing.notice.problem ? (
+                        <Notice>{sharing.notice.text}</Notice>
+                      ) : (
+                        <span
+                          key={sharing.notice.shownAt}
+                          className="fade-out-late text-xs text-green-700"
+                          style={{ animationDuration: `${SHARE_COPIED_SHOW_MS}ms` }}
+                        >
+                          {sharing.notice.text}
+                        </span>
+                      ))}
+                    {shareKind && (
+                      <Button
+                        tip={SHARE_TEXT.tooltip(PROJECT_NAMES[shareKind])}
+                        className="inline-flex items-center gap-2"
+                        onClick={sharing.copyLink}
+                      >
+                        {SHARE_TEXT.button}
+                        <ShareIcon />
+                      </Button>
+                    )}
+                  </>
+                )
+              }
+            />
+          </header>
+        </div>
+        <div
+          key={view}
+          className="md:flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable]"
+        >
+          {draftFailed && (
+            <div className={PAGE_WIDTH}>
+              <Notice>{DRAFT_FAILED_TEXT}</Notice>
+            </div>
+          )}
+          {view === "speakerCutlist" ? (
+            <SpeakerCutlistPage speakerPage={speakerPage} />
+          ) : view === "stack" ? (
+            <StackPage
+              stack={stack}
+              speakerPage={speakerPage}
+              sharedNotice={sharing.sharedNotice(SHARE_KIND.stack)}
+              onEditSpeaker={stackSpeakerEdit.edit}
+            />
+          ) : view === "stackCutlist" ? (
+            <StackCutlistPage stack={stack} />
+          ) : view === "space" ? (
+            <SpacePage
+              space={space}
+              stack={stack}
+              speakerPage={speakerPage}
+              sharedNotice={sharing.sharedNotice(SHARE_KIND.space)}
+            />
+          ) : (
+            <SpeakerPage
+              speakerPage={speakerPage}
+              sharedNotice={sharing.sharedNotice(SHARE_KIND.speaker)}
+              stackEditNotice={stackSpeakerEdit.notice}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </UnitsProvider>
   );
 }

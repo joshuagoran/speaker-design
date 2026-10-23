@@ -57,3 +57,94 @@ export const SQ_IN_PER_SQ_FT = INCHES_PER_FOOT * INCHES_PER_FOOT;
 
 /** Square centimeters in one square inch: the spec's areas in in², the horn engine's (Hornresp's) in cm². */
 export const CM2_PER_IN2 = CM_PER_IN * CM_PER_IN;
+
+/** Liters in one cubic foot. */
+export const LITERS_PER_CUBIC_FT = LITERS_PER_CUBIC_IN * INCHES_PER_FOOT ** 3;
+
+/** Feet in one meter: a speed in m/s shown in ft/s. */
+export const FEET_PER_METER = 1 / METERS_PER_FOOT;
+
+// The display units: the header's Units setting. The model and the saved data keep the units above; only what the page
+// shows (and reads from a field) follows the setting.
+
+/** The two unit systems a page can show. */
+export const UNIT_SYSTEM = { us: "us", metric: "metric" } as const;
+
+/** What the cutlist's sizes are in, as its note names it ("Finished sizes in inches."). */
+export const CUT_SIZE_UNIT_WORDS = {
+  [UNIT_SYSTEM.us]: "inches",
+  [UNIT_SYSTEM.metric]: "mm",
+} as const;
+
+/** The settings menu's Units choice, in display order: [system, label]. */
+export const UNIT_SYSTEM_CHOICES = [
+  [UNIT_SYSTEM.us, "US"],
+  [UNIT_SYSTEM.metric, "Metric"],
+] as const;
+
+/** Where the Units choice is kept, per browser (JSON, like the theme). */
+export const UNITS_STORAGE_KEY = "units";
+
+/**
+ * One kind of amount the page shows, in each system: the unit the model and saved data hold it in (`stored`), and per
+ * system its unit's name, how many of that unit make one stored unit (`per`), the decimals a readout or field shows,
+ * and a field's step (`null`: the field's own step, in the stored unit). The US side of a quantity the model already
+ * holds in US units is the stored unit, and shows as the page always has.
+ */
+interface QuantityUnits {
+  stored: string;
+  us: { unit: string; per: number; decimals: number | null; step: number | null };
+  metric: { unit: string; per: number; decimals: number; step: number };
+}
+
+/** Every quantity the Units setting changes. */
+export const QUANTITIES = {
+  /** a box's, a panel's or a part's size, stored in inches: mm in metric */
+  boxLength: {
+    stored: "in",
+    us: { unit: "in", per: 1, decimals: null, step: null },
+    metric: { unit: "mm", per: MM_PER_IN, decimals: 0, step: 1 },
+  },
+  /** a panel's measured thickness, stored in inches: mm to the hundredth in metric */
+  panelThickness: {
+    stored: "in",
+    us: { unit: "in", per: 1, decimals: null, step: null },
+    metric: { unit: "mm", per: MM_PER_IN, decimals: 2, step: 0.1 },
+  },
+  /** a room's size or a place in it, stored in feet: meters in metric */
+  roomLength: {
+    stored: "ft",
+    us: { unit: "ft", per: 1, decimals: null, step: null },
+    metric: { unit: "m", per: METERS_PER_FOOT, decimals: 2, step: 0.1 },
+  },
+  /** an opening's or a horn's cross-section, stored in in²: cm² in metric */
+  boxArea: {
+    stored: "in²",
+    us: { unit: "in²", per: 1, decimals: null, step: null },
+    metric: { unit: "cm²", per: CM2_PER_IN2, decimals: 0, step: 1 },
+  },
+  /** a chamber's or a box's air, stored in liters: ft³ in US */
+  volume: {
+    stored: "L",
+    us: { unit: "ft³", per: 1 / LITERS_PER_CUBIC_FT, decimals: 2, step: 0.05 },
+    metric: { unit: "L", per: 1, decimals: 1, step: 0.1 },
+  },
+  /** a small air space (a horn's throat chamber, the hardware's recesses), stored in liters: in³ in US */
+  smallVolume: {
+    stored: "L",
+    us: { unit: "in³", per: 1 / LITERS_PER_CUBIC_IN, decimals: 0, step: 1 },
+    metric: { unit: "L", per: 1, decimals: 2, step: 0.01 },
+  },
+  /** a weight, stored in pounds: kg in metric */
+  mass: {
+    stored: "lb",
+    us: { unit: "lb", per: 1, decimals: null, step: null },
+    metric: { unit: "kg", per: KG_PER_LB, decimals: 1, step: 0.5 },
+  },
+  /** an air speed, stored in m/s: ft/s in US */
+  speed: {
+    stored: "m/s",
+    us: { unit: "ft/s", per: FEET_PER_METER, decimals: 0, step: 1 },
+    metric: { unit: "m/s", per: 1, decimals: 1, step: 0.5 },
+  },
+} as const satisfies Record<string, QuantityUnits>;
