@@ -1,5 +1,6 @@
 // What a space asks of the processing ahead of its amps (lib/speaker/spaceAlignment, spaceHardware): the alignment list
 // against the delays and levels the model plays, a mirrored pair's rows, a fill's delay, the amp power figures, the texts.
+import { UNIT_SYSTEM } from "../src/constants/units";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./pa-configs";
@@ -191,11 +192,15 @@ test("space alignment: a delay as the distance sound travels in it, and as words
   assert.equal(delayDistanceIn(0), 0);
   assert.ok(Math.abs(delayDistanceIn(10) - 10 * delayDistanceIn(1)) < 1e-9);
   // under the smallest delay, no delay; at it and above, the time and the distance
-  assert.equal(delayText(0), SPACE_TEXT.noDelay);
-  assert.equal(delayText(NO_DELAY_MS - 0.01), SPACE_TEXT.noDelay);
-  assert.equal(delayText(2), SPACE_TEXT.delayIs("2.00", String(Math.round(delayDistanceIn(2)))));
-  assert.equal(delayText(2), SPACE_TEXT.delayIs("2.00", "27"));
-  assert.notEqual(delayText(NO_DELAY_MS), SPACE_TEXT.noDelay);
+  assert.equal(delayText(0, UNIT_SYSTEM.us), SPACE_TEXT.noDelay);
+  assert.equal(delayText(NO_DELAY_MS - 0.01, UNIT_SYSTEM.us), SPACE_TEXT.noDelay);
+  assert.equal(
+    delayText(2, UNIT_SYSTEM.us),
+    SPACE_TEXT.delayIs("2.00", `${Math.round(delayDistanceIn(2))} in`),
+  );
+  assert.equal(delayText(2, UNIT_SYSTEM.us), SPACE_TEXT.delayIs("2.00", "27 in"));
+  assert.equal(delayText(2, UNIT_SYSTEM.metric), SPACE_TEXT.delayIs("2.00", "686 mm"));
+  assert.notEqual(delayText(NO_DELAY_MS, UNIT_SYSTEM.us), SPACE_TEXT.noDelay);
 });
 
 test("DSP sheet: each row's Gain holds System gain; a box's passive bands are one row with their Pads", () => {

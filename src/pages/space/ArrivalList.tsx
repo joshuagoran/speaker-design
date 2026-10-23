@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { DetailList } from "../../components/ui/DetailList";
 import { delayDistanceIn } from "../../lib/speaker/spaceAlignment";
 import type { ArrivalStatus, ListenerArrival } from "../../lib/speaker/solveFeeds";
@@ -23,6 +24,7 @@ interface Props {
  * color: one row a placement, or one a box for a pair whose boxes differ.
  */
 export function ArrivalList({ arrivals, names }: Props) {
+  const units = useUnits();
   return (
     <DetailList
       rows={arrivals.map((a) => ({
@@ -32,7 +34,7 @@ export function ArrivalList({ arrivals, names }: Props) {
             {SPACE_TEXT.arrivalIs(
               `${names[a.placement] ?? ""}${a.side ? ` ${a.side}` : ""}`,
               formatSigned(a.afterMainsMs),
-              formatSigned(delayDistanceIn(a.afterMainsMs) / INCHES_PER_FOOT),
+              units.signed("roomLength", delayDistanceIn(a.afterMainsMs) / INCHES_PER_FOOT),
             )}
           </span>
         ),

@@ -7,6 +7,10 @@ import {
   STATS_CLEARANCE_FT,
 } from "../../lib/acoustics/coverage";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
+import type { Units } from "../../lib/units";
+
+/** The air temperature the air absorption is worked out at, °C. */
+const AIR_TEMPERATURE_C = 20;
 import {
   CROWD_BOUNCE,
   FLOOR_REFLECTION,
@@ -37,7 +41,7 @@ export const stageSoundLines = (): AssumptionLine[] => [
 ];
 
 /** The groups after a map's own levels and sources: the floor, air and crowd, the room, the summing, what isn't modeled. */
-export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
+export function sharedAssumptionGroups(room: CoverageRoom, units: Units): AssumptionGroup[] {
   const crossover = room.outdoors ? null : modalCrossoverHz(room);
   const t60 = room.outdoors ? null : roomAbsorption(room, 1000).t60;
   const bands = Object.values(COVERAGE_BANDS)
@@ -50,7 +54,7 @@ export function sharedAssumptionGroups(room: CoverageRoom): AssumptionGroup[] {
         `Floor reflection: ${FLOOR_REFLECTION.indoors} of the pressure indoors (hard floor), ${FLOOR_REFLECTION.outdoors} outdoors (ground).`,
         `A full floor keeps the bounce below ${CROWD_BOUNCE.loHz} Hz, ${CROWD_BOUNCE.hi} of it from ${CROWD_BOUNCE.hiHz / 1000} kHz.
 Absorption: the seated-audience row.`,
-        `Air absorption on every path: 20 °C, 50 % humidity (ISO 9613-1). Speed of sound ${SPEED_OF_SOUND} m/s.`,
+        `Air absorption on every path: ${units.temperature(AIR_TEMPERATURE_C)}, 50 % humidity (ISO 9613-1). Speed of sound ${units.format("speed", SPEED_OF_SOUND)}.`,
       ],
     ],
     [
@@ -67,7 +71,7 @@ Sabine decay, solid sides (rough if a side is open).`,
       [
         `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase, so may interfere and cause cancellation. Above, band averages (and one frequency) add only by power.`,
         `Bands, Hz: ${bands}. Each averages over ${BAND_POINTS} frequencies.`,
-        `The floor stats leave out ${STATS_CLEARANCE_FT} ft around every box.`,
+        `The floor stats leave out ${units.format("roomLength", STATS_CLEARANCE_FT)} around every box.`,
       ],
     ],
     [

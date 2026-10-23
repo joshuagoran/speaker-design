@@ -3,7 +3,8 @@
 // has its filters, its total Gain (System gain, the placement's, the box's and an active band's) and its delay. Read
 // from the model, so the Gain is the one the model plays. A mirrored pair is one entry: its two boxes share the
 // settings. Pure.
-import type { BandFilter, BandId, SpeakerBand } from "../../types";
+import { formatQuantity } from "../units";
+import type { BandFilter, BandId, SpeakerBand, UnitSystem } from "../../types";
 import type { SpaceModel } from "./spaceCoverage";
 import { channelGroups } from "./spaceHardware";
 import { bandLevelDb } from "./bandLevel";
@@ -16,11 +17,14 @@ import { formatDelayMs } from "../format";
 /** How far a sound travels in `ms` milliseconds, in: the distance a delay equals (move the box back by it). */
 export const delayDistanceIn = (ms: number) => ((ms / MS_PER_S) * SPEED_OF_SOUND) / METERS_PER_INCH;
 
-/** A delay in words: as a time and as the distance it equals; none under `NO_DELAY_MS`. */
-export const delayText = (ms: number) =>
+/** A delay in words: as a time and as the distance it equals, in `system`'s units; none under `NO_DELAY_MS`. */
+export const delayText = (ms: number, system: UnitSystem) =>
   ms < NO_DELAY_MS
     ? SPACE_TEXT.noDelay
-    : SPACE_TEXT.delayIs(formatDelayMs(ms), String(Math.round(delayDistanceIn(ms))));
+    : SPACE_TEXT.delayIs(
+        formatDelayMs(ms),
+        formatQuantity("boxLength", system, delayDistanceIn(ms), 0),
+      );
 
 /** One DSP output (an active band, or a box's passive bands on their shared amp): what to set for it. */
 export interface AlignmentRow {

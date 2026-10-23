@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { useState } from "react";
 import type { SpaceStage, SpaceVenue, StageShape } from "../../types";
 import { Button } from "../../components/ui/Button";
@@ -43,7 +44,6 @@ const SHAPES: readonly ToggleOption<StageShape>[] = [
 ];
 
 /** A length as a summary shows it, ft: at most two decimals. */
-const ftText = (v: number) => `${shownIn(v)}`;
 
 /**
  * The Stages section: the choice of a new stage on the floor or a riser on a floor stage and its Add button, then each
@@ -68,6 +68,7 @@ export function StageSettings({
   const [pickId, setPickId] = useState<string>(STAGE_ON_FLOOR);
   const pick = byId(choices, pickId) ?? choices[0];
   const half = room.widthFt / 2;
+  const units = useUnits();
   return (
     <>
       <SelectField
@@ -90,16 +91,16 @@ export function StageSettings({
         const host = stageById(stages, stage.on);
         const where = host
           ? SPACE_TEXT.stageOn(names.get(host.id) ?? "")
-          : SPACE_TEXT.stageFromFront(ftText(box.y));
+          : SPACE_TEXT.stageFromFront(units.format("roomLength", box.y));
         return (
           <CardFold
             key={stage.id}
             id={stageDomId(stage.id)}
             title={name}
             summary={SPACE_TEXT.stageSummary(
-              ftText(box.w),
-              ftText(box.d),
-              ftText(stage.heightFt),
+              units.format("roomLength", box.w),
+              units.format("roomLength", box.d),
+              units.format("roomLength", stage.heightFt),
               where,
             )}
             open={open.includes(stage.id)}
@@ -130,7 +131,8 @@ export function StageSettings({
                 min={-half}
                 max={half}
                 step={0.5}
-                unit="ft"
+                quantity="roomLength"
+                unit={units.unit("roomLength")}
                 onChange={(x) => actions.setBox(stage.id, { x })}
               />
               <NumberField
@@ -139,7 +141,8 @@ export function StageSettings({
                 min={0}
                 max={room.lengthFt}
                 step={0.5}
-                unit="ft"
+                quantity="roomLength"
+                unit={units.unit("roomLength")}
                 onChange={(y) => actions.setBox(stage.id, { y })}
               />
             </div>
@@ -150,7 +153,8 @@ export function StageSettings({
                 min={STAGE_MIN_SIDE_FT}
                 max={room.widthFt}
                 step={0.5}
-                unit="ft"
+                quantity="roomLength"
+                unit={units.unit("roomLength")}
                 onChange={(w) => actions.setBox(stage.id, { w })}
               />
               <NumberField
@@ -159,7 +163,8 @@ export function StageSettings({
                 min={STAGE_MIN_SIDE_FT}
                 max={room.lengthFt}
                 step={0.5}
-                unit="ft"
+                quantity="roomLength"
+                unit={units.unit("roomLength")}
                 onChange={(d) => actions.setBox(stage.id, { d })}
               />
               <NumberField
@@ -168,7 +173,8 @@ export function StageSettings({
                 min={STAGE_HEIGHT_FT[0]}
                 max={STAGE_HEIGHT_FT[1]}
                 step={0.5}
-                unit="ft"
+                quantity="roomLength"
+                unit={units.unit("roomLength")}
                 onChange={(h) => actions.setHeight(stage.id, h)}
               />
             </div>

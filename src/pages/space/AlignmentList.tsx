@@ -1,3 +1,4 @@
+import { useUnitSystem } from "../../hooks/useUnits";
 import { delayText, type AlignmentRow } from "../../lib/speaker/spaceAlignment";
 import { formatHz, formatSigned } from "../../lib/format";
 import { FILTER_TYPE_NAMES } from "../../constants/speakerPage";
@@ -24,6 +25,7 @@ const filtersText = (r: Pick<AlignmentRow, "highpass" | "lowpass">) =>
 export function AlignmentList({ rows }: { rows: readonly AlignmentRow[] }) {
   /** a stack's members are numbered; a speaker alone isn't */
   const numbered = rows.some((o) => o.member !== rows[0]?.member);
+  const system = useUnitSystem();
   return (
     <DetailList
       rows={rows.map((r) => ({
@@ -31,7 +33,7 @@ export function AlignmentList({ rows }: { rows: readonly AlignmentRow[] }) {
         title: `${numbered ? `${r.member + 1}. ` : ""}${r.box}: ${r.bands.map((b) => b.name).join(" + ")}`,
         detail: (
           <>
-            <div>{`${filtersText(r)} · ${SPACE_TEXT.gainIs(formatSigned(r.gainDb))} · ${delayText(r.delayMs)}`}</div>
+            <div>{`${filtersText(r)} · ${SPACE_TEXT.gainIs(formatSigned(r.gainDb))} · ${delayText(r.delayMs, system)}`}</div>
             {r.pads.length > 0 && (
               <div>
                 {SPACE_TEXT.padsAre(

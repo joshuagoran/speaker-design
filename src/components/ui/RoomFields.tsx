@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { ToggleGroup } from "./ToggleGroup";
 import { NumberField } from "./NumberField";
 import { SelectField } from "./SelectField";
@@ -44,6 +45,7 @@ interface Props {
 
 /** A coverage room's settings: indoors or out, its size, each surface's material, and the dance floor. */
 export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {} }: Props) {
+  const units = useUnits();
   return (
     <>
       <ToggleGroup
@@ -65,7 +67,8 @@ export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {
           min={ROOM_WIDTH_FT[0]}
           max={ROOM_WIDTH_FT[1]}
           step={1}
-          unit="ft"
+          quantity="roomLength"
+          unit={units.unit("roomLength")}
           onChange={(widthFt) => actions.setRoomSize({ widthFt, lengthFt: room.lengthFt })}
         />
         <NumberField
@@ -74,7 +77,8 @@ export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {
           min={ROOM_LENGTH_FT[0]}
           max={ROOM_LENGTH_FT[1]}
           step={1}
-          unit="ft"
+          quantity="roomLength"
+          unit={units.unit("roomLength")}
           onChange={(lengthFt) => actions.setRoomSize({ widthFt: room.widthFt, lengthFt })}
         />
       </div>
@@ -86,7 +90,8 @@ export function RoomFields({ room, actions, surfaces = SURFACES, surfaceTips = {
             min={ROOM_CEILING_FT[0]}
             max={ROOM_CEILING_FT[1]}
             step={1}
-            unit="ft"
+            quantity="roomLength"
+            unit={units.unit("roomLength")}
             onChange={actions.setCeilingFt}
           />
           <div className="grid grid-cols-2 gap-3">

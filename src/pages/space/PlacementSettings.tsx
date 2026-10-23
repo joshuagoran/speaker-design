@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { clamp } from "../../lib/clamp";
 import type { SpacePlacement, SpaceVenue } from "../../types";
 import { Button } from "../../components/ui/Button";
@@ -59,6 +60,7 @@ export function PlacementSettings({
   coupledWith,
   standsOn,
 }: Props) {
+  const units = useUnits();
   const { delayMs, levelDb } = placement;
   /** how far either side of the center line its spot may go, ft */
   const half = room.widthFt / 2;
@@ -66,8 +68,8 @@ export function PlacementSettings({
   const heightMaxFt = SPACE_LIFT_MAX_IN / INCHES_PER_FOOT;
   // the folded row: a pair says so, then the spot of the box as set and the gain
   const where = SPACE_TEXT.placementSummary(
-    formatSigned(placement.x),
-    placement.y.toFixed(1),
+    units.signed("roomLength", placement.x),
+    units.format("roomLength", placement.y, 1),
     formatSigned(levelDb),
   );
   const summary = placement.mirrored ? `${SPACE_TEXT.pairSummary} · ${where}` : where;
@@ -91,7 +93,8 @@ export function PlacementSettings({
           min={-half}
           max={half}
           step={0.5}
-          unit="ft"
+          quantity="roomLength"
+          unit={units.unit("roomLength")}
           onChange={(x) => onEdit((p) => ({ ...p, x: clamp(x, -half, half) }))}
         />
         <NumberField
@@ -100,7 +103,8 @@ export function PlacementSettings({
           min={0}
           max={room.lengthFt}
           step={0.5}
-          unit="ft"
+          quantity="roomLength"
+          unit={units.unit("roomLength")}
           onChange={(y) => onEdit((p) => ({ ...p, y: clamp(y, 0, room.lengthFt) }))}
         />
         <NumberField
@@ -113,7 +117,8 @@ export function PlacementSettings({
           min={0}
           max={heightMaxFt}
           step={0.5}
-          unit="ft"
+          quantity="roomLength"
+          unit={units.unit("roomLength")}
           onChange={(heightFt) =>
             onEdit((p) => ({
               ...p,
