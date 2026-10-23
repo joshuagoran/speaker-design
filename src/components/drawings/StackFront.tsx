@@ -8,6 +8,11 @@ interface Props {
   speakers: readonly SpeakerSpec[];
   /** the listening point's height above the stack's base, in: drawn as a dashed line */
   listenHeightIn: number;
+  /** the selected member's index, outlined; absent or null: none */
+  selected?: number | null;
+  /** with it, a click on a member selects it (a click on the empty drawing selects none), and a double-click opens it */
+  onSelect?: (member: number | null) => void;
+  onOpen?: (member: number) => void;
 }
 
 /** The margin round the drawing, in. */
@@ -17,7 +22,14 @@ const MARGIN_IN = 2;
  * Front view of a stack, to scale: each member's front drawing (`SpeakerFront`) where the stack places it, flipped for
  * a mirrored member, on the base line, with the listening axis dashed across.
  */
-export function StackFront({ stack, speakers, listenHeightIn }: Props) {
+export function StackFront({
+  stack,
+  speakers,
+  listenHeightIn,
+  selected = null,
+  onSelect,
+  onOpen,
+}: Props) {
   const pal = usePalette();
   /** each member's drawing box, in the stack: across (unflipped, and as drawn) and up, its margin included */
   const boxes = stackLayout(stack, speakers).flatMap(({ speaker, at }, k) => {
@@ -29,6 +41,7 @@ export function StackFront({ stack, speakers, listenHeightIn }: Props) {
       x1 = at.x + frame.maxX + frame.padIn;
     return [
       {
+        member: k,
         speaker,
         mirror,
         cx: at.x,
@@ -56,6 +69,7 @@ export function StackFront({ stack, speakers, listenHeightIn }: Props) {
       className="w-full h-full"
       role="img"
       aria-label={`Front view of the stack, ${boxes.length} box${boxes.length === 1 ? "" : "es"}`}
+      onClick={onSelect ? () => onSelect(null) : undefined}
     >
       <line x1={0} x2={maxX - minX} y1={Y(0)} y2={Y(0)} stroke={pal.ink} strokeWidth={line * 2} />
       <line
@@ -75,6 +89,26 @@ export function StackFront({ stack, speakers, listenHeightIn }: Props) {
           </svg>
         </g>
       ))}
+      {onSelect &&
+        boxes.map((b) => (
+          // a click target over the member's box, outlined while selected
+          <rect
+            key={`pick${b.member}`}
+            x={X(b.drawn[0])}
+            y={Y(b.y1)}
+            width={b.w}
+            height={b.y1 - b.y0}
+            fill="transparent"
+            stroke={b.member === selected ? pal.cyan : "none"}
+            strokeWidth={line * 3}
+            className="cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(b.member);
+            }}
+            onDoubleClick={onOpen ? () => onOpen(b.member) : undefined}
+          />
+        ))}
     </svg>
   );
 }

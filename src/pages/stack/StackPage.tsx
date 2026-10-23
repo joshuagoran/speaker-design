@@ -1,7 +1,6 @@
 import { useUnits } from "../../hooks/useUnits";
-import { useMemo, useState } from "react";
-import type { DispersionPlane, FrequencyPoint, SpeakerSpec, StackMember } from "../../types";
-import { bandLine } from "../../styles/palette";
+import { useState } from "react";
+import type { StackMember } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
@@ -29,8 +28,7 @@ import { UI_TEXT } from "../../constants/uiText";
 import { CHECK_ROW_TEXT } from "../../constants/speakerResults";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { DispersionBlock } from "../../components/charts/DispersionBlock";
-import { dispersionModeled, stackDispersionMap } from "../../lib/speaker/stackDispersion";
-import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
+import { DISPERSION_HEADING } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/stats/StatLabel";
 import { priceText } from "../../lib/speaker/speakerTotals";
@@ -42,7 +40,7 @@ import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
 import { ExpandableChart } from "../../components/ui/ExpandPanel";
 import { MembersView3D } from "../../components/stack-view/MembersView3D";
 import { keysOf } from "../../lib/records";
-import { formatHz, formatDelayMs, formatDb } from "../../lib/format";
+import { formatDelayMs, formatDb } from "../../lib/format";
 import { DEFAULT_PA } from "../../lib/defaults";
 import {
   RESULTS_TWO_COLUMN_PX,
@@ -69,9 +67,9 @@ import { KEEP_UP_TEXT } from "../../constants/keepUp";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
-import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
+import { librarySpec, speakerLibrary } from "./speakerLibrary";
 import { MemberSettings } from "./MemberSettings";
-import { stackCheckRows } from "./stackChips";
+import { useStackView } from "./useStackView";
 import { stackSummary } from "./stackSummary";
 import { SummaryStrip } from "../../components/ui/SummaryStrip";
 import { WarningChips } from "../../components/chips/WarningChips";
@@ -108,23 +106,11 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<StackSettingsSection>("stack", "stack");
   /** the library's speakers, as the picker lists them */
-  const library = (speakerPage.store.saved ?? []).flatMap((c) => {
-    const saved: unknown = Reflect.get(c, "speaker");
-    const spec = readSavedSpeaker(saved);
-    return spec ? [{ id: c.id, name: c.name, spec }] : [];
-  });
+  const library = speakerLibrary(speakerPage.store.saved);
   const [pick, setPick] = useState<string>("");
   const picked = library.find((o) => o.id === pick) ?? library[0];
-  /** each member's name: its speaker's, numbered */
-  const names = useMemo(
-    () =>
-      members.map(
-        (m, k) =>
-          `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
-      ),
-    [members, design.speakers],
-  );
-  const lineOf = (k: number) => bandLine(pal, k, members.length);
+  const { names, modeled, marks, memberSeries, plane, setPlane, dispersion, checkRows } =
+    useStackView(stack);
   const summaries: Record<StackSettingsSection, string> = {
     stack: `${name} · ${members.length} box${members.length === 1 ? "" : "es"}`,
     members: names.join(" · ") || STACK_TEXT.noMembers,
@@ -145,15 +131,6 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
       {children}
     </SettingsSection>
   );
-  const modeled = response.members.flatMap((m, k) => (m ? [{ m, k }] : []));
-  /** the crossover corners, marked on the charts */
-  const marks = [
-    ...new Set(
-      members.flatMap((m) =>
-        [m.crossover.highpass?.hz, m.crossover.lowpass?.hz].filter((f) => f !== undefined),
-      ),
-    ),
-  ].map((f) => ({ f, label: formatHz(f) }));
   const tiles: StatTileItem[] = [
     [
       STACK_TEXT.listenHeight,
@@ -175,32 +152,8 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
     [STATS.stackHeight, units.amount("boxLength", totals.heightIn, 0), units.unit("boxLength")],
   ];
   const gaps = modeled.some(({ m }) => m.response.gaps.length > 0);
-  const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
-  const dispersion = useMemo(
-    () =>
-      modeled.length && dispersionModeled(design.speakers)
-        ? stackDispersionMap(design.stack, design.speakers, response, plane)
-        : null,
-    [design, response, plane, modeled.length],
-  );
   /** the phone strip's headline figures */
   const summary = stackSummary(response, limits, totals.lb, units);
-  /** the checks, one compact row per crossing between members, then per band and chamber of each member */
-  const checkRows = useMemo(
-    () => stackCheckRows(design.stack, response, limits, names),
-    [design.stack, response, limits, names],
-  );
-  /** each member's curve on a chart: its line, and its dot in the legend */
-  const memberSeries = (curves: readonly { k: number; curve: FrequencyPoint[] }[]) =>
-    curves.map(({ k, curve }) => ({
-      curve,
-      clipAtFloor: true,
-      id: `m${k}`,
-      label: names[k],
-      ...lineOf(k),
-      swatch: "dot" as const,
-      tint: "transparent",
-    }));
   const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   const cell = (place: string) => resultsCellClass(wide, place);
   /** the notes on the totals and the charts, in the results' order */
@@ -386,17 +339,7 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
                     value={picked}
                     onChange={(o) => setPick(o.id)}
                   />
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      const speaker: SpeakerSpec = {
-                        ...picked.spec,
-                        id: picked.id,
-                        name: picked.name,
-                      };
-                      stack.addSpeaker(speaker);
-                    }}
-                  >
+                  <Button variant="primary" onClick={() => stack.addSpeaker(librarySpec(picked))}>
                     {STACK_TEXT.addMember}
                   </Button>
                 </>

@@ -4,6 +4,7 @@ import { StackCutlistPage } from "./pages/cutlist/StackCutlistPage";
 import { SpeakerPage } from "./pages/speaker/SpeakerPage";
 import { useSpeakerPage } from "./pages/speaker/useSpeakerPage";
 import { StackPage } from "./pages/stack/StackPage";
+import { StackShellPage } from "./pages/stack/StackShellPage";
 import { useStack } from "./pages/stack/useStack";
 import { useStackSpeakerEdit } from "./pages/stack/useStackSpeakerEdit";
 import { SpacePage } from "./pages/space/SpacePage";
@@ -28,6 +29,7 @@ import {
   PROJECT_NAMES,
   PROJECT_NAV_LABELS,
   PROJECT_PAGES,
+  UNLISTED_PAGE_PROJECTS,
   type AppPage,
   type ProjectId,
 } from "./constants/pages";
@@ -41,7 +43,10 @@ const shareKindOf = (v: AppPage): ShareKind | null =>
 
 /** The project a page belongs to. */
 const projectOf = (v: AppPage): ProjectId =>
-  entriesOf(PROJECT_PAGES).find(([, pages]) => pages.some(([p]) => p === v))?.[0] ?? "speaker";
+  v === "stackShell"
+    ? UNLISTED_PAGE_PROJECTS.stackShell
+    : (entriesOf(PROJECT_PAGES).find(([, pages]) => pages.some(([p]) => p === v))?.[0] ??
+      "speaker");
 
 /** The page shell: hash routing, the header navigation, and the design state of every page (held here so it survives switching tabs). */
 export function App({ draftFailed = false }: { draftFailed?: boolean }) {
@@ -194,6 +199,12 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
               stack={stack}
               speakerPage={speakerPage}
               sharedNotice={sharing.sharedNotice(SHARE_KIND.stack)}
+              onEditSpeaker={stackSpeakerEdit.edit}
+            />
+          ) : view === "stackShell" ? (
+            <StackShellPage
+              stack={stack}
+              speakerPage={speakerPage}
               onEditSpeaker={stackSpeakerEdit.edit}
             />
           ) : view === "stackCutlist" ? (

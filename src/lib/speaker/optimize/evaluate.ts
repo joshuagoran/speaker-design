@@ -86,12 +86,15 @@ export interface SpeakerEval {
 }
 
 /**
- * The F3: the lowest frequency where the curve first reaches its passband (`passbandDb`) less PASSBAND_EDGE_DB, Hz, between grid
- * points on a log scale; null for an empty curve.
+ * The F3: the lowest frequency where the curve first reaches its passband (`passbandDb`) less `belowDb` (default
+ * PASSBAND_EDGE_DB; 6 for an F6), Hz, between grid points on a log scale; null for an empty curve.
  */
-export function f3Of(curve: readonly FrequencyPoint[]): number | null {
+export function f3Of(
+  curve: readonly FrequencyPoint[],
+  belowDb: number = PASSBAND_EDGE_DB,
+): number | null {
   if (!curve.length) return null;
-  const edge = passbandDb(curve) - PASSBAND_EDGE_DB;
+  const edge = passbandDb(curve) - belowDb;
   const i = curve.findIndex((o) => o.spl >= edge);
   if (i < 0) return null;
   if (i === 0) return curve[0].f;

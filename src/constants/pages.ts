@@ -8,6 +8,8 @@ export const PAGE_HASHES = {
   stack: "#stack",
   stackCutlist: "#stack-cutlist",
   space: "#space",
+  /** a test of the new layout on the Stack level: no tab links to it */
+  stackShell: "#stack-shell",
 } as const;
 
 /** A page of the app. */
@@ -46,6 +48,11 @@ export const PROJECT_PAGES = {
   ],
   space: [["space", "Design"]],
 } as const satisfies Record<ProjectId, readonly (readonly [AppPage, string])[]>;
+
+/** Pages no tab lists, by the project whose tabs show above them. */
+export const UNLISTED_PAGE_PROJECTS = { stackShell: "stack" } as const satisfies Partial<
+  Record<AppPage, ProjectId>
+>;
 
 /** The page an empty or unknown hash opens. */
 export const DEFAULT_PAGE = "speaker" satisfies AppPage;

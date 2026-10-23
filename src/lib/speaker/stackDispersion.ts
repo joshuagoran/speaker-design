@@ -160,3 +160,29 @@ export function speakerDispersionMap(
     plane,
   );
 }
+
+/**
+ * A map's beam width at `hz`, degrees: the angle round 0° (on axis) where the level stays at or above `floorDb` against
+ * on-axis, read at the map's frequency nearest `hz` (on a log scale); 180 when it never falls that far within ±90°.
+ */
+export function beamWidthDeg(
+  map: Pick<HifiDispersionMap, "angles" | "freqs" | "rows">,
+  hz: number,
+  floorDb: number,
+): number {
+  const col = map.freqs.reduce(
+    (best, f, i) =>
+      Math.abs(Math.log(f / hz)) < Math.abs(Math.log((map.freqs.at(best) ?? f) / hz)) ? i : best,
+    0,
+  );
+  const level = (i: number) => map.rows.at(i)?.at(col) ?? -Infinity;
+  const axis = map.angles.reduce(
+    (best, a, i) => (Math.abs(a) < Math.abs(map.angles.at(best) ?? a) ? i : best),
+    0,
+  );
+  let lo = axis,
+    hi = axis;
+  while (lo > 0 && level(lo - 1) >= floorDb) lo--;
+  while (hi < map.angles.length - 1 && level(hi + 1) >= floorDb) hi++;
+  return (map.angles.at(hi) ?? 0) - (map.angles.at(lo) ?? 0);
+}
