@@ -2,18 +2,10 @@ import { Button } from "../ui/Button";
 import { LimitField } from "../ui/LimitField";
 import { Notice } from "../ui/Notice";
 import { NumberField } from "../ui/NumberField";
-import { SettingsFold } from "../ui/SettingsFold";
 import { GoalPicker } from "./GoalPicker";
-import { KeepDetails } from "./KeepDetails";
-import { KeepList, type KeepGroup } from "./KeepList";
-import { LockBarButtons } from "./LockBarButtons";
 import { RunRow } from "./RunRow";
-import {
-  keepLinesFrom,
-  SPEAKER_GOAL_KEEPS,
-  SPEAKER_KEEP_WORDS,
-} from "../../lib/optimizer/goalKeeps";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
+import { LOCK_TEXT } from "../../constants/uiText";
 import type { OptimizerProgress, SpeakerGoal } from "../../types";
 import { GAP_Y_TIGHT } from "../../styles/layout";
 
@@ -21,16 +13,12 @@ import { GAP_Y_TIGHT } from "../../styles/layout";
 export interface OptimizerFoldText {
   target: string;
   targetUnit: string;
-  /** says what your design plays, in whole dB */
-  targetYours: (db: string) => string;
-  targetUseYours: string;
+  /** under the goal level while it is louder than your design, by the whole dB between them */
+  goalAbove: (db: number) => string;
   noLimit: string;
   limit: string;
-  keep: string;
-  keepHint: string;
   run: string;
   undoLoad: string;
-  summaryKeeps: (n: number) => string;
 }
 
 /** What the fold reads of a page's optimizer (`useDesignOptimizer`, with the page's locks beside it). */
@@ -38,10 +26,11 @@ export interface OptimizerFoldState {
   goals: readonly SpeakerGoal[];
   tapGoal: (goal: SpeakerGoal) => void;
   targetDb: number;
-  targetIsYours: boolean;
   yoursDb: number | null;
   setTarget: (db: number) => void;
-  useYoursForTarget: () => void;
+  /** the names of what is locked, in the order of the page, and the button that removes every lock */
+  lockedNames: readonly string[];
+  clearLocks: () => void;
   isOptimizing: boolean;
   progress: OptimizerProgress | null;
   result: { stats: { evaluated: number; ms: number }; cards: readonly unknown[] } | null;
@@ -73,26 +62,19 @@ interface Props {
   goalDefs: Record<SpeakerGoal, { short: string; name: string }>;
   text: OptimizerFoldText;
   limits: readonly LimitRow[];
-  /** the Keep list: its groups, and the lock buttons' count and actions */
-  keep: {
-    groups: readonly KeepGroup[];
-    lockBar: Parameters<typeof LockBarButtons>[0];
-  };
 }
 
 /**
- * An optimizer fold: goals in tap order, the target level at 1 m with "Use yours", the limits, the Keep list (a lock
- * per part), and the Find designs button with its progress and Cancel. The Speaker and Stack pages share it; each gives
- * its goals' words, its limits and its Keep groups.
+ * An optimizer fold: goals in tap order, the goal level at 1 m (with how far it is above your design), the limits, the
+ * line of what is locked with Clear locks (the locks are beside the settings), and the Find designs button with its
+ * progress and Cancel. The Speaker and Stack pages share it; each gives its goals' words and its limits.
  */
-export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limits, keep }: Props) {
-  const modeled = o.yoursDb !== null;
+export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limits }: Props) {
+  /** how far the goal is above your design's level, in whole dB (0 or less: not above; 0 when it is not modeled) */
+  const above = o.yoursDb === null ? 0 : Math.round(o.targetDb - o.yoursDb);
   return (
     <>
       <GoalPicker defs={goalDefs} selected={o.goals} onTap={o.tapGoal} />
-      <KeepDetails
-        lines={keepLinesFrom(SPEAKER_GOAL_KEEPS, o.goals, goalDefs, SPEAKER_KEEP_WORDS, modeled)}
-      />
       <div className={GAP_Y_TIGHT}>
         <NumberField
           label={T.target}
@@ -101,16 +83,7 @@ export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limit
           unit={T.targetUnit}
           onChange={o.setTarget}
         />
-        {modeled && (
-          <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
-            {T.targetYours(Math.round(o.yoursDb ?? 0).toString())}
-            {!o.targetIsYours && (
-              <Button size="xs" onClick={o.useYoursForTarget}>
-                {T.targetUseYours}
-              </Button>
-            )}
-          </div>
-        )}
+        {above > 0 && <p className="text-xs text-stone-500">{T.goalAbove(above)}</p>}
       </div>
       {limits.map((l) => (
         <LimitField
@@ -125,16 +98,12 @@ export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limit
           words={{ none: T.noLimit, limit: T.limit, field: l.field }}
         />
       ))}
-      <SettingsFold
-        title={T.keep}
-        summary={keep.lockBar.nLocks ? T.summaryKeeps(keep.lockBar.nLocks) : undefined}
-      >
-        <p className="text-xs text-stone-500">{T.keepHint}</p>
-        <div className="flex items-center gap-2">
-          <LockBarButtons {...keep.lockBar} />
-        </div>
-        <KeepList groups={keep.groups} />
-      </SettingsFold>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="min-w-0 break-words">{LOCK_TEXT.locked(o.lockedNames)}</span>
+        <Button size="xs" onClick={o.clearLocks} disabled={!o.lockedNames.length}>
+          {LOCK_TEXT.clear}
+        </Button>
+      </div>
       <RunRow
         busy={o.isOptimizing}
         hasGoal={o.goals.length > 0}

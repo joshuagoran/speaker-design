@@ -15,13 +15,19 @@ export type ButtonSize = keyof typeof BUTTON_SIZE_CLASSES;
 
 /**
  * Tailwind classes for each Button variant: primary for an action (add, save, start over, export, run), in brand cyan
- * as CLAUDE.md gives actions; secondary for the rest (remove, reset, collapse), neutral.
+ * as CLAUDE.md gives actions; secondary for the rest (reset, collapse), neutral; danger for Remove and Delete, in the
+ * status red.
  */
 export const BUTTON_VARIANT_CLASSES = {
   primary: "border-cmy-c bg-cmy-c text-stone-50 font-semibold hover:border-stone-900",
   secondary: "border-stone-300 bg-panel hover:border-stone-500",
   /** a run that stands apart from the usual one (Fully optimize), in brand magenta */
   special: "border-cmy-m bg-cmy-m text-stone-50 font-semibold italic",
+  /** Remove and Delete: red text and edge on the panel, a red tint on hover */
+  danger: "border-red-300 bg-panel text-red-700 hover:bg-red-50",
 };
+
+/** An icon-only Remove or Delete (a trash icon): the danger red for the icon, and its edge on hover. */
+export const DANGER_ICON_CLASSES = "text-red-700 hover:border-red-300";
 
 export type ButtonVariant = keyof typeof BUTTON_VARIANT_CLASSES;

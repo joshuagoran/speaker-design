@@ -27,7 +27,6 @@ export const STACK_SETTINGS_SECTIONS = {
   stack: "Stack",
   members: "Boxes",
   crossovers: "Crossovers",
-  optimizer: "Optimizer",
 } as const;
 export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;
 

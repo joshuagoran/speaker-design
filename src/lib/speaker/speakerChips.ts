@@ -1,6 +1,7 @@
-// The Speaker page's limit checks, in the chips' style: one list per band (what sets its level, a datasheet driver's
-// power) and one per chamber (its cones at the amp's full power against Xmax, the vent's and the radiators' limits and
-// the program rating). Built from the spec and its limits (lib/speaker/speakerLimits).
+// A speaker's limit checks, in the chips' style, on the Speaker page and for each Stack member: one list per band (what
+// sets its level, a datasheet driver's power) and one per chamber (its cones at the amp's full power against Xmax, the
+// vent's and the radiators' limits and the program rating, then its fit and bracing checks). Built from the spec, its
+// limits (lib/speaker/speakerLimits) and its build (lib/speaker/speakerBuild).
 import type {
   BandId,
   Chip,
@@ -11,15 +12,18 @@ import type {
   SpeakerResponse,
   SpeakerSpec,
 } from "../../types";
-import { formatHz, formatWatts, formatDb } from "../../lib/format";
+import { formatHz, formatWatts, formatDb } from "../format";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
-import { driverName } from "./speakerParts";
-import { keepUpChip, speakerKeepUps } from "../../lib/speaker/keepUp";
-import { dispersionChecks } from "../../lib/speaker/dispersionCheck";
-import { hfHeadroomChip } from "../../lib/speaker/chips";
-import { hfLimitWatts } from "../../lib/acoustics/boxModels";
-import { bandLoads } from "../../lib/speaker/speakerLimits";
+import { driverName } from "./driverLists";
+import { keepUpChip, speakerKeepUps } from "./keepUp";
+import { dispersionChecks } from "./dispersionCheck";
+import { hfHeadroomChip } from "./chips";
+import { hfLimitWatts } from "../acoustics/boxModels";
+import { bandLoads } from "./speakerLimits";
+import { chamberBraceChips, chamberFitChips } from "./fitChips";
+import type { CabinetBuild } from "./speakerBuild";
+import { CHECK_ROW_TEXT } from "../../constants/speakerResults";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 
 /** A Speaker-page check. */
@@ -195,4 +199,38 @@ export function chamberChips(c: SpeakerChamberLimits, bandName: string): Speaker
         : ["ok", "Amp under the program rating", `${amp}, under ${rating}.`, "speakerPower"],
   );
   return chips;
+}
+
+/**
+ * The checks as compact rows: one per band (`bandChips`), then one per chamber (`chamberChips`, then its fit and bracing
+ * checks), each with its key and its label. A row with no check is left out.
+ */
+export function speakerCheckRows(
+  spec: Pick<SpeakerSpec, "bands" | "input" | "cabinet">,
+  limits: SpeakerLimits,
+  response: Pick<SpeakerResponse, "bands">,
+  build: CabinetBuild,
+): { key: string; row: string; chips: SpeakerChip[] }[] {
+  const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
+  const fitChips = chamberFitChips(spec.cabinet, build);
+  const braceChips = chamberBraceChips(spec.cabinet, build);
+  return [
+    ...bandChips(spec, limits, response).map(({ id, chips }) => ({
+      key: `band:${id}`,
+      row: CHECK_ROW_TEXT.band(nameOf(id)),
+      chips,
+    })),
+    ...spec.cabinet.chambers.map((_, i) => {
+      const c = limits.chambers[i];
+      return {
+        key: `chamber:${i}`,
+        row: CHECK_ROW_TEXT.chamber(i + 1),
+        chips: [
+          ...(c ? chamberChips(c, nameOf(c.band)) : []),
+          ...(fitChips[i] ?? []),
+          ...(braceChips[i] ?? []),
+        ],
+      };
+    }),
+  ].filter((r) => r.chips.length > 0);
 }

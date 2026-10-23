@@ -60,7 +60,7 @@ export function useStackSpeakerEdit({ speakerPage, stack, goTo }: Pages) {
         // a failed save stays on the edit; a cancelled or ended one goes nowhere
         if (!saved || !stackEditView.isOpen(edit)) return;
         if (design.current.speakers.some((s) => s.id === edit.speakerId)) {
-          // a whole replace: the optimizer's cards, locks and Undo name the old speaker id
+          // a whole replace: the members now name the saved speaker's id
           stack.setDesign((d) => withStackSpeaker(d, edit.speakerId, saved));
         } else stack.store.flash(STACK_EDIT_TEXT.boxRemoved(saved.name, canSave));
         back();

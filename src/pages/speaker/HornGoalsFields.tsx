@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MarkedText, plainText } from "../../components/ui/MarkedText";
+import { MarkedText } from "../../components/ui/MarkedText";
 import type { HornGoalFit, HornGoals } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
@@ -74,7 +74,7 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
             size="xs"
             className="shrink-0"
             disabled={designing || outOfOrder}
-            title={plainText(SETTINGS_TEXT.designTip)}
+            tip={SETTINGS_TEXT.designTip}
             onClick={() => {
               setDesigning(true);
               // let the button show the work before the search holds the page

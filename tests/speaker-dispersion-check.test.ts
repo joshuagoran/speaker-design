@@ -1,5 +1,5 @@
 // The dispersion check at a crossover between a speaker's bands (src/lib/speaker/dispersionCheck): on the Speaker page's
-// band rows (bandChips) and the Stack page's lists (stackDispersionChips), on hi-fi designs.
+// band rows (bandChips) and each Stack member's band rows (stackCheckRows), on hi-fi designs.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { dispersionChecks } from "../src/lib/speaker/dispersionCheck";
@@ -7,8 +7,9 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { stackMember } from "../src/lib/speaker/specParts";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
-import { bandChips } from "../src/pages/speaker/speakerChips";
-import { stackDispersionChips } from "../src/pages/stack/stackChips";
+import { bandChips } from "../src/lib/speaker/speakerChips";
+import { stackCheckRows } from "../src/pages/stack/stackChips";
+import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { DRIVER_KIND, SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { DISPERSION_TEXT } from "../src/constants/dispersionCheck";
@@ -16,7 +17,7 @@ import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { speakerDispersionMap } from "../src/lib/speaker/stackDispersion";
 import { dispersionGrid } from "../src/lib/acoustics/directivity";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
-import type { HifiDesignState, SpeakerSpec } from "../src/types";
+import type { HifiDesignState, SpeakerSpec, StackSpec } from "../src/types";
 
 const IDENTITY = { id: "hifi", name: "Hi-fi speaker" };
 const hifiSpec = (state: HifiDesignState) => speakerFromHifi(state, DEFAULT_HIFI_LOOK, IDENTITY);
@@ -105,23 +106,39 @@ test("a 3-way has one chip per crossover, each on its lower band", () => {
   );
 });
 
-test("the Stack page lists each member speaker's own crossings, under the member's name", () => {
+test("the Stack page shows each member speaker's own crossings, in the member's band rows", () => {
   const spec = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
-  const stack = { members: [stackMember(spec.id, spec.input), stackMember(spec.id, spec.input)] };
-  const lists = stackDispersionChips(stack, [spec], ["1. Box", "2. Box"]);
-  assert.equal(lists.length, 2);
-  assert.equal(lists[0].heading, "1. Box: Low to High");
-  assert.equal(lists[0].chips[0][3], "stackDispersion");
-  assert.equal(lists[0].chips[0][1], DISPERSION_TEXT.okTitle("High"));
-  // a speaker with one band has no crossing inside it, and none is checked between members
   const sub = { ...templateSpeaker(SPEAKER_TEMPLATE.paSubBox), id: "sub" };
+  /** the dispersion chips of a stack's rows, by row label */
+  const dispersionRows = (
+    stack: Pick<StackSpec, "members">,
+    speakers: SpeakerSpec[],
+    names: string[],
+  ) => {
+    const response = stackResponse(stack, speakers);
+    return stackCheckRows(stack, response, stackLimits(stack, response), names).flatMap((r) =>
+      r.chips.filter((c) => c[3] === "speakerDispersion").map((c) => [r.row, c[1]]),
+    );
+  };
   assert.deepEqual(
-    stackDispersionChips(
+    dispersionRows(
+      { members: [stackMember(spec.id, spec.input), stackMember(spec.id, spec.input)] },
+      [spec],
+      ["1. Box", "2. Box"],
+    ),
+    [
+      ["1. Box: Low band", DISPERSION_TEXT.okTitle("High")],
+      ["2. Box: Low band", DISPERSION_TEXT.okTitle("High")],
+    ],
+  );
+  // a speaker with one band has no crossing inside it, and none is checked between members
+  assert.deepEqual(
+    dispersionRows(
       { members: [stackMember(spec.id, spec.input), stackMember(sub.id, sub.input)] },
       [spec, sub],
       ["1. Box", "2. Sub"],
-    ).map((l) => l.heading),
-    ["1. Box: Low to High"],
+    ).map(([row]) => row),
+    ["1. Box: Low band"],
   );
 });
 

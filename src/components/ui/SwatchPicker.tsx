@@ -1,6 +1,7 @@
 import { ON_DATA } from "../../styles/palette";
 import { FINISH_ID } from "../../constants/finishes";
 import { useId } from "react";
+import { Tooltip } from "./Tooltip";
 import type { PaintSwatch } from "../../types";
 
 interface Props {
@@ -38,7 +39,6 @@ export function SwatchPicker({
             <button
               key={k}
               type="button"
-              title={f.name}
               aria-pressed={value === k}
               onClick={() => onChange(k)}
               className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
@@ -51,34 +51,34 @@ export function SwatchPicker({
             </button>
           ))}
         {swatches.map(([hex, name]) => (
-          <button
-            key={hex}
-            type="button"
-            title={titlePrefix + name}
-            aria-label={titlePrefix + name}
-            aria-pressed={!preset && value.toLowerCase() === hex}
-            onClick={() => onChange(hex)}
-            className={`swatch w-7 h-7 rounded-full border-2 ${ring(!preset && value.toLowerCase() === hex)}`}
-            style={{ background: hex }}
-          />
+          // the aria-label names it with the same words
+          <Tooltip key={hex} control tip={titlePrefix + name}>
+            <button
+              type="button"
+              aria-label={titlePrefix + name}
+              aria-pressed={!preset && value.toLowerCase() === hex}
+              onClick={() => onChange(hex)}
+              className={`swatch w-7 h-7 rounded-full border-2 ${ring(!preset && value.toLowerCase() === hex)}`}
+              style={{ background: hex }}
+            />
+          </Tooltip>
         ))}
-        <label
-          className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative"
-          title="Custom color"
-        >
-          {/* The color picker's ring: its color literals are allowed. */}
-          <span
-            className="absolute inset-0"
-            style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }}
-          />
-          <input
-            type="color"
-            aria-label={`Custom ${label.toLowerCase()}`}
-            value={preset ? ON_DATA.white : value}
-            onChange={(e) => onChange(e.target.value)}
-            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-          />
-        </label>
+        <Tooltip control tip="Custom color">
+          <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative">
+            {/* The color picker's ring: its color literals are allowed. */}
+            <span
+              className="absolute inset-0"
+              style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }}
+            />
+            <input
+              type="color"
+              aria-label={`Custom ${label.toLowerCase()}`}
+              value={preset ? ON_DATA.white : value}
+              onChange={(e) => onChange(e.target.value)}
+              className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+            />
+          </label>
+        </Tooltip>
         <span className="text-xs text-stone-500 ml-1 tabular-nums">{note}</span>
       </div>
     </div>

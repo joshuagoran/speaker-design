@@ -30,6 +30,7 @@ const pairs = (p: Palette): [string, string, string, number][] => {
       [`cyan on ${bg}`, p.cyan, p[bg], 4.5],
       [`magenta on ${bg}`, p.magenta, p[bg], 4.5],
       [`green text on ${bg}`, s.green.text, p[bg], 4.5],
+      // also a danger button's text (Remove, Delete); its edge is the red line below
       [`red text on ${bg}`, s.red.text, p[bg], 4.5],
       [`orange text on ${bg}`, s.orange.text, p[bg], 4.5],
       [`orange line on ${bg}`, s.orange.base, p[bg], 3],
@@ -53,6 +54,7 @@ const pairs = (p: Palette): [string, string, string, number][] => {
     ["muted line on edge (the speaker shell's cutlist outlines, grain)", p.muted, p.edge, 3],
     ["crossed grain (orange text shade) on edge", s.orange.text, p.edge, 3],
     ["green text on its tint", s.green.text, s.green.tint, 4.5],
+    // also a danger button's text on its hover tint
     ["red text on its tint", s.red.text, s.red.tint, 4.5],
     ["orange text on its tint", s.orange.text, s.orange.tint, 4.5],
   ];

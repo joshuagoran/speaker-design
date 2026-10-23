@@ -8,6 +8,7 @@ import { FILTER_TYPE_NAMES } from "../../constants/speakerPage";
 import { SETTINGS_TEXT } from "../../constants/speakerSettings";
 import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 import { PICK_ROW } from "../../styles/layout";
+import { WithLock, type LockControl } from "../../components/ui/LockButton";
 
 /** The filter types, as the picker lists them after its first choice (no filter). */
 const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(FILTER_TYPE_NAMES).map(([id, name]) => ({
@@ -29,6 +30,8 @@ interface Props {
   /** what the picker calls no filter (default Off) */
   offName?: string;
   onEdit: (edit: (filters: Filters) => Filters) => void;
+  /** the optimizer's lock beside each filter's type; none where the optimizer can't change it */
+  locks?: Partial<Record<keyof Filters, LockControl | null>>;
 }
 
 /**
@@ -40,6 +43,7 @@ export function FilterFields({
   newCornerHz,
   offName = SETTINGS_TEXT.filterOff,
   onEdit,
+  locks = {},
 }: Props) {
   const off: SelectOption = { id: "", name: offName };
   const options = [off, ...TYPE_OPTIONS];
@@ -61,7 +65,7 @@ export function FilterFields({
     if (!filter) return picker;
     return (
       <div className={PICK_ROW}>
-        {picker}
+        <WithLock lock={locks[side]}>{picker}</WithLock>
         <NumberField
           label={<Tooltip tip={SETTINGS_TEXT.cornerTip}>{SETTINGS_TEXT.corner}</Tooltip>}
           value={filter.hz}

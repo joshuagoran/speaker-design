@@ -10,8 +10,6 @@ import type {
 } from "../../types";
 import type { SelectOption } from "../../components/ui/SelectField";
 import {
-  CD_OPTIONS,
-  FILL_OPTIONS,
   HIFI_WAVEGUIDES,
   HIFI_WOOFERS,
   HORN_OPTIONS,
@@ -25,20 +23,9 @@ import {
   DEFAULT_PA,
   DEFAULT_PORT_SIZE,
 } from "../../lib/defaults";
-import { HIFI_TWEETERS_BY_TYPE, HIFI_WOOFERS_BY_SIZE } from "../../lib/speaker/driverLists";
 import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { NO_HORN_NAME } from "../../constants/speakerPage";
-
-/** Each driver kind's catalog, as its picker lists it. */
-export const DRIVER_OPTIONS: Record<DriverKind, readonly SelectOption[]> = {
-  sub: SPEAKER_SUB_OPTIONS,
-  mid: MID_OPTIONS,
-  compression: CD_OPTIONS,
-  woofer: HIFI_WOOFERS_BY_SIZE,
-  tweeter: HIFI_TWEETERS_BY_TYPE,
-  coaxial: FILL_OPTIONS,
-};
 
 /** The horn picker's first choice: no horn. */
 export const NO_HORN: SelectOption = { id: "", name: NO_HORN_NAME };
@@ -56,10 +43,6 @@ export const hornOptions = (kind: DriverKind): readonly SelectOption[] =>
     : kind === DRIVER_KIND.tweeter
       ? [NO_HORN, ...HIFI_WAVEGUIDES]
       : [];
-
-/** A driver's catalog name; its id where its table doesn't have it. */
-export const driverName = (driver: Pick<SpeakerDriver, "kind" | "driverId">) =>
-  byId(DRIVER_OPTIONS[driver.kind], driver.driverId)?.name ?? driver.driverId;
 
 /** The port each shape starts at: the default hi-fi design's round port and slot, the PA designs' side ducts. */
 export const DEFAULT_PORTS = {

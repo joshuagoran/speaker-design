@@ -8,7 +8,6 @@ import { AUTO_BALANCE_STATUS } from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { DRAFT_STACK_ID, stackDraft, stackFromSaved, stackSnapshot } from "./stackSaves";
 import { usePageDraft, type SharedMode } from "../../hooks/usePageDraft";
-import { useStackOptimizer } from "./useStackOptimizer";
 import { STACK_TEXT } from "../../constants/stack";
 import type { SavedConfig, SpeakerSpec, StackDesign, StackMember, StackSpec } from "../../types";
 
@@ -57,14 +56,10 @@ export function withSpeaker(speakers: readonly SpeakerSpec[], speaker: SpeakerSp
  */
 export function useStack() {
   const [design, setDesign, sharedDraft] = usePageDraft(stackDraft);
-  // how many times the whole stack was replaced (a start, a saved stack opened): the optimizer's locks start over with it
+  // how many times the whole stack was replaced (a start, a saved stack opened)
   const [round, setRound] = useState(0);
-  /** the whole stack replaced: the optimizer's cards, locks and Undo are dropped */
-  const restart = () => {
-    setRound((n) => n + 1);
-    // called from an event, after `optimizer` below is set
-    optimizer.clearResults();
-  };
+  /** the whole stack replaced */
+  const restart = () => setRound((n) => n + 1);
   const replaceDesign = (next: SetStateAction<StackDesign>) => {
     setDesign(next);
     restart();
@@ -98,19 +93,6 @@ export function useStack() {
     [members, response],
   );
   const store = useConfigStore(STACKS_COLLECTION);
-  // the optimizer reads and loads the whole design (a card keeps the stack's id, name and notes); its cards, locks and
-  // Undo start over when the whole stack is replaced (replaceDesign)
-  const optimizer = useStackOptimizer({
-    design,
-    loadDesign: setDesign,
-    round,
-    current: {
-      musicDb: limits.musicDb,
-      price: totals.dollars,
-      maxBoxLb: totals.maxBoxLb,
-      heightIn: totals.heightIn,
-    },
-  });
   const editStack = (edit: (stack: StackSpec) => StackSpec) =>
     setDesign((d) => ({ ...d, stack: edit(d.stack) }));
   const editMembers = (edit: (members: readonly StackMember[]) => StackMember[]) =>
@@ -118,11 +100,10 @@ export function useStack() {
   return {
     design,
     sharedView,
-    /** replaces the whole stack (a start, a saved stack opened): the optimizer starts over */
+    /** replaces the whole stack (a start, a saved stack opened) */
     setDesign: replaceDesign,
     /** how many times the whole stack was replaced (`setDesign`, a link's stack shown or closed) */
     round,
-    optimizer,
     response,
     limits,
     totals,

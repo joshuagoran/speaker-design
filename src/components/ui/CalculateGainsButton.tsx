@@ -1,6 +1,5 @@
 import { Button } from "./Button";
 import { Notice } from "./Notice";
-import { Tooltip } from "./Tooltip";
 import { MarkedText } from "./MarkedText";
 import type { AutoBalance } from "../../lib/speaker/autoBalance";
 import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
@@ -26,15 +25,14 @@ export function CalculateGainsButton<L>({ balance, onApply, tip }: Props<L>) {
   return (
     <div className={GAP_Y_TIGHT}>
       <div>
-        <Tooltip control tip={<MarkedText text={tip} />}>
-          <Button
-            variant="primary"
-            disabled={balance.status !== AUTO_BALANCE_STATUS.balanced}
-            onClick={onApply}
-          >
-            {AUTO_BALANCE_TEXT.button}
-          </Button>
-        </Tooltip>
+        <Button
+          variant="primary"
+          tip={tip}
+          disabled={balance.status !== AUTO_BALANCE_STATUS.balanced}
+          onClick={onApply}
+        >
+          {AUTO_BALANCE_TEXT.button}
+        </Button>
       </div>
       {balance.status === AUTO_BALANCE_STATUS.unmodeled && (
         <Notice>

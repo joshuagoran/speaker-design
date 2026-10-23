@@ -81,6 +81,6 @@ export const CHIP_IDS = {
     "speakerHfPad",
     "speakerDispersion",
   ],
-  /** the Stack page's checks: between its members, and at each speaker's own crossovers (src/pages/stack/stackChips.ts) */
-  stack: ["stackKeepsUp", "stackDispersion"],
+  /** the Stack page's checks between its members (src/pages/stack/stackChips.ts); each member's own checks take the speaker ids */
+  stack: ["stackKeepsUp"],
 } as const;

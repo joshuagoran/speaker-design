@@ -1,7 +1,6 @@
-// The part of a page's Speaker-style optimizer that the Speaker and Stack pages share: the goals in tap order, the
-// target level and the limits, the search, and loading a card as one edit with Undo (the cards go stale once the design
-// changed after the search). Each page adds its own locks and its own call to the search
-// (pages/speaker/useSpeakerOptimizer, pages/stack/useStackOptimizer).
+// The part of the Speaker page's optimizer that holds no Speaker parts: the goals in tap order, the target level and the
+// limits, the search, and loading a card as one edit with Undo (the cards go stale once the design changed after the
+// search). The page adds its own locks and its own call to the search (pages/speaker/useSpeakerOptimizer).
 import { useRef, useState } from "react";
 import { toggled } from "../lib/lists";
 import { useOptimizerRun } from "./useOptimizerRun";
@@ -157,7 +156,6 @@ export function useDesignOptimizer<
     targetIsYours: target === null,
     yoursDb: musicDb,
     setTarget: (db: number) => setTarget(db),
-    useYoursForTarget: () => setTarget(null),
     limits,
     setLimit: (key: keyof Stored, value: number | null) =>
       setLimits((l) => ({ ...l, [key]: value })),

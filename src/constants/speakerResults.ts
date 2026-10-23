@@ -40,6 +40,7 @@ export const SPEAKER_SAVE_WORDS = {
   pick: (n: number) => `Saved Speakers (${n})`,
   noSaved: "No saved Speakers yet",
   newFromTip: SAVE_ROW_TEXT.newFromTip(PROJECT_NAMES.speaker),
+  confirmDelete: SAVE_ROW_TEXT.confirmDelete(PROJECT_NAMES.speaker),
 } as const;
 
 /** The checks' row labels: a band's, by its name, and a chamber's, by its place. */

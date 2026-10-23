@@ -1,4 +1,6 @@
+import { useId } from "react";
 import { HOVER_TRANSITION } from "./buttonStyles";
+import { Tooltip } from "./Tooltip";
 import type { SelectOption } from "./SelectField";
 
 interface Props<T extends SelectOption> {
@@ -13,7 +15,7 @@ interface Props<T extends SelectOption> {
   /** the heading each option is listed under; absent: one plain list */
   group?: (option: T) => string;
   /** its tooltip: what picking does */
-  title?: string;
+  tip?: string;
   disabled?: boolean;
   /** its width classes (default: grows to fill the row) */
   className?: string;
@@ -30,7 +32,7 @@ export function RowSelect<T extends SelectOption>({
   onChange,
   prompt,
   group,
-  title,
+  tip,
   disabled,
   className = "min-w-0 max-w-full flex-1",
 }: Props<T>) {
@@ -45,10 +47,11 @@ export function RowSelect<T extends SelectOption>({
         items: options.filter((o) => group(o) === heading),
       }))
     : null;
-  return (
+  const tipId = useId();
+  const select = (
     <select
       aria-label={ariaLabel}
-      title={title}
+      aria-describedby={tip ? tipId : undefined}
       value={value}
       disabled={disabled}
       onChange={(e) => {
@@ -68,5 +71,12 @@ export function RowSelect<T extends SelectOption>({
           ))
         : options.map(opt)}
     </select>
+  );
+  return tip ? (
+    <Tooltip control tip={tip} describes={tipId}>
+      {select}
+    </Tooltip>
+  ) : (
+    select
   );
 }

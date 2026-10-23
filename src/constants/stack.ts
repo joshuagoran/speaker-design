@@ -30,8 +30,8 @@ export const STACK_TEXT = {
   noMembers: "Add a saved Speaker or a preset.",
   /** a crossover between two boxes: the lower and the upper box by name */
   crossing: (lower: string, upper: string) => `${lower} to ${upper}`,
-  /** a crossing between two bands inside one box: the box's name, then the lower and the upper band by name */
-  memberCrossing: (box: string, lower: string, upper: string) => `${box}: ${lower} to ${upper}`,
+  /** a row of one box's own checks: the box's name, then the row's label (a band or a chamber) */
+  memberRow: (box: string, row: string) => `${box}: ${row}`,
   missing: "This box's Speaker is deleted. The response leaves it out.",
   gaps: `The response leaves out part of a box's Speaker. The **${PROJECT_NAMES.speaker}** page shows which part.`,
   fullRange: "full range",
@@ -70,4 +70,5 @@ export const STACK_SAVE_WORDS = {
   pick: (n: number) => `Saved Stacks (${n})`,
   noSaved: "No saved Stacks yet",
   newFromTip: SAVE_ROW_TEXT.newFromTip(PROJECT_NAMES.stack),
+  confirmDelete: SAVE_ROW_TEXT.confirmDelete(PROJECT_NAMES.stack),
 } as const satisfies SaveRowWords;

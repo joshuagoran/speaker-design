@@ -259,12 +259,6 @@ const listenHeightOf = (placed: ReturnType<typeof stackLayout>) => {
   return centers.length ? Math.max(...centers) : 0;
 };
 
-/** The listening point's height above the stack's base, in (`StackResponse.listenHeightIn`), without running the model. */
-export const stackListenHeightIn = (
-  stack: Pick<StackSpec, "members">,
-  speakers: readonly SpeakerSpec[],
-): number => listenHeightOf(stackLayout(stack, speakers));
-
 /**
  * The stack at its listening point, moved to 1 m: each member's speaker through its crossover, level, polarity, delay
  * and its bands' paths, summed with their phase. A member whose speaker isn't in `speakers` is left out (null).

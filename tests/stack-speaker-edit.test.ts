@@ -245,7 +245,7 @@ test("stack speaker edit: signed out, Return to Stack changes only the Stack's c
   await settle();
   assert.deepEqual(run.pages, ["stack"]);
   assert.equal(run.closed, 1);
-  // a whole replace: the Stack's optimizer cards, locks and Undo go with the old ids
+  // a whole replace: the members now name the saved speaker's id
   assert.equal(run.replaces, 1);
   assert.deepEqual(
     run.stackNow.stack.members.slice(0, 2).map((m) => m.speakerId),

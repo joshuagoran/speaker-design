@@ -23,7 +23,7 @@ export function GoalPicker<G extends string>({ defs, selected, onTap }: Props<G>
           return (
             <ToggleButton
               key={k}
-              title={g.name}
+              tip={g.name}
               on={i >= 0}
               className="relative"
               onClick={() => onTap(k)}

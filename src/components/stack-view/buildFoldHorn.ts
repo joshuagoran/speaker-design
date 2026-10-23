@@ -1,6 +1,7 @@
 // A folded (drawn) horn's parts in its chamber: each board of its side section as a panel the clear width, the drivers'
-// cutouts in the board they mount on and, in the cutaway, the drivers' baskets and motors behind them. The mouth and the
-// vent are holes in their wall, cut in that panel by the chamber's builder (buildSpeakerScene).
+// cutouts in the board they mount on and the drivers' baskets and motors behind them (in both views: a driver the mouth
+// looks onto shows in the closed box). The mouth and the vent are holes in their wall, cut in that panel by the
+// chamber's builder (buildSpeakerScene).
 // The side section's coordinates (`SidePoint`) map to the chamber group's: `zIn` back from the baffle's inside face,
 // `yIn` up from the clear face's bottom, across from the clear face's center.
 import * as THREE from "three";
@@ -87,8 +88,8 @@ export function buildFoldHorn(
     ctx.group.add(mesh);
   });
 
-  // the drivers' baskets and motors behind the board, as the other horn drivers are drawn (the cutaway)
-  if (ctx.cutaway && driver) {
+  // the drivers' baskets and motors behind the board, as the other horn drivers are drawn (in both views)
+  if (driver) {
     const profile = [
       new THREE.Vector2(0, 0),
       new THREE.Vector2(driver.cutoutIn / 2, 0),

@@ -33,7 +33,7 @@ import { byId } from "../../lib/tables";
 import { hornById } from "../../lib/data";
 import { HIFI_PASSIVES_BY_SIZE } from "../../lib/speaker/driverLists";
 import { onTop } from "../../lib/speaker/speakerLayout";
-import { driverName } from "./speakerParts";
+import { driverName } from "../../lib/speaker/driverLists";
 import { pathIn, shownInOfCm } from "./hornSections";
 
 /** A fill level's id (`FILL_LEVEL_PCT`). */

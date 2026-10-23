@@ -194,7 +194,7 @@ export interface CompareRowsContext {
 
 /** The comparison checks fit and the model, not the optimizer's budget, weight, or size limits. */
 const NO_LIMITS = { budget: null, maxLb: null } as const;
-const NO_CAPS: SizeCaps = {};
+const NO_CAPS: SizeCaps = new Map();
 
 /** A run's problems in words: the checks against `start`, then its warnings. */
 function problemTexts(run: DriverCompareRun, start: DriverCompareRun): string[] {

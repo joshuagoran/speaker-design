@@ -1,4 +1,4 @@
-// The goals as the Speaker and Stack optimizers score them: a design's numbers, each goal's objective and the margin that makes one
+// The goals as the Speaker optimizer scores them: a design's numbers, each goal's objective and the margin that makes one
 // design beat another, the alternatives' order, the first card's heading, and the last check on the cards. Pure.
 import type { SpeakerGoal } from "../../../types";
 import type { CardRole, SelectedCard } from "../../optimizer/selectCards";
