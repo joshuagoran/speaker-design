@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { MAP_DRAG_UPDATE_MS } from "../../constants/space";
 import { alpha, ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
@@ -174,6 +174,8 @@ export function CoverageMap({
   quiet,
 }: Props) {
   const pal = usePalette();
+  // the room's clip, its own id: an expanded map is drawn a second time, in a dialog
+  const roomClip = useId();
   // in an expanded dialog, the dialog's height in place of the page's
   const expandedH = useExpandedChartHeight();
   const mapMaxHeight = expandedH ?? maxHeight;
@@ -454,12 +456,12 @@ export function CoverageMap({
         onKeyDown={key}
       >
         <defs>
-          <clipPath id="coverage-room">
+          <clipPath id={roomClip}>
             <rect x={PAD.l} y={PAD.t} width={w} height={h} />
           </clipPath>
         </defs>
         <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={quiet ? pal.edge : ON_DATA.edge} />
-        <g clipPath="url(#coverage-room)">
+        <g clipPath={`url(#${roomClip})`}>
           {image && (
             <image
               href={image}
@@ -505,7 +507,7 @@ export function CoverageMap({
             </g>
           );
         })}
-        <g clipPath="url(#coverage-room)">
+        <g clipPath={`url(#${roomClip})`}>
           {boxes.flatMap((b, i) =>
             b.covH
               ? [-1, 1].map((sg) => {

@@ -25,27 +25,42 @@ const HISTORY_KEY = "expandedView";
  */
 export function useExpanded(): [open: boolean, setOpen: (open: boolean) => void] {
   const [open, setOpenState] = useState(false);
+  /** whether this view pushed the history entry it is open on (an entry left by a reload is not its own) */
+  const pushed = useRef(false);
   useEffect(() => {
     if (!open) return;
     try {
-      if (!isExpandedEntry(history.state)) history.pushState({ [HISTORY_KEY]: true }, "");
+      history.pushState({ [HISTORY_KEY]: true }, "");
+      pushed.current = true;
     } catch {
       // an address that cannot change: Escape and the close button still work
     }
     const esc = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
-    const back = () => setOpenState(false);
+    const back = () => {
+      pushed.current = false;
+      setOpenState(false);
+    };
     window.addEventListener("keydown", esc);
     window.addEventListener("popstate", back);
     return () => {
       window.removeEventListener("keydown", esc);
       window.removeEventListener("popstate", back);
+      // gone while open (the page changed): its entry stays, but no longer reads as an open view's
+      if (pushed.current && isExpandedEntry(history.state)) {
+        try {
+          history.replaceState(null, "");
+        } catch {
+          // an address that cannot change
+        }
+      }
+      pushed.current = false;
     };
   }, [open]);
-  /** closes the view: back past its history entry, if the entry is still the current one */
+  /** closes the view: back past its own history entry, if that entry is still the current one */
   function close() {
-    if (isExpandedEntry(history.state)) history.back();
+    if (pushed.current && isExpandedEntry(history.state)) history.back();
     else setOpenState(false);
   }
   return [open, (next) => (next ? setOpenState(true) : close())];
