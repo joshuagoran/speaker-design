@@ -45,6 +45,7 @@ import {
 } from "../../constants/foldHorn";
 import { FOLD_WALL } from "../../constants/speakerSpec";
 import {
+  FOLD_CHART_TEXT,
   FOLD_CHECK_TEXT,
   FOLD_EDITOR_TEXT,
   FOLD_STAT_TEXT,
@@ -58,6 +59,7 @@ import { tracedFold } from "../../lib/speaker/foldHorn";
 import { FoldPathChart } from "../charts/FoldPathChart";
 import { offTargetDb } from "../../lib/speaker/foldMatch";
 import { DRIVER_ICON_PATH, Icon, IconButton } from "../ui/IconButton";
+import { ExpandableChart } from "../ui/ExpandPanel";
 import { usePalette } from "../../hooks/useTheme";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { FOLD_TWO_COLUMN_PX } from "../../styles/layout";
@@ -810,13 +812,15 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize, na
         <FoldLegend pal={pal} />
       </div>
       <div className="flex flex-col gap-3 min-w-0">
-        <FoldPathChart
-          sections={trace.sections}
-          target={target}
-          taps={trace.taps}
-          hoverIn={hoverIn}
-          onHover={setHoverIn}
-        />
+        <ExpandableChart title={FOLD_CHART_TEXT.label}>
+          <FoldPathChart
+            sections={trace.sections}
+            target={target}
+            taps={trace.taps}
+            hoverIn={hoverIn}
+            onHover={setHoverIn}
+          />
+        </ExpandableChart>
         <StatTileGrid tiles={foldTiles(trace, traced.rearLiters, target, units)} />
         {trace.checks.map((c, k) => (
           <Notice key={k}>{checkText(c, units)}</Notice>

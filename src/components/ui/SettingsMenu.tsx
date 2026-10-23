@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useMenuClose } from "../../hooks/useMenuClose";
 import { THEME_CHOICES } from "../../constants/themes";
 import { UNIT_SYSTEM_CHOICES, VOLUME_UNIT_CHOICES } from "../../constants/units";
 import { SETTINGS_MENU_TEXT } from "../../constants/uiText";
@@ -28,22 +29,7 @@ export function SettingsMenu({ units, onUnits, volume, onVolume }: Props) {
   const [theme, setTheme] = useThemeChoice();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  // a click outside the menu or Escape closes it
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => {
-      if (e.target instanceof Node && !box.current?.contains(e.target)) setOpen(false);
-    };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    window.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      window.removeEventListener("keydown", escape);
-    };
-  }, [open]);
+  useMenuClose(open, box, setOpen);
   return (
     <div ref={box} className="relative">
       <IconButton
@@ -57,7 +43,7 @@ export function SettingsMenu({ units, onUnits, volume, onVolume }: Props) {
         <div
           role="group"
           aria-label={SETTINGS_MENU_TEXT.button}
-          className="absolute right-0 top-full mt-1 z-20 w-48 p-3 flex flex-col gap-3 rounded border border-stone-300 bg-panel shadow-menu"
+          className="absolute right-0 top-full mt-1 z-20 w-48 p-3 flex flex-col gap-3 rounded border border-stone-300 bg-panel shadow-dialog"
         >
           <SelectField
             label={SETTINGS_MENU_TEXT.theme}

@@ -11,6 +11,8 @@ interface Props {
   onClick: () => void;
   /** a toggle's state (shown dark while on); absent: a plain action */
   pressed?: boolean;
+  /** a menu's button: whether its menu is open (shown dark, with no tip, while open); absent: not a menu's button */
+  menuOpen?: boolean;
   /** "sm": a smaller button for a row of settings (a driver's trash icon); default the views' size */
   size?: "sm" | "md";
   /** a Remove or Delete (a trash icon): the icon in the danger red */
@@ -20,10 +22,18 @@ interface Props {
 }
 
 /**
- * A square icon-only button, for the controls laid over a view (the 3D view's full screen and cutaway). Its name shows
+ * A square icon-only button, for the controls laid over a view (the 3D view's settings menu and its expand button). Its name shows
  * in a tip under it while a mouse is over it or the keyboard puts focus on it, until Escape closes it.
  */
-export function IconButton({ label, onClick, pressed, size = "md", danger, children }: Props) {
+export function IconButton({
+  label,
+  onClick,
+  pressed,
+  menuOpen,
+  size = "md",
+  danger,
+  children,
+}: Props) {
   const [tip, setTip] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const box = useRef<HTMLSpanElement>(null);
@@ -48,15 +58,18 @@ export function IconButton({ label, onClick, pressed, size = "md", danger, child
       onClick={onClick}
       aria-label={plainText(label)}
       aria-pressed={pressed}
+      aria-haspopup={menuOpen === undefined ? undefined : "menu"}
+      aria-expanded={menuOpen}
       // a mouse only: after a tap the tip would stay open
       onPointerEnter={(e) => setTip(e.pointerType === POINTER_MOUSE)}
       onPointerLeave={() => setTip(false)}
       onFocus={(e) => setTip(e.currentTarget.matches(":focus-visible"))}
       onBlur={() => setTip(false)}
-      className={`${size === "sm" ? "w-[30px] h-[30px] shrink-0" : "w-9 h-9"} inline-flex items-center justify-center rounded border ${HOVER_TRANSITION} ${pressed ? PRESSED_CLASSES : `border-stone-300 bg-panel/90 ${danger ? DANGER_ICON_CLASSES : "hover:border-stone-500"}`}`}
+      className={`${size === "sm" ? "w-[30px] h-[30px] shrink-0" : "w-9 h-9"} inline-flex items-center justify-center rounded border ${HOVER_TRANSITION} ${pressed || menuOpen ? PRESSED_CLASSES : `border-stone-300 bg-panel/90 ${danger ? DANGER_ICON_CLASSES : "hover:border-stone-500"}`}`}
     >
       {children}
       {tip &&
+        !menuOpen &&
         createPortal(
           // the button's aria-label names it already
           <span ref={box} aria-hidden="true" className={TIP_CLASS} style={{ visibility: "hidden" }}>
@@ -88,9 +101,6 @@ export function ShareIcon() {
 
 /** A driver seen from the side, the magnet behind and the cone opening to the front (a 16 px icon's path). */
 export const DRIVER_ICON_PATH = "M2 6h3v4H2zM5 6l8-4v12l-8-4";
-
-/** A line struck through an icon, corner to corner: what it shows is hidden (a 16 px icon's path). */
-export const STRIKE_ICON_PATH = "M1.5 14.5l13-13";
 
 /** An icon's SVG: 16 px, stroked in `currentColor`. */
 export function Icon({ children }: { children: React.ReactNode }) {

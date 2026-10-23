@@ -2,11 +2,12 @@ import { UNIT_SYSTEM } from "../../constants/units";
 import { useUnits } from "../../hooks/useUnits";
 import { fromShown } from "../../lib/units";
 import type { UnitSystem } from "../../types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { MAP_DRAG_UPDATE_MS } from "../../constants/space";
 import { alpha, ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
+import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
 import { formatSigned, formatDb } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/acoustics/coverage";
 import { materialAlpha } from "../../lib/acoustics/roomAcoustics";
@@ -180,10 +181,15 @@ export function CoverageMap({
 }: Props) {
   const pal = usePalette();
   const units = useUnits();
+  // the room's clip, its own id: an expanded map is drawn a second time, in a dialog
+  const roomClip = useId();
+  // in an expanded dialog, the dialog's height in place of the page's
+  const expandedH = useExpandedChartHeight();
+  const mapMaxHeight = expandedH ?? maxHeight;
   const [box, cw] = useElementWidth(560);
   const k = Math.max(
     2,
-    Math.min((cw - PAD.l - PAD.r) / room.widthFt, (maxHeight - PAD.t - PAD.b) / room.lengthFt),
+    Math.min((cw - PAD.l - PAD.r) / room.widthFt, (mapMaxHeight - PAD.t - PAD.b) / room.lengthFt),
   );
   const w = room.widthFt * k,
     h = room.lengthFt * k,
@@ -415,7 +421,11 @@ export function CoverageMap({
 
   return (
     <div ref={box}>
-      <div className="flex justify-between items-baseline gap-3 text-xs text-stone-500 mb-1 min-h-[1rem]">
+      <div
+        className="flex justify-between items-baseline gap-3 text-xs text-stone-500 mb-1 min-h-[1rem]"
+        // on the page, the readout clear of the expand button on the map's top-right corner
+        style={{ paddingRight: expandedH === null ? EXPAND_BUTTON_ROOM_PX : 0 }}
+      >
         <span>
           {room.outdoors
             ? UI_TEXT.outdoors
@@ -456,12 +466,12 @@ export function CoverageMap({
         onKeyDown={key}
       >
         <defs>
-          <clipPath id="coverage-room">
+          <clipPath id={roomClip}>
             <rect x={PAD.l} y={PAD.t} width={w} height={h} />
           </clipPath>
         </defs>
         <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={quiet ? pal.edge : ON_DATA.edge} />
-        <g clipPath="url(#coverage-room)">
+        <g clipPath={`url(#${roomClip})`}>
           {image && (
             <image
               href={image}
@@ -507,7 +517,7 @@ export function CoverageMap({
             </g>
           );
         })}
-        <g clipPath="url(#coverage-room)">
+        <g clipPath={`url(#${roomClip})`}>
           {boxes.flatMap((b, i) =>
             b.covH
               ? [-1, 1].map((sg) => {

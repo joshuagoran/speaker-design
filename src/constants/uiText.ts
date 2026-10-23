@@ -37,18 +37,22 @@ export const UI_TEXT = {
   height: "Height",
   /** the summary line of the Details drop-downs (each page's written details) */
   details: "Details",
-  /** the 3D view's buttons: full screen and back, and the cutaway (the cabinet as a ghost, the parts inside showing) */
-  fullScreen: "Full screen",
-  closeFullScreen: "Close full screen",
+  /** a chart's button that opens it large (a dialog, or the whole screen on a phone), and the 3D view's */
+  expandChart: "Expand chart",
+  expand3dView: "Expand 3D view",
+  /** a button that closes what it is on: an expanded chart or 3D view, the driver comparison, a shared design */
+  close: "Close",
+  /** the 3D view's settings menu: its button, and each view option it turns on and off */
+  settings3d: "3D settings",
+  outlinesOnly: "Outlines only",
+  /** the cabinet as a ghost, the parts inside showing */
   cutaway: "Cutaway",
   /** the 3D view's button that puts the camera back where it started */
   resetView: "Reset 3D view",
-  /** the Speaker page's 3D view: its button that shows or hides the drivers (their cutouts stay open) */
+  /** the Speaker page's 3D view: the option that shows or hides the drivers (their cutouts stay open) */
   showDrivers: "Show the drivers",
-  hideDrivers: "Hide the drivers",
-  /** the Space's 3D view: its button that shows or hides each driver's aim line and its coverage edge lines */
+  /** the Space's 3D view: the option that shows or hides each driver's aim line and its coverage edge lines */
   showAimCoverage: "Show aim/coverage",
-  hideAimCoverage: "Hide aim/coverage",
   /** the side ducts' dividers' size, on the Speaker page's side ducts, and its tip */
   ductDividers: "Dividers",
   ductDividersTip: "Two per duct. Thicker dividers make the vent smaller, so it tunes lower.",

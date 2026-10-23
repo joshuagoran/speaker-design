@@ -14,6 +14,7 @@ import { useElementWidth } from "../../hooks/useElementWidth";
 import { usePalette } from "../../hooks/useTheme";
 import { FONT, SVG_FONT } from "../../styles/fonts";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
+import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
 import { alpha, type Palette } from "../../styles/palette";
 
 /** A point on the chart: the distance from the closed end, in, and the area there, in². */
@@ -125,6 +126,8 @@ interface Frame {
   R: number;
   T: number;
   B: number;
+  /** where the hover readout ends, px; absent: the plot's right edge */
+  readoutRight?: number;
 }
 
 /** The chart as drawn in one palette: everything but the pointer and the element's measuring. */
@@ -284,7 +287,7 @@ export function FoldPathDrawing({
           />
           <circle cx={px(hoverIn)} cy={py(near.areaIn2)} r="3.5" fill={pal.ink} />
           <text
-            x={x1}
+            x={frame.readoutRight ?? x1}
             y={y0 - 4}
             textAnchor="end"
             fontSize="12"
@@ -333,16 +336,21 @@ export function FoldPathDrawing({
 export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Props) {
   const pal = usePalette();
   const clipId = useId();
+  // in an expanded dialog: the dialog's height and its full width
+  const expandedH = useExpandedChartHeight();
   // drawn in real pixels so text stays 12 px at any width
   const [box, cw] = useElementWidth(760);
   const narrow = cw < 500;
+  const W = Math.max(280, cw);
   const frame: Frame = {
-    W: Math.max(280, cw),
-    H: HEIGHT,
+    W,
+    H: expandedH ?? HEIGHT,
     L: narrow ? 44 : 52,
     R: narrow ? 8 : 14,
     T: 16,
     B: 36,
+    // on the page, clear of the expand button on the chart's top-right corner
+    readoutRight: expandedH === null ? W - EXPAND_BUTTON_ROOM_PX : undefined,
   };
   const pathEndIn = sections.length ? sections[sections.length - 1].sIn : 0;
   const axes = foldPathAxes(sections, target, useUnitSettings());
@@ -359,7 +367,7 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
     );
   };
   return (
-    <div ref={box} className={RESULT_MAX_WIDTH}>
+    <div ref={box} className={expandedH === null ? RESULT_MAX_WIDTH : undefined}>
       <svg
         viewBox={`0 0 ${frame.W} ${frame.H}`}
         role="img"

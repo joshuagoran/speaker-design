@@ -68,7 +68,8 @@ export default {
       borderRadius: { DEFAULT: "4px", lg: "6px" },
       boxShadow: {
         sheet: `0 -6px 20px ${v("shadow", 0.1)}`,
-        menu: `0 4px 12px ${v("shadow", 0.15)}`,
+        /** an expanded view's dialog over the page */
+        dialog: `0 12px 40px ${v("shadow", 0.25)}`,
       },
       fontFamily: { sans: font, serif: font, mono: font },
       // three weight levels for settings: a card's title over a field's label over the field's value

@@ -39,6 +39,7 @@ import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SaveRow } from "../../components/saved-configs/SaveRow";
 import { StackFront } from "../../components/drawings/StackFront";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { ExpandableChart } from "../../components/ui/ExpandPanel";
 import { MembersView3D } from "../../components/stack-view/MembersView3D";
 import { keysOf } from "../../lib/records";
 import { formatHz, formatDelayMs, formatDb } from "../../lib/format";
@@ -270,40 +271,44 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
           <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} ${resultsGridClass(wide)}`}>
             <section className={`${cell("col-start-1 row-start-1")} ${GAP_Y}`}>
               <SectionHeading>{STACK_TEXT.response}</SectionHeading>
-              <ResponseChart
-                fmin={FREQ_AXIS_MIN_HZ}
-                fmax={FREQ_AXIS_MAX_HZ}
-                top={HIFI_TOP}
-                bot={HIFI_BOT}
-                step={10}
-                yLabel={STACK_TEXT.yLabel}
-                series={[
-                  ...(modeled.length ? [sumSeries(response.sum, STACK_TEXT.sum, pal)] : []),
-                  ...memberSeries(modeled.map(({ m, k }) => ({ k, curve: m.curve }))),
-                ]}
-                marks={marks}
-              />
+              <ExpandableChart title={STACK_TEXT.response}>
+                <ResponseChart
+                  fmin={FREQ_AXIS_MIN_HZ}
+                  fmax={FREQ_AXIS_MAX_HZ}
+                  top={HIFI_TOP}
+                  bot={HIFI_BOT}
+                  step={10}
+                  yLabel={STACK_TEXT.yLabel}
+                  series={[
+                    ...(modeled.length ? [sumSeries(response.sum, STACK_TEXT.sum, pal)] : []),
+                    ...memberSeries(modeled.map(({ m, k }) => ({ k, curve: m.curve }))),
+                  ]}
+                  marks={marks}
+                />
+              </ExpandableChart>
               {gaps && <Notice>{STACK_TEXT.gaps}</Notice>}
               <StatTileGrid tiles={tiles} />
             </section>
             {limits.sum.length > 0 && (
               <section className={`${cell("col-start-2 row-start-1")} ${GAP_Y}`}>
                 <SectionHeading>{STACK_TEXT.maxOutput}</SectionHeading>
-                <ResponseChart
-                  fmin={FREQ_AXIS_MIN_HZ}
-                  fmax={FREQ_AXIS_MAX_HZ}
-                  top={MAX_OUTPUT_TOP}
-                  bot={MAX_OUTPUT_BOT}
-                  step={10}
-                  yLabel={STACK_TEXT.maxYLabel}
-                  series={[
-                    sumSeries(limits.sum, STACK_TEXT.sum, pal),
-                    ...memberSeries(
-                      limits.members.flatMap((m, k) => (m ? [{ k, curve: m.atLimit }] : [])),
-                    ),
-                  ]}
-                  marks={marks}
-                />
+                <ExpandableChart title={STACK_TEXT.maxOutput}>
+                  <ResponseChart
+                    fmin={FREQ_AXIS_MIN_HZ}
+                    fmax={FREQ_AXIS_MAX_HZ}
+                    top={MAX_OUTPUT_TOP}
+                    bot={MAX_OUTPUT_BOT}
+                    step={10}
+                    yLabel={STACK_TEXT.maxYLabel}
+                    series={[
+                      sumSeries(limits.sum, STACK_TEXT.sum, pal),
+                      ...memberSeries(
+                        limits.members.flatMap((m, k) => (m ? [{ k, curve: m.atLimit }] : [])),
+                      ),
+                    ]}
+                    marks={marks}
+                  />
+                </ExpandableChart>
               </section>
             )}
           </div>
