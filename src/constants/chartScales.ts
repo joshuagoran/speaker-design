@@ -1,3 +1,5 @@
+import { UNIT_SYSTEM } from "./units";
+
 /**
  * Top of every maximum-output chart, dB SPL: the Speaker and Stack pages' maximum-output charts and the Speaker
  * optimizer's cards. A PA horn on its amp reaches about 131 dB at 1 m on the saved PA designs, a Hi-fi compression driver on a
@@ -71,11 +73,19 @@ export const SHEET_PX_PER_IN = 4;
 export const SHEET_LABEL_PX = 12;
 
 /**
- * The folded-horn path chart's gridline spacings to pick from, in along the path and in² of area (owner-approved
+ * The folded-horn path chart's gridline spacings to pick from, per unit system: in or mm along the path, in² or cm² of area (owner-approved
  * exception to fixed axes: the chart scales to its drawing and its straight horn, `foldPathAxes`).
  */
-export const FOLD_PATH_GRID_STEPS_IN = [5, 10, 20, 25, 50, 100] as const;
-export const FOLD_AREA_GRID_STEPS_IN2 = [25, 50, 100, 200, 250, 500, 1000] as const;
+export const FOLD_PATH_GRID_STEPS = {
+  [UNIT_SYSTEM.us]: [5, 10, 20, 25, 50, 100],
+  /** mm */
+  [UNIT_SYSTEM.metric]: [100, 200, 250, 500, 1000, 2000, 2500],
+} as const;
+export const FOLD_AREA_GRID_STEPS = {
+  [UNIT_SYSTEM.us]: [25, 50, 100, 200, 250, 500, 1000],
+  /** cm² */
+  [UNIT_SYSTEM.metric]: [100, 200, 250, 500, 1000, 2000, 2500, 5000],
+} as const;
 
 /** The most gridlines the folded-horn path chart draws on each axis. */
 export const FOLD_CHART_MAX_LINES = 8;

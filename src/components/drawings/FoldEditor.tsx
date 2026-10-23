@@ -1,3 +1,5 @@
+import { useUnits } from "../../hooks/useUnits";
+import type { Units } from "../../lib/units";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type {
   FoldCheck,
@@ -35,7 +37,12 @@ import {
   JOIN_IN,
 } from "../../lib/speaker/foldGeometry";
 import { dragOpening, openingRun, placeOpening } from "../../lib/speaker/foldOpenings";
-import { FOLD_END, FOLD_MIN_ROOM_IN, FOLD_SNAP_IN } from "../../constants/foldHorn";
+import {
+  FOLD_END,
+  FOLD_MAGNET_CLEAR_IN,
+  FOLD_MIN_ROOM_IN,
+  FOLD_SNAP_IN,
+} from "../../constants/foldHorn";
 import { FOLD_WALL } from "../../constants/speakerSpec";
 import {
   FOLD_CHECK_TEXT,
@@ -46,7 +53,7 @@ import {
 import { FOLD_CHECK } from "../../constants/foldHorn";
 import { StatTileGrid, type StatTileItem } from "../stats/StatTileGrid";
 import { Notice } from "../ui/Notice";
-import { formatInches, formatDb } from "../../lib/format";
+import { formatDb } from "../../lib/format";
 import { tracedFold } from "../../lib/speaker/foldHorn";
 import { FoldPathChart } from "../charts/FoldPathChart";
 import { offTargetDb } from "../../lib/speaker/foldMatch";
@@ -190,6 +197,7 @@ function gridImage(
  * when it ends.
  */
 export function FoldEditor({ room, fold, target, onChange, setType, onResize, name }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   /** the id of the mask that keeps the field's shading off the boards (no characters a `url(#…)` reference trips on) */
   const maskId = `fold-air-${useId().replace(/[^\w-]/g, "")}`;
@@ -809,9 +817,9 @@ export function FoldEditor({ room, fold, target, onChange, setType, onResize, na
           hoverIn={hoverIn}
           onHover={setHoverIn}
         />
-        <StatTileGrid tiles={foldTiles(trace, traced.rearLiters, target)} />
+        <StatTileGrid tiles={foldTiles(trace, traced.rearLiters, target, units)} />
         {trace.checks.map((c, k) => (
-          <Notice key={k}>{checkText(c)}</Notice>
+          <Notice key={k}>{checkText(c, units)}</Notice>
         ))}
         {trace.hornType && trace.hornType !== setType && (
           <Notice>
@@ -931,18 +939,20 @@ function withoutVent(fold: HornFold): HornFold {
 }
 
 /** A check's notice text. */
-function checkText(c: FoldCheck): string {
+function checkText(c: FoldCheck, units: Units): string {
   switch (c.id) {
     case FOLD_CHECK.drivers:
       return FOLD_CHECK_TEXT.drivers(c.reason);
     case FOLD_CHECK.deadEnd:
-      return FOLD_CHECK_TEXT.deadEnd(formatInches(c.fromClosedEndIn));
+      return FOLD_CHECK_TEXT.deadEnd(units.size(c.fromClosedEndIn));
     case FOLD_CHECK.choke:
-      return FOLD_CHECK_TEXT.choke(formatInches(c.fromClosedEndIn));
+      return FOLD_CHECK_TEXT.choke(units.size(c.fromClosedEndIn));
     case FOLD_CHECK.strayAir:
       return FOLD_CHECK_TEXT.strayAir(c.count);
     case FOLD_CHECK.thin:
-      return FOLD_CHECK_TEXT.thin(formatInches(c.fromClosedEndIn), formatInches(c.widthIn));
+      return FOLD_CHECK_TEXT.thin(units.size(c.fromClosedEndIn), units.size(c.widthIn));
+    case FOLD_CHECK.magnet:
+      return FOLD_CHECK_TEXT.magnet(units.format("boxLength", FOLD_MAGNET_CLEAR_IN));
     default:
       return FOLD_CHECK_TEXT[c.id]();
   }
@@ -954,23 +964,33 @@ function foldTiles(
   /** the rear chamber's air, L (`TracedHornModel.rearLiters`) */
   rear: number | null,
   target: readonly HornSegment[],
+  units: Units,
 ): StatTileItem[] {
   if (!trace.sections.length) return [];
   const mouth = trace.sections[trace.sections.length - 1];
-  const fmt = (t: number | null) => (t === null ? null : `${t.toFixed(1)} in`);
+  const fmt = (t: number | null) => (t === null ? null : units.format("boxLength", t, 1));
   const off = offTargetDb(trace.sections, target);
   return [
-    [FOLD_STAT_TEXT.path, trace.pathIn.toFixed(1), "in"],
-    [FOLD_STAT_TEXT.mouth, mouth.areaIn2.toFixed(0), "in²"],
+    [FOLD_STAT_TEXT.path, units.amount("boxLength", trace.pathIn, 1), units.unit("boxLength")],
+    [FOLD_STAT_TEXT.mouth, units.amount("boxArea", mouth.areaIn2, 0), units.unit("boxArea")],
     [FOLD_STAT_TEXT.taps, FOLD_STAT_TEXT.tapsAt(fmt(trace.taps.front), fmt(trace.taps.back)), ""],
-    ...(rear !== null ? [[FOLD_STAT_TEXT.rear, rear.toFixed(1), "L"] satisfies StatTileItem] : []),
+    ...(rear !== null
+      ? [
+          [
+            FOLD_STAT_TEXT.rear,
+            units.amount("volume", rear, 1),
+            units.unit("volume"),
+          ] satisfies StatTileItem,
+        ]
+      : []),
     ...(trace.vented
       ? [
           [
             FOLD_STAT_TEXT.vent,
             FOLD_STAT_TEXT.ventSize(
-              trace.vented.duct.heightIn.toFixed(1),
-              trace.vented.duct.lengthIn.toFixed(1),
+              units.amount("boxLength", trace.vented.duct.heightIn, 1),
+              units.amount("boxLength", trace.vented.duct.lengthIn, 1),
+              units.unit("boxLength"),
             ),
             "",
           ] satisfies StatTileItem,

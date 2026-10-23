@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { useMemo, useState } from "react";
 import type { DispersionPlane, FrequencyPoint, SpeakerSpec, StackMember } from "../../types";
 import { bandLine } from "../../styles/palette";
@@ -98,6 +99,7 @@ const VIEW_HEIGHT = "h-[300px] md:h-[clamp(320px,50vh,520px)]";
  * output at its listening point on fixed axes, with each member's curve, and the stacks' library.
  */
 export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const { design, response, limits, totals, store, snapshot, holds, restore } = stack;
   const { members, name, notes } = design.stack;
@@ -152,7 +154,11 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
     ),
   ].map((f) => ({ f, label: formatHz(f) }));
   const tiles: StatTileItem[] = [
-    [STACK_TEXT.listenHeight, response.listenHeightIn.toFixed(0), "in"],
+    [
+      STACK_TEXT.listenHeight,
+      units.amount("boxLength", response.listenHeightIn, 0),
+      units.unit("boxLength"),
+    ],
     ...modeled.map(({ m, k }): StatTileItem => [
       `${names[k]} delay`,
       formatDelayMs(m.delayMs),
@@ -164,8 +170,8 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   ];
   const totalTiles: StatTileItem[] = [
     [STATS.partsPrice, priceText(totals), ""],
-    [SPEAKER_TEXT.weight, totals.lb.toFixed(0), "lb"],
-    [STATS.stackHeight, totals.heightIn.toFixed(0), "in"],
+    [SPEAKER_TEXT.weight, units.amount("mass", totals.lb, 0), units.unit("mass")],
+    [STATS.stackHeight, units.amount("boxLength", totals.heightIn, 0), units.unit("boxLength")],
   ];
   const gaps = modeled.some(({ m }) => m.response.gaps.length > 0);
   const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
@@ -177,7 +183,7 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
     [design, response, plane, modeled.length],
   );
   /** the phone strip's headline figures */
-  const summary = stackSummary(response, limits, totals.lb);
+  const summary = stackSummary(response, limits, totals.lb, units);
   /** the checks, one compact row per crossing between members, then per band and chamber of each member */
   const checkRows = useMemo(
     () => stackCheckRows(design.stack, response, limits, names),

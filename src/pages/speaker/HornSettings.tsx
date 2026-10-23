@@ -1,3 +1,5 @@
+import { toShown } from "../../lib/units";
+import { useUnits } from "../../hooks/useUnits";
 import { CardHeading } from "../../components/ui/CardHeading";
 import { MarkedText } from "../../components/ui/MarkedText";
 import { useRef, useState } from "react";
@@ -10,7 +12,14 @@ import { SPEAKER_STEPS } from "../../constants/speakerSteps";
 import { MIN_NET_L } from "../../lib/speaker/speakerBuild";
 import { byId } from "../../lib/tables";
 import { hornSettingsSummary } from "./settingsSummaries";
-import type { HornGoalFit, HornGoals, HornSegment, SpeakerDriver, SpeakerHorn } from "../../types";
+import type {
+  HornGoalFit,
+  HornGoals,
+  HornSegment,
+  SpeakerDriver,
+  SpeakerHorn,
+  Quantity,
+} from "../../types";
 import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
@@ -74,16 +83,21 @@ const TAP_FIELDS = [
   { key: "rearTap", label: SETTINGS_TEXT.backTap, tip: SETTINGS_TEXT.tapsTip },
 ] as const;
 
-/** Each size field of a section: its spec field, its label and its step. */
+/** Each size field of a section: its spec field, its label, its tip (an area's names the unit) and its step. */
 const SECTION_FIELDS: readonly {
   size: HornSectionSize;
   label: string;
-  tip: string;
+  tip: (areaUnit: string) => string;
   step: number;
 }[] = [
   { size: "s1", label: SPEAKER_TEXT.hornStart, tip: SPEAKER_TEXT.hornStartTip, step: 1 },
   { size: "s2", label: SPEAKER_TEXT.hornEnd, tip: SPEAKER_TEXT.hornEndTip, step: 1 },
-  { size: "length", label: SPEAKER_TEXT.portLength, tip: SPEAKER_TEXT.hornLengthTip, step: 0.25 },
+  {
+    size: "length",
+    label: SPEAKER_TEXT.portLength,
+    tip: () => SPEAKER_TEXT.hornLengthTip,
+    step: 0.25,
+  },
 ];
 
 /** The Steps setting's choices: off (smooth) or on. */
@@ -101,6 +115,10 @@ const BOARD_OPTIONS = [
 /** A section's size as its field shows it: an area in in², a length in in. */
 const shownSize = (s: HornSegment, size: HornSectionSize) =>
   size === "length" ? shownInOfCm(s.length) : shownIn2(s[size]);
+
+/** What a section's size measures: its length, or its area at one end. */
+const sizeQuantity = (size: HornSectionSize): Quantity =>
+  size === "length" ? "boxLength" : "boxArea";
 
 /** A tapped drive's tap setting key. */
 type TapKey = (typeof TAP_FIELDS)[number]["key"];
@@ -158,6 +176,7 @@ export function HornSettings({
   onDesign,
   onImport,
 }: Props) {
+  const units = useUnits();
   const { segments, drive } = horn;
   const conesCm2 = conesAreaCm2(drivers);
   const ratio = compressionRatio(conesCm2, segments);
@@ -233,8 +252,9 @@ export function HornSettings({
                   }}
                 >
                   <NumberField
-                    label={<Tooltip tip={tip}>{label}</Tooltip>}
+                    label={<Tooltip tip={tip(units.unit("boxArea"))}>{label}</Tooltip>}
                     value={shownSize(s, size)}
+                    quantity={sizeQuantity(size)}
                     min={0}
                     step={step}
                     onChange={(v) =>
@@ -301,14 +321,14 @@ export function HornSettings({
       <span className="text-xs text-stone-500">{SPEAKER_TEXT.hornProfile}</span>
       {SECTION_FIELDS.map(({ size, label, tip }) => (
         <span key={size} className="text-xs text-stone-500">
-          <Tooltip tip={tip}>{label}</Tooltip>
+          <Tooltip tip={tip(units.unit("boxArea"))}>{label}</Tooltip>
         </span>
       ))}
       {segments.map((s, i) => (
         <div key={i} className="contents font-value text-stone-500">
           <span className="truncate">{HORN_PROFILE_NAMES[s.profile]}</span>
           {SECTION_FIELDS.map(({ size }) => (
-            <span key={size}>{shownSize(s, size)}</span>
+            <span key={size}>{units.amount(sizeQuantity(size), shownSize(s, size))}</span>
           ))}
         </div>
       ))}
@@ -351,7 +371,7 @@ export function HornSettings({
           />
         )}
       </InsetGroup>
-      <FoldBox title={SETTINGS_TEXT.hornSettings} summary={hornSettingsSummary(horn)}>
+      <FoldBox title={SETTINGS_TEXT.hornSettings} summary={hornSettingsSummary(horn, units)}>
         {!folded && drive.kind === HORN_DRIVE.tapped && (
           <div className={PAIR_ROW}>
             {TAP_FIELDS.map(({ key, label, tip }) => (
@@ -404,8 +424,8 @@ export function HornSettings({
                     {SPEAKER_TEXT.hornFrontChamber}
                   </Tooltip>
                 }
-                value={shownIn(front.liters)}
-                unit="L"
+                value={toShown("smallVolume", units.system, front.liters)}
+                unit={units.unit("smallVolume")}
               />
             )}
           </div>
@@ -420,7 +440,7 @@ export function HornSettings({
         )}
         {children}
         {folded ? (
-          <SettingsFold title={SPEAKER_TEXT.straightHorn} summary={straightHornText(horn)}>
+          <SettingsFold title={SPEAKER_TEXT.straightHorn} summary={straightHornText(horn, units)}>
             {manualRow}
             <p className="text-xs text-stone-500">{SPEAKER_TEXT.straightHornNote}</p>
             {manual ? sectionsBlock : sectionsTable}
@@ -430,13 +450,14 @@ export function HornSettings({
             {manualRow}
             {/* a straight horn's rear chamber: the chamber's net air, set with the horn */}
             <NumberField
+              quantity="volume"
               label={
                 <Tooltip tip={SETTINGS_TEXT.rearChamberTip}>{SETTINGS_TEXT.rearChamber}</Tooltip>
               }
               value={shownTenth(rearLiters ?? 0)}
               min={MIN_REAR_L}
               step={SPEAKER_STEPS.netL}
-              unit="L"
+              unit={units.unit("volume")}
               disabled={!manual}
               onChange={(liters) => onRearLiters(Math.max(MIN_REAR_L, liters))}
             />

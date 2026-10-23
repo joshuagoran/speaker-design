@@ -36,5 +36,7 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   summaryTarget: (db: number) => `target ${db} dB`,
   summaryBudget: (dollars: number | null) =>
     dollars === null ? "no budget limit" : `budget $${dollars}`,
-  summaryWeight: (lb: number | null) => (lb === null ? "no weight limit" : `up to ${lb} lb`),
+  /** the weight limit, with its unit, or none */
+  summaryWeight: (weight: string | null) =>
+    weight === null ? "no weight limit" : `up to ${weight}`,
 } as const;

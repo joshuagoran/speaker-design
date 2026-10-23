@@ -13,7 +13,7 @@ import {
 import { targetPathPoints } from "../src/lib/speaker/foldMatch";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { FOLD_CHART_TEXT } from "../src/constants/speakerPage";
-import { CM2_PER_IN2, CM_PER_IN } from "../src/constants/units";
+import { CM2_PER_IN2, CM_PER_IN, UNIT_SYSTEM } from "../src/constants/units";
 import { PALETTES } from "../src/styles/palette";
 import type { FoldPathSection, HornSegment } from "../src/types";
 
@@ -32,7 +32,7 @@ const target: HornSegment[] = [
 
 const taps = { front: 12, back: 40 };
 const frame = { W: 760, H: 240, L: 52, R: 14, T: 16, B: 36 };
-const axes = foldPathAxes(sections, target);
+const axes = foldPathAxes(sections, target, UNIT_SYSTEM.us);
 
 /** the chart's drawing in one theme, as markup */
 const draw = (theme: keyof typeof PALETTES, hoverIn: number | null = null) =>
@@ -104,7 +104,7 @@ describe("FoldPathChart", () => {
     expect(draw("light")).not.toContain("data-hover");
     const html = draw("light", 30);
     expect(html).toContain("data-hover");
-    expect(html).toContain(FOLD_CHART_TEXT.at("30.0", "10.0", "80"));
+    expect(html).toContain(FOLD_CHART_TEXT.at("30.0 in", "10.0 in", "80 in²"));
   });
 
   test("a path past the axes is clipped to the plot", () => {

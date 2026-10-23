@@ -1,3 +1,5 @@
+import { useUnits } from "../../hooks/useUnits";
+import type { Units } from "../../lib/units";
 import { DesignOptimizerSettings } from "../../components/optimizer/DesignOptimizerSettings";
 import { SPEAKER_GOAL_TEXT } from "../../constants/speakerOptimizer";
 import { SPEAKER_OPTIMIZER_TEXT } from "../../constants/speakerOptimizerText";
@@ -12,6 +14,7 @@ interface Props {
 /** The optimizer fold's one-line summary: the goals, the target, the limits and the locks. */
 export function optimizerSummary(
   o: Pick<SpeakerOptimizer, "goals" | "targetDb" | "budget" | "maxLb" | "nLocks">,
+  units: Units,
 ): string {
   return [
     o.goals.length
@@ -19,13 +22,14 @@ export function optimizerSummary(
       : T.summaryNoGoal,
     T.summaryTarget(o.targetDb),
     T.summaryBudget(o.budget),
-    T.summaryWeight(o.maxLb),
+    T.summaryWeight(o.maxLb === null ? null : units.format("mass", o.maxLb)),
     ...(o.nLocks ? [T.summaryKeeps(o.nLocks)] : []),
   ].join(" · ");
 }
 
 /** The Speaker page's Optimizer fold (`DesignOptimizerSettings`): the budget and weight limits. */
 export function SpeakerOptimizerSettings({ optimizer: o }: Props) {
+  const units = useUnits();
   return (
     <DesignOptimizerSettings
       optimizer={o}
@@ -52,7 +56,8 @@ export function SpeakerOptimizerSettings({ optimizer: o }: Props) {
           startAt: o.weightStart,
           min: 1,
           step: 5,
-          unit: "lb",
+          quantity: "mass",
+          unit: units.unit("mass"),
         },
       ]}
     />

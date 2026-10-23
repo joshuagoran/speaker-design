@@ -1,6 +1,8 @@
 // The Speaker settings column's data model: bracing and back panel per Box chamber, the hardware split into handles and
 // the input dish, the read adapter that brings an earlier build's saves up to date (so a saved design doesn't change),
 // the fill levels, the fold summaries and the chamber's position fields.
+import { UNIT_SYSTEM } from "../src/constants/units";
+import { unitsFor } from "../src/lib/units";
 import { describe, expect, test } from "vite-plus/test";
 import type { SpeakerChamber, SpeakerSpec } from "../src/types";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
@@ -32,6 +34,9 @@ import {
 import { atXForOffset, atYForOffset, chamberOffset } from "../src/pages/speaker/chamberPlace";
 import { hornRoom, startingHorn, withChamberLoad } from "../src/pages/speaker/chamberLoad";
 import { DEFAULT_SPEAKER_CHAMBER, EMPTY_SPEAKER } from "../src/lib/defaults";
+
+/** The display helpers in US units, as the page shows by default. */
+const US = unitsFor(UNIT_SYSTEM.us);
 
 const paSub = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
 const th18 = templateSpeaker(SPEAKER_TEMPLATE.th18);
@@ -209,13 +214,16 @@ describe("the fold summaries keep to the key facts", () => {
   });
 
   test("the vent, the fill and bracing, the horn settings", () => {
-    expect(ventSummary({ kind: VENT_KIND.sealed })).toBe("Sealed");
+    expect(ventSummary({ kind: VENT_KIND.sealed }, US)).toBe("Sealed");
     expect(
-      ventSummary({
-        kind: VENT_KIND.vented,
-        port: { shape: "round", n: 2, dia: 3, len: 6 },
-        maxSpeedMs: 17,
-      }),
+      ventSummary(
+        {
+          kind: VENT_KIND.vented,
+          port: { shape: "round", n: 2, dia: 3, len: 6 },
+          maxSpeedMs: 17,
+        },
+        US,
+      ),
     ).toBe("Vented · 2 × 3 in round, 6 in long");
     expect(
       fillBracingSummary({
@@ -231,7 +239,7 @@ describe("the fold summaries keep to the key facts", () => {
     ).toBe("No fill · no braces · glued back");
     const horn = th18.cabinet.chambers[0]?.load;
     if (horn?.kind === CHAMBER_LOAD.horn)
-      expect(hornSettingsSummary(horn.horn)).toMatch(/^Tapped · taps [\d.]+ \/ [\d.]+ in$/);
+      expect(hornSettingsSummary(horn.horn, US)).toMatch(/^Tapped · taps [\d.]+ \/ [\d.]+ in$/);
   });
 
   test("a band, its range, and the construction", () => {

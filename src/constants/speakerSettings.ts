@@ -47,13 +47,17 @@ export const FILL_NAMES = {
   full: "Full",
 } as const satisfies Record<FillLevel, string>;
 
-/** What to do for each fill level, as its button's tooltip says it. */
-export const FILL_TIPS = {
-  none: "No fill.",
-  lined: "Line the walls, about 1 in thick.",
-  half: "Fill about half the air, loosely.",
-  full: "Fill all the air, loosely.",
-} as const satisfies Record<FillLevel, string>;
+/** How thick a Lined fill is, in. */
+export const FILL_LINING_IN = 1;
+
+/** What to do for each fill level, as its button's tooltip says it (`lining`: `FILL_LINING_IN` with its unit). */
+export const fillTips = (lining: string) =>
+  ({
+    none: "No fill.",
+    lined: `Line the walls, about ${lining} thick.`,
+    half: "Fill about half the air, loosely.",
+    full: "Fill all the air, loosely.",
+  }) satisfies Record<FillLevel, string>;
 
 /** Each fill level in the Fill and bracing summary. */
 export const FILL_SUMMARY = {
@@ -97,8 +101,8 @@ export const SETTINGS_TEXT = {
   fill: "Fiber fill",
   fillTip:
     "Polyester fiber slows the air in the box. The box then acts larger and tunes a little lower.",
-  /** the readout beside the fill: the air the box acts as, L, and its gain, % */
-  actsAs: (liters: string, pct: number) => `Acts as ${liters} L (+${pct}%)`,
+  /** the readout beside the fill: the air the box acts as (with its unit), and its gain, % */
+  actsAs: (volume: string, pct: number) => `Acts as ${volume} (+${pct}%)`,
   // bracing
   bracing: "Bracing",
   braceTarget: "Target",
@@ -123,12 +127,12 @@ export const SETTINGS_TEXT = {
   tap: "Tap after section",
   tapsTip: "Where the front and back of the cones join the horn, counted from the closed end.",
   tapTip: "Where the front of the cones joins the horn, counted from the closed end.",
-  /** the Horn settings summary: a horn's sections and path length, in */
-  hornSections: (n: number, lengthIn: string) =>
-    `${n} ${n === 1 ? "section" : "sections"}, ${lengthIn} in long`,
-  /** the Horn settings summary: where the taps are, in from the closed end */
-  hornTaps: (front: string, back: string) => `taps ${front} / ${back} in`,
-  hornTapAt: (at: string) => `tap ${at} in`,
+  /** the Horn settings summary: a horn's sections and path length (with its unit) */
+  hornSections: (n: number, length: string) =>
+    `${n} ${n === 1 ? "section" : "sections"}, ${length} long`,
+  /** the Horn settings summary: where the taps are from the closed end (the numbers, then their unit; one tap with its unit) */
+  hornTaps: (front: string, back: string, unit: string) => `taps ${front} / ${back} ${unit}`,
+  hornTapAt: (at: string) => `tap ${at}`,
   // drivers
   band: "Band",
   bandTip: `The band from **${SPEAKER_SETTINGS_SECTIONS.bands}** that plays this driver.`,

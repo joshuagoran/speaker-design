@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import type { StackMember } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -50,6 +51,7 @@ export function MemberSettings({
   const auto = member.delayMs === AUTO_DELAY;
   const setPose = (edit: Partial<StackMember["pose"]>) =>
     onEdit((m) => ({ ...m, pose: { ...m.pose, ...edit } }));
+  const units = useUnits();
   return (
     <Card>
       <div className="flex items-center justify-between gap-2">
@@ -79,21 +81,24 @@ export function MemberSettings({
           label={<Tooltip tip={STACK_TEXT.acrossTip}>{STACK_TEXT.across}</Tooltip>}
           value={shownIn(pose.xIn)}
           step={0.5}
-          unit="in"
+          quantity="boxLength"
+          unit={units.unit("boxLength")}
           onChange={(xIn) => setPose({ xIn })}
         />
         <NumberField
           label={<Tooltip tip={STACK_TEXT.upTip}>{STACK_TEXT.up}</Tooltip>}
           value={shownIn(pose.yIn)}
           step={0.5}
-          unit="in"
+          quantity="boxLength"
+          unit={units.unit("boxLength")}
           onChange={(yIn) => setPose({ yIn })}
         />
         <NumberField
           label={<Tooltip tip={STACK_TEXT.backTip}>{STACK_TEXT.back}</Tooltip>}
           value={shownIn(pose.zIn)}
           step={0.5}
-          unit="in"
+          quantity="boxLength"
+          unit={units.unit("boxLength")}
           onChange={(zIn) => setPose({ zIn })}
         />
         <NumberField

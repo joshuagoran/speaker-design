@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import type { SidePoint, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import {
@@ -177,6 +178,7 @@ function hull(list: PlanPoint[]): PlanPoint[] {
  * drawing shows its box and its drivers behind the baffle. Stacked chambers take levels (`speakerTopFrame`).
  */
 export function SpeakerTop({ spec }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const { cabinet } = spec;
   const t = cabinet.panel.thicknessIn;
@@ -576,7 +578,7 @@ export function SpeakerTop({ spec }: Props) {
       viewBox={`0 0 ${W} ${H}`}
       className="w-full h-full"
       role="img"
-      aria-label={`Top view, each chamber cut through the middle, ${+layout.size.w.toFixed(2)} × ${+layout.size.d.toFixed(2)}″, ${n} chamber${n === 1 ? "" : "s"}`}
+      aria-label={`Top view, each chamber cut through the middle, ${units.amount("boxLength", layout.size.w)} × ${units.amount("boxLength", layout.size.d)}${units.cutMark}, ${n} chamber${n === 1 ? "" : "s"}`}
     >
       {levels.flatMap((level) =>
         level.chambers.flatMap((i) => {

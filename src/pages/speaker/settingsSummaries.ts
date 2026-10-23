@@ -1,4 +1,5 @@
 // The Speaker settings column's summary lines: each fold's key facts, built from the spec and the catalog.
+import type { Units } from "../../lib/units";
 import type {
   BandFilter,
   ChamberVent,
@@ -46,9 +47,6 @@ export function fillLevelOf(pct: number): FillLevel {
   );
 }
 
-/** A length in a summary, in: to 0.01 in, no trailing zeros. */
-const inches = (v: number) => String(+v.toFixed(2));
-
 /** A band's name by id; "No band" when no band has it. */
 const bandNameOf = (bands: readonly Pick<SpeakerBand, "id" | "name">[], id: string | undefined) =>
   bands.find((b) => b.id === id)?.name;
@@ -80,20 +78,21 @@ export function driverSummary(
 }
 
 /** A vent's summary: sealed, the port's count, size and length, or the radiators, e.g. "Ported · 2 × 3 in round, 6 in long". */
-export function ventSummary(vent: ChamberVent): string {
+export function ventSummary(vent: ChamberVent, units: Units): string {
   if (vent.kind === VENT_KIND.sealed) return VENT_KIND_NAMES.sealed;
   if (vent.kind === VENT_KIND.radiator) {
     const part = byId(HIFI_PASSIVES_BY_SIZE, vent.radiators.id);
     return `${VENT_KIND_NAMES.radiator} · ${vent.radiators.n} × ${part?.name ?? vent.radiators.id}`;
   }
   const { port } = vent;
-  const long = `${inches(port.len)} in long`;
+  const length = (v: number) => units.format("boxLength", v);
+  const long = `${length(port.len)} long`;
   const size =
     port.shape === PORT_SHAPE.slot
-      ? `${port.n} × ${inches(port.h)} in ${PORT_SHAPE_NAMES.slot.toLowerCase()}`
+      ? `${port.n} × ${length(port.h)} ${PORT_SHAPE_NAMES.slot.toLowerCase()}`
       : port.shape === PORT_SHAPE.duct
-        ? `${port.n} × ${inches(port.throat)} in ${PORT_SHAPE_NAMES.duct.toLowerCase()}`
-        : `${port.n} × ${inches(port.dia)} in ${PORT_SHAPE_NAMES.round.toLowerCase()}`;
+        ? `${port.n} × ${length(port.throat)} ${PORT_SHAPE_NAMES.duct.toLowerCase()}`
+        : `${port.n} × ${length(port.dia)} ${PORT_SHAPE_NAMES.round.toLowerCase()}`;
   return `${VENT_KIND_NAMES.vented} · ${size}, ${long}`;
 }
 
@@ -109,19 +108,25 @@ export function fillBracingSummary(chamber: Pick<SpeakerChamber, "stuffingPct" |
   ].join(" · ");
 }
 
-/** How far along the straight horn the end of section `n` is, in from the closed end, to 0.1 in. */
-const tapIn = (horn: Pick<SpeakerHorn, "segments">, n: number) =>
-  String(+shownInOfCm(horn.segments.slice(0, n).reduce((sum, s) => sum + s.length, 0)).toFixed(1));
+/** How far along the straight horn the end of section `n` is from the closed end, as the page shows it (US to 0.1 in). */
+const tapAt = (horn: Pick<SpeakerHorn, "segments">, n: number, units: Units) =>
+  units.amount(
+    "boxLength",
+    +shownInOfCm(horn.segments.slice(0, n).reduce((sum, s) => sum + s.length, 0)).toFixed(1),
+  );
 
 /** A horn's Horn settings summary: its type, then its taps or its sections, e.g. "Tapped · taps 9 / 112 in". */
-export function hornSettingsSummary(horn: Pick<SpeakerHorn, "drive" | "segments">): string {
+export function hornSettingsSummary(
+  horn: Pick<SpeakerHorn, "drive" | "segments">,
+  units: Units,
+): string {
   const { drive } = horn;
   const name = HORN_DRIVE_NAMES[drive.kind];
   if (drive.kind === HORN_DRIVE.tapped)
-    return `${name} · ${SETTINGS_TEXT.hornTaps(tapIn(horn, drive.frontTap), tapIn(horn, drive.rearTap))}`;
+    return `${name} · ${SETTINGS_TEXT.hornTaps(tapAt(horn, drive.frontTap, units), tapAt(horn, drive.rearTap, units), units.unit("boxLength"))}`;
   if (drive.kind === HORN_DRIVE.offset)
-    return `${name} · ${SETTINGS_TEXT.hornTapAt(tapIn(horn, drive.tap))}`;
-  return `${name} · ${SETTINGS_TEXT.hornSections(horn.segments.length, inches(pathIn(horn)))}`;
+    return `${name} · ${SETTINGS_TEXT.hornTapAt(`${tapAt(horn, drive.tap, units)} ${units.unit("boxLength")}`)}`;
+  return `${name} · ${SETTINGS_TEXT.hornSections(horn.segments.length, units.format("boxLength", pathIn(horn)))}`;
 }
 
 /** A filter's type in a summary: its name, a first-order filter by its slope. */
@@ -181,7 +186,7 @@ export function constructionSummary(
 }
 
 /** A chamber in a few words: its type, its size and its drivers, e.g. "Ported box, 15.5 × 26 × 15 in, 2 drivers". */
-export function chamberSummary(chamber: SpeakerChamber): string {
+export function chamberSummary(chamber: SpeakerChamber, units: Units): string {
   const { dims, load } = chamber;
   return [
     load.kind === CHAMBER_LOAD.horn
@@ -190,7 +195,7 @@ export function chamberSummary(chamber: SpeakerChamber): string {
           HORN_PATH_NAMES[load.horn.path],
         )
       : SETTINGS_TEXT.boxSummary(VENT_KIND_NAMES[chamber.vent.kind]),
-    `${inches(dims.w)} × ${inches(dims.h)} × ${inches(dims.d)} in`,
+    `${units.amount("boxLength", dims.w)} × ${units.amount("boxLength", dims.h)} × ${units.format("boxLength", dims.d)}`,
     SETTINGS_TEXT.driverCount(chamber.drivers.length),
   ].join(", ");
 }

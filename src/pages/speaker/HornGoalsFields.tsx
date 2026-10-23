@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { useEffect, useRef, useState } from "react";
 import { MarkedText } from "../../components/ui/MarkedText";
 import type { HornGoalFit, HornGoals } from "../../types";
@@ -50,6 +51,7 @@ interface Props {
  * horn meets the goals now: its spread, its low edge, its lowest maximum output and the air it holds.
  */
 export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Props) {
+  const units = useUnits();
   const [designing, setDesigning] = useState(false);
   const [failed, setFailed] = useState(false);
   /** the queued search, cleared if the fields go away first */
@@ -136,8 +138,8 @@ export function HornGoalsFields({ goals, fit, overAir, onGoals, onDesign }: Prop
       {overAir && (
         <Notice>
           {SPEAKER_TEXT.hornFitAir(
-            String(shownTenth(overAir.hornL)),
-            String(shownTenth(overAir.chamberL)),
+            units.format("volume", overAir.hornL),
+            units.format("volume", overAir.chamberL),
           )}
         </Notice>
       )}
