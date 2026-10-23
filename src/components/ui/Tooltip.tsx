@@ -1,3 +1,4 @@
+import { POINTER_MOUSE } from "../../constants/pointer";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MarkedText, plainText } from "./MarkedText";
@@ -92,9 +93,9 @@ export function Tooltip({ tip, children, className = "", control = false, descri
       ref={ref}
       className={control ? "contents" : `relative inline-block ${className}`}
       // a mouse hover; a touch opens the tip with its tap, and a tap elsewhere closes it
-      onPointerEnter={(e) => e.pointerType === "mouse" && setOpen(true)}
-      onPointerLeave={(e) => e.pointerType === "mouse" && setOpen(false)}
-      onPointerDown={control ? (e) => e.pointerType !== "mouse" && setOpen(true) : undefined}
+      onPointerEnter={(e) => e.pointerType === POINTER_MOUSE && setOpen(true)}
+      onPointerLeave={(e) => e.pointerType === POINTER_MOUSE && setOpen(false)}
+      onPointerDown={control ? (e) => e.pointerType !== POINTER_MOUSE && setOpen(true) : undefined}
       // keyboard focus; a click's focus leaves the tip as the pointer set it
       onFocus={control ? (e) => e.target.matches(":focus-visible") && setOpen(true) : undefined}
       onBlur={control ? () => setOpen(false) : undefined}

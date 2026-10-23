@@ -23,6 +23,7 @@ import {
   pruneKept,
   reconcileHeld,
   toggleKeep,
+  withSizeLock,
 } from "../src/pages/speaker/speakerKeeps";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { LOCK_TEXT } from "../src/constants/uiText";
@@ -200,6 +201,23 @@ test("driver locks hold their driver: a driver added or removed drops them, neve
   assert.ok(isKept(now, vent), "the other locks stay");
   // the chamber list replaced: every lock goes
   assert.equal(countKept(heldLocks(held, { round: 1, layout: driverLayout(two) }, items)), 0);
+});
+
+test("a chamber added or removed drops the vent and size locks, which name a chamber by its place", () => {
+  const two: SpeakerSpec = {
+    ...spec,
+    cabinet: { ...spec.cabinet, chambers: [...spec.cabinet.chambers, ...spec.cabinet.chambers] },
+  };
+  const held = { round: 0, layout: driverLayout(two), locks: withSizeLock({}, 1, "w", "exact") };
+  assert.equal(
+    countKept(heldLocks(held, { round: 0, layout: driverLayout(two) }, keepItems(two))),
+    1,
+  );
+  const one = { ...two, cabinet: { ...two.cabinet, chambers: two.cabinet.chambers.slice(1) } };
+  assert.equal(
+    countKept(heldLocks(held, { round: 0, layout: driverLayout(one) }, keepItems(one))),
+    0,
+  );
 });
 
 test("a driver lock that stopped holding stays dropped when the driver comes back", () => {

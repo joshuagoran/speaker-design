@@ -1,3 +1,4 @@
+import { POINTER_MOUSE } from "../../constants/pointer";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DANGER_ICON_CLASSES, HOVER_TRANSITION, PRESSED_CLASSES } from "./buttonStyles";
@@ -48,7 +49,7 @@ export function IconButton({ label, onClick, pressed, size = "md", danger, child
       aria-label={plainText(label)}
       aria-pressed={pressed}
       // a mouse only: after a tap the tip would stay open
-      onPointerEnter={(e) => setTip(e.pointerType === "mouse")}
+      onPointerEnter={(e) => setTip(e.pointerType === POINTER_MOUSE)}
       onPointerLeave={() => setTip(false)}
       onFocus={(e) => setTip(e.currentTarget.matches(":focus-visible"))}
       onBlur={() => setTip(false)}

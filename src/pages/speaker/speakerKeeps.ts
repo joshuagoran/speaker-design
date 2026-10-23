@@ -179,7 +179,8 @@ export interface HeldLocks {
 /**
  * The locks that hold on the spec as it is now: none once the chamber list was replaced; without the driver and horn
  * locks once a driver entry was added or removed (the entries after it moved place, so a lock would move to another
- * driver); and only the parts the spec still has.
+ * driver); without the vent and size locks too once a chamber was added or removed (they name a chamber by its place);
+ * and only the parts the spec still has.
  */
 export function heldLocks(
   held: HeldLocks,
@@ -187,8 +188,11 @@ export function heldLocks(
   items: readonly KeepItem[],
 ): SpeakerOptimizerLocks {
   if (held.round !== now.round) return {};
+  if (held.layout === now.layout) return pruneKept(held.locks, items);
   const { drivers: _drivers, horns: _horns, ...rest } = held.locks;
-  return pruneKept(held.layout === now.layout ? held.locks : rest, items);
+  const chambersMoved = held.layout.split(",").length !== now.layout.split(",").length;
+  const { vents: _vents, size: _size, ...parts } = rest;
+  return pruneKept(chambersMoved ? parts : rest, items);
 }
 
 /**

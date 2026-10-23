@@ -101,8 +101,7 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   const pal = usePalette();
   const { design, response, limits, totals, store, snapshot, holds, restore } = stack;
   const { members, name, notes } = design.stack;
-  // a viewer's stored folds from when the page had an Optimizer fold still name it: the page ignores that entry, as it
-  // ignores the optimizer's stored limits ("stack.optimizerLimits")
+  // a viewer's stored folds from when the page had an Optimizer fold still name it: the page ignores that entry
   const folds = useFolds("stack.settingsFolds", keysOf(STACK_SETTINGS_SECTIONS));
   const sheet = useSettingsSheet<StackSettingsSection>("stack", "stack");
   /** the library's speakers, as the picker lists them */
@@ -114,8 +113,13 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   const [pick, setPick] = useState<string>("");
   const picked = library.find((o) => o.id === pick) ?? library[0];
   /** each member's name: its speaker's, numbered */
-  const names = members.map(
-    (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
+  const names = useMemo(
+    () =>
+      members.map(
+        (m, k) =>
+          `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
+      ),
+    [members, design.speakers],
   );
   const lineOf = (k: number) => bandLine(pal, k, members.length);
   const summaries: Record<StackSettingsSection, string> = {
@@ -175,7 +179,10 @@ export function StackPage({ stack, speakerPage, sharedNotice, onEditSpeaker }: P
   /** the phone strip's headline figures */
   const summary = stackSummary(response, limits, totals.lb);
   /** the checks, one compact row per crossing between members, then per band and chamber of each member */
-  const checkRows = stackCheckRows(design.stack, response, limits, names);
+  const checkRows = useMemo(
+    () => stackCheckRows(design.stack, response, limits, names),
+    [design.stack, response, limits, names],
+  );
   /** each member's curve on a chart: its line, and its dot in the legend */
   const memberSeries = (curves: readonly { k: number; curve: FrequencyPoint[] }[]) =>
     curves.map(({ k, curve }) => ({
