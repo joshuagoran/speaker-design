@@ -81,7 +81,6 @@ export const SHARE_TEXT = {
   saving: "Saving a copy…",
   copySaved: "Copy saved!",
   copyNotSaved: "The copy did not save.",
-  close: "Close",
   closeAsk: "Close without saving a copy?",
   closeKeep: "Keep open",
   /** by reason: what is true about a link that did not open */

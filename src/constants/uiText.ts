@@ -40,7 +40,7 @@ export const UI_TEXT = {
   /** a chart's button that opens it large (a dialog, or the whole screen on a phone), and the 3D view's */
   expandChart: "Expand chart",
   expand3dView: "Expand 3D view",
-  /** an expanded chart's or 3D view's button that puts it back on the page */
+  /** a button that closes what it is on: an expanded chart or 3D view, the driver comparison, a shared design */
   close: "Close",
   /** the 3D view's settings menu: its button, and each view option it turns on and off */
   settings3d: "3D settings",

@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { UI_TEXT } from "../../constants/uiText";
-import { Button } from "./Button";
 import { Icon, IconButton } from "./IconButton";
 import { SectionHeading } from "./SectionHeading";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
@@ -181,7 +180,9 @@ function ChartDialog({ title, onClose, children }: Props & { onClose: () => void
       >
         <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
           <SectionHeading>{title}</SectionHeading>
-          <Button onClick={onClose}>{UI_TEXT.close}</Button>
+          <IconButton label={UI_TEXT.close} onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
         </div>
         <div ref={body} className="flex-1 min-h-0 overflow-auto px-4 pb-4">
           {height !== null && (

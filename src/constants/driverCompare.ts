@@ -35,7 +35,6 @@ export const DRIVER_COMPARE_TEXT = {
   clickToSwap: " Click to swap.",
   /** the Speaker page's button on a phone: puts the previewed row in */
   swap: "Swap",
-  close: "Close",
   yours: "yours",
   passes: "passes",
   /** the PA table's button */

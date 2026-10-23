@@ -357,7 +357,7 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SectionHeading>{DRIVER_COMPARE_TEXT.heading}</SectionHeading>
           <Button size="xs" onClick={() => setCompare(null)}>
-            {DRIVER_COMPARE_TEXT.close}
+            {UI_TEXT.close}
           </Button>
         </div>
         <p className="text-xs text-stone-500">

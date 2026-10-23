@@ -14,6 +14,7 @@ import { SPEAKER_START_NAMES } from "../src/constants/speakerStarts.ts";
 import { STACK_START_NAMES } from "../src/constants/stackPresets.ts";
 import { STACK_EDIT_TEXT } from "../src/constants/stackSpeakerEdit.ts";
 import { SHARE_TEXT } from "../src/constants/share.ts";
+import { UI_TEXT } from "../src/constants/uiText.ts";
 import { PROJECT_NAMES } from "../src/constants/pages.ts";
 import { DB_KEY, installDb } from "./stand-in-db.mjs";
 
@@ -262,7 +263,7 @@ for (const size of WIDTHS) {
     await goTo("#speaker");
     await closeSheet();
     check(await linked.isVisible(), "the link's speaker is not back after Cancel");
-    await button(SHARE_TEXT.close).click();
+    await button(UI_TEXT.close).click();
     await ownBack("after the link's speaker closed");
     await noScroll("at the end");
   } catch (e) {
