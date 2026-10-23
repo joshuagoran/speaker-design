@@ -407,7 +407,7 @@ export function CoverageMap({
   const xTicks: number[] = [],
     yTicks: number[] = [];
   // a tick every 10 ft, or every 5 m in metric, from the center line across and from the front wall down
-  const tickFt = fromShown("roomLength", units.system, MAP_TICK_STEP[units.system]);
+  const tickFt = fromShown("roomLength", units.settings, MAP_TICK_STEP[units.system]);
   for (let k = -Math.floor(room.widthFt / 2 / tickFt); k * tickFt <= room.widthFt / 2; k++)
     xTicks.push(k * tickFt);
   for (let k = 1; k * tickFt <= room.lengthFt; k++) yTicks.push(k * tickFt);

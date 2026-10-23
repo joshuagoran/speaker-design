@@ -1,7 +1,7 @@
 // The Speaker settings column's data model: bracing and back panel per Box chamber, the hardware split into handles and
 // the input dish, the read adapter that brings an earlier build's saves up to date (so a saved design doesn't change),
 // the fill levels, the fold summaries and the chamber's position fields.
-import { UNIT_SYSTEM } from "../src/constants/units";
+import { DEFAULT_UNIT_SETTINGS } from "../src/constants/units";
 import { unitsFor } from "../src/lib/units";
 import { describe, expect, test } from "vite-plus/test";
 import type { SpeakerChamber, SpeakerSpec } from "../src/types";
@@ -36,7 +36,7 @@ import { hornRoom, startingHorn, withChamberLoad } from "../src/pages/speaker/ch
 import { DEFAULT_SPEAKER_CHAMBER, EMPTY_SPEAKER } from "../src/lib/defaults";
 
 /** The display helpers in US units, as the page shows by default. */
-const US = unitsFor(UNIT_SYSTEM.us);
+const US = unitsFor(DEFAULT_UNIT_SETTINGS);
 
 const paSub = templateSpeaker(SPEAKER_TEMPLATE.paSubBox);
 const th18 = templateSpeaker(SPEAKER_TEMPLATE.th18);

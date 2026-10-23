@@ -1,6 +1,6 @@
-import { useUnitSystem, useUnits } from "../../hooks/useUnits";
+import { useUnitSettings, useUnits } from "../../hooks/useUnits";
 import { fromShown, scaleToShown } from "../../lib/units";
-import type { Quantity, UnitSystem } from "../../types";
+import type { Quantity, UnitSettings } from "../../types";
 import { useId } from "react";
 import type { FoldPathSection, HornSegment } from "../../types";
 import {
@@ -52,14 +52,14 @@ function axisOf(
   top: number,
   steps: readonly number[],
   quantity: Quantity,
-  system: UnitSystem,
+  settings: UnitSettings,
 ): { max: number; grid: number } {
-  const shownTop = scaleToShown(quantity, system, top);
+  const shownTop = scaleToShown(quantity, settings, top);
   const grid =
     steps.find((g) => Math.ceil(shownTop / g) <= FOLD_CHART_MAX_LINES) ?? steps[steps.length - 1];
   return {
-    max: fromShown(quantity, system, Math.max(grid, Math.ceil(shownTop / grid) * grid)),
-    grid: fromShown(quantity, system, grid),
+    max: fromShown(quantity, settings, Math.max(grid, Math.ceil(shownTop / grid) * grid)),
+    grid: fromShown(quantity, settings, grid),
   };
 }
 
@@ -67,20 +67,20 @@ function axisOf(
 export function foldPathAxes(
   sections: readonly FoldPathSection[],
   target: Props["target"],
-  system: UnitSystem,
+  settings: UnitSettings,
 ): FoldPathAxes {
   const points = [...sections, ...targetPathPoints(target)];
   const path = axisOf(
     Math.max(1, ...points.map((p) => p.sIn)),
-    FOLD_PATH_GRID_STEPS[system],
+    FOLD_PATH_GRID_STEPS[settings.system],
     "boxLength",
-    system,
+    settings,
   );
   const area = axisOf(
     Math.max(1, ...points.map((p) => p.areaIn2)),
-    FOLD_AREA_GRID_STEPS[system],
+    FOLD_AREA_GRID_STEPS[settings.system],
     "boxArea",
-    system,
+    settings,
   );
   return {
     pathMaxIn: path.max,
@@ -345,7 +345,7 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
     B: 36,
   };
   const pathEndIn = sections.length ? sections[sections.length - 1].sIn : 0;
-  const axes = foldPathAxes(sections, target, useUnitSystem());
+  const axes = foldPathAxes(sections, target, useUnitSettings());
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     onHover(

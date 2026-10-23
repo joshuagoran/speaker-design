@@ -1,10 +1,19 @@
 import { createContext, useContext, useMemo } from "react";
-import { UNIT_SYSTEM, UNIT_SYSTEM_CHOICES, UNITS_STORAGE_KEY } from "../constants/units";
+import {
+  DEFAULT_UNIT_SETTINGS,
+  UNIT_SYSTEM,
+  UNIT_SYSTEM_CHOICES,
+  UNITS_STORAGE_KEY,
+  VOLUME_STORAGE_KEY,
+  VOLUME_UNIT,
+  VOLUME_UNIT_CHOICES,
+} from "../constants/units";
 import { unitsFor, type Units } from "../lib/units";
-import type { UnitSystem } from "../types";
+import type { UnitSettings, UnitSystem, VolumeUnit } from "../types";
 import { useStoredStateFrom } from "./useStoredState";
 
 const isUnitSystem = (v: unknown): v is UnitSystem => UNIT_SYSTEM_CHOICES.some(([s]) => s === v);
+const isVolumeUnit = (v: unknown): v is VolumeUnit => VOLUME_UNIT_CHOICES.some(([u]) => u === v);
 
 /** The settings menu's Units choice, kept per browser like the theme; US when none is stored. */
 export const useUnitChoice = () =>
@@ -12,24 +21,30 @@ export const useUnitChoice = () =>
     isUnitSystem(stored) ? stored : UNIT_SYSTEM.us,
   );
 
-const UnitsContext = createContext<UnitSystem>(UNIT_SYSTEM.us);
+/** The settings menu's Volume choice, kept per browser; liters when none is stored. */
+export const useVolumeChoice = () =>
+  useStoredStateFrom<VolumeUnit, unknown>(VOLUME_STORAGE_KEY, VOLUME_UNIT.liters, (stored) =>
+    isVolumeUnit(stored) ? stored : VOLUME_UNIT.liters,
+  );
 
-/** Gives the pages under it the unit system `system` (the app's root holds the choice). */
+const UnitsContext = createContext<UnitSettings>(DEFAULT_UNIT_SETTINGS);
+
+/** Gives the pages under it the unit settings `settings` (the app's root holds the choices). */
 export function UnitsProvider({
-  system,
+  settings,
   children,
 }: {
-  system: UnitSystem;
+  settings: UnitSettings;
   children: React.ReactNode;
 }) {
-  return <UnitsContext.Provider value={system}>{children}</UnitsContext.Provider>;
+  return <UnitsContext.Provider value={settings}>{children}</UnitsContext.Provider>;
 }
 
-/** The unit system the page shows: US outside a `UnitsProvider`. */
-export const useUnitSystem = (): UnitSystem => useContext(UnitsContext);
+/** The unit settings the page shows: US and liters outside a `UnitsProvider`. */
+export const useUnitSettings = (): UnitSettings => useContext(UnitsContext);
 
-/** The display helpers (lib/units) bound to the unit system the page shows. */
+/** The display helpers (lib/units) bound to the unit settings the page shows. */
 export function useUnits(): Units {
-  const system = useUnitSystem();
-  return useMemo(() => unitsFor(system), [system]);
+  const settings = useUnitSettings();
+  return useMemo(() => unitsFor(settings), [settings]);
 }

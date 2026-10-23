@@ -8,13 +8,13 @@ import { useStack } from "./pages/stack/useStack";
 import { useStackSpeakerEdit } from "./pages/stack/useStackSpeakerEdit";
 import { SpacePage } from "./pages/space/SpacePage";
 import { useSpace } from "./pages/space/useSpace";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
 import { Notice } from "./components/ui/Notice";
 import { DRAFT_FAILED_TEXT } from "./constants/pageDrafts";
 import { SettingsMenu } from "./components/ui/SettingsMenu";
-import { UnitsProvider, useUnitChoice } from "./hooks/useUnits";
+import { UnitsProvider, useUnitChoice, useVolumeChoice } from "./hooks/useUnits";
 import { PageTabs } from "./components/ui/PageTabs";
 import { ShareIcon } from "./components/ui/IconButton";
 import { Button } from "./components/ui/Button";
@@ -95,8 +95,10 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
   // a Stack's speaker, edited on the Speaker page
   const stackSpeakerEdit = useStackSpeakerEdit({ speakerPage, stack, goTo });
   const [units, setUnits] = useUnitChoice();
+  const [volume, setVolume] = useVolumeChoice();
+  const unitSettings = useMemo(() => ({ system: units, volume }), [units, volume]);
   return (
-    <UnitsProvider system={units}>
+    <UnitsProvider settings={unitSettings}>
       {/* from md up the shell fills the window and doesn't scroll: the header stays, and the page below scrolls in its
       own panes (results and settings, see SettingsLayout) */}
       <div
@@ -132,7 +134,12 @@ export function App({ draftFailed = false }: { draftFailed?: boolean }) {
                 })}
               </nav>
               <div className="ml-auto">
-                <SettingsMenu units={units} onUnits={setUnits} />
+                <SettingsMenu
+                  units={units}
+                  onUnits={setUnits}
+                  volume={volume}
+                  onVolume={setVolume}
+                />
               </div>
             </div>
             <PageTabs

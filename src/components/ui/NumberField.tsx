@@ -1,7 +1,7 @@
 import { FormField } from "./FormField";
 import { HOVER_TRANSITION } from "./buttonStyles";
 import { useEffect, useId, useState } from "react";
-import { useUnitSystem } from "../../hooks/useUnits";
+import { useUnitSettings } from "../../hooks/useUnits";
 import { fromShown, shownStep, toShown } from "../../lib/units";
 import type { Quantity } from "../../types";
 
@@ -44,15 +44,15 @@ export function NumberField({
   quantity,
 }: Props) {
   const id = useId();
-  const system = useUnitSystem();
+  const settings = useUnitSettings();
   /** a converted `n` (stored unit) at `min` or `max` when float error alone puts it just outside */
   const snapToEnd = (n: number) =>
     [min, max].find(
       (end) => end !== undefined && Math.abs(n - end) <= 1e-9 * Math.max(1, Math.abs(end)),
     ) ?? n;
   /** a stored amount as the box shows it, and a typed number in the stored unit */
-  const show = (v: number) => (quantity ? toShown(quantity, system, v) : v);
-  const read = (n: number) => (quantity ? snapToEnd(fromShown(quantity, system, n)) : n);
+  const show = (v: number) => (quantity ? toShown(quantity, settings, v) : v);
+  const read = (n: number) => (quantity ? snapToEnd(fromShown(quantity, settings, n)) : n);
   const shown = show(value);
   const [raw, setRaw] = useState(String(shown));
   /** `n` (stored unit) moved into `min`–`max` */
@@ -65,7 +65,7 @@ export function NumberField({
   // the box keeps what is typed while it reads as the value (a metric box rounds), and shows a new value otherwise
   useEffect(() => {
     setRaw((r) => (holds(r, value) ? r : String(show(value))));
-  }, [value, quantity, system]);
+  }, [value, quantity, settings]);
   return (
     <FormField label={label} htmlFor={id} className={className}>
       <div className={`flex items-center gap-2 text-sm ${fill ? "" : "flex-wrap"}`}>
@@ -76,7 +76,7 @@ export function NumberField({
           value={raw}
           min={min === undefined ? undefined : show(min)}
           max={max === undefined ? undefined : show(max)}
-          step={quantity ? shownStep(quantity, system, step) : step}
+          step={quantity ? shownStep(quantity, settings, step) : step}
           disabled={disabled}
           onChange={(e) => {
             setRaw(e.target.value);

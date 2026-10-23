@@ -667,7 +667,7 @@ export function CutlistPage({
                   <>
                     <span className="text-stone-500">
                       {units.system === UNIT_SYSTEM.metric
-                        ? `${units.unit("panelThickness")} (${toShown("panelThickness", units.system, wallRange.min)}–${toShown("panelThickness", units.system, wallRange.max)} ${units.unit("panelThickness")})`
+                        ? `${units.unit("panelThickness")} (${toShown("panelThickness", units.settings, wallRange.min)}–${toShown("panelThickness", units.settings, wallRange.max)} ${units.unit("panelThickness")})`
                         : `″ = ${(wall * MM_PER_IN).toFixed(1)} mm (${wallRange.min}–${wallRange.max}″)`}
                     </span>
                     {wall !== wallDefault && (

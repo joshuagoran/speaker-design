@@ -424,7 +424,7 @@ export function HornSettings({
                     {SPEAKER_TEXT.hornFrontChamber}
                   </Tooltip>
                 }
-                value={toShown("smallVolume", units.system, front.liters)}
+                value={toShown("smallVolume", units.settings, front.liters)}
                 unit={units.unit("smallVolume")}
               />
             )}

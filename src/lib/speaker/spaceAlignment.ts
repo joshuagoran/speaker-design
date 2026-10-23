@@ -4,7 +4,7 @@
 // from the model, so the Gain is the one the model plays. A mirrored pair is one entry: its two boxes share the
 // settings. Pure.
 import { formatQuantity } from "../units";
-import type { BandFilter, BandId, SpeakerBand, UnitSystem } from "../../types";
+import type { BandFilter, BandId, SpeakerBand, UnitSettings } from "../../types";
 import type { SpaceModel } from "./spaceCoverage";
 import { channelGroups } from "./spaceHardware";
 import { bandLevelDb } from "./bandLevel";
@@ -18,12 +18,12 @@ import { formatDelayMs } from "../format";
 export const delayDistanceIn = (ms: number) => ((ms / MS_PER_S) * SPEED_OF_SOUND) / METERS_PER_INCH;
 
 /** A delay in words: as a time and as the distance it equals, in `system`'s units; none under `NO_DELAY_MS`. */
-export const delayText = (ms: number, system: UnitSystem) =>
+export const delayText = (ms: number, settings: UnitSettings) =>
   ms < NO_DELAY_MS
     ? SPACE_TEXT.noDelay
     : SPACE_TEXT.delayIs(
         formatDelayMs(ms),
-        formatQuantity("boxLength", system, delayDistanceIn(ms), 0),
+        formatQuantity("boxLength", settings, delayDistanceIn(ms), 0),
       );
 
 /** One DSP output (an active band, or a box's passive bands on their shared amp): what to set for it. */

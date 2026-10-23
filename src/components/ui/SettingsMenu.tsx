@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { THEME_CHOICES } from "../../constants/themes";
-import { UNIT_SYSTEM_CHOICES } from "../../constants/units";
+import { UNIT_SYSTEM_CHOICES, VOLUME_UNIT_CHOICES } from "../../constants/units";
 import { SETTINGS_MENU_TEXT } from "../../constants/uiText";
 import { useThemeChoice } from "../../hooks/useTheme";
-import type { UnitSystem } from "../../types";
+import type { UnitSystem, VolumeUnit } from "../../types";
 import { Icon, IconButton } from "./IconButton";
 import { SelectField } from "./SelectField";
 
@@ -12,15 +12,19 @@ const optionsOf = <T extends string>(choices: readonly (readonly [T, string])[])
   choices.map(([id, name]) => ({ id, name }));
 const THEME_OPTIONS = optionsOf(THEME_CHOICES);
 const UNIT_OPTIONS = optionsOf(UNIT_SYSTEM_CHOICES);
+const VOLUME_OPTIONS = optionsOf(VOLUME_UNIT_CHOICES);
 
 interface Props {
   /** the Units choice (the app's root holds it, for every page) */
   units: UnitSystem;
   onUnits: (system: UnitSystem) => void;
+  /** the Volume choice (held with Units) */
+  volume: VolumeUnit;
+  onVolume: (volume: VolumeUnit) => void;
 }
 
-/** The header's gear button: a small menu with the Theme and Units dropdowns (each kept per browser). */
-export function SettingsMenu({ units, onUnits }: Props) {
+/** The header's gear button: a small menu with the Theme, Units, and Volume dropdowns (each kept per browser). */
+export function SettingsMenu({ units, onUnits, volume, onVolume }: Props) {
   const [theme, setTheme] = useThemeChoice();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -66,6 +70,12 @@ export function SettingsMenu({ units, onUnits }: Props) {
             options={UNIT_OPTIONS}
             value={UNIT_OPTIONS.find((o) => o.id === units)}
             onChange={(o) => onUnits(o.id)}
+          />
+          <SelectField
+            label={SETTINGS_MENU_TEXT.volume}
+            options={VOLUME_OPTIONS}
+            value={VOLUME_OPTIONS.find((o) => o.id === volume)}
+            onChange={(o) => onVolume(o.id)}
           />
         </div>
       )}

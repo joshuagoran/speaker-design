@@ -11,7 +11,7 @@ import type {
 } from "../../types";
 import { formatDollars, formatHz, formatWatts, formatDb } from "../../lib/format";
 import { formatDims } from "../../lib/units";
-import { UNIT_SYSTEM } from "../../constants/units";
+import { DEFAULT_UNIT_SETTINGS } from "../../constants/units";
 import type { Units } from "../../lib/units";
 import {
   SPEAKER_TEXT,
@@ -58,7 +58,7 @@ export function chamberText(chamber: SpeakerChamber) {
       : VENT_KIND_NAMES[vent.kind].toLowerCase();
   const drivers = chamber.drivers.map((d) => `${d.count} × ${driverName(d)}`).join(" + ");
   return [
-    formatDims(UNIT_SYSTEM.us, chamber.dims),
+    formatDims(DEFAULT_UNIT_SETTINGS, chamber.dims),
     ventText,
     chamber.stuffingPct ? `stuffed ${chamber.stuffingPct}%` : null,
     chamber.load.kind === CHAMBER_LOAD.horn ? hornText(chamber.load.horn) : null,

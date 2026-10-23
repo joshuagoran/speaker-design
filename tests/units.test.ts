@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { UNIT_SYSTEM } from "../src/constants/units";
+import { UNIT_SYSTEM, VOLUME_UNIT } from "../src/constants/units";
 import {
   convertUnitsText,
   formatAmount,
@@ -21,9 +21,11 @@ import {
 import { UnitsProvider } from "../src/hooks/useUnits";
 import { NumberField } from "../src/components/ui/NumberField";
 import { Delta } from "../src/components/optimizer/Delta";
-import type { UnitSystem } from "../src/types";
+import type { UnitSettings } from "../src/types";
 
-const { us, metric } = UNIT_SYSTEM;
+// US with ft³ volumes, metric with liters: each system's own volume unit
+const us: UnitSettings = { system: UNIT_SYSTEM.us, volume: VOLUME_UNIT.cubicFeet };
+const metric: UnitSettings = { system: UNIT_SYSTEM.metric, volume: VOLUME_UNIT.liters };
 
 describe("conversion", () => {
   test("a stored amount in each system, and back", () => {
@@ -45,6 +47,28 @@ describe("conversion", () => {
     expect(shownStep("boxLength", metric, 0.25)).toBe(1);
     expect(shownStep("roomLength", metric, 1)).toBe(0.1);
     expect(shownStep("boxLength", us, undefined)).toBeUndefined();
+  });
+});
+
+describe("the Volume setting", () => {
+  test("volumes follow it whatever the system; other amounts follow the system", () => {
+    const usLiters: UnitSettings = { ...us, volume: VOLUME_UNIT.liters };
+    const metricCubicFeet: UnitSettings = { ...metric, volume: VOLUME_UNIT.cubicFeet };
+    expect(formatQuantity("volume", usLiters, 56.25)).toBe("56.3 L");
+    expect(formatQuantity("smallVolume", usLiters, 0.12)).toBe("0.12 L");
+    expect(formatQuantity("boxLength", usLiters, 15.5)).toBe("15.5 in");
+    expect(formatQuantity("volume", metricCubicFeet, 28.3168)).toBe("1 ft³");
+    expect(formatQuantity("boxLength", metricCubicFeet, 15.5)).toBe("394 mm");
+    expect(fromShown("volume", metricCubicFeet, 1)).toBeCloseTo(28.3168, 3);
+  });
+
+  test("the model's liters: as in³ with ft³, as they are with liters", () => {
+    expect(
+      convertUnitsText({ ...metric, volume: VOLUME_UNIT.cubicFeet }, "Recesses take 0.12 L."),
+    ).toBe("Recesses take 7 in³.");
+    expect(convertUnitsText({ ...us, volume: VOLUME_UNIT.liters }, "Recesses take 0.12 L.")).toBe(
+      "Recesses take 0.12 L.",
+    );
   });
 });
 
@@ -102,9 +126,9 @@ describe("the model's text", () => {
   });
 });
 
-/** `node` rendered under a Units setting of `system`. */
-const rendered = (system: UnitSystem, node: React.ReactElement) =>
-  renderToString(createElement(UnitsProvider, { system, children: node }));
+/** `node` rendered under the unit settings `settings`. */
+const rendered = (settings: UnitSettings, node: React.ReactElement) =>
+  renderToString(createElement(UnitsProvider, { settings, children: node }));
 
 describe("readouts follow the Units setting", () => {
   test("a number field and a change", () => {

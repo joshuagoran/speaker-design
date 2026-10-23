@@ -1,5 +1,5 @@
 import { formatDollars } from "../../lib/format";
-import { useUnitSystem } from "../../hooks/useUnits";
+import { useUnitSettings } from "../../hooks/useUnits";
 import { scaleToShown, shownDecimals, unitName } from "../../lib/units";
 import type { Quantity } from "../../types";
 
@@ -23,11 +23,11 @@ export function Delta({
   lowerIsBetter,
   digits: ownDigits = 0,
 }: Props) {
-  const system = useUnitSystem();
+  const settings = useUnitSettings();
   if (stored == null) return null;
-  const v = quantity ? scaleToShown(quantity, system, stored) : stored;
-  const unit = quantity ? ` ${unitName(quantity, system)}` : ownUnit;
-  const digits = quantity ? shownDecimals(quantity, system, ownDigits) : ownDigits;
+  const v = quantity ? scaleToShown(quantity, settings, stored) : stored;
+  const unit = quantity ? ` ${unitName(quantity, settings)}` : ownUnit;
+  const digits = quantity ? shownDecimals(quantity, settings, ownDigits) : ownDigits;
   const r = Number(v.toFixed(digits));
   const good = lowerIsBetter ? r < 0 : r > 0,
     bad = lowerIsBetter ? r > 0 : r < 0;

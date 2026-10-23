@@ -85,6 +85,24 @@ export const UNIT_SYSTEM_CHOICES = [
 /** Where the Units choice is kept, per browser (JSON, like the theme). */
 export const UNITS_STORAGE_KEY = "units";
 
+/** The settings menu's Volume choice: liters, or ft³ (in³ for a small air space), whatever the Units system. */
+export const VOLUME_UNIT = { liters: "liters", cubicFeet: "cubicFeet" } as const;
+
+/** The Volume choice in display order: [unit, label]. */
+export const VOLUME_UNIT_CHOICES = [
+  [VOLUME_UNIT.liters, "Liters"],
+  [VOLUME_UNIT.cubicFeet, "ft³"],
+] as const;
+
+/** Where the Volume choice is kept, per browser. */
+export const VOLUME_STORAGE_KEY = "volumeUnit";
+
+/** The settings a page shows before any choice: US sizes, volumes in liters. */
+export const DEFAULT_UNIT_SETTINGS = {
+  system: UNIT_SYSTEM.us,
+  volume: VOLUME_UNIT.liters,
+} as const;
+
 /**
  * One kind of amount the page shows, in each system: the unit the model and saved data hold it in (`stored`), and per
  * system its unit's name, how many of that unit make one stored unit (`per`), the decimals a readout or field shows,
@@ -97,7 +115,7 @@ interface QuantityUnits {
   metric: { unit: string; per: number; decimals: number; step: number };
 }
 
-/** Every quantity the Units setting changes. */
+/** Every quantity the Units setting changes (the volumes follow the Volume setting instead: `VOLUME_QUANTITIES`). */
 export const QUANTITIES = {
   /** a box's, a panel's or a part's size, stored in inches: mm in metric */
   boxLength: {
@@ -123,13 +141,13 @@ export const QUANTITIES = {
     us: { unit: "in²", per: 1, decimals: null, step: null },
     metric: { unit: "cm²", per: CM2_PER_IN2, decimals: 0, step: 1 },
   },
-  /** a chamber's or a box's air, stored in liters: ft³ in US */
+  /** a chamber's or a box's air, stored in liters: ft³ on the US side */
   volume: {
     stored: "L",
     us: { unit: "ft³", per: 1 / LITERS_PER_CUBIC_FT, decimals: 2, step: 0.05 },
     metric: { unit: "L", per: 1, decimals: 1, step: 0.1 },
   },
-  /** a small air space (a horn's throat chamber, the hardware's recesses), stored in liters: in³ in US */
+  /** a small air space (a horn's throat chamber, the hardware's recesses), stored in liters: in³ on the US side */
   smallVolume: {
     stored: "L",
     us: { unit: "in³", per: 1 / LITERS_PER_CUBIC_IN, decimals: 0, step: 1 },
@@ -148,3 +166,13 @@ export const QUANTITIES = {
     metric: { unit: "m/s", per: 1, decimals: 1, step: 0.5 },
   },
 } as const satisfies Record<string, QuantityUnits>;
+
+/** The quantities the Volume setting picks the unit of, and the side of QUANTITIES each choice shows. */
+export const VOLUME_QUANTITIES = [
+  "volume",
+  "smallVolume",
+] as const satisfies readonly (keyof typeof QUANTITIES)[];
+export const VOLUME_UNIT_SIDE = {
+  [VOLUME_UNIT.liters]: UNIT_SYSTEM.metric,
+  [VOLUME_UNIT.cubicFeet]: UNIT_SYSTEM.us,
+} as const;
