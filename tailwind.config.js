@@ -52,6 +52,7 @@ export default {
       colors: {
         stone: { 50: v("white"), 300: v("edge"), 500: v("muted"), 900: v("ink") },
         panel: v("panel"),
+        sunken: v("sunken"),
         // Tailwind's own white and black follow the theme too: the page and the ink
         white: v("white"),
         black: v("ink"),

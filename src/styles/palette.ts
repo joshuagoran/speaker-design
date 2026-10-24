@@ -19,6 +19,9 @@ export interface Palette {
   white: string;
   /** cards, inputs and buttons on the page */
   panel: string;
+  /** side panels set back from the drawing (the new layout's library and inspector): light gray on the light
+   * page, darker than the page on the dark one, so the drawing is the brightest surface in both */
+  sunken: string;
   muted: string;
   /** a lighter gray for a chart line beside the ink and the muted gray (3:1 on the page); a spare: no chart uses it now */
   faint: string;
@@ -41,6 +44,7 @@ const LIGHT: Palette = {
   ink: "#111111",
   white: "#ffffff",
   panel: "#ffffff",
+  sunken: "#f7f7f7",
   muted: "#595959",
   faint: "#8c8c8c",
   edge: "#e6e6e6",
@@ -66,6 +70,7 @@ const DARK: Palette = {
   ink: "#e8e8e6",
   white: "#141516",
   panel: "#1b1d1f",
+  sunken: "#0e0f10",
   muted: "#a3a3a3",
   faint: "#707070",
   edge: "#33373b",

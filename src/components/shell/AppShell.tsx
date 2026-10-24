@@ -2,6 +2,9 @@ import { useState } from "react";
 import { SHELL_TEXT } from "../../constants/shell";
 import { Button } from "../ui/Button";
 
+/** A side panel (library, inspector): set back from the drawing in the sunken gray, scrolling on its own from md up. */
+const SIDE_PANEL_CLASS = "md:min-h-0 md:overflow-y-auto rounded-lg bg-sunken p-3";
+
 interface Props {
   /** the top bar: where you are, and the four answers */
   top: React.ReactNode;
@@ -26,15 +29,11 @@ export function AppShell({ top, library, canvas, inspector, results }: Props) {
     <div className="flex flex-col gap-3 px-4 md:px-8 pb-4 md:h-full md:min-h-0">
       <div className="md:flex-none">{top}</div>
       <div className="flex flex-col gap-3 md:flex-1 md:min-h-0 md:grid md:grid-cols-[220px_minmax(0,1fr)_340px]">
-        <aside className="order-3 md:order-none md:min-h-0 md:overflow-y-auto rounded-lg border border-stone-300 bg-panel p-3">
-          {library}
-        </aside>
+        <aside className={`order-3 md:order-none ${SIDE_PANEL_CLASS}`}>{library}</aside>
         <main className="order-1 md:order-none min-h-[320px] md:min-h-0 overflow-hidden rounded-lg border border-stone-300 bg-panel p-3 flex flex-col">
           {canvas}
         </main>
-        <aside className="order-2 md:order-none md:min-h-0 md:overflow-y-auto rounded-lg border border-stone-300 bg-panel p-3">
-          {inspector}
-        </aside>
+        <aside className={`order-2 md:order-none ${SIDE_PANEL_CLASS}`}>{inspector}</aside>
       </div>
       <section
         aria-label={SHELL_TEXT.results}
