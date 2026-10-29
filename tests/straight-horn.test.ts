@@ -7,7 +7,10 @@ import {
   withStraightHorn,
   withStraightHornsFollowingBox,
 } from "../src/pages/speaker/straightHorn";
-import { CHAMBER_LOAD } from "../src/constants/speakerSpec";
+import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../src/constants/speakerSpec";
+import { coneParts } from "../src/lib/speaker/driverParts";
+import { conesAreaCm2, frontChamber, throatCones } from "../src/lib/speaker/hornThroat";
+import { chamberSetbackIn } from "../src/lib/speaker/driverBoard";
 import type { SpeakerCabinet, SpeakerChamber } from "../src/types";
 
 const cabinet = templateSpeaker(SPEAKER_TEMPLATE.paV2MidBox).cabinet;
@@ -73,4 +76,38 @@ test("straight horn: a wider box widens the mouth and keeps the flare", () => {
 
 test("straight horn: an edit that keeps the box leaves the cabinet as it is", () => {
   assert.equal(withStraightHornsFollowingBox(cabinet, cabinet), cabinet);
+});
+
+test("straight horn: the rear chamber is the box's inside less the flare, the driver, the front chamber and the slots", () => {
+  // by hand, from the box's sizes: the Mid box (one chamber, frame with no inset: walls all round, the slots up the
+  // front sides), its exponential flare made 12 in long at a 1.5 ratio
+  const next = withStraightHorn(cabinet, 0, { flareIn: 12, ratio: 1.5 });
+  const [c] = cabinet.chambers;
+  assert.ok(next && c && c.vent.kind === VENT_KIND.vented && c.vent.port.shape === PORT_SHAPE.slot);
+  const t = cabinet.panel.thicknessIn;
+  const { n, h: slotW, len } = c.vent.port;
+  const CC_PER_IN3 = 16.387064;
+  const clear = { w: c.dims.w - 2 * t, h: c.dims.h - 2 * t, d: c.dims.d - 2 * t };
+  const insideL = (clear.w * clear.h * clear.d * CC_PER_IN3) / 1000;
+  // the mouth: the clear face less each side's slot and its wall
+  const mouthCm2 = (clear.w - n * (slotW + t)) * clear.h * 6.4516;
+  const throatCm2 = conesAreaCm2(c.drivers) / 1.5;
+  const flareCm = 12 * 2.54;
+  // an exponential flare's air: its length times (S2 − S1) over ln(S2 / S1)
+  const flareL = (flareCm * (mouthCm2 - throatCm2)) / Math.log(mouthCm2 / throatCm2) / 1000;
+  const slotsL = (n * slotW * clear.h * len * CC_PER_IN3) / 1000;
+  // the driver's displacement and the front chamber, as the model takes them (the front chamber is Hornresp's Vtc)
+  const displacementL = c.drivers.reduce((sum, d) => sum + (coneParts(d)?.dispL ?? 0) * d.count, 0);
+  const throat = throatCones(c.drivers);
+  assert.ok(throat);
+  const frontL = frontChamber(
+    throat.cone,
+    throat.count,
+    chamberSetbackIn(cabinet.panel, next),
+  ).liters;
+  const expected = insideL - flareL - slotsL - displacementL - frontL;
+  assert.ok(
+    Math.abs((next.netLiters ?? 0) - expected) <= 0.05,
+    `rear chamber ${next.netLiters} L, by hand ${expected.toFixed(2)} L`,
+  );
 });
