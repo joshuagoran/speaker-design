@@ -12,7 +12,15 @@ import { FOLD_CHART_TEXT } from "../../constants/speakerPage";
 import { targetPathPoints } from "../../lib/speaker/foldMatch";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { usePalette } from "../../hooks/useTheme";
-import { FONT, SVG_FONT } from "../../styles/fonts";
+import { FONT } from "../../styles/fonts";
+import {
+  CHART_FALLBACK_WIDTH_PX,
+  CHART_LEGEND_CLASS,
+  CHART_TEXT,
+  Y_TICK_GAP_PX,
+  plotFrame,
+  type PlotFrame,
+} from "./chartFrame";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
 import { alpha, type Palette } from "../../styles/palette";
@@ -118,17 +126,11 @@ export function nearestSection(
   );
 }
 
-/** The size of the drawing and its margins, px. */
-interface Frame {
-  W: number;
-  H: number;
-  L: number;
-  R: number;
-  T: number;
-  B: number;
+/** The size of the drawing and its plot area (the charts' shared frame), px. */
+type Frame = PlotFrame & {
   /** where the hover readout ends, px; absent: the plot's right edge */
   readoutRight?: number;
-}
+};
 
 /** The chart as drawn in one palette: everything but the pointer and the element's measuring. */
 export function FoldPathDrawing({
@@ -147,11 +149,7 @@ export function FoldPathDrawing({
   /** the id of the plot area's clip, unique on the page */
   clipId: string;
 }) {
-  const { W, H, L, R, T, B } = frame;
-  const x0 = L,
-    x1 = W - R,
-    y0 = T,
-    y1 = H - B;
+  const { H, x0, x1, y0, y1 } = frame;
   const { pathMaxIn, pathGridIn, areaMaxIn2, areaGridIn2 } = axes;
   // past the axes nothing is drawn (the clip)
   const px = (sIn: number) => x0 + (sIn / pathMaxIn) * (x1 - x0);
@@ -192,8 +190,7 @@ export function FoldPathDrawing({
         y={y1 + 18}
         textAnchor={Math.abs(s - pathMaxIn) < 1e-9 ? "end" : "middle"}
         fill={pal.muted}
-        fontSize="12"
-        fontFamily={SVG_FONT}
+        {...CHART_TEXT}
       >
         {units.amount("boxLength", s)}
       </text>,
@@ -212,12 +209,11 @@ export function FoldPathDrawing({
       />,
       <text
         key={"ht" + a}
-        x={x0 - 8}
+        x={x0 - Y_TICK_GAP_PX}
         y={py(a) + 3.5}
         textAnchor="end"
         fill={pal.muted}
-        fontSize="12"
-        fontFamily={SVG_FONT}
+        {...CHART_TEXT}
       >
         {units.amount("boxArea", a)}
       </text>,
@@ -270,7 +266,7 @@ export function FoldPathDrawing({
             strokeWidth="2"
             strokeDasharray="4 3"
           />
-          <text x={px(t.sIn) + 4} y={y1 - 5} fill={pal.magenta} fontSize="12" fontFamily={SVG_FONT}>
+          <text x={px(t.sIn) + 4} y={y1 - 5} fill={pal.magenta} {...CHART_TEXT}>
             {t.label}
           </text>
         </g>
@@ -290,8 +286,7 @@ export function FoldPathDrawing({
             x={frame.readoutRight ?? x1}
             y={y0 - 4}
             textAnchor="end"
-            fontSize="12"
-            fontFamily={SVG_FONT}
+            {...CHART_TEXT}
             fill={pal.ink}
             stroke={pal.white}
             strokeWidth="3"
@@ -305,22 +300,14 @@ export function FoldPathDrawing({
           </text>
         </g>
       )}
-      <text
-        x={(x0 + x1) / 2}
-        y={H - 4}
-        textAnchor="middle"
-        fill={pal.muted}
-        fontSize="12"
-        fontFamily={SVG_FONT}
-      >
+      <text x={(x0 + x1) / 2} y={H - 4} textAnchor="middle" fill={pal.muted} {...CHART_TEXT}>
         {FOLD_CHART_TEXT.xAxis(units.unit("boxLength"))}
       </text>
       <text
         transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`}
         textAnchor="middle"
         fill={pal.muted}
-        fontSize="12"
-        fontFamily={SVG_FONT}
+        {...CHART_TEXT}
       >
         {FOLD_CHART_TEXT.yAxis(units.unit("boxArea"))}
       </text>
@@ -338,19 +325,13 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
   const clipId = useId();
   // in an expanded dialog: the dialog's height and its full width
   const expandedH = useExpandedChartHeight();
-  // drawn in real pixels so text stays 12 px at any width
-  const [box, cw] = useElementWidth(760);
-  const narrow = cw < 500;
-  const W = Math.max(280, cw);
+  // drawn in real pixels so text stays one size at any width
+  const [box, cw] = useElementWidth(CHART_FALLBACK_WIDTH_PX);
+  const plot = plotFrame(cw, expandedH ?? HEIGHT);
   const frame: Frame = {
-    W,
-    H: expandedH ?? HEIGHT,
-    L: narrow ? 44 : 52,
-    R: narrow ? 8 : 14,
-    T: 16,
-    B: 36,
+    ...plot,
     // on the page, clear of the expand button on the chart's top-right corner
-    readoutRight: expandedH === null ? W - EXPAND_BUTTON_ROOM_PX : undefined,
+    readoutRight: expandedH === null ? plot.W - EXPAND_BUTTON_ROOM_PX : undefined,
   };
   const pathEndIn = sections.length ? sections[sections.length - 1].sIn : 0;
   const axes = foldPathAxes(sections, target, useUnitSettings());
@@ -359,8 +340,8 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
     onHover(
       distanceAtPointer(
         ((e.clientX - r.left) / r.width) * frame.W,
-        frame.L,
-        frame.W - frame.R,
+        frame.x0,
+        frame.x1,
         pathEndIn,
         axes.pathMaxIn,
       ),
@@ -389,10 +370,7 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
           axes={axes}
         />
       </svg>
-      <div
-        className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-500"
-        style={{ fontFamily: FONT }}
-      >
+      <div className={`${CHART_LEGEND_CLASS} justify-center`} style={{ fontFamily: FONT }}>
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-4 h-0.5" style={{ background: pal.cyan }} />
           {FOLD_CHART_TEXT.traced}

@@ -13,12 +13,21 @@ import {
   DISPERSION_ANGLE_MAX_DEG,
   DISPERSION_GRID_DEG,
   DISPERSION_LABEL_DEG,
-  DISPERSION_FREQ_MAX_HZ,
-  DISPERSION_FREQ_MIN_HZ,
+  FREQ_AXIS_MAX_HZ,
+  FREQ_AXIS_MIN_HZ,
 } from "../../constants/chartScales";
 import { useElementWidth } from "../../hooks/useElementWidth";
-import { SVG_FONT } from "../../styles/fonts";
 import { useMemo, useState } from "react";
+import {
+  CHART_FALLBACK_WIDTH_PX,
+  CHART_LEGEND_CLASS,
+  CHART_TEXT,
+  FrequencyAxis,
+  Y_TICK_GAP_PX,
+  frequencyX,
+  isNarrowChart,
+  plotFrame,
+} from "./chartFrame";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 import { EXPAND_BUTTON_ROOM_PX, useExpandedChartHeight } from "../ui/ExpandPanel";
 
@@ -29,11 +38,13 @@ interface Props {
 
 const { topDb, botDb, contourShade, keyStepDb, stops } = DISPERSION_SCALE;
 const A = DISPERSION_ANGLE_MAX_DEG;
-const LOG_SPAN = Math.log(DISPERSION_FREQ_MAX_HZ / DISPERSION_FREQ_MIN_HZ);
+const LOG_SPAN = Math.log(FREQ_AXIS_MAX_HZ / FREQ_AXIS_MIN_HZ);
+
+/** The map's height on the page, px, on a narrow box and a wide one. */
+const MAP_HEIGHT_PX = { narrow: 280, wide: 340 } as const;
 
 /** A signed number with a true minus sign: "+30", "−30", "0". */
 const signed = (v: number) => (v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0");
-const kHz = (f: number) => (f >= 1000 ? `${+(f / 1000).toFixed(1)}k` : f.toFixed(0));
 
 /** Where `x` falls in the ascending `xs`: the index below it and the fraction toward the next, clamped to the ends. */
 function bracket(xs: readonly number[], x: number): [number, number] {
@@ -51,7 +62,7 @@ function bracket(xs: readonly number[], x: number): [number, number] {
 }
 
 /**
- * The map as an image `pw` × `ph` px on the fixed axes (+90° at the top, 50 Hz-20 kHz across): each pixel's level
+ * The map as an image `pw` × `ph` px on the fixed axes (+90° at the top, 15 Hz-20 kHz across): each pixel's level
  * interpolated from the grid, colored on the dispersion scale, darker where it crosses a contour. Null without a canvas.
  */
 function mapImage(map: HifiDispersionMap, pw: number, ph: number): string | null {
@@ -63,7 +74,7 @@ function mapImage(map: HifiDispersionMap, pw: number, ph: number): string | null
   if (!g) return null;
   const logF = map.freqs.map((f) => Math.log(f));
   const cols = Array.from({ length: pw }, (_, i) =>
-    bracket(logF, Math.log(DISPERSION_FREQ_MIN_HZ) + (LOG_SPAN * (i + 0.5)) / pw),
+    bracket(logF, Math.log(FREQ_AXIS_MIN_HZ) + (LOG_SPAN * (i + 0.5)) / pw),
   );
   const lev = new Float32Array(pw * ph);
   for (let j = 0; j < ph; j++) {
@@ -104,7 +115,7 @@ export function DispersionKey() {
   const ticks = Array.from({ length: span / keyStepDb + 1 }, (_, i) => topDb - i * keyStepDb);
   return (
     <div
-      className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500 mt-1"
+      className={CHART_LEGEND_CLASS}
       aria-label={`Color key: ${signed(topDb)} to ${signed(botDb)} dB relative to on-axis`}
     >
       <span>dB re on-axis</span>
@@ -125,33 +136,30 @@ export function DispersionKey() {
 
 /**
  * Level vs angle and frequency, relative to on-axis, on the axes every dispersion map shares (−90° to +90°,
- * 50 Hz-20 kHz) and the one color scale (+6 to −36 dB, a contour every 3 dB). Hover or drag to read a point.
+ * 15 Hz-20 kHz, the other frequency charts' axis and plot edges) and the one color scale (+6 to −36 dB, a contour every 3 dB). Hover or drag to read a point.
  */
 export function DispersionMap({ map, title }: Props) {
   const pal = usePalette();
   const [hover, setHover] = useState<{ i: number; j: number } | null>(null);
   // in an expanded dialog: the dialog's height and its full width
   const expandedH = useExpandedChartHeight();
-  // drawn in real pixels so text stays 11 px at any width
-  const [box, cw] = useElementWidth(560);
-  const narrow = cw < 500;
-  const W = Math.max(280, cw),
-    H = expandedH ?? (narrow ? 260 : 320),
-    L = 40,
-    R = 10,
-    T = 8,
-    B = 26;
-  const pw = Math.round(W - L - R),
-    ph = H - T - B;
+  // drawn in real pixels so text stays one size at any width
+  const [box, cw] = useElementWidth(CHART_FALLBACK_WIDTH_PX);
+  const frame = plotFrame(cw, expandedH ?? MAP_HEIGHT_PX[isNarrowChart(cw) ? "narrow" : "wide"]);
+  const { W, H } = frame;
+  const L = frame.x0,
+    T = frame.y0;
+  const pw = frame.x1 - frame.x0,
+    ph = frame.y1 - frame.y0;
   const href = useMemo(() => mapImage(map, pw, ph), [map, pw, ph]);
-  const fx = (f: number) => L + (Math.log(f / DISPERSION_FREQ_MIN_HZ) / LOG_SPAN) * pw;
+  const fx = frequencyX(frame, FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ);
   const ay = (deg: number) => T + ((A - deg) / (2 * A)) * ph;
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect(),
       x = ((e.clientX - r.left) / r.width) * W,
       y = ((e.clientY - r.top) / r.height) * H;
     if (x < L || x > L + pw || y < T || y > T + ph) return setHover(null);
-    const f = DISPERSION_FREQ_MIN_HZ * Math.exp(((x - L) / pw) * LOG_SPAN),
+    const f = FREQ_AXIS_MIN_HZ * Math.exp(((x - L) / pw) * LOG_SPAN),
       deg = A - ((y - T) / ph) * 2 * A;
     const nearest = (xs: readonly number[], d: (v: number) => number) =>
       xs.reduce((b, v, k) => (d(v) < d(xs[b]) ? k : b), 0);
@@ -164,12 +172,7 @@ export function DispersionMap({ map, title }: Props) {
     { length: (2 * A) / DISPERSION_GRID_DEG + 1 },
     (_, k) => -A + k * DISPERSION_GRID_DEG,
   );
-  const ticksF = (
-    narrow ? [50, 100, 200, 1000, 5000, 20000] : [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-  ).filter((f) => f >= DISPERSION_FREQ_MIN_HZ && f <= DISPERSION_FREQ_MAX_HZ);
-  const crossovers = map.crossovers.filter(
-    (f) => f >= DISPERSION_FREQ_MIN_HZ && f <= DISPERSION_FREQ_MAX_HZ,
-  );
+  const crossovers = map.crossovers.filter((f) => f >= FREQ_AXIS_MIN_HZ && f <= FREQ_AXIS_MAX_HZ);
   const gridStroke = alpha(ON_DATA.ink, 0.18);
   return (
     <div ref={box} className={expandedH === null ? RESULT_MAX_WIDTH : undefined}>
@@ -196,8 +199,7 @@ export function DispersionMap({ map, title }: Props) {
         onPointerLeave={() => setHover(null)}
         role="img"
         aria-label={`${title}: level against angle and frequency`}
-        fontFamily={SVG_FONT}
-        fontSize="11"
+        {...CHART_TEXT}
       >
         {href ? (
           <image href={href} x={L} y={T} width={pw} height={ph} preserveAspectRatio="none" />
@@ -208,31 +210,19 @@ export function DispersionMap({ map, title }: Props) {
           <g key={deg}>
             <line x1={L} x2={L + pw} y1={ay(deg)} y2={ay(deg)} stroke={gridStroke} />
             {deg % DISPERSION_LABEL_DEG === 0 && (
-              <text x={L - 5} y={ay(deg) + 4} textAnchor="end" fill={pal.muted}>
+              <text x={L - Y_TICK_GAP_PX} y={ay(deg) + 4} textAnchor="end" fill={pal.muted}>
                 {signed(deg)}°
               </text>
             )}
           </g>
         ))}
-        {ticksF.map((f) => (
-          <g key={f}>
-            <line x1={fx(f)} x2={fx(f)} y1={T} y2={T + ph} stroke={gridStroke} />
-            <text
-              x={fx(f)}
-              y={T + ph + 15}
-              textAnchor={
-                f === DISPERSION_FREQ_MAX_HZ
-                  ? "end"
-                  : f === DISPERSION_FREQ_MIN_HZ
-                    ? "start"
-                    : "middle"
-              }
-              fill={pal.muted}
-            >
-              {kHz(f)}
-            </text>
-          </g>
-        ))}
+        <FrequencyAxis
+          frame={frame}
+          fmin={FREQ_AXIS_MIN_HZ}
+          fmax={FREQ_AXIS_MAX_HZ}
+          pal={pal}
+          gridStroke={gridStroke}
+        />
         <rect
           x={L + 0.5}
           y={T + 0.5}

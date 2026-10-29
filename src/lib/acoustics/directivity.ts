@@ -9,8 +9,8 @@ import {
   DISPERSION_ANGLE_MAX_DEG,
   DISPERSION_ANGLE_STEP_DEG,
   DISPERSION_FREQ_POINTS,
-  DISPERSION_FREQ_MAX_HZ,
-  DISPERSION_FREQ_MIN_HZ,
+  FREQ_AXIS_MAX_HZ,
+  FREQ_AXIS_MIN_HZ,
 } from "../../constants/chartScales";
 const C = SPEED_OF_SOUND,
   IN = METERS_PER_INCH;
@@ -148,15 +148,11 @@ export function waveguideGain(th: number, tv: number, [h, v]: [h: number, v: num
 export const logSpacedFrequencies = (a: number, b: number, n: number) =>
   Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
 
-/** The grid every dispersion map (PA and Hi-fi, both planes) is sampled on: −90..90° at one step, the dispersion frequency axis (50 Hz-20 kHz). */
+/** The grid every dispersion map (PA and Hi-fi, both planes) is sampled on: −90..90° at one step, the shared frequency axis (15 Hz-20 kHz). */
 export const dispersionGrid = (): Pick<HifiDispersionMap, "angles" | "freqs"> => ({
   angles: Array.from(
     { length: (2 * DISPERSION_ANGLE_MAX_DEG) / DISPERSION_ANGLE_STEP_DEG + 1 },
     (_, i) => -DISPERSION_ANGLE_MAX_DEG + i * DISPERSION_ANGLE_STEP_DEG,
   ),
-  freqs: logSpacedFrequencies(
-    DISPERSION_FREQ_MIN_HZ,
-    DISPERSION_FREQ_MAX_HZ,
-    DISPERSION_FREQ_POINTS,
-  ),
+  freqs: logSpacedFrequencies(FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ, DISPERSION_FREQ_POINTS),
 });

@@ -3,6 +3,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
+import { plotFrame } from "../src/components/charts/chartFrame";
 import {
   FoldPathChart,
   FoldPathDrawing,
@@ -31,7 +32,7 @@ const target: HornSegment[] = [
 ];
 
 const taps = { front: 12, back: 40 };
-const frame = { W: 760, H: 240, L: 52, R: 14, T: 16, B: 36 };
+const frame = plotFrame(760, 240);
 const axes = foldPathAxes(sections, target, DEFAULT_UNIT_SETTINGS);
 
 /** the chart's drawing in one theme, as markup */

@@ -10,11 +10,14 @@ export const MAX_OUTPUT_TOP = 140;
 /** Bottom of every maximum-output chart, dB SPL. */
 export const MAX_OUTPUT_BOT = 80;
 
-/** Low end of the frequency charts' axis, Hz: the PA stack's, which every frequency chart but the dispersion maps shares. */
+/** Low end of the frequency charts' axis, Hz: the PA stack's, which every frequency chart shares, the dispersion maps too. */
 export const FREQ_AXIS_MIN_HZ = 15;
 
 /** High end of the frequency charts' axis, Hz. */
 export const FREQ_AXIS_MAX_HZ = 20000;
+
+/** The title under every frequency axis. */
+export const FREQUENCY_AXIS_TITLE = "frequency, Hz";
 
 /**
  * Top of every sensitivity and response chart (the Speaker page's 2.83 V, 1 m response and the Stack page's response),
@@ -37,22 +40,14 @@ export const DISPERSION_GRID_DEG = 15;
 /** Labels on a dispersion map's angle axis, degrees apart. */
 export const DISPERSION_LABEL_DEG = 30;
 
-/**
- * Low end of every dispersion map's frequency axis, Hz: the one frequency chart that starts above the PA stack's 15 Hz,
- * since below it the maps are flat. The default designs first fall more than 1 dB off axis (anywhere within ±90°, either
- * plane) at about 85 Hz (PA vertical, the sub/mid crossover lobe), 440 Hz (PA horizontal), 490 Hz (Hi-fi vertical) and
- * 690 Hz (Hi-fi horizontal); 50 Hz is the round value below the lowest.
- */
-export const DISPERSION_FREQ_MIN_HZ = 50;
-
-/** High end of every dispersion map's frequency axis, Hz (the PA stack's). */
-export const DISPERSION_FREQ_MAX_HZ = 20000;
-
 /** How far out a stack's or speaker's dispersion map is worked out, m (the Speaker and Stack pages'). */
 export const DISPERSION_DISTANCE_M = 10;
 
-/** How many log-spaced frequencies a dispersion map samples between its axis ends (about 9 per octave). */
-export const DISPERSION_FREQ_POINTS = 78;
+/**
+ * How many log-spaced frequencies a dispersion map samples between the frequency axis's ends (about 9 per octave). The
+ * maps are flat below about 85 Hz (the default designs first fall 1 dB off axis there), so their low end is one color.
+ */
+export const DISPERSION_FREQ_POINTS = 94;
 
 /**
  * The coverage map's color scale, dB against the target: fixed, so layouts compare by eye. A room spans about 15 dB, so

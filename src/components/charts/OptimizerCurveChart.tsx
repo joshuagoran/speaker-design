@@ -3,6 +3,7 @@ import { usePalette } from "../../hooks/useTheme";
 import { MAX_OUTPUT_BOT, MAX_OUTPUT_TOP } from "../../constants/chartScales";
 import { useState } from "react";
 import { formatDb } from "../../lib/format";
+import { SMALL_CHART_FONT_PX } from "./chartFrame";
 
 /** One curve point: frequency in Hz, level in dB. */
 type CurvePoint = readonly [hz: number, db: number];
@@ -81,7 +82,13 @@ export function OptimizerCurveChart({
       {ticks.map((d) => (
         <g key={d}>
           <line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke={pal.edge} />
-          <text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill={pal.muted}>
+          <text
+            x={L - 3}
+            y={y(d) + 3}
+            fontSize={SMALL_CHART_FONT_PX}
+            textAnchor="end"
+            fill={pal.muted}
+          >
             {d}
           </text>
         </g>
@@ -89,7 +96,14 @@ export function OptimizerCurveChart({
       {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500])
         .filter((f) => f >= fmin && f <= fmax)
         .map((f) => (
-          <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill={pal.muted}>
+          <text
+            key={f}
+            x={x(f)}
+            y={H - 6}
+            fontSize={SMALL_CHART_FONT_PX}
+            textAnchor="middle"
+            fill={pal.muted}
+          >
             {f >= 1000 ? f / 1000 + "k" : f}
           </text>
         ))}
@@ -126,19 +140,25 @@ export function OptimizerCurveChart({
             return (
               <g>
                 <rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={pal.ink} />
-                <text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={pal.white}>
+                <text
+                  x={X}
+                  y={H - B + 11}
+                  fontSize={SMALL_CHART_FONT_PX}
+                  textAnchor="middle"
+                  fill={pal.white}
+                >
                   {hov.f.toFixed(0)} Hz
                 </text>
               </g>
             );
           })()}
-          <text x={L} y={9} fontSize="8.5" fill={pal.ink}>
+          <text x={L} y={9} fontSize={SMALL_CHART_FONT_PX} fill={pal.ink}>
             {hov.f.toFixed(0)} Hz: {formatDb(hov.h1[1])} dB
             {hov.h2 ? ` · yours ${formatDb(hov.h2[1])} dB` : ""}
           </text>
         </>
       ) : (
-        <text x={L} y={9} fontSize="8.5" fill={pal.muted}>
+        <text x={L} y={9} fontSize={SMALL_CHART_FONT_PX} fill={pal.muted}>
           <tspan fill={pal.ink}>━ this</tspan>
           {cur ? "  ╌ yours" : ""} · dB, clean
         </text>
