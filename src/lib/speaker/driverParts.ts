@@ -46,6 +46,13 @@ const CONE_KINDS: ReadonlySet<DriverKind> = new Set([
 /** Whether a driver kind has a cone in the chamber's air. */
 export const isConeKind = (kind: DriverKind) => CONE_KINDS.has(kind);
 
+/** The catalog kinds that are woofers: the PA subs, the PA mid-bass drivers and the Hi-fi woofers. */
+export type WooferKind = Extract<DriverKind, "sub" | "mid" | "woofer">;
+
+/** Whether a driver kind is a woofer: the driver picker shows the three in one list. */
+export const isWooferKind = (kind: DriverKind): kind is WooferKind =>
+  kind === DRIVER_KIND.sub || kind === DRIVER_KIND.mid || kind === DRIVER_KIND.woofer;
+
 /**
  * A cone driver's parts; null for a datasheet kind (compression, tweeter) or an id its table doesn't have. A sub lists
  * its displacement; a mid and a woofer fall back to their engine's estimate; a coaxial takes the Hi-fi woofer's rule,

@@ -7,7 +7,11 @@ import { createElement, useState } from "react";
 import { renderToString } from "react-dom/server";
 import { optimizeSpeaker } from "../src/lib/speaker/optimize/optimizeSpeaker";
 import { evaluateSpeaker } from "../src/lib/speaker/optimize/evaluate";
-import { driverRef } from "../src/lib/speaker/optimize/space";
+import {
+  SPEAKER_OPTIMIZER_CATALOG,
+  driverRef,
+  searchUnits,
+} from "../src/lib/speaker/optimize/space";
 import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import {
   useSpeakerOptimizer,
@@ -22,6 +26,7 @@ import {
   lockedNames,
   pruneKept,
   reconcileHeld,
+  sizeHeldByDriver,
   toggleKeep,
   withSizeLock,
 } from "../src/pages/speaker/speakerKeeps";
@@ -30,7 +35,7 @@ import { LOCK_TEXT } from "../src/constants/uiText";
 import { BandSettings } from "../src/pages/speaker/BandSettings";
 import type { LockControl } from "../src/components/ui/LockButton";
 import { SPEAKER_GOAL } from "../src/constants/speakerOptimizer";
-import type { SpeakerSpec } from "../src/types";
+import type { SpeakerOptimizerLocks, SpeakerSpec } from "../src/types";
 
 const spec = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
 const yours = evaluateSpeaker(spec).metrics;
@@ -128,6 +133,39 @@ test("lock items: one per driver, horn, vent, filter and amp the spec has", () =
   assert.ok(new Set(items.map((i) => i.label + i.kind)).size === items.length, "labels differ");
 });
 
+test("a woofer's size lock: its own lock, held by its model's lock, and what the search tries", () => {
+  const items = keepItems(spec);
+  const size = items.find((i) => i.kind === "sizes");
+  assert.ok(size, "the woofer has a size lock");
+  const model = items.find((i) => i.kind === "drivers" && i.ref === size.ref);
+  assert.ok(model);
+  const sizeOnly = toggleKeep({}, size);
+  assert.deepEqual(lockedNames(sizeOnly, items, 1), [size.label]);
+  // the model's lock holds the size: the Locked line names the model only
+  const both = toggleKeep(sizeOnly, model);
+  assert.ok(sizeHeldByDriver(both, size));
+  assert.deepEqual(lockedNames(both, items, 1), [model.label]);
+  const { ref } = size;
+  assert.ok(typeof ref === "string", "a size lock names a driver entry");
+  const [k, j] = ref.split(".").map(Number);
+  const own = spec.cabinet.chambers[k].drivers[j];
+  const sizeOf = (id: string) =>
+    [
+      ...SPEAKER_OPTIMIZER_CATALOG.sub,
+      ...SPEAKER_OPTIMIZER_CATALOG.mid,
+      ...SPEAKER_OPTIMIZER_CATALOG.woofer,
+    ].find((d) => d.id === id)?.size;
+  const tried = (locks: SpeakerOptimizerLocks) => {
+    const unit = searchUnits(spec, locks, SPEAKER_OPTIMIZER_CATALOG).find(
+      (u) => u.kind === "cone" && u.chamber === k,
+    );
+    assert.ok(unit && unit.kind === "cone");
+    return new Set(unit.drivers.map(sizeOf));
+  };
+  assert.ok(tried({}).size > 1, "free: other sizes too");
+  assert.deepEqual([...tried(sizeOnly)], [sizeOf(own.driverId)], "size locked: its size only");
+});
+
 test("locks: toggling, counting and pruning", () => {
   const items = keepItems(spec);
   const first = items[0];
@@ -138,11 +176,19 @@ test("locks: toggling, counting and pruning", () => {
   const all = items.reduce(toggleKeep, {
     size: { 0: { w: "exact", h: "exact", d: "exact" } },
   } as const);
-  assert.equal(countKept(all), items.length + 3, "every item and the chamber's three axes");
+  // a woofer's size under its locked model counts once, with the model
+  assert.equal(
+    countKept(all),
+    items.filter((i) => i.kind !== "sizes").length + 3,
+    "every item and the chamber's three axes",
+  );
   // a lock on a part the spec no longer has is dropped
   const stale = { drivers: [driverRef(9, 9)], vents: [7], amps: ["gone"] };
   assert.equal(countKept(pruneKept(stale, items)), 0);
-  assert.equal(countKept(pruneKept(all, items)), items.length + 3);
+  assert.equal(
+    countKept(pruneKept(all, items)),
+    items.filter((i) => i.kind !== "sizes").length + 3,
+  );
 });
 
 test("Load keeps your spec's id and name; clearing the results (the spec replaced) ends Undo", () => {

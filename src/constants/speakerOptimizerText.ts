@@ -28,6 +28,8 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   changesNone: "none",
   failing: (problems: string) => `Your design fails: ${problems}. Fixes may cost or weigh more.`,
   chamber: (n: number) => `Chamber ${n}`,
+  /** a woofer's size lock: its screen-reader name and its name in the Locked line ("15 in woofers") */
+  wooferSize: (size: string) => `${size} woofers`,
   axis: { w: "Width", h: "Height", d: "Depth" },
   /** a chamber axis's size lock beside its padlock and after its name in the Locked line: up to this size, exactly it */
   sizeMark: { max: "≤", exact: "=" },

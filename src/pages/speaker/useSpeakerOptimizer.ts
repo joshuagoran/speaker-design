@@ -11,6 +11,7 @@ import {
   countKept,
   driverLayout,
   isKept,
+  sizeHeldByDriver,
   keepItems,
   lockedNames,
   reconcileHeld,
@@ -104,11 +105,14 @@ export function useSpeakerOptimizer({ spec, loadSpec, round, current }: Props) {
     partLock: (kind: KeepItem["kind"], ref: KeepItem["ref"]): LockControl | null => {
       const item = items.find((i) => i.kind === kind && i.ref === ref);
       if (!item) return null;
-      const locked = isKept(locks, item);
+      const held = sizeHeldByDriver(locks, item);
+      const locked = held || isKept(locks, item);
       return {
         name: item.label,
         locked,
-        unlocks: locked,
+        // a size held by its model's lock: a tap does nothing, so it doesn't offer to unlock
+        unlocks: locked && !held,
+        disabled: held,
         onClick: () => setLocks(toggleKeep(locks, item)),
       };
     },
