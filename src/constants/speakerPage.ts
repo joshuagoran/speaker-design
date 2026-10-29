@@ -328,12 +328,11 @@ export const FOLD_EDITOR_TEXT = {
  * the legend's own entries. Its other tiles and legend entries reuse the folded horn editor's.
  */
 export const STRAIGHT_EDITOR_TEXT = {
-  move: `**${FOLD_TOOL_NAMES.move}**: drag the driver board, a throat corner, or a wall.`,
+  move: `**${FOLD_TOOL_NAMES.move}**: drag the driver board, a throat corner, the end of a vent, or a wall.`,
   label: "Top view of the straight horn. The front is at the bottom.",
   throat: "Throat",
   legend: {
     flare: "flare",
-    drivers: "drivers",
     handle: "drag to change",
   },
 } as const;

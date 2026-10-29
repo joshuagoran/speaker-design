@@ -71,7 +71,7 @@ import {
 } from "../../constants/settingsSections";
 import { SPEAKER_TEXT, MODEL_GAP_TEXT, FOLD_EDITOR_TEXT } from "../../constants/speakerPage";
 import { KEEP_UP_TEXT } from "../../constants/keepUp";
-import { CHAMBER_LOAD, HORN_PATH } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, HORN_PATH, VENT_KIND } from "../../constants/speakerSpec";
 import {
   BRACING_TILE_TEXT,
   CHECK_ROW_TEXT,
@@ -506,6 +506,13 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
                         ...ch,
                         dims: { ...ch.dims, d: ch.dims.d + depthIn, w: ch.dims.w + widthIn },
                       }))
+                    }
+                    onSlotLength={(len) =>
+                      speakerPage.editChamber(i, (ch) =>
+                        ch.vent.kind === VENT_KIND.vented
+                          ? { ...ch, vent: { ...ch.vent, port: { ...ch.vent.port, len } } }
+                          : ch,
+                      )
                     }
                     onRestore={(chamber) => speakerPage.editChamber(i, () => chamber)}
                   />

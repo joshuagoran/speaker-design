@@ -12,12 +12,22 @@ interface Props {
   onEdit: (edit: StraightHornEdit) => void;
   /** a wall dragged: what to add to the chamber's depth and width, in */
   onResize: (grow: { depthIn: number; widthIn: number }) => void;
+  /** a slot's back end dragged: the slots' new length, in */
+  onSlotLength: (lenIn: number) => void;
   /** Undo: the chamber as it was before the last drag */
   onRestore: (chamber: SpeakerChamber) => void;
 }
 
 /** A straight front-loaded horn chamber's editor (#255, the draw-first mock), with Undo back through its drags. */
-export function StraightHornCard({ cabinet, index, name, onEdit, onResize, onRestore }: Props) {
+export function StraightHornCard({
+  cabinet,
+  index,
+  name,
+  onEdit,
+  onResize,
+  onSlotLength,
+  onRestore,
+}: Props) {
   const [history, setHistory] = useState<readonly SpeakerChamber[]>([]);
   return (
     <Card className="sm:col-span-2">
@@ -27,6 +37,7 @@ export function StraightHornCard({ cabinet, index, name, onEdit, onResize, onRes
         name={name}
         onEdit={onEdit}
         onResize={onResize}
+        onSlotLength={onSlotLength}
         onDragStart={() => {
           const now = cabinet.chambers[index];
           if (now) setHistory((h) => [...h, now]);
