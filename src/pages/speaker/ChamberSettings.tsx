@@ -39,6 +39,8 @@ import { driverRef } from "../../lib/speaker/optimize/space";
 import type { SpeakerLocks } from "./useSpeakerOptimizer";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
+import { HORN_PORT_SHAPES, hornVentKinds } from "../../lib/speaker/hornDesign";
+import { hornPort } from "./hornVents";
 import { HIFI_PASSIVES_BY_SIZE } from "../../lib/speaker/driverLists";
 import {
   CHAMBER_LOAD_NAMES,
@@ -284,19 +286,26 @@ export function ChamberSettings({
   const fill = !(folded && tapped) && (
     <FillField chamber={chamber} netLiters={result?.netLiters} onEdit={onEdit} />
   );
-  const ventFold = !folded && (
+  /** an undrawn horn's drive: its vents are the ones the horn engine models (`hornVentKinds`) */
+  const hornDrive = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn.drive.kind : null;
+  const ventKinds = hornDrive ? hornVentKinds(hornDrive) : keysOf(VENT_KIND_NAMES);
+  const portShapes = hornDrive ? HORN_PORT_SHAPES : keysOf(PORT_SHAPE_NAMES);
+  /** the clear height a horn's starting slots run up */
+  const hornClearH = clearH ?? chamber.dims.h - 2 * cabinet.panel.thicknessIn;
+  /** a vent of `kind`: a horn's starts as its slots at the front sides (`hornPort`) */
+  const ventOfKind = (kind: ChamberVent["kind"]): ChamberVent =>
+    hornDrive && kind === VENT_KIND.vented
+      ? hornPort(chamber, hornClearH, PORT_SHAPE.slot)
+      : DEFAULT_VENTS[kind];
+  // a tapped horn takes no vent: with only Sealed to pick, the fold has nothing to set
+  const ventFold = !folded && ventKinds.length > 1 && (
     <FoldBox title={SETTINGS_TEXT.vent} summary={ventSummary(vent, units)}>
       <WithLock lock={locks.partLock("vents", index)}>
         <ToggleGroup
           label={SETTINGS_TEXT.ventType}
           value={vent.kind}
-          onChange={(kind) => setVent(kind === vent.kind ? vent : DEFAULT_VENTS[kind])}
-          options={entriesOf(VENT_KIND_NAMES)}
-          disabled={
-            tapped
-              ? { values: [VENT_KIND.vented, VENT_KIND.radiator], why: SPEAKER_TEXT.ventTapped }
-              : undefined
-          }
+          onChange={(kind) => setVent(kind === vent.kind ? vent : ventOfKind(kind))}
+          options={entriesOf(VENT_KIND_NAMES).filter(([k]) => ventKinds.includes(k))}
         />
       </WithLock>
       {vent.kind === VENT_KIND.vented && (
@@ -304,18 +313,20 @@ export function ChamberSettings({
           <ToggleGroup
             label={SETTINGS_TEXT.ventShape}
             value={vent.port.shape ?? PORT_SHAPE.round}
-            onChange={(shape) =>
-              setPort(
-                shape === (vent.port.shape ?? PORT_SHAPE.round) ? vent.port : DEFAULT_PORTS[shape],
-              )
-            }
-            options={entriesOf(PORT_SHAPE_NAMES)}
+            onChange={(shape) => {
+              if (shape === (vent.port.shape ?? PORT_SHAPE.round)) return;
+              if (hornDrive && shape !== PORT_SHAPE.duct)
+                setVent(hornPort(chamber, hornClearH, shape));
+              else setPort(DEFAULT_PORTS[shape]);
+            }}
+            options={entriesOf(PORT_SHAPE_NAMES).filter(([k]) => portShapes.includes(k))}
           />
           <PortFields
             port={vent.port}
             walls={cabinet.panel}
             chamber={chamber}
             clearW={placed?.clear.w ?? chamber.dims.w - 2 * cabinet.panel.thicknessIn}
+            horn={hornDrive !== null}
             onChange={setPort}
           />
           {!vents && <p className="text-xs text-stone-500">{SPEAKER_TEXT.ventFixed}</p>}
@@ -368,7 +379,8 @@ export function ChamberSettings({
           auto={vents.auto}
           onChange={(p) => onEdit((c) => ({ ...c, vent: withVentPosition(c.vent, p) }))}
         >
-          {vents.position && (
+          {/* a horn's round port is on the back: the baffle is its mouth */}
+          {vents.position && !hornDrive && (
             <ToggleGroup
               label={SPEAKER_TEXT.panel}
               value={vents.position.panel}
@@ -702,9 +714,12 @@ export function PortFields({
   walls,
   chamber,
   clearW,
+  horn = false,
   onChange,
 }: {
   port: SpeakerPort;
+  /** a horn's rear chamber: its slots are open, at the front sides beside the mouth (no kind or place to pick) */
+  horn?: boolean;
   /** the walls: side-duct dividers of their size take their thickness, and a letterbox's fins */
   walls: Pick<SpeakerPanel, "nominal" | "thicknessIn">;
   /** the chamber: its size folds a letterbox, its drivers take flared tubes */
@@ -720,6 +735,7 @@ export function PortFields({
         t={walls.thicknessIn}
         chamber={chamber}
         clearW={clearW}
+        horn={horn}
         onChange={onChange}
       />
     );
@@ -785,12 +801,15 @@ function SlotFields({
   t,
   chamber,
   clearW,
+  horn,
   onChange,
 }: {
   port: SpeakerSlotPort;
   t: SpeakerPanel["thicknessIn"];
   chamber: Pick<SpeakerChamber, "dims">;
   clearW: number;
+  /** a horn's rear chamber: open slots at the front sides, so neither the kind nor the place is offered */
+  horn: boolean;
   onChange: (p: SpeakerPort) => void;
 }) {
   const letterbox = port.fins !== undefined;
@@ -847,8 +866,8 @@ function SlotFields({
     );
   return (
     <>
-      {kind}
-      {resets}
+      {!horn && kind}
+      {!horn && resets}
       <div className={FIELD_ROW}>
         <NumberField
           label={SPEAKER_TEXT.slotCount}
@@ -865,12 +884,14 @@ function SlotFields({
         />
         <PortLengthField port={port} onChange={(l) => onChange({ ...port, len: l })} />
       </div>
-      <ToggleGroup
-        label={<Tooltip tip={SPEAKER_TEXT.slotPlaceTip}>{SPEAKER_TEXT.slotPlace}</Tooltip>}
-        value={port.place ?? SLOT_PLACE.floor}
-        onChange={(place) => onChange(withSlotPlace(port, place))}
-        options={entriesOf(SLOT_PLACE_NAMES)}
-      />
+      {!horn && (
+        <ToggleGroup
+          label={<Tooltip tip={SPEAKER_TEXT.slotPlaceTip}>{SPEAKER_TEXT.slotPlace}</Tooltip>}
+          value={port.place ?? SLOT_PLACE.floor}
+          onChange={(place) => onChange(withSlotPlace(port, place))}
+          options={entriesOf(SLOT_PLACE_NAMES)}
+        />
+      )}
       <ToggleGroup
         label={<Tooltip tip={SPEAKER_TEXT.slotFoldTip}>{SPEAKER_TEXT.slotFold}</Tooltip>}
         value={!!port.folded}

@@ -93,12 +93,16 @@ test("speaker horn load: Horn starts one conical section from the cones to the c
 test("speaker horn load: Direct removes the horn and sets the net air back to Auto", () => {
   for (const [template, i] of MODELED) {
     const spec = templateSpeaker(template);
-    const back = switched(switched(spec, i, CHAMBER_LOAD.horn), i, CHAMBER_LOAD.direct);
+    const horn = switched(spec, i, CHAMBER_LOAD.horn);
+    const back = switched(horn, i, CHAMBER_LOAD.direct);
     const chamber = back.cabinet.chambers[i];
+    const start = spec.cabinet.chambers[i];
     assert.equal(chamber.load.kind, CHAMBER_LOAD.direct, template);
     assert.equal(chamber.netLiters, null, template);
-    assert.deepEqual(chamber, spec.cabinet.chambers[i], `${template}: as it started`);
-    assert.deepEqual(responseOf(back).sum, responseOf(spec).sum);
+    // the vent is the horn's (a horn's vent starts again: hornVentFrom); the rest is as it started
+    assert.deepEqual(chamber.vent, horn.cabinet.chambers[i].vent, template);
+    assert.deepEqual({ ...chamber, vent: start.vent }, start, `${template}: as it started`);
+    assert.deepEqual(responseOf(back).chambers[i].gaps, [], template);
   }
   // a template's horn chamber goes direct too, and still models
   const bin = switched(templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne), 0, CHAMBER_LOAD.direct);

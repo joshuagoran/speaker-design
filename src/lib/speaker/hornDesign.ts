@@ -11,6 +11,8 @@ import type {
   HornPort,
   HornSegment,
   SpeakerChamber,
+  SideDuctPort,
+  SpeakerPort,
 } from "../../types";
 import { frontChamber, throatCones } from "./hornThroat";
 import { isSizedSegment } from "../acoustics/hornSegments";
@@ -51,6 +53,24 @@ function slotPort(slot: {
 }
 
 /**
+ * The vents the horn engine models in an undrawn horn's rear chamber, by drive: none in a tapped horn's (its rear
+ * chamber is a closed passage to its tap); a round port or slots in a front-loaded or offset horn's. Side ducts and
+ * passive radiators are not modeled yet. The Speaker page offers only these.
+ */
+export const hornVentKinds = (drive: HornDrive["kind"]): readonly ChamberVent["kind"][] =>
+  drive === HORN_DRIVE.tapped ? [VENT_KIND.sealed] : [VENT_KIND.sealed, VENT_KIND.vented];
+
+/** The port shapes a horn's rear chamber takes (`hornVentKinds`): a round port (no shape set) or slots. */
+export const HORN_PORT_SHAPES: readonly NonNullable<SpeakerPort["shape"]>[] = [
+  PORT_SHAPE.round,
+  PORT_SHAPE.slot,
+];
+
+/** Whether a horn's rear chamber takes a port of this shape: a round port or slots, not side ducts. */
+const hornTakesShape = (port: SpeakerPort): port is Exclude<SpeakerPort, SideDuctPort> =>
+  HORN_PORT_SHAPES.includes(port.shape ?? PORT_SHAPE.round);
+
+/**
  * The rear chamber's vent as the engine's port: none when sealed; round tubes or slots (each running the chamber's
  * clear `face`, `slotRunIn`) as their open area and their path length plus the inner end's correction (the engine's
  * radiation load adds the outer end's, a slot's from its opening's rectangle). Null: a vent the engine doesn't take yet
@@ -62,9 +82,8 @@ function rearPort(
   wallIn: number,
 ): { port: HornPort | null } | null {
   if (vent.kind === VENT_KIND.sealed) return { port: null };
-  if (vent.kind === VENT_KIND.radiator) return null;
+  if (vent.kind !== VENT_KIND.vented || !hornTakesShape(vent.port)) return null;
   const { port } = vent;
-  if (port.shape === PORT_SHAPE.duct) return null;
   if (port.shape === PORT_SHAPE.slot) {
     /** each opening's long side: the whole clear face, less its fins (as the box model takes them) */
     const faceRun = slotRunIn(face, port);

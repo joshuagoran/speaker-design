@@ -23,6 +23,7 @@ import { chamberSetbackIn } from "../../lib/speaker/driverBoard";
 import { goalHorn, hornGoalFit, type GoalDrive } from "../../lib/speaker/hornGoals";
 import { foldLayout } from "../../lib/speaker/foldLayout";
 import { DEFAULT_VENTS } from "./speakerParts";
+import { hornVentFrom } from "./hornVents";
 import { DIRECT_LOAD } from "../../lib/speaker/specParts";
 import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
@@ -96,7 +97,8 @@ export const flareLiters = (horn: Pick<SpeakerHorn, "segments">) =>
   segmentsAirLiters(horn.segments);
 
 /**
- * The chamber with its load switched to `kind`. Horn: a starting horn (`startingHorn`), and its net air set to the rear
+ * The chamber with its load switched to `kind`. Horn: a starting horn (`startingHorn`), its vent as a horn's
+ * (`hornVentFrom`), and its net air set to the rear
  * chamber's (the horn engine needs it): the chamber's net air now (`netLiters`; absent, its clear volume) less the
  * flare's, to the tenth, at least the build's floor. Unchanged when it has no cone to horn-load or already has that
  * load. Direct: the horn removed, and the net air back to Auto (worked out from the size).
@@ -118,6 +120,7 @@ export function withChamberLoad(
     ...chamber,
     load: { kind: CHAMBER_LOAD.horn, horn },
     netLiters: Math.max(MIN_NET_L, shownTenth(now - flareLiters(horn))),
+    vent: hornVentFrom(chamber.vent, chamber, room.clear.h),
   };
 }
 

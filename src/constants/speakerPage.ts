@@ -552,7 +552,6 @@ export const SPEAKER_TEXT = {
   /** the line under a tapped horn's settings: what the chamber's volume is */
   hornTappedAir: "The chamber's net air is the air behind the cones.",
   /** why a tapped horn's chamber takes no vent */
-  ventTapped: "A tapped horn has no vent.",
   hornGoals: "Target band",
   hornGoalLow: "Lowest",
   hornGoalLowTip: "Lowest flat frequency goal.",
