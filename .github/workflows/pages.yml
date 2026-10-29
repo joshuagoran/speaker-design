@@ -27,7 +27,8 @@ jobs:
 
   # the build, the phone and tablet layout check (tests/mobile-check.mjs), the save row check, and the Stack edit check
   phone:
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04, not ubuntu-latest: Playwright 1.56 has no Chromium for Ubuntu 26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +55,8 @@ jobs:
   # tests. On a pull request they run only when the 3D view, the horn mount code, their tests, or this workflow change;
   # on main they always run.
   three:
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04, not ubuntu-latest: Playwright 1.56 has no Chromium for Ubuntu 26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
