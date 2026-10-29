@@ -67,8 +67,10 @@ Vite+ docs: `node_modules/vite-plus/docs`.
 
 ## Git and PRs
 
-- Never push to `main`; every change goes through a PR (don't ask). Merge `main` into a feature branch with a pushed merge commit,
+- Never push to `main`; every change goes through a PR. Merge `main` into a feature branch with a pushed merge commit,
   no PR.
+- Never open, close, or merge an issue or a PR without the owner's OK; closing one still shows in the owner's history.
+  Ask whether an item goes on an existing issue (name it) or a new one.
 - Readable branch names (`hifi-slot-vent`), even when the session assigns another.
 - No session links in commits, PRs, or comments.
 - PR title: short STE, naming the change for the user. Description: "What changes" (bullets for the user) and "Tests"
