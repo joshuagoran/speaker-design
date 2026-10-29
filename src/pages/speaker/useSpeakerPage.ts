@@ -11,6 +11,7 @@ import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import { settledCabinet } from "../../lib/speaker/speakerLayout";
+import { withStraightHornsFollowingBox } from "./straightHorn";
 import { autoBalanceSpeaker, withSpeakerLevels } from "../../lib/speaker/autoBalance";
 import { AUTO_BALANCE_STATUS } from "../../constants/autoBalance";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
@@ -253,7 +254,12 @@ export function useSpeakerPage() {
   // every edit settles the drivers: a position that would leave the baffle, or overlap another driver or opening, is kept
   // where the layout stands it (the settings, the views and the cutlist then agree)
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
-    setSpec((s) => ({ ...s, cabinet: settledCabinet(withHornTop(edit(s.cabinet))) }));
+    setSpec((s) => ({
+      ...s,
+      cabinet: settledCabinet(
+        withHornTop(withStraightHornsFollowingBox(s.cabinet, edit(s.cabinet))),
+      ),
+    }));
   const editChambers = (edit: (chambers: readonly SpeakerChamber[]) => SpeakerChamber[]) =>
     editCabinet((c) => ({ ...c, chambers: edit(c.chambers) }));
   const editChamber = (i: number, edit: (chamber: SpeakerChamber) => SpeakerChamber) =>

@@ -82,6 +82,8 @@ import {
   type SpeakerView,
 } from "../../constants/speakerResults";
 import { SpeakerSettings } from "./SpeakerSettings";
+import { StraightHornCard } from "./StraightHornCard";
+import { straightHornSizes, withStraightHorn } from "./straightHorn";
 import { SpeakerOptimizerResults } from "./SpeakerOptimizerResults";
 import { speakerCheckRows } from "../../lib/speaker/speakerChips";
 import { chamberUnbraced } from "../../lib/speaker/fitChips";
@@ -479,6 +481,33 @@ function SpeakerPageBody({ speakerPage, sharedNotice, stackEditNotice }: Props) 
                         dims: { ...ch.dims, d: ch.dims.d + depthIn, h: ch.dims.h + heightIn },
                       }))
                     }
+                  />
+                ) : straightHornSizes(spec.cabinet, i) ? (
+                  <StraightHornCard
+                    key={`straight${i}`}
+                    cabinet={spec.cabinet}
+                    index={i}
+                    name={
+                      spec.cabinet.chambers.length === 1 ? null : FOLD_EDITOR_TEXT.chamber(i + 1)
+                    }
+                    onEdit={(edit) =>
+                      speakerPage.editCabinet((cabinet) => {
+                        const next = withStraightHorn(cabinet, i, edit);
+                        return next
+                          ? {
+                              ...cabinet,
+                              chambers: cabinet.chambers.map((c, k) => (k === i ? next : c)),
+                            }
+                          : cabinet;
+                      })
+                    }
+                    onResize={({ depthIn, widthIn }) =>
+                      speakerPage.editChamber(i, (ch) => ({
+                        ...ch,
+                        dims: { ...ch.dims, d: ch.dims.d + depthIn, w: ch.dims.w + widthIn },
+                      }))
+                    }
+                    onRestore={(chamber) => speakerPage.editChamber(i, () => chamber)}
                   />
                 ) : null,
               )}
