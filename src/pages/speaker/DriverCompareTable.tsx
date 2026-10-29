@@ -1,7 +1,9 @@
+import { useUnits } from "../../hooks/useUnits";
+import type { Units } from "../../lib/units";
 import { useState } from "react";
 import { CompareChecks, CompareTable, type CompareColumn } from "../../components/ui/CompareTable";
 import { SORT_BEST, sortRows, type DriverCompareRow } from "../../lib/speaker/driverCompare";
-import { isWooferKind } from "./speakerParts";
+import { isWooferKind } from "../../lib/speaker/driverParts";
 import { formatDollars } from "../../lib/format";
 import { Button } from "../../components/ui/Button";
 import { DRIVER_TYPE_NAMES } from "../../constants/speakerPage";
@@ -32,8 +34,8 @@ interface Props {
 const amount = (x: number | null, unit: string, digits = 1) =>
   x === null ? "–" : `${x.toFixed(digits)}${unit ? ` ${unit}` : ""}`;
 
-/** The Speaker page's columns between the name and the checks, in order. */
-const COLUMNS: CompareColumn<DriverCompareRow>[] = [
+/** The Speaker page's columns between the name and the checks, in order (the weight in the page's units). */
+const columnsFor = (units: Units): CompareColumn<DriverCompareRow>[] => [
   {
     key: DRIVER_COMPARE_SORT.price,
     head: DRIVER_COMPARE_TEXT.heads.price,
@@ -42,7 +44,7 @@ const COLUMNS: CompareColumn<DriverCompareRow>[] = [
   {
     key: DRIVER_COMPARE_SORT.lb,
     head: DRIVER_COMPARE_TEXT.heads.lb,
-    cell: (r) => amount(r.lb, "lb"),
+    cell: (r) => (r.lb === null ? amount(null, "") : units.format("mass", r.lb, 1)),
   },
   {
     key: DRIVER_COMPARE_SORT.level,
@@ -69,6 +71,7 @@ const COLUMNS: CompareColumn<DriverCompareRow>[] = [
  * that fail something yours doesn't stay last. The previewed row's checks (else yours) show above the table.
  */
 export function DriverCompareTable({ rows, kind, previewId, onPreview, onUse, rowUse }: Props) {
+  const units = useUnits();
   const [sort, setSort] = useState<{ key: DriverCompareSort; dir: SortDirection }>({
     key: DRIVER_COMPARE_SORT.max,
     dir: SORT_BEST.max,
@@ -116,7 +119,7 @@ export function DriverCompareTable({ rows, kind, previewId, onPreview, onUse, ro
       </div>
       <CompareTable
         nameHead={DRIVER_TYPE_NAMES[isWooferKind(kind) ? DRIVER_KIND.woofer : kind]}
-        columns={COLUMNS}
+        columns={columnsFor(units)}
         rows={sorted}
         onUse={use}
         bg="bg-panel"

@@ -28,6 +28,8 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   changesNone: "none",
   failing: (problems: string) => `Your design fails: ${problems}. Fixes may cost or weigh more.`,
   chamber: (n: number) => `Chamber ${n}`,
+  /** a woofer's size lock: its screen-reader name and its name in the Locked line ("15 in woofers") */
+  wooferSize: (size: string) => `${size} woofers`,
   axis: { w: "Width", h: "Height", d: "Depth" },
   /** a chamber axis's size lock beside its padlock and after its name in the Locked line: up to this size, exactly it */
   sizeMark: { max: "≤", exact: "=" },
@@ -36,5 +38,7 @@ export const SPEAKER_OPTIMIZER_TEXT = {
   summaryTarget: (db: number) => `target ${db} dB`,
   summaryBudget: (dollars: number | null) =>
     dollars === null ? "no budget limit" : `budget $${dollars}`,
-  summaryWeight: (lb: number | null) => (lb === null ? "no weight limit" : `up to ${lb} lb`),
+  /** the weight limit, with its unit, or none */
+  summaryWeight: (weight: string | null) =>
+    weight === null ? "no weight limit" : `up to ${weight}`,
 } as const;

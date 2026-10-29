@@ -9,7 +9,10 @@ import type {
   SpeakerHorn,
   SpeakerSpec,
 } from "../../types";
-import { formatDims, formatDollars, formatHz, formatWatts, formatDb } from "../../lib/format";
+import { formatDollars, formatHz, formatWatts, formatDb } from "../../lib/format";
+import { formatDims } from "../../lib/units";
+import { DEFAULT_UNIT_SETTINGS } from "../../constants/units";
+import type { Units } from "../../lib/units";
 import {
   SPEAKER_TEXT,
   HORN_DRIVE_NAMES,
@@ -40,13 +43,13 @@ export const hornText = (horn: Pick<SpeakerHorn, "drive" | "path" | "segments">)
   ].join(", ");
 
 /** A folded horn's straight horn (the shape its drawing should follow) in one line: its length and its end areas. */
-export const straightHornText = (horn: Pick<SpeakerHorn, "segments">) => {
+export const straightHornText = (horn: Pick<SpeakerHorn, "segments">, units: Units) => {
   const { segments } = horn;
-  const areaIn2 = (cm2: number | undefined) => Math.round((cm2 ?? 0) / CM2_PER_IN2);
-  return `${pathIn(horn)} in, ${areaIn2(segments[0]?.s1)} to ${areaIn2(segments[segments.length - 1]?.s2)} in²`;
+  const area = (cm2: number | undefined) => units.amount("boxArea", (cm2 ?? 0) / CM2_PER_IN2, 0);
+  return `${units.format("boxLength", pathIn(horn))}, ${area(segments[0]?.s1)} to ${area(segments[segments.length - 1]?.s2)} ${units.unit("boxArea")}`;
 };
 
-/** A chamber in one line: its size, vent, horn and drivers. */
+/** A chamber in one line: its size, vent, horn and drivers (in US units: the library keeps the line with the save). */
 export function chamberText(chamber: SpeakerChamber) {
   const { vent } = chamber;
   const ventText =
@@ -55,7 +58,7 @@ export function chamberText(chamber: SpeakerChamber) {
       : VENT_KIND_NAMES[vent.kind].toLowerCase();
   const drivers = chamber.drivers.map((d) => `${d.count} × ${driverName(d)}`).join(" + ");
   return [
-    formatDims(chamber.dims),
+    formatDims(DEFAULT_UNIT_SETTINGS, chamber.dims),
     ventText,
     chamber.stuffingPct ? `stuffed ${chamber.stuffingPct}%` : null,
     chamber.load.kind === CHAMBER_LOAD.horn ? hornText(chamber.load.horn) : null,
@@ -117,14 +120,14 @@ export function driverSummary(cabinet: Pick<SpeakerSpec["cabinet"], "chambers">)
 }
 
 /**
- * The facts the near miss names of its closest design: the weight (`weight`, default its total), the price and the
- * level at 1 m (none for a level that isn't modeled).
+ * The facts the near miss names of its closest design: the weight, the price and the level at 1 m (none for a level
+ * that isn't modeled).
  */
-export const nearMissFacts = (
+const nearMissFacts = (
   m: Pick<SpeakerOptimizerMetrics, "lb" | "price" | "pricePartial" | "musicDb">,
-  weight = `${m.lb.toFixed(0)} lb`,
+  units: Units,
 ): string[] => [
-  weight,
+  units.format("mass", m.lb, 0),
   `${formatDollars(m.price)}${m.pricePartial ? UI_TEXT.partialPriceMark : ""}`,
   ...(m.musicDb === null ? [] : [`${formatDb(m.musicDb)} dB at 1 m`]),
 ];
@@ -142,13 +145,13 @@ export const nearMissSentence = (facts: readonly string[], closestIsYours: boole
  * The Speaker near miss's closest design in a sentence: its drivers, weight, price and level at 1 m. Empty when there is
  * none.
  */
-export function speakerNearMissText({
-  closest,
-  closestIsYours,
-}: Pick<SpeakerNearMiss, "closest" | "closestIsYours">): string {
+export function speakerNearMissText(
+  { closest, closestIsYours }: Pick<SpeakerNearMiss, "closest" | "closestIsYours">,
+  units: Units,
+): string {
   if (!closest) return "";
   return nearMissSentence(
-    [driverSummary(closest.spec.cabinet), ...nearMissFacts(closest.metrics)],
+    [driverSummary(closest.spec.cabinet), ...nearMissFacts(closest.metrics, units)],
     closestIsYours,
   );
 }

@@ -69,3 +69,11 @@ export const LOCK_TEXT = {
   locked: (names: readonly string[]) => `Locked: ${names.length ? names.join(", ") : "nothing"}`,
   clear: "Clear locks",
 } as const;
+
+/** The header's settings menu: its gear button's name (and tooltip), and its dropdowns. */
+export const SETTINGS_MENU_TEXT = {
+  button: "Theme and units",
+  theme: "Theme",
+  units: "Units",
+  volume: "Volume",
+};

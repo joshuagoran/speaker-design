@@ -16,6 +16,8 @@ export interface LockControl {
   mark?: string;
   /** whether a tap unlocks it (an on/off lock: while it is locked; a size lock: on its last mode) */
   unlocks: boolean;
+  /** shown locked by another lock that holds it (a woofer's size under its model's lock); a tap does nothing */
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -23,14 +25,15 @@ export interface LockControl {
  * A small padlock button beside a setting: pressed while the optimizer keeps that setting as it is. A size lock shows
  * its mode (≤ or =) beside the padlock. No tooltip: its screen-reader name says what a tap does.
  */
-export function LockButton({ name, locked, mark, unlocks, onClick }: LockControl) {
+export function LockButton({ name, locked, mark, unlocks, disabled, onClick }: LockControl) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={locked}
       aria-label={unlocks ? LOCK_TEXT.unlock(name) : LOCK_TEXT.lock(name)}
-      className={`inline-flex shrink-0 items-center justify-center gap-0.5 min-w-9 h-9 px-1.5 rounded border text-xs font-semibold ${HOVER_TRANSITION} ${locked ? PRESSED_CLASSES : "border-stone-300 text-stone-500 bg-panel hover:border-stone-500"}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-0.5 min-w-9 h-9 px-1.5 rounded border text-xs font-semibold ${HOVER_TRANSITION} ${locked ? PRESSED_CLASSES : "border-stone-300 text-stone-500 bg-panel hover:border-stone-500"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
         <path

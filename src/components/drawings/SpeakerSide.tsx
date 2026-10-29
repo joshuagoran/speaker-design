@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import type { PositionFocus, SidePoint, SpeakerSpec } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import {
@@ -88,6 +89,7 @@ export function speakerSideFrame(
  * wall show as gaps in it.
  */
 export function SpeakerSide({ spec, focus = null }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const { cabinet } = spec;
   const t = cabinet.panel.thicknessIn;
@@ -400,7 +402,7 @@ export function SpeakerSide({ spec, focus = null }: Props) {
       viewBox={`0 0 ${W} ${H}`}
       className="w-full h-full"
       role="img"
-      aria-label={`Side view, cut through the center, ${layout.size.d} × ${layout.size.h}″, ${layout.chambers.length} chamber${layout.chambers.length === 1 ? "" : "s"}`}
+      aria-label={`Side view, cut through the center, ${units.amount("boxLength", layout.size.d)} × ${units.amount("boxLength", layout.size.h)}${units.cutMark}, ${layout.chambers.length} chamber${layout.chambers.length === 1 ? "" : "s"}`}
     >
       {layout.chambers.flatMap(chamber)}
       {mark}

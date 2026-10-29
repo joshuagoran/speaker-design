@@ -1,6 +1,7 @@
 // The Stack page's phone summary strip: the lowest tuning of its members'
 // chambers, the stack's maximum output at SUMMARY_LOW_HZ, the members' weight, and what limits the stack for music.
 import type { StackLimits, StackResponse } from "../../types";
+import type { Units } from "../../lib/units";
 import type { SummaryItem } from "../../components/ui/SummaryStrip";
 import { curveLevelAt } from "../../lib/acoustics/coverage";
 import { LIMIT_NAMES } from "../../constants/limits";
@@ -11,6 +12,7 @@ export function stackSummary(
   response: Pick<StackResponse, "members">,
   limits: Pick<StackLimits, "sum" | "members" | "member" | "band">,
   lb: number,
+  units: Units,
 ): SummaryItem[] | null {
   const live = response.members.filter((m) => m !== null);
   if (!live.length) return null;
@@ -33,7 +35,7 @@ export function stackSummary(
       low !== null ? low.toFixed(0) : SUMMARY_STRIP_TEXT.none,
       low !== null ? "dB" : "",
     ],
-    [SUMMARY_STRIP_TEXT.weight, lb.toFixed(0), "lb"],
+    [SUMMARY_STRIP_TEXT.weight, units.amount("mass", lb, 0), units.unit("mass")],
     [SUMMARY_STRIP_TEXT.limit, who ? LIMIT_NAMES[who] : SUMMARY_STRIP_TEXT.none, ""],
   ];
 }

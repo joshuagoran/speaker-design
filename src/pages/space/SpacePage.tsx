@@ -1,3 +1,4 @@
+import { useUnits } from "../../hooks/useUnits";
 import { useEffect, useMemo, useState } from "react";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
@@ -77,7 +78,6 @@ import {
   BAND_NEAR_DB,
   BAND_ON_TARGET_DB,
 } from "../../constants/space";
-import { shownIn } from "../speaker/speakerFields";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import { readSavedSpeaker } from "../../lib/speaker/speakerSaves";
 import { stackFromSaved } from "../stack/stackSaves";
@@ -140,6 +140,7 @@ const relClass = (rel: number) =>
  * scale beside a 3D view of the room, the levels at the reference, and the response at the listener.
  */
 export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const { design, model, view, stats } = space;
   const { venue, placements, name } = design.space;
@@ -329,7 +330,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
         .join(" · ") || SPACE_TEXT.noStages,
     room: venue.room.outdoors
       ? SPACE_TEXT.outdoors
-      : `${venue.room.widthFt} × ${venue.room.lengthFt} × ${venue.room.ceilingFt} ft`,
+      : `${units.amount("roomLength", venue.room.widthFt)} × ${units.amount("roomLength", venue.room.lengthFt)} × ${units.format("roomLength", venue.room.ceilingFt)}`,
     placements: (
       <MarkedText
         text={`${venue.targetDb} dB target · ${names.map(literal).join(" · ") || SPACE_TEXT.noPlacements}`}
@@ -403,7 +404,7 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                         riser: st.on !== null,
                         label: SPACE_TEXT.stageLabel(
                           stageNameOf.get(st.id) ?? "",
-                          `${shownIn(stageTopFt(venue.stages, st))}`,
+                          units.format("roomLength", stageTopFt(venue.stages, st)),
                         ),
                       }))}
                       selectedStage={selectedStage}
@@ -560,7 +561,8 @@ export function SpacePage({ space, stack, speakerPage, sharedNotice }: Props) {
                   // the ear stays under a low ceiling
                   max={venue.room.outdoors ? 8 : Math.min(8, venue.room.ceilingFt)}
                   step={0.1}
-                  unit="ft"
+                  quantity="roomLength"
+                  unit={units.unit("roomLength")}
                   onChange={(earFt) => space.editVenue((v) => ({ ...v, earFt }))}
                 />
               </div>

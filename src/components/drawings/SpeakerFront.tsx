@@ -1,3 +1,5 @@
+import { useUnits } from "../../hooks/useUnits";
+import type { Units } from "../../lib/units";
 import { useRef, useState } from "react";
 import type {
   BandId,
@@ -95,10 +97,10 @@ const MARK_LABEL_GAP_PX = 3;
 const MARK_HALO_PX = 1.5;
 const CENTER_PLUS_PX = 3;
 
-/** A position as its field shows it, in, to the hundredth: signed across, plain up. */
-const markLabel = (v: number, signed: boolean) => {
-  const r = Math.round(v * 100) / 100;
-  return `${signed && r > 0 ? "+" : ""}${r}″`;
+/** A position as its field shows it (in to the hundredth, or mm), with its unit: signed across, plain up. */
+const markLabel = (v: number, signed: boolean, units: Units) => {
+  const r = Number(units.amount("boxLength", v));
+  return `${signed && r > 0 ? "+" : ""}${r}${units.cutMark}`;
 };
 
 /** A driver dragged on the baffle: its entry, where its group started, where it may go, and the pointer's start. */
@@ -149,6 +151,7 @@ export function speakerFrontFrame(
  * radiator on the back is drawn dashed (behind). The top is drawn flat (an arched top too, for now).
  */
 export function SpeakerFront({ spec, onMoveDriver, onPickDriver, focus = null }: Props) {
+  const units = useUnits();
   const pal = usePalette();
   const { cabinet } = spec;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -610,7 +613,7 @@ export function SpeakerFront({ spec, onMoveDriver, onPickDriver, focus = null }:
                 dominantBaseline={across ? "auto" : "middle"}
                 {...label}
               >
-                {markLabel(across ? d.position.xIn : d.position.yIn, across)}
+                {markLabel(across ? d.position.xIn : d.position.yIn, across, units)}
               </text>
             </g>
           );
@@ -638,7 +641,7 @@ export function SpeakerFront({ spec, onMoveDriver, onPickDriver, focus = null }:
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       role="img"
-      aria-label={`Front view, ${layout.size.w} × ${layout.size.h}″, ${layout.chambers.length} chamber${layout.chambers.length === 1 ? "" : "s"}`}
+      aria-label={`Front view, ${units.amount("boxLength", layout.size.w)} × ${units.amount("boxLength", layout.size.h)}${units.cutMark}, ${layout.chambers.length} chamber${layout.chambers.length === 1 ? "" : "s"}`}
     >
       {layout.chambers.map((c, i) => (
         <rect

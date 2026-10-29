@@ -28,7 +28,7 @@ import { HORN_PROFILE_NAMES } from "./hornEngine";
 import { CUTLIST_TAB_NAME } from "./pages";
 import { UI_TEXT } from "./uiText";
 import { GAIN_LABEL, PAD_LABEL } from "./controlLabels";
-import { FOLD_DRIVERS_REASON, FOLD_MAGNET_CLEAR_IN } from "./foldHorn";
+import { FOLD_DRIVERS_REASON } from "./foldHorn";
 
 // Settings that a tip in the same table names (`**name**`): each name once, before the tables use it.
 const HORN_START_NAME = "Start area";
@@ -270,16 +270,16 @@ export const MODEL_GAP_TEXT = {
 /** The folded-horn path chart's labels. */
 export const FOLD_CHART_TEXT = {
   label: "Passage area against distance from the closed end",
-  xAxis: "distance from the closed end, in",
-  yAxis: "area, in²",
+  /** the axes' titles, with their unit */
+  xAxis: (unit: string) => `distance from the closed end, ${unit}`,
+  yAxis: (unit: string) => `area, ${unit}`,
   traced: "Drawn passage",
   target: "Straight horn",
   taps: "Taps",
   front: "front",
   back: "back",
-  /** the readout at the place pointed at: distance, width, area (numbers as formatted text) */
-  at: (distanceIn: string, widthIn: string, areaIn2: string) =>
-    `${distanceIn} in · ${widthIn} in wide · ${areaIn2} in²`,
+  /** the readout at the place pointed at: distance, width, area (formatted, with their units) */
+  at: (distance: string, width: string, area: string) => `${distance} · ${width} wide · ${area}`,
 } as const;
 
 /** The folded horn editor's tools, by id, as their buttons name them. */
@@ -334,8 +334,8 @@ export const FOLD_STAT_TEXT = {
   /** where the cones open, in from the closed end: one or two formatted lengths */
   tapsAt: (front: string | null, back: string | null) =>
     [front, back].filter((t) => t !== null).join(" and ") || "none",
-  /** the vent's duct: its height and its length (both formatted, in inches), as "1.5 × 6 in" */
-  ventSize: (height: string, length: string) => `${height} × ${length} in`,
+  /** the vent's duct: its height and its length (both formatted), then their unit, as "1.5 × 6 in" */
+  ventSize: (height: string, length: string, unit: string) => `${height} × ${length} ${unit}`,
 } as const;
 
 /** What each check on a drawn horn says (`FOLD_CHECK`), from its figures (lengths formatted). */
@@ -351,7 +351,8 @@ export const FOLD_CHECK_TEXT = {
   deadEnd: (at: string) =>
     `The cones first open ${at} from the closed end. That is a long dead end behind them. Move them nearer the closed end.`,
   choke: (at: string) => `The passage narrows sharply ${at} from the closed end.`,
-  magnet: () => `A driver's motor is within ${FOLD_MAGNET_CLEAR_IN} in of a board or a wall.`,
+  /** the clearance, with its unit */
+  magnet: (clear: string) => `A driver's motor is within ${clear} of a board or a wall.`,
   cutout: () => "A driver's cutout runs off its board.",
   strayAir: (count: number) =>
     count === 1
@@ -558,9 +559,9 @@ export const SPEAKER_TEXT = {
     `**${SPEAKER_TEXT.maxOutput}**: ${db} dB at ${hz} Hz, limited by ${limit}.`,
   /** the goals check: how far the maximum output falls under the target level */
   hornFitShort: (db: string) => `That is ${db} dB quieter than the target.`,
-  /** the goals check: the horn holds more air than the chamber has */
+  /** the goals check: the horn holds more air than the chamber has (the volumes with their unit) */
   hornFitAir: (horn: string, chamber: string) =>
-    `The horn holds ${horn} L. The chamber has only ${chamber} L of air.`,
+    `The horn holds ${horn}. The chamber has only ${chamber} of air.`,
   hornImport: HORN_IMPORT_NAME,
   hornImportTip: `Paste the text of a Hornresp record. It sets the **${STRAIGHT_HORN_NAME}**, the **${HORN_TYPE_NAME}**, the taps, the **${SETTINGS_TEXT.rearChamber}**, and the **${SETTINGS_TEXT.vent}**. The drivers stay as set in this chamber.`,
   hornImportField: "Record text",
@@ -583,8 +584,9 @@ export const SPEAKER_TEXT = {
   hornStepsSetting: "Steps",
   hornStepsTip: `**${HORN_STEPS_OFF_NAME}**: each section starts where the section before it ends. **${HORN_STEPS_ON_NAME}**: each section after the first shows its **${HORN_START_NAME}**, so you can make a step.`,
   hornProfileTip: `The shape of the flare in this section: how its area grows from the start to the end. **${HORN_PROFILE_NAMES.con}**: both sides grow together. **${HORN_PROFILE_NAMES.exp}**: a flat top and bottom, curved sides. **${HORN_PROFILE_NAMES.par}**: a flat top and bottom, straight sides.`,
-  hornStartTip: "The area of the section at its throat end, in².",
-  hornEndTip: "The area of the section at its mouth end, in².",
+  /** the section's area tips, with the area's unit */
+  hornStartTip: (unit: string) => `The area of the section at its throat end, ${unit}.`,
+  hornEndTip: (unit: string) => `The area of the section at its mouth end, ${unit}.`,
   hornLengthTip: "The length of the section along the horn path.",
   hornPathSectionsTip: "The horn is a row of sections, from the throat to the mouth.",
   driverHornTip: `A horn or waveguide on this compression driver or tweeter. **${NO_HORN_NAME}**: the driver has no horn.`,

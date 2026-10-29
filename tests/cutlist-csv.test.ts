@@ -5,7 +5,6 @@ import {
   CSV_BOM,
   CSV_SECTIONS,
   CSV_TOTAL,
-  PANEL_CSV_COLUMNS,
   cutlistCsv,
   partLengthWidth,
   purchasedTotal,
@@ -16,6 +15,7 @@ import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEMPLATE } from "../src/constants/speakerStarts";
 import { PURCHASED_PARTIAL_NOTE, PURCHASED_PART } from "../src/constants/purchasedParts";
 import { UI_TEXT } from "../src/constants/uiText";
+import { UNIT_SYSTEM } from "../src/constants/units";
 import type { PurchasedPart } from "../src/types";
 
 test("cutlist CSV: L runs along a locked grain, else it is the long side", () => {
@@ -45,12 +45,13 @@ test("cutlist CSV: the panels with L and W in their own columns, then the purcha
     ],
     bought,
     2,
+    UNIT_SYSTEM.us,
   );
   // the UTF-8 byte order mark first, so a spreadsheet reads ″, ° and × right
   assert.ok(csv.startsWith(CSV_BOM));
   const lines = csv.slice(CSV_BOM.length).trimEnd().split("\r\n");
   assert.equal(lines[0], CSV_SECTIONS.panels);
-  assert.equal(lines[1], PANEL_CSV_COLUMNS.join(","));
+  assert.equal(lines[1], "Box,Tag,Part,Qty,L (in),W (in),Grain,Thickness (in),Notes");
   assert.equal(lines[2], "Shell,K1,Side,4,47.5,18,L along grain,0.709,a; b");
   assert.equal(lines[3], "");
   assert.equal(lines[4], CSV_SECTIONS.purchased);
@@ -63,11 +64,32 @@ test("cutlist CSV: the panels with L and W in their own columns, then the purcha
   assert.deepEqual(purchasedTotal(bought, 2), { dollars: 200, partial: true });
 });
 
+test("cutlist CSV: in metric, sizes in mm to the tenth", () => {
+  const panel = {
+    box: "Shell",
+    tag: "K1",
+    part: "Side",
+    qty: 1,
+    l: 47.5,
+    w: 18,
+    grainLocked: false,
+    t: 0.75,
+    notes: [],
+  };
+  const lines = cutlistCsv([panel], [], 1, UNIT_SYSTEM.metric)
+    .slice(CSV_BOM.length)
+    .trimEnd()
+    .split("\r\n");
+  assert.equal(lines[1], "Box,Tag,Part,Qty,L (mm),W (mm),Grain,Thickness (mm),Notes");
+  assert.equal(lines[2], "Shell,K1,Side,1,1206.5,457.2,any,19.05,");
+});
+
 test("cutlist CSV: every price known, the total has no mark and no note row", () => {
   const csv = cutlistCsv(
     [],
     [{ kind: PURCHASED_PART.driver, model: "M", count: 1, unit: 10, source: "A" }],
     1,
+    UNIT_SYSTEM.us,
   );
   const lines = csv.slice(CSV_BOM.length).trimEnd().split("\r\n");
   assert.equal(lines[lines.length - 1], `${CSV_TOTAL},,,,10.00,`);

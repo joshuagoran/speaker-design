@@ -52,12 +52,9 @@ export type CompareOrigin = DriverCompareOption & Pick<SpeakerDriver, "kind">;
 export function driverOptions(d: SpeakerDriver, origin?: CompareOrigin): DriverCompareOption[] {
   const own = ownOption(d);
   const found: DriverCompareOption[] = isConeKind(d.kind)
-    ? coneCandidates(
-        d.kind,
-        d.driverId,
-        SPEAKER_OPTIMIZER_CATALOG,
-        partFacts(d.kind, d.driverId).size ?? undefined,
-      ).map((driverId) => ({
+    ? coneCandidates(d.kind, d.driverId, SPEAKER_OPTIMIZER_CATALOG, {
+        ownSize: partFacts(d.kind, d.driverId).size ?? undefined,
+      }).map((driverId) => ({
         driverId,
         hornId: own.hornId,
       }))

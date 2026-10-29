@@ -72,9 +72,9 @@ export const BRACING_CHIP_TEXT = {
 export const SPEAKER_DETAILS_TEXT = {
   response: "Response",
   responseLines: [
-    "On axis, at 1 m, in half space.",
+    "On axis, at 1 m, in half space (2π).",
     "Every band gets 2.83 V.",
-    "It does not include the baffle step, the room, or the driver positions yet.",
+    "It does not include the baffle step, the room, or the driver positions.",
     `The **${PROJECT_NAMES.space}** page adds them.`,
   ],
   fbLine: `**${SPEAKER_TEXT.fb}** marks the tuning of each vented chamber.`,

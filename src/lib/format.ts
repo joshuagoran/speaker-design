@@ -1,4 +1,3 @@
-import type { Dims3 } from "../types";
 import { DELAY_DECIMALS } from "../constants/speakerSteps";
 
 /** Formats a delay, ms, without its unit: to `DELAY_DECIMALS` places, as every delay shows. */
@@ -35,10 +34,6 @@ export const formatHz = (f: number): string => `${Math.round(f)} Hz`;
 /** Formats watts: one decimal under 10 W, whole watts with thousands separators above, e.g. 4.2 W, 1,250 W. */
 export const formatWatts = (w: number): string =>
   `${w < 10 ? w.toFixed(1) : Math.round(w).toLocaleString("en-US")} W`;
-
-/** Formats a box's outside size, width × height × depth, e.g. 22 × 30 × 20″. */
-export const formatDims = ({ w, h, d }: Dims3): string =>
-  `${+w.toFixed(2)} × ${+h.toFixed(2)} × ${+d.toFixed(2)}″`;
 
 /** A stress in Pa as N/mm², to a tenth (the strength notes). */
 export const formatStress = (pa: number) => `${(pa / 1e6).toFixed(1)} N/mm²`;

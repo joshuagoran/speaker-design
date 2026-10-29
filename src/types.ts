@@ -52,6 +52,7 @@ import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { SPEAKER_GOAL } from "./constants/speakerOptimizer";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
+import type { QUANTITIES, UNIT_SYSTEM, VOLUME_UNIT } from "./constants/units";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
@@ -2506,6 +2507,8 @@ export interface SpeakerOptimizerLocks {
   drivers?: readonly DriverRef[];
   /** driver entries whose horn stays */
   horns?: readonly DriverRef[];
+  /** woofer entries whose nominal size stays: another woofer of that size may take their place */
+  sizes?: readonly DriverRef[];
   /** chambers, by index, whose vent stays */
   vents?: readonly number[];
   /** bands whose highpass stays, and whose lowpass stays (a crossover in the box moves only when both its sides are free) */
@@ -3462,3 +3465,18 @@ export type ThemeChoice = (typeof THEME_CHOICES)[number][0];
 
 /** A theme: the palette in use, picked by the device's setting or the switch. */
 export type ThemeName = Exclude<ThemeChoice, typeof THEME_SYSTEM>;
+
+/** The settings menu's Units choice: what the page shows its sizes, volumes, weights and speeds in. */
+export type UnitSystem = (typeof UNIT_SYSTEM)[keyof typeof UNIT_SYSTEM];
+
+/** The settings menu's Volume choice: liters, or ft³. */
+export type VolumeUnit = (typeof VOLUME_UNIT)[keyof typeof VOLUME_UNIT];
+
+/** What the page shows its amounts in: the Units system, and the Volume choice for volumes. */
+export interface UnitSettings {
+  system: UnitSystem;
+  volume: VolumeUnit;
+}
+
+/** A kind of amount the Units setting changes (a box's size, a room's size, a volume, …). */
+export type Quantity = keyof typeof QUANTITIES;

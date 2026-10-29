@@ -1,3 +1,4 @@
+import type { Quantity } from "../../types";
 import { Button } from "../ui/Button";
 import { LimitField } from "../ui/LimitField";
 import { Notice } from "../ui/Notice";
@@ -54,6 +55,8 @@ export interface LimitRow {
   min: number;
   step: number;
   unit: string;
+  /** what the limit measures, when the Units setting changes it (`NumberField`'s) */
+  quantity?: Quantity;
 }
 
 interface Props {
@@ -95,6 +98,7 @@ export function DesignOptimizerSettings({ optimizer: o, goalDefs, text: T, limit
           min={l.min}
           step={l.step}
           unit={l.unit}
+          quantity={l.quantity}
           words={{ none: T.noLimit, limit: T.limit, field: l.field }}
         />
       ))}

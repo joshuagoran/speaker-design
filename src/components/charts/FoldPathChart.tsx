@@ -1,9 +1,12 @@
+import { useUnitSettings, useUnits } from "../../hooks/useUnits";
+import { fromShown, scaleToShown } from "../../lib/units";
+import type { Quantity, UnitSettings } from "../../types";
 import { useId } from "react";
 import type { FoldPathSection, HornSegment } from "../../types";
 import {
-  FOLD_AREA_GRID_STEPS_IN2,
+  FOLD_AREA_GRID_STEPS,
   FOLD_CHART_MAX_LINES,
-  FOLD_PATH_GRID_STEPS_IN,
+  FOLD_PATH_GRID_STEPS,
 } from "../../constants/chartScales";
 import { FOLD_CHART_TEXT } from "../../constants/speakerPage";
 import { targetPathPoints } from "../../lib/speaker/foldMatch";
@@ -49,21 +52,45 @@ export interface FoldPathAxes {
   areaGridIn2: number;
 }
 
-/** The smallest spacing in `steps` that covers `top` in at most `FOLD_CHART_MAX_LINES` gridlines, and the axis top. */
-function axisOf(top: number, steps: readonly number[]): { max: number; grid: number } {
+/**
+ * The smallest spacing in `steps` (in the page's unit) that covers `top` (stored unit) in at most
+ * `FOLD_CHART_MAX_LINES` gridlines, and the axis top: both back in the stored unit, so the lines fall on round numbers
+ * in the unit the page shows.
+ */
+function axisOf(
+  top: number,
+  steps: readonly number[],
+  quantity: Quantity,
+  settings: UnitSettings,
+): { max: number; grid: number } {
+  const shownTop = scaleToShown(quantity, settings, top);
   const grid =
-    steps.find((g) => Math.ceil(top / g) <= FOLD_CHART_MAX_LINES) ?? steps[steps.length - 1];
-  return { max: Math.max(grid, Math.ceil(top / grid) * grid), grid };
+    steps.find((g) => Math.ceil(shownTop / g) <= FOLD_CHART_MAX_LINES) ?? steps[steps.length - 1];
+  return {
+    max: fromShown(quantity, settings, Math.max(grid, Math.ceil(shownTop / grid) * grid)),
+    grid: fromShown(quantity, settings, grid),
+  };
 }
 
 /** The axes that fit the traced passage and the straight horn: each to the next gridline past the larger. */
 export function foldPathAxes(
   sections: readonly FoldPathSection[],
   target: Props["target"],
+  settings: UnitSettings,
 ): FoldPathAxes {
   const points = [...sections, ...targetPathPoints(target)];
-  const path = axisOf(Math.max(1, ...points.map((p) => p.sIn)), FOLD_PATH_GRID_STEPS_IN);
-  const area = axisOf(Math.max(1, ...points.map((p) => p.areaIn2)), FOLD_AREA_GRID_STEPS_IN2);
+  const path = axisOf(
+    Math.max(1, ...points.map((p) => p.sIn)),
+    FOLD_PATH_GRID_STEPS[settings.system],
+    "boxLength",
+    settings,
+  );
+  const area = axisOf(
+    Math.max(1, ...points.map((p) => p.areaIn2)),
+    FOLD_AREA_GRID_STEPS[settings.system],
+    "boxArea",
+    settings,
+  );
   return {
     pathMaxIn: path.max,
     pathGridIn: path.grid,
@@ -141,8 +168,12 @@ export function FoldPathDrawing({
     t.sIn !== null && t.sIn >= 0 && t.sIn <= pathMaxIn ? [{ sIn: t.sIn, label: t.label }] : [],
   );
   const near = hoverIn === null ? null : nearestSection(sections, hoverIn);
+  const units = useUnits();
   const grid: React.ReactElement[] = [];
-  for (let s = 0; s <= pathMaxIn; s += pathGridIn) {
+  /** the gridlines' places, stored unit: every `step` up to `max` (counted, so a converted step does not drift) */
+  const lines = (max: number, step: number) =>
+    Array.from({ length: Math.round(max / step) + 1 }, (_, k) => k * step);
+  for (const s of lines(pathMaxIn, pathGridIn)) {
     grid.push(
       <line
         key={"v" + s}
@@ -157,15 +188,15 @@ export function FoldPathDrawing({
         key={"vt" + s}
         x={px(s)}
         y={y1 + 18}
-        textAnchor={s === pathMaxIn ? "end" : "middle"}
+        textAnchor={Math.abs(s - pathMaxIn) < 1e-9 ? "end" : "middle"}
         fill={pal.muted}
         {...CHART_TEXT}
       >
-        {s}
+        {units.amount("boxLength", s)}
       </text>,
     );
   }
-  for (let a = 0; a <= areaMaxIn2; a += areaGridIn2) {
+  for (const a of lines(areaMaxIn2, areaGridIn2)) {
     grid.push(
       <line
         key={"h" + a}
@@ -184,7 +215,7 @@ export function FoldPathDrawing({
         fill={pal.muted}
         {...CHART_TEXT}
       >
-        {a}
+        {units.amount("boxArea", a)}
       </text>,
     );
   }
@@ -262,15 +293,15 @@ export function FoldPathDrawing({
             paintOrder="stroke"
           >
             {FOLD_CHART_TEXT.at(
-              hoverIn.toFixed(1),
-              near.widthIn.toFixed(1),
-              near.areaIn2.toFixed(0),
+              units.format("boxLength", hoverIn, 1),
+              units.format("boxLength", near.widthIn, 1),
+              units.format("boxArea", near.areaIn2, 0),
             )}
           </text>
         </g>
       )}
       <text x={(x0 + x1) / 2} y={H - 4} textAnchor="middle" fill={pal.muted} {...CHART_TEXT}>
-        {FOLD_CHART_TEXT.xAxis}
+        {FOLD_CHART_TEXT.xAxis(units.unit("boxLength"))}
       </text>
       <text
         transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`}
@@ -278,14 +309,14 @@ export function FoldPathDrawing({
         fill={pal.muted}
         {...CHART_TEXT}
       >
-        {FOLD_CHART_TEXT.yAxis}
+        {FOLD_CHART_TEXT.yAxis(units.unit("boxArea"))}
       </text>
     </>
   );
 }
 
 /**
- * A folded horn's passage area along its path, in² against in from the closed end, on axes that fit the passage and the
+ * A folded horn's passage area along its path against the distance from the closed end (in the page's units), on axes that fit the passage and the
  * straight horn (`foldPathAxes`): the traced passage solid, the straight horn it should match dashed, the
  * places the cones open marked. The hover is linked: the pointer reports the distance it is over, and `hoverIn` draws it.
  */
@@ -303,7 +334,7 @@ export function FoldPathChart({ sections, target, taps, hoverIn, onHover }: Prop
     readoutRight: expandedH === null ? plot.W - EXPAND_BUTTON_ROOM_PX : undefined,
   };
   const pathEndIn = sections.length ? sections[sections.length - 1].sIn : 0;
-  const axes = foldPathAxes(sections, target);
+  const axes = foldPathAxes(sections, target, useUnitSettings());
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     onHover(

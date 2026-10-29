@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useMenuClose } from "../../hooks/useMenuClose";
 import { HOVER_TRANSITION } from "./buttonStyles";
 import { Icon, IconButton } from "./IconButton";
 import { MarkedText, plainText } from "./MarkedText";
@@ -27,26 +28,10 @@ export function ToggleMenu({ label, icon, items }: Props) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
-  // the first option takes focus when the menu opens; a click outside closes it, and so does Escape, wherever focus
-  // is: caught before anything else hears it, so it closes the menu only (not an expanded view under it)
+  useMenuClose(open, root, setOpen);
+  // the first option takes focus when the menu opens
   useEffect(() => {
-    if (!open) return;
-    menu.current?.querySelector("button")?.focus();
-    const outside = (e: PointerEvent) => {
-      if (e.target instanceof Node && !root.current?.contains(e.target)) setOpen(false);
-    };
-    const esc = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.stopPropagation();
-      setOpen(false);
-      root.current?.querySelector("button")?.focus();
-    };
-    document.addEventListener("pointerdown", outside);
-    window.addEventListener("keydown", esc, true);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      window.removeEventListener("keydown", esc, true);
-    };
+    if (open) menu.current?.querySelector("button")?.focus();
   }, [open]);
   /** Up and Down move between the options */
   const keys = (e: React.KeyboardEvent<HTMLDivElement>) => {
